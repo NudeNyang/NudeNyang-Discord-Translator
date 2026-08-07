@@ -143,12 +143,65 @@ def test_codex_requires_chatgpt_subscription_login(monkeypatch, tmp_path: Path) 
         translator.prepare()
 
 
-def test_codex_invocation_uses_schema_read_only_and_stdin(monkeypatch, tmp_path: Path) -> None:
+def test_codex_invocation_reuses_persistent_app_server(monkeypatch, tmp_path: Path) -> None:
+    translator = SubscriptionCliTranslator("chatgpt")
+    translator._resolved_command = ("codex", "codex")
+    monkeypatch.setattr(translator, "prepare", lambda: None)
+    monkeypatch.setattr(translator, "_workspace_dir", lambda: tmp_path)
+    instances = []
+
+    class FakeAppServer:
+        def __init__(self, executable, workspace, environment, timeout_seconds):
+            self.arguments = executable, workspace, environment, timeout_seconds
+            self.prompts: list[str] = []
+            self.closed = False
+            instances.append(self)
+
+        def invoke(self, prompt, schema):
+            self.prompts.append(prompt)
+            assert schema["required"] == ["translations"]
+            return {"translations": [{"id": 0, "text": "안녕하세요"}]}
+
+        def close(self):
+            self.closed = True
+
+    monkeypatch.setattr(cli_module, "_CodexAppServer", FakeAppServer, raising=False)
+    monkeypatch.setattr(
+        cli_module,
+        "_run_process",
+        lambda *_args, **_kwargs: pytest.fail("codex exec 폴백이 실행되면 안 돼"),
+    )
+
+    first = translator._invoke("translate first")
+    second = translator._invoke("translate second")
+
+    assert _validated_translations(first, {0}) == {0: "안녕하세요"}
+    assert _validated_translations(second, {0}) == {0: "안녕하세요"}
+    assert len(instances) == 1
+    assert instances[0].prompts == ["translate first", "translate second"]
+    translator.close()
+    assert instances[0].closed
+
+
+def test_codex_app_server_failure_falls_back_to_safe_one_shot(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
     translator = SubscriptionCliTranslator("chatgpt")
     translator._resolved_command = ("codex", "codex")
     monkeypatch.setattr(translator, "prepare", lambda: None)
     monkeypatch.setattr(translator, "_workspace_dir", lambda: tmp_path)
     calls: list[tuple[list[str], str | None]] = []
+
+    class BrokenAppServer:
+        def __init__(self, *_args, **_kwargs):
+            self.closed = False
+
+        def invoke(self, _prompt, _schema):
+            raise RuntimeError("protocol unavailable")
+
+        def close(self):
+            self.closed = True
 
     def fake_run(command, **kwargs):
         calls.append((command, kwargs.get("input_text")))
@@ -159,6 +212,7 @@ def test_codex_invocation_uses_schema_read_only_and_stdin(monkeypatch, tmp_path:
         )
         return subprocess.CompletedProcess(command, 0, "", "")
 
+    monkeypatch.setattr(cli_module, "_CodexAppServer", BrokenAppServer)
     monkeypatch.setattr(cli_module, "_run_process", fake_run)
 
     payload = translator._invoke("translate this")
@@ -169,9 +223,9 @@ def test_codex_invocation_uses_schema_read_only_and_stdin(monkeypatch, tmp_path:
     assert command[command.index("--sandbox") + 1] == "read-only"
     assert "--ignore-user-config" in command
     assert "--ignore-rules" in command
-    assert "--output-schema" in command
     assert command[-1] == "-"
     assert input_text == "translate this"
+    assert translator._codex_server is None
 
 
 def test_claude_invocation_disables_tools_and_sessions(monkeypatch, tmp_path: Path) -> None:

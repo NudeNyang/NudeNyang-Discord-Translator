@@ -56,6 +56,8 @@ TRANSLATOR_LABELS = {
     "deepl": "DeepL API",
     "original": "원문 표시",
 }
+TRANSLATION_BATCH_DEBOUNCE_SECONDS = 0.12
+TRANSLATION_BATCH_MAX_ITEMS = 32
 SPEECH_STYLE_LABELS = {
     "auto": "원문 말투 유지 (자동)",
     "polite": "항상 존댓말·격식체",
@@ -346,6 +348,61 @@ class TranslationService:
             return text
         return self._translate_known_source(text, protected, source, target)
 
+    def translate_many(self, texts: list[str], target: Language) -> list[str]:
+        if not texts:
+            return []
+        results: list[str | None] = [None] * len(texts)
+        pending: list[tuple[int, str, Any, Language, str]] = []
+        for index, text in enumerate(texts):
+            protected = protect_text(text)
+            if not protected.has_translatable_text:
+                results[index] = text
+                continue
+            source = self.detector.detect(text)
+            if source is target:
+                results[index] = self._translate_japanese_fragments(text, target)
+                continue
+            if source is Language.UNKNOWN:
+                results[index] = text
+                continue
+            source_hash = sha256(text.encode("utf-8")).hexdigest()
+            cached = self.cache.get_message(
+                source_hash,
+                text,
+                source,
+                target,
+                self.namespace,
+                allow_fuzzy=False,
+            )
+            if cached is not None:
+                results[index] = cached
+                continue
+            pending.append((index, text, protected, source, source_hash))
+
+        if pending:
+            translated_items = self.translator.translate_many(
+                [(protected.masked, source) for _, _, protected, source, _ in pending],
+                target,
+            )
+            if len(translated_items) != len(pending):
+                raise RuntimeError("번역 엔진이 요청한 메시지 수와 다른 결과를 반환했어.")
+            for item, translated in zip(pending, translated_items, strict=True):
+                index, text, protected, source, source_hash = item
+                restored = protected.restore(translated)
+                self.cache.put(
+                    source_hash,
+                    text,
+                    source,
+                    target,
+                    restored,
+                    self.namespace,
+                )
+                results[index] = restored
+
+        if any(result is None for result in results):
+            raise RuntimeError("번역 엔진이 일부 메시지의 결과를 반환하지 않았어.")
+        return [str(result) for result in results]
+
     def _translate_japanese_fragments(self, text: str, target: Language) -> str:
         if target is not Language.KOREAN:
             return text
@@ -542,29 +599,70 @@ class DomTranslationController:
 
     def _worker(self) -> None:
         while not self.stop_event.is_set():
-            job = self.jobs.get()
-            if job is None:
+            first_job = self.jobs.get()
+            if first_job is None:
                 return
-            if job.generation != self.translation_generation:
+            jobs = [first_job]
+            stop_after_batch = False
+            deadline = time.monotonic() + TRANSLATION_BATCH_DEBOUNCE_SECONDS
+            while len(jobs) < TRANSLATION_BATCH_MAX_ITEMS:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    queued = self.jobs.get(timeout=remaining)
+                except queue.Empty:
+                    break
+                if queued is None:
+                    stop_after_batch = True
+                    break
+                jobs.append(queued)
+            active_jobs = [
+                job for job in jobs if job.generation == self.translation_generation
+            ]
+            if not active_jobs:
+                if stop_after_batch:
+                    return
                 continue
             try:
+                translated_items: list[str] = []
                 with self.service_lock:
-                    if job.generation != self.translation_generation:
-                        continue
-                    translated = self.service.translate(job.part.text, job.target)
-                self.results.put(
-                    TranslationResult(job.part, job.target, job.generation, translated)
-                )
-            except Exception as exc:
-                self.results.put(
-                    TranslationResult(
-                        job.part,
-                        job.target,
-                        job.generation,
-                        job.part.text,
-                        str(exc),
+                    active_jobs = [
+                        job
+                        for job in active_jobs
+                        if job.generation == self.translation_generation
+                    ]
+                    if active_jobs:
+                        target = active_jobs[0].target
+                        translated_items = self.service.translate_many(
+                            [job.part.text for job in active_jobs],
+                            target,
+                        )
+                        if len(translated_items) != len(active_jobs):
+                            raise RuntimeError(
+                                "번역 서비스가 요청한 메시지 수와 다른 결과를 반환했어."
+                            )
+                if not active_jobs:
+                    if stop_after_batch:
+                        return
+                    continue
+                for job, translated in zip(active_jobs, translated_items, strict=True):
+                    self.results.put(
+                        TranslationResult(job.part, job.target, job.generation, translated)
                     )
-                )
+            except Exception as exc:
+                for job in active_jobs:
+                    self.results.put(
+                        TranslationResult(
+                            job.part,
+                            job.target,
+                            job.generation,
+                            job.part.text,
+                            str(exc),
+                        )
+                    )
+            if stop_after_batch:
+                return
 
     def _scan_images(self) -> None:
         assert self.client is not None

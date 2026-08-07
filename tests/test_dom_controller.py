@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from pathlib import Path
+from queue import Queue
 
 from discord_translate_overlay.cache import TranslationCache
 from discord_translate_overlay.config import AppConfig
@@ -30,6 +31,25 @@ class RecordingTranslator(Translator):
         )
 
 
+class BatchRecordingTranslator(RecordingTranslator):
+    def __init__(self) -> None:
+        super().__init__()
+        self.batch_calls: list[list[str]] = []
+
+    def translate_many(
+        self,
+        items: list[tuple[str, Language]],
+        target: Language,
+    ) -> list[str]:
+        del target
+        texts = [text for text, _source in items]
+        self.batch_calls.append(texts)
+        return [
+            text.replace("こんにちは", "안녕하세요").replace("Hello", "안녕")
+            for text in texts
+        ]
+
+
 def test_same_language_is_not_translated(tmp_path: Path) -> None:
     translator = RecordingTranslator()
     cache = TranslationCache(tmp_path / "cache.db")
@@ -52,6 +72,78 @@ def test_emoji_and_mention_are_preserved_and_result_is_cached(tmp_path: Path) ->
     assert "@everyone" not in translator.calls[0]
     assert "🌸" not in translator.calls[0]
     cache.close()
+
+
+def test_translation_service_batches_uncached_messages_and_reuses_cache(tmp_path: Path) -> None:
+    translator = BatchRecordingTranslator()
+    cache = TranslationCache(tmp_path / "batch-cache.db")
+    service = TranslationService(translator, cache)
+    messages = ["@everyone こんにちは 🌸", "Hello friend"]
+
+    assert service.translate_many(messages, Language.KOREAN) == [
+        "@everyone 안녕하세요 🌸",
+        "안녕 friend",
+    ]
+    assert len(translator.batch_calls) == 1
+    assert len(translator.batch_calls[0]) == 2
+    assert "@everyone" not in translator.batch_calls[0][0]
+    assert "🌸" not in translator.batch_calls[0][0]
+
+    assert service.translate_many(messages, Language.KOREAN) == [
+        "@everyone 안녕하세요 🌸",
+        "안녕 friend",
+    ]
+    assert len(translator.batch_calls) == 1
+    cache.close()
+
+
+def test_dom_worker_drains_visible_messages_into_one_service_batch(monkeypatch) -> None:
+    class BatchService:
+        def __init__(self) -> None:
+            self.single_calls: list[str] = []
+            self.batch_calls: list[list[str]] = []
+
+        def translate(self, text: str, target: Language) -> str:
+            del target
+            self.single_calls.append(text)
+            return f"번역:{text}"
+
+        def translate_many(self, texts: list[str], target: Language) -> list[str]:
+            del target
+            self.batch_calls.append(texts)
+            return [f"번역:{text}" for text in texts]
+
+    monkeypatch.setattr(dom_module, "TRANSLATION_BATCH_DEBOUNCE_SECONDS", 0.02)
+    controller = dom_module.DomTranslationController.__new__(
+        dom_module.DomTranslationController
+    )
+    controller.stop_event = threading.Event()
+    controller.translation_generation = 4
+    controller.service_lock = threading.RLock()
+    controller.service = BatchService()
+    controller.jobs = Queue()
+    controller.results = Queue()
+    worker = threading.Thread(target=controller._worker)
+    worker.start()
+    for index, text in enumerate(("first", "second", "third")):
+        controller.jobs.put(
+            dom_module.TranslationJob(
+                dom_module.DomPart("message", f"message-{index}", 0, text),
+                Language.KOREAN,
+                4,
+            )
+        )
+    controller.jobs.put(None)
+    worker.join(timeout=1.0)
+
+    assert not worker.is_alive()
+    assert controller.service.single_calls == []
+    assert controller.service.batch_calls == [["first", "second", "third"]]
+    assert [controller.results.get_nowait().translated for _ in range(3)] == [
+        "번역:first",
+        "번역:second",
+        "번역:third",
+    ]
 
 
 def test_apply_script_serializes_multilingual_text_without_html_injection() -> None:
