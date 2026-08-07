@@ -1,0 +1,47 @@
+[project]
+name = "discord-translate-kanana-runtime"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "platformdirs>=4.3,<5",
+  "psutil>=7,<8",
+]
+
+[project.optional-dependencies]
+cpu = [
+  "accelerate>=1.10,<2",
+  "bitsandbytes>=0.48,<1",
+  "torch==2.9.0+cpu",
+  "transformers>=4.57,<5",
+]
+gpu = [
+  "accelerate>=1.10,<2",
+  "bitsandbytes>=0.48,<1",
+  "torch==2.9.0+cu128",
+  "transformers>=4.57,<5",
+]
+
+[tool.uv]
+environments = ["sys_platform == 'win32'"]
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "gpu" },
+  ],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu128", extra = "gpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
