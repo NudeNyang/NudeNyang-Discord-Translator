@@ -1,4 +1,5 @@
 mod deepl;
+pub mod hymt;
 mod mock;
 pub mod protected_text;
 mod service;
@@ -6,6 +7,7 @@ mod service;
 use crate::language::Language;
 
 pub use deepl::DeepLTranslator;
+pub use hymt::HyMtTranslator;
 pub use mock::{MockTranslator, OriginalTranslator};
 pub use service::TranslationService;
 
