@@ -1,75 +1,58 @@
-# Rust/Tauri 완전 전환 계획
+# Rust/Tauri 완전 전환 기록
 
-## 결정
+## 결정과 완료 상태
 
-Nude Translator의 기본 데스크톱 앱과 번역 엔진을 **Tauri 2 + Rust**로 전환한다.
-Python/PySide6 구현은 전환 기간의 비교·복구 자료로만 유지한다. 전환 완료 배포는
-Python 인터프리터, `.venv`, PyInstaller 사이드카가 없어도 독립적으로 동작해야 한다.
+Nude Translator의 기본 앱과 엔진을 Tauri 2 + Rust로 통합한다. Python/PySide6/PaddleOCR
+구현은 새 배포에서 제거하고 Git 이력으로만 보존한다. 전환 전 하이브리드 기준점은 커밋
+`6d3839d`이며 작업 브랜치는 `feature/full-rust-engine`이다.
 
-OCR은 이미지 번역과 화면 기반 보조 인식에 필요한 **기본 엔진 기능**으로 유지한다.
-최종 구조에서는 Rust가 OCR 모델 세션, 전·후처리와 자원 생명주기를 직접 관리한다.
-Hy-MT2의 GGUF 모델과 `llama.cpp` 실행 파일은 Python 의존성이 아닌 네이티브 자원이므로,
-Rust가 프로세스와 HTTP 세션을 직접 관리한다.
+설정 UI는 Tauri WebView이므로 HTML/CSS/JavaScript를 사용한다. “Rust 완전 전환”의 범위는
+앱 기능, 상태, 네이티브 통합, 번역/OCR 엔진, 실행·빌드·배포 경로이며 UI 마크업 자체를 Rust로
+재작성한다는 뜻은 아니다.
 
 ## 최종 구조
 
 ```text
-Tauri WebView 설정 UI
-  ↕ Tauri command / event
+Tauri WebView
+  ↕ command / event
 Rust 앱·엔진
-  ├─ 단일 인스턴스, 창, 트레이, 단축키
-  ├─ 설정·상태·SQLite 번역 캐시
-  ├─ Discord 프로세스·CDP WebSocket·DOM 변경
-  ├─ Hy-MT2/llama.cpp·구독 CLI·DeepL 번역기
-  ├─ 이미지 캡처·OCR 모델·텍스트 합성
-  └─ 업데이트·플랫폼 별 자원 관리
+  ├─ 창·트레이·단축키·설정
+  ├─ Discord 프로세스·CDP·DOM
+  ├─ Hy-MT2/llama.cpp·구독 CLI·DeepL
+  ├─ OCR·이미지 합성
+  ├─ SQLite 캐시
+  └─ 업데이트·플랫폼 자원
 ```
 
-전환 중에만 기존 JSON Lines 사이드카를 호환 경계로 사용한다. 각 Rust 모듈의
-동등 기능과 회귀 테스트가 확보되면 해당 Python 요청을 제거한다. 최종 배포에서는
-사이드카 프로토콜과 Python 프로세스가 존재하지 않는다.
+JSON Lines Python 사이드카와 `.venv`, PyInstaller, Paddle 런타임은 더 이상 존재하지 않는다.
 
-## 기능 소유권
+## 단계별 기록
 
-| 영역 | 전환 전 | 전환 완료 |
+| 단계 | 결과 | 대표 커밋 |
 |---|---|---|
-| 설정창·트레이·단일 인스턴스 | Tauri/Rust | Tauri/Rust |
-| 설정 저장·호환 변환 | Python | Rust |
-| Discord 실행·재시작 | Python | Rust |
-| CDP 연결·DOM 반영 | Python | Rust |
-| Hy-MT2·llama.cpp 관리 | Python | Rust |
-| 구독 CLI·DeepL 번역 | Python | Rust |
-| 이미지 OCR | Python/PaddleOCR | Rust/네이티브 모델 런타임 |
-| 번역 캐시 | Python/SQLite | Rust/SQLite |
-| 업데이트·배포 | Python 구현 | Rust/Tauri |
+| 하이브리드 기준점 | 복구 가능한 기준 커밋 고정 | `6d3839d` |
+| 설정·상태 | Rust 설정 저장, 이전, 상태 계약 | `7cecdf5` |
+| 업데이트·Discord | 업데이트와 디버그 포트 프로세스 제어 | `d95ad00` |
+| 캐시 | Rust SQLite + 메모리 LRU | `929c779` |
+| CDP·DOM | Rust WebSocket, 스냅샷, 적용, 복원 | `cbedd77`, `2d6edbb` |
+| 번역 | 언어 감지, Hy-MT2, 품질 복구, 구독 CLI | `414bda8`~`6543eba` |
+| OCR 기반 | 네이티브 MNN OCR, 고정 모델 검증 | `f814d45`, `e92f4e1` |
+| 이미지 번역 | DOM 버튼, OCR, 번역, PNG 합성 | `9217a7b` |
+| Python 제거 | 소스·테스트·패키징을 Rust 단일 경로로 정리 | 완료 |
 
-## 단계와 커밋 경계
+## 완료 조건
 
-1. **기준점 고정**: 하이브리드 상태를 별도 브랜치와 커밋으로 보존한다.
-2. **Rust 기반 이전**: 설정, 상태, 캐시, 업데이트, Discord 프로세스 제어를 이전한다.
-3. **DOM 이전**: CDP WebSocket, DOM 감시, 언어 감지, 번역 표시/복원을 이전한다.
-4. **번역기 이전**: Hy-MT2/llama.cpp, 구독 CLI, DeepL, 보호 텍스트와 재시도 정책을 이전한다.
-5. **OCR 이전**: 이미지 다운로드·전처리·텍스트 감지/인식·합성을 Rust 런타임으로 이전한다.
-6. **Python 제거**: Tauri 실행·빌드·테스트에서 Python, `.venv`, PyInstaller, Paddle 의존성을 제거한다.
-7. **배포 검증**: Windows 릴리스 빌드와 실제 Discord, Hy-MT2, OCR 시나리오를 검증한다.
+- Tauri 앱 하나로 설정, 트레이, 단축키, 번역 켜기·끄기와 종료가 가능하다.
+- 메시지·채널 DOM 번역, 언어 변경, 모델 변경, 원문 복원이 Rust에서 동작한다.
+- Hy-MT2 예열 유지와 즉시 VRAM 반환을 Rust가 관리한다.
+- 이미지 OCR과 번역 이미지 합성이 Python 없이 동작한다.
+- 최초 동의와 15초 Discord 재시작 흐름이 Rust 상태로 관리된다.
+- 실행·빌드·패키징 경로가 `python`, `.venv`, PyInstaller를 참조하지 않는다.
+- 웹 테스트, Rust 테스트, Clippy, Windows 릴리스 빌드를 통과한다.
+- 릴리스 실행 중 Python 프로세스가 생성되지 않는다.
 
-각 단계는 포팅한 Python 테스트에 대응하는 Rust 테스트, 웹 상태 테스트, Clippy와
-해당 실행 경로 검증을 통과한 뒤 별도 커밋으로 마감한다.
+## 롤백
 
-## 전환 완료 조건
-
-- Tauri 앱 하나만 실행해 설정, 트레이, 번역 켜기·끄기와 종료가 가능하다.
-- 실시간 DOM 번역, Hy-MT2 예열/VRAM 반환, 이미지 OCR을 기존 설정과 함께 사용할 수 있다.
-- Discord 디버그 렌더러가 없으면 최초 1회 동의 후 15초 안내와 안전한 자동 재시작이 동작한다.
-- 엔진 종료·비정상 종료가 고아 프로세스나 중복 설정창을 만들지 않는다.
-- Windows 설치·업데이트와 macOS용 네이티브 자원 경로가 Tauri 번들 규칙으로 정의된다.
-- 배포 실행 경로에서 `python`, `.venv`, `discord_translate_overlay.sidecar`를 참조하지 않는다.
-- 웹 상태 테스트, Rust 단위/통합 테스트, Clippy와 실제 Tauri 릴리스 빌드가 통과한다.
-
-## 원칙
-
-- 기능을 전환 중이라는 이유로 OCR을 숨기거나 제거하지 않는다.
-- 이전 중 기존 JSON Lines 계약은 기능 단위로 제거하고, 새 내부 계약은 Rust 타입으로 표현한다.
-- 네이티브 실행 파일과 모델은 Rust가 경로, 프로세스, 타임아웃, 종료를 소유한다.
-- macOS 지원을 약속하기 전 Apple Silicon 실제 기기에서 Discord, Metal, OCR, 서명·공증을 검증한다.
-- 전환 기간에도 기존 설정 파일과 번역 캐시를 읽을 수 있어야 한다.
+작업은 기능 단위 커밋으로 나뉘어 있다. 문제가 발견되면 전체 저장소를 지우거나 강제로
+초기화하지 않고, 필요한 커밋을 revert하거나 하이브리드 기준점 `6d3839d`에서 별도 브랜치를
+만들어 비교한다.

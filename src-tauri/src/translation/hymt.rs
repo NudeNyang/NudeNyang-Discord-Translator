@@ -245,6 +245,12 @@ impl HyMtTranslator {
         if model_is_verified(&self.model_path, self.model)? {
             return Ok(());
         }
+        if bundled_model_path(self.model).as_deref() == Some(self.model_path.as_path()) {
+            return Err(format!(
+                "앱에 포함된 {} 모델의 무결성 검증에 실패했어. 앱을 다시 설치해줘.",
+                self.model.label
+            ));
+        }
         if self.model_path.exists() {
             fs::remove_file(&self.model_path)
                 .map_err(|error| format!("손상된 Hy-MT2 모델을 삭제하지 못했어: {error}"))?;
@@ -689,11 +695,42 @@ fn default_cache_root() -> PathBuf {
 }
 
 fn default_model_path(model: HyMtModel) -> PathBuf {
+    if let Some(path) = bundled_model_path(model) {
+        return path;
+    }
     default_cache_root()
         .join("models")
         .join("hy-mt2")
         .join(model.key)
         .join(model.filename)
+}
+
+fn bundled_model_path(model: HyMtModel) -> Option<PathBuf> {
+    let executable = env::current_exe().ok()?;
+    let parent = executable.parent()?;
+    let adjacent = parent
+        .join("runtime")
+        .join("models")
+        .join("hy-mt2")
+        .join(model.key)
+        .join(model.filename);
+    if adjacent.is_file() {
+        return Some(adjacent);
+    }
+    #[cfg(target_os = "macos")]
+    if let Some(contents) = parent.parent() {
+        let resource = contents
+            .join("Resources")
+            .join("runtime")
+            .join("models")
+            .join("hy-mt2")
+            .join(model.key)
+            .join(model.filename);
+        if resource.is_file() {
+            return Some(resource);
+        }
+    }
+    None
 }
 
 fn default_server_log_path(model: HyMtModel) -> PathBuf {
@@ -766,8 +803,8 @@ fn model_is_verified(path: &Path, model: HyMtModel) -> Result<bool, String> {
     if actual != model.expected_sha256 {
         return Ok(false);
     }
-    fs::write(marker, &actual)
-        .map_err(|error| format!("Hy-MT2 검증 표식을 저장하지 못했어: {error}"))?;
+    // 번들 내부 모델은 읽기 전용일 수 있다. 해시가 맞으면 표식 저장 실패는 무시한다.
+    let _ = fs::write(marker, &actual);
     Ok(true)
 }
 

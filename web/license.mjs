@@ -696,10 +696,9 @@ Apache License 2.0이 별도로 적용된다. 각 모델의 공식 라이선스 
 | Hy-MT2 1.8B GGUF | 기본 로컬 번역 모델 | Apache-2.0, Copyright (C) 2026 Tencent, <https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF> |
 | Hy-MT2 7B GGUF | 품질 우선 로컬 번역 모델 | Apache-2.0, Copyright (C) 2026 Tencent, <https://huggingface.co/tencent/Hy-MT2-7B-GGUF> |
 | llama.cpp | GGUF 추론 서버 | MIT, <https://github.com/ggml-org/llama.cpp> |
-| PaddleOCR | 화면 문자 검출 및 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
-| PaddlePaddle | OCR 추론 런타임 | Apache-2.0, <https://github.com/PaddlePaddle/Paddle> |
-| PySide6 / Qt | 전환기 레거시 UI와 오버레이 | LGPL-3.0/GPL/상용 선택, <https://doc.qt.io/qtforpython-6/licenses.html> |
-| dxcam | Windows DXGI 캡처 | MIT, <https://github.com/ra1nty/DXcam> |
+| ocr-rs | Rust OCR 전·후처리와 MNN 바인딩 | Apache-2.0, <https://github.com/zibo-chen/rust-paddle-ocr> |
+| MNN | 네이티브 OCR 추론 런타임 | Apache-2.0, <https://github.com/alibaba/MNN> |
+| PaddleOCR 모델 | PP-OCRv6 감지·인식 및 한국어 PP-OCRv5 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
 
 DeepL은 모델이나 SDK를 번들하지 않고 사용자가 제공한 API 키로 공식 HTTP API를 호출한다.
 사용자는 DeepL의 별도 서비스 약관과 사용량 제한을 따른다.

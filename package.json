@@ -5,6 +5,7 @@
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
+    "test": "npm run test:web",
     "test:web": "node --test web/test/*.test.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

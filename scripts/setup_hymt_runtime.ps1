@@ -16,4 +16,4 @@ if ($LASTEXITCODE -ne 0) {
     throw "llama.cpp 설치에 실패했어(exit code: $LASTEXITCODE)."
 }
 
-Write-Host "설치가 끝났어. 실행 중인 오버레이를 완전히 종료한 뒤 다시 켜줘."
+Write-Host "설치가 끝났어. 실행 중인 Nude Translator를 완전히 종료한 뒤 다시 켜줘."
