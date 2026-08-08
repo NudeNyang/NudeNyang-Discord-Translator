@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod config;
+
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -12,6 +14,8 @@ use serde_json::{json, Value};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, State, WindowEvent};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+
+use config::{AppConfig, ConfigStore};
 
 #[derive(Clone, Default)]
 struct EngineClient {
@@ -190,16 +194,17 @@ async fn engine_health(engine: State<'_, EngineClient>) -> Result<Value, String>
 }
 
 #[tauri::command]
-async fn settings_get(engine: State<'_, EngineClient>) -> Result<Value, String> {
-    call_engine(engine.inner().clone(), "settings-get", Value::Null).await
+fn settings_get(config: State<'_, ConfigStore>) -> Result<AppConfig, String> {
+    config.get()
 }
 
 #[tauri::command]
 async fn settings_update(
     app: AppHandle,
     engine: State<'_, EngineClient>,
+    config: State<'_, ConfigStore>,
     patch: Value,
-) -> Result<Value, String> {
+) -> Result<AppConfig, String> {
     let shortcut = patch
         .get("hotkeys")
         .and_then(|hotkeys| hotkeys.get("toggle_translation"))
@@ -210,12 +215,23 @@ async fn settings_update(
     } else {
         None
     };
+    let previous_config = config.get()?;
+    let updated = match config.update(patch.clone()) {
+        Ok(updated) => updated,
+        Err(error) => {
+            if let Some(previous) = previous {
+                let _ = replace_toggle_shortcut(&app, &previous);
+            }
+            return Err(error);
+        }
+    };
     match call_engine(engine.inner().clone(), "settings-update", patch).await {
-        Ok(config) => {
-            let _ = app.emit("settings-changed", config.clone());
-            Ok(config)
+        Ok(_) => {
+            let _ = app.emit("settings-changed", updated.clone());
+            Ok(updated)
         }
         Err(error) => {
+            let _ = config.replace(previous_config);
             if let Some(previous) = previous {
                 let _ = replace_toggle_shortcut(&app, &previous);
             }
@@ -228,14 +244,20 @@ async fn settings_update(
 async fn translation_set_enabled(
     app: AppHandle,
     engine: State<'_, EngineClient>,
+    config: State<'_, ConfigStore>,
     enabled: bool,
 ) -> Result<Value, String> {
+    let previous_config = config.get()?;
+    config.update(json!({"enabled": enabled}))?;
     let status = call_engine(
         engine.inner().clone(),
         "translation-set-enabled",
         json!({"enabled": enabled}),
     )
-    .await?;
+    .await
+    .inspect_err(|_| {
+        let _ = config.replace(previous_config);
+    })?;
     let _ = app.emit("translation-state-changed", status.clone());
     Ok(status)
 }
@@ -243,10 +265,21 @@ async fn translation_set_enabled(
 #[tauri::command]
 async fn runtime_status(
     engine: State<'_, EngineClient>,
+    config: State<'_, ConfigStore>,
     shortcut: State<'_, ShortcutConfig>,
 ) -> Result<Value, String> {
     let mut status = call_engine(engine.inner().clone(), "runtime-status", Value::Null).await?;
     if let Some(object) = status.as_object_mut() {
+        let current_config = config.get()?;
+        object.insert("enabled".to_string(), Value::Bool(current_config.enabled));
+        object.insert(
+            "targetLanguage".to_string(),
+            Value::String(current_config.target_language),
+        );
+        object.insert(
+            "configuredTranslator".to_string(),
+            Value::String(current_config.translator),
+        );
         let configured = shortcut
             .toggle_translation
             .lock()
@@ -523,6 +556,7 @@ fn create_tray(app: &tauri::App) -> tauri::Result<()> {
 fn main() {
     let engine = EngineClient::default();
     let shutdown_engine = engine.clone();
+    let config = ConfigStore::load_default().expect("Nude Translator 설정을 읽지 못했어");
     let app = tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -539,6 +573,7 @@ fn main() {
         }))
         .manage(LifecycleState::default())
         .manage(ShortcutConfig::default())
+        .manage(config)
         .manage(engine)
         .setup(|app| {
             create_tray(app)?;
@@ -547,18 +582,9 @@ fn main() {
             // 키 상태 폴링으로 동작시켜 설정 저장과 모델 변경이 막히지 않게 해.
             let _ = replace_toggle_shortcut(&handle, "F12");
             start_fallback_shortcut_poller(handle.clone());
-            tauri::async_runtime::spawn(async move {
-                let client = handle.state::<EngineClient>().inner().clone();
-                if let Ok(config) = call_engine(client, "settings-get", Value::Null).await {
-                    if let Some(shortcut) = config
-                        .get("hotkeys")
-                        .and_then(|hotkeys| hotkeys.get("toggle_translation"))
-                        .and_then(Value::as_str)
-                    {
-                        let _ = replace_toggle_shortcut(&handle, shortcut);
-                    }
-                }
-            });
+            if let Ok(config) = handle.state::<ConfigStore>().get() {
+                let _ = replace_toggle_shortcut(&handle, &config.hotkeys.toggle_translation);
+            }
             Ok(())
         })
         .on_window_event(|window, event| {
