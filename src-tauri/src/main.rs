@@ -6,6 +6,7 @@ mod config;
 mod discord;
 pub mod dom;
 mod engine;
+pub mod image_translation;
 pub mod language;
 pub mod ocr;
 pub mod translation;

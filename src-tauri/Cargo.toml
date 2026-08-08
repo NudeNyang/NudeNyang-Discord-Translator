@@ -10,11 +10,14 @@ repository = "https://github.com/NudeNyang/Nude-Translator"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+ab_glyph = "0.2"
+base64 = "0.22"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 regex = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 fs2 = "0.4"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+imageproc = "0.25"
 ocr-rs = { path = "../vendor/ocr-rs" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

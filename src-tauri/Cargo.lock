@@ -2719,8 +2719,11 @@ dependencies = [
 name = "nude-translator-tauri"
 version = "0.2.0"
 dependencies = [
+ "ab_glyph",
+ "base64 0.22.1",
  "fs2",
  "image",
+ "imageproc",
  "ocr-rs",
  "regex",
  "reqwest 0.12.28",

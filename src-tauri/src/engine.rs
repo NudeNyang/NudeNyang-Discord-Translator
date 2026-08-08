@@ -4,12 +4,20 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine as _;
 use serde::Serialize;
+use serde_json::json;
 
 use crate::cache::TranslationCache;
 use crate::cdp::{discord_target, CdpClient};
 use crate::config::{default_config_path, AppConfig};
 use crate::dom::{apply_script, parse_snapshot, DomChange, DomPart, SNAPSHOT_SCRIPT};
+use crate::image_translation::{
+    apply_image_error_script, apply_image_result_script, fetch_image_data_script,
+    image_capture_info_script, parse_image_capture_info, parse_image_data, parse_image_requests,
+    restore_images_script, ImageTranslationOutcome, ImageTranslationProcessor, IMAGE_UI_SCRIPT,
+};
 use crate::language::Language;
 use crate::translation::{
     DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, OriginalTranslator,
@@ -21,6 +29,7 @@ const MAX_BATCH_ITEMS: usize = 32;
 
 type Locator = (String, String, usize);
 type PendingKey = (u64, String, String, usize, String);
+type ImagePendingKey = (u64, String);
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,8 +91,17 @@ struct TranslationBatch {
     parts: Vec<DomPart>,
 }
 
+struct ImageTranslationBatch {
+    generation: u64,
+    target: Language,
+    image_id: String,
+    source_key: String,
+    image_bytes: Vec<u8>,
+}
+
 enum WorkerCommand {
     Translate(TranslationBatch),
+    TranslateImage(ImageTranslationBatch),
     Activate {
         generation: u64,
         name: String,
@@ -100,6 +118,13 @@ enum WorkerResult {
         target: Language,
         parts: Vec<DomPart>,
         values: Result<Vec<String>, String>,
+    },
+    ImageTranslated {
+        generation: u64,
+        target: Language,
+        image_id: String,
+        source_key: String,
+        outcome: Result<ImageTranslationOutcome, String>,
     },
     Activated {
         generation: u64,
@@ -188,6 +213,7 @@ fn run_controller(
     let mut client: Option<CdpClient> = None;
     let mut states: HashMap<Locator, PartState> = HashMap::new();
     let mut pending: HashSet<PendingKey> = HashSet::new();
+    let mut image_pending: HashSet<ImagePendingKey> = HashSet::new();
     let mut generation = 0_u64;
     let mut preparation_generation = 0_u64;
     let mut consecutive_connection_failures = 0_u8;
@@ -224,6 +250,7 @@ fn run_controller(
                             &mut client,
                             &mut states,
                             &mut pending,
+                            &mut image_pending,
                             &mut generation,
                         );
                     }
@@ -249,8 +276,9 @@ fn run_controller(
                         }
                     }
                     if enabled_changed && !config.enabled {
-                        restore(&mut client, &states);
+                        restore(&mut client, &states, false);
                         pending.clear();
+                        image_pending.clear();
                         generation += 1;
                         if !config.keep_local_model_warm {
                             let _ = worker_tx.send(WorkerCommand::Release);
@@ -270,8 +298,9 @@ fn run_controller(
                             }
                         });
                         if !enabled {
-                            restore(&mut client, &states);
+                            restore(&mut client, &states, false);
                             pending.clear();
+                            image_pending.clear();
                             generation += 1;
                             consecutive_connection_failures = 0;
                             connection_issue_reported = false;
@@ -333,6 +362,7 @@ fn run_controller(
             &mut client,
             &mut states,
             &mut pending,
+            &mut image_pending,
             &mut generation,
             preparation_generation,
             target,
@@ -362,6 +392,14 @@ fn run_controller(
                     generation,
                     target,
                     &worker_tx,
+                )?;
+                scan_images(
+                    client.as_mut().expect("connected CDP client"),
+                    &mut image_pending,
+                    generation,
+                    target,
+                    &worker_tx,
+                    &status,
                 )?;
             }
             Ok(())
@@ -397,7 +435,7 @@ fn run_controller(
         }
     }
 
-    restore(&mut client, &states);
+    restore(&mut client, &states, false);
     let _ = worker_tx.send(WorkerCommand::Stop);
     if let Some(worker) = worker {
         let _ = worker.join();
@@ -405,6 +443,118 @@ fn run_controller(
     if let Some(mut client) = client {
         client.close();
     }
+}
+
+fn scan_images(
+    client: &mut CdpClient,
+    pending: &mut HashSet<ImagePendingKey>,
+    generation: u64,
+    target: Language,
+    worker: &mpsc::Sender<WorkerCommand>,
+    status: &Arc<Mutex<RuntimeStatus>>,
+) -> Result<(), String> {
+    let requests = parse_image_requests(client.evaluate(IMAGE_UI_SCRIPT, false)?)?;
+    for request in requests.into_iter().take(2) {
+        let pending_key = (generation, request.id.clone());
+        if request.id.is_empty() || pending.contains(&pending_key) {
+            continue;
+        }
+        let image_bytes = match fetch_image_bytes(client, &request.id) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                client.evaluate(&apply_image_error_script(&request.id, &error)?, false)?;
+                update_status(status, |runtime| {
+                    runtime.notice = format!("이미지를 읽지 못했어: {error}");
+                });
+                continue;
+            }
+        };
+        if image_bytes.is_empty() {
+            client.evaluate(
+                &apply_image_error_script(&request.id, "이미지 데이터가 비어 있어.")?,
+                false,
+            )?;
+            continue;
+        }
+        pending.insert(pending_key);
+        update_status(status, |runtime| {
+            runtime.notice =
+                "이미지 OCR과 번역을 처리하고 있어. 최초 실행은 모델 준비 때문에 조금 걸릴 수 있어."
+                    .to_string();
+        });
+        worker
+            .send(WorkerCommand::TranslateImage(ImageTranslationBatch {
+                generation,
+                target,
+                image_id: request.id,
+                source_key: request.source_key,
+                image_bytes,
+            }))
+            .map_err(|_| "Rust 이미지 번역 작업 스레드가 종료됐어.".to_string())?;
+    }
+    Ok(())
+}
+
+fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, String> {
+    let script = fetch_image_data_script(image_id)?;
+    if let Ok(value) = client.evaluate(&script, true) {
+        if !value.is_null() {
+            let data = parse_image_data(value)?;
+            if !data.base64.is_empty() {
+                return BASE64
+                    .decode(data.base64.as_bytes())
+                    .map_err(|error| format!("Discord 이미지 Base64를 해석하지 못했어: {error}"));
+            }
+        }
+    }
+
+    let info_value = client.evaluate(&image_capture_info_script(image_id)?, false)?;
+    if info_value.is_null() {
+        return Err("이미지 요소를 더 이상 찾을 수 없어.".to_string());
+    }
+    let info = parse_image_capture_info(info_value)?;
+    if !info.fully_visible {
+        return Err(
+            "원본을 읽을 수 없어. 이미지 전체가 보이도록 조정한 뒤 다시 시도해줘.".to_string(),
+        );
+    }
+    client.evaluate(
+        "(() => { const b=document.getElementById('nt-image-translate-button'); if(b) b.style.visibility='hidden'; })()",
+        false,
+    )?;
+    let screenshot = (|| -> Result<serde_json::Value, String> {
+        client.evaluate(
+            "new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+            true,
+        )?;
+        client.call(
+            "Page.captureScreenshot",
+            json!({
+                "format": "png",
+                "fromSurface": true,
+                "captureBeyondViewport": false,
+                "clip": {
+                    "x": info.x,
+                    "y": info.y,
+                    "width": info.width,
+                    "height": info.height,
+                    "scale": 1
+                }
+            }),
+        )
+    })();
+    let _ = client.evaluate(
+        "(() => { const b=document.getElementById('nt-image-translate-button'); if(b) b.style.visibility=''; })()",
+        false,
+    );
+    let encoded = screenshot?
+        .get("data")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "Discord 화면 캡처 결과가 비어 있어.".to_string())?
+        .to_string();
+    BASE64
+        .decode(encoded.as_bytes())
+        .map_err(|error| format!("Discord 화면 캡처 Base64를 해석하지 못했어: {error}"))
 }
 
 fn scan_dom(
@@ -464,6 +614,7 @@ fn drain_worker_results(
     client: &mut Option<CdpClient>,
     states: &mut HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
+    image_pending: &mut HashSet<ImagePendingKey>,
     generation: &mut u64,
     preparation_generation: u64,
     target: Language,
@@ -513,6 +664,59 @@ fn drain_worker_results(
                     Err(error) => update_status(status, |runtime| runtime.notice = error),
                 }
             }
+            WorkerResult::ImageTranslated {
+                generation: result_generation,
+                target: result_target,
+                image_id,
+                source_key,
+                outcome,
+            } => {
+                image_pending.remove(&(result_generation, image_id.clone()));
+                if result_generation != *generation || result_target != target {
+                    continue;
+                }
+                let Some(client) = client.as_mut() else {
+                    continue;
+                };
+                match outcome {
+                    Ok(outcome) if outcome.translated_count > 0 => {
+                        let source = format!(
+                            "data:image/png;base64,{}",
+                            BASE64.encode(&outcome.png_bytes)
+                        );
+                        if let Ok(script) =
+                            apply_image_result_script(&image_id, &source, &source_key)
+                        {
+                            let _ = client.evaluate(&script, true);
+                        }
+                        update_status(status, |runtime| {
+                            runtime.notice = if outcome.used_cache {
+                                "캐시된 이미지 번역을 적용했어.".to_string()
+                            } else {
+                                format!(
+                                    "이미지에서 {}개 글자 영역을 번역했어.",
+                                    outcome.translated_count
+                                )
+                            };
+                        });
+                    }
+                    Ok(_) => {
+                        let message = "번역할 이미지 텍스트를 찾지 못했어.";
+                        if let Ok(script) = apply_image_error_script(&image_id, message) {
+                            let _ = client.evaluate(&script, false);
+                        }
+                        update_status(status, |runtime| runtime.notice = message.to_string());
+                    }
+                    Err(error) => {
+                        if let Ok(script) = apply_image_error_script(&image_id, &error) {
+                            let _ = client.evaluate(&script, false);
+                        }
+                        update_status(status, |runtime| {
+                            runtime.notice = format!("이미지 번역에 실패했어: {error}");
+                        });
+                    }
+                }
+            }
             WorkerResult::Activated {
                 generation: activated_generation,
                 name,
@@ -520,7 +724,7 @@ fn drain_worker_results(
                 if activated_generation != preparation_generation || name != config.translator {
                     continue;
                 }
-                reset_translation_state(client, states, pending, generation);
+                reset_translation_state(client, states, pending, image_pending, generation);
                 update_status(status, |runtime| {
                     runtime.active_translator = name.clone();
                     if name == runtime.configured_translator {
@@ -562,6 +766,7 @@ fn run_translation_worker(
         }
     };
     let mut service = TranslationService::new(Box::new(OriginalTranslator), cache);
+    let mut image_processor = ImageTranslationProcessor::new();
     while let Ok(command) = commands.recv() {
         match command {
             WorkerCommand::Translate(batch) => {
@@ -572,6 +777,17 @@ fn run_translation_worker(
                     target: batch.target,
                     parts: batch.parts,
                     values,
+                });
+            }
+            WorkerCommand::TranslateImage(batch) => {
+                let outcome =
+                    image_processor.process(&batch.image_bytes, batch.target, &mut service);
+                let _ = results.send(WorkerResult::ImageTranslated {
+                    generation: batch.generation,
+                    target: batch.target,
+                    image_id: batch.image_id,
+                    source_key: batch.source_key,
+                    outcome,
                 });
             }
             WorkerCommand::Activate {
@@ -677,18 +893,21 @@ fn reset_translation_state(
     client: &mut Option<CdpClient>,
     states: &mut HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
+    image_pending: &mut HashSet<ImagePendingKey>,
     generation: &mut u64,
 ) {
-    restore(client, states);
+    restore(client, states, true);
     states.clear();
     pending.clear();
+    image_pending.clear();
     *generation += 1;
 }
 
-fn restore(client: &mut Option<CdpClient>, states: &HashMap<Locator, PartState>) {
-    if states.is_empty() {
-        return;
-    }
+fn restore(
+    client: &mut Option<CdpClient>,
+    states: &HashMap<Locator, PartState>,
+    discard_images: bool,
+) {
     let changes: Vec<DomChange> = states
         .iter()
         .map(|((kind, item_id, index), state)| DomChange {
@@ -698,8 +917,13 @@ fn restore(client: &mut Option<CdpClient>, states: &HashMap<Locator, PartState>)
             text: state.original.clone(),
         })
         .collect();
-    if let (Some(client), Ok(script)) = (client.as_mut(), apply_script(&changes)) {
-        let _ = client.evaluate(&script, false);
+    if let Some(client) = client.as_mut() {
+        if !changes.is_empty() {
+            if let Ok(script) = apply_script(&changes) {
+                let _ = client.evaluate(&script, false);
+            }
+        }
+        let _ = client.evaluate(&restore_images_script(discard_images), false);
     }
 }
 
