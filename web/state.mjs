@@ -96,6 +96,12 @@ export function resolveEnabledState(reportedEnabled, pendingEnabled) {
   return { enabled: pending, pending };
 }
 
+export function discordConnectionLabel(status = {}) {
+  if (status.cdpConnected) return "Discord 연결됨";
+  if (status.connectionIssue) return "연결 확인 필요";
+  return status.enabled ? "Discord 연결 중" : "번역 대기 중";
+}
+
 const TRANSLATOR_RUNTIME_NAMES = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",

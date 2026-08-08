@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  discordConnectionLabel,
   normalizeConfig,
   resolveEnabledState,
   restartCountdownMessage,
@@ -11,6 +12,17 @@ import {
   SUPPORTED_TARGET_LANGUAGES,
   translatorRuntimeLabel,
 } from "../state.mjs";
+
+test("disabled translation is shown as waiting instead of connecting", () => {
+  assert.equal(
+    discordConnectionLabel({ enabled: false, cdpConnected: false, connectionIssue: null }),
+    "번역 대기 중",
+  );
+  assert.equal(
+    discordConnectionLabel({ enabled: true, cdpConnected: false, connectionIssue: null }),
+    "Discord 연결 중",
+  );
+});
 
 test("shortcut capture accepts function keys and modified key combinations", () => {
   assert.equal(shortcutFromKeyboardEvent({ key: "F9" }), "F9");

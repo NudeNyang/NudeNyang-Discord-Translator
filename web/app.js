@@ -1,4 +1,5 @@
 import {
+  discordConnectionLabel,
   normalizeConfig,
   resolveEnabledState,
   restartCountdownMessage,
@@ -398,11 +399,7 @@ function updateEngineState(status) {
   const modelLabel = translatorRuntimeLabel(status);
   const hasError = Boolean(status.connectionIssue || status.translatorError);
   elements.engineState.dataset.state = ready && !hasError ? "ready" : hasError ? "error" : "loading";
-  const connectionLabel = ready
-    ? "Discord 연결됨"
-    : status.connectionIssue
-      ? "연결 확인 필요"
-      : "Discord 연결 중";
+  const connectionLabel = discordConnectionLabel(status);
   elements.engineStateLabel.textContent = ready && modelLabel
     ? `${connectionLabel} · ${modelLabel}`
     : connectionLabel;

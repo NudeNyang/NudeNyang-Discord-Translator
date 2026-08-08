@@ -21,6 +21,13 @@ pub struct DiscordProcess {
     pub executable: PathBuf,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+struct DiscordLaunchPlan {
+    program: PathBuf,
+    arguments: Vec<String>,
+    current_dir: PathBuf,
+}
+
 pub fn current_process() -> Option<DiscordProcess> {
     let mut system = System::new();
     system.refresh_processes_specifics(
@@ -71,22 +78,16 @@ pub fn restart(expected_process_id: Option<u32>, port: u16) -> Result<DiscordPro
         return Err("Discord 설치 경로를 찾지 못했어.".to_string());
     }
     stop_matching_processes(&executable)?;
-    let child = Command::new(&executable)
-        .args(discord_debug_arguments(port))
-        .current_dir(
-            executable
-                .parent()
-                .ok_or_else(|| "Discord 설치 폴더를 찾지 못했어.".to_string())?,
-        )
+    let launch = discord_launch_plan(&executable, port)?;
+    Command::new(&launch.program)
+        .args(&launch.arguments)
+        .current_dir(&launch.current_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|error| format!("Discord를 디버그 모드로 실행하지 못했어: {error}"))?;
-    Ok(DiscordProcess {
-        process_id: child.id(),
-        executable,
-    })
+    wait_for_restarted_process(&executable, Duration::from_secs(15))
 }
 
 pub fn wait_for_debug_port(port: u16, timeout: Duration) -> Result<(), String> {
@@ -181,6 +182,62 @@ fn installed_executable_in(local_app_data: &Path) -> Option<PathBuf> {
     None
 }
 
+fn discord_launch_plan(executable: &Path, port: u16) -> Result<DiscordLaunchPlan, String> {
+    let app_dir = executable
+        .parent()
+        .ok_or_else(|| "Discord 설치 폴더를 찾지 못했어.".to_string())?;
+    let executable_name = executable
+        .file_name()
+        .ok_or_else(|| "Discord 실행 파일 이름을 찾지 못했어.".to_string())?
+        .to_string_lossy()
+        .into_owned();
+    let root_dir = app_dir.parent().unwrap_or(app_dir);
+    let updater = root_dir.join("Update.exe");
+    let debug_arguments = discord_debug_arguments(port);
+
+    if updater.is_file() {
+        return Ok(DiscordLaunchPlan {
+            program: updater,
+            arguments: vec![
+                "--processStart".to_string(),
+                executable_name,
+                "--process-start-args".to_string(),
+                debug_arguments.join(" "),
+            ],
+            current_dir: root_dir.to_path_buf(),
+        });
+    }
+
+    Ok(DiscordLaunchPlan {
+        program: executable.to_path_buf(),
+        arguments: debug_arguments.into_iter().collect(),
+        current_dir: app_dir.to_path_buf(),
+    })
+}
+
+fn wait_for_restarted_process(
+    executable: &Path,
+    timeout: Duration,
+) -> Result<DiscordProcess, String> {
+    let expected_name = executable
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if let Some(process) = current_process().filter(|process| {
+            process
+                .executable
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(&expected_name))
+        }) {
+            return Ok(process);
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
+    Err("Discord 재실행 요청은 보냈지만 새 프로세스를 찾지 못했어.".to_string())
+}
+
 fn discord_debug_arguments(port: u16) -> [String; 2] {
     [
         "--force-renderer-accessibility".to_string(),
@@ -196,7 +253,11 @@ fn is_discord_name(name: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{discord_debug_arguments, installed_executable_in, is_discord_name};
+    #[cfg(target_os = "windows")]
+    use super::{current_process, restart, wait_for_debug_port};
+    use super::{
+        discord_debug_arguments, discord_launch_plan, installed_executable_in, is_discord_name,
+    };
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -209,6 +270,35 @@ mod tests {
                 "--remote-debugging-port=9222".to_string()
             ]
         );
+    }
+
+    #[test]
+    fn squirrel_updater_forwards_debug_arguments_to_discord() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("nude-translator-launch-{nonce}"));
+        let app = root.join("app-1.0.0");
+        fs::create_dir_all(&app).unwrap();
+        fs::write(root.join("Update.exe"), b"test").unwrap();
+        let executable = app.join("Discord.exe");
+        fs::write(&executable, b"test").unwrap();
+
+        let plan = discord_launch_plan(&executable, 9222).expect("launch plan");
+
+        assert_eq!(plan.program, root.join("Update.exe"));
+        assert_eq!(plan.current_dir, root);
+        assert_eq!(
+            plan.arguments,
+            [
+                "--processStart".to_string(),
+                "Discord.exe".to_string(),
+                "--process-start-args".to_string(),
+                "--force-renderer-accessibility --remote-debugging-port=9222".to_string(),
+            ]
+        );
+        let _ = fs::remove_dir_all(plan.current_dir);
     }
 
     #[test]
@@ -233,5 +323,15 @@ mod tests {
         let executable = installed_executable_in(&root).expect("installed Discord");
         assert!(executable.to_string_lossy().contains("app-2.0.0"));
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    #[ignore = "실행 중인 Discord를 종료하고 디버그 포트로 실제 재시작해"]
+    fn live_restart_opens_the_discord_debug_port() {
+        let expected_process_id = current_process().map(|process| process.process_id);
+        let restarted = restart(expected_process_id, 9222).expect("restart Discord");
+        assert!(restarted.process_id > 0);
+        wait_for_debug_port(9222, std::time::Duration::from_secs(30)).expect("Discord debug port");
     }
 }
