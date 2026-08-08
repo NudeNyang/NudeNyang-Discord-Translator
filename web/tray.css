@@ -166,24 +166,28 @@ button:focus-visible {
   padding-bottom: 0;
 }
 
-.language-view {
+.language-view,
+.model-view {
   padding-top: 5px;
   padding-bottom: 5px;
 }
 
-.language-option[aria-pressed="true"] {
+.language-option[aria-pressed="true"],
+.model-option[aria-pressed="true"] {
   background: color-mix(in srgb, var(--accent) 17%, transparent);
   color: var(--accent-strong);
 }
 
-.language-check {
+.language-check,
+.model-check {
   visibility: hidden;
   color: var(--accent-strong);
   font-size: 14px;
   font-weight: 750;
 }
 
-.language-option[aria-pressed="true"] .language-check {
+.language-option[aria-pressed="true"] .language-check,
+.model-option[aria-pressed="true"] .model-check {
   visibility: visible;
 }
 
@@ -200,6 +204,12 @@ button:focus-visible {
 }
 
 .language-view .menu-row.compact {
+  min-height: 37px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.model-view .menu-row.compact {
   min-height: 37px;
   padding-top: 6px;
   padding-bottom: 6px;

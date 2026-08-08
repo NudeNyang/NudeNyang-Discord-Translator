@@ -18,7 +18,9 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, State, WindowEvent};
+use tauri::{
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WindowEvent,
+};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 use config::{AppConfig, ConfigStore};
@@ -210,6 +212,38 @@ fn main_window_hide(app: AppHandle) {
 #[tauri::command]
 fn tray_menu_hide(app: AppHandle) {
     hide_tray_menu(&app);
+}
+
+#[tauri::command]
+fn tray_menu_set_height(app: AppHandle, height: u32) -> Result<(), String> {
+    let window = app
+        .get_webview_window("tray-menu")
+        .ok_or_else(|| "트레이 메뉴 창을 찾지 못했어.".to_string())?;
+    let scale = window
+        .scale_factor()
+        .map_err(|error| format!("트레이 화면 배율을 확인하지 못했어: {error}"))?;
+    let current_size = window
+        .outer_size()
+        .map_err(|error| format!("트레이 메뉴 크기를 확인하지 못했어: {error}"))?;
+    let current_position = window
+        .outer_position()
+        .map_err(|error| format!("트레이 메뉴 위치를 확인하지 못했어: {error}"))?;
+    let physical_height = ((height.clamp(200, 500) as f64) * scale).round() as u32;
+    let bottom = current_position.y + current_size.height as i32;
+    let next_y = bottom - physical_height as i32;
+    window
+        .set_size(Size::Physical(PhysicalSize::new(
+            current_size.width,
+            physical_height,
+        )))
+        .map_err(|error| format!("트레이 메뉴 크기를 바꾸지 못했어: {error}"))?;
+    window
+        .set_position(Position::Physical(PhysicalPosition::new(
+            current_position.x,
+            next_y,
+        )))
+        .map_err(|error| format!("트레이 메뉴 위치를 맞추지 못했어: {error}"))?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -491,6 +525,7 @@ fn main() {
             main_window_show,
             main_window_hide,
             tray_menu_hide,
+            tray_menu_set_height,
             tray_open_settings,
             tray_request_translation_toggle,
             application_exit

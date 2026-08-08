@@ -218,6 +218,7 @@ fn run_controller(
     let mut preparation_generation = 0_u64;
     let mut consecutive_connection_failures = 0_u8;
     let mut connection_issue_reported = false;
+    let mut image_ui_needs_cleanup = true;
     let mut stopped = false;
     let mut pending_control = None;
 
@@ -253,6 +254,7 @@ fn run_controller(
                             &mut image_pending,
                             &mut generation,
                         );
+                        image_ui_needs_cleanup = client.is_none();
                     }
                     config = updated;
                     update_status(&status, |runtime| {
@@ -277,6 +279,7 @@ fn run_controller(
                     }
                     if enabled_changed && !config.enabled {
                         restore(&mut client, &states, false);
+                        image_ui_needs_cleanup = client.is_none();
                         pending.clear();
                         image_pending.clear();
                         generation += 1;
@@ -299,6 +302,7 @@ fn run_controller(
                         });
                         if !enabled {
                             restore(&mut client, &states, false);
+                            image_ui_needs_cleanup = client.is_none();
                             pending.clear();
                             image_pending.clear();
                             generation += 1;
@@ -377,6 +381,7 @@ fn run_controller(
                 let mut connected = CdpClient::new(target.websocket_url);
                 connected.connect()?;
                 client = Some(connected);
+                image_ui_needs_cleanup = true;
             }
             consecutive_connection_failures = 0;
             connection_issue_reported = false;
@@ -401,6 +406,13 @@ fn run_controller(
                     &worker_tx,
                     &status,
                 )?;
+                image_ui_needs_cleanup = true;
+            } else if image_ui_needs_cleanup {
+                client
+                    .as_mut()
+                    .expect("connected CDP client")
+                    .evaluate(&restore_images_script(false), false)?;
+                image_ui_needs_cleanup = false;
             }
             Ok(())
         })();
@@ -417,6 +429,7 @@ fn run_controller(
             if let Some(mut disconnected) = client.take() {
                 disconnected.close();
             }
+            image_ui_needs_cleanup = true;
             update_status(&status, |runtime| runtime.cdp_connected = false);
         }
 
@@ -969,6 +982,41 @@ mod tests {
         assert_eq!(poll_interval(0), Duration::from_millis(500));
         assert_eq!(poll_interval(100), Duration::from_millis(50));
         assert!(translator_label("chatgpt").contains("Codex"));
+    }
+
+    #[test]
+    fn applying_a_new_translator_replaces_the_active_rust_backend() {
+        let mut config = AppConfig::default();
+        config.enabled = false;
+        config.translator = "mock".to_string();
+        config.keep_local_model_warm = false;
+        let engine = RustEngine::start(config.clone());
+
+        wait_for_translator(&engine, "mock");
+        config.translator = "original".to_string();
+        engine.apply_config(config).unwrap();
+        wait_for_translator(&engine, "original");
+
+        let status = engine.status().unwrap();
+        engine.stop();
+        assert_eq!(status.configured_translator, "original");
+        assert_eq!(status.active_translator, "original");
+        assert_eq!(status.translator_state, "ready");
+    }
+
+    fn wait_for_translator(engine: &RustEngine, expected: &str) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        loop {
+            let status = engine.status().unwrap();
+            if status.active_translator == expected && status.translator_state == "ready" {
+                return;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "{expected} 번역기로 전환되지 않았어: {status:?}"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
     }
 
     #[test]

@@ -35,6 +35,13 @@
             </span>
             <span class="menu-value arrow-value"><span id="target-language">한국어</span><b>›</b></span>
           </button>
+
+          <button class="menu-row compact" id="open-model-settings" type="button">
+            <span class="menu-copy">
+              <strong>번역 모델</strong>
+            </span>
+            <span class="menu-value arrow-value"><span id="translator-name">Hy-MT2 1.8B</span><b>›</b></span>
+          </button>
         </div>
 
         <div class="menu-group bottom-group">
@@ -63,6 +70,30 @@
         </button>
         <button class="menu-row compact language-option" data-language="zh-Hant" type="button">
           <span class="menu-copy"><strong>繁體中文</strong></span><span class="language-check" aria-hidden="true">✓</span>
+        </button>
+      </div>
+
+      <div class="menu-group model-view" id="model-view" aria-label="번역 모델 선택" hidden>
+        <button class="menu-row compact model-option" data-translator="hymt_1_8b" type="button">
+          <span class="menu-copy"><strong>Hy-MT2 1.8B Q4</strong></span><span class="model-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact model-option" data-translator="hymt_7b" type="button">
+          <span class="menu-copy"><strong>Hy-MT2 7B Q4</strong></span><span class="model-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact model-option" data-translator="chatgpt" type="button">
+          <span class="menu-copy"><strong>ChatGPT Plus/Pro</strong></span><span class="model-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact model-option" data-translator="claude" type="button">
+          <span class="menu-copy"><strong>Claude Pro/Max</strong></span><span class="model-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact model-option" data-translator="gemini" type="button">
+          <span class="menu-copy"><strong>Gemini Pro/Ultra</strong></span><span class="model-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact model-option" data-translator="deepl" type="button">
+          <span class="menu-copy"><strong>DeepL API</strong></span><span class="model-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact model-option" data-translator="mock" type="button">
+          <span class="menu-copy"><strong>Mock 테스트</strong></span><span class="model-check" aria-hidden="true">✓</span>
         </button>
       </div>
     </main>

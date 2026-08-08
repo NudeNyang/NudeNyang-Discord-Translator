@@ -33,6 +33,10 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     window.__ntImageVisibility = {};
     window.__ntImageUiInstalled = false;
   }
+  if (!window.__ntImageUiAbort || window.__ntImageUiAbort.signal.aborted) {
+    window.__ntImageUiAbort = new AbortController();
+    window.__ntImageUiInstalled = false;
+  }
   window.__ntImageRequests ||= [];
   window.__ntTranslatedImages ||= {};
   window.__ntImageVisibility ||= {};
@@ -108,7 +112,10 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
       state === 'error' ? '다시 시도' : '이미지 번역';
   };
   const show = img => {
-    if (!eligible(img)) return;
+    if (!window.__ntImageEnabled || !eligible(img)) {
+      button.style.display = 'none';
+      return;
+    }
     button.dataset.ntTarget = ensure(img);
     update(img);
     button.style.display = 'block';
@@ -127,6 +134,10 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     window.__ntImageUiInstalled = true;
     const signal = window.__ntImageUiAbort.signal;
     document.addEventListener('pointermove', event => {
+      if (!window.__ntImageEnabled) {
+        button.style.display = 'none';
+        return;
+      }
       if (window.__ntImageFrame) return;
       const x = event.clientX, y = event.clientY;
       window.__ntImageFrame = requestAnimationFrame(() => {
@@ -435,7 +446,13 @@ pub fn restore_images_script(discard: bool) -> String {
     format!(
         r##"(() => {{
           const discard={discard}; window.__ntImageEnabled=false;
-          document.getElementById('nt-image-translate-button')?.style.setProperty('display','none');
+          clearTimeout(window.__ntImageButtonTimer);
+          if (window.__ntImageFrame) cancelAnimationFrame(window.__ntImageFrame);
+          window.__ntImageFrame=0;
+          window.__ntImageUiAbort?.abort();
+          document.getElementById('nt-image-translate-button')?.remove();
+          document.getElementById('nt-image-translate-style')?.remove();
+          window.__ntImageUiInstalled=false;
           let restored=0;
           for (const img of document.querySelectorAll('img[data-nt-image-id]')) {{
             if (img.dataset.ntOriginalSrc) {{ img.src=img.dataset.ntOriginalSrc;
@@ -883,7 +900,8 @@ fn default_cache_dir() -> PathBuf {
 mod tests {
     use super::{
         apply_image_error_script, fetch_image_data_script, group_dense_text_lines,
-        parse_image_requests, ImageTranslationProcessor, OcrRecognizer,
+        parse_image_requests, restore_images_script, ImageTranslationProcessor, OcrRecognizer,
+        IMAGE_UI_SCRIPT,
     };
     use crate::cache::TranslationCache;
     use crate::language::Language;
@@ -950,6 +968,17 @@ mod tests {
         assert!(fetch.contains("\\\""));
         let error = apply_image_error_script("one", "줄1\n'줄2").unwrap();
         assert!(error.contains("\\n"));
+    }
+
+    #[test]
+    fn disabling_translation_unmounts_the_image_ui_and_allows_reinstall() {
+        let cleanup = restore_images_script(false);
+
+        assert!(cleanup.contains("window.__ntImageUiAbort?.abort()"));
+        assert!(cleanup.contains("nt-image-translate-button')?.remove()"));
+        assert!(cleanup.contains("nt-image-translate-style')?.remove()"));
+        assert!(cleanup.contains("window.__ntImageUiInstalled=false"));
+        assert!(IMAGE_UI_SCRIPT.contains("window.__ntImageUiAbort.signal.aborted"));
     }
 
     #[test]

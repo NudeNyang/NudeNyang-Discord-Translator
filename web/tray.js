@@ -9,35 +9,74 @@ const LANGUAGE_LABELS = Object.freeze({
   "zh-Hant": "繁體中文",
 });
 
+const TRANSLATOR_LABELS = Object.freeze({
+  hymt_1_8b: "Hy-MT2 1.8B",
+  hymt_7b: "Hy-MT2 7B",
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  deepl: "DeepL",
+  mock: "Mock 테스트",
+});
+
+const VIEW_HEIGHTS = Object.freeze({
+  main: 318,
+  language: 274,
+  model: 348,
+});
+
 const elements = {
   engineSummary: document.querySelector("#engine-summary"),
   translationIndicator: document.querySelector("#translation-indicator"),
   translationState: document.querySelector("#translation-state"),
   targetLanguage: document.querySelector("#target-language"),
+  translatorName: document.querySelector("#translator-name"),
   mainMenu: document.querySelector("#main-menu"),
   languageView: document.querySelector("#language-view"),
+  modelView: document.querySelector("#model-view"),
   openLabel: document.querySelector("#open-label"),
   languageOptions: [...document.querySelectorAll("[data-language]")],
+  translatorOptions: [...document.querySelectorAll("[data-translator]")],
 };
 let currentConfig = null;
+let currentStatus = null;
 let refreshing = false;
 
 function showMainView() {
   elements.mainMenu.hidden = false;
   elements.languageView.hidden = true;
+  elements.modelView.hidden = true;
   elements.openLabel.textContent = "열기";
+  resizeTray(VIEW_HEIGHTS.main);
 }
 
 function showLanguageView() {
   elements.mainMenu.hidden = true;
   elements.languageView.hidden = false;
+  elements.modelView.hidden = true;
   elements.openLabel.textContent = "뒤로";
+  resizeTray(VIEW_HEIGHTS.language);
   elements.languageOptions.find(option => option.getAttribute("aria-pressed") === "true")?.focus();
+}
+
+function showModelView() {
+  elements.mainMenu.hidden = true;
+  elements.languageView.hidden = true;
+  elements.modelView.hidden = false;
+  elements.openLabel.textContent = "뒤로";
+  resizeTray(VIEW_HEIGHTS.model);
+  elements.translatorOptions.find(option => option.getAttribute("aria-pressed") === "true")?.focus();
 }
 
 function updateLanguageSelection(language) {
   elements.languageOptions.forEach(option => {
     option.setAttribute("aria-pressed", String(option.dataset.language === language));
+  });
+}
+
+function updateTranslatorSelection(translator) {
+  elements.translatorOptions.forEach(option => {
+    option.setAttribute("aria-pressed", String(option.dataset.translator === translator));
   });
 }
 
@@ -47,6 +86,8 @@ function applyTheme(theme) {
 }
 
 function renderStatus(status, config) {
+  if (status) currentStatus = status;
+  status ||= currentStatus;
   const enabled = Boolean(status?.enabled ?? config?.enabled);
   const connected = Boolean(status?.cdpConnected);
   elements.translationIndicator.classList.toggle("enabled", enabled);
@@ -57,6 +98,17 @@ function renderStatus(status, config) {
   const targetLanguage = config?.target_language || status?.targetLanguage || "ko";
   elements.targetLanguage.textContent = LANGUAGE_LABELS[targetLanguage] || "한국어";
   updateLanguageSelection(targetLanguage);
+  const translator = config?.translator || status?.configuredTranslator || "hymt_1_8b";
+  const translatorLabel = TRANSLATOR_LABELS[translator] || translator;
+  const translatorPending = status?.configuredTranslator === translator
+    && ["queued", "preparing"].includes(status?.translatorState);
+  const translatorFailed = status?.configuredTranslator === translator
+    && status?.translatorState === "error";
+  elements.translatorName.textContent = translatorPending
+    ? `${translatorLabel} 준비 중`
+    : translatorFailed ? `${translatorLabel} 오류` : translatorLabel;
+  elements.translatorName.title = translatorLabel;
+  updateTranslatorSelection(translator);
 }
 
 async function refresh() {
@@ -86,33 +138,54 @@ async function run(command) {
   }
 }
 
+function resizeTray(height) {
+  if (invoke) void invoke("tray_menu_set_height", { height });
+}
+
 async function selectLanguage(language) {
   if (!invoke || !LANGUAGE_LABELS[language]) return;
   try {
     const updated = await invoke("settings_update", { patch: { target_language: language } });
     currentConfig = updated;
-    renderStatus(null, updated);
+    renderStatus(currentStatus, updated);
     showMainView();
   } catch {
     elements.engineSummary.textContent = "표시 언어를 바꾸지 못함";
   }
 }
 
+async function selectTranslator(translator) {
+  if (!invoke || !TRANSLATOR_LABELS[translator]) return;
+  try {
+    const updated = await invoke("settings_update", { patch: { translator } });
+    currentConfig = updated;
+    renderStatus(currentStatus, updated);
+    showMainView();
+    await refresh();
+  } catch {
+    elements.engineSummary.textContent = "번역 모델을 바꾸지 못함";
+  }
+}
+
 document.querySelector("#open-settings").addEventListener("click", () => {
-  if (!elements.languageView.hidden) showMainView();
+  if (!elements.languageView.hidden || !elements.modelView.hidden) showMainView();
   else run("tray_open_settings");
 });
 document.querySelector("#open-language-settings").addEventListener("click", showLanguageView);
+document.querySelector("#open-model-settings").addEventListener("click", showModelView);
 document.querySelector("#open-settings-secondary").addEventListener("click", () => run("tray_open_settings"));
 document.querySelector("#toggle-translation").addEventListener("click", () => run("tray_request_translation_toggle"));
 document.querySelector("#quit-app").addEventListener("click", () => run("application_exit"));
 elements.languageOptions.forEach(option => {
   option.addEventListener("click", () => selectLanguage(option.dataset.language));
 });
+elements.translatorOptions.forEach(option => {
+  option.addEventListener("click", () => selectTranslator(option.dataset.translator));
+});
 
 document.addEventListener("keydown", event => {
   if (event.key !== "Escape") return;
-  if (!elements.languageView.hidden) showMainView();
+  if (!elements.languageView.hidden || !elements.modelView.hidden) showMainView();
   else run("tray_menu_hide");
 });
 
@@ -125,7 +198,7 @@ if (listen) {
   listen("settings-changed", event => {
     currentConfig = event.payload;
     applyTheme(currentConfig.ui_theme || "system");
-    renderStatus(null, currentConfig);
+    renderStatus(currentStatus, currentConfig);
   });
 }
 showMainView();

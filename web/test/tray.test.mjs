@@ -26,7 +26,7 @@ test("saving settings hides the main window only after a successful update", () 
 });
 
 test("custom tray menu exposes the expected actions and current app palette", () => {
-  for (const label of ["실시간 번역", "표시 언어", "설정", "종료"]) {
+  for (const label of ["실시간 번역", "표시 언어", "번역 모델", "설정", "종료"]) {
     assert.match(trayMarkup, new RegExp(label));
   }
   for (const command of [
@@ -59,11 +59,41 @@ test("display language can be changed inside the tray menu", () => {
   );
 });
 
-test("tray window height hugs the menu without clipping the language list", () => {
+test("translation model can be changed inside the tray menu", () => {
+  for (const translator of [
+    "hymt_1_8b",
+    "hymt_7b",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "deepl",
+    "mock",
+  ]) {
+    assert.match(trayMarkup, new RegExp(`data-translator="${translator}"`));
+  }
+  assert.match(
+    trayScript,
+    /invoke\("settings_update", \{ patch: \{ translator \} \}\)/,
+  );
+  assert.doesNotMatch(
+    trayScript,
+    /#open-model-settings"\)\.addEventListener\("click", \(\) => run\("tray_open_settings"\)/,
+  );
+});
+
+test("tray window height hugs each menu view without clipping option lists", () => {
   const trayWindow = tauriConfig.app.windows.find(window => window.label === "tray-menu");
-  assert.equal(trayWindow.height, 274);
+  assert.equal(trayWindow.height, 318);
   assert.match(trayStyles, /\.language-view \.menu-row\.compact \{\s*min-height: 37px;/);
+  assert.match(trayStyles, /\.model-view \.menu-row\.compact \{\s*min-height: 37px;/);
   assert.match(trayStyles, /\.bottom-group \{[^}]*padding-bottom: 0;/s);
+  assert.match(trayScript, /main: 318/);
+  assert.match(trayScript, /language: 274/);
+  assert.match(trayScript, /model: 348/);
+  assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.main\)/);
+  assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.language\)/);
+  assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.model\)/);
+  assert.match(rustShell, /fn tray_menu_set_height/);
 });
 
 test("tray panel keeps a crisp border without a blurred outer shadow", () => {
