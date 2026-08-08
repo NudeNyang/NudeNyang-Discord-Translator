@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 pub mod cache;
+pub mod cdp;
 mod config;
 mod discord;
+pub mod dom;
 mod updater;
 
 use std::io::{BufRead, BufReader, Write};
