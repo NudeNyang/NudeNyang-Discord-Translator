@@ -1,13 +1,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
+mod discord;
+mod updater;
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-#[cfg(windows)]
 use std::time::Duration;
 
 use serde_json::{json, Value};
@@ -280,6 +281,12 @@ async fn runtime_status(
             "configuredTranslator".to_string(),
             Value::String(current_config.translator),
         );
+        object.insert(
+            "discordProcessId".to_string(),
+            discord::current_process()
+                .map(|process| Value::from(process.process_id))
+                .unwrap_or(Value::Null),
+        );
         let configured = shortcut
             .toggle_translation
             .lock()
@@ -297,15 +304,15 @@ async fn runtime_status(
 
 #[tauri::command]
 async fn update_check(
-    engine: State<'_, EngineClient>,
+    config: State<'_, ConfigStore>,
     current_version: String,
 ) -> Result<Value, String> {
-    call_engine(
-        engine.inner().clone(),
-        "update-check",
-        json!({"currentVersion": current_version}),
-    )
+    let repository = config.get()?.update_repository;
+    tauri::async_runtime::spawn_blocking(move || {
+        updater::check_for_update(&repository, &current_version)
+    })
     .await
+    .map_err(|error| format!("업데이트 확인 작업을 기다리지 못했어: {error}"))?
 }
 
 #[tauri::command]
@@ -313,12 +320,22 @@ async fn discord_restart(
     engine: State<'_, EngineClient>,
     expected_process_id: Option<u32>,
 ) -> Result<Value, String> {
-    call_engine(
-        engine.inner().clone(),
-        "discord-restart",
-        json!({"expectedProcessId": expected_process_id}),
+    let client = engine.inner().clone();
+    let _ = call_engine(
+        client.clone(),
+        "translation-set-enabled",
+        json!({"enabled": false}),
     )
+    .await;
+    tauri::async_runtime::spawn_blocking(move || {
+        discord::restart(expected_process_id, 9222)?;
+        discord::wait_for_debug_port(9222, Duration::from_secs(30))?;
+        Ok::<_, String>(())
+    })
     .await
+    .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했어: {error}"))??;
+    let _ = call_engine(client, "translation-set-enabled", json!({"enabled": true})).await;
+    Ok(json!({"connected": true}))
 }
 
 #[tauri::command]
