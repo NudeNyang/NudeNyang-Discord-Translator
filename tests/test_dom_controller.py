@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from queue import Queue
 
+import pytest
+
 from discord_translate_overlay.cache import TranslationCache
 from discord_translate_overlay.config import AppConfig
 from discord_translate_overlay.experimental_dom import controller as dom_module
@@ -16,6 +18,7 @@ from discord_translate_overlay.experimental_dom.controller import (
 )
 from discord_translate_overlay.models import Language
 from discord_translate_overlay.translation.base import Translator
+from discord_translate_overlay.translation.mock import MockTranslator
 
 
 class RecordingTranslator(Translator):
@@ -29,6 +32,22 @@ class RecordingTranslator(Translator):
         return text.replace("こんにちは", "안녕하세요").replace(
             "誕生日系のイベント", "생일 관련 이벤트"
         )
+
+
+class LocalLifecycleTranslator(RecordingTranslator):
+    def __init__(self) -> None:
+        super().__init__()
+        self.prepare_started = threading.Event()
+        self.close_calls = 0
+
+    def model_is_ready(self) -> bool:
+        return True
+
+    def prepare(self) -> None:
+        self.prepare_started.set()
+
+    def close(self) -> None:
+        self.close_calls += 1
 
 
 class BatchRecordingTranslator(RecordingTranslator):
@@ -57,6 +76,29 @@ def test_same_language_is_not_translated(tmp_path: Path) -> None:
 
     assert service.translate("이미 한국어야", Language.KOREAN) == "이미 한국어야"
     assert translator.calls == []
+    cache.close()
+
+
+@pytest.mark.parametrize(
+    ("target", "source_text", "expected_prefix"),
+    [
+        (Language.KOREAN, "Hello", "[ko]"),
+        (Language.JAPANESE, "안녕하세요", "[ja]"),
+        (Language.ENGLISH, "こんにちは", "[en]"),
+        (Language.CHINESE_SIMPLIFIED, "Hello", "[zh]"),
+        (Language.CHINESE_TRADITIONAL, "Hello", "[zh-Hant]"),
+    ],
+)
+def test_dom_translation_uses_every_selected_display_language(
+    tmp_path: Path,
+    target: Language,
+    source_text: str,
+    expected_prefix: str,
+) -> None:
+    cache = TranslationCache(tmp_path / f"target-{target.value}.db")
+    service = TranslationService(MockTranslator(), cache)
+
+    assert service.translate(source_text, target).startswith(expected_prefix)
     cache.close()
 
 
@@ -239,8 +281,126 @@ def test_tray_exposes_supported_translation_engines() -> None:
         "claude",
         "gemini",
         "deepl",
+        "mock",
         "original",
     }
+
+
+def test_cdp_restart_prompt_requires_two_consecutive_failures() -> None:
+    controller = dom_module.DomTranslationController.__new__(
+        dom_module.DomTranslationController
+    )
+    controller.enabled = True
+    controller.connection_issues = Queue()
+    controller._consecutive_connection_failures = 0
+    controller._connection_issue_reported = False
+
+    controller._record_connection_failure(RuntimeError("port closed"))
+    assert controller.connection_issues.empty()
+
+    controller._record_connection_failure(RuntimeError("renderer unavailable"))
+    assert controller.connection_issues.get_nowait() == "renderer unavailable"
+
+    controller._record_connection_failure(RuntimeError("duplicate"))
+    assert controller.connection_issues.empty()
+
+
+def test_cdp_restart_prompt_is_suppressed_while_translation_is_off() -> None:
+    controller = dom_module.DomTranslationController.__new__(
+        dom_module.DomTranslationController
+    )
+    controller.enabled = False
+    controller.connection_issues = Queue()
+    controller._consecutive_connection_failures = 0
+    controller._connection_issue_reported = False
+
+    controller._record_connection_failure(RuntimeError("port closed"))
+    controller._record_connection_failure(RuntimeError("still closed"))
+
+    assert controller.connection_issues.empty()
+
+
+def test_successful_cdp_connection_resets_restart_prompt_guard() -> None:
+    controller = dom_module.DomTranslationController.__new__(
+        dom_module.DomTranslationController
+    )
+    controller._consecutive_connection_failures = 2
+    controller._connection_issue_reported = True
+
+    controller._mark_connection_ready()
+
+    assert controller._consecutive_connection_failures == 0
+    assert not controller._connection_issue_reported
+
+
+def test_local_model_is_prepared_in_background_when_warm_mode_is_enabled(
+    monkeypatch, tmp_path: Path
+) -> None:
+    translator = LocalLifecycleTranslator()
+    monkeypatch.setattr(dom_module, "make_translator", lambda _config, **_kwargs: translator)
+    monkeypatch.setattr(
+        dom_module,
+        "TranslationCache",
+        lambda: TranslationCache(tmp_path / "warm-start-cache.db"),
+    )
+    controller = dom_module.DomTranslationController(
+        AppConfig(translator="hymt_7b", enabled=False, keep_local_model_warm=True)
+    )
+    try:
+        assert translator.prepare_started.wait(timeout=1.0)
+    finally:
+        controller.close()
+
+
+def test_disabling_translation_releases_local_model_when_warm_mode_is_disabled(
+    monkeypatch, tmp_path: Path
+) -> None:
+    translator = LocalLifecycleTranslator()
+    monkeypatch.setattr(dom_module, "make_translator", lambda _config, **_kwargs: translator)
+    monkeypatch.setattr(
+        dom_module,
+        "TranslationCache",
+        lambda: TranslationCache(tmp_path / "cold-toggle-cache.db"),
+    )
+    monkeypatch.setattr(dom_module, "save_config", lambda _config: None)
+    controller = dom_module.DomTranslationController(
+        AppConfig(translator="hymt_7b", enabled=True, keep_local_model_warm=False)
+    )
+    try:
+        controller._set_enabled(False)
+        assert translator.close_calls == 1
+    finally:
+        controller.close()
+
+
+def test_disabling_warm_mode_releases_model_while_translation_is_already_off(
+    monkeypatch, tmp_path: Path
+) -> None:
+    translator = LocalLifecycleTranslator()
+    monkeypatch.setattr(dom_module, "make_translator", lambda _config, **_kwargs: translator)
+    monkeypatch.setattr(
+        dom_module,
+        "TranslationCache",
+        lambda: TranslationCache(tmp_path / "cold-setting-cache.db"),
+    )
+    monkeypatch.setattr(dom_module, "save_config", lambda _config: None)
+    controller = dom_module.DomTranslationController(
+        AppConfig(translator="hymt_7b", enabled=False, keep_local_model_warm=True)
+    )
+    try:
+        assert translator.prepare_started.wait(timeout=1.0)
+        controller.request_config(
+            AppConfig(
+                translator="hymt_7b",
+                enabled=False,
+                keep_local_model_warm=False,
+            )
+        )
+        controller._consume_controls()
+
+        assert translator.close_calls == 1
+    finally:
+        controller.close()
 
 
 def test_model_switch_replaces_service_and_persists_choice(
@@ -271,6 +431,19 @@ def test_model_switch_replaces_service_and_persists_choice(
         assert saved == ["hymt_7b"]
     finally:
         controller.close()
+
+
+def test_mock_model_uses_mock_translator() -> None:
+    translator = dom_module.make_translator(AppConfig(translator="mock"))
+
+    assert translator.cache_namespace == "mock:v1"
+
+
+def test_capture_frequency_controls_dom_poll_interval() -> None:
+    assert dom_module._poll_interval_seconds(20) == pytest.approx(0.05)
+    assert dom_module._poll_interval_seconds(8) == pytest.approx(0.125)
+    assert dom_module._poll_interval_seconds(1) == pytest.approx(0.5)
+    assert dom_module._poll_interval_seconds(200) == pytest.approx(0.05)
 
 
 def test_speech_style_switch_rebuilds_translator_and_persists_choice(

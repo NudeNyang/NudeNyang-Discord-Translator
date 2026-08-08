@@ -90,3 +90,14 @@ def test_clear_unregisters_native_and_polled_bindings(monkeypatch) -> None:
 
     assert FakeUser32.unregistered
     assert manager.binding_count == 0
+
+
+def test_platform_without_native_hotkey_backend_is_import_safe(monkeypatch) -> None:
+    monkeypatch.setattr(hotkeys, "user32", None)
+    manager = GlobalHotkeys()
+
+    assert not manager.available
+    assert not manager.register("F12", lambda: None)
+    manager.poll()
+    manager.clear()
+    assert manager.binding_count == 0

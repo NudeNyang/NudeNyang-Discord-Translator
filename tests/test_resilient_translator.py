@@ -6,8 +6,8 @@ from discord_translate_overlay.translation.resilient import (
 )
 
 
-class _PartialKanana(Translator):
-    cache_namespace = "kanana:test"
+class _PartialLocalTranslator(Translator):
+    cache_namespace = "local:test"
 
     def __init__(self) -> None:
         self.calls: list[list[tuple[str, Language]]] = []
@@ -54,7 +54,7 @@ class _HallucinatingTranslator(Translator):
 
 
 def test_repairs_partial_japanese_with_line_retry_then_deepl_fallback() -> None:
-    primary = _PartialKanana()
+    primary = _PartialLocalTranslator()
     fallback = _RecordingDeepL()
     translator = ResilientTranslator(primary, fallback)
     source = (
@@ -92,7 +92,7 @@ def test_quality_check_allows_a_preserved_japanese_proper_name() -> None:
 
 
 def test_unresolved_local_echo_is_not_cacheable() -> None:
-    primary = _PartialKanana()
+    primary = _PartialLocalTranslator()
     translator = ResilientTranslator(primary)
     source = "Join先はポスター記載の4KVRCグループインスタンスです！"
 

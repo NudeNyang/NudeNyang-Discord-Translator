@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "discord-translate-overlay"
 version = "0.1.0"
-description = "Nude Translator for Discord on Windows 10/11"
+description = "Nude Translator for Discord (Windows; macOS foundation included)"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
-license = { text = "MIT" }
+license = "GPL-3.0-only"
 dependencies = [
   "comtypes>=1.4,<2; sys_platform == 'win32'",
-  "dxcam==0.3.0",
+  "dxcam==0.3.0; sys_platform == 'win32'",
   "httpx>=0.28,<1",
   "numpy>=2.0,<3",
   "opencv-python-headless>=4.10,<5",
@@ -19,22 +19,22 @@ dependencies = [
   "platformdirs>=4.3,<5",
   "psutil>=7,<8",
   "PySide6>=6.9,<7",
-  "pywin32>=310",
+  "pywin32>=310; sys_platform == 'win32'",
   "websocket-client>=1.8,<2",
 ]
 
 [project.optional-dependencies]
 ocr-cpu = [
-  "paddleocr==3.7.0",
-  "paddlepaddle==3.3.1",
+  "paddleocr==3.7.0; sys_platform == 'win32'",
+  "paddlepaddle==3.3.1; sys_platform == 'win32'",
 ]
 ocr-gpu = [
   "nvidia-cublas-cu12==12.9.2.10; sys_platform == 'win32'",
   "nvidia-cuda-nvrtc-cu12==12.9.86; sys_platform == 'win32'",
   "nvidia-cuda-runtime-cu12==12.9.79; sys_platform == 'win32'",
   "nvidia-cudnn-cu12==9.24.0.43; sys_platform == 'win32'",
-  "paddleocr==3.7.0",
-  "paddlepaddle-gpu==3.3.1",
+  "paddleocr==3.7.0; sys_platform == 'win32'",
+  "paddlepaddle-gpu==3.3.1; sys_platform == 'win32'",
 ]
 dev = [
   "pytest>=8.3,<10",
@@ -47,12 +47,13 @@ dev = [
 discord-translate-overlay = "discord_translate_overlay.app:main"
 discord-translate-poc = "discord_translate_overlay.poc:main"
 nude-translator-dom = "discord_translate_overlay.experimental_dom.controller:main"
+nude-translator-engine = "discord_translate_overlay.sidecar:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/discord_translate_overlay"]
 
 [tool.uv]
-environments = ["sys_platform == 'win32'"]
+environments = ["sys_platform == 'win32'", "sys_platform == 'darwin'"]
 conflicts = [
   [
     { extra = "ocr-cpu" },

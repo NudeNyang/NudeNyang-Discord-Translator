@@ -22,7 +22,7 @@ Hy-MT2는 번역 특화 모델이고 네 언어를 모두 지원한다. 1.8B Q4 
 - 7B Q4: `9f96256500f3fc1ab4d64336b58f52a949a95ad7516b0c229476eef782f9f77b`
 
 번역 캐시 이름에는 모델 크기, 양자화, 프롬프트 버전을 포함한다. 모델이나 프롬프트를 바꾸면
-이전 결과를 재사용하지 않는다. 기존 Kanana 캐시도 Hy-MT2와 섞이지 않는다.
+이전 결과를 재사용하지 않으며 다른 번역 엔진의 캐시와도 섞이지 않는다.
 
 ## 프롬프트와 보호 대상
 
@@ -57,7 +57,6 @@ Hy-MT2 1.8B Q4를 실제 `llama.cpp` 서버로 실행했다.
 
 - Papago 웹 자동화: 공식 제품 연동 방식이 아니고 페이지 변경·차단에 취약해 보류
 - TranslateGemma 4B: 비교 후보지만 Gemma 배포 약관과 추가 메모리 부담 때문에 후순위
-- Kanana-2: 일반 대화 모델이며 현재 일본어 의미 오역이 확인돼 기본 엔진에서 제외
 - Hy-MT2 1.25-bit: Windows 배포 경로가 충분히 안정화될 때 다시 검토
 
 ## 출처
@@ -66,3 +65,7 @@ Hy-MT2 1.8B Q4를 실제 `llama.cpp` 서버로 실행했다.
 - <https://huggingface.co/tencent/Hy-MT2-7B-GGUF>
 - <https://github.com/Tencent-Hunyuan/Hy-MT2>
 - <https://github.com/ggml-org/llama.cpp>
+
+내장 배포 시 각 GGUF 저장소의 Apache-2.0 원문과 Tencent 저작권 고지를 변경 없이 함께
+제공한다. 저장된 원문은 `licenses/Hy-MT2-1.8B-GGUF-LICENSE.txt`와
+`licenses/Hy-MT2-7B-GGUF-LICENSE.txt`에서 확인할 수 있다.

@@ -24,4 +24,4 @@ if ($old) {
     exit 0
 }
 
-Start-Process -FilePath $executable -WorkingDirectory $installRoot -WindowStyle Hidden
+Start-Process -FilePath $executable -WorkingDirectory $installRoot

@@ -1,0 +1,16 @@
+{
+  "name": "nude-translator-tauri",
+  "private": true,
+  "version": "0.2.0",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "test:web": "node --test web/test/*.test.mjs",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build --no-bundle"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.0"
+  }
+}

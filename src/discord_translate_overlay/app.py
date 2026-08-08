@@ -6,6 +6,7 @@ import ctypes
 import logging
 import os
 import sys
+import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -13,7 +14,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QAction, QActionGroup, QCursor
-from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
+from PySide6.QtWidgets import QApplication, QDialog, QMenu, QMessageBox, QSystemTrayIcon
 
 from .accessibility import DiscordUiaReader
 from .branding import PRODUCT_NAME
@@ -31,16 +32,19 @@ from .theme import detect_theme
 from .translation.base import Translator
 from .translation.deepl import DeepLTranslator
 from .translation.hymt import HyMtTranslator
-from .translation.kanana import KananaTranslator
 from .translation.mock import MockTranslator, OriginalTranslator
-from .translation.resilient import ResilientTranslator
 from .translation.subscription_cli import SubscriptionCliTranslator
 from .ui.hotkeys import GlobalHotkeys
 from .ui.overlay import TranslationOverlay
 from .ui.region_selector import RegionSelector
-from .ui.settings_dialog import SettingsDialog
+from .ui.settings_dialog import SettingsDialog, bring_dialog_to_front
 from .ui.update_coordinator import UpdateCoordinator
-from .ui.visuals import app_icon, menu_stylesheet
+from .ui.visuals import (
+    app_icon,
+    configure_tray_menu,
+    menu_stylesheet,
+    translation_status_icon,
+)
 
 LOGGER = logging.getLogger("discord_translate_overlay")
 
@@ -87,6 +91,8 @@ class OverlayController:
         self._pending_channel_frame = None
         self._channel_result: ChannelNameResult | None = None
         self._closing = False
+        self._local_warmup_translator: Translator | None = None
+        self._settings_dialog: SettingsDialog | None = None
         self._last_region_probe = 0.0
         self._last_channel_probe = 0.0
         self._future_started_at = 0.0
@@ -128,6 +134,8 @@ class OverlayController:
         self.updater.start()
 
         self._notify_translator()
+        if self.config.keep_local_model_warm:
+            self._start_local_model_warmup()
 
     def _notify_translator(self) -> None:
         if self.translator.sends_text_externally:
@@ -171,17 +179,6 @@ class OverlayController:
                 device=self.config.hymt_device,
                 speech_style=self.config.speech_style,
             )
-        if name == "kanana":
-            primary = KananaTranslator(
-                device=self.config.kanana_device,
-                precision=self.config.kanana_precision,
-            )
-            try:
-                fallback = DeepLTranslator()
-            except RuntimeError:
-                fallback = None
-                LOGGER.info("DEEPL_API_KEY가 없어 Kanana 줄 단위 재시도만 사용해.")
-            return ResilientTranslator(primary, fallback)
         try:
             return DeepLTranslator()
         except RuntimeError:
@@ -496,12 +493,14 @@ class OverlayController:
 
     def _tray_menu(self) -> QMenu:
         menu = QMenu()
-        menu.setStyleSheet(menu_stylesheet(self.config.ui_theme))
+        configure_tray_menu(menu, self.config.ui_theme)
         menu.addAction(f"{PRODUCT_NAME} 열기", self.show_settings)
         menu.addSeparator()
-        self.enabled_action = QAction("번역 켜기", menu, checkable=True)
-        self.enabled_action.setChecked(self.config.enabled)
-        self.enabled_action.triggered.connect(self.set_enabled)
+        self.enabled_action = QAction("번역 켜기", menu)
+        self.enabled_action.setIcon(translation_status_icon(enabled=self.config.enabled))
+        self.enabled_action.triggered.connect(
+            lambda _checked=False: self.set_enabled(not self.config.enabled)
+        )
         menu.addAction(self.enabled_action)
 
         language_menu = menu.addMenu("표시 언어")
@@ -521,9 +520,6 @@ class OverlayController:
             language_menu.addAction(action)
 
         menu.addAction("원문/번역 전환", self.toggle_original)
-        menu.addAction("현재 번역문 복사", self.copy_current)
-        menu.addAction("OCR 영역 직접 선택", self.select_region)
-        menu.addAction("OCR 영역 자동 감지", self.use_auto_region)
         menu.addSeparator()
         self.restart_update_action = QAction("재시작하여 업데이트", menu)
         self.restart_update_action.setVisible(False)
@@ -534,18 +530,73 @@ class OverlayController:
         return menu
 
     def _tray_activated(self, reason) -> None:
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            self.show_settings()
+        if reason in (
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
+            QTimer.singleShot(0, self.show_settings)
 
     def set_enabled(self, enabled: bool) -> None:
         self.config.enabled = enabled
-        self.enabled_action.setChecked(enabled)
+        self.enabled_action.setIcon(translation_status_icon(enabled=enabled))
         self.tray.setIcon(app_icon(enabled=enabled))
         if not enabled:
             self._hide_overlays()
         else:
             self._show_available_overlays()
+        if self.config.keep_local_model_warm:
+            self._start_local_model_warmup()
+        elif not enabled:
+            self._release_local_model_when_idle()
         self._save()
+
+    def _start_local_model_warmup(self) -> None:
+        if (
+            not self.config.translator.startswith("hymt_")
+            or not self.config.keep_local_model_warm
+            or getattr(self, "_closing", False)
+        ):
+            return
+        translator = self.translator
+        prepare = getattr(translator, "prepare", None)
+        if not callable(prepare) or getattr(self, "_local_warmup_translator", None) is translator:
+            return
+        self._local_warmup_translator = translator
+
+        def warm_in_background() -> None:
+            try:
+                if (
+                    translator is self.translator
+                    and self.config.keep_local_model_warm
+                    and not getattr(self, "_closing", False)
+                ):
+                    prepare()
+                    LOGGER.info("로컬 번역 모델 예열 완료")
+            except Exception:
+                LOGGER.exception("로컬 번역 모델 예열 실패")
+            finally:
+                if getattr(self, "_local_warmup_translator", None) is translator:
+                    self._local_warmup_translator = None
+
+        threading.Thread(
+            target=warm_in_background,
+            name="warm-local-translator",
+            daemon=True,
+        ).start()
+
+    def _release_local_model_when_idle(self) -> None:
+        if (
+            self.config.enabled
+            or self.config.keep_local_model_warm
+            or not self.config.translator.startswith("hymt_")
+            or getattr(self, "_closing", False)
+        ):
+            return
+        if self.future is not None:
+            QTimer.singleShot(100, self._release_local_model_when_idle)
+            return
+        self.translator.close()
+        LOGGER.info("로컬 번역 모델 해제: VRAM 반환 요청 완료")
 
     def toggle_enabled(self) -> None:
         self.set_enabled(not self.config.enabled)
@@ -639,44 +690,90 @@ class OverlayController:
         self._save()
 
     def show_settings(self) -> None:
+        existing = getattr(self, "_settings_dialog", None)
+        if existing is not None:
+            bring_dialog_to_front(existing)
+            return
         previous_hotkeys = copy.deepcopy(self.config.hotkeys)
         dialog = SettingsDialog(self.config)
-        if dialog.exec():
-            old_translator = self.config.translator
-            old_hymt_device = self.config.hymt_device
-            old_speech_style = self.config.speech_style
-            dialog.apply()
-            if not self._bind_hotkeys():
-                self.config.hotkeys = previous_hotkeys
-                self._bind_hotkeys()
-                QMessageBox.warning(
-                    None,
-                    "단축키를 사용할 수 없어",
-                    "선택한 단축키 중 하나를 다른 프로그램이 사용 중이야. 기존 설정을 유지할게.",
-                )
-            hymt_device = self.config.hymt_device
-            style_aware = self.config.translator.startswith("hymt_") or (
-                self.config.translator in {"chatgpt", "claude", "gemini"}
+        self._settings_dialog = dialog
+        dialog.finished.connect(
+            lambda result, current=dialog, hotkeys=previous_hotkeys: (
+                self._finish_settings_dialog(current, result, hotkeys)
             )
-            if old_translator != self.config.translator or (
-                (self.config.translator.startswith("hymt_") and old_hymt_device != hymt_device)
-                or (style_aware and old_speech_style != self.config.speech_style)
-            ):
-                previous = self.translator
-                self.translator = self._make_translator(self.config.translator)
-                self.pipeline.translator = self.translator
-                self.channel_processor.translator = self.translator
-                if self.future is None:
-                    previous.close()
-                self._notify_translator()
-            self.pipeline.set_target(self.config.target_language)
-            self.channel_processor.set_target(self.config.target_language)
-            self.timer.setInterval(max(50, round(1000 / self.config.capture_fps)))
-            if self._channel_result is not None:
-                self._apply_channel_result(self._channel_result)
-            self.tray.contextMenu().setStyleSheet(menu_stylesheet(self.config.ui_theme))
-            self.set_enabled(self.config.enabled)
-            self._save()
+        )
+        bring_dialog_to_front(dialog)
+
+    def _finish_settings_dialog(
+        self,
+        dialog: SettingsDialog,
+        result: int,
+        previous_hotkeys: object,
+    ) -> None:
+        if self._settings_dialog is dialog:
+            self._settings_dialog = None
+        try:
+            if result != QDialog.DialogCode.Accepted:
+                return
+            self._apply_settings_dialog(dialog, previous_hotkeys)
+        finally:
+            dialog.deleteLater()
+
+    def _apply_settings_dialog(
+        self,
+        dialog: SettingsDialog,
+        previous_hotkeys: object,
+    ) -> None:
+        old_translator = self.config.translator
+        old_hymt_device = self.config.hymt_device
+        old_speech_style = self.config.speech_style
+        dialog.apply()
+        if not self._bind_hotkeys():
+            self.config.hotkeys = previous_hotkeys
+            self._bind_hotkeys()
+            QMessageBox.warning(
+                None,
+                "단축키를 사용할 수 없어",
+                "선택한 단축키 중 하나를 다른 프로그램이 사용 중이야. "
+                "기존 설정을 유지할게.",
+            )
+        hymt_device = self.config.hymt_device
+        style_aware = self.config.translator.startswith("hymt_") or (
+            self.config.translator in {"chatgpt", "claude", "gemini"}
+        )
+        if old_translator != self.config.translator or (
+            (
+                self.config.translator.startswith("hymt_")
+                and old_hymt_device != hymt_device
+            )
+            or (style_aware and old_speech_style != self.config.speech_style)
+        ):
+            previous = self.translator
+            self.translator = self._make_translator(self.config.translator)
+            self.pipeline.translator = self.translator
+            self.channel_processor.translator = self.translator
+            if self.future is None:
+                previous.close()
+            self._notify_translator()
+        self.pipeline.set_target(self.config.target_language)
+        self.channel_processor.set_target(self.config.target_language)
+        self.timer.setInterval(max(50, round(1000 / self.config.capture_fps)))
+        if self._channel_result is not None:
+            self._apply_channel_result(self._channel_result)
+        self.tray.contextMenu().setStyleSheet(menu_stylesheet(self.config.ui_theme))
+        self.set_enabled(self.config.enabled)
+        self._save()
+
+    def toggle_settings(self) -> None:
+        existing = getattr(self, "_settings_dialog", None)
+        if (
+            existing is not None
+            and existing.isVisible()
+            and not existing.isMinimized()
+        ):
+            existing.hide()
+            return
+        self.show_settings()
 
     def _bind_hotkeys(self) -> bool:
         self.hotkeys.clear()

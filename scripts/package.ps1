@@ -16,7 +16,7 @@ if ($Clean) {
 }
 
 if (-not $SkipBuild) {
-    uv run pyinstaller `
+    uv run python -m PyInstaller `
     --noconfirm `
     --windowed `
     --name NudeTranslator `
@@ -47,35 +47,28 @@ if (-not $SkipBuild) {
         throw "PyInstaller 패키징 실패 (exit code: $LASTEXITCODE)"
     }
 
-    uv run pyinstaller `
-        --noconfirm `
-        --clean `
-        --onefile `
-        --windowed `
-        --name NudeTranslatorDOM `
-        --icon "$ProjectRoot\assets\nude-translator.ico" `
-        --exclude-module paddle `
-        --exclude-module paddleocr `
-        --exclude-module paddlex `
-        --exclude-module cv2 `
-        --hidden-import win32timezone `
-        --paths "$ProjectRoot\src" `
-        "$ProjectRoot\scripts\run_dom.py"
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "DOM 모드 패키징 실패 (exit code: $LASTEXITCODE)"
-    }
 }
 
-$DomExecutable = Join-Path $ProjectRoot 'dist\NudeTranslatorDOM.exe'
-if (-not (Test-Path -LiteralPath $DomExecutable)) {
-    throw 'NudeTranslatorDOM.exe가 없어 릴리스 패키지를 완성할 수 없어.'
+$MainExecutable = Join-Path $ProjectRoot 'dist\NudeTranslator\NudeTranslator.exe'
+if (-not (Test-Path -LiteralPath $MainExecutable)) {
+    throw 'NudeTranslator.exe가 없어 릴리스 패키지를 완성할 수 없어.'
 }
-Copy-Item -LiteralPath $DomExecutable -Destination "$ProjectRoot\dist\NudeTranslator"
+$DomExecutable = Join-Path $ProjectRoot 'dist\NudeTranslator\NudeTranslatorDOM.exe'
+Copy-Item -LiteralPath $MainExecutable -Destination $DomExecutable
 Copy-Item -LiteralPath "$ProjectRoot\scripts\start_packaged_dom.ps1" `
     -Destination "$ProjectRoot\dist\NudeTranslator\Start-NudeTranslatorDOM.ps1"
 Copy-Item -LiteralPath "$ProjectRoot\scripts\restart_discord_debug.ps1" `
     -Destination "$ProjectRoot\dist\NudeTranslator\Restart-Discord-Debug.ps1"
+Copy-Item -LiteralPath "$ProjectRoot\LICENSE" `
+    -Destination "$ProjectRoot\dist\NudeTranslator\LICENSE.txt"
+Copy-Item -LiteralPath "$ProjectRoot\THIRD_PARTY_NOTICES.md" `
+    -Destination "$ProjectRoot\dist\NudeTranslator\THIRD_PARTY_NOTICES.md"
+$LicenseDestination = "$ProjectRoot\dist\NudeTranslator\licenses"
+New-Item -ItemType Directory -Force $LicenseDestination | Out-Null
+Copy-Item -LiteralPath "$ProjectRoot\licenses\Hy-MT2-1.8B-GGUF-LICENSE.txt" `
+    -Destination $LicenseDestination
+Copy-Item -LiteralPath "$ProjectRoot\licenses\Hy-MT2-7B-GGUF-LICENSE.txt" `
+    -Destination $LicenseDestination
 
 $LlamaCommand = Get-Command llama-server -ErrorAction SilentlyContinue
 $LlamaPath = if ($LlamaCommand) { $LlamaCommand.Source } else { $null }

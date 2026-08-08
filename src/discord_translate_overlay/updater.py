@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 
-from .branding import WINDOWS_RELEASE_ASSET
+from .platforms import current_platform_services
 
 GITHUB_API_VERSION = "2026-03-10"
 _REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -55,13 +55,15 @@ class GitHubReleaseClient:
         self,
         repository: str,
         *,
-        asset_name: str = WINDOWS_RELEASE_ASSET,
+        asset_name: str | None = None,
         http_client: httpx.Client | None = None,
     ) -> None:
         if not _REPOSITORY_PATTERN.fullmatch(repository.strip()):
             raise ValueError("업데이트 저장소는 owner/repository 형식이어야 해.")
         self.repository = repository.strip()
-        self.asset_name = asset_name
+        self.asset_name = asset_name or current_platform_services().release_asset_name
+        if not self.asset_name:
+            raise ValueError("현재 운영체제의 업데이트 파일 이름이 정의되지 않았어.")
         self._owns_client = http_client is None
         self.http = http_client or httpx.Client(
             follow_redirects=True,

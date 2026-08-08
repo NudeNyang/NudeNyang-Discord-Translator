@@ -24,10 +24,22 @@ def test_main_ocr_environment_never_installs_torch() -> None:
     assert "bitsandbytes" not in _requirement_names(requirements)
 
 
-def test_kanana_runtime_declares_its_own_model_dependencies() -> None:
-    runtime_path = PROJECT_ROOT / "runtime" / "kanana" / "pyproject.toml"
-    runtime = tomllib.loads(runtime_path.read_text(encoding="utf-8"))
-    extras = runtime["project"]["optional-dependencies"]
+def test_windows_native_dependencies_are_not_installed_on_macos() -> None:
+    main = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    requirements = {
+        Requirement(item).name: Requirement(item)
+        for item in main["project"]["dependencies"]
+    }
 
-    assert {"torch", "transformers", "bitsandbytes"} <= _requirement_names(extras["gpu"])
-    assert {"torch", "transformers", "bitsandbytes"} <= _requirement_names(extras["cpu"])
+    assert str(requirements["dxcam"].marker) == 'sys_platform == "win32"'
+    assert str(requirements["pywin32"].marker) == 'sys_platform == "win32"'
+    assert "sys_platform == 'darwin'" in main["tool"]["uv"]["environments"]
+
+
+def test_legacy_ocr_extras_are_windows_only() -> None:
+    main = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    for extra_name in ("ocr-cpu", "ocr-gpu"):
+        for item in main["project"]["optional-dependencies"][extra_name]:
+            requirement = Requirement(item)
+            assert str(requirement.marker) == 'sys_platform == "win32"'

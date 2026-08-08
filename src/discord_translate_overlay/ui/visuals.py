@@ -3,8 +3,8 @@ from __future__ import annotations
 import ctypes
 import sys
 
-from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
+from PySide6.QtCore import QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QApplication
 
 LIGHT = {
@@ -12,6 +12,7 @@ LIGHT = {
     "surface": "#FFFFFF",
     "surface_alt": "#EEF5F6",
     "popup_hover": "#E3F1F2",
+    "control_hover": "#D3EEEB",
     "border": "#CFDDE1",
     "text": "#172D35",
     "muted": "#647A82",
@@ -30,6 +31,7 @@ DARK = {
     "surface": "#101D23",
     "surface_alt": "#14242B",
     "popup_hover": "#1A3037",
+    "control_hover": "#214548",
     "border": "#2C3D44",
     "text": "#E8EFF2",
     "muted": "#98AAB1",
@@ -77,13 +79,11 @@ def settings_stylesheet(preference: str) -> str:
     QLabel#settingTitle {{ font-size: 13px; font-weight: 650; color: {c['text']}; }}
     QLabel#settingDescription, QLabel#footerNote {{ font-size: 11px; color: {c['muted']}; }}
     QLabel#privacyWarning {{ font-size: 11px; color: {c['danger']}; }}
-    QLabel#versionBadge {{
-        color: {c['muted']};
-        background: {c['surface_alt']};
-        border: 1px solid {c['border']};
-        border-radius: 8px;
-        padding: 4px 8px;
+    QLabel#appProductName {{ font-size: 15px; font-weight: 650; color: {c['text']}; }}
+    QLabel#appVersion, QLabel#appMeta, QLabel#appCopyright {{
+        font-size: 11px; color: {c['muted']};
     }}
+    QLabel#appLicenseSummary {{ font-size: 11px; color: {c['text']}; }}
     QLabel#inlineNotice {{
         color: {c['muted']};
         background: {c['notice']};
@@ -112,8 +112,14 @@ def settings_stylesheet(preference: str) -> str:
         color: {c['text']};
         selection-background-color: {c['accent']};
     }}
-    QPushButton:hover, QComboBox:hover, QLineEdit:hover, QKeySequenceEdit:hover {{
+    QPushButton:hover, QComboBox:hover, QLineEdit:hover, QSpinBox:hover,
+    QDoubleSpinBox:hover, QKeySequenceEdit:hover {{
         border-color: {c['accent']};
+        background: {c['popup_hover']};
+    }}
+    QComboBox:hover {{
+        border: 2px solid {c['accent']};
+        background: {c['control_hover']};
     }}
     QComboBox:focus, QLineEdit:focus, QSpinBox:focus,
     QDoubleSpinBox:focus, QKeySequenceEdit:focus {{
@@ -125,9 +131,19 @@ def settings_stylesheet(preference: str) -> str:
         border-color: {c['accent']};
         color: {c['accent_text']};
         font-weight: 650;
-        padding: 0 18px;
     }}
     QPushButton[primary="true"]:hover {{ background: {c['accent_hover']}; }}
+    QPushButton[link="true"] {{
+        min-height: 0;
+        max-height: 24px;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        background: transparent;
+        color: {c['accent']};
+    }}
+    QPushButton#appAuthorLink {{ color: {c['text']}; font-weight: 650; }}
+    QPushButton[link="true"]:hover {{ color: {c['accent_hover']}; }}
     QCheckBox {{ spacing: 9px; color: {c['text']}; }}
     QCheckBox::indicator {{
         width: 18px;
@@ -141,13 +157,43 @@ def settings_stylesheet(preference: str) -> str:
         background: {c['accent']};
         border-color: {c['accent']};
     }}
-    QComboBox::drop-down {{ border: 0; width: 28px; }}
+    QComboBox::drop-down {{
+        border: 0;
+        border-left: 1px solid transparent;
+        border-top-right-radius: 7px;
+        border-bottom-right-radius: 7px;
+        width: 30px;
+    }}
+    QComboBox::drop-down:hover {{
+        background: {c['accent_soft']};
+        border-left-color: {c['accent']};
+    }}
     QComboBox QAbstractItemView {{
         background: {c['surface']}; color: {c['text']};
         border: 1px solid {c['border']}; selection-background-color: {c['popup_hover']};
-        selection-color: {c['text']}; padding: 4px;
+        selection-color: {c['text']}; padding: 4px; outline: none;
+    }}
+    QComboBox QAbstractItemView::item {{
+        min-height: 34px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 6px;
+    }}
+    QComboBox QAbstractItemView::item:hover,
+    QComboBox QAbstractItemView::item:selected {{
+        background: {c['control_hover']};
+        color: {c['text']};
     }}
     QScrollArea, QWidget#scrollBody {{ border: 0; background: transparent; }}
+    QPlainTextEdit#licenseText {{
+        border: 1px solid {c['border']};
+        border-radius: 10px;
+        padding: 10px;
+        background: {c['surface']};
+        color: {c['text']};
+        font-family: "Cascadia Mono", "Consolas";
+        font-size: 10px;
+    }}
     QScrollArea > QWidget > QWidget {{ background: transparent; }}
     QScrollBar:vertical {{
         background: transparent;
@@ -177,9 +223,53 @@ def menu_stylesheet(preference: str) -> str:
     }}
     QMenu::item {{ padding: 8px 30px 8px 12px; border-radius: 6px; }}
     QMenu::item:selected {{ background: {c['accent_soft']}; color: {c['accent']}; }}
+    QMenu::icon {{ margin-left: 9px; }}
     QMenu::separator {{ height: 1px; background: {c['border']}; margin: 5px 8px; }}
     QMenu::indicator:checked {{ background: {c['accent']}; border-radius: 5px; }}
     """
+
+
+def configure_tray_menu(menu, preference: str) -> None:
+    """Keep the Qt tray menu above Windows' hidden-icon flyout."""
+    menu.setStyleSheet(menu_stylesheet(preference))
+    menu.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+    menu.aboutToShow.connect(
+        lambda: QTimer.singleShot(0, lambda: _position_tray_menu_above(menu))
+    )
+
+
+def tray_menu_y_above(
+    *,
+    anchor_y: int,
+    menu_height: int,
+    available_top: int,
+    available_bottom: int,
+    gap: int = 8,
+) -> int:
+    preferred = anchor_y - menu_height - gap
+    minimum = available_top + gap
+    maximum = available_bottom - menu_height - gap
+    return max(minimum, min(preferred, maximum))
+
+
+def _position_tray_menu_above(menu) -> None:
+    if not menu.isVisible():
+        return
+    anchor = QCursor.pos()
+    screen = QApplication.screenAt(anchor) or QApplication.primaryScreen()
+    if screen is None:
+        return
+    available = screen.availableGeometry()
+    menu_height = max(menu.height(), menu.sizeHint().height())
+    menu.move(
+        menu.x(),
+        tray_menu_y_above(
+            anchor_y=anchor.y(),
+            menu_height=menu_height,
+            available_top=available.top(),
+            available_bottom=available.bottom() + 1,
+        ),
+    )
 
 
 def app_icon(*, enabled: bool = True, size: int = 64) -> QIcon:
@@ -197,34 +287,46 @@ def app_icon(*, enabled: bool = True, size: int = 64) -> QIcon:
         17 * scale,
     )
 
-    pen = QPen(QColor("white"), 3.2 * scale, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    painter.setBrush(QColor("white"))
+    painter.drawEllipse(QRectF(12 * scale, 18 * scale, 12 * scale, 15 * scale))
+    painter.drawEllipse(QRectF(21 * scale, 10 * scale, 12 * scale, 16 * scale))
+    painter.drawEllipse(QRectF(31 * scale, 10 * scale, 12 * scale, 16 * scale))
+    painter.drawEllipse(QRectF(40 * scale, 18 * scale, 12 * scale, 15 * scale))
+
+    pad = QPainterPath()
+    pad.moveTo(32 * scale, 27 * scale)
+    pad.cubicTo(37 * scale, 27 * scale, 39 * scale, 31 * scale, 42 * scale, 35 * scale)
+    pad.cubicTo(48 * scale, 41 * scale, 45 * scale, 52 * scale, 37 * scale, 53 * scale)
+    pad.cubicTo(35 * scale, 53 * scale, 33 * scale, 51 * scale, 32 * scale, 49 * scale)
+    pad.cubicTo(30 * scale, 51 * scale, 28 * scale, 53 * scale, 25 * scale, 53 * scale)
+    pad.cubicTo(17 * scale, 52 * scale, 15 * scale, 41 * scale, 22 * scale, 35 * scale)
+    pad.cubicTo(25 * scale, 31 * scale, 27 * scale, 27 * scale, 32 * scale, 27 * scale)
+    pad.closeSubpath()
+    painter.drawPath(pad)
+    painter.end()
+    return QIcon(pixmap)
+
+
+def translation_status_icon(*, enabled: bool = True, size: int = 18) -> QIcon:
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    scale = size / 18.0
+    color = QColor("#159B94" if enabled else "#7F9096")
+    pen = QPen(color, 1.8 * scale)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
     painter.setPen(pen)
     painter.setBrush(Qt.BrushStyle.NoBrush)
-    upper = QPainterPath()
-    upper.moveTo(17 * scale, 22 * scale)
-    upper.lineTo(32 * scale, 14 * scale)
-    upper.lineTo(47 * scale, 22 * scale)
-    upper.lineTo(32 * scale, 30 * scale)
-    upper.closeSubpath()
-    painter.drawPath(upper)
-    painter.drawPolyline(
-        QPolygonF(
-            [
-                QPointF(17 * scale, 31 * scale),
-                QPointF(32 * scale, 39 * scale),
-                QPointF(47 * scale, 31 * scale),
-            ]
-        )
-    )
-    painter.drawPolyline(
-        QPolygonF(
-            [
-                QPointF(17 * scale, 40 * scale),
-                QPointF(32 * scale, 48 * scale),
-                QPointF(47 * scale, 40 * scale),
-            ]
-        )
-    )
+    painter.drawEllipse(QRectF(2 * scale, 2 * scale, 14 * scale, 14 * scale))
+
+    if enabled:
+        check = QPainterPath()
+        check.moveTo(5.2 * scale, 9.2 * scale)
+        check.lineTo(8.0 * scale, 12.0 * scale)
+        check.lineTo(13.0 * scale, 6.5 * scale)
+        painter.drawPath(check)
     painter.end()
     return QIcon(pixmap)
 

@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Nude Translator main window permissions",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://x.com/NudeNyang_VRC" },
+        { "url": "https://github.com/NudeNyang/Nude-Translator" },
+        { "url": "https://github.com/NudeNyang/Nude-Translator/releases/**" }
+      ]
+    }
+  ]
+}

@@ -25,16 +25,26 @@ from ..env import load_local_env
 from ..language import LanguageDetector
 from ..models import Language
 from ..ocr.paddle_dual import PaddleDualOcr
+from ..platforms import create_discord_debug_launcher
 from ..translation.base import Translator
 from ..translation.deepl import DeepLTranslator
 from ..translation.hymt import HyMtTranslator
-from ..translation.mock import OriginalTranslator
+from ..translation.mock import MockTranslator, OriginalTranslator
 from ..translation.protected_text import protect_text
 from ..translation.subscription_cli import SubscriptionCliTranslator
+from ..ui.discord_restart_prompt import (
+    ask_auto_restart_consent,
+    ask_restart_countdown,
+)
 from ..ui.hotkeys import GlobalHotkeys
-from ..ui.settings_dialog import SettingsDialog
+from ..ui.settings_dialog import SettingsDialog, bring_dialog_to_front
 from ..ui.update_coordinator import UpdateCoordinator
-from ..ui.visuals import app_icon, menu_stylesheet
+from ..ui.visuals import (
+    app_icon,
+    configure_tray_menu,
+    menu_stylesheet,
+    translation_status_icon,
+)
 from .cdp import CdpClient, discord_target
 from .image_translation import (
     IMAGE_UI_SCRIPT,
@@ -54,10 +64,13 @@ TRANSLATOR_LABELS = {
     "claude": "Claude 플랜 (Claude Code)",
     "gemini": "Gemini 플랜 (Antigravity CLI)",
     "deepl": "DeepL API",
+    "mock": "Mock 테스트",
     "original": "원문 표시",
 }
 TRANSLATION_BATCH_DEBOUNCE_SECONDS = 0.12
 TRANSLATION_BATCH_MAX_ITEMS = 32
+MIN_CAPTURE_FPS = 2
+MAX_CAPTURE_FPS = 20
 SPEECH_STYLE_LABELS = {
     "auto": "원문 말투 유지 (자동)",
     "polite": "항상 존댓말·격식체",
@@ -464,7 +477,8 @@ class DomTranslationController:
         desired_name = config.translator
         desired_translator = make_translator(config)
         startup_preparation: tuple[str, Translator] | None = None
-        if _translator_needs_download(desired_translator):
+        should_prepare_local = config.enabled or config.keep_local_model_warm
+        if _translator_needs_download(desired_translator) and should_prepare_local:
             fallback_name, fallback = _startup_fallback(config, desired_name)
             self.translator = fallback
             self.active_translator_name = fallback_name
@@ -490,8 +504,15 @@ class DomTranslationController:
         self.image_jobs: queue.Queue[ImageTranslationJob | None] = queue.Queue()
         self.image_results: queue.Queue[ImageTranslationResult] = queue.Queue()
         self.controls: queue.Queue[tuple[str, object | None]] = queue.Queue()
+        self.control_event = threading.Event()
         self.notices: queue.Queue[str] = queue.Queue()
+        self.connection_issues: queue.Queue[str] = queue.Queue()
         self.stop_event = threading.Event()
+        self._consecutive_connection_failures = 0
+        self._connection_issue_reported = False
+        self._local_warmup_translator: Translator | None = None
+        self.preparing_translator_name: str | None = None
+        self.translator_error = ""
         self.worker = threading.Thread(target=self._worker, name="dom-translator", daemon=True)
         self.worker.start()
         self.image_worker = threading.Thread(
@@ -505,6 +526,8 @@ class DomTranslationController:
         atexit.register(self.restore)
         if startup_preparation is not None:
             self._start_translator_preparation(*startup_preparation)
+        elif self.config.keep_local_model_warm:
+            self._start_active_local_warmup()
 
     def connect(self) -> None:
         if self.client is not None:
@@ -531,43 +554,57 @@ class DomTranslationController:
     def run(self) -> None:
         LOGGER.info("DOM 번역 시작. %s로 켜기/끄기", self.config.hotkeys.toggle_translation)
         while not self.stop_event.is_set():
+            self.control_event.clear()
+            started = time.monotonic()
             self._consume_controls()
             self._consume_hotkey()
+            had_client = self.client is not None
+            retry_delay: float | None = None
             try:
                 self.connect()
+                self._mark_connection_ready()
                 self._drain_results()
                 self._drain_image_results()
                 if self.enabled:
                     self._scan()
                     self._scan_images()
-            except Exception:
+            except Exception as exc:
                 LOGGER.exception("DOM 처리 중 오류")
+                if not had_client:
+                    self._record_connection_failure(exc)
                 if self.client is not None:
                     self.client.close()
                     self.client = None
-                time.sleep(1.0)
-            time.sleep(0.25)
+                retry_delay = 1.0
+            elapsed = time.monotonic() - started
+            interval = retry_delay or _poll_interval_seconds(self.config.capture_fps)
+            self.control_event.wait(max(0.0, interval - elapsed))
 
     def stop(self, *_: object) -> None:
         self.stop_event.set()
+        self.control_event.set()
 
     def request_toggle(self) -> None:
         self.toggle_requested.set()
 
     def request_enabled(self, enabled: bool) -> None:
-        self.controls.put(("enabled", enabled))
+        self._queue_control("enabled", enabled)
 
     def request_target(self, language: Language) -> None:
-        self.controls.put(("target", language))
+        self._queue_control("target", language)
 
     def request_translator(self, name: str) -> None:
-        self.controls.put(("translator", name))
+        self._queue_control("translator", name)
 
     def request_speech_style(self, style: str) -> None:
-        self.controls.put(("speech_style", style))
+        self._queue_control("speech_style", style)
 
     def request_config(self, config: AppConfig) -> None:
-        self.controls.put(("config", copy.deepcopy(config)))
+        self._queue_control("config", copy.deepcopy(config))
+
+    def _queue_control(self, command: str, value: object) -> None:
+        self.controls.put((command, value))
+        self.control_event.set()
 
     def _scan(self) -> None:
         assert self.client is not None
@@ -902,9 +939,29 @@ class DomTranslationController:
         save_config(self.config)
         LOGGER.info("번역 %s", "켜짐" if enabled else "꺼짐")
         if not enabled:
+            self._consecutive_connection_failures = 0
+            self._connection_issue_reported = False
             self.restore()
+            self._cancel_pending_translation_work()
+            if not self.config.keep_local_model_warm:
+                self._release_local_model()
         else:
             self._restored = False
+            if self.config.keep_local_model_warm:
+                self._start_active_local_warmup()
+
+    def _record_connection_failure(self, error: Exception) -> None:
+        if not self.enabled or self._connection_issue_reported:
+            return
+        self._consecutive_connection_failures += 1
+        if self._consecutive_connection_failures < 2:
+            return
+        self._connection_issue_reported = True
+        self.connection_issues.put(str(error))
+
+    def _mark_connection_ready(self) -> None:
+        self._consecutive_connection_failures = 0
+        self._connection_issue_reported = False
 
     def _apply_config(self, updated: AppConfig) -> None:
         runtime_changed = (
@@ -914,12 +971,16 @@ class DomTranslationController:
         )
         target_changed = updated.target_language != self.config.target_language
         enabled_changed = updated.enabled != self.enabled
+        warm_mode_changed = (
+            updated.keep_local_model_warm != self.config.keep_local_model_warm
+        )
         for field_info in fields(AppConfig):
             if field_info.name in {
                 "enabled",
                 "target_language",
                 "translator",
                 "hymt_device",
+                "keep_local_model_warm",
                 "speech_style",
             }:
                 continue
@@ -931,11 +992,14 @@ class DomTranslationController:
         if target_changed:
             self._set_target(updated.target_language)
         self.config.hymt_device = updated.hymt_device
+        self.config.keep_local_model_warm = updated.keep_local_model_warm
         self.config.speech_style = updated.speech_style
         if runtime_changed:
             self._set_translator(updated.translator, force=True)
         if enabled_changed:
             self._set_enabled(updated.enabled)
+        if warm_mode_changed and not runtime_changed:
+            self._sync_local_model_warmth()
         save_config(self.config)
 
     def _set_target(self, language: Language) -> None:
@@ -952,10 +1016,13 @@ class DomTranslationController:
         if not force and name == self.active_translator_name and name == self.config.translator:
             return
         self.preparation_generation += 1
+        self.preparing_translator_name = None
+        self.translator_error = ""
         try:
             replacement = make_translator(self.config, name=name)
         except Exception as exc:
             message = f"번역 모델을 바꾸지 못했어: {exc}"
+            self.translator_error = message
             LOGGER.exception(message)
             self.notices.put(message)
             return
@@ -963,7 +1030,12 @@ class DomTranslationController:
         save_config(self.config)
         label = TRANSLATOR_LABELS[name]
         prepare = getattr(replacement, "prepare", None)
-        if callable(prepare):
+        should_prepare = (
+            not name.startswith("hymt_")
+            or self.enabled
+            or self.config.keep_local_model_warm
+        )
+        if callable(prepare) and should_prepare:
             self._start_translator_preparation(name, replacement)
             LOGGER.info("번역 모델 준비 시작: %s", label)
             self.notices.put(
@@ -989,7 +1061,12 @@ class DomTranslationController:
         save_config(self.config)
         name = self.config.translator
         prepare = getattr(replacement, "prepare", None)
-        if callable(prepare):
+        should_prepare = (
+            not name.startswith("hymt_")
+            or self.enabled
+            or self.config.keep_local_model_warm
+        )
+        if callable(prepare) and should_prepare:
             self._start_translator_preparation(name, replacement)
         else:
             self._activate_translator(name, replacement)
@@ -1000,6 +1077,8 @@ class DomTranslationController:
     def _start_translator_preparation(self, name: str, replacement: Translator) -> None:
         self.preparation_generation += 1
         generation = self.preparation_generation
+        self.preparing_translator_name = name
+        self.translator_error = ""
         label = TRANSLATOR_LABELS[name]
         if _translator_needs_download(replacement):
             self.notices.put(
@@ -1033,7 +1112,12 @@ class DomTranslationController:
         if generation != self.preparation_generation or name != self.config.translator:
             _close_translator(replacement)
             return
+        self.preparing_translator_name = None
         self._activate_translator(name, replacement)
+        if name.startswith("hymt_") and not (
+            self.enabled or self.config.keep_local_model_warm
+        ):
+            self._release_local_model()
         label = TRANSLATOR_LABELS[name]
         LOGGER.info("번역 모델 준비 완료: %s", label)
         self.notices.put(f"{label} 준비가 끝났고 지금부터 이 모델로 번역해.")
@@ -1048,9 +1132,11 @@ class DomTranslationController:
         _close_translator(replacement)
         if generation != self.preparation_generation or name != self.config.translator:
             return
+        self.preparing_translator_name = None
         self.config.translator = self.active_translator_name
         save_config(self.config)
         message = f"{TRANSLATOR_LABELS[name]} 준비 실패: {error}"
+        self.translator_error = message
         LOGGER.error(message)
         self.notices.put(message)
 
@@ -1061,11 +1147,67 @@ class DomTranslationController:
             self.translator = replacement
             self.service = TranslationService(replacement, self.cache)
             self.active_translator_name = name
+            self.preparing_translator_name = None
+            self.translator_error = ""
         _close_translator(previous)
         LOGGER.info("번역 모델 변경: %s", TRANSLATOR_LABELS[name])
 
+    def _start_active_local_warmup(self) -> None:
+        if (
+            not self.active_translator_name.startswith("hymt_")
+            or not self.config.keep_local_model_warm
+        ):
+            return
+        translator = self.translator
+        prepare = getattr(translator, "prepare", None)
+        if not callable(prepare) or self._local_warmup_translator is translator:
+            return
+        self._local_warmup_translator = translator
+
+        def warm_in_background() -> None:
+            try:
+                with self.service_lock:
+                    if (
+                        translator is not self.translator
+                        or not self.config.keep_local_model_warm
+                    ):
+                        return
+                    prepare()
+                LOGGER.info("로컬 번역 모델 예열 완료")
+            except Exception as exc:
+                LOGGER.exception("로컬 번역 모델 예열 실패")
+                self.notices.put(f"로컬 모델 예열에 실패했어: {exc}")
+            finally:
+                if self._local_warmup_translator is translator:
+                    self._local_warmup_translator = None
+
+        threading.Thread(
+            target=warm_in_background,
+            name="warm-local-translator",
+            daemon=True,
+        ).start()
+
+    def _release_local_model(self) -> None:
+        if not self.active_translator_name.startswith("hymt_"):
+            return
+        with self.service_lock:
+            _close_translator(self.translator)
+        LOGGER.info("로컬 번역 모델 해제: VRAM 반환 요청 완료")
+
+    def _sync_local_model_warmth(self) -> None:
+        if not self.active_translator_name.startswith("hymt_"):
+            return
+        if self.config.keep_local_model_warm:
+            self._start_active_local_warmup()
+        elif not self.enabled:
+            self._release_local_model()
+
     def _reset_translation_state(self) -> None:
         self.restore(discard_images=True)
+        self._cancel_pending_translation_work()
+        self._restored = False
+
+    def _cancel_pending_translation_work(self) -> None:
         self.translation_generation += 1
         self.states.clear()
         self.pending.clear()
@@ -1096,7 +1238,6 @@ class DomTranslationController:
                 self.image_results.get_nowait()
             except queue.Empty:
                 break
-        self._restored = False
 
     def restore(self, *, discard_images: bool = False) -> None:
         if self.client is None:
@@ -1134,7 +1275,14 @@ def make_translator(config: AppConfig, *, name: str | None = None) -> Translator
         )
     if selected == "deepl":
         return DeepLTranslator()
+    if selected == "mock":
+        return MockTranslator()
     return OriginalTranslator()
+
+
+def _poll_interval_seconds(capture_fps: int) -> float:
+    normalized = max(MIN_CAPTURE_FPS, min(MAX_CAPTURE_FPS, int(capture_fps)))
+    return 1.0 / normalized
 
 
 def _translator_needs_download(translator: Translator) -> bool:
@@ -1170,7 +1318,13 @@ def configure_logging() -> None:
 def run_with_tray(controller: DomTranslationController) -> int:
     from PySide6.QtCore import QTimer
     from PySide6.QtGui import QAction, QActionGroup
-    from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
+    from PySide6.QtWidgets import (
+        QApplication,
+        QDialog,
+        QMenu,
+        QMessageBox,
+        QSystemTrayIcon,
+    )
 
     app = QApplication(sys.argv)
     app.setApplicationName(PRODUCT_NAME)
@@ -1178,19 +1332,51 @@ def run_with_tray(controller: DomTranslationController) -> int:
     app.setWindowIcon(app_icon())
     app.setQuitOnLastWindowClosed(False)
 
+    discord_launcher = create_discord_debug_launcher()
+    repair_results: queue.Queue[tuple[bool, str]] = queue.Queue()
+    repair_in_progress = False
+    restart_attempted_for_activation = False
+    connection_prompt_active = False
+    settings_dialog: SettingsDialog | None = None
+
+    def ensure_auto_restart_consent() -> bool:
+        if controller.config.discord_auto_restart_consent_granted:
+            return True
+        parent = settings_dialog if settings_dialog is not None else None
+        if not ask_auto_restart_consent(controller.config.ui_theme, parent):
+            return False
+        controller.config.discord_auto_restart_consent_granted = True
+        save_config(controller.config)
+        return True
+
+    def request_translation_enabled(enabled: bool, *, user_initiated: bool) -> None:
+        nonlocal restart_attempted_for_activation
+        if enabled == controller.enabled:
+            return
+        if enabled:
+            if repair_in_progress:
+                return
+            if not ensure_auto_restart_consent():
+                return
+            if user_initiated:
+                restart_attempted_for_activation = False
+        controller.request_enabled(enabled)
+
+    def request_translation_toggle() -> None:
+        request_translation_enabled(not controller.enabled, user_initiated=True)
+
     tray = QSystemTrayIcon(app_icon(enabled=controller.enabled), app)
     tray.setToolTip(f"{PRODUCT_NAME} · 실험적 DOM 모드")
     menu = QMenu()
-    menu.setStyleSheet(menu_stylesheet(controller.config.ui_theme))
+    configure_tray_menu(menu, controller.config.ui_theme)
 
     open_action = QAction(f"{PRODUCT_NAME} 열기", menu)
     menu.addAction(open_action)
     menu.addSeparator()
 
     toggle_action = QAction("번역 켜기", menu)
-    toggle_action.setCheckable(True)
-    toggle_action.setChecked(controller.enabled)
-    toggle_action.triggered.connect(lambda _checked=False: controller.request_toggle())
+    toggle_action.setIcon(translation_status_icon(enabled=controller.enabled))
+    toggle_action.triggered.connect(lambda _checked=False: request_translation_toggle())
     menu.addAction(toggle_action)
 
     language_menu = menu.addMenu("표시 언어")
@@ -1260,7 +1446,9 @@ def run_with_tray(controller: DomTranslationController) -> int:
 
     def bind_toggle_hotkey(shortcut: str) -> bool:
         hotkeys.clear()
-        return hotkeys.register(shortcut, controller.request_toggle)
+        if not hotkeys.available:
+            return True
+        return hotkeys.register(shortcut, request_translation_toggle)
 
     if not bind_toggle_hotkey(controller.config.hotkeys.toggle_translation):
         tray.showMessage(
@@ -1280,6 +1468,98 @@ def run_with_tray(controller: DomTranslationController) -> int:
     def notify(title: str, message: str) -> None:
         tray.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information, 5000)
 
+    def start_discord_repair(expected_process_id: int | None) -> None:
+        nonlocal repair_in_progress, restart_attempted_for_activation
+        repair_in_progress = True
+        restart_attempted_for_activation = True
+        controller.request_enabled(False)
+        notify("Discord 재시작 중", "디버그 렌더러 모드로 다시 연결하고 있어.")
+
+        def worker() -> None:
+            try:
+                discord_launcher.restart(
+                    expected_process_id=expected_process_id,
+                    port=9222,
+                )
+                deadline = time.monotonic() + 30.0
+                last_error = "Discord 디버그 렌더러를 찾지 못했어."
+                while time.monotonic() < deadline:
+                    try:
+                        discord_target()
+                        repair_results.put((True, ""))
+                        return
+                    except Exception as exc:
+                        last_error = str(exc)
+                        time.sleep(0.5)
+                raise RuntimeError(
+                    "Discord를 다시 열었지만 30초 안에 디버그 렌더러가 준비되지 않았어. "
+                    f"마지막 오류: {last_error}"
+                )
+            except Exception as exc:
+                repair_results.put((False, str(exc)))
+
+        threading.Thread(
+            target=worker,
+            name="discord-debug-restart",
+            daemon=True,
+        ).start()
+
+    def handle_connection_issue(_message: str) -> None:
+        nonlocal connection_prompt_active
+        if (
+            connection_prompt_active
+            or repair_in_progress
+            or not controller.enabled
+            or controller.client is not None
+        ):
+            return
+        if not ensure_auto_restart_consent():
+            controller.request_enabled(False)
+            notify(
+                "자동 재시작 취소",
+                "동의하지 않아 번역을 껐어. 다시 켜면 안내를 확인할 수 있어.",
+            )
+            return
+        if restart_attempted_for_activation:
+            controller.request_enabled(False)
+            QMessageBox.warning(
+                settings_dialog,
+                "Discord 연결 실패",
+                "이번 번역 실행에서 Discord 자동 재시작을 이미 한 번 시도했지만 "
+                "디버그 렌더러에 연결하지 못했어. Discord를 직접 종료한 뒤 다시 켜줘.",
+            )
+            return
+        if not discord_launcher.available:
+            controller.request_enabled(False)
+            QMessageBox.warning(
+                settings_dialog,
+                "Discord를 찾을 수 없어",
+                "설치되었거나 실행 중인 Discord를 찾지 못해서 번역을 켤 수 없어.",
+            )
+            return
+
+        current = discord_launcher.current_process()
+        expected_process_id = current.process_id if current is not None else None
+        connection_prompt_active = True
+        try:
+            confirmed = ask_restart_countdown(
+                controller.config.ui_theme,
+                seconds=15,
+                parent=settings_dialog,
+            )
+        finally:
+            connection_prompt_active = False
+        if not confirmed:
+            controller.request_enabled(False)
+            notify(
+                "Discord 자동 재시작 취소",
+                "번역을 껐어. 통화나 작성 중인 내용을 정리한 뒤 다시 켜면 돼.",
+            )
+            return
+        if controller.client is not None:
+            return
+        start_discord_repair(expected_process_id)
+
     def update_ready(_staged: object) -> None:
         restart_update_action.setVisible(True)
         notify("업데이트 준비 완료", "트레이 메뉴에서 재시작하여 업데이트를 눌러줘.")
@@ -1287,25 +1567,55 @@ def run_with_tray(controller: DomTranslationController) -> int:
     updater = UpdateCoordinator(controller.config, notify=notify, ready=update_ready)
     updater.start()
 
+    def finish_settings(
+        dialog: SettingsDialog,
+        result: int,
+        draft: AppConfig,
+        previous_shortcut: str,
+    ) -> None:
+        nonlocal restart_attempted_for_activation, settings_dialog
+        if settings_dialog is dialog:
+            settings_dialog = None
+        try:
+            if result != QDialog.DialogCode.Accepted:
+                return
+            dialog.apply()
+            if draft.enabled and not controller.enabled:
+                if ensure_auto_restart_consent():
+                    draft.discord_auto_restart_consent_granted = True
+                    restart_attempted_for_activation = False
+                else:
+                    draft.enabled = False
+            if not bind_toggle_hotkey(draft.hotkeys.toggle_translation):
+                bind_toggle_hotkey(previous_shortcut)
+                QMessageBox.warning(
+                    None,
+                    "단축키를 사용할 수 없어",
+                    f"{draft.hotkeys.toggle_translation}은 다른 프로그램이 사용 중이야. "
+                    f"기존 {previous_shortcut} 단축키를 유지할게.",
+                )
+                return
+            controller.request_config(draft)
+            menu.setStyleSheet(menu_stylesheet(draft.ui_theme))
+            save_config(draft)
+        finally:
+            dialog.deleteLater()
+
     def show_settings() -> None:
+        nonlocal settings_dialog
+        if settings_dialog is not None:
+            bring_dialog_to_front(settings_dialog)
+            return
         previous_shortcut = controller.config.hotkeys.toggle_translation
         draft = copy.deepcopy(controller.config)
         dialog = SettingsDialog(draft)
-        if not dialog.exec():
-            return
-        dialog.apply()
-        if not bind_toggle_hotkey(draft.hotkeys.toggle_translation):
-            bind_toggle_hotkey(previous_shortcut)
-            QMessageBox.warning(
-                None,
-                "단축키를 사용할 수 없어",
-                f"{draft.hotkeys.toggle_translation}은 다른 프로그램이 사용 중이야. "
-                f"기존 {previous_shortcut} 단축키를 유지할게.",
+        settings_dialog = dialog
+        dialog.finished.connect(
+            lambda result, current=dialog, current_draft=draft, shortcut=previous_shortcut: (
+                finish_settings(current, result, current_draft, shortcut)
             )
-            return
-        controller.request_config(draft)
-        menu.setStyleSheet(menu_stylesheet(draft.ui_theme))
-        save_config(draft)
+        )
+        bring_dialog_to_front(dialog)
 
     open_action.triggered.connect(show_settings)
     settings_action.triggered.connect(show_settings)
@@ -1323,8 +1633,12 @@ def run_with_tray(controller: DomTranslationController) -> int:
     app.aboutToQuit.connect(controller.stop)
     tray.setContextMenu(menu)
     tray.activated.connect(
-        lambda reason: show_settings()
-        if reason == QSystemTrayIcon.ActivationReason.Trigger
+        lambda reason: QTimer.singleShot(0, show_settings)
+        if reason
+        in (
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        )
         else None
     )
     tray.show()
@@ -1340,8 +1654,8 @@ def run_with_tray(controller: DomTranslationController) -> int:
     last_enabled = controller.enabled
 
     def sync_menu() -> None:
-        nonlocal last_enabled
-        toggle_action.setChecked(controller.enabled)
+        nonlocal last_enabled, repair_in_progress
+        toggle_action.setIcon(translation_status_icon(enabled=controller.enabled))
         if controller.enabled != last_enabled:
             tray.setIcon(app_icon(enabled=controller.enabled))
             last_enabled = controller.enabled
@@ -1351,6 +1665,28 @@ def run_with_tray(controller: DomTranslationController) -> int:
             action.setChecked(name == controller.config.translator)
         for style, action in speech_style_actions.items():
             action.setChecked(style == controller.config.speech_style)
+        while True:
+            try:
+                repaired, error = repair_results.get_nowait()
+            except queue.Empty:
+                break
+            repair_in_progress = False
+            if repaired:
+                controller.request_enabled(True)
+                notify("Discord 연결 완료", "디버그 렌더러가 준비되어 번역을 다시 켰어.")
+            else:
+                controller.request_enabled(False)
+                QMessageBox.warning(
+                    settings_dialog,
+                    "Discord 자동 재시작 실패",
+                    error,
+                )
+        while True:
+            try:
+                issue = controller.connection_issues.get_nowait()
+            except queue.Empty:
+                break
+            handle_connection_issue(issue)
         while True:
             try:
                 message = controller.notices.get_nowait()

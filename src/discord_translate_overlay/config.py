@@ -46,11 +46,11 @@ class AppConfig:
     ocr_device: str = "auto"
     translator: str = "hymt_1_8b"
     hymt_device: str = "auto"
+    keep_local_model_warm: bool = True
     speech_style: str = "auto"
     auto_update: bool = True
     update_repository: str = DEFAULT_UPDATE_REPOSITORY
-    kanana_device: str = "auto"
-    kanana_precision: str = "int4"
+    discord_auto_restart_consent_granted: bool = False
     chat_region: RegionConfig = field(default_factory=RegionConfig)
     hotkeys: HotkeyConfig = field(default_factory=HotkeyConfig)
 
@@ -59,10 +59,12 @@ class AppConfig:
         data = dict(data)
         region = RegionConfig(**data.pop("chat_region", {}))
         hotkeys = HotkeyConfig(**data.pop("hotkeys", {}))
-        # Existing prototype users should move off Kanana without having to
+        # Removed prototype engines should migrate without requiring users to
         # delete their local settings file.
-        if data.get("translator") == "kanana":
+        if data.get("translator") in {"kanana", "original"}:
             data["translator"] = "hymt_1_8b"
+        data.pop("kanana_device", None)
+        data.pop("kanana_precision", None)
         if data.get("update_repository") == "NudeNyang/DiscordTranslateOverlay":
             data["update_repository"] = DEFAULT_UPDATE_REPOSITORY
         if data.get("speech_style", "auto") not in {"auto", "polite", "casual"}:

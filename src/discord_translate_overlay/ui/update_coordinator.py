@@ -11,6 +11,7 @@ from PySide6.QtCore import QTimer
 
 from .. import __version__
 from ..config import AppConfig
+from ..platforms import current_platform_services
 from ..updater import (
     GitHubReleaseClient,
     ReleaseInfo,
@@ -42,7 +43,7 @@ class UpdateCoordinator:
         self._poll_timer.start(250)
 
     def start(self, delay_ms: int = 5000) -> None:
-        if self.config.auto_update:
+        if self.config.auto_update and current_platform_services().auto_update_supported:
             QTimer.singleShot(delay_ms, self.check)
 
     def check(self) -> None:
@@ -67,6 +68,8 @@ class UpdateCoordinator:
         self, client: GitHubReleaseClient, release: ReleaseInfo
     ) -> StagedUpdate | None:
         if not getattr(sys, "frozen", False):
+            return None
+        if not current_platform_services().auto_update_supported:
             return None
         update_root = Path(user_cache_dir("NudeTranslator", "NudeNyang")) / "updates"
         archive = client.download(release, update_root / "downloads" / release.version)

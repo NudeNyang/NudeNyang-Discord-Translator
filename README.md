@@ -3,12 +3,42 @@
 Windows 10/11의 Discord에서 한국어·일본어·영어·중국어 메시지를 메시지별로 판별하고,
 선택한 언어로 바꿔 표시하는 실시간 번역기다.
 
-기본 모드는 Discord API, 봇, 사용자 토큰, self-bot, DOM 변조를 사용하지 않는다. 실제
-Discord 메시지는 수정되지 않고 화면 위의 클릭 통과형 창만 바뀐다. 화면 합성의 한계를 피하기
-위한 실험적 DOM 모드도 공개 소스에 포함하지만, 비공식 방식이라는 위험 고지를 확인하고
-사용자가 직접 선택해야 한다.
+> 데스크톱 앱은 Tauri 2 + Rust로 전환 중이다. 설정창·트레이·앱 생명주기는 Rust가 맡고,
+> DOM 번역·Hy-MT2와 기본 이미지 OCR은 창 없는 Python 엔진으로 유지한다. 결정 이유와 단계별
+> 완료 조건은 [TAURI_MIGRATION.md](TAURI_MIGRATION.md)에 기록한다.
+
+## 운영체제 지원
+
+| 운영체제 | 현재 상태 | 비고 |
+|---|---|---|
+| Windows 10/11 x64 | 지원 | 현재 배포·자동 업데이트 대상 |
+| macOS Apple Silicon | 기반 준비 중 | 아직 실행 파일을 배포하거나 지원한다고 약속하지 않음 |
+| macOS Intel | 계획 없음 | 초기 macOS 대상은 Apple Silicon으로 한정 |
+
+공통 번역·DOM/CDP·OCR 코드는 Python 엔진에서 재사용하고, Tauri/Rust 앱 셸을 플랫폼 공통
+진입점으로 사용한다. 운영체제별 llama.cpp 런타임, Discord 실행, 패키징과 업데이트는
+명시적인 플랫폼 경계로 교체하는 방향이다.
+현재 준비 상태와 구현 순서는 [MACOS.md](MACOS.md)에 기록한다.
+
+현재 제품 방향은 Discord API, 봇, 사용자 토큰과 self-bot을 사용하지 않는 DOM 표시 번역이다.
+Discord 설치 파일은 수정하지 않지만 공식 확장 방식이 아니므로 클라이언트 업데이트로 깨지거나
+Discord 정책상 위험이 생길 수 있다. 이미지 번역을 위한 OCR은 기본 기능으로 유지한다.
 
 ## 현재 아키텍처
+
+```text
+Tauri WebView 설정 UI
+  → Rust 창·트레이·단일 인스턴스·전역 단축키
+  → JSON Lines IPC
+  → Python 헤드리스 엔진
+       ├─ Discord CDP/DOM 메시지·채널 번역
+       ├─ Discord 첨부 이미지 PaddleOCR 번역
+       ├─ Hy-MT2·구독 CLI·DeepL
+       └─ 번역 캐시와 기존 설정 호환
+```
+
+기존 PySide6 화면 오버레이 구현도 전환 검증과 회귀 비교를 위해 소스에 남아 있다.
+아래 구조는 새 기능의 기본 경로가 아니라 제거 예정인 레거시 경로다.
 
 ```text
 Discord HWND 추적
@@ -44,10 +74,9 @@ Discord HWND 추적
   원문에 투명 구멍을 내지 않고 번역문과 캡처한 인라인 이모티콘을 다시 배치하는
   메시지 단위 합성 렌더러를 사용한다.
 
-실험적 DOM 방식도 GitHub 소스와 Release에 포함한다. 기본값은 외부 오버레이 방식이며,
-DOM 기능은 사용자 토큰이나 Discord API를 사용하지 않고 현재 렌더링 세션의 표시만 바꾼다.
-공식 확장 방식이 아니어서 약관 위반 및 계정 제재 가능성이 있다는 고지와 세부 안전 경계는
-`ARCHITECTURE.md`에 기록돼 있다.
+새 Tauri 앱의 기본 번역 경로는 DOM 방식이다. 사용자 토큰이나 Discord API를 사용하지 않고
+현재 렌더링 세션의 표시만 바꾼다. 공식 확장 방식이 아니어서 약관 위반 및 계정 제재 가능성이
+있다는 고지와 세부 안전 경계는 `ARCHITECTURE.md`에 기록돼 있다.
 
 ## 설치
 
@@ -119,20 +148,24 @@ uv run discord-translate-poc artifacts/discord-chat.png --translator mock --targ
 결과는 `artifacts/poc-overlay.png`, OCR 후보·신뢰도·언어·좌표는
 `artifacts/poc-result.json`에 기록된다.
 
-## 실시간 실행
+## Tauri 앱 실행
 
 API 키 없이도 기본값인 **Hy-MT2 1.8B 로컬 번역**으로 실행된다.
 
 ```powershell
-uv run discord-translate-overlay
+npm install
+npm run tauri:dev
 ```
 
-실험적 DOM 모드는 별도 명령으로 실행한다. 최초 실행 때 Discord를 디버그 포트와 함께 다시
-열 수 있으며 현재 렌더링 세션의 표시만 바꾼다.
+Tauri가 설정창·트레이·단일 인스턴스와 전역 단축키를 담당하고 Python 헤드리스 엔진을 자식
+프로세스로 시작한다. 소스 개발 빌드는 프로젝트의 `.venv`를 사용한다. 최초 실행 때 Discord를
+디버그 포트와 함께 다시 열 수 있으며 현재 렌더링 세션의 표시만 바꾼다.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/start_dom_translate.ps1
-```
+실시간 번역을 처음 켤 때는 Discord 자동 재시작 방식을 한 번 안내하고 동의를 받는다.
+동의 후 Discord 디버그 렌더러에 연속으로 연결하지 못하면 15초 카운트다운을 표시하며,
+사용자는 `지금 재시작` 또는 `취소`를 선택할 수 있다. 재시작하면 작성 중인 메시지가 사라지거나
+통화가 종료될 수 있다. 카운트다운 도중 Discord 프로세스가 바뀌면 오래된 요청을 취소하고,
+한 번 재시작한 뒤에도 연결하지 못하면 자동으로 반복 재시작하지 않는다.
 
 DOM 모드에서는 Discord 메시지와 채널명뿐 아니라 첨부 이미지 및 링크 미리보기의 글자도
 선택적으로 번역할 수 있다. 번역이 켜진 상태에서 이미지 위에 마우스를 올린 뒤
@@ -243,6 +276,8 @@ digest를 검증한 뒤 업데이트를 준비한다. 사용자가 트레이의 
 설정의 `번역 말투`에서 원문 격식 자동 유지, 항상 존댓말·격식체, 항상 반말·비격식체를
 고를 수 있다. 자동 모드는 한·일·영·중의 명시적인 말투 단서를 판별하며, 말투별 번역 캐시를
 분리해 이전 말투의 결과를 잘못 재사용하지 않는다.
+`로컬 모델 예열 유지`는 기본으로 켜져 있어 번역을 꺼도 모델을 VRAM에 유지한다. 이 옵션을
+끄면 번역을 끌 때 로컬 서버를 종료해 VRAM을 반환하며, 다음 번역을 켤 때 모델을 다시 불러온다.
 화면 이미지와 OCR 텍스트는 PC 밖으로 전송되지 않는다.
 
 첫 번역 때 Tencent 공식 Hugging Face 저장소에서 모델을 이어받기 가능한 방식으로 내려받고,
@@ -253,27 +288,27 @@ digest를 검증한 뒤 업데이트를 준비한다. 사용자가 트레이의 
 ## 테스트와 패키징
 
 ```powershell
-uv run pytest
-uv run ruff check .
-powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
+.\.venv\Scripts\python.exe -m pytest -o addopts=
+.\.venv\Scripts\python.exe -m ruff check src tests
+npm run test:web
+cargo clippy --manifest-path src-tauri\Cargo.toml --all-targets -- -D warnings
+npm run tauri:build
 ```
 
-PyInstaller 출력은 `dist/NudeTranslator/`에 생성된다. Paddle와 Hy-MT2 모델은 첫
-실행 때 사용자 캐시에 다운로드되므로 실행 파일에 모델 가중치를 중복 포함하지 않는다.
-배포 폴더에는 Hy-MT2 실행에 필요한 `llama.cpp` Windows 런타임을 함께 넣는다.
-GitHub Release에 올릴 파일은 `release/NudeTranslator-Windows-x64.zip`으로 생성된다.
+현재 Tauri 릴리스 실행 파일은 `src-tauri/target/release/nude-translator-tauri.exe`에 생성된다.
+이 전환 빌드는 소스 저장소의 `.venv`에서 Python 엔진을 실행하는 개발 검증용이다. 공개 배포에는
+Python OCR 엔진과 llama.cpp를 Tauri Resources에 사이드카로 포함하고 설치 서명·업데이트를
+연결해야 한다. 그 단계가 끝나기 전에는 이 파일 하나만 따로 복사해 배포하지 않는다.
 
 ```powershell
-.\dist\NudeTranslator\NudeTranslator.exe
+.\src-tauri\target\release\nude-translator-tauri.exe
 ```
 
-창 없는 배포 실행에서도 시작 오류를 확인할 수 있도록 기본 로그를
-`%LOCALAPPDATA%\NudeTranslator\overlay.log`에 남긴다. 별도 경로가 필요하면
-`--log-file <경로>`를 사용하면 된다.
-
-현재 패키징 스크립트는 Paddle/PaddleX와 CUDA DLL을 안전하게 모두 수집하는 검증용 구성이라
-GPU 빌드의 배포 폴더가 약 3.7 GB다. 모델 가중치는 별도지만 미사용 Paddle 기능까지 포함된
-크기다. 설치 프로그램을 배포하기 전에는 전용 PyInstaller hook으로 OCR 런타임만 선별해야 한다.
+기존 `scripts/package.ps1`과 `dist/NudeTranslator/`는 PySide6 레거시 회귀 빌드용으로만 남긴다.
+현재 전환 빌드는 Paddle와 Hy-MT2 모델을 첫 실행 때 사용자 캐시에 다운로드한다. 정식 Tauri
+배포판은 공식 Hy-MT2 GGUF를 내장하는 방향이며, 모델별 Apache-2.0 원문과 Tencent 저작권
+고지를 앱과 배포 패키지에 함께 포함한다. 세부 전환 순서는
+[TAURI_MIGRATION.md](TAURI_MIGRATION.md)를 따른다.
 
 ## 이 PC에서 확인한 결과
 
@@ -319,3 +354,13 @@ GPU 빌드의 배포 폴더가 약 3.7 GB다. 모델 가중치는 별도지만 �
 - [PaddleOCR 3.7 공식 문서](https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/OCR.html)
 - [PP-OCRv6 모델 소개](https://www.paddleocr.ai/latest/en/version3.x/algorithm/PP-OCRv6/PP-OCRv6.html)
 - [Windows Graphics Capture](https://learn.microsoft.com/windows/apps/develop/media-authoring-processing/screen-capture)
+
+## 라이선스
+
+Copyright (C) 2026 NudeNyang
+
+Nude Translator 앱 소스와 자체 구성요소는 GNU General Public License version 3 전용
+(`GPL-3.0-only`)으로 배포한다. 자세한 조건은 [LICENSE](LICENSE)에서 확인할 수 있다.
+Hy-MT2 모델과 그 밖의 제3자 구성요소에는 각자의 라이선스가 적용되며,
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)와 [licenses](licenses) 폴더에 원문과 출처를
+정리한다.

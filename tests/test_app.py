@@ -1,8 +1,12 @@
+import threading
 from concurrent.futures import Future
 from types import SimpleNamespace
 
+from PySide6.QtWidgets import QApplication, QSystemTrayIcon
+
 from discord_translate_overlay import app as app_module
 from discord_translate_overlay.app import OverlayController, _frame_geometry_signature
+from discord_translate_overlay.config import AppConfig
 from discord_translate_overlay.models import Rect
 
 
@@ -102,3 +106,182 @@ def test_failed_first_ocr_forces_a_full_retry_without_waiting_for_scroll() -> No
 
     assert controller._force_next_frame
     assert detector.reset_called
+
+
+def test_overlay_disable_releases_local_model_when_warm_mode_is_disabled(
+    monkeypatch,
+) -> None:
+    class LocalTranslator:
+        def __init__(self) -> None:
+            self.close_calls = 0
+
+        def close(self) -> None:
+            self.close_calls += 1
+
+    translator = LocalTranslator()
+    controller = OverlayController.__new__(OverlayController)
+    controller.config = AppConfig(
+        translator="hymt_7b", enabled=True, keep_local_model_warm=False
+    )
+    controller.translator = translator
+    controller.future = None
+    controller.enabled_action = SimpleNamespace(setIcon=lambda _icon: None)
+    controller.tray = SimpleNamespace(setIcon=lambda _icon: None)
+    controller._hide_overlays = lambda: None
+    controller._show_available_overlays = lambda: None
+    controller._save = lambda: None
+    monkeypatch.setattr(app_module, "app_icon", lambda *, enabled: None)
+    monkeypatch.setattr(app_module, "translation_status_icon", lambda *, enabled: None)
+
+    controller.set_enabled(False)
+
+    assert translator.close_calls == 1
+
+
+def test_overlay_prepares_local_model_in_background_when_warm_mode_is_enabled() -> None:
+    class LocalTranslator:
+        def __init__(self) -> None:
+            self.prepare_started = threading.Event()
+
+        def prepare(self) -> None:
+            self.prepare_started.set()
+
+    translator = LocalTranslator()
+    controller = OverlayController.__new__(OverlayController)
+    controller.config = AppConfig(
+        translator="hymt_7b", enabled=False, keep_local_model_warm=True
+    )
+    controller.translator = translator
+    controller._closing = False
+    controller._local_warmup_translator = None
+
+    controller._start_local_model_warmup()
+
+    assert translator.prepare_started.wait(timeout=1.0)
+
+
+def test_repeated_settings_request_reuses_the_open_dialog(monkeypatch) -> None:
+    dialogs = []
+
+    class Signal:
+        def __init__(self) -> None:
+            self.callback = None
+
+        def connect(self, callback) -> None:
+            self.callback = callback
+
+    class FakeSettingsDialog:
+        def __init__(self, _config) -> None:
+            self.finished = Signal()
+            self.show_calls = 0
+            self.raise_calls = 0
+            self.activate_calls = 0
+            dialogs.append(self)
+
+        def isMinimized(self) -> bool:
+            return False
+
+        def showNormal(self) -> None:
+            raise AssertionError("일반 상태의 창은 show로 표시해야 해")
+
+        def show(self) -> None:
+            self.show_calls += 1
+
+        def raise_(self) -> None:
+            self.raise_calls += 1
+
+        def activateWindow(self) -> None:
+            self.activate_calls += 1
+
+    controller = OverlayController.__new__(OverlayController)
+    controller.config = AppConfig()
+    controller._settings_dialog = None
+    monkeypatch.setattr(app_module, "SettingsDialog", FakeSettingsDialog)
+
+    controller.show_settings()
+    controller.show_settings()
+
+    assert len(dialogs) == 1
+    assert dialogs[0].show_calls == 2
+    assert dialogs[0].raise_calls == 2
+    assert dialogs[0].activate_calls == 2
+    assert dialogs[0].finished.callback is not None
+
+
+def test_toggle_settings_hides_the_visible_settings_dialog() -> None:
+    class VisibleDialog:
+        def __init__(self) -> None:
+            self.hide_calls = 0
+
+        def isVisible(self) -> bool:
+            return True
+
+        def isMinimized(self) -> bool:
+            return False
+
+        def hide(self) -> None:
+            self.hide_calls += 1
+
+    dialog = VisibleDialog()
+    controller = OverlayController.__new__(OverlayController)
+    controller._settings_dialog = dialog
+
+    controller.toggle_settings()
+
+    assert dialog.hide_calls == 1
+
+
+def test_toggle_settings_restores_the_existing_hidden_settings_dialog(monkeypatch) -> None:
+    class HiddenDialog:
+        def isVisible(self) -> bool:
+            return False
+
+        def isMinimized(self) -> bool:
+            return False
+
+    dialog = HiddenDialog()
+    controller = OverlayController.__new__(OverlayController)
+    controller._settings_dialog = dialog
+    brought_forward = []
+    monkeypatch.setattr(
+        app_module,
+        "bring_dialog_to_front",
+        lambda existing: brought_forward.append(existing),
+    )
+
+    controller.toggle_settings()
+
+    assert brought_forward == [dialog]
+
+
+def test_tray_menu_omits_ocr_region_actions() -> None:
+    app = QApplication.instance() or QApplication([])
+    controller = OverlayController.__new__(OverlayController)
+    controller.config = AppConfig()
+
+    menu = controller._tray_menu()
+    action_labels = {action.text() for action in menu.actions()}
+    toggle_action = next(action for action in menu.actions() if action.text() == "번역 켜기")
+
+    assert "OCR 영역 직접 선택" not in action_labels
+    assert "OCR 영역 자동 감지" not in action_labels
+    assert "현재 번역문 복사" not in action_labels
+    assert not toggle_action.isCheckable()
+    assert not toggle_action.icon().isNull()
+    menu.close()
+    app.processEvents()
+
+
+def test_tray_activation_always_requests_the_settings_window() -> None:
+    app = QApplication.instance() or QApplication([])
+    controller = OverlayController.__new__(OverlayController)
+    show_calls = []
+    controller.show_settings = lambda: show_calls.append(True)
+    controller.toggle_settings = lambda: (_ for _ in ()).throw(
+        AssertionError("트레이 클릭으로 이미 열린 설정창을 숨기면 안 돼")
+    )
+
+    controller._tray_activated(QSystemTrayIcon.ActivationReason.Trigger)
+    app.processEvents()
+
+    assert show_calls == [True]

@@ -18,6 +18,7 @@ import httpx
 from platformdirs import user_cache_dir
 
 from ..models import Language
+from ..platforms import current_platform_services, llama_server_candidates
 from .base import Translator
 
 LOGGER = logging.getLogger("discord_translate_overlay")
@@ -239,7 +240,7 @@ class HyMtTranslator(Translator):
             "0" if self.device == "cpu" else "auto",
             "--no-webui",
         ]
-        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        creationflags = current_platform_services().subprocess_creation_flags()
         self._process = subprocess.Popen(
             command,
             stdin=subprocess.DEVNULL,
@@ -366,15 +367,12 @@ def find_llama_server() -> Path | None:
     candidates: list[Path] = []
     if override:
         candidates.append(Path(override).expanduser())
-    bundled = Path(sys.executable).resolve().parent / "runtime" / "llama" / "llama-server.exe"
-    candidates.append(bundled)
-    discovered = shutil.which("llama-server") or shutil.which("llama-server.exe")
-    if discovered:
-        candidates.append(Path(discovered))
-    local_app_data = os.getenv("LOCALAPPDATA")
-    if local_app_data:
-        package_root = Path(local_app_data) / "Microsoft" / "WinGet" / "Packages"
-        candidates.extend(package_root.glob("ggml.llamacpp_*/llama-server.exe"))
+    services = current_platform_services()
+    candidates.extend(llama_server_candidates(Path(sys.executable)))
+    for command_name in services.llama_server_command_names:
+        discovered = shutil.which(command_name)
+        if discovered:
+            candidates.append(Path(discovered))
     for candidate in candidates:
         if candidate.is_file():
             return candidate.resolve()

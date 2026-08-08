@@ -5,6 +5,8 @@ from collections.abc import Callable
 
 from PySide6.QtCore import QAbstractNativeEventFilter, QByteArray
 
+from ..platforms import current_platform_services
+
 WM_HOTKEY = 0x0312
 MOD_ALT = 0x0001
 MOD_CONTROL = 0x0002
@@ -12,7 +14,8 @@ MOD_SHIFT = 0x0004
 MOD_WIN = 0x0008
 MOD_NOREPEAT = 0x4000
 
-user32 = ctypes.windll.user32
+_PLATFORM = current_platform_services()
+user32 = ctypes.windll.user32 if _PLATFORM.global_hotkeys_supported else None
 
 
 class _Message(ctypes.Structure):
@@ -37,6 +40,10 @@ class GlobalHotkeys(QAbstractNativeEventFilter):
 
     def register(self, shortcut: str, callback: Callable[[], None]) -> bool:
         modifiers, key = _parse(normalize_shortcut(shortcut))
+        if user32 is None:
+            # Importing the DOM application is now safe on future platforms.
+            # A native macOS backend will replace this explicit unsupported path.
+            return False
         hotkey_id = self._next_id
         self._next_id += 1
         if not user32.RegisterHotKey(None, hotkey_id, modifiers | MOD_NOREPEAT, key):
@@ -51,6 +58,8 @@ class GlobalHotkeys(QAbstractNativeEventFilter):
         return True
 
     def poll(self) -> None:
+        if user32 is None:
+            return
         for key, callback in self._polled_callbacks.items():
             down = bool(user32.GetAsyncKeyState(key) & 0x8000)
             if down and key not in self._polled_down:
@@ -75,8 +84,9 @@ class GlobalHotkeys(QAbstractNativeEventFilter):
         self.clear()
 
     def clear(self) -> None:
-        for hotkey_id in self._callbacks:
-            user32.UnregisterHotKey(None, hotkey_id)
+        if user32 is not None:
+            for hotkey_id in self._callbacks:
+                user32.UnregisterHotKey(None, hotkey_id)
         self._callbacks.clear()
         self._polled_callbacks.clear()
         self._polled_down.clear()
@@ -84,6 +94,10 @@ class GlobalHotkeys(QAbstractNativeEventFilter):
     @property
     def binding_count(self) -> int:
         return len(self._callbacks) + len(self._polled_callbacks)
+
+    @property
+    def available(self) -> bool:
+        return user32 is not None
 
 
 def normalize_shortcut(shortcut: str) -> str:

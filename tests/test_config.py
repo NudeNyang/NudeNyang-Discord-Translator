@@ -9,6 +9,8 @@ def test_new_desktop_and_update_preferences_round_trip(tmp_path) -> None:
     config.ui_theme = "dark"
     config.auto_update = False
     config.update_repository = "Example/CustomTranslator"
+    config.keep_local_model_warm = False
+    config.discord_auto_restart_consent_granted = True
     config.hotkeys.toggle_translation = "Ctrl+Alt+T"
 
     save_config(config, path)
@@ -17,6 +19,8 @@ def test_new_desktop_and_update_preferences_round_trip(tmp_path) -> None:
     assert restored.ui_theme == "dark"
     assert not restored.auto_update
     assert restored.update_repository == "Example/CustomTranslator"
+    assert not restored.keep_local_model_warm
+    assert restored.discord_auto_restart_consent_granted
     assert restored.hotkeys.toggle_translation == "Ctrl+Alt+T"
 
 
@@ -28,6 +32,8 @@ def test_old_settings_receive_safe_new_defaults(tmp_path) -> None:
 
     assert restored.ui_theme == "system"
     assert restored.auto_update
+    assert restored.keep_local_model_warm
+    assert not restored.discord_auto_restart_consent_granted
     assert restored.update_repository == "NudeNyang/Nude-Translator"
 
 
@@ -41,3 +47,23 @@ def test_old_update_repository_is_migrated(tmp_path) -> None:
     restored = load_config(path)
 
     assert restored.update_repository == "NudeNyang/Nude-Translator"
+
+
+def test_original_display_translator_is_migrated_to_default_local_model() -> None:
+    restored = AppConfig.from_dict({"translator": "original"})
+
+    assert restored.translator == "hymt_1_8b"
+
+
+def test_removed_kanana_settings_are_ignored_during_migration() -> None:
+    restored = AppConfig.from_dict(
+        {
+            "translator": "kanana",
+            "kanana_device": "cuda",
+            "kanana_precision": "int4",
+        }
+    )
+
+    assert restored.translator == "hymt_1_8b"
+    assert not hasattr(restored, "kanana_device")
+    assert not hasattr(restored, "kanana_precision")

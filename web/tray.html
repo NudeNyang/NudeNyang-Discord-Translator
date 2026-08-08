@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nude Translator</title>
+    <link rel="stylesheet" href="./tray.css" />
+  </head>
+  <body>
+    <main class="tray-panel" aria-label="Nude Translator 트레이 메뉴">
+      <button class="brand-row" id="open-settings" type="button">
+        <img src="./app-icon.png" alt="" width="34" height="34" />
+        <span class="brand-copy">
+          <strong>Nude Translator</strong>
+          <small id="engine-summary">상태 확인 중</small>
+        </span>
+        <span class="open-label" id="open-label">열기</span>
+      </button>
+
+      <div id="main-menu">
+        <div class="menu-group">
+          <button class="menu-row" id="toggle-translation" type="button">
+            <span class="translation-indicator" id="translation-indicator" aria-hidden="true">
+              <span></span>
+            </span>
+            <span class="menu-copy">
+              <strong>실시간 번역</strong>
+            </span>
+            <span class="menu-value" id="translation-state">확인 중</span>
+          </button>
+
+          <button class="menu-row compact" id="open-language-settings" type="button">
+            <span class="menu-copy">
+              <strong>표시 언어</strong>
+            </span>
+            <span class="menu-value arrow-value"><span id="target-language">한국어</span><b>›</b></span>
+          </button>
+        </div>
+
+        <div class="menu-group bottom-group">
+          <button class="menu-row compact" id="open-settings-secondary" type="button">
+            <span class="menu-copy"><strong>설정</strong></span>
+            <span class="menu-value arrow-value" aria-hidden="true"><b>›</b></span>
+          </button>
+          <button class="menu-row compact danger" id="quit-app" type="button">
+            <span class="menu-copy"><strong>종료</strong></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-group language-view" id="language-view" aria-label="표시 언어 선택" hidden>
+        <button class="menu-row compact language-option" data-language="ko" type="button">
+          <span class="menu-copy"><strong>한국어</strong></span><span class="language-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact language-option" data-language="ja" type="button">
+          <span class="menu-copy"><strong>日本語</strong></span><span class="language-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact language-option" data-language="en" type="button">
+          <span class="menu-copy"><strong>English</strong></span><span class="language-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact language-option" data-language="zh" type="button">
+          <span class="menu-copy"><strong>简体中文</strong></span><span class="language-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="menu-row compact language-option" data-language="zh-Hant" type="button">
+          <span class="menu-copy"><strong>繁體中文</strong></span><span class="language-check" aria-hidden="true">✓</span>
+        </button>
+      </div>
+    </main>
+    <script type="module" src="./tray.js"></script>
+  </body>
+</html>

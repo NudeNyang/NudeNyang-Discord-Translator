@@ -68,7 +68,7 @@ def test_message_lookup_does_not_fuzzy_match_protected_emoticons(tmp_path) -> No
             Language.JAPANESE,
             Language.KOREAN,
             "(•ω・)",
-            "kanana:test:protected",
+            "local:test:protected",
         )
 
         assert (
@@ -77,7 +77,7 @@ def test_message_lookup_does_not_fuzzy_match_protected_emoticons(tmp_path) -> No
                 "(•ω•)つス.....",
                 Language.JAPANESE,
                 Language.KOREAN,
-                "kanana:test:protected",
+                "local:test:protected",
                 allow_fuzzy=False,
             )
             is None
@@ -102,12 +102,12 @@ def test_translation_cache_is_separated_by_engine(tmp_path) -> None:
             "hello",
             Language.ENGLISH,
             Language.KOREAN,
-            "Kanana 결과",
-            "kanana:test",
+            "로컬 엔진 결과",
+            "local:test",
         )
 
         assert cache.get("same-message", Language.KOREAN, "deepl:v1") == "DeepL 결과"
-        assert cache.get("same-message", Language.KOREAN, "kanana:test") == "Kanana 결과"
+        assert cache.get("same-message", Language.KOREAN, "local:test") == "로컬 엔진 결과"
     finally:
         cache.close()
 

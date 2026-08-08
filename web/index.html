@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nude Translator 설정</title>
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <img class="brand-icon" src="./app-icon.png" alt="" width="52" height="52" />
+        <div class="header-copy">
+          <h1>설정</h1>
+          <p>Discord DOM 번역과 로컬 모델, 이미지 OCR을 한곳에서 관리합니다.</p>
+        </div>
+        <div class="engine-state" id="engine-state" data-state="loading">
+          <span class="state-dot" aria-hidden="true"></span>
+          <span id="engine-state-label">엔진 연결 중</span>
+        </div>
+      </header>
+
+      <form id="settings-form">
+        <div class="settings-scroll-region">
+          <div id="settings-scroll" class="settings-scroll">
+          <section class="settings-section" aria-labelledby="translation-heading">
+          <h2 id="translation-heading">기본 번역</h2>
+          <div class="settings-surface">
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>실시간 번역</h3>
+                <p>Discord 메시지와 채널명을 선택한 언어로 번역해 표시합니다.</p>
+              </div>
+              <button class="switch" id="enabled" type="button" role="switch" aria-checked="false">
+                <span></span><b>꺼짐</b>
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>표시 언어</h3>
+                <p>원문과 표시 언어가 같으면 번역하지 않고 그대로 유지합니다.</p>
+              </div>
+              <div class="custom-select" data-field="target_language"></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>번역 모델</h3>
+                <p>로컬 Hy-MT2와 구독 CLI, 외부 API 중에서 선택합니다.</p>
+              </div>
+              <div class="custom-select" data-field="translator"></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>번역 말투</h3>
+                <p>원문 말투를 유지하거나 존댓말과 반말로 고정할 수 있습니다.</p>
+              </div>
+              <div class="custom-select" data-field="speech_style"></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>Hy-MT2 실행 장치</h3>
+                <p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p>
+              </div>
+              <div class="custom-select" data-field="hymt_device"></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>로컬 모델 예열 유지</h3>
+                <p>번역을 꺼도 모델을 VRAM에 유지합니다. 끄면 즉시 반환합니다.</p>
+              </div>
+              <button class="switch" id="keep-warm" type="button" role="switch" aria-checked="true">
+                <span></span><b>유지</b>
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>화면 확인 빈도</h3>
+                <p>값이 높으면 반응은 빨라지지만 CPU 사용량이 증가할 수 있습니다.</p>
+              </div>
+              <label class="number-field">
+                <input id="capture-fps" type="number" min="2" max="20" inputmode="numeric" />
+                <span>회/초</span>
+              </label>
+            </div>
+            <div class="privacy-note">
+              <strong>로컬 우선</strong>
+              <span>Hy-MT2와 이미지 OCR은 PC에서 실행됩니다. 외부 모델은 추출된 텍스트만 전송합니다.</span>
+            </div>
+          </div>
+          </section>
+
+          <section class="settings-section" aria-labelledby="appearance-heading">
+          <h2 id="appearance-heading">화면</h2>
+          <div class="settings-surface single-row">
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>설정창 테마</h3>
+                <p>시스템 설정을 따르거나 라이트 및 다크 모드를 직접 선택합니다.</p>
+              </div>
+              <div class="custom-select" data-field="ui_theme"></div>
+            </div>
+          </div>
+          </section>
+
+          <section class="settings-section" aria-labelledby="shortcut-heading">
+          <h2 id="shortcut-heading">단축키</h2>
+          <div class="settings-surface single-row">
+            <div class="setting-row">
+              <div class="setting-copy">
+                <h3>번역 켜기·끄기</h3>
+                <p>다른 프로그램을 사용 중일 때도 이 키로 번역 상태를 전환합니다.</p>
+              </div>
+              <div class="shortcut-editor">
+                <input
+                  class="text-field"
+                  id="toggle-shortcut"
+                  type="text"
+                  maxlength="24"
+                  autocomplete="off"
+                  aria-describedby="shortcut-help"
+                  readonly
+                />
+                <small id="shortcut-help">클릭한 뒤 원하는 단축키 조합을 누르면 변경할 수 있습니다.</small>
+              </div>
+            </div>
+          </div>
+          </section>
+
+          <section class="settings-section" aria-labelledby="app-heading">
+          <h2 id="app-heading">앱 정보</h2>
+            <div class="settings-surface app-information">
+              <div class="app-info-row app-info-product">
+                <div>
+                  <h3>Nude Translator</h3>
+                  <p>버전 <span id="app-version">0.2.0</span></p>
+                </div>
+                <div class="app-info-links" aria-label="프로젝트 링크">
+                  <span>© 2026</span>
+                  <span aria-hidden="true">·</span>
+                  <button class="app-link" id="author-link" type="button">NudeNyang</button>
+                  <span aria-hidden="true">·</span>
+                  <button class="app-link" id="github-link" type="button">GitHub</button>
+                </div>
+              </div>
+
+              <div class="app-info-row">
+                <div>
+                  <h3>자동 업데이트</h3>
+                  <p id="update-status">새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.</p>
+                </div>
+                <button class="button secondary app-info-button" id="check-update" type="button">지금 확인</button>
+              </div>
+
+              <div class="app-info-row">
+                <div>
+                  <p class="app-copyright">Copyright © 2026 NudeNyang</p>
+                  <p class="app-license-summary">GNU GPL v3에 따라 이용 가능하며 별도 보증은 제공되지 않습니다.</p>
+                </div>
+                <button class="button secondary app-info-button" id="view-license" type="button">라이선스 보기</button>
+              </div>
+            </div>
+          </section>
+          </div>
+          <div id="settings-scroll-indicator" class="scroll-indicator" aria-hidden="true">
+            <div class="scroll-indicator-thumb"></div>
+          </div>
+        </div>
+
+        <footer class="form-footer">
+          <p id="save-status">설정은 이 PC에만 저장됩니다.</p>
+          <div class="footer-actions">
+            <button class="button secondary" id="cancel" type="button">취소</button>
+            <button class="button primary" type="submit">저장</button>
+          </div>
+        </footer>
+      </form>
+    </main>
+
+    <div class="modal-layer" id="modal-layer" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <h2 id="modal-title"></h2>
+        <p id="modal-message"></p>
+        <div class="modal-actions">
+          <button class="button secondary" id="modal-cancel" type="button">취소</button>
+          <button class="button primary" id="modal-accept" type="button"></button>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
