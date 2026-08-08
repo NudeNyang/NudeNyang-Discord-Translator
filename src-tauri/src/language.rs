@@ -61,7 +61,7 @@ impl TryFrom<&str> for Language {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct RecognitionCandidate {
     pub engine: String,
     pub text: String,

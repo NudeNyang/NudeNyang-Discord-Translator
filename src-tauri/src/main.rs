@@ -7,6 +7,7 @@ mod discord;
 pub mod dom;
 mod engine;
 pub mod language;
+pub mod ocr;
 pub mod translation;
 mod updater;
 
