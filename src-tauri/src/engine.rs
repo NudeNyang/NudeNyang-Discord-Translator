@@ -1,0 +1,773 @@
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::sync::{mpsc, Arc, Mutex};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
+
+use serde::Serialize;
+
+use crate::cache::TranslationCache;
+use crate::cdp::{discord_target, CdpClient};
+use crate::config::{default_config_path, AppConfig};
+use crate::dom::{apply_script, parse_snapshot, DomChange, DomPart, SNAPSHOT_SCRIPT};
+use crate::language::Language;
+use crate::translation::{
+    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, OriginalTranslator,
+    SubscriptionCliTranslator, TranslationService, Translator,
+};
+
+const CDP_PORT: u16 = 9222;
+const MAX_BATCH_ITEMS: usize = 32;
+
+type Locator = (String, String, usize);
+type PendingKey = (u64, String, String, usize, String);
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeStatus {
+    pub enabled: bool,
+    pub controller_enabled: bool,
+    pub cdp_connected: bool,
+    pub connection_issue: String,
+    pub discord_process_id: Option<u32>,
+    pub engine: String,
+    pub target_language: String,
+    pub configured_translator: String,
+    pub active_translator: String,
+    pub translator_state: String,
+    pub translator_error: String,
+    pub notice: String,
+}
+
+impl RuntimeStatus {
+    fn new(config: &AppConfig) -> Self {
+        Self {
+            enabled: config.enabled,
+            controller_enabled: config.enabled,
+            cdp_connected: false,
+            connection_issue: String::new(),
+            discord_process_id: None,
+            engine: "rust-native".to_string(),
+            target_language: config.target_language.clone(),
+            configured_translator: config.translator.clone(),
+            active_translator: "original".to_string(),
+            translator_state: "queued".to_string(),
+            translator_error: String::new(),
+            notice: String::new(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct RustEngine {
+    controls: mpsc::Sender<Control>,
+    status: Arc<Mutex<RuntimeStatus>>,
+    thread: Arc<Mutex<Option<JoinHandle<()>>>>,
+}
+
+enum Control {
+    ApplyConfig(Box<AppConfig>),
+    SetEnabled(bool),
+    Stop,
+}
+
+struct PartState {
+    original: String,
+    translated: String,
+}
+
+struct TranslationBatch {
+    generation: u64,
+    target: Language,
+    parts: Vec<DomPart>,
+}
+
+enum WorkerCommand {
+    Translate(TranslationBatch),
+    Activate {
+        generation: u64,
+        name: String,
+        translator: Box<dyn Translator>,
+    },
+    Warm,
+    Release,
+    Stop,
+}
+
+enum WorkerResult {
+    Translated {
+        generation: u64,
+        target: Language,
+        parts: Vec<DomPart>,
+        values: Result<Vec<String>, String>,
+    },
+    Activated {
+        generation: u64,
+        name: String,
+    },
+    WarmFailed(String),
+}
+
+enum PreparationResult {
+    Ready {
+        generation: u64,
+        name: String,
+        translator: Box<dyn Translator>,
+    },
+    Failed {
+        generation: u64,
+        name: String,
+        error: String,
+    },
+}
+
+impl RustEngine {
+    pub fn start(config: AppConfig) -> Self {
+        let (control_tx, control_rx) = mpsc::channel();
+        let status = Arc::new(Mutex::new(RuntimeStatus::new(&config)));
+        let thread_status = status.clone();
+        let handle = thread::Builder::new()
+            .name("rust-dom-controller".to_string())
+            .spawn(move || run_controller(config, control_rx, thread_status))
+            .expect("Rust DOM 번역 스레드를 시작하지 못했어");
+        Self {
+            controls: control_tx,
+            status,
+            thread: Arc::new(Mutex::new(Some(handle))),
+        }
+    }
+
+    pub fn apply_config(&self, config: AppConfig) -> Result<(), String> {
+        self.controls
+            .send(Control::ApplyConfig(Box::new(config)))
+            .map_err(|_| "Rust 번역 엔진이 종료되어 설정을 적용하지 못했어.".to_string())
+    }
+
+    pub fn set_enabled(&self, enabled: bool) -> Result<(), String> {
+        if let Ok(mut status) = self.status.lock() {
+            status.enabled = enabled;
+            status.controller_enabled = enabled;
+        }
+        self.controls
+            .send(Control::SetEnabled(enabled))
+            .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했어.".to_string())
+    }
+
+    pub fn status(&self) -> Result<RuntimeStatus, String> {
+        let mut status = self
+            .status
+            .lock()
+            .map_err(|_| "Rust 번역 엔진 상태 잠금을 열지 못했어.".to_string())?;
+        let snapshot = status.clone();
+        status.notice.clear();
+        Ok(snapshot)
+    }
+
+    pub fn stop(&self) {
+        let _ = self.controls.send(Control::Stop);
+        if let Ok(mut thread) = self.thread.lock() {
+            if let Some(handle) = thread.take() {
+                let _ = handle.join();
+            }
+        }
+    }
+}
+
+fn run_controller(
+    mut config: AppConfig,
+    controls: mpsc::Receiver<Control>,
+    status: Arc<Mutex<RuntimeStatus>>,
+) {
+    let (worker_tx, worker_rx) = mpsc::channel();
+    let (worker_result_tx, worker_result_rx) = mpsc::channel();
+    let worker = thread::Builder::new()
+        .name("rust-translation-worker".to_string())
+        .spawn(move || run_translation_worker(worker_rx, worker_result_tx))
+        .ok();
+    let (preparation_tx, preparation_rx) = mpsc::channel();
+    let mut client: Option<CdpClient> = None;
+    let mut states: HashMap<Locator, PartState> = HashMap::new();
+    let mut pending: HashSet<PendingKey> = HashSet::new();
+    let mut generation = 0_u64;
+    let mut preparation_generation = 0_u64;
+    let mut consecutive_connection_failures = 0_u8;
+    let mut connection_issue_reported = false;
+    let mut stopped = false;
+    let mut pending_control = None;
+
+    request_translator_preparation(
+        &config,
+        &preparation_tx,
+        &status,
+        &mut preparation_generation,
+    );
+
+    while !stopped {
+        let started = Instant::now();
+        loop {
+            let control = pending_control.take().or_else(|| controls.try_recv().ok());
+            let Some(control) = control else {
+                break;
+            };
+            match control {
+                Control::ApplyConfig(updated) => {
+                    let updated = *updated;
+                    let target_changed = updated.target_language != config.target_language;
+                    let runtime_changed = updated.translator != config.translator
+                        || updated.hymt_device != config.hymt_device
+                        || updated.speech_style != config.speech_style;
+                    let enabled_changed = updated.enabled != config.enabled;
+                    let warm_changed =
+                        updated.keep_local_model_warm != config.keep_local_model_warm;
+                    if target_changed || runtime_changed {
+                        reset_translation_state(
+                            &mut client,
+                            &mut states,
+                            &mut pending,
+                            &mut generation,
+                        );
+                    }
+                    config = updated;
+                    update_status(&status, |runtime| {
+                        runtime.enabled = config.enabled;
+                        runtime.controller_enabled = config.enabled;
+                        runtime.target_language = config.target_language.clone();
+                        runtime.configured_translator = config.translator.clone();
+                    });
+                    if runtime_changed {
+                        request_translator_preparation(
+                            &config,
+                            &preparation_tx,
+                            &status,
+                            &mut preparation_generation,
+                        );
+                    } else if warm_changed {
+                        if config.keep_local_model_warm {
+                            let _ = worker_tx.send(WorkerCommand::Warm);
+                        } else if !config.enabled {
+                            let _ = worker_tx.send(WorkerCommand::Release);
+                        }
+                    }
+                    if enabled_changed && !config.enabled {
+                        restore(&mut client, &states);
+                        pending.clear();
+                        generation += 1;
+                        if !config.keep_local_model_warm {
+                            let _ = worker_tx.send(WorkerCommand::Release);
+                        }
+                    } else if enabled_changed {
+                        let _ = worker_tx.send(WorkerCommand::Warm);
+                    }
+                }
+                Control::SetEnabled(enabled) => {
+                    if config.enabled != enabled {
+                        config.enabled = enabled;
+                        update_status(&status, |runtime| {
+                            runtime.enabled = enabled;
+                            runtime.controller_enabled = enabled;
+                            if !enabled {
+                                runtime.connection_issue.clear();
+                            }
+                        });
+                        if !enabled {
+                            restore(&mut client, &states);
+                            pending.clear();
+                            generation += 1;
+                            consecutive_connection_failures = 0;
+                            connection_issue_reported = false;
+                            if !config.keep_local_model_warm {
+                                let _ = worker_tx.send(WorkerCommand::Release);
+                            }
+                        } else {
+                            let _ = worker_tx.send(WorkerCommand::Warm);
+                        }
+                    }
+                }
+                Control::Stop => {
+                    stopped = true;
+                    break;
+                }
+            }
+        }
+        if stopped {
+            break;
+        }
+
+        while let Ok(prepared) = preparation_rx.try_recv() {
+            match prepared {
+                PreparationResult::Ready {
+                    generation: prepared_generation,
+                    name,
+                    translator,
+                } => {
+                    if prepared_generation == preparation_generation && name == config.translator {
+                        let _ = worker_tx.send(WorkerCommand::Activate {
+                            generation: prepared_generation,
+                            name,
+                            translator,
+                        });
+                    }
+                }
+                PreparationResult::Failed {
+                    generation: prepared_generation,
+                    name,
+                    error,
+                } => {
+                    if prepared_generation == preparation_generation && name == config.translator {
+                        update_status(&status, |runtime| {
+                            runtime.translator_state = "error".to_string();
+                            runtime.translator_error =
+                                format!("{} 준비 실패: {error}", translator_label(&name));
+                            runtime.notice = runtime.translator_error.clone();
+                        });
+                    }
+                }
+            }
+        }
+
+        let target =
+            Language::try_from(config.target_language.as_str()).unwrap_or(Language::Korean);
+        drain_worker_results(
+            &worker_result_rx,
+            &worker_tx,
+            &mut client,
+            &mut states,
+            &mut pending,
+            &mut generation,
+            preparation_generation,
+            target,
+            &config,
+            &status,
+        );
+
+        let had_client = client.is_some();
+        let result = (|| -> Result<(), String> {
+            if client.is_none() {
+                let target = discord_target(CDP_PORT)?;
+                let mut connected = CdpClient::new(target.websocket_url);
+                connected.connect()?;
+                client = Some(connected);
+            }
+            consecutive_connection_failures = 0;
+            connection_issue_reported = false;
+            update_status(&status, |runtime| {
+                runtime.cdp_connected = true;
+                runtime.connection_issue.clear();
+            });
+            if config.enabled {
+                scan_dom(
+                    client.as_mut().expect("connected CDP client"),
+                    &states,
+                    &mut pending,
+                    generation,
+                    target,
+                    &worker_tx,
+                )?;
+            }
+            Ok(())
+        })();
+        if let Err(error) = result {
+            if !had_client && config.enabled && !connection_issue_reported {
+                consecutive_connection_failures += 1;
+                if consecutive_connection_failures >= 2 {
+                    connection_issue_reported = true;
+                    update_status(&status, |runtime| {
+                        runtime.connection_issue = error.clone();
+                    });
+                }
+            }
+            if let Some(mut disconnected) = client.take() {
+                disconnected.close();
+            }
+            update_status(&status, |runtime| runtime.cdp_connected = false);
+        }
+
+        let interval = if client.is_some() {
+            poll_interval(config.capture_fps)
+        } else {
+            Duration::from_secs(1)
+        };
+        let remaining = interval.saturating_sub(started.elapsed());
+        if remaining > Duration::ZERO {
+            match controls.recv_timeout(remaining) {
+                Ok(control) => pending_control = Some(control),
+                Err(mpsc::RecvTimeoutError::Disconnected) => stopped = true,
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+            }
+        }
+    }
+
+    restore(&mut client, &states);
+    let _ = worker_tx.send(WorkerCommand::Stop);
+    if let Some(worker) = worker {
+        let _ = worker.join();
+    }
+    if let Some(mut client) = client {
+        client.close();
+    }
+}
+
+fn scan_dom(
+    client: &mut CdpClient,
+    states: &HashMap<Locator, PartState>,
+    pending: &mut HashSet<PendingKey>,
+    generation: u64,
+    target: Language,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<(), String> {
+    let snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
+    let mut changes = Vec::new();
+    let mut parts = Vec::new();
+    for part in snapshot.parts {
+        let locator = part.locator();
+        if let Some(state) = states.get(&locator) {
+            if part.text == state.translated {
+                continue;
+            }
+            if part.text == state.original {
+                changes.push(DomChange::new(&part, state.translated.clone()));
+                continue;
+            }
+        }
+        let pending_key = (
+            generation,
+            part.kind.clone(),
+            part.item_id.clone(),
+            part.index,
+            part.text.clone(),
+        );
+        if pending.contains(&pending_key) || parts.len() >= MAX_BATCH_ITEMS {
+            continue;
+        }
+        pending.insert(pending_key);
+        parts.push(part);
+    }
+    if !changes.is_empty() {
+        client.evaluate(&apply_script(&changes)?, false)?;
+    }
+    if !parts.is_empty() {
+        worker
+            .send(WorkerCommand::Translate(TranslationBatch {
+                generation,
+                target,
+                parts,
+            }))
+            .map_err(|_| "Rust 번역 작업 스레드가 종료됐어.".to_string())?;
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn drain_worker_results(
+    results: &mpsc::Receiver<WorkerResult>,
+    worker: &mpsc::Sender<WorkerCommand>,
+    client: &mut Option<CdpClient>,
+    states: &mut HashMap<Locator, PartState>,
+    pending: &mut HashSet<PendingKey>,
+    generation: &mut u64,
+    preparation_generation: u64,
+    target: Language,
+    config: &AppConfig,
+    status: &Arc<Mutex<RuntimeStatus>>,
+) {
+    let mut changes = Vec::new();
+    while let Ok(result) = results.try_recv() {
+        match result {
+            WorkerResult::Translated {
+                generation: result_generation,
+                target: result_target,
+                parts,
+                values,
+            } => {
+                for part in &parts {
+                    pending.remove(&(
+                        result_generation,
+                        part.kind.clone(),
+                        part.item_id.clone(),
+                        part.index,
+                        part.text.clone(),
+                    ));
+                }
+                if result_generation != *generation || result_target != target {
+                    continue;
+                }
+                match values {
+                    Ok(values) if values.len() == parts.len() => {
+                        for (part, translated) in parts.into_iter().zip(values) {
+                            states.insert(
+                                part.locator(),
+                                PartState {
+                                    original: part.text.clone(),
+                                    translated: translated.clone(),
+                                },
+                            );
+                            if translated != part.text && config.enabled {
+                                changes.push(DomChange::new(&part, translated));
+                            }
+                        }
+                    }
+                    Ok(_) => update_status(status, |runtime| {
+                        runtime.notice =
+                            "번역 서비스가 요청한 메시지 수와 다른 결과를 반환했어.".to_string();
+                    }),
+                    Err(error) => update_status(status, |runtime| runtime.notice = error),
+                }
+            }
+            WorkerResult::Activated {
+                generation: activated_generation,
+                name,
+            } => {
+                if activated_generation != preparation_generation || name != config.translator {
+                    continue;
+                }
+                reset_translation_state(client, states, pending, generation);
+                update_status(status, |runtime| {
+                    runtime.active_translator = name.clone();
+                    if name == runtime.configured_translator {
+                        runtime.translator_state = "ready".to_string();
+                        runtime.translator_error.clear();
+                        runtime.notice = format!(
+                            "{} 준비가 끝났고 지금부터 이 모델로 번역해.",
+                            translator_label(&name)
+                        );
+                    }
+                });
+                if name.starts_with("hymt_") && !config.enabled && !config.keep_local_model_warm {
+                    let _ = worker.send(WorkerCommand::Release);
+                }
+            }
+            WorkerResult::WarmFailed(error) => update_status(status, |runtime| {
+                runtime.notice = format!("로컬 모델 예열에 실패했어: {error}");
+            }),
+        }
+    }
+    if !changes.is_empty() {
+        if let Some(client) = client.as_mut() {
+            if let Ok(script) = apply_script(&changes) {
+                let _ = client.evaluate(&script, false);
+            }
+        }
+    }
+}
+
+fn run_translation_worker(
+    commands: mpsc::Receiver<WorkerCommand>,
+    results: mpsc::Sender<WorkerResult>,
+) {
+    let cache = match TranslationCache::open_default() {
+        Ok(cache) => cache,
+        Err(error) => {
+            let _ = results.send(WorkerResult::WarmFailed(error));
+            return;
+        }
+    };
+    let mut service = TranslationService::new(Box::new(OriginalTranslator), cache);
+    while let Ok(command) = commands.recv() {
+        match command {
+            WorkerCommand::Translate(batch) => {
+                let texts: Vec<String> = batch.parts.iter().map(|part| part.text.clone()).collect();
+                let values = service.translate_many(&texts, batch.target);
+                let _ = results.send(WorkerResult::Translated {
+                    generation: batch.generation,
+                    target: batch.target,
+                    parts: batch.parts,
+                    values,
+                });
+            }
+            WorkerCommand::Activate {
+                generation,
+                name,
+                translator,
+            } => {
+                service.replace_translator(translator);
+                let _ = results.send(WorkerResult::Activated { generation, name });
+            }
+            WorkerCommand::Warm => {
+                if let Err(error) = service.translator_mut().prepare() {
+                    let _ = results.send(WorkerResult::WarmFailed(error));
+                }
+            }
+            WorkerCommand::Release => service.translator_mut().close(),
+            WorkerCommand::Stop => break,
+        }
+    }
+}
+
+fn request_translator_preparation(
+    config: &AppConfig,
+    sender: &mpsc::Sender<PreparationResult>,
+    status: &Arc<Mutex<RuntimeStatus>>,
+    generation: &mut u64,
+) {
+    *generation += 1;
+    let current_generation = *generation;
+    let config = config.clone();
+    let name = config.translator.clone();
+    let should_prepare =
+        !name.starts_with("hymt_") || config.enabled || config.keep_local_model_warm;
+    update_status(status, |runtime| {
+        runtime.configured_translator = name.clone();
+        runtime.translator_state = "preparing".to_string();
+        runtime.translator_error.clear();
+        runtime.notice = format!(
+            "{} 준비를 뒤에서 시작했어. 완료 전까지 현재 모델로 계속 번역해.",
+            translator_label(&name)
+        );
+    });
+    let sender = sender.clone();
+    thread::spawn(move || {
+        let result = make_translator(&config).and_then(|mut translator| {
+            if should_prepare {
+                translator.prepare()?;
+            }
+            Ok(translator)
+        });
+        let message = match result {
+            Ok(translator) => PreparationResult::Ready {
+                generation: current_generation,
+                name,
+                translator,
+            },
+            Err(error) => PreparationResult::Failed {
+                generation: current_generation,
+                name,
+                error,
+            },
+        };
+        let _ = sender.send(message);
+    });
+}
+
+fn make_translator(config: &AppConfig) -> Result<Box<dyn Translator>, String> {
+    match config.translator.as_str() {
+        "hymt_1_8b" => Ok(Box::new(HyMtTranslator::new(
+            HyMtModelSize::Small,
+            config.hymt_device.clone(),
+            config.speech_style.clone(),
+        )?)),
+        "hymt_7b" => Ok(Box::new(HyMtTranslator::new(
+            HyMtModelSize::Large,
+            config.hymt_device.clone(),
+            config.speech_style.clone(),
+        )?)),
+        "chatgpt" | "claude" | "gemini" => Ok(Box::new(SubscriptionCliTranslator::new(
+            &config.translator,
+            &config.speech_style,
+            120,
+            cache_root(),
+        )?)),
+        "deepl" => Ok(Box::new(DeepLTranslator::new(
+            None,
+            Duration::from_secs(30),
+        )?)),
+        "mock" => Ok(Box::new(MockTranslator)),
+        "original" => Ok(Box::new(OriginalTranslator)),
+        other => Err(format!("지원하지 않는 번역 모델이야: {other}")),
+    }
+}
+
+fn cache_root() -> PathBuf {
+    default_config_path()
+        .parent()
+        .map(|path| path.join("Cache"))
+        .unwrap_or_else(|| PathBuf::from("Cache"))
+}
+
+fn reset_translation_state(
+    client: &mut Option<CdpClient>,
+    states: &mut HashMap<Locator, PartState>,
+    pending: &mut HashSet<PendingKey>,
+    generation: &mut u64,
+) {
+    restore(client, states);
+    states.clear();
+    pending.clear();
+    *generation += 1;
+}
+
+fn restore(client: &mut Option<CdpClient>, states: &HashMap<Locator, PartState>) {
+    if states.is_empty() {
+        return;
+    }
+    let changes: Vec<DomChange> = states
+        .iter()
+        .map(|((kind, item_id, index), state)| DomChange {
+            kind: kind.clone(),
+            id: item_id.clone(),
+            index: *index,
+            text: state.original.clone(),
+        })
+        .collect();
+    if let (Some(client), Ok(script)) = (client.as_mut(), apply_script(&changes)) {
+        let _ = client.evaluate(&script, false);
+    }
+}
+
+fn poll_interval(capture_fps: u32) -> Duration {
+    Duration::from_secs_f64(1.0 / capture_fps.clamp(2, 20) as f64)
+}
+
+fn translator_label(name: &str) -> &str {
+    match name {
+        "hymt_1_8b" => "Hy-MT2 1.8B Q4 (경량·기본)",
+        "hymt_7b" => "Hy-MT2 7B Q4 (품질·약 4.6GB)",
+        "chatgpt" => "ChatGPT 플랜 (Codex CLI)",
+        "claude" => "Claude 플랜 (Claude Code)",
+        "gemini" => "Gemini 플랜 (Antigravity CLI)",
+        "deepl" => "DeepL API",
+        "mock" => "Mock 테스트",
+        _ => "원문 표시",
+    }
+}
+
+fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut RuntimeStatus)) {
+    if let Ok(mut status) = status.lock() {
+        update(&mut status);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{poll_interval, translator_label, RuntimeStatus, RustEngine};
+    use crate::config::AppConfig;
+
+    #[test]
+    fn runtime_status_starts_with_the_configured_contract() {
+        let config = AppConfig::default();
+        let status = RuntimeStatus::new(&config);
+        assert_eq!(status.engine, "rust-native");
+        assert_eq!(status.configured_translator, "hymt_1_8b");
+        assert_eq!(status.active_translator, "original");
+    }
+
+    #[test]
+    fn capture_rate_is_bounded_and_labels_cover_real_backends() {
+        assert_eq!(poll_interval(0), Duration::from_millis(500));
+        assert_eq!(poll_interval(100), Duration::from_millis(50));
+        assert!(translator_label("chatgpt").contains("Codex"));
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요해"]
+    fn live_engine_connects_without_a_python_sidecar() {
+        let mut config = AppConfig::default();
+        config.enabled = false;
+        config.translator = "original".to_string();
+        config.keep_local_model_warm = false;
+        let engine = RustEngine::start(config);
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        let connected = loop {
+            if engine.status().unwrap().cdp_connected {
+                break true;
+            }
+            if std::time::Instant::now() >= deadline {
+                break false;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        };
+        engine.stop();
+        assert!(connected);
+    }
+
+    use std::time::Duration;
+}

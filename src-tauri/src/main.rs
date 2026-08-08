@@ -5,15 +5,13 @@ pub mod cdp;
 mod config;
 mod discord;
 pub mod dom;
+mod engine;
 pub mod language;
 pub mod translation;
 mod updater;
 
-use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::Mutex;
 use std::time::Duration;
 
 use serde_json::{json, Value};
@@ -22,18 +20,7 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, State, Wind
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 use config::{AppConfig, ConfigStore};
-
-#[derive(Clone, Default)]
-struct EngineClient {
-    process: Arc<Mutex<Option<EngineProcess>>>,
-    next_request_id: Arc<AtomicU64>,
-}
-
-struct EngineProcess {
-    child: Child,
-    stdin: ChildStdin,
-    stdout: BufReader<ChildStdout>,
-}
+use engine::RustEngine;
 
 #[derive(Default)]
 struct LifecycleState {
@@ -60,143 +47,9 @@ extern "system" {
     fn GetAsyncKeyState(virtual_key: i32) -> i16;
 }
 
-impl EngineClient {
-    fn request(&self, command: &str, payload: Value) -> Result<Value, String> {
-        let mut process = self
-            .process
-            .lock()
-            .map_err(|_| "번역 엔진 잠금을 열지 못했어.".to_string())?;
-        if process.is_none() {
-            *process = Some(spawn_engine()?);
-        }
-        let running = process
-            .as_mut()
-            .ok_or_else(|| "번역 엔진을 시작하지 못했어.".to_string())?;
-        let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed) + 1;
-        let request = json!({
-            "id": request_id,
-            "command": command,
-            "payload": payload
-        });
-        writeln!(running.stdin, "{request}")
-            .and_then(|_| running.stdin.flush())
-            .map_err(|error| format!("번역 엔진에 요청을 보내지 못했어: {error}"))?;
-        let mut line = String::new();
-        running
-            .stdout
-            .read_line(&mut line)
-            .map_err(|error| format!("번역 엔진 응답을 읽지 못했어: {error}"))?;
-        if line.trim().is_empty() {
-            *process = None;
-            return Err("번역 엔진이 응답 없이 종료됐어.".to_string());
-        }
-        let response: Value = serde_json::from_str(&line)
-            .map_err(|error| format!("번역 엔진 응답 형식이 잘못됐어: {error}"))?;
-        if response.get("id").and_then(Value::as_u64) != Some(request_id) {
-            return Err("번역 엔진 응답 순서가 맞지 않아.".to_string());
-        }
-        if response.get("ok").and_then(Value::as_bool) == Some(true) {
-            Ok(response.get("result").cloned().unwrap_or(Value::Null))
-        } else {
-            Err(response
-                .get("error")
-                .and_then(Value::as_str)
-                .unwrap_or("번역 엔진 요청이 실패했어.")
-                .to_string())
-        }
-    }
-
-    fn stop(&self) {
-        if let Ok(mut process) = self.process.lock() {
-            if let Some(mut running) = process.take() {
-                let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed) + 1;
-                let _ = writeln!(
-                    running.stdin,
-                    "{}",
-                    json!({"id": request_id, "command": "shutdown", "payload": null})
-                );
-                let _ = running.stdin.flush();
-                let _ = running.child.wait();
-            }
-        }
-    }
-}
-
-fn project_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("src-tauri에는 프로젝트 루트가 있어야 해")
-        .to_path_buf()
-}
-
-fn spawn_engine() -> Result<EngineProcess, String> {
-    let root = project_root();
-    let packaged = std::env::current_exe()
-        .ok()
-        .and_then(|path| path.parent().map(Path::to_path_buf))
-        .map(|directory| {
-            directory.join(if cfg!(windows) {
-                "nude-translator-engine.exe"
-            } else {
-                "nude-translator-engine"
-            })
-        });
-
-    let mut command = if packaged.as_ref().is_some_and(|path| path.is_file()) {
-        let mut command = Command::new(packaged.expect("검사한 엔진 경로가 있어야 해"));
-        command.arg("serve");
-        command
-    } else {
-        let python = if cfg!(windows) {
-            root.join(".venv/Scripts/python.exe")
-        } else {
-            root.join(".venv/bin/python")
-        };
-        if !python.is_file() {
-            return Err(format!(
-                "Python OCR 엔진을 찾지 못했어: {}",
-                python.display()
-            ));
-        }
-        let mut command = Command::new(python);
-        command.args(["-m", "discord_translate_overlay.sidecar", "serve"]);
-        command
-    };
-    let mut child = command
-        .current_dir(root)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|error| format!("Python OCR 엔진을 실행하지 못했어: {error}"))?;
-    let stdin = child
-        .stdin
-        .take()
-        .ok_or_else(|| "번역 엔진 입력 채널을 만들지 못했어.".to_string())?;
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| "번역 엔진 출력 채널을 만들지 못했어.".to_string())?;
-    Ok(EngineProcess {
-        child,
-        stdin,
-        stdout: BufReader::new(stdout),
-    })
-}
-
-async fn call_engine(
-    client: EngineClient,
-    command: &'static str,
-    payload: Value,
-) -> Result<Value, String> {
-    tauri::async_runtime::spawn_blocking(move || client.request(command, payload))
-        .await
-        .map_err(|error| format!("번역 엔진 작업을 기다리지 못했어: {error}"))?
-}
-
 #[tauri::command]
-async fn engine_health(engine: State<'_, EngineClient>) -> Result<Value, String> {
-    call_engine(engine.inner().clone(), "health", Value::Null).await
+fn engine_health() -> Value {
+    json!({"status": "ready", "protocolVersion": 2, "ocrMode": "rust-native"})
 }
 
 #[tauri::command]
@@ -205,9 +58,9 @@ fn settings_get(config: State<'_, ConfigStore>) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
-async fn settings_update(
+fn settings_update(
     app: AppHandle,
-    engine: State<'_, EngineClient>,
+    engine: State<'_, RustEngine>,
     config: State<'_, ConfigStore>,
     patch: Value,
 ) -> Result<AppConfig, String> {
@@ -231,8 +84,8 @@ async fn settings_update(
             return Err(error);
         }
     };
-    match call_engine(engine.inner().clone(), "settings-update", patch).await {
-        Ok(_) => {
+    match engine.apply_config(updated.clone()) {
+        Ok(()) => {
             let _ = app.emit("settings-changed", updated.clone());
             Ok(updated)
         }
@@ -247,34 +100,31 @@ async fn settings_update(
 }
 
 #[tauri::command]
-async fn translation_set_enabled(
+fn translation_set_enabled(
     app: AppHandle,
-    engine: State<'_, EngineClient>,
+    engine: State<'_, RustEngine>,
     config: State<'_, ConfigStore>,
     enabled: bool,
 ) -> Result<Value, String> {
     let previous_config = config.get()?;
     config.update(json!({"enabled": enabled}))?;
-    let status = call_engine(
-        engine.inner().clone(),
-        "translation-set-enabled",
-        json!({"enabled": enabled}),
-    )
-    .await
-    .inspect_err(|_| {
+    engine.set_enabled(enabled).inspect_err(|_| {
         let _ = config.replace(previous_config);
     })?;
+    let status = serde_json::to_value(engine.status()?)
+        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했어: {error}"))?;
     let _ = app.emit("translation-state-changed", status.clone());
     Ok(status)
 }
 
 #[tauri::command]
-async fn runtime_status(
-    engine: State<'_, EngineClient>,
+fn runtime_status(
+    engine: State<'_, RustEngine>,
     config: State<'_, ConfigStore>,
     shortcut: State<'_, ShortcutConfig>,
 ) -> Result<Value, String> {
-    let mut status = call_engine(engine.inner().clone(), "runtime-status", Value::Null).await?;
+    let mut status = serde_json::to_value(engine.status()?)
+        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했어: {error}"))?;
     if let Some(object) = status.as_object_mut() {
         let current_config = config.get()?;
         object.insert("enabled".to_string(), Value::Bool(current_config.enabled));
@@ -322,16 +172,11 @@ async fn update_check(
 
 #[tauri::command]
 async fn discord_restart(
-    engine: State<'_, EngineClient>,
+    engine: State<'_, RustEngine>,
     expected_process_id: Option<u32>,
 ) -> Result<Value, String> {
     let client = engine.inner().clone();
-    let _ = call_engine(
-        client.clone(),
-        "translation-set-enabled",
-        json!({"enabled": false}),
-    )
-    .await;
+    let _ = client.set_enabled(false);
     tauri::async_runtime::spawn_blocking(move || {
         discord::restart(expected_process_id, 9222)?;
         discord::wait_for_debug_port(9222, Duration::from_secs(30))?;
@@ -339,7 +184,7 @@ async fn discord_restart(
     })
     .await
     .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했어: {error}"))??;
-    let _ = call_engine(client, "translation-set-enabled", json!({"enabled": true})).await;
+    let _ = client.set_enabled(true);
     Ok(json!({"connected": true}))
 }
 
@@ -372,7 +217,6 @@ fn tray_open_settings(app: AppHandle) {
 
 #[tauri::command]
 fn tray_request_translation_toggle(app: AppHandle) {
-    main_window_show(app.clone());
     let _ = app.emit("request-translation-toggle", ());
 }
 
@@ -576,9 +420,12 @@ fn create_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 fn main() {
-    let engine = EngineClient::default();
-    let shutdown_engine = engine.clone();
     let config = ConfigStore::load_default().expect("Nude Translator 설정을 읽지 못했어");
+    let initial_config = config
+        .get()
+        .expect("Nude Translator 초기 설정을 읽지 못했어");
+    let engine = RustEngine::start(initial_config);
+    let shutdown_engine = engine.clone();
     let app = tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
