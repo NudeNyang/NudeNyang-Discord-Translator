@@ -2,6 +2,7 @@ mod deepl;
 pub mod hymt;
 mod mock;
 pub mod protected_text;
+mod resilient;
 mod service;
 
 use crate::language::Language;
@@ -9,6 +10,7 @@ use crate::language::Language;
 pub use deepl::DeepLTranslator;
 pub use hymt::HyMtTranslator;
 pub use mock::{MockTranslator, OriginalTranslator};
+pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::TranslationService;
 
 pub trait Translator: Send {
