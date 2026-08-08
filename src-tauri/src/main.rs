@@ -5,6 +5,8 @@ pub mod cdp;
 mod config;
 mod discord;
 pub mod dom;
+pub mod language;
+pub mod translation;
 mod updater;
 
 use std::io::{BufRead, BufReader, Write};

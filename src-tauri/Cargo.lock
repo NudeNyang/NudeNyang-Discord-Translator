@@ -2205,10 +2205,12 @@ dependencies = [
 name = "nude-translator-tauri"
 version = "0.2.0"
 dependencies = [
+ "regex",
  "reqwest 0.12.28",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
  "sysinfo",
  "tauri",
  "tauri-build",
