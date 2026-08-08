@@ -4,6 +4,7 @@ mod mock;
 pub mod protected_text;
 mod resilient;
 mod service;
+mod subscription_cli;
 
 use crate::language::Language;
 
@@ -12,6 +13,7 @@ pub use hymt::HyMtTranslator;
 pub use mock::{MockTranslator, OriginalTranslator};
 pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::TranslationService;
+pub use subscription_cli::{SubscriptionCliTranslator, SubscriptionProvider};
 
 pub trait Translator: Send {
     fn display_name(&self) -> &str;

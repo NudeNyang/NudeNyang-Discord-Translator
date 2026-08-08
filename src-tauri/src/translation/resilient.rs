@@ -385,8 +385,10 @@ mod tests {
     use crate::language::Language;
     use crate::translation::Translator;
 
+    type RecordedCalls = Arc<Mutex<Vec<Vec<(String, Language)>>>>;
+
     struct PartialTranslator {
-        calls: Arc<Mutex<Vec<Vec<(String, Language)>>>>,
+        calls: RecordedCalls,
     }
 
     impl Translator for PartialTranslator {
