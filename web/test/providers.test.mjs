@@ -95,8 +95,8 @@ test("subscription CLI disconnect only disables the provider inside Nude Transla
   assert.match(rustMain, /patch\["translator"\]\s*=\s*json!\("hymt_1_8b"\)/);
 });
 
-test("provider action buttons share dimensions and semantic colors", () => {
-  assert.match(markup, /button danger provider-disconnect/);
+test("provider action buttons share dimensions and use calm semantic colors", () => {
+  assert.match(markup, /button secondary provider-disconnect/);
   assert.match(script, /연결 해제/);
   assert.match(
     styles,
@@ -108,10 +108,12 @@ test("provider action buttons share dimensions and semantic colors", () => {
   );
   assert.match(
     styles,
-    /\.button\.danger\s*\{[\s\S]*?color:\s*var\(--danger\)[\s\S]*?background:\s*var\(--danger-soft\)/,
+    /\.button\.provider-disconnect\s*\{[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
   );
-  assert.match(styles, /--danger-soft:\s*#f4e6e9/);
-  assert.match(styles, /--danger-soft:\s*#402a34/);
+  assert.doesNotMatch(
+    styles,
+    /\.button\.provider-disconnect\s*\{[\s\S]*?var\(--danger\)/,
+  );
 });
 
 test("provider status details wrap instead of being clipped", () => {

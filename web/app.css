@@ -787,6 +787,19 @@ input:focus-visible,
   background: var(--control);
 }
 
+.button.provider-disconnect {
+  border-color: color-mix(in srgb, var(--muted) 34%, var(--border));
+  color: var(--muted);
+  background: color-mix(in srgb, var(--control) 88%, var(--surface));
+  font-size: 12px;
+}
+
+.button.provider-disconnect:hover {
+  border-color: color-mix(in srgb, var(--muted) 62%, var(--border));
+  color: var(--text);
+  background: color-mix(in srgb, var(--control) 76%, var(--surface-hover));
+}
+
 .provider-action:not(:disabled) {
   border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
   color: var(--accent-strong);

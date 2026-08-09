@@ -801,15 +801,15 @@ fn install_claude_cli() -> Result<CliConnectionProbe, String> {
         Duration::from_secs(900),
     )?;
     if !output.status.success() {
-        let detail = format!(
-            "{}\n{}",
-            decode_process_output(&output.stdout),
-            decode_process_output(&output.stderr)
+        if let Ok(probe) = probe_subscription_connection("claude") {
+            if probe.installed {
+                return Ok(probe);
+            }
+        }
+        return Err(
+            "Windows 앱 설치 관리자가 Claude Code 설치를 완료하지 못했습니다. 네트워크 연결을 확인한 후 다시 시도하십시오."
+                .to_string(),
         );
-        return Err(format!(
-            "Claude Code를 자동으로 설치하지 못했습니다: {}",
-            tail_chars(detail.trim(), 600)
-        ));
     }
     let probe = probe_subscription_connection("claude")?;
     if !probe.installed {
@@ -1745,19 +1745,48 @@ fn common_install_locations(provider: SubscriptionProvider) -> Vec<(PathBuf, Imp
             (roaming.join("npm/codex.cmd"), Implementation::Codex),
             (roaming.join("npm/codex.exe"), Implementation::Codex),
         ],
-        SubscriptionProvider::Claude => vec![
-            (home.join(".local/bin/claude.exe"), Implementation::Claude),
-            (
-                local.join("Microsoft/WinGet/Links/claude.exe"),
-                Implementation::Claude,
-            ),
-            (roaming.join("npm/claude.cmd"), Implementation::Claude),
-        ],
+        SubscriptionProvider::Claude => {
+            let mut locations = vec![
+                (home.join(".local/bin/claude.exe"), Implementation::Claude),
+                (
+                    local.join("Microsoft/WinGet/Links/claude.exe"),
+                    Implementation::Claude,
+                ),
+                (roaming.join("npm/claude.cmd"), Implementation::Claude),
+            ];
+            if let Some(path) =
+                find_winget_package_executable(&local, "Anthropic.ClaudeCode", "claude.exe")
+            {
+                locations.push((path, Implementation::Claude));
+            }
+            locations
+        }
         SubscriptionProvider::Gemini => vec![
             (local.join("agy/bin/agy.exe"), Implementation::Agy),
             (roaming.join("npm/gemini.cmd"), Implementation::Gemini),
         ],
     }
+}
+
+fn find_winget_package_executable(
+    local_app_data: &Path,
+    package_id: &str,
+    executable: &str,
+) -> Option<PathBuf> {
+    let packages = local_app_data.join("Microsoft/WinGet/Packages");
+    let prefix = format!("{package_id}_").to_ascii_lowercase();
+    fs::read_dir(packages)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .starts_with(&prefix)
+        })
+        .map(|entry| entry.path().join(executable))
+        .find(|candidate| candidate.is_file())
 }
 
 fn find_executable(name: &str) -> Option<PathBuf> {
@@ -1851,10 +1880,30 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        acp_error_message, decode_payload, decode_process_output, parse_node_major, run_process,
-        subscription_environment, translation_prompt, validated_translations, write_acp_request,
-        SubscriptionCliTranslator,
+        acp_error_message, decode_payload, decode_process_output, find_winget_package_executable,
+        parse_node_major, run_process, subscription_environment, translation_prompt,
+        validated_translations, write_acp_request, SubscriptionCliTranslator,
     };
+
+    #[cfg(windows)]
+    #[test]
+    fn finds_claude_inside_the_winget_package_directory() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-winget-package-{}",
+            std::process::id()
+        ));
+        let package = directory
+            .join("Microsoft/WinGet/Packages")
+            .join("Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe");
+        std::fs::create_dir_all(&package).unwrap();
+        std::fs::write(package.join("claude.exe"), b"").unwrap();
+
+        let resolved =
+            find_winget_package_executable(&directory, "Anthropic.ClaudeCode", "claude.exe");
+
+        let _ = std::fs::remove_dir_all(&directory);
+        assert_eq!(resolved, Some(package.join("claude.exe")));
+    }
     use crate::language::Language;
     use crate::translation::Translator;
 
