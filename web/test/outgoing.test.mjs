@@ -84,3 +84,11 @@ test("outgoing translation preserves Discord Slate mention entities", () => {
   assert.match(outgoing, /function hasActiveAutocomplete\(editor\)/);
   assert.match(outgoing, /if \(hasActiveAutocomplete\(editor\)\) return/);
 });
+
+test("translated outgoing text settles in Discord Slate before Enter is dispatched", () => {
+  assert.match(outgoing, /verifyInserted/);
+  assert.match(outgoing, /requestAnimationFrame/);
+  assert.match(outgoing, /stableSince/);
+  assert.match(engine, /verify_outgoing_insert_script/);
+  assert.match(engine, /composer synchronization timed out/);
+});

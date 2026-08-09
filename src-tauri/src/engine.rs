@@ -26,8 +26,8 @@ use crate::outgoing::{
     apply_outgoing_error_script, apply_outgoing_suggestion_script,
     attach_outgoing_text_file_script, outgoing_originals_ui_script, outgoing_ui_script,
     parse_outgoing_bindings, parse_outgoing_requests, prepare_outgoing_attachment_script,
-    prepare_outgoing_send_script, suggest_recent_language, OutgoingRequest,
-    OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
+    prepare_outgoing_send_script, suggest_recent_language, verify_outgoing_insert_script,
+    OutgoingRequest, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
 };
 use crate::text_split::split_for_discord;
 use crate::translation::{
@@ -935,6 +935,31 @@ fn dispatch_outgoing_send(
         }
         if replacement.is_some() {
             client.call("Input.insertText", json!({"text": part}))?;
+            let settle_started = Instant::now();
+            let synchronized = client
+                .evaluate(&verify_outgoing_insert_script(request_id, part)?, true)?
+                .as_bool()
+                == Some(true);
+            if !synchronized {
+                crate::diagnostics::warn(
+                    "outgoing-translation",
+                    &format!(
+                        "composer synchronization timed out; utf16_units={}",
+                        part.encode_utf16().count()
+                    ),
+                );
+                return Err(
+                    "번역문이 Discord 입력창에 안정적으로 반영되지 않아 전송을 중단했습니다. 입력창의 내용을 확인한 후 다시 시도하십시오."
+                        .to_string(),
+                );
+            }
+            crate::diagnostics::info(
+                "outgoing-translation",
+                &format!(
+                    "composer synchronized; settle_ms={}",
+                    settle_started.elapsed().as_millis()
+                ),
+            );
         }
         dispatch_enter(client)?;
         if !final_part {

@@ -19,10 +19,10 @@ test("the user-facing product name is NudeNyang Translator", () => {
 });
 
 test("the beta version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.3.2-beta");
-  assert.match(tauriConfig, /"version": "0\.3\.2-beta"/);
-  assert.match(cargoManifest, /^version = "0\.3\.2-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.3\.2 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.3.3-beta");
+  assert.match(tauriConfig, /"version": "0\.3\.3-beta"/);
+  assert.match(cargoManifest, /^version = "0\.3\.3-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.3\.3 Beta<\/span>/);
 });
 
 test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
