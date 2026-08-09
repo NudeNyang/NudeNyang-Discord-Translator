@@ -106,7 +106,7 @@ fn validate_repository(repository: &str) -> Result<(), String> {
                 .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.' | b'-'))
     };
     if !valid_part(owner) || !valid_part(name) || parts.next().is_some() {
-        return Err("업데이트 저장소는 owner/repository 형식이어야 해.".to_string());
+        return Err("업데이트 저장소는 owner/repository 형식이어야 합니다.".to_string());
     }
     Ok(())
 }
@@ -123,10 +123,10 @@ fn version_tuple(version: &str) -> Result<(u64, u64, u64), String> {
         .split('.')
         .map(str::parse::<u64>)
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|_| format!("지원하지 않는 버전 형식이야: {version}"))?;
+        .map_err(|_| format!("지원하지 않는 버전 형식입니다: {version}"))?;
     match values.as_slice() {
         [major, minor, patch] => Ok((*major, *minor, *patch)),
-        _ => Err(format!("지원하지 않는 버전 형식이야: {version}")),
+        _ => Err(format!("지원하지 않는 버전 형식입니다: {version}")),
     }
 }
 

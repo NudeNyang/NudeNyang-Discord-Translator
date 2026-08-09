@@ -8,6 +8,7 @@ use crate::language::{detect_explicit_language, Language};
 const OUTGOING_UI_SCRIPT: &str = r####"
 (() => {
   const enabled = __ENABLED__;
+  const defaultLanguage = __DEFAULT_LANGUAGE__;
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
@@ -17,8 +18,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   function currentChannelKey() {
     return location.pathname.startsWith('/channels/') ? location.pathname : '';
   }
-  function readStoredLanguage(key) {
-    try { return localStorage.getItem(storageKey(key)) || 'auto'; } catch { return 'auto'; }
+  function readStoredLanguage(key, fallbackLanguage) {
+    try { return localStorage.getItem(storageKey(key)) || fallbackLanguage; } catch { return fallbackLanguage; }
   }
   function writeStoredLanguage(key, language) {
     try {
@@ -99,6 +100,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       manualRequest: '',
       statusTimer: 0,
       root: null,
+      defaultLanguage: 'auto',
       setStatus(message, error = false) {
         if (!this.root) return;
         const status = this.root.querySelector('.nt-outgoing-status');
@@ -111,7 +113,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       updateLabel() {
         if (!this.root) return;
         const key = currentChannelKey();
-        const language = readStoredLanguage(key);
+        const language = readStoredLanguage(key, this.defaultLanguage);
         this.root.querySelector('.nt-outgoing-trigger b').textContent = languageLabels[language] || languageLabels.auto;
       },
       showLanguageMenu(heading = '전송 언어 선택', requestId = '') {
@@ -221,7 +223,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           return;
         }
         const id = `outgoing-${Date.now()}-${++this.sequence}`;
-        const selected = this.oneShotOriginal ? 'original' : readStoredLanguage(key);
+        const selected = this.oneShotOriginal ? 'original' : readStoredLanguage(key, this.defaultLanguage);
         this.oneShotOriginal = false;
         const item = {id, channel_key:key, text, selected_language:selected, recent_messages:recentMessages()};
         this.pending.set(id, {...item, editor});
@@ -249,6 +251,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     document.addEventListener('keydown', controller.listener, true);
     window[GLOBAL] = controller;
   }
+  controller.defaultLanguage = defaultLanguage;
   controller.enabled = enabled;
   controller.root = ensureRoot(controller);
   controller.root.hidden = !enabled;
@@ -280,8 +283,21 @@ pub struct OutgoingRequest {
     pub recent_messages: Vec<String>,
 }
 
-pub fn outgoing_ui_script(enabled: bool) -> String {
-    OUTGOING_UI_SCRIPT.replace("__ENABLED__", if enabled { "true" } else { "false" })
+pub fn outgoing_ui_script(enabled: bool, default_language: &str) -> String {
+    let default_language = if matches!(
+        default_language,
+        "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant"
+    ) {
+        default_language
+    } else {
+        "auto"
+    };
+    OUTGOING_UI_SCRIPT
+        .replace("__ENABLED__", if enabled { "true" } else { "false" })
+        .replace(
+            "__DEFAULT_LANGUAGE__",
+            &serde_json::to_string(default_language).expect("static language code"),
+        )
 }
 
 pub fn parse_outgoing_requests(value: Value) -> Result<Vec<OutgoingRequest>, String> {
@@ -359,7 +375,7 @@ mod tests {
 
     use super::{
         apply_outgoing_suggestion_script, outgoing_ui_script, parse_outgoing_requests,
-        suggest_recent_language, OUTGOING_CLEANUP_SCRIPT,
+        prepare_outgoing_send_script, suggest_recent_language, OUTGOING_CLEANUP_SCRIPT,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::language::Language;
@@ -410,8 +426,11 @@ mod tests {
     fn live_discord_can_mount_and_remove_the_outgoing_control() {
         let target = discord_target(9222).expect("Discord channel target");
         let mut client = CdpClient::new(target.websocket_url);
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("remove controller from previous build");
         let requests = client
-            .evaluate(&outgoing_ui_script(true), false)
+            .evaluate(&outgoing_ui_script(true, "auto"), false)
             .expect("outgoing script");
         assert!(requests.is_array());
         let mounted = client
@@ -421,20 +440,53 @@ mod tests {
             )
             .expect("mounted state");
         assert_eq!(mounted.as_bool(), Some(true));
-        client
-            .evaluate(
-                "(() => { const editor=document.createElement('div'); editor.id='nt-outgoing-live-test'; editor.setAttribute('role','textbox'); editor.setAttribute('contenteditable','true'); editor.textContent='안녕하세요'; document.body.append(editor); editor.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})); })()",
-                false,
-            )
-            .expect("synthetic composer event");
-        let queued = parse_outgoing_requests(
-            client
-                .evaluate(&outgoing_ui_script(true), false)
-                .expect("queued outgoing request"),
-        )
-        .expect("outgoing request payload");
+        let japanese_controller = outgoing_ui_script(true, "ja");
+        let request_probe = format!(
+            "(() => {{ ({japanese_controller}); const label=document.querySelector('#nt-outgoing-translation .nt-outgoing-trigger b')?.textContent; const editor=document.createElement('div'); editor.id='nt-outgoing-live-test'; editor.setAttribute('role','textbox'); editor.setAttribute('contenteditable','true'); editor.textContent='안녕하세요'; document.body.append(editor); editor.dispatchEvent(new KeyboardEvent('keydown',{{key:'Enter',bubbles:true,cancelable:true}})); const requests=({japanese_controller}); return {{label,requests}}; }})()"
+        );
+        let probe = client
+            .evaluate(&request_probe, true)
+            .expect("updated language and synthetic composer event");
+        assert_eq!(probe["label"].as_str(), Some("日本語"));
+        let queued =
+            parse_outgoing_requests(probe["requests"].clone()).expect("outgoing request payload");
         assert_eq!(queued.len(), 1);
         assert_eq!(queued[0].text, "안녕하세요");
+        assert_eq!(queued[0].selected_language, "ja");
+        let prepared = client
+            .evaluate(
+                &prepare_outgoing_send_script(&queued[0].id, true).expect("prepare script"),
+                false,
+            )
+            .expect("prepare translated send");
+        assert_eq!(prepared.as_bool(), Some(true));
+        client
+            .evaluate(
+                "window.__ntOutgoingLiveSentText='';window.__ntOutgoingLiveCapture=function(event){if(event.key==='Enter'&&event.target?.id==='nt-outgoing-live-test'){window.__ntOutgoingLiveSentText=event.target.innerText||event.target.textContent||'';document.removeEventListener('keydown',window.__ntOutgoingLiveCapture,true);delete window.__ntOutgoingLiveCapture;}};document.addEventListener('keydown',window.__ntOutgoingLiveCapture,true);",
+                false,
+            )
+            .expect("translated send capture");
+        client
+            .call("Input.insertText", json!({"text": "こんにちは"}))
+            .expect("insert translated text");
+        for event_type in ["rawKeyDown", "keyUp"] {
+            client
+                .call(
+                    "Input.dispatchKeyEvent",
+                    json!({
+                        "type": event_type,
+                        "key": "Enter",
+                        "code": "Enter",
+                        "windowsVirtualKeyCode": 13,
+                        "nativeVirtualKeyCode": 13
+                    }),
+                )
+                .expect("dispatch translated send");
+        }
+        let replaced = client
+            .evaluate("window.__ntOutgoingLiveSentText", false)
+            .expect("translated text at send time");
+        assert_eq!(replaced.as_str(), Some("こんにちは"));
         client
             .evaluate(
                 "document.getElementById('nt-outgoing-live-test')?.remove()",

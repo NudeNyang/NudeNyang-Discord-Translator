@@ -43,6 +43,14 @@ const OPTIONS = {
     ["polite", "항상 존댓말·격식체"],
     ["casual", "항상 반말·비격식체"],
   ],
+  outgoing_target_language: [
+    ["auto", "최근 대화에서 자동 감지"],
+    ["ko", "한국어"],
+    ["ja", "日本語"],
+    ["en", "English"],
+    ["zh", "简体中文"],
+    ["zh-Hant", "繁體中文"],
+  ],
   hymt_device: [
     ["auto", "자동 (GPU 우선, CPU 대체)"],
     ["cpu", "CPU"],
@@ -76,6 +84,7 @@ const elements = {
   form: document.querySelector("#settings-form"),
   enabled: document.querySelector("#enabled"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
+  outgoingConfirmLanguage: document.querySelector("#outgoing-confirm-language"),
   keepWarm: document.querySelector("#keep-warm"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
@@ -580,6 +589,12 @@ function renderConfig(config) {
     "켜짐",
     "꺼짐",
   );
+  setSwitch(
+    elements.outgoingConfirmLanguage,
+    state.config.outgoing_confirm_language,
+    "확인",
+    "자동 적용",
+  );
   setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "유지", "반환");
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
@@ -595,6 +610,9 @@ function collectPatch() {
     ui_theme: state.selectValues.ui_theme,
     outgoing_translation_enabled:
       elements.outgoingTranslation.getAttribute("aria-checked") === "true",
+    outgoing_target_language: state.selectValues.outgoing_target_language,
+    outgoing_confirm_language:
+      elements.outgoingConfirmLanguage.getAttribute("aria-checked") === "true",
     keep_local_model_warm: elements.keepWarm.getAttribute("aria-checked") === "true",
     capture_fps: Math.max(2, Math.min(20, Number(elements.captureFps.value) || 8)),
     hotkeys: { toggle_translation: elements.shortcut.value.trim() || "F12" },
@@ -836,6 +854,10 @@ elements.outgoingTranslation.addEventListener("click", async () => {
   } catch (error) {
     await showError("보내는 메시지 번역 상태를 변경하지 못했습니다", String(error));
   }
+});
+elements.outgoingConfirmLanguage.addEventListener("click", () => {
+  const enabled = elements.outgoingConfirmLanguage.getAttribute("aria-checked") !== "true";
+  setSwitch(elements.outgoingConfirmLanguage, enabled, "확인", "자동 적용");
 });
 elements.keepWarm.addEventListener("click", () => {
   const enabled = elements.keepWarm.getAttribute("aria-checked") !== "true";

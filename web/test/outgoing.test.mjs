@@ -29,3 +29,10 @@ test("channel memory, one-message overrides, and safe failures are represented",
   assert.match(engine, /Input\.insertText/);
   assert.match(engine, /Input\.dispatchKeyEvent/);
 });
+
+test("configured outgoing defaults and confirmation policy reach Discord", () => {
+  assert.match(outgoing, /__DEFAULT_LANGUAGE__/);
+  assert.match(engine, /outgoing_target_language/);
+  assert.match(engine, /outgoing_confirm_language/);
+  assert.match(engine, /enqueue_outgoing_translation/);
+});

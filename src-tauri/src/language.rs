@@ -56,7 +56,7 @@ impl TryFrom<&str> for Language {
             "zh" => Ok(Self::ChineseSimplified),
             "zh-Hant" => Ok(Self::ChineseTraditional),
             "und" => Ok(Self::Unknown),
-            _ => Err(format!("지원하지 않는 언어 코드야: {value}")),
+            _ => Err(format!("지원하지 않는 언어 코드입니다: {value}")),
         }
     }
 }

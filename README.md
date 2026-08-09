@@ -1,5 +1,7 @@
 # Nude Translator
 
+제품 내 사용자 노출 문구의 작성 기준은 [제품 문체 원칙](PRODUCT_LANGUAGE.md)을 따릅니다.
+
 Nude Translator는 Windows 10/11의 Discord 화면을 한국어·일본어·영어·중국어로 바꿔
 표시하는 Tauri 2 + Rust 데스크톱 앱이다. Discord API, 사용자 토큰, self-bot을 사용하지
 않고 원격 디버깅 포트로 현재 렌더러의 DOM만 변경한다.

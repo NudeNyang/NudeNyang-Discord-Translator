@@ -280,7 +280,7 @@ impl ImageTranslationProcessor {
             }
         }
         let image = image::load_from_memory(image_bytes)
-            .map_err(|error| format!("이미지 데이터를 읽을 수 없어: {error}"))?;
+            .map_err(|error| format!("이미지 데이터를 읽을 수 없습니다: {error}"))?;
         if self.ocr.is_none() {
             self.ocr = Some(Box::new(PaddleDualOcr::new(true)?));
         }
@@ -348,7 +348,7 @@ impl ImageTranslationProcessor {
 
 pub fn parse_image_requests(value: serde_json::Value) -> Result<Vec<ImageRequest>, String> {
     serde_json::from_value(value)
-        .map_err(|error| format!("Discord 이미지 번역 요청 형식이 잘못됐어: {error}"))
+        .map_err(|error| format!("Discord 이미지 번역 요청 형식이 올바르지 않습니다: {error}"))
 }
 
 pub fn parse_image_data(value: serde_json::Value) -> Result<ImageData, String> {

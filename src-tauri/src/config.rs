@@ -57,6 +57,8 @@ pub struct AppConfig {
     pub target_language: String,
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
+    pub outgoing_target_language: String,
+    pub outgoing_confirm_language: bool,
     pub show_original: bool,
     pub theme: String,
     pub ui_theme: String,
@@ -86,6 +88,8 @@ impl Default for AppConfig {
             target_language: "ko".to_string(),
             enabled: true,
             outgoing_translation_enabled: false,
+            outgoing_target_language: "auto".to_string(),
+            outgoing_confirm_language: true,
             show_original: false,
             theme: "auto".to_string(),
             ui_theme: "system".to_string(),
@@ -115,7 +119,7 @@ impl AppConfig {
     pub fn from_value(mut value: Value) -> Result<Self, String> {
         let object = value
             .as_object_mut()
-            .ok_or_else(|| "설정 파일의 최상위 값은 객체여야 해.".to_string())?;
+            .ok_or_else(|| "설정 파일의 최상위 값은 객체여야 합니다.".to_string())?;
 
         if object
             .get("translator")
@@ -169,6 +173,16 @@ impl AppConfig {
             .is_some_and(|value| !matches!(value, "system" | "light" | "dark"))
         {
             object.insert("ui_theme".to_string(), Value::String("system".to_string()));
+        }
+        if object
+            .get("outgoing_target_language")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant"))
+        {
+            object.insert(
+                "outgoing_target_language".to_string(),
+                Value::String("auto".to_string()),
+            );
         }
 
         serde_json::from_value(value)
@@ -269,8 +283,12 @@ fn load_config(path: &Path) -> Result<AppConfig, String> {
     }
     let bytes = fs::read(path)
         .map_err(|error| format!("설정 파일을 읽지 못했습니다 ({}): {error}", path.display()))?;
-    let value = serde_json::from_slice(&bytes)
-        .map_err(|error| format!("설정 JSON이 올바르지 않아 ({}): {error}", path.display()))?;
+    let value = serde_json::from_slice(&bytes).map_err(|error| {
+        format!(
+            "설정 JSON 형식이 올바르지 않습니다 ({}): {error}",
+            path.display()
+        )
+    })?;
     AppConfig::from_value(value)
 }
 
@@ -344,6 +362,8 @@ mod tests {
         assert_eq!(restored.ui_theme, "system");
         assert!(restored.keep_local_model_warm);
         assert!(!restored.outgoing_translation_enabled);
+        assert_eq!(restored.outgoing_target_language, "auto");
+        assert!(restored.outgoing_confirm_language);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
         assert!(restored.disabled_providers.is_empty());
 

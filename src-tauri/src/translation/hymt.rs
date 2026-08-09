@@ -107,11 +107,11 @@ impl HyMtTranslator {
         let model = model_size.model();
         let device = device.into();
         if !matches!(device.as_str(), "auto" | "cpu") {
-            return Err(format!("지원하지 않는 Hy-MT2 실행 장치야: {device}"));
+            return Err(format!("지원하지 않는 Hy-MT2 실행 장치입니다: {device}"));
         }
         let speech_style = speech_style.into();
         if !matches!(speech_style.as_str(), "auto" | "polite" | "casual") {
-            return Err(format!("지원하지 않는 말투 설정이야: {speech_style}"));
+            return Err(format!("지원하지 않는 말투 설정입니다: {speech_style}"));
         }
         let client = Client::builder()
             .timeout(Duration::from_secs(90))
@@ -169,17 +169,23 @@ impl HyMtTranslator {
             fs::create_dir_all(parent)
                 .map_err(|error| format!("Hy-MT2 로그 폴더를 만들지 못했습니다: {error}"))?;
         }
-        let log = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_path)
-            .map_err(|error| format!("Hy-MT2 로그 파일을 열지 못했습니다: {error}"))?;
-        let stderr = log
-            .try_clone()
-            .map_err(|error| format!("Hy-MT2 로그 파일을 복제하지 못했습니다: {error}"))?;
-        let mut command = Command::new(&executable);
-        command
-            .args([
+        let attempts = startup_device_attempts(&self.device);
+        for (index, attempt) in attempts.iter().enumerate() {
+            let log = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log_path)
+                .map_err(|error| format!("Hy-MT2 로그 파일을 열지 못했습니다: {error}"))?;
+            let mut marker = log
+                .try_clone()
+                .map_err(|error| format!("Hy-MT2 로그 파일을 복제하지 못했습니다: {error}"))?;
+            writeln!(marker, "\n[Nude Translator] Hy-MT2 {} 모드 시작", attempt)
+                .map_err(|error| format!("Hy-MT2 로그를 기록하지 못했습니다: {error}"))?;
+            let stderr = log
+                .try_clone()
+                .map_err(|error| format!("Hy-MT2 로그 파일을 복제하지 못했습니다: {error}"))?;
+            let mut command = Command::new(&executable);
+            command.args([
                 "--model",
                 self.model_path
                     .to_str()
@@ -192,51 +198,77 @@ impl HyMtTranslator {
                 "2048",
                 "--parallel",
                 "1",
-                "--gpu-layers",
-                if self.device == "cpu" { "0" } else { "auto" },
-                "--no-webui",
-            ])
-            .stdin(Stdio::null())
-            .stdout(Stdio::from(log))
-            .stderr(Stdio::from(stderr));
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            command.creation_flags(CREATE_NO_WINDOW);
-        }
-        self.process = Some(
+            ]);
+            if *attempt == "cpu" {
+                command.args(["--device", "none", "--gpu-layers", "0", "--no-op-offload"]);
+            } else {
+                command.args(["--gpu-layers", "auto"]);
+            }
             command
-                .spawn()
-                .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했습니다: {error}"))?,
-        );
-        let deadline = Instant::now() + self.startup_timeout;
-        while Instant::now() < deadline {
-            if self
-                .process
-                .as_mut()
-                .and_then(|process| process.try_wait().ok().flatten())
-                .is_some()
+                .arg("--no-webui")
+                .stdin(Stdio::null())
+                .stdout(Stdio::from(log))
+                .stderr(Stdio::from(stderr));
+            #[cfg(windows)]
             {
+                use std::os::windows::process::CommandExt;
+                command.creation_flags(CREATE_NO_WINDOW);
+            }
+            self.process = Some(
+                command
+                    .spawn()
+                    .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했습니다: {error}"))?,
+            );
+            let deadline = Instant::now() + self.startup_timeout;
+            while Instant::now() < deadline {
+                if let Some(status) = self
+                    .process
+                    .as_mut()
+                    .and_then(|process| process.try_wait().ok().flatten())
+                {
+                    self.process = None;
+                    if index + 1 < attempts.len() {
+                        let mut log = OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open(&log_path)
+                            .map_err(|error| {
+                                format!("Hy-MT2 로그 파일을 열지 못했습니다: {error}")
+                            })?;
+                        writeln!(
+                            log,
+                            "[Nude Translator] GPU 서버가 종료되어 CPU 모드로 다시 시작합니다. 종료 상태: {status}"
+                        )
+                        .map_err(|error| format!("Hy-MT2 로그를 기록하지 못했습니다: {error}"))?;
+                        break;
+                    }
+                    return Err(format!(
+                        "Hy-MT2 로컬 서버가 시작 중 종료되었습니다. 종료 상태: {status}. 로그: {}",
+                        log_path.display()
+                    ));
+                }
+                if self
+                    .client
+                    .get(format!("http://127.0.0.1:{}/health", self.port))
+                    .timeout(Duration::from_secs(1))
+                    .send()
+                    .is_ok_and(|response| response.status().is_success())
+                {
+                    return Ok(());
+                }
+                thread::sleep(Duration::from_millis(250));
+            }
+            if self.process.is_some() {
+                self.close();
                 return Err(format!(
-                    "Hy-MT2 로컬 서버가 시작 중 종료됐어. 로그: {}",
+                    "Hy-MT2 모델을 {}초 안에 불러오지 못했습니다. 로그: {}",
+                    self.startup_timeout.as_secs(),
                     log_path.display()
                 ));
             }
-            if self
-                .client
-                .get(format!("http://127.0.0.1:{}/health", self.port))
-                .timeout(Duration::from_secs(1))
-                .send()
-                .is_ok_and(|response| response.status().is_success())
-            {
-                return Ok(());
-            }
-            thread::sleep(Duration::from_millis(250));
         }
-        self.close();
         Err(format!(
-            "Hy-MT2 모델을 {}초 안에 불러오지 못했습니다. 로그: {}",
-            self.startup_timeout.as_secs(),
+            "Hy-MT2 로컬 서버를 시작하지 못했습니다. 로그: {}",
             log_path.display()
         ))
     }
@@ -376,6 +408,14 @@ impl HyMtTranslator {
         } else {
             Ok(result)
         }
+    }
+}
+
+fn startup_device_attempts(device: &str) -> Vec<&'static str> {
+    if device == "auto" {
+        vec!["auto", "cpu"]
+    } else {
+        vec!["cpu"]
     }
 }
 
@@ -849,9 +889,9 @@ fn free_tcp_port() -> Result<u16, String> {
 mod tests {
     use super::{
         clean_translation, detect_speech_style, find_llama_server, rewrite_style_prompt,
-        translate_with_completion, HyMtModelSize, HyMtTranslator,
+        startup_device_attempts, translate_with_completion, HyMtModelSize, HyMtTranslator,
     };
-    use crate::language::Language;
+    use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -985,7 +1025,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요해"]
+    fn automatic_device_retries_with_cpu_only_after_gpu_failure() {
+        assert_eq!(startup_device_attempts("auto"), vec!["auto", "cpu"]);
+        assert_eq!(startup_device_attempts("cpu"), vec!["cpu"]);
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
     fn live_small_model_translates_without_python() {
         let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
         assert!(translator.model_is_ready());
@@ -999,6 +1045,41 @@ mod tests {
             .expect("translate with Hy-MT2");
         assert!(!translated.trim().is_empty());
         assert_ne!(translated, "Hello, nice to meet you.");
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_in_cpu_only_mode() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "cpu", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start CPU-only llama-server");
+        let translated = translator
+            .translate("Hello.", Language::English, Language::Korean)
+            .expect("translate with CPU-only Hy-MT2");
+        assert!(!translated.trim().is_empty());
+        assert_ne!(translated, "Hello.");
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_korean_to_japanese() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "cpu", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start CPU-only llama-server");
+        let translated = translator
+            .translate(
+                "오늘 저녁에 같이 게임할래?",
+                Language::Korean,
+                Language::Japanese,
+            )
+            .expect("translate Korean into Japanese with Hy-MT2");
+        assert_eq!(
+            detect_explicit_language(&translated),
+            Language::Japanese,
+            "unexpected translation: {translated}"
+        );
         translator.close();
     }
 }

@@ -1,6 +1,8 @@
 export const DEFAULT_CONFIG = Object.freeze({
   enabled: false,
   outgoing_translation_enabled: false,
+  outgoing_target_language: "auto",
+  outgoing_confirm_language: true,
   target_language: "ko",
   translator: "hymt_1_8b",
   speech_style: "auto",
@@ -57,10 +59,16 @@ export function normalizeConfig(value = {}) {
   const targetLanguage = SUPPORTED_TARGET_LANGUAGES.includes(value.target_language)
     ? value.target_language
     : DEFAULT_CONFIG.target_language;
+  const outgoingTargetLanguage = ["auto", ...SUPPORTED_TARGET_LANGUAGES].includes(
+    value.outgoing_target_language,
+  )
+    ? value.outgoing_target_language
+    : DEFAULT_CONFIG.outgoing_target_language;
   return {
     ...DEFAULT_CONFIG,
     ...value,
     target_language: targetLanguage,
+    outgoing_target_language: outgoingTargetLanguage,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),

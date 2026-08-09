@@ -29,5 +29,16 @@ test("settings can be reverted and native window chrome follows the selected the
 test("outgoing message translation is an explicit basic translation setting", () => {
   assert.match(markup, /<h3>보내는 메시지 번역<\/h3>/);
   assert.match(markup, /id="outgoing-translation"/);
+  assert.match(markup, /<h3>기본 전송 언어<\/h3>/);
+  assert.match(markup, /data-field="outgoing_target_language"/);
+  assert.match(markup, /<h3>자동 감지 결과 확인<\/h3>/);
+  assert.match(markup, /id="outgoing-confirm-language"/);
   assert.match(script, /outgoing_translation_enabled/);
+  assert.match(script, /outgoing_target_language/);
+  assert.match(script, /outgoing_confirm_language/);
+});
+
+test("footer action labels stay on one line", () => {
+  assert.match(markup, /id="cancel"[^>]*>되돌리기<\/button>/);
+  assert.match(readFileSync(new URL("../app.css", import.meta.url), "utf8"), /\.footer-actions \.button[\s\S]*white-space:\s*nowrap/);
 });

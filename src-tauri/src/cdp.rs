@@ -88,9 +88,9 @@ impl CdpClient {
             return Ok(());
         }
         let url = Url::parse(&self.websocket_url)
-            .map_err(|error| format!("CDP WebSocket 주소가 올바르지 않아: {error}"))?;
+            .map_err(|error| format!("CDP WebSocket 주소가 올바르지 않습니다: {error}"))?;
         if url.scheme() != "ws" {
-            return Err("로컬 Discord CDP는 ws:// 주소여야 해.".to_string());
+            return Err("로컬 Discord CDP는 ws:// 주소여야 합니다.".to_string());
         }
         let host = url
             .host_str()
@@ -141,7 +141,7 @@ impl CdpClient {
                 continue;
             };
             let response: Value = serde_json::from_str(&text)
-                .map_err(|error| format!("CDP {method} 응답 형식이 잘못됐어: {error}"))?;
+                .map_err(|error| format!("CDP {method} 응답 형식이 올바르지 않습니다: {error}"))?;
             if response.get("id").and_then(Value::as_u64) != Some(request_id) {
                 continue;
             }

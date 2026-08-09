@@ -758,6 +758,11 @@ input:focus-visible,
   gap: 9px;
 }
 
+.footer-actions .button {
+  min-width: 86px;
+  white-space: nowrap;
+}
+
 .button {
   min-width: 76px;
   min-height: 40px;

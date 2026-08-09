@@ -25,7 +25,7 @@ use crate::language::Language;
 use crate::outgoing::{
     apply_outgoing_error_script, apply_outgoing_suggestion_script, outgoing_ui_script,
     parse_outgoing_requests, prepare_outgoing_send_script, suggest_recent_language,
-    OUTGOING_CLEANUP_SCRIPT,
+    OutgoingRequest, OUTGOING_CLEANUP_SCRIPT,
 };
 use crate::translation::{
     DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, OriginalTranslator,
@@ -460,13 +460,14 @@ fn run_controller(
                     &mut outgoing_pending,
                     generation,
                     &worker_tx,
+                    &config,
                 )?;
                 outgoing_ui_needs_cleanup = true;
             } else if outgoing_ui_needs_cleanup {
-                client
-                    .as_mut()
-                    .expect("connected CDP client")
-                    .evaluate(&outgoing_ui_script(false), false)?;
+                client.as_mut().expect("connected CDP client").evaluate(
+                    &outgoing_ui_script(false, &config.outgoing_target_language),
+                    false,
+                )?;
                 outgoing_ui_needs_cleanup = false;
             }
             Ok(())
@@ -546,7 +547,7 @@ fn scan_images(
         };
         if image_bytes.is_empty() {
             client.evaluate(
-                &apply_image_error_script(&request.id, "이미지 데이터가 비어 있어.")?,
+                &apply_image_error_script(&request.id, "이미지 데이터가 비어 있습니다.")?,
                 false,
             )?;
             continue;
@@ -554,7 +555,7 @@ fn scan_images(
         pending.insert(pending_key);
         update_status(status, |runtime| {
             runtime.notice =
-                "이미지 OCR과 번역을 처리하고 있어. 최초 실행은 모델 준비 때문에 조금 걸릴 수 있어."
+                "이미지 OCR과 번역을 처리하고 있습니다. 최초 실행 시에는 모델 준비에 시간이 걸릴 수 있습니다."
                     .to_string();
         });
         worker
@@ -565,7 +566,7 @@ fn scan_images(
                 source_key: request.source_key,
                 image_bytes,
             }))
-            .map_err(|_| "Rust 이미지 번역 작업 스레드가 종료됐어.".to_string())?;
+            .map_err(|_| "Rust 이미지 번역 작업 스레드가 종료되었습니다.".to_string())?;
     }
     Ok(())
 }
@@ -626,7 +627,7 @@ fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, 
     let encoded = screenshot?
         .get("data")
         .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| "Discord 화면 캡처 결과가 비어 있어.".to_string())?
+        .ok_or_else(|| "Discord 화면 캡처 결과가 비어 있습니다.".to_string())?
         .to_string();
     BASE64
         .decode(encoded.as_bytes())
@@ -678,7 +679,7 @@ fn scan_dom(
                 target,
                 parts,
             }))
-            .map_err(|_| "Rust 번역 작업 스레드가 종료됐어.".to_string())?;
+            .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
     }
     Ok(())
 }
@@ -688,14 +689,24 @@ fn scan_outgoing(
     pending: &mut HashSet<OutgoingPendingKey>,
     generation: u64,
     worker: &mpsc::Sender<WorkerCommand>,
+    config: &AppConfig,
 ) -> Result<(), String> {
-    let requests = parse_outgoing_requests(client.evaluate(&outgoing_ui_script(true), false)?)?;
+    let requests = parse_outgoing_requests(client.evaluate(
+        &outgoing_ui_script(true, &config.outgoing_target_language),
+        false,
+    )?)?;
     for request in requests {
         if request.id.is_empty() || request.text.trim().is_empty() {
             continue;
         }
         if request.selected_language == "auto" {
             let suggestion = suggest_recent_language(&request.recent_messages);
+            if !config.outgoing_confirm_language {
+                if let Some(target) = suggestion {
+                    enqueue_outgoing_translation(request, target, pending, generation, worker)?;
+                    continue;
+                }
+            }
             client.evaluate(
                 &apply_outgoing_suggestion_script(&request.id, suggestion)?,
                 false,
@@ -729,20 +740,30 @@ fn scan_outgoing(
                 continue;
             }
         };
-        let pending_key = (generation, request.id.clone());
-        if !pending.insert(pending_key) {
-            continue;
-        }
-        worker
-            .send(WorkerCommand::TranslateOutgoing(OutgoingTranslationBatch {
-                generation,
-                target,
-                request_id: request.id,
-                text: request.text,
-            }))
-            .map_err(|_| "보내는 메시지 번역 작업을 시작하지 못했습니다.".to_string())?;
+        enqueue_outgoing_translation(request, target, pending, generation, worker)?;
     }
     Ok(())
+}
+
+fn enqueue_outgoing_translation(
+    request: OutgoingRequest,
+    target: Language,
+    pending: &mut HashSet<OutgoingPendingKey>,
+    generation: u64,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<(), String> {
+    let pending_key = (generation, request.id.clone());
+    if !pending.insert(pending_key) {
+        return Ok(());
+    }
+    worker
+        .send(WorkerCommand::TranslateOutgoing(OutgoingTranslationBatch {
+            generation,
+            target,
+            request_id: request.id,
+            text: request.text,
+        }))
+        .map_err(|_| "보내는 메시지 번역 작업을 시작하지 못했습니다.".to_string())
 }
 
 fn dispatch_outgoing_send(
@@ -1125,7 +1146,7 @@ fn make_translator(config: &AppConfig) -> Result<Box<dyn Translator>, String> {
         )?)),
         "mock" => Ok(Box::new(MockTranslator)),
         "original" => Ok(Box::new(OriginalTranslator)),
-        other => Err(format!("지원하지 않는 번역 모델이야: {other}")),
+        other => Err(format!("지원하지 않는 번역 모델입니다: {other}")),
     }
 }
 

@@ -725,6 +725,12 @@ fn authenticate_gemini_acp_process_with_cache(
                     }
                 }
                 Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    // Some Gemini CLI versions save the OAuth cache and close ACP stdout
+                    // without returning the authenticate response. A valid new cache is the
+                    // authoritative completion signal in that flow.
+                    if authentication_started && oauth_cache.new_valid_fingerprint().is_some() {
+                        return Ok(());
+                    }
                     return Err("Gemini CLI ACP 인증 연결이 종료되었습니다.".to_string());
                 }
             }
@@ -1374,7 +1380,7 @@ impl CodexAppServer {
         let stdin = self
             .stdin
             .as_mut()
-            .ok_or_else(|| "Codex app-server 입력 연결이 닫혀 있어.".to_string())?;
+            .ok_or_else(|| "Codex app-server 입력 연결이 닫혀 있습니다.".to_string())?;
         writeln!(stdin, "{message}")
             .and_then(|()| stdin.flush())
             .map_err(|error| format!("Codex app-server 연결이 끊어졌어: {error}"))
@@ -1400,13 +1406,13 @@ impl CodexAppServer {
     fn next_message(&mut self, deadline: Instant) -> Result<Value, String> {
         let remaining = deadline
             .checked_duration_since(Instant::now())
-            .ok_or_else(|| "Codex app-server 번역 응답 시간이 초과됐어.".to_string())?;
+            .ok_or_else(|| "Codex app-server 번역 응답 시간이 초과되었습니다.".to_string())?;
         let event = self
             .messages
             .as_ref()
-            .ok_or_else(|| "Codex app-server 출력 연결이 닫혀 있어.".to_string())?
+            .ok_or_else(|| "Codex app-server 출력 연결이 닫혀 있습니다.".to_string())?
             .recv_timeout(remaining)
-            .map_err(|_| "Codex app-server 번역 응답 시간이 초과됐어.".to_string())?;
+            .map_err(|_| "Codex app-server 번역 응답 시간이 초과되었습니다.".to_string())?;
         match event {
             ServerEvent::Message(message) => Ok(message),
             ServerEvent::Closed => {
@@ -1421,7 +1427,9 @@ impl CodexAppServer {
                 } else {
                     format!(" ({})", detail.trim())
                 };
-                Err(format!("Codex app-server가 예기치 않게 종료됐어{suffix}"))
+                Err(format!(
+                    "Codex app-server가 예기치 않게 종료되었습니다{suffix}"
+                ))
             }
         }
     }

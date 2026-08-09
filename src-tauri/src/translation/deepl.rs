@@ -32,7 +32,9 @@ impl DeepLTranslator {
             .or(credentials::read("deepl")?)
             .unwrap_or_default();
         if api_key.is_empty() {
-            return Err("DEEPL_API_KEY가 없어 DeepL 번역을 시작할 수 없습니다.".to_string());
+            return Err(
+                "DEEPL_API_KEY가 설정되지 않아 DeepL 번역을 시작할 수 없습니다.".to_string(),
+            );
         }
         let endpoint = if api_key.ends_with(":fx") {
             "https://api-free.deepl.com/v2/translate"

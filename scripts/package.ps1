@@ -13,7 +13,7 @@ if ($Clean) {
     foreach ($target in @($DistDirectory, $ReleaseDirectory)) {
         $full = [System.IO.Path]::GetFullPath($target)
         if (-not $full.StartsWith($ProjectRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "프로젝트 밖의 경로는 지울 수 없어: $full"
+            throw "프로젝트 밖의 경로는 삭제할 수 없습니다: $full"
         }
         Remove-Item -LiteralPath $full -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -23,13 +23,13 @@ Set-Location $ProjectRoot
 if (-not $SkipBuild) {
     npm run tauri:build
     if ($LASTEXITCODE -ne 0) {
-        throw "Tauri 릴리스 빌드에 실패했어(exit code: $LASTEXITCODE)."
+        throw "Tauri 릴리스 빌드에 실패했습니다(exit code: $LASTEXITCODE)."
     }
 }
 
 $Executable = Join-Path $ProjectRoot 'src-tauri\target\release\nude-translator-tauri.exe'
 if (-not (Test-Path -LiteralPath $Executable)) {
-    throw "Rust 릴리스 실행 파일이 없어: $Executable"
+    throw "Rust 릴리스 실행 파일이 없습니다: $Executable"
 }
 
 New-Item -ItemType Directory -Force $DistDirectory | Out-Null
@@ -47,7 +47,7 @@ if (-not $LlamaPath) {
         Select-Object -First 1 -ExpandProperty FullName
 }
 if (-not $LlamaPath) {
-    throw 'llama.cpp가 없어. scripts/setup_hymt_runtime.ps1을 먼저 실행해줘.'
+    throw 'llama.cpp가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
 }
 
 $LlamaSource = Split-Path -Parent $LlamaPath
@@ -73,7 +73,7 @@ foreach ($model in $Models) {
     if (-not $model.Required) { continue }
     $source = Join-Path (Join-Path $ModelCache $model.Key) $model.File
     if (-not (Test-Path -LiteralPath $source)) {
-        throw "내장할 Hy-MT2 모델이 없어: $source`n앱에서 해당 모델을 한 번 준비한 뒤 다시 패키징해줘."
+        throw "내장할 Hy-MT2 모델이 없습니다: $source`n앱에서 해당 모델을 한 번 준비한 후 다시 패키징하십시오."
     }
     $destination = Join-Path $DistDirectory "runtime\models\hy-mt2\$($model.Key)"
     New-Item -ItemType Directory -Force $destination | Out-Null
@@ -85,12 +85,12 @@ $Archive = Join-Path $ReleaseDirectory 'NudeTranslator-Windows-x64.zip'
 Remove-Item -LiteralPath $Archive -Force -ErrorAction SilentlyContinue
 & tar.exe -a -c -f $Archive -C $DistDirectory .
 if ($LASTEXITCODE -ne 0) {
-    throw "릴리스 ZIP 생성에 실패했어(exit code: $LASTEXITCODE)."
+    throw "릴리스 ZIP 생성에 실패했습니다(exit code: $LASTEXITCODE)."
 }
 
 Write-Host "패키징 완료: $DistDirectory"
 Write-Host "릴리스 파일: $Archive"
-Write-Host 'Python 없이 Tauri/Rust 앱, llama.cpp, Hy-MT2 1.8B 모델을 포함했어.'
+Write-Host 'Python 없이 Tauri/Rust 앱, llama.cpp, Hy-MT2 1.8B 모델을 포함했습니다.'
 if ($IncludeLargeModel) {
-    Write-Host 'Hy-MT2 7B 모델도 포함했어.'
+    Write-Host 'Hy-MT2 7B 모델도 포함했습니다.'
 }
