@@ -121,16 +121,62 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
 pub const RESTORE_TEXT_SCRIPT: &str = r#"
 (() => {
   const originals = window.__nudeTranslatorOriginals;
-  if (!(originals instanceof Map)) return {restored: 0};
   let restored = 0;
-  for (const [node, text] of originals) {
-    if (!node?.isConnected) continue;
-    if (node.nodeType === Node.TEXT_NODE) node.nodeValue = text;
-    else node.textContent = text;
+  if (originals instanceof Map) {
+    for (const [node, text] of originals) {
+      if (!node?.isConnected) continue;
+      if (node.nodeType === Node.TEXT_NODE) node.nodeValue = text;
+      else node.textContent = text;
+      restored++;
+    }
+    originals.clear();
+  }
+  const locators = window.__nudeTranslatorOriginalsByLocator;
+  if (!(locators instanceof Map)) return {restored, remaining: 0};
+  function eligibleTextNodes(root) {
+    const nodes = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.nodeValue || !node.nodeValue.trim()) continue;
+      const parent = node.parentElement;
+      if (!parent) continue;
+      const protectedParent = parent.closest(
+        'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+      );
+      if (protectedParent && root.contains(protectedParent)) continue;
+      const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
+      if (hiddenParent && hiddenParent !== root) continue;
+      nodes.push(node);
+    }
+    return nodes;
+  }
+  function target(change) {
+    let root = null;
+    if (change.kind === 'message') root = document.querySelector(`[data-dto-message-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'reply') root = document.querySelector(`[data-dto-reply-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'embed') root = document.querySelector(`[data-dto-root-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'forum-title') root = document.querySelector(`[data-dto-forum-title-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'heading') root = document.querySelector(`[data-dto-heading-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'channel') {
+      const channel = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"]`);
+      return channel?.querySelector('div[aria-hidden="true"] > span,[class*="name__"][aria-hidden="true"] > div') || null;
+    } else if (change.kind === 'category') {
+      const category = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"][role="button"]`);
+      return category?.querySelector('h3 > div') || null;
+    }
+    return root ? eligibleTextNodes(root)[change.index] || null : null;
+  }
+  for (const [key, change] of [...locators]) {
+    const node = target(change);
+    if (!node) continue;
+    if (node.nodeType === Node.TEXT_NODE) node.nodeValue = change.text;
+    else node.textContent = change.text;
+    locators.delete(key);
     restored++;
   }
-  originals.clear();
-  return {restored};
+  return {restored, remaining: locators.size};
 })()
 "#;
 
@@ -138,6 +184,8 @@ pub const CLEAR_TEXT_REGISTRY_SCRIPT: &str = r#"
 (() => {
   const originals = window.__nudeTranslatorOriginals;
   if (originals instanceof Map) originals.clear();
+  const locators = window.__nudeTranslatorOriginalsByLocator;
+  if (locators instanceof Map) locators.clear();
 })()
 "#;
 
@@ -201,8 +249,14 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     ? window.__nudeTranslatorOriginals
     : new Map();
   window.__nudeTranslatorOriginals = originals;
-  function remember(node, text) {{
+  const originalLocators = window.__nudeTranslatorOriginalsByLocator instanceof Map
+    ? window.__nudeTranslatorOriginalsByLocator
+    : new Map();
+  window.__nudeTranslatorOriginalsByLocator = originalLocators;
+  function remember(node, text, change) {{
     if (node && !originals.has(node)) originals.set(node, text);
+    const key = JSON.stringify([change.kind, change.id, change.index]);
+    if (!originalLocators.has(key)) originalLocators.set(key, {{...change, text}});
   }}
   function eligibleTextNodes(root) {{
     const nodes = [];
@@ -252,7 +306,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
         '[class*="name__"][aria-hidden="true"] > div'
       ) || null;
       if (root) {{
-        remember(root, root.textContent);
+        remember(root, root.textContent, change);
         root.textContent = change.text;
         applied++;
         continue;
@@ -264,7 +318,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       );
       root = category?.querySelector('h3 > div') || null;
       if (root) {{
-        remember(root, root.textContent);
+        remember(root, root.textContent, change);
         root.textContent = change.text;
         applied++;
         continue;
@@ -274,7 +328,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     const nodes = eligibleTextNodes(root);
     const node = nodes[change.index];
     if (!node) continue;
-    remember(node, node.nodeValue);
+    remember(node, node.nodeValue, change);
     node.nodeValue = change.text;
     applied++;
   }}
@@ -332,7 +386,11 @@ mod tests {
         let script = apply_script(&[DomChange::new(&part, "번역문")]).unwrap();
         assert!(script.contains("__nudeTranslatorOriginals"));
         assert!(script.contains("originals.set"));
+        assert!(script.contains("__nudeTranslatorOriginalsByLocator"));
+        assert!(script.contains("originalLocators.set"));
         assert!(RESTORE_TEXT_SCRIPT.contains("originals.clear"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("locators.delete"));
         assert!(CLEAR_TEXT_REGISTRY_SCRIPT.contains("originals.clear"));
+        assert!(CLEAR_TEXT_REGISTRY_SCRIPT.contains("locators.clear"));
     }
 }

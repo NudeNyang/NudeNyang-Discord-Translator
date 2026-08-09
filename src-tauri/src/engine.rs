@@ -479,12 +479,18 @@ fn run_controller(
                     &status,
                 )?;
                 image_ui_needs_cleanup = true;
-            } else if image_ui_needs_cleanup {
+            } else {
                 client
                     .as_mut()
                     .expect("connected CDP client")
-                    .evaluate(&restore_images_script(false), false)?;
-                image_ui_needs_cleanup = false;
+                    .evaluate(RESTORE_TEXT_SCRIPT, false)?;
+                if image_ui_needs_cleanup {
+                    client
+                        .as_mut()
+                        .expect("connected CDP client")
+                        .evaluate(&restore_images_script(false), false)?;
+                    image_ui_needs_cleanup = false;
+                }
             }
             if config.outgoing_translation_enabled {
                 scan_outgoing(
@@ -1364,13 +1370,22 @@ mod tests {
         let part = before
             .parts
             .into_iter()
-            .next()
-            .expect("복원 검증에 사용할 Discord 텍스트가 필요합니다");
+            .find(|part| part.kind == "message")
+            .expect("복원 검증에 사용할 Discord 메시지가 필요합니다");
         let locator = part.locator();
         let marker = "[Nude Translator restore verification]";
         let script = apply_script(&[DomChange::new(&part, marker)]).unwrap();
         client.evaluate(&script, false).unwrap();
         let translated = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
+        let item_id = serde_json::to_string(&part.item_id).unwrap();
+        client
+            .evaluate(
+                &format!(
+                    "(() => {{ const id={item_id}; const root=document.querySelector(`[data-dto-message-id=\"${{CSS.escape(id)}}\"]`); if(!root) return false; root.innerHTML=root.innerHTML; return true; }})()"
+                ),
+                false,
+            )
+            .unwrap();
         client.evaluate(RESTORE_TEXT_SCRIPT, false).unwrap();
         let restored = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
         client.close();
@@ -1391,6 +1406,82 @@ mod tests {
                 .map(|candidate| candidate.text.as_str()),
             Some(part.text.as_str())
         );
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_toggle_off_restores_a_message_after_discord_recreates_its_text_nodes() {
+        let target = discord_target(9222).expect("Discord 디버그 렌더러가 필요합니다");
+        let mut client = CdpClient::new(target.websocket_url);
+        client.connect().unwrap();
+        let original = "こんにちは。今日は一緒に遊びませんか。";
+        client
+            .evaluate(
+                &format!(
+                    "(() => {{ document.getElementById('message-content-nt-toggle-restore')?.remove(); const root=document.createElement('div'); root.id='message-content-nt-toggle-restore'; root.style.cssText='position:fixed;left:20px;top:80px;z-index:2147483000'; root.textContent={}; document.body.append(root); return true; }})()",
+                    serde_json::to_string(original).unwrap()
+                ),
+                false,
+            )
+            .unwrap();
+
+        let mut config = AppConfig::default();
+        config.enabled = true;
+        config.outgoing_translation_enabled = false;
+        config.translator = "mock".to_string();
+        config.target_language = "ko".to_string();
+        config.keep_local_model_warm = false;
+        config.capture_fps = 20;
+        let engine = RustEngine::start(config);
+        wait_for_dom_text(&mut client, "[ko] ", false);
+        client
+            .evaluate(
+                &format!(
+                    "(() => {{ const root=document.getElementById('message-content-nt-toggle-restore'); root.textContent={}; return true; }})()",
+                    serde_json::to_string(original).unwrap()
+                ),
+                false,
+            )
+            .unwrap();
+        wait_for_dom_text(&mut client, "[ko] ", false);
+        client
+            .evaluate(
+                "(() => { const root=document.getElementById('message-content-nt-toggle-restore'); root.innerHTML=root.innerHTML; return true; })()",
+                false,
+            )
+            .unwrap();
+        engine.set_enabled(false).unwrap();
+        wait_for_dom_text(&mut client, original, true);
+
+        engine.stop();
+        client
+            .evaluate(
+                "document.getElementById('message-content-nt-toggle-restore')?.remove()",
+                false,
+            )
+            .unwrap();
+        client.close();
+    }
+
+    fn wait_for_dom_text(client: &mut CdpClient, expected: &str, exact: bool) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let value = client
+                .evaluate(
+                    "document.getElementById('message-content-nt-toggle-restore')?.textContent || ''",
+                    false,
+                )
+                .unwrap();
+            let text = value.as_str().unwrap_or_default();
+            if (exact && text == expected) || (!exact && text.starts_with(expected)) {
+                return;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "Discord 테스트 메시지가 기대한 내용으로 바뀌지 않았습니다: {text}"
+            );
+            std::thread::sleep(Duration::from_millis(50));
+        }
     }
 
     fn wait_for_translator(engine: &RustEngine, expected: &str) {
