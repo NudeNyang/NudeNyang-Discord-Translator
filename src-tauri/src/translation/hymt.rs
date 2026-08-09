@@ -19,7 +19,7 @@ use crate::language::Language;
 
 use super::Translator;
 
-const PROMPT_VERSION: &str = "register-aware-v3";
+const PROMPT_VERSION: &str = "tone-and-punctuation-v4";
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const PROMPT_ECHO_HINTS: [&str; 17] = [
     "zxqkeep",
@@ -504,7 +504,7 @@ where
         let leading_len = part.len() - part.trim_start().len();
         let trailing_start = part.trim_end().len();
         let core = part.trim();
-        let prompt = translation_prompt(core, source, target);
+        let prompt = translation_prompt(core, source, target, resolved_style);
         let mut result = complete(&prompt, core)?;
         if matches!(resolved_style, "polite" | "casual")
             && (detect_speech_style(&result, target) != resolved_style
@@ -590,14 +590,17 @@ pub fn detect_speech_style(text: &str, source: Language) -> &'static str {
     }
 }
 
-fn translation_prompt(text: &str, source: Language, target: Language) -> String {
+fn translation_prompt(text: &str, source: Language, target: Language, style: &str) -> String {
     format!(
         "Translate the following {} text into {}.\n\
          Translate every clause and preserve every piece of information without adding or omitting anything.\n\
-         Preserve paragraph boundaries and line breaks where possible.\n\
+         Preserve the speaker's exact social register, warmth, directness, slang, contractions, fragments, and emotional intensity. Do not make casual language polite, formal, literary, or businesslike.\n\
+         Style requirement: {}\n\
+         Preserve paragraph boundaries, line breaks, emojis, and punctuation intent. If a source line has no sentence-final punctuation, do not add a period, full stop, question mark, or exclamation mark. Preserve ellipses and repeated punctuation.\n\
          Only output the translated result without an explanation.\n\n{}",
         source.english_name(),
         target.english_name(),
+        style_requirement(target, style),
         text
     )
 }
@@ -605,7 +608,7 @@ fn translation_prompt(text: &str, source: Language, target: Language) -> String 
 pub fn rewrite_style_prompt(text: &str, target: Language, style: &str) -> String {
     format!(
         "Rewrite the following {} text to meet this style requirement.\nStyle requirement: {}\n\
-         Keep the meaning unchanged. Only output the rewritten text without an explanation.\n\n{}",
+         Keep the meaning, line breaks, emojis, punctuation intent, warmth, and directness unchanged. Do not add sentence-final punctuation where the input has none. Only output the rewritten text without an explanation.\n\n{}",
         target.english_name(),
         style_requirement(target, style),
         text
@@ -923,6 +926,31 @@ mod tests {
         assert!(prompts
             .iter()
             .all(|prompt| prompt.contains("preserve every piece of information")));
+        assert!(prompts
+            .iter()
+            .all(|prompt| prompt.contains("no sentence-final punctuation")));
+        assert!(prompts
+            .iter()
+            .all(|prompt| prompt.contains("exact social register")));
+    }
+
+    #[test]
+    fn automatic_style_is_included_in_the_initial_prompt() {
+        let mut captured = String::new();
+        let result = translate_with_completion(
+            "일본어로 통역해줘",
+            Language::Korean,
+            Language::Japanese,
+            "auto",
+            |prompt, _text| {
+                captured = prompt.to_string();
+                Ok("日本語に訳して".to_string())
+            },
+        )
+        .unwrap();
+        assert_eq!(result, "日本語に訳して");
+        assert!(captured.contains("Japanese casual/plain form"));
+        assert!(captured.contains("Do not make casual language polite"));
     }
 
     #[test]

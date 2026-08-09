@@ -97,7 +97,7 @@ impl TranslationService {
                 self.translator.cache_namespace(),
                 false,
             )? {
-                results[index] = Some(cached);
+                results[index] = Some(preserve_terminal_punctuation(text, &cached));
                 continue;
             }
             pending.push((index, text.clone(), protected, source, source_hash));
@@ -115,7 +115,8 @@ impl TranslationService {
             for ((index, text, protected, source, hash), translated) in
                 pending.into_iter().zip(translated)
             {
-                let restored = protected.restore(&translated);
+                let restored =
+                    preserve_terminal_punctuation(&text, &protected.restore(&translated));
                 if self
                     .translator
                     .should_cache(&text, &restored, source, target)
@@ -192,12 +193,12 @@ impl TranslationService {
             self.translator.cache_namespace(),
             false,
         )? {
-            return Ok(cached);
+            return Ok(preserve_terminal_punctuation(text, &cached));
         }
         let translated = self
             .translator
             .translate(&protected.masked, source, target)?;
-        let restored = protected.restore(&translated);
+        let restored = preserve_terminal_punctuation(text, &protected.restore(&translated));
         if self
             .translator
             .should_cache(text, &restored, source, target)
@@ -225,11 +226,89 @@ fn source_hash(text: &str) -> String {
     format!("{:x}", Sha256::digest(text.as_bytes()))
 }
 
+fn preserve_terminal_punctuation(source: &str, translated: &str) -> String {
+    let source_lines: Vec<_> = source.split('\n').collect();
+    let translated_lines: Vec<_> = translated.split('\n').collect();
+    if source_lines.len() == translated_lines.len() {
+        return source_lines
+            .into_iter()
+            .zip(translated_lines)
+            .map(|(source_line, translated_line)| {
+                remove_added_terminal_punctuation(source_line, translated_line)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+    }
+    remove_added_terminal_punctuation(source, translated)
+}
+
+fn remove_added_terminal_punctuation(source: &str, translated: &str) -> String {
+    if has_terminal_punctuation(source) || !has_terminal_punctuation(translated) {
+        return translated.to_string();
+    }
+
+    let trailing_whitespace = translated.len() - translated.trim_end().len();
+    let content_end = translated.len() - trailing_whitespace;
+    let content = &translated[..content_end];
+    let trailing = &translated[content_end..];
+    let mut punctuation_end = content.len();
+
+    while let Some((index, character)) = content[..punctuation_end].char_indices().next_back() {
+        if is_terminal_closer(character) {
+            punctuation_end = index;
+        } else {
+            break;
+        }
+    }
+
+    let mut punctuation_start = punctuation_end;
+    while let Some((index, character)) = content[..punctuation_start].char_indices().next_back() {
+        if is_sentence_terminal(character) {
+            punctuation_start = index;
+        } else {
+            break;
+        }
+    }
+    if punctuation_start == punctuation_end {
+        return translated.to_string();
+    }
+
+    format!(
+        "{}{}{}",
+        &content[..punctuation_start],
+        &content[punctuation_end..],
+        trailing
+    )
+}
+
+fn has_terminal_punctuation(text: &str) -> bool {
+    let mut characters = text.trim_end().chars().rev();
+    while let Some(character) = characters.next() {
+        if is_terminal_closer(character) {
+            continue;
+        }
+        return is_sentence_terminal(character);
+    }
+    false
+}
+
+fn is_sentence_terminal(character: char) -> bool {
+    matches!(character, '.' | '。' | '!' | '！' | '?' | '？' | '…')
+}
+
+fn is_terminal_closer(character: char) -> bool {
+    matches!(
+        character,
+        '"' | '\'' | '”' | '’' | '」' | '』' | '】' | '〉' | '》' | ')' | ']' | '}'
+    )
+}
+
 #[cfg(test)]
 mod tests {
-    use super::TranslationService;
+    use super::{has_terminal_punctuation, preserve_terminal_punctuation, TranslationService};
     use crate::cache::TranslationCache;
     use crate::language::Language;
+    use crate::translation::hymt::{detect_speech_style, HyMtModelSize, HyMtTranslator};
     use crate::translation::{MockTranslator, Translator};
     use std::fs;
     use std::sync::{Arc, Mutex};
@@ -307,6 +386,60 @@ mod tests {
         assert!(first.contains("@everyone 👋"));
         assert_eq!(first, second);
         assert_eq!(*calls.lock().unwrap(), 1);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn removes_sentence_endings_added_by_translation() {
+        assert_eq!(
+            preserve_terminal_punctuation("안녕", "こんにちは。"),
+            "こんにちは"
+        );
+        assert_eq!(
+            preserve_terminal_punctuation("\"안녕\"", "「こんにちは。」"),
+            "「こんにちは」"
+        );
+        assert_eq!(
+            preserve_terminal_punctuation("안녕\n잘 자", "こんにちは。\nおやすみ。"),
+            "こんにちは\nおやすみ"
+        );
+    }
+
+    #[test]
+    fn preserves_existing_punctuation_and_non_terminal_expression() {
+        assert_eq!(
+            preserve_terminal_punctuation("안녕!", "こんにちは！"),
+            "こんにちは！"
+        );
+        assert_eq!(
+            preserve_terminal_punctuation("진짜...", "本当に……"),
+            "本当に……"
+        );
+        assert_eq!(
+            preserve_terminal_punctuation("안녕 😊", "こんにちは 😊"),
+            "こんにちは 😊"
+        );
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_local_model_preserves_casual_tone_without_adding_a_period() {
+        let path = cache_path("live-tone-punctuation");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let translator = HyMtTranslator::new(HyMtModelSize::Small, "cpu", "auto").unwrap();
+        let mut service = TranslationService::new(Box::new(translator), cache);
+        let translated = service
+            .translate("오늘 저녁에 같이 게임할래", Language::Japanese)
+            .expect("translate casual Korean into Japanese");
+        assert_eq!(
+            detect_speech_style(&translated, Language::Japanese),
+            "casual",
+            "unexpected register: {translated}"
+        );
+        assert!(
+            !has_terminal_punctuation(&translated),
+            "unexpected terminal punctuation: {translated}"
+        );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 }
