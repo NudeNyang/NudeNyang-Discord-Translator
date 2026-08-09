@@ -31,13 +31,13 @@ Python 인터프리터, `.venv`, PyInstaller, PaddleOCR 사이드카는 실행·
 - Discord 메시지와 채널명을 언어별로 판별해 선택한 표시 언어로 번역
 - 한국어·일본어·영어·중국어 간 번역 및 같은 언어 원문 유지
 - 최근 대화 언어를 기준으로 보내는 메시지를 번역하고, 장문은 텍스트 파일 하나로 전송
-- Hy-MT2 1.8B/7B 로컬 번역, ChatGPT·Gemini 구독 CLI, DeepL, Mock 엔진
+- Hy-MT2 1.8B/7B 로컬 번역, ChatGPT·Claude·Gemini 구독 CLI, DeepL, Mock 엔진
 - 번역을 꺼도 로컬 모델을 VRAM에 유지하거나 즉시 반환하는 예열 옵션
 - Discord 첨부 이미지에 나타나는 `이미지 번역` 버튼과 원문/번역 전환
 - Rust 네이티브 PP-OCR 계열 감지·다국어/한국어 이중 인식 및 이미지 재합성
 - 설정 가능한 전역 단축키, 트레이 상태 동기화, 설정창 단일 인스턴스
 - 최초 동의 뒤 CDP 연결 실패 시 15초 안내 후 Discord 안전 재시작
-- GitHub Release 기반 업데이트 확인·다운로드·SHA-256 검증
+- 서명된 비공개 R2 베타 업데이트 확인·다운로드·자동 설치
 
 ## 지원 범위
 
@@ -88,6 +88,20 @@ Hy-MT2 1.8B 모델을 내장한다. `-IncludeLargeModel`을 추가하면 7B 모�
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
 ```
+
+비공개 베타는 Cloudflare R2와 Worker를 사용한다. 최초 한 번 인프라를 준비한 뒤 서명된
+NSIS 설치 파일을 만들고 업로드한다. 기본 베타 패키지는 Hy-MT2 모델을 제외해 업데이트
+용량을 줄이며, 모델은 앱에서 처음 선택할 때 공식 저장소에서 내려받는다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup_beta_r2.ps1
+powershell -ExecutionPolicy Bypass -File scripts/package_beta.ps1
+powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
+```
+
+업데이트 서명 키와 베타 토큰, 친구용 최초 설치 링크는 저장소 밖의
+`%LOCALAPPDATA%\NudeTranslator\secrets`에만 저장한다. 다음 베타에서는 앱 버전을 올린 뒤
+패키징과 배포 스크립트만 다시 실행한다.
 
 ## 문서
 

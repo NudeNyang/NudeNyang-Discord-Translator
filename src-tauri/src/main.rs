@@ -409,16 +409,13 @@ fn runtime_status(
 }
 
 #[tauri::command]
-async fn update_check(
-    config: State<'_, ConfigStore>,
-    current_version: String,
-) -> Result<Value, String> {
-    let repository = config.get()?.update_repository;
-    tauri::async_runtime::spawn_blocking(move || {
-        updater::check_for_update(&repository, &current_version)
-    })
-    .await
-    .map_err(|error| format!("업데이트 확인 작업을 기다리지 못했습니다: {error}"))?
+async fn update_check(app: AppHandle) -> Result<Value, String> {
+    updater::check_for_update(&app).await
+}
+
+#[tauri::command]
+async fn update_install(app: AppHandle) -> Result<Value, String> {
+    updater::install_update(app).await
 }
 
 #[tauri::command]
@@ -856,6 +853,7 @@ fn main() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             main_window_show(app.clone());
         }))
@@ -911,6 +909,7 @@ fn main() {
             translation_set_enabled,
             runtime_status,
             update_check,
+            update_install,
             provider_connections_get,
             provider_install,
             provider_connect,

@@ -72,7 +72,8 @@ const state = {
   restartAttempted: false,
   polling: false,
   updateCheckActive: false,
-  availableReleaseUrl: "",
+  availableUpdateVersion: "",
+  updateInstalling: false,
   settingsScrollTimer: 0,
   pendingEnabled: null,
   toggleActive: false,
@@ -442,23 +443,22 @@ async function disconnectProvider(row) {
 
 async function checkForUpdates(silent = false) {
   if (state.updateCheckActive) return;
-  if (state.availableReleaseUrl && !silent) {
-    await openExternalUrl(state.availableReleaseUrl);
+  if (state.availableUpdateVersion && !silent) {
+    await installAvailableUpdate();
     return;
   }
   state.updateCheckActive = true;
   elements.checkUpdate.disabled = true;
-  if (!silent) elements.updateStatus.textContent = "GitHub에서 최신 릴리스를 확인하고 있습니다...";
+  if (!silent) elements.updateStatus.textContent = "비공개 베타 업데이트를 확인하고 있습니다...";
   try {
-    const result = await invoke("update_check", {
-      currentVersion: elements.appVersion.textContent.trim(),
-    });
+    const result = await invoke("update_check");
     if (result.available) {
-      state.availableReleaseUrl = result.pageUrl;
+      state.availableUpdateVersion = result.version;
       elements.updateStatus.textContent = `새 버전 ${result.version}을 사용할 수 있습니다.`;
-      elements.checkUpdate.textContent = "릴리스 열기";
+      elements.checkUpdate.textContent = "업데이트 설치";
     } else {
-      elements.updateStatus.textContent = "현재 버전이 최신이거나 공개된 릴리스가 없습니다.";
+      state.availableUpdateVersion = "";
+      elements.updateStatus.textContent = "현재 베타 버전이 최신입니다.";
       elements.checkUpdate.textContent = "지금 확인";
     }
   } catch (error) {
@@ -467,6 +467,26 @@ async function checkForUpdates(silent = false) {
     state.updateCheckActive = false;
     elements.checkUpdate.disabled = false;
   }
+}
+
+async function installAvailableUpdate() {
+  if (state.updateInstalling) return;
+  state.updateInstalling = true;
+  elements.checkUpdate.disabled = true;
+  elements.updateStatus.textContent = `${state.availableUpdateVersion} 업데이트를 다운로드하고 있습니다...`;
+  try {
+    await invoke("update_install");
+    elements.updateStatus.textContent = "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.";
+  } catch (error) {
+    elements.updateStatus.textContent = `업데이트 설치 실패: ${String(error)}`;
+    elements.checkUpdate.disabled = false;
+  } finally {
+    state.updateInstalling = false;
+  }
+}
+
+function formatMegabytes(bytes) {
+  return `${(Number(bytes || 0) / 1024 / 1024).toFixed(1)}MB`;
 }
 
 async function loadAppInformation() {
@@ -952,6 +972,14 @@ if (tauriListen) {
   tauriListen("provider-connections-changed", loadProviderConnections);
   tauriListen("focus-provider-connection", event => {
     loadProviderConnections().finally(() => revealProviderConnection(event.payload));
+  });
+  tauriListen("update-download-progress", event => {
+    const downloaded = formatMegabytes(event.payload?.downloaded);
+    const total = event.payload?.total ? ` / ${formatMegabytes(event.payload.total)}` : "";
+    elements.updateStatus.textContent = `업데이트 다운로드 중 ${downloaded}${total}`;
+  });
+  tauriListen("update-download-finished", () => {
+    elements.updateStatus.textContent = "업데이트 서명을 확인하고 설치하고 있습니다...";
   });
 }
 

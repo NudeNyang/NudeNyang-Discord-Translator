@@ -38,15 +38,31 @@
     }
   },
   "bundle": {
-    "active": false,
-    "resources": [
-      "../LICENSE",
-      "../THIRD_PARTY_NOTICES.md",
-      "../licenses"
-    ],
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "../LICENSE": "LICENSE.txt",
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
+      "../licenses/": "licenses/",
+      "bundle-resources/runtime/": "runtime/"
+    },
     "icon": [
       "../assets/nude-translator.ico",
       "../assets/nude-translator.png"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQzRUJCNzUwMUVEMjcyNTEKUldSUmN0SWVVTGZyUTI1eGpEWWVaVjc5M25sWHBsRlpJUlVwZUhzaS9qOEJRMHQrU0QwTitUWkMK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
