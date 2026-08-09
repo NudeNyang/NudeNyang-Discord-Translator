@@ -245,7 +245,55 @@ input:focus-visible,
 
 #settings-form {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.update-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 46%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-soft) 82%, var(--surface));
+}
+
+.update-banner[hidden] {
+  display: none;
+}
+
+.update-banner-mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.update-banner-copy {
+  min-width: 0;
+}
+
+.update-banner-copy strong {
+  display: block;
+  font-size: 14px;
+}
+
+.update-banner-copy p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.update-banner .button {
+  min-width: 118px;
+  white-space: nowrap;
 }
 
 .settings-scroll-region {

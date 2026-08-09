@@ -24,6 +24,7 @@ const VIEW_HEIGHTS = Object.freeze({
   language: 274,
   model: 353,
 });
+const UPDATE_ROW_HEIGHT = 58;
 
 const elements = {
   engineSummary: document.querySelector("#engine-summary"),
@@ -35,6 +36,9 @@ const elements = {
   languageView: document.querySelector("#language-view"),
   modelView: document.querySelector("#model-view"),
   openLabel: document.querySelector("#open-label"),
+  updateGroup: document.querySelector("#tray-update-group"),
+  installUpdate: document.querySelector("#install-update"),
+  updateVersion: document.querySelector("#tray-update-version"),
   languageOptions: [...document.querySelectorAll("[data-language]")],
   translatorOptions: [...document.querySelectorAll("[data-translator]")],
 };
@@ -42,13 +46,34 @@ let currentConfig = null;
 let currentStatus = null;
 let refreshing = false;
 let providerConnections = new Map();
+let availableUpdateVersion = "";
 
 function showMainView() {
   elements.mainMenu.hidden = false;
   elements.languageView.hidden = true;
   elements.modelView.hidden = true;
   elements.openLabel.textContent = "열기";
-  resizeTray(VIEW_HEIGHTS.main);
+  resizeTray(VIEW_HEIGHTS.main + (availableUpdateVersion ? UPDATE_ROW_HEIGHT : 0));
+}
+
+function renderUpdateAvailability(update) {
+  availableUpdateVersion = update?.available ? String(update.version || "") : "";
+  const available = Boolean(availableUpdateVersion);
+  elements.updateGroup.hidden = !available;
+  elements.installUpdate.hidden = !available;
+  elements.updateVersion.textContent = availableUpdateVersion;
+  if (!elements.mainMenu.hidden) {
+    resizeTray(VIEW_HEIGHTS.main + (available ? UPDATE_ROW_HEIGHT : 0));
+  }
+}
+
+async function refreshUpdateAvailability() {
+  if (!invoke) return;
+  try {
+    renderUpdateAvailability(await invoke("update_availability_get"));
+  } catch {
+    renderUpdateAvailability(null);
+  }
 }
 
 function showLanguageView() {
@@ -203,6 +228,7 @@ document.querySelector("#open-model-settings").addEventListener("click", showMod
 document.querySelector("#open-settings-secondary").addEventListener("click", () => run("tray_open_settings"));
 document.querySelector("#toggle-translation").addEventListener("click", () => run("tray_request_translation_toggle"));
 document.querySelector("#quit-app").addEventListener("click", () => run("application_exit"));
+elements.installUpdate.addEventListener("click", () => run("tray_request_update_install"));
 elements.languageOptions.forEach(option => {
   option.addEventListener("click", () => selectLanguage(option.dataset.language));
 });
@@ -220,7 +246,9 @@ if (listen) {
   listen("tray-menu-opened", () => {
     showMainView();
     refresh();
+    refreshUpdateAvailability();
   });
+  listen("update-availability-changed", event => renderUpdateAvailability(event.payload));
   listen("translation-state-changed", event => renderStatus(event.payload, currentConfig));
   listen("settings-changed", event => {
     currentConfig = event.payload;
@@ -230,4 +258,5 @@ if (listen) {
 }
 showMainView();
 refresh();
+refreshUpdateAvailability();
 window.setInterval(refresh, 700);

@@ -18,6 +18,16 @@
       </button>
 
       <div id="main-menu">
+        <div class="menu-group update-group" id="tray-update-group" hidden>
+          <button class="menu-row update-row" id="install-update" type="button" hidden>
+            <span class="update-indicator" aria-hidden="true">↻</span>
+            <span class="menu-copy">
+              <strong>업데이트 설치</strong>
+              <small><span id="tray-update-version"></span> 버전을 사용할 수 있습니다</small>
+            </span>
+            <span class="menu-value arrow-value" aria-hidden="true"><b>›</b></span>
+          </button>
+        </div>
         <div class="menu-group">
           <button class="menu-row" id="toggle-translation" type="button">
             <span class="translation-indicator" id="translation-indicator" aria-hidden="true">

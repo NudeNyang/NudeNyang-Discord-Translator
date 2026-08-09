@@ -92,7 +92,7 @@ test("tray window height hugs each menu view without clipping option lists", () 
   assert.match(trayScript, /main: 318/);
   assert.match(trayScript, /language: 274/);
   assert.match(trayScript, /model: 353/);
-  assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.main\)/);
+  assert.match(trayScript, /VIEW_HEIGHTS\.main \+ \(availableUpdateVersion \? UPDATE_ROW_HEIGHT : 0\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.language\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.model\)/);
   assert.match(rustShell, /fn tray_menu_set_height/);
@@ -100,4 +100,14 @@ test("tray window height hugs each menu view without clipping option lists", () 
 
 test("tray panel keeps a crisp border without a blurred outer shadow", () => {
   assert.match(trayStyles, /\.tray-panel \{[^}]*box-shadow: none;/s);
+});
+
+test("a deferred update remains available from the tray menu", () => {
+  assert.match(trayMarkup, /id="install-update"[^>]*hidden/);
+  assert.match(trayMarkup, /id="tray-update-version"/);
+  assert.match(trayScript, /invoke\("update_availability_get"\)/);
+  assert.match(trayScript, /listen\("update-availability-changed"/);
+  assert.match(trayScript, /run\("tray_request_update_install"\)/);
+  assert.match(rustShell, /emit\("update-availability-changed"/);
+  assert.match(rustShell, /fn update_availability_get/);
 });

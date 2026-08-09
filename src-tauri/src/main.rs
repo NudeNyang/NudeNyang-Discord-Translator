@@ -38,6 +38,11 @@ struct LifecycleState {
     exiting: AtomicBool,
 }
 
+#[derive(Default)]
+struct UpdateAvailabilityState {
+    version: Mutex<Option<String>>,
+}
+
 struct ShortcutBinding {
     configured: Mutex<String>,
     fallback_virtual_key: AtomicU32,
@@ -514,10 +519,36 @@ fn runtime_status(
 #[tauri::command]
 async fn update_check(app: AppHandle) -> Result<Value, String> {
     let result = updater::check_for_update(&app).await;
+    if let Ok(payload) = &result {
+        let version = payload
+            .get("available")
+            .and_then(Value::as_bool)
+            .filter(|available| *available)
+            .and_then(|_| payload.get("version"))
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        if let Ok(mut available) = app.state::<UpdateAvailabilityState>().version.lock() {
+            *available = version;
+        }
+        let _ = app.emit("update-availability-changed", payload.clone());
+    }
     if let Err(error) = &result {
         diagnostics::error("updater", error);
     }
     result
+}
+
+#[tauri::command]
+fn update_availability_get(state: State<'_, UpdateAvailabilityState>) -> Result<Value, String> {
+    let version = state
+        .version
+        .lock()
+        .map_err(|_| "업데이트 상태 잠금을 열지 못했습니다.".to_string())?
+        .clone();
+    Ok(match version {
+        Some(version) => json!({"available": true, "version": version}),
+        None => json!({"available": false}),
+    })
 }
 
 #[tauri::command]
@@ -748,6 +779,13 @@ fn tray_open_provider_settings(app: AppHandle, provider: String) {
 #[tauri::command]
 fn tray_request_translation_toggle(app: AppHandle) {
     let _ = app.emit("request-translation-toggle", ());
+}
+
+#[tauri::command]
+fn tray_request_update_install(app: AppHandle) {
+    main_window_show(app.clone());
+    hide_tray_menu(&app);
+    let _ = app.emit("request-update-install", ());
 }
 
 #[tauri::command]
@@ -1001,6 +1039,7 @@ fn main() {
             main_window_show(app.clone());
         }))
         .manage(LifecycleState::default())
+        .manage(UpdateAvailabilityState::default())
         .manage(ShortcutConfig::default())
         .manage(ProviderLoginState::default())
         .manage(config)
@@ -1062,6 +1101,7 @@ fn main() {
             translation_set_enabled,
             runtime_status,
             update_check,
+            update_availability_get,
             update_install,
             diagnostic_log_reveal,
             diagnostic_log_write,
@@ -1079,6 +1119,7 @@ fn main() {
             tray_open_settings,
             tray_open_provider_settings,
             tray_request_translation_toggle,
+            tray_request_update_install,
             application_exit
         ])
         .build(tauri::generate_context!())

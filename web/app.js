@@ -81,6 +81,7 @@ const state = {
   polling: false,
   updateCheckActive: false,
   availableUpdateVersion: "",
+  updatePromptedVersion: "",
   updateInstalling: false,
   settingsScrollTimer: 0,
   pendingEnabled: null,
@@ -117,6 +118,9 @@ const elements = {
   githubLink: document.querySelector("#github-link"),
   updateStatus: document.querySelector("#update-status"),
   checkUpdate: document.querySelector("#check-update"),
+  updateBanner: document.querySelector("#update-banner"),
+  updateBannerVersion: document.querySelector("#update-banner-version"),
+  updateBannerInstall: document.querySelector("#update-banner-install"),
   openDiagnosticLog: document.querySelector("#open-diagnostic-log"),
   viewLicense: document.querySelector("#view-license"),
   providerRows: [...document.querySelectorAll(".provider-row")],
@@ -502,11 +506,9 @@ async function checkForUpdates(silent = false) {
   try {
     const result = await invoke("update_check");
     if (result.available) {
-      state.availableUpdateVersion = result.version;
-      elements.updateStatus.textContent = `새 버전 ${result.version}을 사용할 수 있습니다.`;
-      elements.checkUpdate.textContent = "업데이트 설치";
+      await showAvailableUpdate(result.version, { prompt: silent });
     } else {
-      state.availableUpdateVersion = "";
+      renderAvailableUpdate("");
       elements.updateStatus.textContent = "현재 베타 버전이 최신입니다.";
       elements.checkUpdate.textContent = "지금 확인";
     }
@@ -518,10 +520,45 @@ async function checkForUpdates(silent = false) {
   }
 }
 
+function renderAvailableUpdate(version) {
+  state.availableUpdateVersion = version || "";
+  const available = Boolean(state.availableUpdateVersion);
+  elements.updateBanner.hidden = !available;
+  elements.updateBannerVersion.textContent = state.availableUpdateVersion;
+  elements.updateBannerInstall.disabled = state.updateInstalling;
+  elements.updateBannerInstall.textContent = state.updateInstalling ? "설치 준비 중" : "업데이트 설치";
+  elements.checkUpdate.textContent = available ? "업데이트 설치" : "지금 확인";
+}
+
+async function showAvailableUpdate(version, { prompt = false } = {}) {
+  renderAvailableUpdate(version);
+  elements.updateStatus.textContent = `새 버전 ${version}을 사용할 수 있습니다.`;
+  if (!prompt || state.updatePromptedVersion === version) return;
+
+  state.updatePromptedVersion = version;
+  while (state.promptActive || !elements.modalLayer.hidden) {
+    await new Promise(resolve => window.setTimeout(resolve, 200));
+  }
+  state.promptActive = true;
+  let accepted = false;
+  try {
+    accepted = await showModal({
+      title: "새 업데이트가 있습니다",
+      message: `${version} 버전을 설치할 수 있습니다. 지금 설치하면 앱이 다시 실행됩니다. 작업 중이라면 나중에 설치해도 됩니다.`,
+      acceptText: "업데이트 설치",
+      cancelText: "나중에",
+    });
+  } finally {
+    state.promptActive = false;
+  }
+  if (accepted) await installAvailableUpdate();
+}
+
 async function installAvailableUpdate() {
-  if (state.updateInstalling) return;
+  if (state.updateInstalling || !state.availableUpdateVersion) return;
   state.updateInstalling = true;
   elements.checkUpdate.disabled = true;
+  renderAvailableUpdate(state.availableUpdateVersion);
   elements.updateStatus.textContent = `${state.availableUpdateVersion} 업데이트를 다운로드하고 있습니다...`;
   try {
     await invoke("update_install");
@@ -531,6 +568,7 @@ async function installAvailableUpdate() {
     elements.checkUpdate.disabled = false;
   } finally {
     state.updateInstalling = false;
+    renderAvailableUpdate(state.availableUpdateVersion);
   }
 }
 
@@ -896,6 +934,7 @@ function showModal({
   title,
   message,
   acceptText,
+  cancelText = "취소",
   autoSeconds = 0,
   autoMessage = null,
   cancelVisible = true,
@@ -904,6 +943,7 @@ function showModal({
   elements.modalTitle.textContent = title;
   elements.modalMessage.textContent = message;
   elements.modalAccept.textContent = acceptText;
+  elements.modalCancel.textContent = cancelText;
   elements.modalCancel.hidden = !cancelVisible;
   if (variant) elements.modalLayer.dataset.variant = variant;
   else delete elements.modalLayer.dataset.variant;
@@ -1042,6 +1082,9 @@ for (const row of elements.providerRows) {
 elements.checkUpdate.addEventListener("click", () => {
   checkForUpdates(false).catch(error => showError("업데이트를 확인하지 못했습니다", String(error)));
 });
+elements.updateBannerInstall.addEventListener("click", () => {
+  installAvailableUpdate().catch(error => showError("업데이트를 설치하지 못했습니다", String(error)));
+});
 elements.openDiagnosticLog.addEventListener("click", () => {
   invoke("diagnostic_log_reveal").catch(error => showError("로그 파일을 열지 못했습니다", String(error)));
 });
@@ -1082,6 +1125,9 @@ if (tauriListen) {
   tauriListen("request-outgoing-translation-toggle", toggleOutgoingTranslation);
   tauriListen("settings-changed", event => renderConfig(event.payload));
   tauriListen("provider-connections-changed", loadProviderConnections);
+  tauriListen("request-update-install", () => {
+    installAvailableUpdate().catch(error => showError("업데이트를 설치하지 못했습니다", String(error)));
+  });
   tauriListen("focus-provider-connection", event => {
     loadProviderConnections().finally(() => revealProviderConnection(event.payload));
   });

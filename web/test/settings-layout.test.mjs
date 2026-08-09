@@ -94,3 +94,15 @@ test("friends can reveal one privacy-safe diagnostic log file", () => {
   assert.match(markup, /id="open-diagnostic-log"/);
   assert.match(script, /invoke\("diagnostic_log_reveal"\)/);
 });
+
+test("automatic updates are announced outside the app information panel", () => {
+  assert.match(markup, /id="update-banner"[^>]*hidden/);
+  assert.match(markup, /id="update-banner-version"/);
+  assert.match(markup, /id="update-banner-install"/);
+  assert.ok(
+    markup.indexOf('id="update-banner"') < markup.indexOf('class="settings-workspace"'),
+  );
+  assert.match(script, /showAvailableUpdate\(result\.version, \{ prompt: silent \}\)/);
+  assert.match(script, /title: "새 업데이트가 있습니다"/);
+  assert.match(script, /cancelText: "나중에"/);
+});

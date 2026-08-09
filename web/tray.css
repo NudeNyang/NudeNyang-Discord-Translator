@@ -166,6 +166,33 @@ button:focus-visible {
   padding-bottom: 0;
 }
 
+.update-group[hidden],
+.update-row[hidden] {
+  display: none;
+}
+
+.update-group {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.update-row {
+  color: var(--accent-strong);
+}
+
+.update-indicator {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: 17px;
+  font-weight: 800;
+}
+
 .language-view,
 .model-view {
   padding-top: 5px;
