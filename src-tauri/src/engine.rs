@@ -748,10 +748,10 @@ fn drain_worker_results(
                     if name == runtime.configured_translator {
                         runtime.translator_state = "ready".to_string();
                         runtime.translator_error.clear();
-                        runtime.notice = format!(
-                            "{} 준비가 완료되었습니다. 지금부터 이 모델로 번역합니다.",
-                            translator_label(&name)
-                        );
+                        let model_is_prepared = !name.starts_with("hymt_")
+                            || config.enabled
+                            || config.keep_local_model_warm;
+                        runtime.notice = translator_activation_notice(&name, model_is_prepared);
                     }
                 });
                 if name.starts_with("hymt_") && !config.enabled && !config.keep_local_model_warm {
@@ -964,6 +964,20 @@ fn translator_label(name: &str) -> &str {
     }
 }
 
+fn translator_activation_notice(name: &str, model_is_prepared: bool) -> String {
+    if name.starts_with("hymt_") && !model_is_prepared {
+        format!(
+            "선택한 번역 모델: {}. 번역을 켜면 모델을 준비합니다.",
+            translator_label(name)
+        )
+    } else {
+        format!(
+            "선택한 번역 모델: {}. 번역 준비가 완료되었습니다.",
+            translator_label(name)
+        )
+    }
+}
+
 fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut RuntimeStatus)) {
     if let Ok(mut status) = status.lock() {
         update(&mut status);
@@ -972,7 +986,9 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 
 #[cfg(test)]
 mod tests {
-    use super::{poll_interval, translator_label, RuntimeStatus, RustEngine};
+    use super::{
+        poll_interval, translator_activation_notice, translator_label, RuntimeStatus, RustEngine,
+    };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
     use crate::dom::{
@@ -993,6 +1009,17 @@ mod tests {
         assert_eq!(poll_interval(0), Duration::from_millis(500));
         assert_eq!(poll_interval(100), Duration::from_millis(50));
         assert!(translator_label("chatgpt").contains("Codex"));
+    }
+
+    #[test]
+    fn activation_notice_distinguishes_a_prepared_model_from_a_deferred_local_model() {
+        let prepared = translator_activation_notice("hymt_1_8b", true);
+        let deferred = translator_activation_notice("hymt_1_8b", false);
+
+        assert!(prepared.contains("번역 준비가 완료되었습니다"));
+        assert!(!prepared.contains("지금부터"));
+        assert!(deferred.contains("번역을 켜면 모델을 준비합니다"));
+        assert!(!deferred.contains("준비가 완료되었습니다"));
     }
 
     #[test]
