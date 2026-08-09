@@ -87,7 +87,7 @@ impl Translator for ResilientTranslator {
         }
         let mut results = self.primary.translate_many(items, target)?;
         if results.len() != items.len() {
-            return Err("주 번역 엔진이 요청 수와 다른 결과를 반환했어.".to_string());
+            return Err("주 번역 엔진이 요청 수와 다른 결과를 반환했습니다.".to_string());
         }
 
         let failed: Vec<usize> = items

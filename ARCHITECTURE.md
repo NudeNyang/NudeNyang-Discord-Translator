@@ -14,6 +14,8 @@ Nude Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정�
 | DOM 스냅샷·적용·복원 | `src-tauri/src/dom.rs`, `engine.rs` |
 | 언어 판별 | `src-tauri/src/language.rs` |
 | 번역기·복구 정책 | `src-tauri/src/translation/` |
+| 외부 서비스 연결 상태 | `src-tauri/src/providers.rs` |
+| 운영체제 자격 증명 저장 | `src-tauri/src/credentials.rs` |
 | SQLite·메모리 캐시 | `src-tauri/src/cache.rs` |
 | OCR 모델·후처리 | `src-tauri/src/ocr.rs` |
 | 이미지 UI·합성 | `src-tauri/src/image_translation.rs` |
@@ -45,6 +47,12 @@ Nude Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정�
 배포 ZIP에 포함하고, 7B는 패키징 옵션 또는 첫 선택 시 검증 다운로드로 제공한다. 구독 CLI와
 DeepL은 추출된 번역 대상 문자열만 전달한다. Discord 화면 이미지, 인증 토큰, 캐시 DB는 외부
 번역 서비스로 전송하지 않는다.
+
+ChatGPT와 Gemini는 공식 CLI의 설치 및 로그인 상태를 구분한다. Windows에서는 사용자가 설치
+버튼을 선택하면 Node.js LTS와 해당 CLI를 앱이 자동으로 준비하고 공식 로그인 흐름을 시작한다.
+DeepL 키는 API 사용량 조회로 검증한 후 운영체제 자격 증명 저장소에만 보관한다. 일반 설정,
+로그, 번역 캐시에는 비밀 값을 기록하지 않는다. CLI 로그아웃은 다른 프로그램의 세션에도 영향을
+줄 수 있으므로 앱에서 강제로 수행하지 않는다.
 
 번역 캐시는 엔진·대상 언어·프롬프트/말투 버전을 네임스페이스에 포함한다. 최근 결과는 메모리
 LRU에서 조회하고 전체 기록은 SQLite에 저장한다. 모델이나 설정 변경으로 의미가 달라지면 다른

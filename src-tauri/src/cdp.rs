@@ -21,14 +21,14 @@ pub fn list_targets(port: u16) -> Result<Vec<CdpTarget>, String> {
         .connect_timeout(Duration::from_secs(2))
         .timeout(Duration::from_secs(2))
         .build()
-        .map_err(|error| format!("CDP 검색 클라이언트를 만들지 못했어: {error}"))?
+        .map_err(|error| format!("CDP 검색 클라이언트를 만들지 못했습니다: {error}"))?
         .get(format!("http://127.0.0.1:{port}/json/list"))
         .send()
         .and_then(|response| response.error_for_status())
-        .map_err(|error| format!("Discord 디버그 대상을 조회하지 못했어: {error}"))?;
+        .map_err(|error| format!("Discord 디버그 대상을 조회하지 못했습니다: {error}"))?;
     let targets: Vec<CdpTarget> = response
         .json()
-        .map_err(|error| format!("Discord 디버그 대상 목록을 읽지 못했어: {error}"))?;
+        .map_err(|error| format!("Discord 디버그 대상 목록을 읽지 못했습니다: {error}"))?;
     Ok(targets
         .into_iter()
         .filter(|target| !target.websocket_url.is_empty())
@@ -57,7 +57,7 @@ fn select_discord_target(targets: Vec<CdpTarget>) -> Result<CdpTarget, String> {
         .collect::<Vec<_>>()
         .join(", ");
     Err(format!(
-        "Discord 렌더러 대상을 찾지 못했어: {}",
+        "Discord 렌더러 대상을 찾지 못했습니다: {}",
         if details.is_empty() {
             "대상 없음"
         } else {
@@ -94,19 +94,19 @@ impl CdpClient {
         }
         let host = url
             .host_str()
-            .ok_or_else(|| "CDP WebSocket 호스트가 없어.".to_string())?;
+            .ok_or_else(|| "CDP WebSocket 호스트가 없습니다.".to_string())?;
         let port = url
             .port_or_known_default()
-            .ok_or_else(|| "CDP WebSocket 포트가 없어.".to_string())?;
+            .ok_or_else(|| "CDP WebSocket 포트가 없습니다.".to_string())?;
         let address = first_address(host, port)?;
         let stream = TcpStream::connect_timeout(&address, self.timeout)
-            .map_err(|error| format!("Discord CDP WebSocket에 연결하지 못했어: {error}"))?;
+            .map_err(|error| format!("Discord CDP WebSocket에 연결하지 못했습니다: {error}"))?;
         stream
             .set_read_timeout(Some(self.timeout))
             .and_then(|_| stream.set_write_timeout(Some(self.timeout)))
-            .map_err(|error| format!("CDP WebSocket 타임아웃을 설정하지 못했어: {error}"))?;
+            .map_err(|error| format!("CDP WebSocket 타임아웃을 설정하지 못했습니다: {error}"))?;
         let (socket, _) = client(self.websocket_url.as_str(), stream)
-            .map_err(|error| format!("Discord CDP WebSocket 연결에 실패했어: {error}"))?;
+            .map_err(|error| format!("Discord CDP WebSocket 연결에 실패했습니다: {error}"))?;
         self.socket = Some(socket);
         Ok(())
     }
@@ -132,11 +132,11 @@ impl CdpClient {
             .ok_or_else(|| "CDP WebSocket이 연결되지 않았어.".to_string())?;
         socket
             .send(Message::Text(payload.to_string().into()))
-            .map_err(|error| format!("CDP {method} 요청을 보내지 못했어: {error}"))?;
+            .map_err(|error| format!("CDP {method} 요청을 보내지 못했습니다: {error}"))?;
         loop {
             let message = socket
                 .read()
-                .map_err(|error| format!("CDP {method} 응답을 읽지 못했어: {error}"))?;
+                .map_err(|error| format!("CDP {method} 응답을 읽지 못했습니다: {error}"))?;
             let Message::Text(text) = message else {
                 continue;
             };
@@ -188,9 +188,9 @@ impl Drop for CdpClient {
 fn first_address(host: &str, port: u16) -> Result<SocketAddr, String> {
     (host, port)
         .to_socket_addrs()
-        .map_err(|error| format!("CDP WebSocket 주소를 해석하지 못했어: {error}"))?
+        .map_err(|error| format!("CDP WebSocket 주소를 해석하지 못했습니다: {error}"))?
         .next()
-        .ok_or_else(|| "CDP WebSocket 주소를 찾지 못했어.".to_string())
+        .ok_or_else(|| "CDP WebSocket 주소를 찾지 못했습니다.".to_string())
 }
 
 #[cfg(test)]

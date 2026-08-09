@@ -32,8 +32,7 @@ const OPTIONS = {
     ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
     ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
     ["chatgpt", "ChatGPT Plus/Pro (Codex CLI)"],
-    ["claude", "Claude Pro/Max (Claude Code)"],
-    ["gemini", "Gemini Pro/Ultra (Antigravity CLI)"],
+    ["gemini", "Gemini Pro/Ultra (Gemini CLI)"],
     ["deepl", "DeepL (API 키·외부 전송)"],
     ["mock", "Mock 테스트"],
   ],
@@ -67,6 +66,8 @@ const state = {
   settingsScrollTimer: 0,
   pendingEnabled: null,
   toggleActive: false,
+  providerConnections: new Map(),
+  providerLoading: false,
 };
 
 const elements = {
@@ -94,7 +95,10 @@ const elements = {
   updateStatus: document.querySelector("#update-status"),
   checkUpdate: document.querySelector("#check-update"),
   viewLicense: document.querySelector("#view-license"),
+  providerRows: [...document.querySelectorAll(".provider-row")],
 };
+
+const EXTERNAL_PROVIDERS = new Set(["chatgpt", "gemini", "deepl"]);
 
 function updateScrollIndicator() {
   const metrics = scrollThumbMetrics(
@@ -195,6 +199,133 @@ async function openExternalUrl(url) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+function providerConnection(provider) {
+  return state.providerConnections.get(provider) || null;
+}
+
+function providerIsConnected(provider) {
+  return Boolean(providerConnection(provider)?.connected);
+}
+
+function providerStateLabel(connection) {
+  if (connection.connected) return "연결됨";
+  if (connection.state === "not-installed") return "설치 필요";
+  if (connection.state === "credential-required") return "API 키 필요";
+  if (connection.state === "login-required") return "로그인 필요";
+  return "확인 필요";
+}
+
+function renderProviderConnections(connections) {
+  state.providerConnections = new Map(connections.map(connection => [connection.id, connection]));
+  for (const row of elements.providerRows) {
+    const connection = providerConnection(row.dataset.provider);
+    if (!connection) continue;
+    const status = row.querySelector(".provider-status");
+    const action = row.querySelector(".provider-action");
+    const disconnect = row.querySelector(".provider-disconnect");
+    status.dataset.state = connection.state;
+    status.querySelector("strong").textContent = providerStateLabel(connection);
+    status.querySelector("span").textContent = connection.detail;
+    action.disabled = connection.connected && connection.id !== "deepl";
+    action.textContent = connection.connected
+      ? connection.id === "deepl" ? "키 변경" : "연결됨"
+      : connection.installed ? "연결" : "설치";
+    if (disconnect) disconnect.hidden = !connection.canDisconnect;
+    const secret = row.querySelector(".provider-secret");
+    if (secret) secret.placeholder = connection.connected ? "새 API 키로 변경" : "DeepL API 키";
+  }
+}
+
+async function loadProviderConnections() {
+  if (state.providerLoading) return;
+  state.providerLoading = true;
+  try {
+    renderProviderConnections(await invoke("provider_connections_get"));
+  } catch (error) {
+    for (const row of elements.providerRows) {
+      const status = row.querySelector(".provider-status");
+      status.dataset.state = "error";
+      status.querySelector("strong").textContent = "확인 실패";
+      status.querySelector("span").textContent = String(error);
+    }
+  } finally {
+    state.providerLoading = false;
+  }
+}
+
+function revealProviderConnection(provider) {
+  const row = document.querySelector(`.provider-row[data-provider="${provider}"]`);
+  if (!row) return;
+  row.dataset.highlight = "true";
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.setTimeout(() => delete row.dataset.highlight, 1800);
+}
+
+async function connectProvider(row) {
+  const provider = row.dataset.provider;
+  const action = row.querySelector(".provider-action");
+  const status = row.querySelector(".provider-status");
+  const secret = row.querySelector(".provider-secret");
+  const credential = secret?.value.trim() || null;
+  if (provider === "deepl" && !credential) {
+    secret.focus();
+    throw new Error("DeepL API 키를 입력하십시오.");
+  }
+  action.disabled = true;
+  try {
+    let current = providerConnection(provider);
+    if (current && !current.installed) {
+      action.textContent = "설치 중";
+      status.dataset.state = "loading";
+      status.querySelector("strong").textContent = "설치 중";
+      status.querySelector("span").textContent = `${current.name} CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.`;
+      current = await invoke("provider_install", { provider });
+      state.providerConnections.set(provider, current);
+      renderProviderConnections([...state.providerConnections.values()]);
+    }
+
+    action.disabled = true;
+    action.textContent = provider === "deepl" ? "확인 중" : "로그인 중";
+    status.dataset.state = "loading";
+    status.querySelector("strong").textContent = provider === "deepl" ? "확인 중" : "로그인 중";
+    status.querySelector("span").textContent = provider === "deepl"
+      ? "DeepL API 키의 유효성을 확인하고 있습니다."
+      : "계정 로그인 절차를 시작하고 있습니다.";
+    const connection = await invoke("provider_connect", { provider, credential });
+    state.providerConnections.set(provider, connection);
+    renderProviderConnections([...state.providerConnections.values()]);
+    if (secret && connection.connected) secret.value = "";
+    if (provider === "gemini" && !connection.connected) {
+      await showModal({
+        title: "Gemini 로그인 창을 열었습니다",
+        message: "Gemini CLI 창에서 Google 로그인을 완료한 후 이 화면의 연결 버튼을 다시 선택하십시오.",
+        acceptText: "확인",
+        cancelVisible: false,
+      });
+      await loadProviderConnections();
+    }
+  } finally {
+    if (providerConnection(provider)) {
+      renderProviderConnections([...state.providerConnections.values()]);
+    } else {
+      action.disabled = false;
+    }
+  }
+}
+
+async function disconnectProvider(row) {
+  const provider = row.dataset.provider;
+  const confirmed = await showModal({
+    title: "DeepL 연결을 해제하시겠습니까?",
+    message: "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다.",
+    acceptText: "연결 해제",
+  });
+  if (!confirmed) return;
+  const connection = await invoke("provider_disconnect", { provider });
+  state.providerConnections.set(provider, connection);
+  renderProviderConnections([...state.providerConnections.values()]);
+}
+
 async function checkForUpdates(silent = false) {
   if (state.updateCheckActive) return;
   if (state.availableReleaseUrl && !silent) {
@@ -269,6 +400,10 @@ function renderSelect(element) {
       closeSelect(element);
       trigger.focus();
       if (field === "ui_theme") applyTheme(value);
+      if (field === "translator" && EXTERNAL_PROVIDERS.has(value) && !providerIsConnected(value)) {
+        elements.saveStatus.textContent = "선택한 외부 번역 서비스를 먼저 연결하십시오.";
+        revealProviderConnection(value);
+      }
     });
     menu.append(option);
   }
@@ -345,7 +480,7 @@ function collectPatch() {
 async function ensureRestartConsent() {
   if (state.config.discord_auto_restart_consent_granted) return true;
   const confirmed = await showModal({
-    title: "Discord 자동 재시작을 허용할까요?",
+    title: "Discord 자동 재시작을 허용하시겠습니까?",
     message:
       "실시간 번역을 켜면 Discord가 디버그 렌더러 모드로 실행되지 않았을 때 15초 안내 후 자동으로 다시 시작합니다.\n\n재시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.",
     acceptText: "동의하고 켜기",
@@ -385,7 +520,7 @@ async function toggleTranslation() {
   try {
     await setTranslationEnabled(!state.config.enabled, true);
   } catch (error) {
-    await showError("번역 상태를 바꾸지 못했어요", String(error));
+    await showError("번역 상태를 변경하지 못했습니다", String(error));
   } finally {
     state.toggleActive = false;
   }
@@ -436,7 +571,7 @@ async function handleRestartRequired(status) {
       await setTranslationEnabled(false, false);
       await showError(
         "Discord 연결 실패",
-        "이번 번역 실행에서 자동 재시작을 이미 한 번 시도했어요. Discord를 직접 종료한 뒤 다시 켜 주세요.",
+        "이번 번역 실행에서 자동 재시작을 이미 한 번 시도했습니다. Discord를 직접 종료한 후 다시 실행하십시오.",
       );
       return;
     }
@@ -559,23 +694,23 @@ elements.shortcut.addEventListener("keydown", event => {
   }
   const shortcut = shortcutFromKeyboardEvent(event);
   if (!shortcut) {
-    help.textContent = "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 눌러 주세요.";
+    help.textContent = "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 입력하십시오.";
     return;
   }
   elements.shortcut.value = shortcut;
-  help.textContent = `${shortcut}로 변경됩니다. 저장을 눌러 적용해 주세요.`;
+  help.textContent = `${shortcut}로 변경됩니다. 저장을 선택하여 적용하십시오.`;
 });
 elements.shortcut.addEventListener("focus", () => {
-  document.querySelector("#shortcut-help").textContent = "새 단축키 조합을 눌러 주세요. Esc를 누르면 취소됩니다.";
+  document.querySelector("#shortcut-help").textContent = "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.";
 });
 elements.shortcut.addEventListener("blur", () => {
   document.querySelector("#shortcut-help").textContent = "클릭한 뒤 원하는 단축키 조합을 누르면 변경할 수 있습니다.";
 });
 elements.authorLink.addEventListener("click", () => {
-  openExternalUrl(APP_LINKS.author).catch(error => showError("링크를 열지 못했어요", String(error)));
+  openExternalUrl(APP_LINKS.author).catch(error => showError("링크를 열지 못했습니다", String(error)));
 });
 elements.githubLink.addEventListener("click", () => {
-  openExternalUrl(APP_LINKS.repository).catch(error => showError("링크를 열지 못했어요", String(error)));
+  openExternalUrl(APP_LINKS.repository).catch(error => showError("링크를 열지 못했습니다", String(error)));
 });
 elements.viewLicense.addEventListener("click", () => {
   showModal({
@@ -586,8 +721,16 @@ elements.viewLicense.addEventListener("click", () => {
     variant: "license",
   });
 });
+for (const row of elements.providerRows) {
+  row.querySelector(".provider-action").addEventListener("click", () => {
+    connectProvider(row).catch(error => showError("번역 서비스를 연결하지 못했습니다", String(error)));
+  });
+  row.querySelector(".provider-disconnect")?.addEventListener("click", () => {
+    disconnectProvider(row).catch(error => showError("연결을 해제하지 못했습니다", String(error)));
+  });
+}
 elements.checkUpdate.addEventListener("click", () => {
-  checkForUpdates(false).catch(error => showError("업데이트를 확인하지 못했어요", String(error)));
+  checkForUpdates(false).catch(error => showError("업데이트를 확인하지 못했습니다", String(error)));
 });
 elements.settingsScroll.addEventListener("scroll", () => {
   updateScrollIndicator();
@@ -602,6 +745,11 @@ elements.cancel.addEventListener("click", () => renderConfig(state.saved));
 elements.form.addEventListener("submit", async event => {
   event.preventDefault();
   try {
+    const translator = state.selectValues.translator;
+    if (EXTERNAL_PROVIDERS.has(translator) && !providerIsConnected(translator)) {
+      revealProviderConnection(translator);
+      throw new Error("선택한 외부 번역 서비스를 먼저 연결하십시오.");
+    }
     elements.saveStatus.textContent = "저장 중";
     const updated = await invoke("settings_update", { patch: collectPatch() });
     renderConfig(updated);
@@ -615,11 +763,16 @@ elements.form.addEventListener("submit", async event => {
 if (tauriListen) {
   tauriListen("request-translation-toggle", toggleTranslation);
   tauriListen("settings-changed", event => renderConfig(event.payload));
+  tauriListen("provider-connections-changed", loadProviderConnections);
+  tauriListen("focus-provider-connection", event => {
+    loadProviderConnections().finally(() => revealProviderConnection(event.payload));
+  });
 }
 
 bindOverlayScrollIndicator();
 new ResizeObserver(updateScrollIndicator).observe(elements.settingsScroll);
 window.requestAnimationFrame(updateScrollIndicator);
 loadSettings();
+loadProviderConnections();
 loadAppInformation();
 window.setInterval(pollRuntime, 700);

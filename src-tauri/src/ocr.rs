@@ -108,19 +108,19 @@ impl PaddleDualOcr {
                 OcrEngineConfig::new().with_det_options(DetOptions::new().with_max_side_len(1536)),
             ),
         )
-        .map_err(|error| format!("PP-OCRv6 감지 모델을 열지 못했어: {error}"))?;
+        .map_err(|error| format!("PP-OCRv6 감지 모델을 열지 못했습니다: {error}"))?;
         let v6_recognizer = OcrEngine::rec_only(
             root.join(V6_REC_MODEL.filename),
             root.join(V6_CHARSET.filename),
             Some(OcrEngineConfig::new()),
         )
-        .map_err(|error| format!("PP-OCRv6 인식 모델을 열지 못했어: {error}"))?;
+        .map_err(|error| format!("PP-OCRv6 인식 모델을 열지 못했습니다: {error}"))?;
         let ko_recognizer = OcrEngine::rec_only(
             root.join(KO_REC_MODEL.filename),
             root.join(KO_CHARSET.filename),
             Some(OcrEngineConfig::new()),
         )
-        .map_err(|error| format!("한국어 PP-OCRv5 인식 모델을 열지 못했어: {error}"))?;
+        .map_err(|error| format!("한국어 PP-OCRv5 인식 모델을 열지 못했습니다: {error}"))?;
         Ok(Self {
             detector,
             v6_recognizer,
@@ -144,7 +144,7 @@ impl PaddleDualOcr {
         let mut detections = self
             .detector
             .detect_and_crop(image)
-            .map_err(|error| format!("이미지에서 글자 영역을 찾지 못했어: {error}"))?;
+            .map_err(|error| format!("이미지에서 글자 영역을 찾지 못했습니다: {error}"))?;
         detections.sort_by(|(_, left), (_, right)| {
             left.rect
                 .top()
@@ -158,13 +158,13 @@ impl PaddleDualOcr {
         let v6 = self
             .v6_recognizer
             .recognize_batch(&crops)
-            .map_err(|error| format!("PP-OCRv6 글자 인식에 실패했어: {error}"))?;
+            .map_err(|error| format!("PP-OCRv6 글자 인식에 실패했습니다: {error}"))?;
         let korean = self
             .ko_recognizer
             .recognize_batch(&crops)
-            .map_err(|error| format!("한국어 PP-OCRv5 글자 인식에 실패했어: {error}"))?;
+            .map_err(|error| format!("한국어 PP-OCRv5 글자 인식에 실패했습니다: {error}"))?;
         if v6.len() != detections.len() || korean.len() != detections.len() {
-            return Err("OCR 인식 결과 수가 감지 영역 수와 맞지 않아.".to_string());
+            return Err("OCR 인식 결과 수가 감지 영역 수와 일치하지 않습니다.".to_string());
         }
 
         let mut lines = Vec::with_capacity(detections.len());
@@ -440,7 +440,8 @@ fn polygon_area_vec(points: &[Point]) -> f64 {
 
 fn ensure_models() -> Result<PathBuf, String> {
     let root = default_model_root();
-    fs::create_dir_all(&root).map_err(|error| format!("OCR 모델 폴더를 만들지 못했어: {error}"))?;
+    fs::create_dir_all(&root)
+        .map_err(|error| format!("OCR 모델 폴더를 만들지 못했습니다: {error}"))?;
     for asset in MODEL_ASSETS {
         ensure_asset(&root, asset)?;
     }
@@ -454,7 +455,7 @@ fn ensure_asset(root: &Path, asset: ModelAsset) -> Result<(), String> {
     }
     if destination.exists() {
         fs::remove_file(&destination)
-            .map_err(|error| format!("손상된 OCR 모델을 삭제하지 못했어: {error}"))?;
+            .map_err(|error| format!("손상된 OCR 모델을 삭제하지 못했습니다: {error}"))?;
     }
     let partial = partial_path(&destination);
     let mut downloaded = partial
@@ -463,14 +464,14 @@ fn ensure_asset(root: &Path, asset: ModelAsset) -> Result<(), String> {
         .unwrap_or(0);
     if downloaded > asset.expected_bytes {
         fs::remove_file(&partial)
-            .map_err(|error| format!("잘못된 OCR 임시 파일을 삭제하지 못했어: {error}"))?;
+            .map_err(|error| format!("잘못된 OCR 임시 파일을 삭제하지 못했습니다: {error}"))?;
         downloaded = 0;
     }
     let client = Client::builder()
         .connect_timeout(Duration::from_secs(30))
         .timeout(None)
         .build()
-        .map_err(|error| format!("OCR 모델 다운로드 클라이언트를 만들지 못했어: {error}"))?;
+        .map_err(|error| format!("OCR 모델 다운로드 클라이언트를 만들지 못했습니다: {error}"))?;
     let url = format!(
         "{MODEL_BASE_URL}/{MODEL_REVISION}/models/{}",
         asset.filename
@@ -482,7 +483,7 @@ fn ensure_asset(root: &Path, asset: ModelAsset) -> Result<(), String> {
     let mut response = request
         .send()
         .and_then(|response| response.error_for_status())
-        .map_err(|error| format!("{} 다운로드에 실패했어: {error}", asset.filename))?;
+        .map_err(|error| format!("{} 다운로드에 실패했습니다: {error}", asset.filename))?;
     let append = downloaded > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
     if !append {
         downloaded = 0;
@@ -493,26 +494,26 @@ fn ensure_asset(root: &Path, asset: ModelAsset) -> Result<(), String> {
         .append(append)
         .truncate(!append)
         .open(&partial)
-        .map_err(|error| format!("OCR 임시 파일을 열지 못했어: {error}"))?;
+        .map_err(|error| format!("OCR 임시 파일을 열지 못했습니다: {error}"))?;
     let mut buffer = vec![0_u8; 1024 * 1024];
     loop {
         let count = response
             .read(&mut buffer)
-            .map_err(|error| format!("OCR 모델을 내려받지 못했어: {error}"))?;
+            .map_err(|error| format!("OCR 모델을 내려받지 못했습니다: {error}"))?;
         if count == 0 {
             break;
         }
         output
             .write_all(&buffer[..count])
-            .map_err(|error| format!("OCR 모델을 저장하지 못했어: {error}"))?;
+            .map_err(|error| format!("OCR 모델을 저장하지 못했습니다: {error}"))?;
         downloaded += count as u64;
     }
     output
         .flush()
-        .map_err(|error| format!("OCR 모델 파일을 마무리하지 못했어: {error}"))?;
+        .map_err(|error| format!("OCR 모델 파일을 마무리하지 못했습니다: {error}"))?;
     if downloaded != asset.expected_bytes {
         return Err(format!(
-            "{} 다운로드 크기가 맞지 않아({downloaded}/{} bytes).",
+            "{} 다운로드 크기가 일치하지 않습니다({downloaded}/{} bytes).",
             asset.filename, asset.expected_bytes
         ));
     }
@@ -520,14 +521,14 @@ fn ensure_asset(root: &Path, asset: ModelAsset) -> Result<(), String> {
     if digest != asset.expected_sha256.to_ascii_lowercase() {
         let _ = fs::remove_file(&partial);
         return Err(format!(
-            "{} 무결성 검증에 실패해 손상된 파일을 삭제했어.",
+            "{} 무결성 검증에 실패해 손상된 파일을 삭제했습니다.",
             asset.filename
         ));
     }
     fs::rename(&partial, &destination)
-        .map_err(|error| format!("OCR 모델 파일을 적용하지 못했어: {error}"))?;
+        .map_err(|error| format!("OCR 모델 파일을 적용하지 못했습니다: {error}"))?;
     fs::write(hash_marker(&destination), digest)
-        .map_err(|error| format!("OCR 모델 검증 표식을 저장하지 못했어: {error}"))
+        .map_err(|error| format!("OCR 모델 검증 표식을 저장하지 못했습니다: {error}"))
 }
 
 fn asset_is_verified(path: &Path, asset: ModelAsset) -> Result<bool, String> {
@@ -545,19 +546,19 @@ fn asset_is_verified(path: &Path, asset: ModelAsset) -> Result<bool, String> {
         return Ok(false);
     }
     fs::write(hash_marker(path), &digest)
-        .map_err(|error| format!("OCR 모델 검증 표식을 저장하지 못했어: {error}"))?;
+        .map_err(|error| format!("OCR 모델 검증 표식을 저장하지 못했습니다: {error}"))?;
     Ok(true)
 }
 
 fn file_sha256(path: &Path) -> Result<String, String> {
     let mut file =
-        File::open(path).map_err(|error| format!("OCR 모델을 검증하지 못했어: {error}"))?;
+        File::open(path).map_err(|error| format!("OCR 모델을 검증하지 못했습니다: {error}"))?;
     let mut digest = Sha256::new();
     let mut buffer = vec![0_u8; 1024 * 1024];
     loop {
         let count = file
             .read(&mut buffer)
-            .map_err(|error| format!("OCR 모델을 검증하지 못했어: {error}"))?;
+            .map_err(|error| format!("OCR 모델을 검증하지 못했습니다: {error}"))?;
         if count == 0 {
             break;
         }

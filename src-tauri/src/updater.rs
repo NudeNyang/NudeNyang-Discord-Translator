@@ -34,7 +34,7 @@ pub fn check_for_update(repository: &str, current_version: &str) -> Result<Value
         .timeout(std::time::Duration::from_secs(30))
         .user_agent("Nude-Translator-Updater")
         .build()
-        .map_err(|error| format!("업데이트 확인 클라이언트를 만들지 못했어: {error}"))?;
+        .map_err(|error| format!("업데이트 확인 클라이언트를 만들지 못했습니다: {error}"))?;
     let response = client
         .get(format!(
             "https://api.github.com/repos/{repository}/releases/latest"
@@ -42,16 +42,16 @@ pub fn check_for_update(repository: &str, current_version: &str) -> Result<Value
         .header("Accept", "application/vnd.github+json")
         .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
         .send()
-        .map_err(|error| format!("GitHub Release를 확인하지 못했어: {error}"))?;
+        .map_err(|error| format!("GitHub Release를 확인하지 못했습니다: {error}"))?;
     if response.status() == StatusCode::NOT_FOUND {
         return Ok(json!({"available": false}));
     }
     let response = response
         .error_for_status()
-        .map_err(|error| format!("GitHub Release 응답이 실패했어: {error}"))?;
+        .map_err(|error| format!("GitHub Release 응답이 실패했습니다: {error}"))?;
     let release: GitHubRelease = response
         .json()
-        .map_err(|error| format!("GitHub Release 응답을 읽지 못했어: {error}"))?;
+        .map_err(|error| format!("GitHub Release 응답을 읽지 못했습니다: {error}"))?;
     release_result(release, current)
 }
 

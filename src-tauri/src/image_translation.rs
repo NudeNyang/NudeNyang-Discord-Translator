@@ -326,18 +326,18 @@ impl ImageTranslationProcessor {
                 rendered.height(),
                 image::ExtendedColorType::Rgba8,
             )
-            .map_err(|error| format!("번역 이미지를 PNG로 만들지 못했어: {error}"))?;
+            .map_err(|error| format!("번역 이미지를 PNG로 만들지 못했습니다: {error}"))?;
         fs::create_dir_all(&self.cache_dir)
-            .map_err(|error| format!("이미지 번역 캐시 폴더를 만들지 못했어: {error}"))?;
+            .map_err(|error| format!("이미지 번역 캐시 폴더를 만들지 못했습니다: {error}"))?;
         let temporary = cache_path.with_extension("tmp");
         fs::write(&temporary, &png_bytes)
-            .map_err(|error| format!("이미지 번역 캐시를 쓰지 못했어: {error}"))?;
+            .map_err(|error| format!("이미지 번역 캐시를 쓰지 못했습니다: {error}"))?;
         if cache_path.exists() {
             fs::remove_file(&cache_path)
-                .map_err(|error| format!("손상된 이미지 번역 캐시를 지우지 못했어: {error}"))?;
+                .map_err(|error| format!("손상된 이미지 번역 캐시를 지우지 못했습니다: {error}"))?;
         }
         fs::rename(&temporary, &cache_path)
-            .map_err(|error| format!("이미지 번역 캐시를 적용하지 못했어: {error}"))?;
+            .map_err(|error| format!("이미지 번역 캐시를 적용하지 못했습니다: {error}"))?;
         Ok(ImageTranslationOutcome {
             png_bytes,
             translated_count: translated_lines.len(),
@@ -353,7 +353,7 @@ pub fn parse_image_requests(value: serde_json::Value) -> Result<Vec<ImageRequest
 
 pub fn parse_image_data(value: serde_json::Value) -> Result<ImageData, String> {
     serde_json::from_value(value)
-        .map_err(|error| format!("Discord 이미지 데이터를 읽지 못했어: {error}"))
+        .map_err(|error| format!("Discord 이미지 데이터를 읽지 못했습니다: {error}"))
 }
 
 pub fn image_capture_info_script(image_id: &str) -> Result<String, String> {
@@ -372,7 +372,7 @@ pub fn image_capture_info_script(image_id: &str) -> Result<String, String> {
 
 pub fn parse_image_capture_info(value: serde_json::Value) -> Result<ImageCaptureInfo, String> {
     serde_json::from_value(value)
-        .map_err(|error| format!("Discord 이미지 위치 정보를 읽지 못했어: {error}"))
+        .map_err(|error| format!("Discord 이미지 위치 정보를 읽지 못했습니다: {error}"))
 }
 
 pub fn fetch_image_data_script(image_id: &str) -> Result<String, String> {
@@ -633,7 +633,7 @@ fn load_font(target: Language) -> Result<FontArc, String> {
             }
         }
     }
-    Err("이미지 번역에 사용할 시스템 글꼴을 찾지 못했어.".to_string())
+    Err("이미지 번역에 사용할 시스템 글꼴을 찾지 못했습니다.".to_string())
 }
 
 fn font_candidates(target: Language) -> Vec<PathBuf> {

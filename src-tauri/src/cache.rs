@@ -101,13 +101,14 @@ impl TranslationCache {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|error| {
                 format!(
-                    "번역 캐시 폴더를 만들지 못했어 ({}): {error}",
+                    "번역 캐시 폴더를 만들지 못했습니다 ({}): {error}",
                     parent.display()
                 )
             })?;
         }
-        let mut connection = Connection::open(&path)
-            .map_err(|error| format!("번역 캐시를 열지 못했어 ({}): {error}", path.display()))?;
+        let mut connection = Connection::open(&path).map_err(|error| {
+            format!("번역 캐시를 열지 못했습니다 ({}): {error}", path.display())
+        })?;
         initialize_schema(&mut connection)?;
         Ok(Self {
             connection: Mutex::new(connection),
@@ -130,7 +131,7 @@ impl TranslationCache {
         if let Some(entry) = self
             .memory
             .lock()
-            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했어.".to_string())?
+            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했습니다.".to_string())?
             .get(&key)
         {
             return Ok(Some(entry.translated_text));
@@ -140,7 +141,7 @@ impl TranslationCache {
             let connection = self
                 .connection
                 .lock()
-                .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했어.".to_string())?;
+                .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했습니다.".to_string())?;
             connection
                 .query_row(
                     "SELECT source_text, source_language, translated_text, updated_at \
@@ -160,7 +161,7 @@ impl TranslationCache {
                     },
                 )
                 .optional()
-                .map_err(|error| format!("번역 캐시를 조회하지 못했어: {error}"))?
+                .map_err(|error| format!("번역 캐시를 조회하지 못했습니다: {error}"))?
         };
         let Some(entry) = entry else {
             return Ok(None);
@@ -191,7 +192,7 @@ impl TranslationCache {
             let mut memory = self
                 .memory
                 .lock()
-                .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했어.".to_string())?;
+                .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했습니다.".to_string())?;
             memory.fuzzy_match(&normalized, source_language, target_language, translator)
         };
         if let Some(entry) = memory_match {
@@ -211,7 +212,7 @@ impl TranslationCache {
             let connection = self
                 .connection
                 .lock()
-                .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했어.".to_string())?;
+                .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했습니다.".to_string())?;
             let mut statement = connection
                 .prepare(
                     "SELECT source_hash, source_text, translated_text, updated_at \
@@ -219,7 +220,7 @@ impl TranslationCache {
                      WHERE source_language=?1 AND target_language=?2 AND translator=?3 \
                      ORDER BY updated_at DESC",
                 )
-                .map_err(|error| format!("번역 캐시 조회를 준비하지 못했어: {error}"))?;
+                .map_err(|error| format!("번역 캐시 조회를 준비하지 못했습니다: {error}"))?;
             let rows = statement
                 .query_map(
                     params![source_language, target_language, translator],
@@ -235,10 +236,11 @@ impl TranslationCache {
                         })
                     },
                 )
-                .map_err(|error| format!("번역 캐시를 조회하지 못했어: {error}"))?;
+                .map_err(|error| format!("번역 캐시를 조회하지 못했습니다: {error}"))?;
             let mut matched = None;
             for row in rows {
-                let entry = row.map_err(|error| format!("번역 캐시 행을 읽지 못했어: {error}"))?;
+                let entry =
+                    row.map_err(|error| format!("번역 캐시 행을 읽지 못했습니다: {error}"))?;
                 if text_matches(&normalize_text(&entry.source_text), &normalized) {
                     matched = Some(entry);
                     break;
@@ -284,7 +286,7 @@ impl TranslationCache {
         self.remember(entry.clone())?;
         self.connection
             .lock()
-            .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했어.".to_string())?
+            .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했습니다.".to_string())?
             .execute(
                 "INSERT INTO translations \
                  (source_hash, source_text, source_language, target_language, translator, translated_text, updated_at) \
@@ -304,14 +306,14 @@ impl TranslationCache {
                     entry.updated_at,
                 ],
             )
-            .map_err(|error| format!("번역 캐시를 저장하지 못했어: {error}"))?;
+            .map_err(|error| format!("번역 캐시를 저장하지 못했습니다: {error}"))?;
         Ok(())
     }
 
     pub fn memory_size(&self) -> Result<usize, String> {
         self.memory
             .lock()
-            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했어.".to_string())
+            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했습니다.".to_string())
             .map(|memory| memory.entries.len())
     }
 
@@ -328,14 +330,14 @@ impl TranslationCache {
         );
         self.memory
             .lock()
-            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했어.".to_string())
+            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했습니다.".to_string())
             .map(|memory| memory.entries.contains_key(&key))
     }
 
     fn remember(&self, entry: CacheEntry) -> Result<(), String> {
         self.memory
             .lock()
-            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했어.".to_string())?
+            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했습니다.".to_string())?
             .put(entry, self.memory_capacity);
         Ok(())
     }
@@ -355,14 +357,14 @@ fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
                PRIMARY KEY (source_hash, target_language, translator)\
              );",
         )
-        .map_err(|error| format!("번역 캐시 테이블을 만들지 못했어: {error}"))?;
+        .map_err(|error| format!("번역 캐시 테이블을 만들지 못했습니다: {error}"))?;
     let has_translator = {
         let mut statement = connection
             .prepare("PRAGMA table_info(translations)")
-            .map_err(|error| format!("번역 캐시 스키마를 확인하지 못했어: {error}"))?;
+            .map_err(|error| format!("번역 캐시 스키마를 확인하지 못했습니다: {error}"))?;
         let found = statement
             .query_map([], |row| row.get::<_, String>(1))
-            .map_err(|error| format!("번역 캐시 스키마를 읽지 못했어: {error}"))?
+            .map_err(|error| format!("번역 캐시 스키마를 읽지 못했습니다: {error}"))?
             .filter_map(Result::ok)
             .any(|column| column == "translator");
         found
@@ -372,7 +374,7 @@ fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
     }
     let transaction = connection
         .transaction()
-        .map_err(|error| format!("번역 캐시 마이그레이션을 시작하지 못했어: {error}"))?;
+        .map_err(|error| format!("번역 캐시 마이그레이션을 시작하지 못했습니다: {error}"))?;
     transaction
         .execute_batch(
             "ALTER TABLE translations RENAME TO translations_legacy;\
@@ -392,10 +394,10 @@ fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
              FROM translations_legacy;\
              DROP TABLE translations_legacy;",
         )
-        .map_err(|error| format!("이전 번역 캐시를 변환하지 못했어: {error}"))?;
+        .map_err(|error| format!("이전 번역 캐시를 변환하지 못했습니다: {error}"))?;
     transaction
         .commit()
-        .map_err(|error| format!("번역 캐시 마이그레이션을 완료하지 못했어: {error}"))
+        .map_err(|error| format!("번역 캐시 마이그레이션을 완료하지 못했습니다: {error}"))
 }
 
 fn default_cache_path() -> PathBuf {

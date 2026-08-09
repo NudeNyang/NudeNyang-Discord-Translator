@@ -116,7 +116,7 @@ impl HyMtTranslator {
         let client = Client::builder()
             .timeout(Duration::from_secs(90))
             .build()
-            .map_err(|error| format!("Hy-MT2 HTTP 클라이언트를 만들지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 HTTP 클라이언트를 만들지 못했습니다: {error}"))?;
         Ok(Self {
             model,
             device,
@@ -160,30 +160,30 @@ impl HyMtTranslator {
             .clone()
             .or_else(find_llama_server)
             .ok_or_else(|| {
-                "llama.cpp 실행 파일이 없어. PowerShell에서 `scripts\\setup_hymt_runtime.ps1`을 한 번 실행해줘."
+                "llama.cpp 실행 파일이 없습니다. PowerShell에서 `scripts\\setup_hymt_runtime.ps1`을 한 번 실행하십시오."
                     .to_string()
             })?;
         self.port = free_tcp_port()?;
         let log_path = default_server_log_path(self.model);
         if let Some(parent) = log_path.parent() {
             fs::create_dir_all(parent)
-                .map_err(|error| format!("Hy-MT2 로그 폴더를 만들지 못했어: {error}"))?;
+                .map_err(|error| format!("Hy-MT2 로그 폴더를 만들지 못했습니다: {error}"))?;
         }
         let log = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&log_path)
-            .map_err(|error| format!("Hy-MT2 로그 파일을 열지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 로그 파일을 열지 못했습니다: {error}"))?;
         let stderr = log
             .try_clone()
-            .map_err(|error| format!("Hy-MT2 로그 파일을 복제하지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 로그 파일을 복제하지 못했습니다: {error}"))?;
         let mut command = Command::new(&executable);
         command
             .args([
                 "--model",
                 self.model_path
                     .to_str()
-                    .ok_or_else(|| "Hy-MT2 모델 경로를 UTF-8로 표현하지 못했어.".to_string())?,
+                    .ok_or_else(|| "Hy-MT2 모델 경로를 UTF-8로 표현하지 못했습니다.".to_string())?,
                 "--host",
                 "127.0.0.1",
                 "--port",
@@ -207,7 +207,7 @@ impl HyMtTranslator {
         self.process = Some(
             command
                 .spawn()
-                .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했어: {error}"))?,
+                .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했습니다: {error}"))?,
         );
         let deadline = Instant::now() + self.startup_timeout;
         while Instant::now() < deadline {
@@ -235,7 +235,7 @@ impl HyMtTranslator {
         }
         self.close();
         Err(format!(
-            "Hy-MT2 모델을 {}초 안에 불러오지 못했어. 로그: {}",
+            "Hy-MT2 모델을 {}초 안에 불러오지 못했습니다. 로그: {}",
             self.startup_timeout.as_secs(),
             log_path.display()
         ))
@@ -247,24 +247,24 @@ impl HyMtTranslator {
         }
         if bundled_model_path(self.model).as_deref() == Some(self.model_path.as_path()) {
             return Err(format!(
-                "앱에 포함된 {} 모델의 무결성 검증에 실패했어. 앱을 다시 설치해줘.",
+                "앱에 포함된 {} 모델의 무결성 검증에 실패했습니다. 앱을 다시 설치하십시오.",
                 self.model.label
             ));
         }
         if self.model_path.exists() {
             fs::remove_file(&self.model_path)
-                .map_err(|error| format!("손상된 Hy-MT2 모델을 삭제하지 못했어: {error}"))?;
+                .map_err(|error| format!("손상된 Hy-MT2 모델을 삭제하지 못했습니다: {error}"))?;
         }
         let parent = self
             .model_path
             .parent()
-            .ok_or_else(|| "Hy-MT2 모델 폴더를 찾지 못했어.".to_string())?;
+            .ok_or_else(|| "Hy-MT2 모델 폴더를 찾지 못했습니다.".to_string())?;
         fs::create_dir_all(parent)
-            .map_err(|error| format!("Hy-MT2 모델 폴더를 만들지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 모델 폴더를 만들지 못했습니다: {error}"))?;
         let required = self.model.expected_bytes + 512 * 1024 * 1024;
         if available_space(parent).is_ok_and(|free| free < required) {
             return Err(format!(
-                "{} 다운로드 공간이 부족해. 최소 {:.1}GB의 여유 공간이 필요해.",
+                "{} 다운로드 공간이 부족합니다. 최소 {:.1}GB의 여유 공간이 필요합니다.",
                 self.model.label,
                 required as f64 / 1024_f64.powi(3)
             ));
@@ -273,7 +273,7 @@ impl HyMtTranslator {
         let mut downloaded = partial.metadata().map(|meta| meta.len()).unwrap_or(0);
         if downloaded > self.model.expected_bytes {
             fs::remove_file(&partial)
-                .map_err(|error| format!("잘못된 모델 임시 파일을 삭제하지 못했어: {error}"))?;
+                .map_err(|error| format!("잘못된 모델 임시 파일을 삭제하지 못했습니다: {error}"))?;
             downloaded = 0;
         }
         let url = format!(
@@ -284,7 +284,7 @@ impl HyMtTranslator {
             .connect_timeout(Duration::from_secs(30))
             .timeout(None)
             .build()
-            .map_err(|error| format!("모델 다운로드 클라이언트를 만들지 못했어: {error}"))?;
+            .map_err(|error| format!("모델 다운로드 클라이언트를 만들지 못했습니다: {error}"))?;
         let mut request = download_client.get(url);
         if downloaded > 0 {
             request = request.header(RANGE, format!("bytes={downloaded}-"));
@@ -292,7 +292,7 @@ impl HyMtTranslator {
         let mut response = request
             .send()
             .and_then(|response| response.error_for_status())
-            .map_err(|error| format!("Hy-MT2 모델 다운로드에 실패했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 모델 다운로드에 실패했습니다: {error}"))?;
         let append = downloaded > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
         if !append {
             downloaded = 0;
@@ -303,26 +303,26 @@ impl HyMtTranslator {
             .append(append)
             .truncate(!append)
             .open(&partial)
-            .map_err(|error| format!("Hy-MT2 모델 임시 파일을 열지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 모델 임시 파일을 열지 못했습니다: {error}"))?;
         let mut buffer = vec![0_u8; 1024 * 1024];
         loop {
             let count = response
                 .read(&mut buffer)
-                .map_err(|error| format!("Hy-MT2 모델을 내려받지 못했어: {error}"))?;
+                .map_err(|error| format!("Hy-MT2 모델을 내려받지 못했습니다: {error}"))?;
             if count == 0 {
                 break;
             }
             output
                 .write_all(&buffer[..count])
-                .map_err(|error| format!("Hy-MT2 모델을 저장하지 못했어: {error}"))?;
+                .map_err(|error| format!("Hy-MT2 모델을 저장하지 못했습니다: {error}"))?;
             downloaded += count as u64;
         }
         output
             .flush()
-            .map_err(|error| format!("Hy-MT2 모델 파일을 마무리하지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 모델 파일을 마무리하지 못했습니다: {error}"))?;
         if downloaded != self.model.expected_bytes {
             return Err(format!(
-                "Hy-MT2 모델 다운로드 크기가 맞지 않아({downloaded}/{} bytes).",
+                "Hy-MT2 모델 다운로드 크기가 일치하지 않습니다({downloaded}/{} bytes).",
                 self.model.expected_bytes
             ));
         }
@@ -330,13 +330,14 @@ impl HyMtTranslator {
         if actual_hash != self.model.expected_sha256 {
             let _ = fs::remove_file(&partial);
             return Err(
-                "Hy-MT2 모델 무결성 검증에 실패했어. 손상된 다운로드 파일을 삭제했어.".to_string(),
+                "Hy-MT2 모델 무결성 검증에 실패했습니다. 손상된 다운로드 파일을 삭제했습니다."
+                    .to_string(),
             );
         }
         fs::rename(&partial, &self.model_path)
-            .map_err(|error| format!("Hy-MT2 모델 파일을 적용하지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 모델 파일을 적용하지 못했습니다: {error}"))?;
         fs::write(hash_marker(&self.model_path), actual_hash)
-            .map_err(|error| format!("Hy-MT2 검증 표식을 저장하지 못했어: {error}"))
+            .map_err(|error| format!("Hy-MT2 검증 표식을 저장하지 못했습니다: {error}"))
     }
 
     fn complete(&self, prompt: &str, text: &str) -> Result<String, String> {
@@ -357,10 +358,10 @@ impl HyMtTranslator {
             }))
             .send()
             .and_then(|response| response.error_for_status())
-            .map_err(|error| format!("Hy-MT2 번역 요청이 실패했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 번역 요청이 실패했습니다: {error}"))?;
         let payload: Value = response
             .json()
-            .map_err(|error| format!("Hy-MT2 번역 응답을 읽지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 번역 응답을 읽지 못했습니다: {error}"))?;
         let content = payload
             .get("choices")
             .and_then(Value::as_array)
@@ -371,7 +372,7 @@ impl HyMtTranslator {
             .unwrap_or_default();
         let result = clean_translation(content);
         if result.is_empty() {
-            Err("Hy-MT2가 번역문 대신 지시문 또는 빈 결과를 반환했어.".to_string())
+            Err("Hy-MT2가 번역문 대신 지시문 또는 빈 결과를 반환했습니다.".to_string())
         } else {
             Ok(result)
         }
@@ -810,13 +811,13 @@ fn model_is_verified(path: &Path, model: HyMtModel) -> Result<bool, String> {
 
 fn file_sha256(path: &Path) -> Result<String, String> {
     let mut file =
-        File::open(path).map_err(|error| format!("Hy-MT2 모델을 검증하지 못했어: {error}"))?;
+        File::open(path).map_err(|error| format!("Hy-MT2 모델을 검증하지 못했습니다: {error}"))?;
     let mut digest = Sha256::new();
     let mut buffer = vec![0_u8; 4 * 1024 * 1024];
     loop {
         let count = file
             .read(&mut buffer)
-            .map_err(|error| format!("Hy-MT2 모델을 검증하지 못했어: {error}"))?;
+            .map_err(|error| format!("Hy-MT2 모델을 검증하지 못했습니다: {error}"))?;
         if count == 0 {
             break;
         }
@@ -841,7 +842,7 @@ fn free_tcp_port() -> Result<u16, String> {
     TcpListener::bind(("127.0.0.1", 0))
         .and_then(|listener| listener.local_addr())
         .map(|address| address.port())
-        .map_err(|error| format!("Hy-MT2 로컬 포트를 확보하지 못했어: {error}"))
+        .map_err(|error| format!("Hy-MT2 로컬 포트를 확보하지 못했습니다: {error}"))
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use serde::Deserialize;
 
+use crate::credentials;
 use crate::language::Language;
 
 use super::Translator;
@@ -28,9 +29,10 @@ impl DeepLTranslator {
     pub fn new(api_key: Option<String>, timeout: Duration) -> Result<Self, String> {
         let api_key = api_key
             .or_else(|| env::var("DEEPL_API_KEY").ok())
+            .or(credentials::read("deepl")?)
             .unwrap_or_default();
         if api_key.is_empty() {
-            return Err("DEEPL_API_KEY가 없어 DeepL 번역을 시작할 수 없어.".to_string());
+            return Err("DEEPL_API_KEY가 없어 DeepL 번역을 시작할 수 없습니다.".to_string());
         }
         let endpoint = if api_key.ends_with(":fx") {
             "https://api-free.deepl.com/v2/translate"
@@ -40,12 +42,35 @@ impl DeepLTranslator {
         let client = reqwest::blocking::Client::builder()
             .timeout(timeout)
             .build()
-            .map_err(|error| format!("DeepL 클라이언트를 만들지 못했어: {error}"))?;
+            .map_err(|error| format!("DeepL 클라이언트를 만들지 못했습니다: {error}"))?;
         Ok(Self {
             api_key,
             endpoint: endpoint.to_string(),
             client,
         })
+    }
+
+    pub fn validate_api_key(api_key: &str, timeout: Duration) -> Result<(), String> {
+        let api_key = api_key.trim();
+        if api_key.is_empty() {
+            return Err("DeepL API 키를 입력하십시오.".to_string());
+        }
+        let base = if api_key.ends_with(":fx") {
+            "https://api-free.deepl.com"
+        } else {
+            "https://api.deepl.com"
+        };
+        let client = reqwest::blocking::Client::builder()
+            .timeout(timeout)
+            .build()
+            .map_err(|error| format!("DeepL 연결 확인을 준비하지 못했습니다: {error}"))?;
+        client
+            .get(format!("{base}/v2/usage"))
+            .header("Authorization", format!("DeepL-Auth-Key {api_key}"))
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map(|_| ())
+            .map_err(|error| format!("DeepL API 키를 확인하지 못했습니다: {error}"))
     }
 
     fn request_data(
@@ -94,10 +119,10 @@ impl Translator for DeepLTranslator {
             .form(&Self::request_data(text, source, target)?)
             .send()
             .and_then(|response| response.error_for_status())
-            .map_err(|error| format!("DeepL 번역 요청이 실패했어: {error}"))?;
+            .map_err(|error| format!("DeepL 번역 요청이 실패했습니다: {error}"))?;
         let payload: DeepLResponse = response
             .json()
-            .map_err(|error| format!("DeepL 번역 응답을 읽지 못했어: {error}"))?;
+            .map_err(|error| format!("DeepL 번역 응답을 읽지 못했습니다: {error}"))?;
         payload
             .translations
             .into_iter()
@@ -114,7 +139,7 @@ fn deepl_target(language: Language) -> Result<&'static str, String> {
         Language::Japanese => Ok("JA"),
         Language::ChineseSimplified => Ok("ZH-HANS"),
         Language::ChineseTraditional => Ok("ZH-HANT"),
-        Language::Unknown => Err("DeepL 대상 언어를 확인하지 못했어.".to_string()),
+        Language::Unknown => Err("DeepL 대상 언어를 확인하지 못했습니다.".to_string()),
     }
 }
 

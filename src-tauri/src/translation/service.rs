@@ -110,7 +110,7 @@ impl TranslationService {
                 .collect();
             let translated = self.translator.translate_many(&items, target)?;
             if translated.len() != pending.len() {
-                return Err("번역 엔진이 요청한 메시지 수와 다른 결과를 반환했어.".to_string());
+                return Err("번역 엔진이 요청한 메시지 수와 다른 결과를 반환했습니다.".to_string());
             }
             for ((index, text, protected, source, hash), translated) in
                 pending.into_iter().zip(translated)

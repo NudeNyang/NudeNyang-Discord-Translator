@@ -118,6 +118,29 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
 })()
 "#;
 
+pub const RESTORE_TEXT_SCRIPT: &str = r#"
+(() => {
+  const originals = window.__nudeTranslatorOriginals;
+  if (!(originals instanceof Map)) return {restored: 0};
+  let restored = 0;
+  for (const [node, text] of originals) {
+    if (!node?.isConnected) continue;
+    if (node.nodeType === Node.TEXT_NODE) node.nodeValue = text;
+    else node.textContent = text;
+    restored++;
+  }
+  originals.clear();
+  return {restored};
+})()
+"#;
+
+pub const CLEAR_TEXT_REGISTRY_SCRIPT: &str = r#"
+(() => {
+  const originals = window.__nudeTranslatorOriginals;
+  if (originals instanceof Map) originals.clear();
+})()
+"#;
+
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct DomPart {
     pub kind: String,
@@ -164,16 +187,23 @@ impl DomChange {
 
 pub fn parse_snapshot(value: Value) -> Result<DomSnapshot, String> {
     serde_json::from_value(value)
-        .map_err(|error| format!("Discord DOM 스냅샷을 읽지 못했어: {error}"))
+        .map_err(|error| format!("Discord DOM 스냅샷을 읽지 못했습니다: {error}"))
 }
 
 pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     let encoded = serde_json::to_string(changes)
-        .map_err(|error| format!("DOM 번역 변경 목록을 만들지 못했어: {error}"))?;
+        .map_err(|error| format!("DOM 번역 변경 목록을 만들지 못했습니다: {error}"))?;
     Ok(format!(
         r#"
 (() => {{
   const changes = {encoded};
+  const originals = window.__nudeTranslatorOriginals instanceof Map
+    ? window.__nudeTranslatorOriginals
+    : new Map();
+  window.__nudeTranslatorOriginals = originals;
+  function remember(node, text) {{
+    if (node && !originals.has(node)) originals.set(node, text);
+  }}
   function eligibleTextNodes(root) {{
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -221,19 +251,30 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
         'div[aria-hidden="true"] > span,' +
         '[class*="name__"][aria-hidden="true"] > div'
       ) || null;
-      if (root) {{ root.textContent = change.text; applied++; continue; }}
+      if (root) {{
+        remember(root, root.textContent);
+        root.textContent = change.text;
+        applied++;
+        continue;
+      }}
     }}
     else if (change.kind === 'category') {{
       const category = document.querySelector(
         `[data-list-item-id="${{CSS.escape(change.id)}}"][role="button"]`
       );
       root = category?.querySelector('h3 > div') || null;
-      if (root) {{ root.textContent = change.text; applied++; continue; }}
+      if (root) {{
+        remember(root, root.textContent);
+        root.textContent = change.text;
+        applied++;
+        continue;
+      }}
     }}
     if (!root) continue;
     const nodes = eligibleTextNodes(root);
     const node = nodes[change.index];
     if (!node) continue;
+    remember(node, node.nodeValue);
     node.nodeValue = change.text;
     applied++;
   }}
@@ -245,7 +286,10 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{apply_script, parse_snapshot, DomChange, DomPart, SNAPSHOT_SCRIPT};
+    use super::{
+        apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
+        RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
+    };
     use serde_json::json;
 
     #[test]
@@ -275,5 +319,20 @@ mod tests {
         let script = apply_script(&[DomChange::new(&part, "` ${alert(1)} \"번역\"")]).unwrap();
         assert!(script.contains(r#""text":"` ${alert(1)} \"번역\"""#));
         assert!(script.contains("CSS.escape(change.id)"));
+    }
+
+    #[test]
+    fn translated_nodes_register_their_original_text_for_shutdown_restore() {
+        let part = DomPart {
+            kind: "message".to_string(),
+            item_id: "dto-message-1".to_string(),
+            index: 0,
+            text: "원문".to_string(),
+        };
+        let script = apply_script(&[DomChange::new(&part, "번역문")]).unwrap();
+        assert!(script.contains("__nudeTranslatorOriginals"));
+        assert!(script.contains("originals.set"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("originals.clear"));
+        assert!(CLEAR_TEXT_REGISTRY_SCRIPT.contains("originals.clear"));
     }
 }

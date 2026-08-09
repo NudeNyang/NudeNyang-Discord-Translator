@@ -64,7 +64,6 @@ test("translation model can be changed inside the tray menu", () => {
     "hymt_1_8b",
     "hymt_7b",
     "chatgpt",
-    "claude",
     "gemini",
     "deepl",
     "mock",
@@ -75,6 +74,9 @@ test("translation model can be changed inside the tray menu", () => {
     trayScript,
     /invoke\("settings_update", \{ patch: \{ translator \} \}\)/,
   );
+  assert.match(trayScript, /invoke\("provider_connections_get"\)/);
+  assert.match(trayScript, /invoke\("tray_open_provider_settings", \{ provider: translator \}\)/);
+  assert.doesNotMatch(trayMarkup, /data-translator="claude"/);
   assert.doesNotMatch(
     trayScript,
     /#open-model-settings"\)\.addEventListener\("click", \(\) => run\("tray_open_settings"\)/,
@@ -89,7 +91,7 @@ test("tray window height hugs each menu view without clipping option lists", () 
   assert.match(trayStyles, /\.bottom-group \{[^}]*padding-bottom: 0;/s);
   assert.match(trayScript, /main: 318/);
   assert.match(trayScript, /language: 274/);
-  assert.match(trayScript, /model: 348/);
+  assert.match(trayScript, /model: 311/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.main\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.language\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.model\)/);

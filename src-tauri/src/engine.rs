@@ -12,7 +12,10 @@ use serde_json::json;
 use crate::cache::TranslationCache;
 use crate::cdp::{discord_target, CdpClient};
 use crate::config::{default_config_path, AppConfig};
-use crate::dom::{apply_script, parse_snapshot, DomChange, DomPart, SNAPSHOT_SCRIPT};
+use crate::dom::{
+    apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
+    RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
+};
 use crate::image_translation::{
     apply_image_error_script, apply_image_result_script, fetch_image_data_script,
     image_capture_info_script, parse_image_capture_info, parse_image_data, parse_image_requests,
@@ -154,7 +157,7 @@ impl RustEngine {
         let handle = thread::Builder::new()
             .name("rust-dom-controller".to_string())
             .spawn(move || run_controller(config, control_rx, thread_status))
-            .expect("Rust DOM 번역 스레드를 시작하지 못했어");
+            .expect("Rust DOM 번역 스레드를 시작하지 못했습니다");
         Self {
             controls: control_tx,
             status,
@@ -165,7 +168,7 @@ impl RustEngine {
     pub fn apply_config(&self, config: AppConfig) -> Result<(), String> {
         self.controls
             .send(Control::ApplyConfig(Box::new(config)))
-            .map_err(|_| "Rust 번역 엔진이 종료되어 설정을 적용하지 못했어.".to_string())
+            .map_err(|_| "Rust 번역 엔진이 종료되어 설정을 적용하지 못했습니다.".to_string())
     }
 
     pub fn set_enabled(&self, enabled: bool) -> Result<(), String> {
@@ -175,14 +178,14 @@ impl RustEngine {
         }
         self.controls
             .send(Control::SetEnabled(enabled))
-            .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했어.".to_string())
+            .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
     }
 
     pub fn status(&self) -> Result<RuntimeStatus, String> {
         let mut status = self
             .status
             .lock()
-            .map_err(|_| "Rust 번역 엔진 상태 잠금을 열지 못했어.".to_string())?;
+            .map_err(|_| "Rust 번역 엔진 상태 잠금을 열지 못했습니다.".to_string())?;
         let snapshot = status.clone();
         status.notice.clear();
         Ok(snapshot)
@@ -477,7 +480,7 @@ fn scan_images(
             Err(error) => {
                 client.evaluate(&apply_image_error_script(&request.id, &error)?, false)?;
                 update_status(status, |runtime| {
-                    runtime.notice = format!("이미지를 읽지 못했어: {error}");
+                    runtime.notice = format!("이미지를 읽지 못했습니다: {error}");
                 });
                 continue;
             }
@@ -514,21 +517,22 @@ fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, 
         if !value.is_null() {
             let data = parse_image_data(value)?;
             if !data.base64.is_empty() {
-                return BASE64
-                    .decode(data.base64.as_bytes())
-                    .map_err(|error| format!("Discord 이미지 Base64를 해석하지 못했어: {error}"));
+                return BASE64.decode(data.base64.as_bytes()).map_err(|error| {
+                    format!("Discord 이미지 Base64를 해석하지 못했습니다: {error}")
+                });
             }
         }
     }
 
     let info_value = client.evaluate(&image_capture_info_script(image_id)?, false)?;
     if info_value.is_null() {
-        return Err("이미지 요소를 더 이상 찾을 수 없어.".to_string());
+        return Err("이미지 요소를 더 이상 찾을 수 없습니다.".to_string());
     }
     let info = parse_image_capture_info(info_value)?;
     if !info.fully_visible {
         return Err(
-            "원본을 읽을 수 없어. 이미지 전체가 보이도록 조정한 뒤 다시 시도해줘.".to_string(),
+            "원본을 읽을 수 없습니다. 이미지 전체가 보이도록 조정한 후 다시 시도하십시오."
+                .to_string(),
         );
     }
     client.evaluate(
@@ -567,7 +571,7 @@ fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, 
         .to_string();
     BASE64
         .decode(encoded.as_bytes())
-        .map_err(|error| format!("Discord 화면 캡처 Base64를 해석하지 못했어: {error}"))
+        .map_err(|error| format!("Discord 화면 캡처 Base64를 해석하지 못했습니다: {error}"))
 }
 
 fn scan_dom(
@@ -672,7 +676,8 @@ fn drain_worker_results(
                     }
                     Ok(_) => update_status(status, |runtime| {
                         runtime.notice =
-                            "번역 서비스가 요청한 메시지 수와 다른 결과를 반환했어.".to_string();
+                            "번역 서비스가 요청한 메시지 수와 다른 결과를 반환했습니다."
+                                .to_string();
                     }),
                     Err(error) => update_status(status, |runtime| runtime.notice = error),
                 }
@@ -704,17 +709,17 @@ fn drain_worker_results(
                         }
                         update_status(status, |runtime| {
                             runtime.notice = if outcome.used_cache {
-                                "캐시된 이미지 번역을 적용했어.".to_string()
+                                "캐시된 이미지 번역을 적용했습니다.".to_string()
                             } else {
                                 format!(
-                                    "이미지에서 {}개 글자 영역을 번역했어.",
+                                    "이미지에서 {}개 글자 영역을 번역했습니다.",
                                     outcome.translated_count
                                 )
                             };
                         });
                     }
                     Ok(_) => {
-                        let message = "번역할 이미지 텍스트를 찾지 못했어.";
+                        let message = "번역할 이미지 텍스트를 찾지 못했습니다.";
                         if let Ok(script) = apply_image_error_script(&image_id, message) {
                             let _ = client.evaluate(&script, false);
                         }
@@ -725,7 +730,7 @@ fn drain_worker_results(
                             let _ = client.evaluate(&script, false);
                         }
                         update_status(status, |runtime| {
-                            runtime.notice = format!("이미지 번역에 실패했어: {error}");
+                            runtime.notice = format!("이미지 번역에 실패했습니다: {error}");
                         });
                     }
                 }
@@ -744,7 +749,7 @@ fn drain_worker_results(
                         runtime.translator_state = "ready".to_string();
                         runtime.translator_error.clear();
                         runtime.notice = format!(
-                            "{} 준비가 끝났고 지금부터 이 모델로 번역해.",
+                            "{} 준비가 완료되었습니다. 지금부터 이 모델로 번역합니다.",
                             translator_label(&name)
                         );
                     }
@@ -754,7 +759,7 @@ fn drain_worker_results(
                 }
             }
             WorkerResult::WarmFailed(error) => update_status(status, |runtime| {
-                runtime.notice = format!("로컬 모델 예열에 실패했어: {error}");
+                runtime.notice = format!("로컬 모델 예열에 실패했습니다: {error}");
             }),
         }
     }
@@ -839,7 +844,7 @@ fn request_translator_preparation(
         runtime.translator_state = "preparing".to_string();
         runtime.translator_error.clear();
         runtime.notice = format!(
-            "{} 준비를 뒤에서 시작했어. 완료 전까지 현재 모델로 계속 번역해.",
+            "{} 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
             translator_label(&name)
         );
     });
@@ -931,11 +936,13 @@ fn restore(
         })
         .collect();
     if let Some(client) = client.as_mut() {
+        let _ = client.evaluate(RESTORE_TEXT_SCRIPT, false);
         if !changes.is_empty() {
             if let Ok(script) = apply_script(&changes) {
                 let _ = client.evaluate(&script, false);
             }
         }
+        let _ = client.evaluate(CLEAR_TEXT_REGISTRY_SCRIPT, false);
         let _ = client.evaluate(&restore_images_script(discard_images), false);
     }
 }
@@ -966,7 +973,11 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{poll_interval, translator_label, RuntimeStatus, RustEngine};
+    use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
+    use crate::dom::{
+        apply_script, parse_snapshot, DomChange, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
+    };
 
     #[test]
     fn runtime_status_starts_with_the_configured_contract() {
@@ -1002,6 +1013,45 @@ mod tests {
         assert_eq!(status.configured_translator, "original");
         assert_eq!(status.active_translator, "original");
         assert_eq!(status.translator_state, "ready");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_restore_registry_returns_translated_discord_text_to_original() {
+        let target = discord_target(9222).expect("Discord 디버그 렌더러가 필요합니다");
+        let mut client = CdpClient::new(target.websocket_url);
+        client.connect().unwrap();
+        let before = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
+        let part = before
+            .parts
+            .into_iter()
+            .next()
+            .expect("복원 검증에 사용할 Discord 텍스트가 필요합니다");
+        let locator = part.locator();
+        let marker = "[Nude Translator restore verification]";
+        let script = apply_script(&[DomChange::new(&part, marker)]).unwrap();
+        client.evaluate(&script, false).unwrap();
+        let translated = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
+        client.evaluate(RESTORE_TEXT_SCRIPT, false).unwrap();
+        let restored = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
+        client.close();
+
+        assert_eq!(
+            translated
+                .parts
+                .iter()
+                .find(|candidate| candidate.locator() == locator)
+                .map(|candidate| candidate.text.as_str()),
+            Some(marker)
+        );
+        assert_eq!(
+            restored
+                .parts
+                .iter()
+                .find(|candidate| candidate.locator() == locator)
+                .map(|candidate| candidate.text.as_str()),
+            Some(part.text.as_str())
+        );
     }
 
     fn wait_for_translator(engine: &RustEngine, expected: &str) {

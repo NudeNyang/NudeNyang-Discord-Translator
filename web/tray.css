@@ -186,6 +186,16 @@ button:focus-visible {
   font-weight: 750;
 }
 
+.model-connection {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.model-option.needs-connection .menu-copy {
+  color: var(--muted);
+}
+
 .language-option[aria-pressed="true"] .language-check,
 .model-option[aria-pressed="true"] .model-check {
   visibility: visible;

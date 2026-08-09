@@ -68,14 +68,16 @@ pub fn restart(expected_process_id: Option<u32>, port: u16) -> Result<DiscordPro
     let current = current_process();
     let current_id = current.as_ref().map(|process| process.process_id);
     if expected_process_id != current_id {
-        return Err("Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했어.".to_string());
+        return Err(
+            "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
+        );
     }
     let executable = current
         .map(|process| process.executable)
         .or_else(installed_executable)
-        .ok_or_else(|| "Discord 설치 경로를 찾지 못했어.".to_string())?;
+        .ok_or_else(|| "Discord 설치 경로를 찾지 못했습니다.".to_string())?;
     if !executable.is_file() {
-        return Err("Discord 설치 경로를 찾지 못했어.".to_string());
+        return Err("Discord 설치 경로를 찾지 못했습니다.".to_string());
     }
     stop_matching_processes(&executable)?;
     let launch = discord_launch_plan(&executable, port)?;
@@ -86,7 +88,7 @@ pub fn restart(expected_process_id: Option<u32>, port: u16) -> Result<DiscordPro
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .map_err(|error| format!("Discord를 디버그 모드로 실행하지 못했어: {error}"))?;
+        .map_err(|error| format!("Discord를 디버그 모드로 실행하지 못했습니다: {error}"))?;
     wait_for_restarted_process(&executable, Duration::from_secs(15))
 }
 
@@ -97,8 +99,8 @@ pub fn wait_for_debug_port(port: u16, timeout: Duration) -> Result<(), String> {
         .connect_timeout(Duration::from_millis(500))
         .timeout(Duration::from_secs(1))
         .build()
-        .map_err(|error| format!("Discord 연결 확인 클라이언트를 만들지 못했어: {error}"))?;
-    let mut last_error = "Discord 디버그 렌더러를 찾지 못했어.".to_string();
+        .map_err(|error| format!("Discord 연결 확인 클라이언트를 만들지 못했습니다: {error}"))?;
+    let mut last_error = "Discord 디버그 렌더러를 찾지 못했습니다.".to_string();
     while Instant::now() < deadline {
         match client
             .get(&url)
@@ -146,7 +148,7 @@ fn stop_matching_processes(executable: &Path) -> Result<(), String> {
         }
         thread::sleep(Duration::from_millis(100));
     }
-    Err("Discord 프로세스를 종료하지 못했어.".to_string())
+    Err("Discord 프로세스를 종료하지 못했습니다.".to_string())
 }
 
 fn installed_executable() -> Option<PathBuf> {
@@ -185,10 +187,10 @@ fn installed_executable_in(local_app_data: &Path) -> Option<PathBuf> {
 fn discord_launch_plan(executable: &Path, port: u16) -> Result<DiscordLaunchPlan, String> {
     let app_dir = executable
         .parent()
-        .ok_or_else(|| "Discord 설치 폴더를 찾지 못했어.".to_string())?;
+        .ok_or_else(|| "Discord 설치 폴더를 찾지 못했습니다.".to_string())?;
     let executable_name = executable
         .file_name()
-        .ok_or_else(|| "Discord 실행 파일 이름을 찾지 못했어.".to_string())?
+        .ok_or_else(|| "Discord 실행 파일 이름을 찾지 못했습니다.".to_string())?
         .to_string_lossy()
         .into_owned();
     let root_dir = app_dir.parent().unwrap_or(app_dir);
@@ -235,7 +237,7 @@ fn wait_for_restarted_process(
         }
         thread::sleep(Duration::from_millis(200));
     }
-    Err("Discord 재실행 요청은 보냈지만 새 프로세스를 찾지 못했어.".to_string())
+    Err("Discord 재실행 요청은 보냈지만 새 프로세스를 찾지 못했습니다.".to_string())
 }
 
 fn discord_debug_arguments(port: u16) -> [String; 2] {

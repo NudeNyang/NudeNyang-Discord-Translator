@@ -9,6 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use regex::Regex;
+use serde::Serialize;
 use serde_json::{json, Value};
 
 use crate::language::Language;
@@ -31,13 +32,21 @@ pub enum SubscriptionProvider {
     Gemini,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliConnectionProbe {
+    pub installed: bool,
+    pub connected: bool,
+    pub detail: String,
+}
+
 impl SubscriptionProvider {
     pub fn from_key(value: &str) -> Result<Self, String> {
         match value {
             "chatgpt" => Ok(Self::ChatGpt),
             "claude" => Ok(Self::Claude),
             "gemini" => Ok(Self::Gemini),
-            _ => Err(format!("지원하지 않는 구독 번역 서비스야: {value}")),
+            _ => Err(format!("지원하지 않는 구독 번역 서비스입니다: {value}")),
         }
     }
 
@@ -67,17 +76,21 @@ impl SubscriptionProvider {
 
     fn install_hint(self) -> &'static str {
         match self {
-            Self::ChatGpt => "Codex CLI를 설치한 뒤 'codex login'으로 ChatGPT 플랜에 로그인해줘.",
-            Self::Claude => "Claude Code를 설치한 뒤 'claude auth login'으로 플랜에 로그인해줘.",
-            Self::Gemini => "Antigravity CLI를 설치하고 Google AI Pro/Ultra 계정으로 로그인해줘.",
+            Self::ChatGpt => {
+                "Codex CLI를 설치한 후 'codex login'으로 ChatGPT 플랜에 로그인하십시오."
+            }
+            Self::Claude => {
+                "Claude Code를 설치한 후 'claude auth login'으로 플랜에 로그인하십시오."
+            }
+            Self::Gemini => "Gemini CLI를 설치하고 Google AI Pro/Ultra 계정으로 로그인하십시오.",
         }
     }
 
     fn login_hint(self) -> &'static str {
         match self {
-            Self::ChatGpt => "'codex login'을 실행하고 ChatGPT 계정으로 로그인해줘.",
-            Self::Claude => "'claude auth login'을 실행하고 Claude 플랜 계정으로 로그인해줘.",
-            Self::Gemini => "Antigravity CLI를 한 번 실행하고 Google 계정 로그인을 완료해줘.",
+            Self::ChatGpt => "'codex login'을 실행하고 ChatGPT 계정으로 로그인하십시오.",
+            Self::Claude => "'claude auth login'을 실행하고 Claude 플랜 계정으로 로그인하십시오.",
+            Self::Gemini => "Gemini CLI를 한 번 실행하고 Google 계정 로그인을 완료하십시오.",
         }
     }
 }
@@ -111,7 +124,7 @@ impl SubscriptionCliTranslator {
     ) -> Result<Self, String> {
         let provider = SubscriptionProvider::from_key(provider)?;
         if !matches!(speech_style, "auto" | "polite" | "casual") {
-            return Err(format!("지원하지 않는 번역 말투야: {speech_style}"));
+            return Err(format!("지원하지 않는 번역 말투입니다: {speech_style}"));
         }
         Ok(Self {
             provider,
@@ -153,7 +166,7 @@ impl SubscriptionCliTranslator {
 
     fn workspace_dir(&self) -> Result<PathBuf, String> {
         fs::create_dir_all(&self.workspace_root)
-            .map_err(|error| format!("구독 번역 작업 폴더를 만들지 못했어: {error}"))?;
+            .map_err(|error| format!("구독 번역 작업 폴더를 만들지 못했습니다: {error}"))?;
         Ok(self.workspace_root.clone())
     }
 
@@ -249,6 +262,313 @@ impl SubscriptionCliTranslator {
     }
 }
 
+pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProbe, String> {
+    let provider = SubscriptionProvider::from_key(provider)?;
+    let mut translator = SubscriptionCliTranslator::new(
+        provider.key(),
+        "auto",
+        15,
+        std::env::temp_dir().join("nude-translator-connection-check"),
+    )?;
+    let (executable, implementation) = match translator.resolve_command() {
+        Ok(value) => value,
+        Err(error) => {
+            return Ok(CliConnectionProbe {
+                installed: false,
+                connected: false,
+                detail: error,
+            });
+        }
+    };
+
+    match implementation {
+        Implementation::Codex => {
+            let output = run_process(
+                &executable,
+                &["login".to_string(), "status".to_string()],
+                None,
+                &translator.workspace_dir()?,
+                &subscription_environment(),
+                Duration::from_secs(10),
+            )?;
+            let status = format!(
+                "{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let connected = output.status.success() && status.to_lowercase().contains("chatgpt");
+            Ok(CliConnectionProbe {
+                installed: true,
+                connected,
+                detail: if connected {
+                    "ChatGPT 구독 계정으로 연결되어 있습니다.".to_string()
+                } else {
+                    "Codex CLI는 설치되어 있지만 ChatGPT 로그인이 필요합니다.".to_string()
+                },
+            })
+        }
+        Implementation::Agy | Implementation::Gemini => {
+            let connected = gemini_oauth_cache_exists();
+            Ok(CliConnectionProbe {
+                installed: true,
+                connected,
+                detail: if connected {
+                    "Gemini CLI의 Google 로그인 정보를 확인했습니다.".to_string()
+                } else {
+                    "Gemini CLI는 설치되어 있지만 Google 로그인이 필요합니다.".to_string()
+                },
+            })
+        }
+        Implementation::Claude => Ok(CliConnectionProbe {
+            installed: true,
+            connected: false,
+            detail: "공개 앱에서는 Claude 구독 로그인을 사용하지 않습니다.".to_string(),
+        }),
+    }
+}
+
+pub fn connect_subscription_interactively(provider: &str) -> Result<CliConnectionProbe, String> {
+    let provider = SubscriptionProvider::from_key(provider)?;
+    let mut translator = SubscriptionCliTranslator::new(
+        provider.key(),
+        "auto",
+        300,
+        std::env::temp_dir().join("nude-translator-connection-login"),
+    )?;
+    let (executable, implementation) = translator.resolve_command()?;
+    match implementation {
+        Implementation::Codex => {
+            let output = run_process(
+                &executable,
+                &["login".to_string()],
+                None,
+                &translator.workspace_dir()?,
+                &subscription_environment(),
+                Duration::from_secs(300),
+            )?;
+            if !output.status.success() {
+                return Err(format!(
+                    "ChatGPT 로그인을 완료하지 못했습니다: {}",
+                    tail_chars(&String::from_utf8_lossy(&output.stderr), 400)
+                ));
+            }
+        }
+        Implementation::Agy | Implementation::Gemini => {
+            open_cli_login_console(&executable)?;
+        }
+        Implementation::Claude => {
+            return Err("공개 앱에서는 Claude 구독 로그인을 연결하지 않습니다.".to_string());
+        }
+    }
+    probe_subscription_connection(provider.key())
+}
+
+pub fn install_subscription_cli(provider: &str) -> Result<CliConnectionProbe, String> {
+    let provider = SubscriptionProvider::from_key(provider)?;
+    let package = match provider {
+        SubscriptionProvider::ChatGpt => "@openai/codex@latest",
+        SubscriptionProvider::Gemini => "@google/gemini-cli@latest",
+        SubscriptionProvider::Claude => {
+            return Err("Claude 구독 CLI 설치는 지원하지 않습니다.".to_string());
+        }
+    };
+    let npm = ensure_npm_available()?;
+    let workspace = std::env::temp_dir().join("nude-translator-cli-install");
+    fs::create_dir_all(&workspace)
+        .map_err(|error| format!("CLI 설치 작업 폴더를 만들지 못했습니다: {error}"))?;
+    let output = run_process(
+        &npm,
+        &[
+            "install".to_string(),
+            "--global".to_string(),
+            package.to_string(),
+            "--no-audit".to_string(),
+            "--no-fund".to_string(),
+        ],
+        None,
+        &workspace,
+        &subscription_environment(),
+        Duration::from_secs(900),
+    )?;
+    if !output.status.success() {
+        let detail = format!(
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return Err(format!(
+            "{} CLI를 설치하지 못했습니다: {}",
+            provider.display_name(),
+            tail_chars(detail.trim(), 600)
+        ));
+    }
+    let probe = probe_subscription_connection(provider.key())?;
+    if !probe.installed {
+        return Err(format!(
+            "{} CLI 설치는 완료되었지만 실행 파일을 찾지 못했습니다. 앱을 다시 실행한 후 연결을 시도하십시오.",
+            provider.display_name()
+        ));
+    }
+    Ok(probe)
+}
+
+fn ensure_npm_available() -> Result<PathBuf, String> {
+    if let (Some(npm), Some(major)) = (find_npm_executable(), installed_node_major()) {
+        if major >= 20 {
+            return Ok(npm);
+        }
+    }
+    install_node_runtime()?;
+    let npm = find_npm_executable().ok_or_else(|| {
+        "Node.js 설치는 완료되었지만 npm 실행 파일을 찾지 못했습니다. 앱을 다시 실행한 후 설치를 시도하십시오."
+            .to_string()
+    })?;
+    match installed_node_major() {
+        Some(major) if major >= 20 => Ok(npm),
+        Some(major) => Err(format!(
+            "CLI 실행에는 Node.js 20 이상이 필요하지만 현재 버전은 {major}입니다. Windows를 다시 시작한 후 설치를 다시 시도하십시오."
+        )),
+        None => Err(
+            "Node.js 설치는 완료되었지만 버전을 확인하지 못했습니다. 앱을 다시 실행한 후 설치를 시도하십시오."
+                .to_string(),
+        ),
+    }
+}
+
+fn find_npm_executable() -> Option<PathBuf> {
+    if let Some(path) = find_executable("npm") {
+        return Some(path);
+    }
+    #[cfg(windows)]
+    {
+        for variable in ["ProgramFiles", "ProgramFiles(x86)"] {
+            if let Some(root) = env::var_os(variable) {
+                let candidate = PathBuf::from(root).join("nodejs/npm.cmd");
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn find_node_executable() -> Option<PathBuf> {
+    if let Some(path) = find_executable("node") {
+        return Some(path);
+    }
+    #[cfg(windows)]
+    {
+        for variable in ["ProgramFiles", "ProgramFiles(x86)"] {
+            if let Some(root) = env::var_os(variable) {
+                let candidate = PathBuf::from(root).join("nodejs/node.exe");
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn installed_node_major() -> Option<u32> {
+    let executable = find_node_executable()?;
+    let output = run_process(
+        &executable,
+        &["--version".to_string()],
+        None,
+        &std::env::temp_dir(),
+        &subscription_environment(),
+        Duration::from_secs(10),
+    )
+    .ok()?;
+    parse_node_major(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn parse_node_major(value: &str) -> Option<u32> {
+    value
+        .trim()
+        .trim_start_matches('v')
+        .split('.')
+        .next()?
+        .parse()
+        .ok()
+}
+
+#[cfg(windows)]
+fn install_node_runtime() -> Result<(), String> {
+    let winget = find_executable("winget").ok_or_else(|| {
+        "자동 설치에 필요한 Windows 앱 설치 관리자(winget)를 찾지 못했습니다. Microsoft Store에서 앱 설치 관리자를 설치한 후 다시 시도하십시오."
+            .to_string()
+    })?;
+    let action = if find_node_executable().is_some() {
+        "upgrade"
+    } else {
+        "install"
+    };
+    let output = run_process(
+        &winget,
+        &[
+            action.to_string(),
+            "--id".to_string(),
+            "OpenJS.NodeJS.LTS".to_string(),
+            "--exact".to_string(),
+            "--silent".to_string(),
+            "--accept-package-agreements".to_string(),
+            "--accept-source-agreements".to_string(),
+            "--disable-interactivity".to_string(),
+        ],
+        None,
+        &std::env::temp_dir(),
+        &subscription_environment(),
+        Duration::from_secs(900),
+    )?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let detail = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Err(format!(
+        "CLI 실행에 필요한 Node.js를 자동으로 설치하지 못했습니다: {}",
+        tail_chars(detail.trim(), 600)
+    ))
+}
+
+#[cfg(not(windows))]
+fn install_node_runtime() -> Result<(), String> {
+    Err("현재 운영체제에서는 Node.js 자동 설치를 지원하지 않습니다.".to_string())
+}
+
+fn gemini_oauth_cache_exists() -> bool {
+    let Some(home) = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME")) else {
+        return false;
+    };
+    let root = PathBuf::from(home).join(".gemini");
+    ["oauth_creds.json", "google_accounts.json"]
+        .iter()
+        .any(|name| root.join(name).is_file())
+}
+
+#[cfg(windows)]
+fn open_cli_login_console(executable: &Path) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+    let mut command = process_command(executable, &[]);
+    command.creation_flags(CREATE_NEW_CONSOLE);
+    command
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("Gemini 로그인 창을 열지 못했습니다: {error}"))
+}
+
+#[cfg(not(windows))]
+fn open_cli_login_console(_executable: &Path) -> Result<(), String> {
+    Err("현재 운영체제에서는 터미널에서 Gemini CLI를 한 번 실행하여 로그인하십시오.".to_string())
+}
+
 impl Translator for SubscriptionCliTranslator {
     fn display_name(&self) -> &str {
         &self.display_name
@@ -286,7 +606,7 @@ impl Translator for SubscriptionCliTranslator {
             .to_lowercase();
             if !output.status.success() || !status.contains("chatgpt") {
                 return Err(
-                    "Codex CLI가 ChatGPT 플랜 로그인 상태가 아니야. API 키 로그인이 아닌 'codex login'을 사용해줘."
+                    "Codex CLI가 ChatGPT 플랜 로그인 상태가 아닙니다. API 키 로그인이 아닌 'codex login'을 사용하십시오."
                         .to_string(),
                 );
             }
@@ -310,7 +630,7 @@ impl Translator for SubscriptionCliTranslator {
             }
             if status.contains("apikey") || status.contains("\"console\"") {
                 return Err(
-                    "Claude Code가 API 결제 계정으로 로그인되어 있어. 로그아웃한 뒤 Claude 플랜 계정으로 다시 로그인해줘."
+                    "Claude Code가 API 결제 계정으로 로그인되어 있습니다. 로그아웃한 후 Claude 플랜 계정으로 다시 로그인하십시오."
                         .to_string(),
                 );
             }
@@ -498,19 +818,19 @@ impl CodexAppServer {
         configure_hidden(&mut command);
         let mut child = command
             .spawn()
-            .map_err(|error| format!("Codex app-server를 시작하지 못했어: {error}"))?;
+            .map_err(|error| format!("Codex app-server를 시작하지 못했습니다: {error}"))?;
         let stdin = child
             .stdin
             .take()
-            .ok_or_else(|| "Codex app-server 입력 연결을 열지 못했어.".to_string())?;
+            .ok_or_else(|| "Codex app-server 입력 연결을 열지 못했습니다.".to_string())?;
         let stdout = child
             .stdout
             .take()
-            .ok_or_else(|| "Codex app-server 출력 연결을 열지 못했어.".to_string())?;
+            .ok_or_else(|| "Codex app-server 출력 연결을 열지 못했습니다.".to_string())?;
         let stderr = child
             .stderr
             .take()
-            .ok_or_else(|| "Codex app-server 오류 연결을 열지 못했어.".to_string())?;
+            .ok_or_else(|| "Codex app-server 오류 연결을 열지 못했습니다.".to_string())?;
         let (sender, receiver) = mpsc::channel();
         thread::spawn(move || {
             for line in BufReader::new(stdout).lines() {
@@ -568,7 +888,7 @@ impl CodexAppServer {
         self.thread_id = response
             .pointer("/thread/id")
             .and_then(Value::as_str)
-            .ok_or_else(|| "Codex app-server가 번역 스레드를 만들지 못했어.".to_string())?
+            .ok_or_else(|| "Codex app-server가 번역 스레드를 만들지 못했습니다.".to_string())?
             .to_string();
         Ok(())
     }
@@ -601,7 +921,7 @@ impl CodexAppServer {
                 .get("result")
                 .filter(|value| value.is_object())
                 .cloned()
-                .ok_or_else(|| "Codex app-server 응답 형식이 올바르지 않아.".to_string());
+                .ok_or_else(|| "Codex app-server 응답 형식이 올바르지 않습니다.".to_string());
         }
     }
 
@@ -669,11 +989,11 @@ fn invoke_codex_once(
         std::process::id()
     ));
     fs::create_dir_all(&temporary)
-        .map_err(|error| format!("Codex 임시 폴더를 만들지 못했어: {error}"))?;
+        .map_err(|error| format!("Codex 임시 폴더를 만들지 못했습니다: {error}"))?;
     let schema_path = temporary.join("schema.json");
     let output_path = temporary.join("response.json");
     fs::write(&schema_path, schema.to_string())
-        .map_err(|error| format!("Codex 응답 스키마를 저장하지 못했어: {error}"))?;
+        .map_err(|error| format!("Codex 응답 스키마를 저장하지 못했습니다: {error}"))?;
     let arguments = vec![
         "exec".to_string(),
         "--ephemeral".to_string(),
@@ -758,7 +1078,7 @@ fn validated_translations(
     let translations = value
         .get("translations")
         .and_then(Value::as_array)
-        .ok_or_else(|| "구독 번역기의 응답에서 translations 배열을 찾지 못했어.".to_string())?;
+        .ok_or_else(|| "구독 번역기의 응답에서 translations 배열을 찾지 못했습니다.".to_string())?;
     let mut results = HashMap::new();
     for item in translations {
         if let (Some(identifier), Some(text)) = (
@@ -773,7 +1093,7 @@ fn validated_translations(
         }
     }
     if results.keys().copied().collect::<HashSet<_>>() != *expected_ids {
-        return Err("구독 번역기가 요청한 문장 수와 다른 결과를 반환했어.".to_string());
+        return Err("구독 번역기가 요청한 문장 수와 다른 결과를 반환했습니다.".to_string());
     }
     Ok(results)
 }
@@ -806,7 +1126,7 @@ fn decode_payload(raw: &str) -> Result<Value, String> {
     let ansi = Regex::new(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])").unwrap();
     let cleaned = ansi.replace_all(raw, "").trim().to_string();
     if cleaned.is_empty() {
-        return Err("구독 번역기가 빈 응답을 반환했어.".to_string());
+        return Err("구독 번역기가 빈 응답을 반환했습니다.".to_string());
     }
     if let Ok(value) = serde_json::from_str(&cleaned) {
         return Ok(value);
@@ -826,19 +1146,19 @@ fn decode_payload(raw: &str) -> Result<Value, String> {
             return Ok(value);
         }
     }
-    Err("구독 번역기의 응답을 JSON으로 읽지 못했어.".to_string())
+    Err("구독 번역기의 응답을 JSON으로 읽지 못했습니다.".to_string())
 }
 
 fn app_server_error(error: &Value) -> String {
     if let Some(message) = error.get("message").and_then(Value::as_str) {
         if !message.trim().is_empty() {
-            return format!("Codex app-server 번역에 실패했어: {}", message.trim());
+            return format!("Codex app-server 번역에 실패했습니다: {}", message.trim());
         }
     }
     if !error.is_null() {
-        return format!("Codex app-server 번역에 실패했어: {error}");
+        return format!("Codex app-server 번역에 실패했습니다: {error}");
     }
-    "Codex app-server 번역에 실패했어.".to_string()
+    "Codex app-server 번역에 실패했습니다.".to_string()
 }
 
 fn raise_for_failure(output: &Output, provider: SubscriptionProvider) -> Result<(), String> {
@@ -857,7 +1177,7 @@ fn raise_for_failure(output: &Output, provider: SubscriptionProvider) -> Result<
         format!(" ({})", detail.trim())
     };
     Err(format!(
-        "{} 번역 실행에 실패했어{suffix}",
+        "{} 번역 실행에 실패했습니다{suffix}",
         provider.display_name()
     ))
 }
@@ -885,22 +1205,22 @@ fn run_process(
     configure_hidden(&mut command);
     let mut child = command
         .spawn()
-        .map_err(|error| format!("구독 번역 CLI를 실행하지 못했어: {error}"))?;
+        .map_err(|error| format!("구독 번역 CLI를 실행하지 못했습니다: {error}"))?;
     if let Some(input) = input {
         if let Some(mut stdin) = child.stdin.take() {
             stdin
                 .write_all(input.as_bytes())
-                .map_err(|error| format!("구독 번역 CLI에 요청을 보내지 못했어: {error}"))?;
+                .map_err(|error| format!("구독 번역 CLI에 요청을 보내지 못했습니다: {error}"))?;
         }
     }
     let mut stdout = child
         .stdout
         .take()
-        .ok_or_else(|| "구독 번역 CLI 출력 연결을 열지 못했어.".to_string())?;
+        .ok_or_else(|| "구독 번역 CLI 출력 연결을 열지 못했습니다.".to_string())?;
     let mut stderr = child
         .stderr
         .take()
-        .ok_or_else(|| "구독 번역 CLI 오류 연결을 열지 못했어.".to_string())?;
+        .ok_or_else(|| "구독 번역 CLI 오류 연결을 열지 못했습니다.".to_string())?;
     let stdout_thread = thread::spawn(move || {
         let mut bytes = Vec::new();
         let _ = stdout.read_to_end(&mut bytes);
@@ -915,7 +1235,7 @@ fn run_process(
     let status = loop {
         if let Some(status) = child
             .try_wait()
-            .map_err(|error| format!("구독 번역 CLI 상태를 확인하지 못했어: {error}"))?
+            .map_err(|error| format!("구독 번역 CLI 상태를 확인하지 못했습니다: {error}"))?
         {
             break status;
         }
@@ -925,7 +1245,7 @@ fn run_process(
             let _ = stdout_thread.join();
             let _ = stderr_thread.join();
             return Err(format!(
-                "구독 번역 응답이 {}초를 넘어 중단했어.",
+                "구독 번역 응답이 {}초를 초과하여 중단했습니다.",
                 timeout.as_secs()
             ));
         }
@@ -1057,11 +1377,18 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        decode_payload, subscription_environment, translation_prompt, validated_translations,
-        SubscriptionCliTranslator,
+        decode_payload, parse_node_major, subscription_environment, translation_prompt,
+        validated_translations, SubscriptionCliTranslator,
     };
     use crate::language::Language;
     use crate::translation::Translator;
+
+    #[test]
+    fn parses_node_version_for_automatic_cli_installation() {
+        assert_eq!(parse_node_major("v22.18.0\r\n"), Some(22));
+        assert_eq!(parse_node_major("20.12.2"), Some(20));
+        assert_eq!(parse_node_major("unknown"), None);
+    }
 
     #[test]
     fn prompt_marks_message_content_as_untrusted() {

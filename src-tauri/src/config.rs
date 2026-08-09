@@ -116,7 +116,7 @@ impl AppConfig {
         if object
             .get("translator")
             .and_then(Value::as_str)
-            .is_some_and(|value| matches!(value, "kanana" | "original"))
+            .is_some_and(|value| matches!(value, "kanana" | "original" | "claude"))
         {
             object.insert(
                 "translator".to_string(),
@@ -151,12 +151,13 @@ impl AppConfig {
             object.insert("ui_theme".to_string(), Value::String("system".to_string()));
         }
 
-        serde_json::from_value(value).map_err(|error| format!("설정 파일을 읽지 못했어: {error}"))
+        serde_json::from_value(value)
+            .map_err(|error| format!("설정 파일을 읽지 못했습니다: {error}"))
     }
 
     pub fn patched(&self, patch: Value) -> Result<Self, String> {
         let mut current = serde_json::to_value(self)
-            .map_err(|error| format!("현재 설정을 변환하지 못했어: {error}"))?;
+            .map_err(|error| format!("현재 설정을 변환하지 못했습니다: {error}"))?;
         merge_patch(&mut current, &patch);
         Self::from_value(current)
     }
@@ -183,7 +184,7 @@ impl ConfigStore {
     pub fn get(&self) -> Result<AppConfig, String> {
         self.value
             .read()
-            .map_err(|_| "설정 읽기 잠금을 열지 못했어.".to_string())
+            .map_err(|_| "설정 읽기 잠금을 열지 못했습니다.".to_string())
             .map(|value| value.clone())
     }
 
@@ -191,7 +192,7 @@ impl ConfigStore {
         let mut value = self
             .value
             .write()
-            .map_err(|_| "설정 쓰기 잠금을 열지 못했어.".to_string())?;
+            .map_err(|_| "설정 쓰기 잠금을 열지 못했습니다.".to_string())?;
         let updated = value.patched(patch)?;
         save_config(&self.path, &updated)?;
         *value = updated.clone();
@@ -203,7 +204,7 @@ impl ConfigStore {
         *self
             .value
             .write()
-            .map_err(|_| "설정 쓰기 잠금을 열지 못했어.".to_string())? = config;
+            .map_err(|_| "설정 쓰기 잠금을 열지 못했습니다.".to_string())? = config;
         Ok(())
     }
 }
@@ -247,7 +248,7 @@ fn load_config(path: &Path) -> Result<AppConfig, String> {
         return Ok(AppConfig::default());
     }
     let bytes = fs::read(path)
-        .map_err(|error| format!("설정 파일을 읽지 못했어 ({}): {error}", path.display()))?;
+        .map_err(|error| format!("설정 파일을 읽지 못했습니다 ({}): {error}", path.display()))?;
     let value = serde_json::from_slice(&bytes)
         .map_err(|error| format!("설정 JSON이 올바르지 않아 ({}): {error}", path.display()))?;
     AppConfig::from_value(value)
@@ -256,13 +257,20 @@ fn load_config(path: &Path) -> Result<AppConfig, String> {
 fn save_config(path: &Path, config: &AppConfig) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| {
-            format!("설정 폴더를 만들지 못했어 ({}): {error}", parent.display())
+            format!(
+                "설정 폴더를 만들지 못했습니다 ({}): {error}",
+                parent.display()
+            )
         })?;
     }
     let bytes = serde_json::to_vec_pretty(config)
-        .map_err(|error| format!("설정을 JSON으로 변환하지 못했어: {error}"))?;
-    fs::write(path, bytes)
-        .map_err(|error| format!("설정 파일을 저장하지 못했어 ({}): {error}", path.display()))
+        .map_err(|error| format!("설정을 JSON으로 변환하지 못했습니다: {error}"))?;
+    fs::write(path, bytes).map_err(|error| {
+        format!(
+            "설정 파일을 저장하지 못했습니다 ({}): {error}",
+            path.display()
+        )
+    })
 }
 
 fn merge_patch(target: &mut Value, patch: &Value) {
@@ -316,6 +324,10 @@ mod tests {
         assert_eq!(restored.ui_theme, "system");
         assert!(restored.keep_local_model_warm);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
+
+        let public_build = AppConfig::from_value(json!({"translator": "claude"}))
+            .expect("Claude subscription config should migrate");
+        assert_eq!(public_build.translator, "hymt_1_8b");
     }
 
     #[test]

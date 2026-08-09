@@ -13,7 +13,10 @@ pub use hymt::{HyMtModelSize, HyMtTranslator};
 pub use mock::{MockTranslator, OriginalTranslator};
 pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::TranslationService;
-pub use subscription_cli::{SubscriptionCliTranslator, SubscriptionProvider};
+pub use subscription_cli::{
+    connect_subscription_interactively, install_subscription_cli, probe_subscription_connection,
+    CliConnectionProbe, SubscriptionCliTranslator, SubscriptionProvider,
+};
 
 pub trait Translator: Send {
     fn display_name(&self) -> &str;

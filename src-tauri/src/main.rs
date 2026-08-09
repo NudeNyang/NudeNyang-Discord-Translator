@@ -3,12 +3,14 @@
 pub mod cache;
 pub mod cdp;
 mod config;
+mod credentials;
 mod discord;
 pub mod dom;
 mod engine;
 pub mod image_translation;
 pub mod language;
 pub mod ocr;
+mod providers;
 pub mod translation;
 mod updater;
 
@@ -116,7 +118,7 @@ fn translation_set_enabled(
         let _ = config.replace(previous_config);
     })?;
     let status = serde_json::to_value(engine.status()?)
-        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했어: {error}"))?;
+        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했습니다: {error}"))?;
     let _ = app.emit("translation-state-changed", status.clone());
     Ok(status)
 }
@@ -128,7 +130,7 @@ fn runtime_status(
     shortcut: State<'_, ShortcutConfig>,
 ) -> Result<Value, String> {
     let mut status = serde_json::to_value(engine.status()?)
-        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했어: {error}"))?;
+        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했습니다: {error}"))?;
     if let Some(object) = status.as_object_mut() {
         let current_config = config.get()?;
         object.insert("enabled".to_string(), Value::Bool(current_config.enabled));
@@ -149,7 +151,7 @@ fn runtime_status(
         let configured = shortcut
             .toggle_translation
             .lock()
-            .map_err(|_| "전역 단축키 설정 잠금을 열지 못했어.".to_string())?
+            .map_err(|_| "전역 단축키 설정 잠금을 열지 못했습니다.".to_string())?
             .clone();
         let polling = shortcut.fallback_virtual_key.load(Ordering::Acquire) != 0;
         object.insert("shortcut".to_string(), Value::String(configured));
@@ -171,7 +173,64 @@ async fn update_check(
         updater::check_for_update(&repository, &current_version)
     })
     .await
-    .map_err(|error| format!("업데이트 확인 작업을 기다리지 못했어: {error}"))?
+    .map_err(|error| format!("업데이트 확인 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn provider_connections_get() -> Result<Vec<providers::ProviderConnection>, String> {
+    tauri::async_runtime::spawn_blocking(providers::list)
+        .await
+        .map_err(|error| format!("번역 서비스 상태 확인을 기다리지 못했습니다: {error}"))
+}
+
+#[tauri::command]
+async fn provider_install(provider: String) -> Result<providers::ProviderConnection, String> {
+    tauri::async_runtime::spawn_blocking(move || providers::install(&provider))
+        .await
+        .map_err(|error| format!("번역 서비스 설치 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn provider_connect(
+    app: AppHandle,
+    engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
+    provider: String,
+    credential: Option<String>,
+) -> Result<providers::ProviderConnection, String> {
+    let provider_for_task = provider.clone();
+    let connection = tauri::async_runtime::spawn_blocking(move || {
+        providers::connect(&provider_for_task, credential.as_deref())
+    })
+    .await
+    .map_err(|error| format!("번역 서비스 연결 작업을 기다리지 못했습니다: {error}"))??;
+
+    if connection.connected {
+        let current = config.get()?;
+        if current.translator == provider {
+            engine.apply_config(current)?;
+        }
+    }
+    let _ = app.emit("provider-connections-changed", ());
+    Ok(connection)
+}
+
+#[tauri::command]
+fn provider_disconnect(
+    app: AppHandle,
+    engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
+    provider: String,
+) -> Result<providers::ProviderConnection, String> {
+    let connection = providers::disconnect(&provider)?;
+    let current = config.get()?;
+    if current.translator == provider {
+        let updated = config.update(json!({"translator": "hymt_1_8b"}))?;
+        engine.apply_config(updated.clone())?;
+        let _ = app.emit("settings-changed", updated);
+    }
+    let _ = app.emit("provider-connections-changed", ());
+    Ok(connection)
 }
 
 #[tauri::command]
@@ -187,7 +246,7 @@ async fn discord_restart(
         Ok::<_, String>(())
     })
     .await
-    .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했어: {error}"))??;
+    .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))??;
     let _ = client.set_enabled(true);
     Ok(json!({"connected": true}))
 }
@@ -218,16 +277,16 @@ fn tray_menu_hide(app: AppHandle) {
 fn tray_menu_set_height(app: AppHandle, height: u32) -> Result<(), String> {
     let window = app
         .get_webview_window("tray-menu")
-        .ok_or_else(|| "트레이 메뉴 창을 찾지 못했어.".to_string())?;
+        .ok_or_else(|| "트레이 메뉴 창을 찾지 못했습니다.".to_string())?;
     let scale = window
         .scale_factor()
-        .map_err(|error| format!("트레이 화면 배율을 확인하지 못했어: {error}"))?;
+        .map_err(|error| format!("트레이 화면 배율을 확인하지 못했습니다: {error}"))?;
     let current_size = window
         .outer_size()
-        .map_err(|error| format!("트레이 메뉴 크기를 확인하지 못했어: {error}"))?;
+        .map_err(|error| format!("트레이 메뉴 크기를 확인하지 못했습니다: {error}"))?;
     let current_position = window
         .outer_position()
-        .map_err(|error| format!("트레이 메뉴 위치를 확인하지 못했어: {error}"))?;
+        .map_err(|error| format!("트레이 메뉴 위치를 확인하지 못했습니다: {error}"))?;
     let physical_height = ((height.clamp(200, 500) as f64) * scale).round() as u32;
     let bottom = current_position.y + current_size.height as i32;
     let next_y = bottom - physical_height as i32;
@@ -236,13 +295,13 @@ fn tray_menu_set_height(app: AppHandle, height: u32) -> Result<(), String> {
             current_size.width,
             physical_height,
         )))
-        .map_err(|error| format!("트레이 메뉴 크기를 바꾸지 못했어: {error}"))?;
+        .map_err(|error| format!("트레이 메뉴 크기를 바꾸지 못했습니다: {error}"))?;
     window
         .set_position(Position::Physical(PhysicalPosition::new(
             current_position.x,
             next_y,
         )))
-        .map_err(|error| format!("트레이 메뉴 위치를 맞추지 못했어: {error}"))?;
+        .map_err(|error| format!("트레이 메뉴 위치를 맞추지 못했습니다: {error}"))?;
     Ok(())
 }
 
@@ -252,16 +311,32 @@ fn tray_open_settings(app: AppHandle) {
 }
 
 #[tauri::command]
+fn tray_open_provider_settings(app: AppHandle, provider: String) {
+    main_window_show(app.clone());
+    let _ = app.emit("focus-provider-connection", provider);
+}
+
+#[tauri::command]
 fn tray_request_translation_toggle(app: AppHandle) {
     let _ = app.emit("request-translation-toggle", ());
 }
 
 #[tauri::command]
 fn application_exit(app: AppHandle) {
-    app.state::<LifecycleState>()
-        .exiting
-        .store(true, Ordering::Release);
+    shutdown_translation(&app);
     app.exit(0);
+}
+
+fn shutdown_translation(app: &AppHandle) {
+    let lifecycle = app.state::<LifecycleState>();
+    if lifecycle.exiting.swap(true, Ordering::AcqRel) {
+        return;
+    }
+    let engine = app.state::<RustEngine>();
+    let _ = engine.set_enabled(false);
+    let config = app.state::<ConfigStore>();
+    let _ = config.update(json!({"enabled": false}));
+    engine.stop();
 }
 
 fn hide_tray_menu(app: &AppHandle) {
@@ -338,7 +413,7 @@ fn replace_toggle_shortcut(app: &AppHandle, next: &str) -> Result<String, String
     let mut current = shortcut_state
         .toggle_translation
         .lock()
-        .map_err(|_| "전역 단축키 설정 잠금을 열지 못했어.".to_string())?;
+        .map_err(|_| "전역 단축키 설정 잠금을 열지 못했습니다.".to_string())?;
     let fallback_key = if cfg!(windows) {
         fallback_function_key(next)
     } else {
@@ -355,13 +430,13 @@ fn replace_toggle_shortcut(app: &AppHandle, next: &str) -> Result<String, String
     let registered = app.global_shortcut().register(next);
     if let Err(error) = registered {
         let Some(virtual_key) = fallback_key else {
-            return Err(format!("{next} 전역 단축키를 등록하지 못했어: {error}"));
+            return Err(format!("{next} 전역 단축키를 등록하지 못했습니다: {error}"));
         };
         if app.global_shortcut().is_registered(previous.as_str()) {
             app.global_shortcut()
                 .unregister(previous.as_str())
                 .map_err(|unregister_error| {
-                    format!("기존 {previous} 단축키를 해제하지 못했어: {unregister_error}")
+                    format!("기존 {previous} 단축키를 해제하지 못했습니다: {unregister_error}")
                 })?;
         }
         shortcut_state
@@ -373,7 +448,9 @@ fn replace_toggle_shortcut(app: &AppHandle, next: &str) -> Result<String, String
     if app.global_shortcut().is_registered(previous.as_str()) {
         if let Err(error) = app.global_shortcut().unregister(previous.as_str()) {
             let _ = app.global_shortcut().unregister(next);
-            return Err(format!("기존 {previous} 단축키를 해제하지 못했어: {error}"));
+            return Err(format!(
+                "기존 {previous} 단축키를 해제하지 못했습니다: {error}"
+            ));
         }
     }
     shortcut_state
@@ -456,12 +533,11 @@ fn create_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 fn main() {
-    let config = ConfigStore::load_default().expect("Nude Translator 설정을 읽지 못했어");
+    let config = ConfigStore::load_default().expect("Nude Translator 설정을 읽지 못했습니다");
     let initial_config = config
         .get()
-        .expect("Nude Translator 초기 설정을 읽지 못했어");
+        .expect("Nude Translator 초기 설정을 읽지 못했습니다");
     let engine = RustEngine::start(initial_config);
-    let shutdown_engine = engine.clone();
     let app = tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -521,21 +597,28 @@ fn main() {
             translation_set_enabled,
             runtime_status,
             update_check,
+            provider_connections_get,
+            provider_install,
+            provider_connect,
+            provider_disconnect,
             discord_restart,
             main_window_show,
             main_window_hide,
             tray_menu_hide,
             tray_menu_set_height,
             tray_open_settings,
+            tray_open_provider_settings,
             tray_request_translation_toggle,
             application_exit
         ])
         .build(tauri::generate_context!())
-        .expect("Nude Translator Tauri 앱을 만들지 못했어");
-    app.run(move |_handle, event| {
-        if matches!(event, tauri::RunEvent::Exit) {
-            shutdown_engine.stop();
+        .expect("Nude Translator Tauri 앱을 만들지 못했습니다");
+    app.run(move |handle, event| match event {
+        tauri::RunEvent::ExitRequested { .. } => shutdown_translation(handle),
+        tauri::RunEvent::Exit => {
+            handle.state::<RustEngine>().stop();
         }
+        _ => {}
     });
 }
 
