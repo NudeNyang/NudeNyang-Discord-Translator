@@ -4,6 +4,7 @@ pub mod cache;
 pub mod cdp;
 mod config;
 mod credentials;
+pub mod diagnostics;
 mod discord;
 pub mod dom;
 mod engine;
@@ -27,6 +28,7 @@ use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WindowEvent,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use tauri_plugin_opener::OpenerExt;
 
 use config::{AppConfig, ConfigStore};
 use engine::RustEngine;
@@ -511,12 +513,35 @@ fn runtime_status(
 
 #[tauri::command]
 async fn update_check(app: AppHandle) -> Result<Value, String> {
-    updater::check_for_update(&app).await
+    let result = updater::check_for_update(&app).await;
+    if let Err(error) = &result {
+        diagnostics::error("updater", error);
+    }
+    result
 }
 
 #[tauri::command]
 async fn update_install(app: AppHandle) -> Result<Value, String> {
-    updater::install_update(app).await
+    let result = updater::install_update(app).await;
+    if let Err(error) = &result {
+        diagnostics::error("updater", error);
+    }
+    result
+}
+
+#[tauri::command]
+fn diagnostic_log_reveal(app: AppHandle) -> Result<String, String> {
+    let path = diagnostics::log_path();
+    diagnostics::info("application", "diagnostic log revealed by user");
+    app.opener()
+        .reveal_item_in_dir(&path)
+        .map_err(|error| format!("진단 로그 파일 위치를 열지 못했습니다: {error}"))?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn diagnostic_log_write(level: String, component: String, message: String) {
+    diagnostics::record(&level, &component, &message);
 }
 
 #[tauri::command]
@@ -727,6 +752,7 @@ fn tray_request_translation_toggle(app: AppHandle) {
 
 #[tauri::command]
 fn application_exit(app: AppHandle) {
+    diagnostics::info("application", "application exit requested");
     shutdown_translation(&app);
     app.exit(0);
 }
@@ -923,10 +949,10 @@ fn start_fallback_shortcut_poller(_app: AppHandle) {}
 
 fn create_tray(app: &tauri::App) -> tauri::Result<()> {
     TrayIconBuilder::with_id("nude-translator")
-        .tooltip("Nude Translator")
+        .tooltip("NudeNyang Translator")
         .icon(
             app.default_window_icon()
-                .expect("Nude Translator 아이콘이 필요해")
+                .expect("NudeNyang Translator 아이콘이 필요해")
                 .clone(),
         )
         .on_tray_icon_event(|tray, event| {
@@ -949,10 +975,11 @@ fn create_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 fn main() {
-    let config = ConfigStore::load_default().expect("Nude Translator 설정을 읽지 못했습니다");
+    let _ = diagnostics::initialize(env!("CARGO_PKG_VERSION"));
+    let config = ConfigStore::load_default().expect("NudeNyang Translator 설정을 읽지 못했습니다");
     let initial_config = config
         .get()
-        .expect("Nude Translator 초기 설정을 읽지 못했습니다");
+        .expect("NudeNyang Translator 초기 설정을 읽지 못했습니다");
     let engine = RustEngine::start(initial_config);
     let app = tauri::Builder::default()
         .plugin(
@@ -1036,6 +1063,8 @@ fn main() {
             runtime_status,
             update_check,
             update_install,
+            diagnostic_log_reveal,
+            diagnostic_log_write,
             provider_connections_get,
             provider_install,
             provider_connect,
@@ -1053,7 +1082,7 @@ fn main() {
             application_exit
         ])
         .build(tauri::generate_context!())
-        .expect("Nude Translator Tauri 앱을 만들지 못했습니다");
+        .expect("NudeNyang Translator Tauri 앱을 만들지 못했습니다");
     app.run(move |handle, event| match event {
         tauri::RunEvent::ExitRequested { .. } => shutdown_translation(handle),
         tauri::RunEvent::Exit => {

@@ -2,7 +2,7 @@
 
 ## 결정과 완료 상태
 
-Nude Translator의 기본 앱과 엔진을 Tauri 2 + Rust로 통합한다. Python/PySide6/PaddleOCR
+NudeNyang Translator의 기본 앱과 엔진을 Tauri 2 + Rust로 통합한다. Python/PySide6/PaddleOCR
 구현은 새 배포에서 제거하고 Git 이력으로만 보존한다. 전환 전 하이브리드 기준점은 커밋
 `6d3839d`이며 작업 브랜치는 `feature/full-rust-engine`이다.
 

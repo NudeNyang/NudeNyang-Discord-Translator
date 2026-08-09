@@ -86,7 +86,7 @@ test("DeepL API keys are replaced through the main save action", () => {
   assert.match(providers, /API 키가 운영체제 보안 저장소에 저장되어 있습니다/);
 });
 
-test("subscription CLI disconnect only disables the provider inside Nude Translator", () => {
+test("subscription CLI disconnect only disables the provider inside NudeNyang Translator", () => {
   for (const provider of ["chatgpt", "claude", "gemini"]) {
     const row = markup.match(new RegExp(`<article class="provider-row" data-provider="${provider}">[\\s\\S]*?<\\/article>`))?.[0] || "";
     assert.match(row, /provider-disconnect/);
@@ -94,7 +94,7 @@ test("subscription CLI disconnect only disables the provider inside Nude Transla
   assert.match(config, /disabled_providers/);
   assert.match(providers, /CLI 로그인 정보는 유지/);
   assert.match(providers, /state:\s*if disabled\s*\{\s*"disabled"/);
-  assert.match(script, /Nude Translator에서만 사용을 중지합니다/);
+  assert.match(script, /NudeNyang Translator에서만 사용을 중지합니다/);
   assert.match(script, /provider === "deepl"/);
   assert.match(rustMain, /"disabled_providers"/);
   assert.match(rustMain, /patch\["translator"\]\s*=\s*json!\("hymt_1_8b"\)/);

@@ -1,8 +1,8 @@
-# Nude Translator
+# NudeNyang Translator
 
 제품 내 사용자 노출 문구의 작성 기준은 [제품 문체 원칙](PRODUCT_LANGUAGE.md)을 따릅니다.
 
-Nude Translator는 Windows 10/11의 Discord 화면을 한국어·일본어·영어·중국어로 바꿔
+NudeNyang Translator는 Windows 10/11의 Discord 화면을 한국어·일본어·영어·중국어로 바꿔
 표시하는 Tauri 2 + Rust 데스크톱 앱이다. Discord API, 사용자 토큰, self-bot을 사용하지
 않고 원격 디버깅 포트로 현재 렌더러의 DOM만 변경한다.
 
@@ -102,6 +102,14 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
 업데이트 서명 키와 베타 토큰, 친구용 최초 설치 링크는 저장소 밖의
 `%LOCALAPPDATA%\NudeTranslator\secrets`에만 저장한다. 다음 베타에서는 앱 버전을 올린 뒤
 패키징과 배포 스크립트만 다시 실행한다.
+
+## 진단 로그
+
+앱과 번역 엔진에서 발생한 오류는 Windows의
+`%LOCALAPPDATA%\NudeNyang Translator\NudeNyangTranslator.log` 한 파일에 기록한다. 설정의
+`앱 정보 > 로그 파일 찾기`를 누르면 탐색기에서 바로 선택된다. 로그는 최대 5MB로 유지하며
+이전 기록을 별도 파일로 회전하지 않는다. 사용자 홈 경로, API 키, 토큰, 비밀번호는 기록 전에
+가리고 번역할 메시지 본문과 Hy-MT2 프롬프트는 기록하지 않는다.
 
 ## 문서
 

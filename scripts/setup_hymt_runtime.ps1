@@ -16,4 +16,4 @@ if ($LASTEXITCODE -ne 0) {
     throw "llama.cpp 설치에 실패했습니다(exit code: $LASTEXITCODE)."
 }
 
-Write-Host "설치가 완료되었습니다. 실행 중인 Nude Translator를 완전히 종료한 후 다시 실행하십시오."
+Write-Host "설치가 완료되었습니다. 실행 중인 NudeNyang Translator를 완전히 종료한 후 다시 실행하십시오."

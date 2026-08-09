@@ -5,9 +5,21 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection};
+use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
 type CacheKey = (String, String, String);
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct OutgoingOriginalRecord {
+    pub message_id: String,
+    pub channel_key: String,
+    pub original_text: String,
+    pub sent_text: String,
+    pub part_number: usize,
+    pub total_parts: usize,
+    pub created_at: f64,
+}
 
 #[derive(Clone, Debug)]
 struct CacheEntry {
@@ -334,6 +346,89 @@ impl TranslationCache {
             .map(|memory| memory.entries.contains_key(&key))
     }
 
+    pub fn put_outgoing_original(&self, record: &OutgoingOriginalRecord) -> Result<(), String> {
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| "보낸 메시지 원문 저장소 잠금을 열지 못했습니다.".to_string())?;
+        connection
+            .execute(
+                "INSERT INTO outgoing_originals \
+                 (message_id, channel_key, original_text, sent_text, part_number, total_parts, created_at) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) \
+                 ON CONFLICT(channel_key, message_id) DO UPDATE SET \
+                   original_text=excluded.original_text, \
+                   sent_text=excluded.sent_text, \
+                   part_number=excluded.part_number, \
+                   total_parts=excluded.total_parts, \
+                   created_at=excluded.created_at",
+                params![
+                    record.message_id,
+                    record.channel_key,
+                    record.original_text,
+                    record.sent_text,
+                    record.part_number,
+                    record.total_parts,
+                    record.created_at,
+                ],
+            )
+            .map_err(|error| format!("보낸 메시지 원문을 저장하지 못했습니다: {error}"))?;
+        connection
+            .execute(
+                "DELETE FROM outgoing_originals WHERE created_at < ?1",
+                params![now_seconds() - 30.0 * 24.0 * 60.0 * 60.0],
+            )
+            .map_err(|error| format!("오래된 보낸 메시지 원문을 정리하지 못했습니다: {error}"))?;
+        connection
+            .execute(
+                "DELETE FROM outgoing_originals WHERE rowid NOT IN (\
+                   SELECT rowid FROM outgoing_originals ORDER BY created_at DESC LIMIT 2000\
+                 )",
+                [],
+            )
+            .map_err(|error| {
+                format!("보낸 메시지 원문 저장 한도를 적용하지 못했습니다: {error}")
+            })?;
+        Ok(())
+    }
+
+    pub fn outgoing_originals_for_channel(
+        &self,
+        channel_key: &str,
+        limit: usize,
+    ) -> Result<Vec<OutgoingOriginalRecord>, String> {
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| "보낸 메시지 원문 저장소 잠금을 열지 못했습니다.".to_string())?;
+        let mut statement = connection
+            .prepare(
+                "SELECT message_id, channel_key, original_text, sent_text, \
+                        part_number, total_parts, created_at \
+                 FROM outgoing_originals \
+                 WHERE channel_key=?1 \
+                 ORDER BY created_at DESC LIMIT ?2",
+            )
+            .map_err(|error| format!("보낸 메시지 원문 조회를 준비하지 못했습니다: {error}"))?;
+        let rows = statement
+            .query_map(params![channel_key, limit], |row| {
+                Ok(OutgoingOriginalRecord {
+                    message_id: row.get(0)?,
+                    channel_key: row.get(1)?,
+                    original_text: row.get(2)?,
+                    sent_text: row.get(3)?,
+                    part_number: row.get(4)?,
+                    total_parts: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            })
+            .map_err(|error| format!("보낸 메시지 원문을 조회하지 못했습니다: {error}"))?;
+        rows.map(|row| {
+            row.map_err(|error| format!("보낸 메시지 원문 행을 읽지 못했습니다: {error}"))
+        })
+        .collect()
+    }
+
     fn remember(&self, entry: CacheEntry) -> Result<(), String> {
         self.memory
             .lock()
@@ -355,6 +450,16 @@ fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
                translated_text TEXT NOT NULL,\
                updated_at REAL NOT NULL,\
                PRIMARY KEY (source_hash, target_language, translator)\
+             );\
+             CREATE TABLE IF NOT EXISTS outgoing_originals (\
+               message_id TEXT NOT NULL,\
+               channel_key TEXT NOT NULL,\
+               original_text TEXT NOT NULL,\
+               sent_text TEXT NOT NULL,\
+               part_number INTEGER NOT NULL DEFAULT 1,\
+               total_parts INTEGER NOT NULL DEFAULT 1,\
+               created_at REAL NOT NULL,\
+               PRIMARY KEY (channel_key, message_id)\
              );",
         )
         .map_err(|error| format!("번역 캐시 테이블을 만들지 못했습니다: {error}"))?;
@@ -500,7 +605,7 @@ impl<T> OptionalRow<T> for rusqlite::Result<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::TranslationCache;
+    use super::{OutgoingOriginalRecord, TranslationCache};
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -595,6 +700,32 @@ mod tests {
         assert!(cache.memory_contains("a", "ko", "test:v1").unwrap());
         assert!(cache.memory_contains("c", "ko", "test:v1").unwrap());
         assert!(!cache.memory_contains("b", "ko", "test:v1").unwrap());
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn outgoing_originals_survive_reopening_the_sqlite_cache() {
+        let path = temporary_cache_path("outgoing-original");
+        let record = OutgoingOriginalRecord {
+            message_id: "123456789".to_string(),
+            channel_key: "/channels/1/2".to_string(),
+            original_text: "오늘은 조금 늦을 것 같아".to_string(),
+            sent_text: "I think I'll be a little late today".to_string(),
+            part_number: 1,
+            total_parts: 1,
+            created_at: super::now_seconds(),
+        };
+        {
+            let cache = TranslationCache::open(path.clone(), 8).unwrap();
+            cache.put_outgoing_original(&record).unwrap();
+        }
+
+        let reopened = TranslationCache::open(path.clone(), 8).unwrap();
+        let loaded = reopened
+            .outgoing_originals_for_channel("/channels/1/2", 20)
+            .unwrap();
+
+        assert_eq!(loaded, vec![record]);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 }

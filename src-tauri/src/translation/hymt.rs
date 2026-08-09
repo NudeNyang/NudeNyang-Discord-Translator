@@ -164,26 +164,10 @@ impl HyMtTranslator {
                     .to_string()
             })?;
         self.port = free_tcp_port()?;
-        let log_path = default_server_log_path(self.model);
-        if let Some(parent) = log_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|error| format!("Hy-MT2 로그 폴더를 만들지 못했습니다: {error}"))?;
-        }
+        let log_path = crate::diagnostics::log_path();
         let attempts = startup_device_attempts(&self.device);
         for (index, attempt) in attempts.iter().enumerate() {
-            let log = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&log_path)
-                .map_err(|error| format!("Hy-MT2 로그 파일을 열지 못했습니다: {error}"))?;
-            let mut marker = log
-                .try_clone()
-                .map_err(|error| format!("Hy-MT2 로그 파일을 복제하지 못했습니다: {error}"))?;
-            writeln!(marker, "\n[Nude Translator] Hy-MT2 {} 모드 시작", attempt)
-                .map_err(|error| format!("Hy-MT2 로그를 기록하지 못했습니다: {error}"))?;
-            let stderr = log
-                .try_clone()
-                .map_err(|error| format!("Hy-MT2 로그 파일을 복제하지 못했습니다: {error}"))?;
+            crate::diagnostics::info("hy-mt2", &format!("server start; mode={attempt}"));
             let mut command = Command::new(&executable);
             command.args([
                 "--model",
@@ -207,18 +191,23 @@ impl HyMtTranslator {
             command
                 .arg("--no-webui")
                 .stdin(Stdio::null())
-                .stdout(Stdio::from(log))
-                .stderr(Stdio::from(stderr));
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
             #[cfg(windows)]
             {
                 use std::os::windows::process::CommandExt;
                 command.creation_flags(CREATE_NO_WINDOW);
             }
-            self.process = Some(
-                command
-                    .spawn()
-                    .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했습니다: {error}"))?,
-            );
+            let mut child = command
+                .spawn()
+                .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했습니다: {error}"))?;
+            if let Some(stdout) = child.stdout.take() {
+                crate::diagnostics::pipe_external_output(stdout, "hy-mt2-server");
+            }
+            if let Some(stderr) = child.stderr.take() {
+                crate::diagnostics::pipe_external_output(stderr, "hy-mt2-server");
+            }
+            self.process = Some(child);
             let deadline = Instant::now() + self.startup_timeout;
             while Instant::now() < deadline {
                 if let Some(status) = self
@@ -228,18 +217,10 @@ impl HyMtTranslator {
                 {
                     self.process = None;
                     if index + 1 < attempts.len() {
-                        let mut log = OpenOptions::new()
-                            .create(true)
-                            .append(true)
-                            .open(&log_path)
-                            .map_err(|error| {
-                                format!("Hy-MT2 로그 파일을 열지 못했습니다: {error}")
-                            })?;
-                        writeln!(
-                            log,
-                            "[Nude Translator] GPU 서버가 종료되어 CPU 모드로 다시 시작합니다. 종료 상태: {status}"
-                        )
-                        .map_err(|error| format!("Hy-MT2 로그를 기록하지 못했습니다: {error}"))?;
+                        crate::diagnostics::warn(
+                            "hy-mt2",
+                            &format!("GPU server exited; retrying with CPU; status={status}"),
+                        );
                         break;
                     }
                     return Err(format!(
@@ -791,10 +772,6 @@ fn bundled_model_path(model: HyMtModel) -> Option<PathBuf> {
         }
     }
     None
-}
-
-fn default_server_log_path(model: HyMtModel) -> PathBuf {
-    default_cache_root().join(format!("hy-mt2-{}-server.log", model.key))
 }
 
 pub fn find_llama_server() -> Option<PathBuf> {

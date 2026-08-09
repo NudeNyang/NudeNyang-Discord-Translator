@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use crate::cache::OutgoingOriginalRecord;
 use crate::language::{detect_explicit_language, Language};
 
 const OUTGOING_UI_SCRIPT: &str = r####"
@@ -11,7 +12,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 5;
+  const CONTROLLER_VERSION = 6;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const languageLabels = {auto:'자동 감지',ko:'한국어',ja:'日本語',en:'English',zh:'简体中文','zh-Hant':'繁體中文'};
   const storageKey = key => `nude-translator:outgoing-language:${key}`;
@@ -61,6 +62,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   }
   function composerText(editor) {
     return (editor.innerText || editor.textContent || '').replace(/\u00a0/g, ' ').trim();
+  }
+  function discordMessageId(root) {
+    const prefix = 'message-content-';
+    return root?.id?.startsWith(prefix) ? root.id.slice(prefix.length) : '';
   }
   function makeButton(text, action, value = '') {
     const button = document.createElement('button');
@@ -116,6 +121,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       enabled: false,
       queue: [],
       pending: new Map(),
+      sent: [],
+      bindings: [],
       sequence: 0,
       bypass: 0,
       activeRequest: '',
@@ -237,6 +244,40 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           }
         }
       },
+      reconcileSent() {
+        const now = Date.now();
+        const roots = [...document.querySelectorAll('[id^="message-content-"]')]
+          .filter(root => !root.closest('[id^="message-reply-context-"]'));
+        const remaining = [];
+        for (const item of this.sent) {
+          if (now - item.created_at >= 60000) continue;
+          if (item.channel_key !== currentChannelKey()) {
+            remaining.push(item);
+            continue;
+          }
+          const root = roots.slice().reverse().find(candidate => {
+            const messageId = discordMessageId(candidate);
+            if (!messageId || item.existing_message_ids.includes(messageId)) return false;
+            return originalText(candidate).trim() === item.sent_text;
+          });
+          if (!root) {
+            remaining.push(item);
+            continue;
+          }
+          const binding = {
+            message_id: discordMessageId(root),
+            channel_key: item.channel_key,
+            original_text: item.original_text,
+            sent_text: item.sent_text,
+            part_number: item.part_number,
+            total_parts: item.total_parts,
+            created_at: Date.now() / 1000,
+          };
+          this.bindings.push(binding);
+          window.__nudeTranslatorRegisterOutgoingOriginal?.(binding);
+        }
+        this.sent = remaining;
+      },
       keydown(event) {
         if (!this.enabled || event.key !== 'Enter' || event.shiftKey || event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
         const editor = event.target.closest?.(composerSelector);
@@ -246,6 +287,20 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const activeId = this.activeRequest;
           const activeItem = activeId ? this.pending.get(activeId) : null;
           const keepAfterSend = Boolean(activeItem?.keep_after_send);
+          const sentText = composerText(editor);
+          if (activeItem && sentText) {
+            this.sent.push({
+              channel_key: activeItem.channel_key,
+              original_text: activeItem.text,
+              sent_text: sentText,
+              part_number: activeItem.part_number || 1,
+              total_parts: activeItem.total_parts || 1,
+              existing_message_ids: [...document.querySelectorAll('[id^="message-content-"]')]
+                .map(discordMessageId)
+                .filter(Boolean),
+              created_at: Date.now(),
+            });
+          }
           if (activeItem) activeItem.keep_after_send = false;
           if (activeId && !keepAfterSend) this.pending.delete(activeId);
           this.activeRequest = '';
@@ -304,6 +359,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           selection.addRange(range);
         }
         item.keep_after_send = !finalPart;
+        item.part_number = partNumber;
+        item.total_parts = totalParts;
         this.activeRequest = id;
         this.bypass += 1;
         if (totalParts > 1) this.setStatus(`번역문을 분할 전송하고 있습니다. (${partNumber}/${totalParts})`);
@@ -374,6 +431,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   controller.root = ensureRoot(controller);
   controller.root.hidden = !enabled;
   controller.prunePending();
+  controller.reconcileSent();
+  window.__nudeTranslatorApplyOutgoingOriginals?.();
   controller.updateLabel();
   return enabled ? controller.queue.splice(0, 8).map(item => {
     const {editor, ...plain} = item;
@@ -391,6 +450,113 @@ pub const OUTGOING_CLEANUP_SCRIPT: &str = r#"
   delete window.__nudeTranslatorOutgoing;
 })()
 "#;
+
+pub const OUTGOING_BINDINGS_SCRIPT: &str = r#"
+(() => {
+  const controller = window.__nudeTranslatorOutgoing;
+  return controller?.bindings?.splice(0, 32) || [];
+})()
+"#;
+
+const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
+(() => {
+  const channelKey = __CHANNEL_KEY__;
+  const records = __RECORDS__;
+  const GLOBAL = '__nudeTranslatorOutgoingOriginalDisplay';
+  const STYLE_ID = 'nt-outgoing-original-style';
+  const VERSION = 1;
+  const messageId = root => root?.id?.startsWith('message-content-')
+    ? root.id.slice('message-content-'.length) : '';
+  const recordKey = record => `${record.channel_key}|${record.message_id}`;
+  function ensureStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      .nt-outgoing-original-view{display:flex;align-items:flex-start;gap:8px;max-width:100%;white-space:pre-wrap;color:var(--text-normal,#dbdee1)}
+      .nt-outgoing-original-copy{min-width:0;overflow-wrap:anywhere}
+      .nt-outgoing-original-label{margin-right:6px;color:var(--text-muted,#949ba4);font-size:11px;font-weight:650}
+      .nt-outgoing-original-toggle{flex:none;margin-top:1px;padding:1px 5px;border:0;border-radius:4px;background:transparent;color:var(--text-link,#00a8fc);font:inherit;font-size:11px;cursor:pointer}
+      .nt-outgoing-original-toggle:hover{background:var(--background-modifier-hover,#ffffff0f)}
+    `;
+    document.head.append(style);
+  }
+  function restoreSentText(root, record) {
+    const originals = window.__nudeTranslatorOriginals;
+    if (originals instanceof Map) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!originals.has(node)) continue;
+        node.nodeValue = originals.get(node);
+        originals.delete(node);
+      }
+    }
+    const current = (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (current !== record.sent_text) root.textContent = record.sent_text;
+  }
+  function ensureView(root, record) {
+    let view = root.nextElementSibling;
+    if (view?.getAttribute('data-nt-outgoing-original-view') !== record.message_id) {
+      view = document.createElement('div');
+      view.className = 'nt-outgoing-original-view';
+      view.setAttribute('data-nt-outgoing-original-view', record.message_id);
+      view.innerHTML = '<div class="nt-outgoing-original-copy"><span class="nt-outgoing-original-label">입력 원문</span><span class="nt-outgoing-original-text"></span></div><button type="button" class="nt-outgoing-original-toggle"></button>';
+      root.insertAdjacentElement('afterend', view);
+    }
+    view.querySelector('.nt-outgoing-original-text').textContent = record.original_text;
+    const button = view.querySelector('.nt-outgoing-original-toggle');
+    const originalText = view.querySelector('.nt-outgoing-original-copy');
+    const showSent = view.dataset.mode === 'sent' || record.part_number > 1;
+    root.style.display = showSent ? '' : 'none';
+    originalText.hidden = showSent;
+    button.textContent = showSent ? '원문 보기' : '전송문 보기';
+    if (button.dataset.bound !== 'true') {
+      button.dataset.bound = 'true';
+      button.addEventListener('click', () => {
+        view.dataset.mode = view.dataset.mode === 'sent' ? 'original' : 'sent';
+        const sent = view.dataset.mode === 'sent';
+        root.style.display = sent ? '' : 'none';
+        originalText.hidden = sent;
+        button.textContent = sent ? '원문 보기' : '전송문 보기';
+      });
+    }
+  }
+
+  let manager = window[GLOBAL];
+  if (!manager || manager.version !== VERSION) {
+    manager = {
+      version: VERSION,
+      records: new Map(),
+      register(record) {
+        if (!record?.message_id || !record?.channel_key) return;
+        this.records.set(recordKey(record), record);
+        this.apply();
+      },
+      apply() {
+        ensureStyle();
+        const currentChannel = location.pathname.startsWith('/channels/') ? location.pathname : '';
+        for (const root of document.querySelectorAll('[id^="message-content-"]')) {
+          if (root.closest('[id^="message-reply-context-"]')) continue;
+          const record = this.records.get(`${currentChannel}|${messageId(root)}`);
+          if (!record) continue;
+          root.setAttribute('data-nt-outgoing-original', 'true');
+          restoreSentText(root, record);
+          ensureView(root, record);
+        }
+      },
+    };
+    window[GLOBAL] = manager;
+  }
+  manager.records.clear();
+  for (const record of records) manager.records.set(recordKey(record), record);
+  window.__nudeTranslatorRegisterOutgoingOriginal = record => manager.register(record);
+  window.__nudeTranslatorApplyOutgoingOriginals = () => manager.apply();
+  window.__nudeTranslatorOutgoingOriginalsReady = channelKey;
+  manager.apply();
+  return manager.records.size;
+})()
+"####;
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct OutgoingRequest {
@@ -422,6 +588,24 @@ pub fn outgoing_ui_script(enabled: bool, default_language: &str) -> String {
 pub fn parse_outgoing_requests(value: Value) -> Result<Vec<OutgoingRequest>, String> {
     serde_json::from_value(value)
         .map_err(|error| format!("보내는 메시지 번역 요청을 읽지 못했습니다: {error}"))
+}
+
+pub fn parse_outgoing_bindings(value: Value) -> Result<Vec<OutgoingOriginalRecord>, String> {
+    serde_json::from_value(value)
+        .map_err(|error| format!("보낸 메시지 원문 연결 정보를 읽지 못했습니다: {error}"))
+}
+
+pub fn outgoing_originals_ui_script(
+    channel_key: &str,
+    records: &[OutgoingOriginalRecord],
+) -> Result<String, String> {
+    let channel_key = serde_json::to_string(channel_key)
+        .map_err(|error| format!("Discord 채널 식별자를 인코딩하지 못했습니다: {error}"))?;
+    let records = serde_json::to_string(records)
+        .map_err(|error| format!("보낸 메시지 원문 목록을 인코딩하지 못했습니다: {error}"))?;
+    Ok(OUTGOING_ORIGINALS_UI_SCRIPT
+        .replace("__CHANNEL_KEY__", &channel_key)
+        .replace("__RECORDS__", &records))
 }
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
@@ -526,10 +710,12 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        apply_outgoing_suggestion_script, attach_outgoing_text_file_script, outgoing_ui_script,
+        apply_outgoing_suggestion_script, attach_outgoing_text_file_script,
+        outgoing_originals_ui_script, outgoing_ui_script, parse_outgoing_bindings,
         parse_outgoing_requests, prepare_outgoing_attachment_script, prepare_outgoing_send_script,
-        suggest_recent_language, OUTGOING_CLEANUP_SCRIPT,
+        suggest_recent_language, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
     };
+    use crate::cache::OutgoingOriginalRecord;
     use crate::cdp::{discord_target, CdpClient};
     use crate::language::Language;
 
@@ -601,6 +787,38 @@ mod tests {
         assert!(attach.contains("attachTextFile"));
         assert!(attach.contains("\\n"));
         assert!(attach.contains("</script>"));
+    }
+
+    #[test]
+    fn outgoing_original_bindings_are_parsed_and_rendered_safely() {
+        let records = parse_outgoing_bindings(json!([{
+            "message_id": "123",
+            "channel_key": "/channels/1/2",
+            "original_text": "오늘은 `조금` 늦어 </script>",
+            "sent_text": "I'll be a little late",
+            "part_number": 1,
+            "total_parts": 1,
+            "created_at": 42.0
+        }]))
+        .unwrap();
+        let script = outgoing_originals_ui_script("/channels/1/2", &records).unwrap();
+
+        assert_eq!(
+            records,
+            vec![OutgoingOriginalRecord {
+                message_id: "123".to_string(),
+                channel_key: "/channels/1/2".to_string(),
+                original_text: "오늘은 `조금` 늦어 </script>".to_string(),
+                sent_text: "I'll be a little late".to_string(),
+                part_number: 1,
+                total_parts: 1,
+                created_at: 42.0,
+            }]
+        );
+        assert!(script.contains("전송문 보기"));
+        assert!(script.contains("원문 보기"));
+        assert!(script.contains("data-nt-outgoing-original"));
+        assert!(OUTGOING_BINDINGS_SCRIPT.contains("bindings"));
     }
 
     #[test]
@@ -830,8 +1048,12 @@ mod tests {
         let content = "번역문 첫 줄\n번역문 마지막 줄";
         let attached = client
             .evaluate(
-                &attach_outgoing_text_file_script(request_id, content, "NudeTranslator-test.txt")
-                    .expect("attach script"),
+                &attach_outgoing_text_file_script(
+                    request_id,
+                    content,
+                    "NudeNyangTranslator-test.txt",
+                )
+                .expect("attach script"),
                 false,
             )
             .expect("attach translated text file");
@@ -842,7 +1064,10 @@ mod tests {
                 true,
             )
             .expect("read attached file");
-        assert_eq!(result["name"].as_str(), Some("NudeTranslator-test.txt"));
+        assert_eq!(
+            result["name"].as_str(),
+            Some("NudeNyangTranslator-test.txt")
+        );
         assert_eq!(result["content"].as_str(), Some(content));
         assert_eq!(result["editor"].as_str(), Some(""));
         assert_eq!(result["pending"].as_u64(), Some(1));

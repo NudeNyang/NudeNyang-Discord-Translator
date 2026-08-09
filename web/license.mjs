@@ -677,7 +677,7 @@ Public License instead of this License.  But first, please read
 
 export const THIRD_PARTY_NOTICES_TEXT = `# Third-party notices
 
-Nude Translator 자체 소스와 구성요소는 \`GPL-3.0-only\`로 배포한다. 이 라이선스는 아래
+NudeNyang Translator 자체 소스와 구성요소는 \`GPL-3.0-only\`로 배포한다. 이 라이선스는 아래
 제3자 구성요소의 별도 라이선스와 저작권을 대체하지 않는다.
 
 ## Hy-MT2 내장 배포
@@ -1125,7 +1125,7 @@ Hy-MT2-7B-GGUF is licensed under the Apache License, Version 2.0.
 `;
 
 export const LICENSE_DOCUMENTS = Object.freeze([
-  Object.freeze({ title: "Nude Translator (GPL-3.0-only)", text: APP_LICENSE_TEXT }),
+  Object.freeze({ title: "NudeNyang Translator (GPL-3.0-only)", text: APP_LICENSE_TEXT }),
   Object.freeze({ title: "제3자 고지", text: THIRD_PARTY_NOTICES_TEXT }),
   Object.freeze({ title: "Hy-MT2 1.8B GGUF (Apache-2.0)", text: HYMT_1_8B_LICENSE_TEXT }),
   Object.freeze({ title: "Hy-MT2 7B GGUF (Apache-2.0)", text: HYMT_7B_LICENSE_TEXT }),

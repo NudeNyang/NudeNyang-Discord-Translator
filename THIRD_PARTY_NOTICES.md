@@ -1,6 +1,6 @@
 # Third-party notices
 
-Nude Translator 자체 소스와 구성요소는 `GPL-3.0-only`로 배포한다. 이 라이선스는 아래
+NudeNyang Translator 자체 소스와 구성요소는 `GPL-3.0-only`로 배포한다. 이 라이선스는 아래
 제3자 구성요소의 별도 라이선스와 저작권을 대체하지 않는다.
 
 ## Hy-MT2 내장 배포

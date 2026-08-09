@@ -4,6 +4,8 @@ import test from "node:test";
 
 const outgoing = readFileSync(new URL("../../src-tauri/src/outgoing.rs", import.meta.url), "utf8");
 const engine = readFileSync(new URL("../../src-tauri/src/engine.rs", import.meta.url), "utf8");
+const dom = readFileSync(new URL("../../src-tauri/src/dom.rs", import.meta.url), "utf8");
+const cache = readFileSync(new URL("../../src-tauri/src/cache.rs", import.meta.url), "utf8");
 
 test("outgoing translation intercepts only normal Enter sends", () => {
   assert.match(outgoing, /event\.key !== 'Enter'/);
@@ -56,4 +58,17 @@ test("long outgoing translations use one text attachment instead of notification
   assert.match(outgoing, /new File\(\[content\], filename/);
   assert.match(outgoing, /번역문이 길어 텍스트 파일로 전송합니다\./);
   assert.match(engine, /dispatch_outgoing_text_file/);
+});
+
+test("sent translations restore the exact typed original instead of translating twice", () => {
+  assert.match(outgoing, /original_text/);
+  assert.match(outgoing, /sent_text/);
+  assert.match(outgoing, /message_id/);
+  assert.match(outgoing, /전송문 보기/);
+  assert.match(outgoing, /원문 보기/);
+  assert.match(outgoing, /parse_outgoing_bindings/);
+  assert.match(engine, /put_outgoing_original/);
+  assert.match(engine, /outgoing_originals_for_channel/);
+  assert.match(dom, /data-nt-outgoing-original/);
+  assert.match(cache, /CREATE TABLE IF NOT EXISTS outgoing_originals/);
 });

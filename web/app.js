@@ -117,6 +117,7 @@ const elements = {
   githubLink: document.querySelector("#github-link"),
   updateStatus: document.querySelector("#update-status"),
   checkUpdate: document.querySelector("#check-update"),
+  openDiagnosticLog: document.querySelector("#open-diagnostic-log"),
   viewLicense: document.querySelector("#view-license"),
   providerRows: [...document.querySelectorAll(".provider-row")],
 };
@@ -212,6 +213,23 @@ async function invoke(command, payload = {}) {
   if (!tauriInvoke) throw new Error("Tauri 앱에서만 사용할 수 있는 기능입니다.");
   return tauriInvoke(command, payload);
 }
+
+function writeDiagnostic(level, message) {
+  if (!tauriInvoke) return;
+  tauriInvoke("diagnostic_log_write", {
+    level,
+    component: "webview",
+    message: String(message || "unknown webview error"),
+  }).catch(() => {});
+}
+
+window.addEventListener("error", event => {
+  writeDiagnostic("error", `${event.message || "JavaScript error"} at ${event.filename || "unknown"}:${event.lineno || 0}`);
+});
+window.addEventListener("unhandledrejection", event => {
+  const reason = event.reason?.stack || event.reason?.message || event.reason;
+  writeDiagnostic("error", `Unhandled promise rejection: ${String(reason || "unknown")}`);
+});
 
 function isAllowedExternalUrl(url) {
   return Object.values(APP_LINKS).includes(url)
@@ -463,7 +481,7 @@ async function disconnectProvider(row) {
     title: `${currentConnection?.name || "번역 서비스"} 연결을 해제하시겠습니까?`,
     message: isDeepL
       ? "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다."
-      : "CLI 로그인 정보와 설치 상태는 유지되며 Nude Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.",
+      : "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.",
     acceptText: "연결 해제",
   });
   if (!confirmed) return;
@@ -917,6 +935,7 @@ function showModal({
 }
 
 async function showError(title, message) {
+  writeDiagnostic("error", `${title}: ${message}`);
   await showModal({
     title,
     message,
@@ -1022,6 +1041,9 @@ for (const row of elements.providerRows) {
 }
 elements.checkUpdate.addEventListener("click", () => {
   checkForUpdates(false).catch(error => showError("업데이트를 확인하지 못했습니다", String(error)));
+});
+elements.openDiagnosticLog.addEventListener("click", () => {
+  invoke("diagnostic_log_reveal").catch(error => showError("로그 파일을 열지 못했습니다", String(error)));
 });
 elements.settingsScroll.addEventListener("scroll", () => {
   updateScrollIndicator();

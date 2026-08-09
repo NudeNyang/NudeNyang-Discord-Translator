@@ -1,7 +1,7 @@
 [package]
 name = "nude-translator-tauri"
-version = "0.3.1-beta"
-description = "Nude Translator Tauri desktop shell"
+version = "0.3.2-beta"
+description = "NudeNyang Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NudeNyang/Nude-Translator"
@@ -33,6 +33,7 @@ tauri-plugin-updater = "2"
 unicode-normalization = "0.1"
 url = "2"
 tungstenite = "0.26"
+time = { version = "0.3", features = ["formatting"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }

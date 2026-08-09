@@ -656,7 +656,7 @@ fn authenticate_gemini_acp_process_with_cache(
             json!({
                 "protocolVersion": 1,
                 "clientCapabilities": {},
-                "clientInfo": {"name": "Nude Translator", "version": "0.3.0-beta"}
+                "clientInfo": {"name": "NudeNyang Translator", "version": env!("CARGO_PKG_VERSION")}
             }),
         )?;
 
@@ -1343,7 +1343,7 @@ impl CodexAppServer {
         self.send(&json!({
             "method": "initialize",
             "id": initialize_id,
-            "params": {"clientInfo": {"name": "nude_translator", "title": "Nude Translator", "version": "0.3.0-beta"}},
+            "params": {"clientInfo": {"name": "nudenyang_translator", "title": "NudeNyang Translator", "version": env!("CARGO_PKG_VERSION")}},
         }))?;
         self.wait_for_response(initialize_id, deadline)?;
         self.send(&json!({"method": "initialized", "params": {}}))?;
@@ -1777,6 +1777,7 @@ fn subscription_environment() -> HashMap<String, String> {
     for name in API_ENVIRONMENT_VARIABLES {
         environment.remove(name);
     }
+    remove_stale_codex_home(&mut environment);
     environment.insert("NO_COLOR".to_string(), "1".to_string());
     environment.insert("CLICOLOR".to_string(), "0".to_string());
     #[cfg(windows)]
@@ -1789,6 +1790,15 @@ fn subscription_environment() -> HashMap<String, String> {
         }
     }
     environment
+}
+
+fn remove_stale_codex_home(environment: &mut HashMap<String, String>) {
+    if environment
+        .get("CODEX_HOME")
+        .is_some_and(|path| !Path::new(path).is_dir())
+    {
+        environment.remove("CODEX_HOME");
+    }
 }
 
 fn implementation_name(name: &str) -> Implementation {
@@ -1951,7 +1961,7 @@ fn tail_chars(value: &str, limit: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
     use std::sync::{Arc, Mutex};
 
     use serde_json::json;
@@ -2224,6 +2234,39 @@ mod tests {
         for name in super::API_ENVIRONMENT_VARIABLES {
             assert!(!environment.contains_key(name));
         }
+    }
+
+    #[test]
+    fn removes_stale_codex_home_from_child_environment() {
+        let missing = std::env::temp_dir().join(format!(
+            "nude-translator-missing-codex-home-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&missing);
+        let mut environment = HashMap::from([(
+            "CODEX_HOME".to_string(),
+            missing.to_string_lossy().into_owned(),
+        )]);
+
+        super::remove_stale_codex_home(&mut environment);
+
+        assert!(!environment.contains_key("CODEX_HOME"));
+    }
+
+    #[test]
+    fn preserves_existing_codex_home_in_child_environment() {
+        let existing = std::env::temp_dir().join(format!(
+            "nude-translator-existing-codex-home-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&existing).unwrap();
+        let expected = existing.to_string_lossy().into_owned();
+        let mut environment = HashMap::from([("CODEX_HOME".to_string(), expected.clone())]);
+
+        super::remove_stale_codex_home(&mut environment);
+
+        let _ = std::fs::remove_dir_all(&existing);
+        assert_eq!(environment.get("CODEX_HOME"), Some(&expected));
     }
 
     #[cfg(windows)]

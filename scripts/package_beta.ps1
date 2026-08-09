@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'Nude Translator 0.3.1 비공개 베타',
+    [string]$ReleaseNotes = 'NudeNyang Translator 0.3.2 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
@@ -107,7 +107,7 @@ if (-not (Test-Path -LiteralPath $Signature)) {
 
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
 New-Item -ItemType Directory -Path $ReleaseDirectory -Force | Out-Null
-$InstallerName = "NudeTranslator-$Version-Windows-x64-Setup.exe"
+$InstallerName = "NudeNyangTranslator-$Version-Windows-x64-Setup.exe"
 $ReleaseInstaller = Join-Path $ReleaseDirectory $InstallerName
 Copy-Item -LiteralPath $Installer.FullName -Destination $ReleaseInstaller -Force
 Copy-Item -LiteralPath $Signature -Destination "$ReleaseInstaller.sig" -Force

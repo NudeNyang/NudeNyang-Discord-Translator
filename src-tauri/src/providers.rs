@@ -173,7 +173,9 @@ fn cli_connection(
         }
         .to_string(),
         detail: if disabled {
-            format!("{name} CLI 로그인 정보는 유지되며 Nude Translator에서만 사용을 중지했습니다.")
+            format!(
+                "{name} CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다."
+            )
         } else {
             probe.detail
         },
@@ -270,6 +272,6 @@ mod tests {
         assert_eq!(disconnected.state, "disabled");
         assert!(!disconnected.connected);
         assert!(disconnected.installed);
-        assert!(disconnected.detail.contains("Nude Translator에서만"));
+        assert!(disconnected.detail.contains("NudeNyang Translator에서만"));
     }
 }

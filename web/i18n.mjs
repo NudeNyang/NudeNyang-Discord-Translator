@@ -75,6 +75,9 @@ const COPY = Object.freeze({
   "버전, 업데이트, 프로젝트 및 라이선스 정보를 확인합니다.": ["View version, update, project, and license information.", "バージョン、更新、プロジェクト、ライセンス情報を確認します。", "查看版本、更新、项目和许可证信息。"],
   "자동 업데이트": ["Automatic updates", "自動更新", "自动更新"],
   "지금 확인": ["Check now", "今すぐ確認", "立即检查"],
+  "진단 로그": ["Diagnostic log", "診断ログ", "诊断日志"],
+  "오류 확인에 필요한 기록을 개인정보와 인증 정보를 가린 하나의 파일에 저장합니다.": ["Store troubleshooting details in one file with personal and authentication data redacted.", "トラブルシューティングに必要な記録を、個人情報と認証情報を伏せた1つのファイルに保存します。", "将排查错误所需的记录保存到一个文件中，并隐藏个人信息和身份验证信息。"],
+  "로그 파일 찾기": ["Show log file", "ログファイルを表示", "显示日志文件"],
   "라이선스 보기": ["View license", "ライセンスを表示", "查看许可证"],
   "되돌리기": ["Revert", "元に戻す", "还原"],
   "저장": ["Save", "保存", "保存"],
@@ -123,8 +126,8 @@ export function applyStaticTranslations(root, language) {
   language = resolveUiLanguage(language);
   document.documentElement.lang = language === "zh" ? "zh-CN" : language;
   document.title = language === "ko"
-    ? "Nude Translator 설정"
-    : `Nude Translator · ${translateCopy(language, "설정")}`;
+    ? "NudeNyang Translator 설정"
+    : `NudeNyang Translator · ${translateCopy(language, "설정")}`;
   const elements = root.querySelectorAll("h1, h2, h3, p, span, strong, b, button, small");
   for (const element of elements) {
     if (element.children.length > 0) continue;

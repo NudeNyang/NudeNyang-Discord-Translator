@@ -5,6 +5,31 @@ import test from "node:test";
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const rustMain = readFileSync(new URL("../../src-tauri/src/main.rs", import.meta.url), "utf8");
+const tauriConfig = readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8");
+const packageManifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+const cargoManifest = readFileSync(new URL("../../src-tauri/Cargo.toml", import.meta.url), "utf8");
+const installerHooks = readFileSync(new URL("../../src-tauri/windows/hooks.nsh", import.meta.url), "utf8");
+
+test("the user-facing product name is NudeNyang Translator", () => {
+  assert.match(markup, /NudeNyang Translator/);
+  assert.match(tauriConfig, /"productName": "NudeNyang Translator"/);
+  assert.doesNotMatch(markup, /Nude Translator/);
+  assert.doesNotMatch(tauriConfig, /Nude Translator/);
+});
+
+test("the beta version is consistent across the application manifests", () => {
+  assert.equal(packageManifest.version, "0.3.2-beta");
+  assert.match(tauriConfig, /"version": "0\.3\.2-beta"/);
+  assert.match(cargoManifest, /^version = "0\.3\.2-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.3\.2 Beta<\/span>/);
+});
+
+test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
+  assert.match(tauriConfig, /"installerHooks": "\.\/windows\/hooks\.nsh"/);
+  assert.match(installerHooks, /NudeNyang Translator\.lnk/);
+  assert.match(installerHooks, /Delete "\$DESKTOP\\Nude Translator\.lnk"/);
+  assert.match(installerHooks, /Delete "\$SMPROGRAMS\\Nude Translator\.lnk"/);
+});
 
 test("settings use five uniform navigation categories", () => {
   for (const panel of ["translation", "engine", "image", "convenience", "about"]) {
@@ -54,4 +79,17 @@ test("convenience panel exposes separate incoming and outgoing shortcuts", () =>
 test("footer action labels stay on one line", () => {
   assert.match(markup, /id="cancel"[^>]*>되돌리기<\/button>/);
   assert.match(readFileSync(new URL("../app.css", import.meta.url), "utf8"), /\.footer-actions \.button[\s\S]*white-space:\s*nowrap/);
+});
+
+test("friends can reveal one privacy-safe diagnostic log file", () => {
+  const diagnostics = readFileSync(new URL("../../src-tauri/src/diagnostics.rs", import.meta.url), "utf8");
+  const hymt = readFileSync(new URL("../../src-tauri/src/translation/hymt.rs", import.meta.url), "utf8");
+  assert.match(diagnostics, /NudeNyangTranslator\.log/);
+  assert.match(diagnostics, /MAX_LOG_BYTES/);
+  assert.match(diagnostics, /redact_sensitive/);
+  assert.match(hymt, /pipe_external_output/);
+  assert.doesNotMatch(hymt, /default_server_log_path/);
+  assert.match(rustMain, /diagnostic_log_reveal/);
+  assert.match(markup, /id="open-diagnostic-log"/);
+  assert.match(script, /invoke\("diagnostic_log_reveal"\)/);
 });

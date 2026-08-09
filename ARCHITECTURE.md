@@ -2,7 +2,7 @@
 
 ## 단일 Rust 엔진
 
-Nude Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정과 트레이 렌더링만
+NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정과 트레이 렌더링만
 담당하며, 모든 상태 변경은 Tauri command/event를 통해 Rust 상태로 들어간다.
 
 | 영역 | 소유 모듈 |

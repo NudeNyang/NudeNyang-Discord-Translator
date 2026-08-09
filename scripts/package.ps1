@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
-$DistDirectory = Join-Path $ProjectRoot 'dist\NudeTranslator'
+$DistDirectory = Join-Path $ProjectRoot 'dist\NudeNyangTranslator'
 $ReleaseDirectory = Join-Path $ProjectRoot 'release'
 
 if ($Clean) {
@@ -33,7 +33,7 @@ if (-not (Test-Path -LiteralPath $Executable)) {
 }
 
 New-Item -ItemType Directory -Force $DistDirectory | Out-Null
-Copy-Item -LiteralPath $Executable -Destination (Join-Path $DistDirectory 'NudeTranslator.exe') -Force
+Copy-Item -LiteralPath $Executable -Destination (Join-Path $DistDirectory 'NudeNyangTranslator.exe') -Force
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE') -Destination (Join-Path $DistDirectory 'LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'THIRD_PARTY_NOTICES.md') -Destination $DistDirectory -Force
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'licenses') -Destination $DistDirectory -Recurse -Force
@@ -81,7 +81,7 @@ foreach ($model in $Models) {
 }
 
 New-Item -ItemType Directory -Force $ReleaseDirectory | Out-Null
-$Archive = Join-Path $ReleaseDirectory 'NudeTranslator-Windows-x64.zip'
+$Archive = Join-Path $ReleaseDirectory 'NudeNyangTranslator-Windows-x64.zip'
 Remove-Item -LiteralPath $Archive -Force -ErrorAction SilentlyContinue
 & tar.exe -a -c -f $Archive -C $DistDirectory .
 if ($LASTEXITCODE -ne 0) {

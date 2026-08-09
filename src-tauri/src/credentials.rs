@@ -1,4 +1,4 @@
-const SERVICE_NAME: &str = "Nude Translator";
+const SERVICE_NAME: &str = "NudeNyang Translator";
 
 fn entry(provider: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(SERVICE_NAME, provider)

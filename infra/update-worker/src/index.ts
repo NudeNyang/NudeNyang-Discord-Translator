@@ -144,7 +144,7 @@ async function serveObject(
   headers.set("Content-Length", String(object.size));
   headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");
   if (attachment) {
-    const filename = (key.split("/").at(-1) ?? "NudeTranslator-Setup.exe").replaceAll('"', "");
+    const filename = (key.split("/").at(-1) ?? "NudeNyangTranslator-Setup.exe").replaceAll('"', "");
     headers.set("Content-Disposition", `attachment; filename="${filename}"`);
   }
   return new Response(request.method === "HEAD" ? null : object.body, { headers });
@@ -196,7 +196,7 @@ function privateHeaders(): Headers {
 
 function unauthorized(): Response {
   return response("베타 업데이트 접근 권한이 없습니다.", 401, {
-    "WWW-Authenticate": 'Bearer realm="Nude Translator Beta"',
+    "WWW-Authenticate": 'Bearer realm="NudeNyang Translator Beta"',
   });
 }
 

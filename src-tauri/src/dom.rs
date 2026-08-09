@@ -49,6 +49,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
   const out = [];
   for (const root of document.querySelectorAll('[id^="message-content-"]')) {
     if (root.closest('[id^="message-reply-context-"]')) continue;
+    if (root.getAttribute('data-nt-outgoing-original') === 'true') continue;
     if (!isVisible(root)) continue;
     const id = ensureRootId(root, 'data-dto-message-id', 'message');
     out.push(...parts('message', id, root));
@@ -359,6 +360,7 @@ mod tests {
             ("message".into(), "dto-message-1".into(), 2)
         );
         assert!(SNAPSHOT_SCRIPT.contains("message-reply-context-"));
+        assert!(SNAPSHOT_SCRIPT.contains("data-nt-outgoing-original"));
         assert!(SNAPSHOT_SCRIPT.contains("postTitleText"));
     }
 

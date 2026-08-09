@@ -3,6 +3,9 @@ pub fn split_for_translation(text: &str, max_chars: usize) -> Vec<String> {
 }
 
 pub fn split_for_discord(text: &str, max_utf16_units: usize) -> Vec<String> {
+    if max_utf16_units > 0 && text.encode_utf16().count() <= max_utf16_units {
+        return vec![text.to_string()];
+    }
     split_with_limit(text, max_utf16_units, char::len_utf16)
 }
 
@@ -38,7 +41,6 @@ fn split_with_limit(
             chunks.push(remainder.to_string());
             break;
         }
-
         let end = preferred_boundary(remainder, max_units, units_for_char);
         chunks.push(remainder[..end].to_string());
         start += end;
@@ -138,6 +140,14 @@ mod tests {
                 .all(|chunk| chunk.encode_utf16().count() <= 20),
             "oversized chunks: {chunks:?}"
         );
+    }
+
+    #[test]
+    fn discord_text_under_the_limit_stays_in_one_message_even_with_many_paragraphs() {
+        let source = "첫 문단입니다.\n\n두 번째 문단입니다.\n\n세 번째 문단입니다.";
+        let chunks = split_for_discord(source, 1_900);
+
+        assert_eq!(chunks, vec![source.to_string()]);
     }
 
     #[test]

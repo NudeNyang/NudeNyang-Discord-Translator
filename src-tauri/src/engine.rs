@@ -24,9 +24,10 @@ use crate::image_translation::{
 use crate::language::Language;
 use crate::outgoing::{
     apply_outgoing_error_script, apply_outgoing_suggestion_script,
-    attach_outgoing_text_file_script, outgoing_ui_script, parse_outgoing_requests,
-    prepare_outgoing_attachment_script, prepare_outgoing_send_script, suggest_recent_language,
-    OutgoingRequest, OUTGOING_CLEANUP_SCRIPT,
+    attach_outgoing_text_file_script, outgoing_originals_ui_script, outgoing_ui_script,
+    parse_outgoing_bindings, parse_outgoing_requests, prepare_outgoing_attachment_script,
+    prepare_outgoing_send_script, suggest_recent_language, OutgoingRequest,
+    OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
 };
 use crate::text_split::split_for_discord;
 use crate::translation::{
@@ -266,6 +267,7 @@ fn run_controller(
         .spawn(move || run_translation_worker(worker_rx, worker_result_tx))
         .ok();
     let (preparation_tx, preparation_rx) = mpsc::channel();
+    let outgoing_original_store = TranslationCache::open_default().ok();
     let mut client: Option<CdpClient> = None;
     let mut states: HashMap<Locator, PartState> = HashMap::new();
     let mut pending: HashSet<PendingKey> = HashSet::new();
@@ -421,6 +423,10 @@ fn run_controller(
                     error,
                 } => {
                     if prepared_generation == preparation_generation && name == config.translator {
+                        crate::diagnostics::error(
+                            "translator",
+                            &format!("{} preparation failed: {error}", translator_label(&name)),
+                        );
                         update_status(&status, |runtime| {
                             runtime.translator_state = "error".to_string();
                             runtime.translator_error =
@@ -464,6 +470,27 @@ fn run_controller(
                 runtime.cdp_connected = true;
                 runtime.connection_issue.clear();
             });
+            ensure_outgoing_originals(
+                client.as_mut().expect("connected CDP client"),
+                outgoing_original_store.as_ref(),
+            )?;
+            if config.outgoing_translation_enabled {
+                scan_outgoing(
+                    client.as_mut().expect("connected CDP client"),
+                    &mut outgoing_pending,
+                    generation,
+                    &worker_tx,
+                    &config,
+                    outgoing_original_store.as_ref(),
+                )?;
+                outgoing_ui_needs_cleanup = true;
+            } else if outgoing_ui_needs_cleanup {
+                client.as_mut().expect("connected CDP client").evaluate(
+                    &outgoing_ui_script(false, &config.outgoing_target_language),
+                    false,
+                )?;
+                outgoing_ui_needs_cleanup = false;
+            }
             if config.enabled {
                 scan_dom(
                     client.as_mut().expect("connected CDP client"),
@@ -495,22 +522,6 @@ fn run_controller(
                     image_ui_needs_cleanup = false;
                 }
             }
-            if config.outgoing_translation_enabled {
-                scan_outgoing(
-                    client.as_mut().expect("connected CDP client"),
-                    &mut outgoing_pending,
-                    generation,
-                    &worker_tx,
-                    &config,
-                )?;
-                outgoing_ui_needs_cleanup = true;
-            } else if outgoing_ui_needs_cleanup {
-                client.as_mut().expect("connected CDP client").evaluate(
-                    &outgoing_ui_script(false, &config.outgoing_target_language),
-                    false,
-                )?;
-                outgoing_ui_needs_cleanup = false;
-            }
             Ok(())
         })();
         if let Err(error) = result {
@@ -521,6 +532,7 @@ fn run_controller(
                 consecutive_connection_failures += 1;
                 if consecutive_connection_failures >= 2 {
                     connection_issue_reported = true;
+                    crate::diagnostics::error("discord-connection", &error);
                     update_status(&status, |runtime| {
                         runtime.connection_issue = error.clone();
                     });
@@ -725,17 +737,56 @@ fn scan_dom(
     Ok(())
 }
 
+fn ensure_outgoing_originals(
+    client: &mut CdpClient,
+    store: Option<&TranslationCache>,
+) -> Result<(), String> {
+    let channel = client
+        .evaluate(
+            "location.pathname.startsWith('/channels/') ? location.pathname : ''",
+            false,
+        )?
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    if channel.is_empty() {
+        return Ok(());
+    }
+    let encoded_channel = serde_json::to_string(&channel)
+        .map_err(|error| format!("Discord 채널 식별자를 인코딩하지 못했습니다: {error}"))?;
+    let ready = client.evaluate(
+        &format!("window.__nudeTranslatorOutgoingOriginalsReady === {encoded_channel}"),
+        false,
+    )?;
+    if ready.as_bool() == Some(true) {
+        client.evaluate("window.__nudeTranslatorApplyOutgoingOriginals?.()", false)?;
+        return Ok(());
+    }
+    let records = store
+        .and_then(|store| store.outgoing_originals_for_channel(&channel, 500).ok())
+        .unwrap_or_default();
+    client.evaluate(&outgoing_originals_ui_script(&channel, &records)?, false)?;
+    Ok(())
+}
+
 fn scan_outgoing(
     client: &mut CdpClient,
     pending: &mut HashSet<OutgoingPendingKey>,
     generation: u64,
     worker: &mpsc::Sender<WorkerCommand>,
     config: &AppConfig,
+    original_store: Option<&TranslationCache>,
 ) -> Result<(), String> {
     let requests = parse_outgoing_requests(client.evaluate(
         &outgoing_ui_script(true, &config.outgoing_target_language),
         false,
     )?)?;
+    let bindings = parse_outgoing_bindings(client.evaluate(OUTGOING_BINDINGS_SCRIPT, false)?)?;
+    if let Some(store) = original_store {
+        for binding in &bindings {
+            let _ = store.put_outgoing_original(binding);
+        }
+    }
     for request in requests {
         if request.id.is_empty() || request.text.trim().is_empty() {
             continue;
@@ -812,6 +863,20 @@ fn dispatch_outgoing_send(
     request_id: &str,
     replacement: Option<&str>,
 ) -> Result<(), String> {
+    if let Some(text) = replacement {
+        let utf16_units = text.encode_utf16().count();
+        crate::diagnostics::info(
+            "outgoing-translation",
+            &format!(
+                "dispatch prepared; utf16_units={utf16_units}; delivery={}",
+                if utf16_units > DISCORD_MESSAGE_UTF16_LIMIT {
+                    "attachment"
+                } else {
+                    "single-message"
+                }
+            ),
+        );
+    }
     if let Some(text) =
         replacement.filter(|text| text.encode_utf16().count() > DISCORD_MESSAGE_UTF16_LIMIT)
     {
@@ -894,7 +959,7 @@ fn dispatch_outgoing_text_file(
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-    let filename = format!("NudeTranslator-translation-{timestamp}.txt");
+    let filename = format!("NudeNyangTranslator-translation-{timestamp}.txt");
     let attached = client.evaluate(
         &attach_outgoing_text_file_script(request_id, content, &filename)?,
         false,
@@ -1086,6 +1151,7 @@ fn drain_worker_results(
                         if let Err(error) =
                             dispatch_outgoing_send(client, &request_id, Some(&translated))
                         {
+                            crate::diagnostics::error("outgoing-translation", &error);
                             if let Ok(script) = apply_outgoing_error_script(
                                 &request_id,
                                 &format!("번역문을 모두 전송하지 못했습니다. {error}"),
@@ -1095,6 +1161,7 @@ fn drain_worker_results(
                         }
                     }
                     Err(error) => {
+                        crate::diagnostics::error("outgoing-translation", &error);
                         if let Ok(script) = apply_outgoing_error_script(
                             &request_id,
                             &format!(
@@ -1141,9 +1208,12 @@ fn drain_worker_results(
                     let _ = worker.send(WorkerCommand::Release);
                 }
             }
-            WorkerResult::WarmFailed(error) => update_status(status, |runtime| {
-                runtime.notice = format!("로컬 모델 예열에 실패했습니다: {error}");
-            }),
+            WorkerResult::WarmFailed(error) => {
+                crate::diagnostics::error("translator", &format!("model warmup failed: {error}"));
+                update_status(status, |runtime| {
+                    runtime.notice = format!("로컬 모델 예열에 실패했습니다: {error}");
+                });
+            }
         }
     }
     if !changes.is_empty() {
@@ -1488,7 +1558,7 @@ mod tests {
             .find(|part| part.kind == "message")
             .expect("복원 검증에 사용할 Discord 메시지가 필요합니다");
         let locator = part.locator();
-        let marker = "[Nude Translator restore verification]";
+        let marker = "[NudeNyang Translator restore verification]";
         let script = apply_script(&[DomChange::new(&part, marker)]).unwrap();
         client.evaluate(&script, false).unwrap();
         let translated = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
