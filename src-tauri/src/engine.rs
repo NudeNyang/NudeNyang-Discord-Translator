@@ -27,6 +27,7 @@ use crate::outgoing::{
     parse_outgoing_requests, prepare_outgoing_send_script, suggest_recent_language,
     OutgoingRequest, OUTGOING_CLEANUP_SCRIPT,
 };
+use crate::text_split::split_for_discord;
 use crate::translation::{
     DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, OriginalTranslator,
     SubscriptionCliTranslator, TranslationService, Translator,
@@ -34,6 +35,7 @@ use crate::translation::{
 
 const CDP_PORT: u16 = 9222;
 const MAX_BATCH_ITEMS: usize = 32;
+const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 
 type Locator = (String, String, usize);
 type PendingKey = (u64, String, String, usize, String);
@@ -809,16 +811,62 @@ fn dispatch_outgoing_send(
     request_id: &str,
     replacement: Option<&str>,
 ) -> Result<(), String> {
-    let prepared = client.evaluate(
-        &prepare_outgoing_send_script(request_id, replacement.is_some())?,
-        false,
-    )?;
-    if prepared.as_bool() != Some(true) {
-        return Err("Discord 메시지 입력창을 찾을 수 없습니다.".to_string());
+    let parts = replacement
+        .map(|text| split_for_discord(text, DISCORD_MESSAGE_UTF16_LIMIT))
+        .unwrap_or_else(|| vec![String::new()]);
+    if parts.is_empty() || replacement.is_some_and(str::is_empty) {
+        return Err("전송할 번역문이 없습니다.".to_string());
     }
-    if let Some(text) = replacement {
-        client.call("Input.insertText", json!({"text": text}))?;
+
+    for (index, part) in parts.iter().enumerate() {
+        let continuation = index > 0;
+        let final_part = index + 1 == parts.len();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let prepared = loop {
+            let prepared = client.evaluate(
+                &prepare_outgoing_send_script(
+                    request_id,
+                    replacement.is_some(),
+                    continuation,
+                    final_part,
+                    index + 1,
+                    parts.len(),
+                )?,
+                false,
+            )?;
+            if prepared.as_bool() == Some(true) {
+                break true;
+            }
+            if Instant::now() >= deadline {
+                break false;
+            }
+            thread::sleep(Duration::from_millis(40));
+        };
+        if !prepared {
+            return if index == 0 {
+                Err(
+                    "Discord 메시지 입력창을 찾을 수 없습니다. 원문은 입력창에 유지됩니다."
+                        .to_string(),
+                )
+            } else {
+                Err(format!(
+                    "분할된 번역문 {}개 중 {index}개를 전송했습니다. 나머지 메시지는 입력창 상태를 확인한 후 다시 전송하십시오.",
+                    parts.len()
+                ))
+            };
+        }
+        if replacement.is_some() {
+            client.call("Input.insertText", json!({"text": part}))?;
+        }
+        dispatch_enter(client)?;
+        if !final_part {
+            thread::sleep(Duration::from_millis(250));
+        }
     }
+    Ok(())
+}
+
+fn dispatch_enter(client: &mut CdpClient) -> Result<(), String> {
     client.call(
         "Input.dispatchKeyEvent",
         json!({
@@ -973,9 +1021,7 @@ fn drain_worker_results(
                         {
                             if let Ok(script) = apply_outgoing_error_script(
                                 &request_id,
-                                &format!(
-                                    "번역문을 전송하지 못했습니다. 번역하지 않고 원문을 유지합니다. {error}"
-                                ),
+                                &format!("번역문을 모두 전송하지 못했습니다. {error}"),
                             ) {
                                 let _ = client.evaluate(&script, false);
                             }

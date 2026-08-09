@@ -12,6 +12,7 @@ pub mod language;
 pub mod ocr;
 pub mod outgoing;
 mod providers;
+pub mod text_split;
 pub mod translation;
 mod updater;
 

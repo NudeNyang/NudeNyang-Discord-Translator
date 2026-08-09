@@ -10,6 +10,8 @@ static MENTION_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)@(?:[A-Za-z0-9_.-]+|全員|各位|여러분)").unwrap());
 static CHANNEL_TAG_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"#[A-Za-z0-9_.-]{2,}").unwrap());
+static URL_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)\bhttps?://[^\s<>"']+"#).unwrap());
 static CUSTOM_EMOJI_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r":[A-Za-z0-9_~.-]{2,32}:").unwrap());
 static ASCII_EMOTICON_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -91,6 +93,7 @@ pub fn protect_text(text: &str) -> ProtectedText {
     for pattern in [
         &*MENTION_RE,
         &*CHANNEL_TAG_RE,
+        &*URL_RE,
         &*CUSTOM_EMOJI_RE,
         &*ASCII_EMOTICON_RE,
         &*SHRUG_RE,
@@ -175,9 +178,16 @@ mod tests {
 
     #[test]
     fn masks_and_restores_mentions_emoji_and_emoticons() {
-        let source = "Hello @everyone 👋🏽 :party_blob: ^_^ T_T";
+        let source = "Hello @everyone 👋🏽 :party_blob: ^_^ T_T https://example.com/a?q=1";
         let protected = protect_text(source);
-        for token in ["@everyone", "👋🏽", ":party_blob:", "^_^", "T_T"] {
+        for token in [
+            "@everyone",
+            "👋🏽",
+            ":party_blob:",
+            "^_^",
+            "T_T",
+            "https://example.com/a?q=1",
+        ] {
             assert!(!protected.masked.contains(token));
         }
         assert!(protected.has_translatable_text());

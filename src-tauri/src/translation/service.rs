@@ -5,6 +5,7 @@ use sha2::{Digest, Sha256};
 
 use crate::cache::TranslationCache;
 use crate::language::{Language, LanguageDetector};
+use crate::text_split::split_for_translation;
 
 use super::protected_text::{protect_text, ProtectedText};
 use super::Translator;
@@ -15,6 +16,8 @@ static JAPANESE_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+
+const MAX_TRANSLATION_CHARS: usize = 700;
 
 pub struct TranslationService {
     translator: Box<dyn Translator>,
@@ -49,21 +52,43 @@ impl TranslationService {
     }
 
     pub fn translate(&mut self, text: &str, target: Language) -> Result<String, String> {
-        let protected = protect_text(text);
-        if !protected.has_translatable_text() {
-            return Ok(text.to_string());
-        }
-        let source = self.detector.detect(text, true);
-        if source == target {
-            return self.translate_japanese_fragments(text, target);
-        }
-        if source == Language::Unknown {
-            return Ok(text.to_string());
-        }
-        self.translate_known_source(text, &protected, source, target)
+        self.translate_many(&[text.to_string()], target)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "번역 엔진이 결과를 반환하지 않았습니다.".to_string())
     }
 
     pub fn translate_many(
+        &mut self,
+        texts: &[String],
+        target: Language,
+    ) -> Result<Vec<String>, String> {
+        if texts.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let groups = texts
+            .iter()
+            .map(|text| split_for_translation(text, MAX_TRANSLATION_CHARS))
+            .collect::<Vec<_>>();
+        let flattened = groups.iter().flatten().cloned().collect::<Vec<_>>();
+        let translated = self.translate_many_unchunked(&flattened, target)?;
+        let mut translated = translated.into_iter();
+        groups
+            .into_iter()
+            .map(|chunks| {
+                let mut result = String::new();
+                for _ in chunks {
+                    result.push_str(&translated.next().ok_or_else(|| {
+                        "번역 엔진이 일부 텍스트의 결과를 반환하지 않았습니다.".to_string()
+                    })?);
+                }
+                Ok(result)
+            })
+            .collect()
+    }
+
+    fn translate_many_unchunked(
         &mut self,
         texts: &[String],
         target: Language,
@@ -137,8 +162,9 @@ impl TranslationService {
         results
             .into_iter()
             .map(|result| {
-                result
-                    .ok_or_else(|| "번역 엔진이 일부 메시지의 결과를 반환하지 않았어.".to_string())
+                result.ok_or_else(|| {
+                    "번역 엔진이 일부 메시지의 결과를 반환하지 않았습니다.".to_string()
+                })
             })
             .collect()
     }
@@ -318,6 +344,10 @@ mod tests {
         calls: Arc<Mutex<usize>>,
     }
 
+    struct RecordingIdentityTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -335,6 +365,36 @@ mod tests {
         ) -> Result<String, String> {
             *self.calls.lock().unwrap() += 1;
             Ok(format!("[{}] {text}", target.code()))
+        }
+    }
+
+    impl Translator for RecordingIdentityTranslator {
+        fn display_name(&self) -> &str {
+            "recording-identity"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "recording-identity:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            self.inputs.lock().unwrap().push(text.to_string());
+            Ok(text.to_string())
+        }
+
+        fn should_cache(
+            &self,
+            _source_text: &str,
+            _translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            false
         }
     }
 
@@ -390,6 +450,28 @@ mod tests {
     }
 
     #[test]
+    fn long_text_is_translated_in_bounded_chunks_without_losing_content() {
+        let path = cache_path("long-text-chunks");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(RecordingIdentityTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = "긴 문장입니다. ".repeat(180);
+        let translated = service
+            .translate(&source, Language::Japanese)
+            .expect("translate long text");
+        let recorded = inputs.lock().unwrap();
+        assert!(recorded.len() >= 2, "recorded inputs: {}", recorded.len());
+        assert!(recorded.iter().all(|text| text.chars().count() <= 700));
+        assert_eq!(translated, source);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn removes_sentence_endings_added_by_translation() {
         assert_eq!(
             preserve_terminal_punctuation("안녕", "こんにちは。"),
@@ -439,6 +521,33 @@ mod tests {
         assert!(
             !has_terminal_punctuation(&translated),
             "unexpected terminal punctuation: {translated}"
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_local_model_translates_article_length_text_without_truncation() {
+        let path = cache_path("live-long-text");
+        let cache = TranslationCache::open(path.clone(), 128).unwrap();
+        let translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        let mut service = TranslationService::new(Box::new(translator), cache);
+        let source = (1..=60)
+            .map(|index| {
+                format!(
+                    "이것은 긴 기사 번역의 {index}번째 검증 문장입니다. 자세한 자료는 https://example.com/article/{index} 에서 확인할 수 있습니다. "
+                )
+            })
+            .collect::<String>();
+        assert!(source.chars().count() > 2_800);
+        let translated = service
+            .translate(&source, Language::Japanese)
+            .expect("translate article-length Korean text");
+        assert!(translated.contains("https://example.com/article/1"));
+        assert!(translated.contains("https://example.com/article/60"));
+        assert_eq!(
+            crate::language::detect_explicit_language(&translated),
+            Language::Japanese
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }

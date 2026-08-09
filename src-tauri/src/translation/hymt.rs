@@ -19,7 +19,7 @@ use crate::language::Language;
 
 use super::Translator;
 
-const PROMPT_VERSION: &str = "tone-and-punctuation-v4";
+const PROMPT_VERSION: &str = "long-text-v5";
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const PROMPT_ECHO_HINTS: [&str; 17] = [
     "zxqkeep",
@@ -195,7 +195,7 @@ impl HyMtTranslator {
                 "--port",
                 &self.port.to_string(),
                 "--ctx-size",
-                "2048",
+                "8192",
                 "--parallel",
                 "1",
             ]);
@@ -394,20 +394,36 @@ impl HyMtTranslator {
         let payload: Value = response
             .json()
             .map_err(|error| format!("Hy-MT2 번역 응답을 읽지 못했습니다: {error}"))?;
-        let content = payload
-            .get("choices")
-            .and_then(Value::as_array)
-            .and_then(|choices| choices.first())
-            .and_then(|choice| choice.get("message"))
-            .and_then(|message| message.get("content"))
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        let result = clean_translation(content);
-        if result.is_empty() {
-            Err("Hy-MT2가 번역문 대신 지시문 또는 빈 결과를 반환했습니다.".to_string())
-        } else {
-            Ok(result)
-        }
+        completion_result(&payload)
+    }
+}
+
+fn completion_result(payload: &Value) -> Result<String, String> {
+    let choice = payload
+        .get("choices")
+        .and_then(Value::as_array)
+        .and_then(|choices| choices.first());
+    if choice
+        .and_then(|choice| choice.get("finish_reason"))
+        .and_then(Value::as_str)
+        .is_some_and(|reason| matches!(reason, "length" | "max_tokens"))
+    {
+        return Err(
+            "Hy-MT2 번역 결과가 길이 제한에 도달했습니다. 텍스트를 나누어 다시 시도하십시오."
+                .to_string(),
+        );
+    }
+
+    let content = choice
+        .and_then(|choice| choice.get("message"))
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let result = clean_translation(content);
+    if result.is_empty() {
+        Err("Hy-MT2가 번역문 대신 지시문 또는 빈 결과를 반환했습니다.".to_string())
+    } else {
+        Ok(result)
     }
 }
 
@@ -684,7 +700,7 @@ fn fallback_register_cleanup(text: &str, target: Language, style: &str) -> Strin
 }
 
 fn max_output_tokens(text: &str) -> usize {
-    (text.chars().count() * 3).clamp(96, 768)
+    (text.chars().count() * 3).clamp(96, 2048)
 }
 
 fn clean_translation(text: &str) -> String {
@@ -891,8 +907,9 @@ fn free_tcp_port() -> Result<u16, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        clean_translation, detect_speech_style, find_llama_server, rewrite_style_prompt,
-        startup_device_attempts, translate_with_completion, HyMtModelSize, HyMtTranslator,
+        clean_translation, completion_result, detect_speech_style, find_llama_server,
+        max_output_tokens, rewrite_style_prompt, startup_device_attempts,
+        translate_with_completion, HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
@@ -957,6 +974,23 @@ mod tests {
     fn instruction_echo_is_removed() {
         let echoed = "줄바꿈, URL, ZXQKEEP로 시작하는 모든 단어를 유지하세요.\n사용자명, 이모티콘, 제품명은 번역하지 마세요.\n\n안녕하세요";
         assert_eq!(clean_translation(echoed), "안녕하세요");
+    }
+
+    #[test]
+    fn incomplete_completion_is_rejected_instead_of_returning_partial_text() {
+        let payload = serde_json::json!({
+            "choices": [{
+                "finish_reason": "length",
+                "message": {"content": "일부만 번역된 결과"}
+            }]
+        });
+        let error = completion_result(&payload).unwrap_err();
+        assert!(error.contains("길이 제한"), "unexpected error: {error}");
+    }
+
+    #[test]
+    fn long_chunk_has_enough_output_budget() {
+        assert_eq!(max_output_tokens(&"가".repeat(700)), 2048);
     }
 
     #[test]

@@ -11,7 +11,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 2;
+  const CONTROLLER_VERSION = 3;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const languageLabels = {auto:'자동 감지',ko:'한국어',ja:'日本語',en:'English',zh:'简体中文','zh-Hant':'繁體中文'};
   const storageKey = key => `nude-translator:outgoing-language:${key}`;
@@ -228,9 +228,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!editor) return;
         if (this.bypass > 0) {
           this.bypass -= 1;
-          if (this.activeRequest) this.pending.delete(this.activeRequest);
+          const activeId = this.activeRequest;
+          const activeItem = activeId ? this.pending.get(activeId) : null;
+          const keepAfterSend = Boolean(activeItem?.keep_after_send);
+          if (activeItem) activeItem.keep_after_send = false;
+          if (activeId && !keepAfterSend) this.pending.delete(activeId);
           this.activeRequest = '';
-          this.setStatus('');
+          if (!keepAfterSend) this.setStatus('');
           return;
         }
         const text = composerText(editor);
@@ -262,20 +266,32 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         this.queue.push(item);
         this.setStatus(selected === 'original' ? '원문을 전송합니다.' : '메시지를 번역하고 있습니다.');
       },
-      prepare(id, replace) {
+      prepare(id, replace, continuation = false, finalPart = true, partNumber = 1, totalParts = 1) {
         const item = this.pending.get(id);
-        if (!item?.editor?.isConnected) return false;
-        if (composerText(item.editor) !== item.text) return false;
-        item.editor.focus();
+        if (!item) return false;
+        let editor = item.editor;
+        if (continuation) {
+          if (!editor?.isConnected || composerText(editor)) {
+            const editors = [...document.querySelectorAll(composerSelector)];
+            editor = editors.reverse().find(candidate => candidate.isConnected && !composerText(candidate));
+          }
+          if (!editor?.isConnected || composerText(editor)) return false;
+          item.editor = editor;
+        } else {
+          if (!editor?.isConnected || composerText(editor) !== item.text) return false;
+        }
+        editor.focus();
         if (replace) {
           const selection = getSelection();
           const range = document.createRange();
-          range.selectNodeContents(item.editor);
+          range.selectNodeContents(editor);
           selection.removeAllRanges();
           selection.addRange(range);
         }
+        item.keep_after_send = !finalPart;
         this.activeRequest = id;
         this.bypass += 1;
+        if (totalParts > 1) this.setStatus(`번역문을 분할 전송하고 있습니다. (${partNumber}/${totalParts})`);
         return true;
       },
     };
@@ -394,11 +410,18 @@ pub fn apply_outgoing_error_script(request_id: &str, message: &str) -> Result<St
     ))
 }
 
-pub fn prepare_outgoing_send_script(request_id: &str, replace: bool) -> Result<String, String> {
+pub fn prepare_outgoing_send_script(
+    request_id: &str,
+    replace: bool,
+    continuation: bool,
+    final_part: bool,
+    part_number: usize,
+    total_parts: usize,
+) -> Result<String, String> {
     let id = serde_json::to_string(request_id)
         .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
     Ok(format!(
-        "window.__nudeTranslatorOutgoing?.prepare({id},{replace}) === true"
+        "window.__nudeTranslatorOutgoing?.prepare({id},{replace},{continuation},{final_part},{part_number},{total_parts}) === true"
     ))
 }
 
@@ -455,10 +478,22 @@ mod tests {
     }
 
     #[test]
+    fn continuation_send_script_keeps_request_until_the_final_part() {
+        let script = prepare_outgoing_send_script("outgoing-1", true, true, false, 2, 3).unwrap();
+        assert!(script.contains("prepare(\"outgoing-1\",true,true,false,2,3)"));
+    }
+
+    #[test]
     #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
     fn live_discord_can_mount_and_remove_the_outgoing_control() {
         let target = discord_target(9222).expect("Discord channel target");
         let mut client = CdpClient::new(target.websocket_url);
+        client
+            .evaluate(
+                "if(window.__ntOutgoingSplitCapture)document.removeEventListener('keydown',window.__ntOutgoingSplitCapture,true);document.getElementById('nt-outgoing-split-test')?.remove();delete window.__ntOutgoingSplitCapture;delete window.__ntOutgoingSplitMessages;",
+                false,
+            )
+            .expect("remove stale split test state");
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("remove controller from previous build");
@@ -488,7 +523,8 @@ mod tests {
         assert_eq!(queued[0].selected_language, "ja");
         let prepared = client
             .evaluate(
-                &prepare_outgoing_send_script(&queued[0].id, true).expect("prepare script"),
+                &prepare_outgoing_send_script(&queued[0].id, true, false, true, 1, 1)
+                    .expect("prepare script"),
                 false,
             )
             .expect("prepare translated send");
@@ -529,5 +565,101 @@ mod tests {
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("cleanup script");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_controller_keeps_a_request_across_split_messages() {
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        client
+            .evaluate(
+                "if(window.__ntOutgoingSplitCapture)document.removeEventListener('keydown',window.__ntOutgoingSplitCapture,true);document.getElementById('nt-outgoing-split-test')?.remove();delete window.__ntOutgoingSplitCapture;delete window.__ntOutgoingSplitMessages;",
+                false,
+            )
+            .expect("remove stale split test state");
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("remove previous controller");
+        let controller = outgoing_ui_script(true, "ja");
+        let queued = client
+            .evaluate(
+                &format!(
+                    "(() => {{ ({controller}); const editor=document.createElement('div'); editor.id='nt-outgoing-split-test'; editor.setAttribute('role','textbox'); editor.setAttribute('contenteditable','true'); editor.textContent='긴 원문'; document.body.append(editor); editor.dispatchEvent(new KeyboardEvent('keydown',{{key:'Enter',bubbles:true,cancelable:true}})); return ({controller}); }})()"
+                ),
+                true,
+            )
+            .expect("queue synthetic outgoing request");
+        let requests = parse_outgoing_requests(queued).expect("outgoing request payload");
+        assert_eq!(requests.len(), 1);
+        let request_id = &requests[0].id;
+        client
+            .evaluate(
+                "window.__ntOutgoingSplitMessages=[];window.__ntOutgoingSplitCapture=function(event){if(event.key==='Enter'&&event.target?.id==='nt-outgoing-split-test'){window.__ntOutgoingSplitMessages.push(event.target.innerText||event.target.textContent||'');event.target.textContent='';}};document.addEventListener('keydown',window.__ntOutgoingSplitCapture,true);",
+                false,
+            )
+            .expect("install split message capture");
+
+        for (index, text) in ["첫 번째 번역문", "두 번째 번역문"].into_iter().enumerate()
+        {
+            let prepared = client
+                .evaluate(
+                    &prepare_outgoing_send_script(
+                        request_id,
+                        true,
+                        index > 0,
+                        index == 1,
+                        index + 1,
+                        2,
+                    )
+                    .expect("prepare split part"),
+                    false,
+                )
+                .expect("prepare split send");
+            assert_eq!(
+                prepared.as_bool(),
+                Some(true),
+                "split part {} was not prepared",
+                index + 1
+            );
+            client
+                .call("Input.insertText", json!({"text": text}))
+                .expect("insert split text");
+            for event_type in ["rawKeyDown", "keyUp"] {
+                client
+                    .call(
+                        "Input.dispatchKeyEvent",
+                        json!({
+                            "type": event_type,
+                            "key": "Enter",
+                            "code": "Enter",
+                            "windowsVirtualKeyCode": 13,
+                            "nativeVirtualKeyCode": 13
+                        }),
+                    )
+                    .expect("dispatch split send");
+            }
+        }
+
+        let result = client
+            .evaluate(
+                "({messages:window.__ntOutgoingSplitMessages,pending:window.__nudeTranslatorOutgoing?.pending.size})",
+                true,
+            )
+            .expect("read split send result");
+        assert_eq!(
+            result["messages"],
+            json!(["첫 번째 번역문", "두 번째 번역문"])
+        );
+        assert_eq!(result["pending"].as_u64(), Some(0));
+        client
+            .evaluate(
+                "document.removeEventListener('keydown',window.__ntOutgoingSplitCapture,true);document.getElementById('nt-outgoing-split-test')?.remove();delete window.__ntOutgoingSplitCapture;delete window.__ntOutgoingSplitMessages;",
+                false,
+            )
+            .expect("remove split capture");
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
     }
 }
