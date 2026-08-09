@@ -32,7 +32,7 @@ test("Claude Pro and Max connect through the official local Claude Code CLI", ()
   assert.match(script, /\["claude",\s*"Claude Pro\/Max/);
   assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "deepl"\]\)/);
   assert.doesNotMatch(config, /"kanana" \| "original" \| "claude"/);
-  assert.match(providers, /cli_status\("claude", "Claude"/);
+  assert.match(providers, /cli_status\(\s*"claude",\s*"Claude"/);
   assert.match(subscriptionCli, /Anthropic\.ClaudeCode/);
   assert.match(trayMarkup, /data-translator="claude"/);
   assert.match(trayScript, /claude:\s*"Claude"/);
@@ -63,6 +63,20 @@ test("DeepL API keys are replaced through the main save action", () => {
   const saveHandler = script.match(/elements\.form\.addEventListener\("submit"[\s\S]*?\n\}\);/)?.[0] || "";
   assert.ok(saveHandler.indexOf("savePendingProviderCredentials") < saveHandler.indexOf("EXTERNAL_PROVIDERS"));
   assert.match(providers, /API 키가 운영체제 보안 저장소에 저장되어 있습니다/);
+});
+
+test("subscription CLI disconnect only disables the provider inside Nude Translator", () => {
+  for (const provider of ["chatgpt", "claude", "gemini"]) {
+    const row = markup.match(new RegExp(`<article class="provider-row" data-provider="${provider}">[\\s\\S]*?<\\/article>`))?.[0] || "";
+    assert.match(row, /provider-disconnect/);
+  }
+  assert.match(config, /disabled_providers/);
+  assert.match(providers, /CLI 로그인 정보는 유지/);
+  assert.match(providers, /state:\s*if disabled\s*\{\s*"disabled"/);
+  assert.match(script, /Nude Translator에서만 사용을 중지합니다/);
+  assert.match(script, /provider === "deepl"/);
+  assert.match(rustMain, /"disabled_providers"/);
+  assert.match(rustMain, /patch\["translator"\]\s*=\s*json!\("hymt_1_8b"\)/);
 });
 
 test("provider action buttons share dimensions and semantic colors", () => {

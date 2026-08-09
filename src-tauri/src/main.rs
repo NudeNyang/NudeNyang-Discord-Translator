@@ -177,8 +177,11 @@ async fn update_check(
 }
 
 #[tauri::command]
-async fn provider_connections_get() -> Result<Vec<providers::ProviderConnection>, String> {
-    tauri::async_runtime::spawn_blocking(providers::list)
+async fn provider_connections_get(
+    config: State<'_, ConfigStore>,
+) -> Result<Vec<providers::ProviderConnection>, String> {
+    let disabled_providers = config.get()?.disabled_providers;
+    tauri::async_runtime::spawn_blocking(move || providers::list(&disabled_providers))
         .await
         .map_err(|error| format!("번역 서비스 상태 확인을 기다리지 못했습니다: {error}"))
 }
@@ -206,7 +209,21 @@ async fn provider_connect(
     .map_err(|error| format!("번역 서비스 연결 작업을 기다리지 못했습니다: {error}"))??;
 
     if connection.connected {
-        let current = config.get()?;
+        let mut current = config.get()?;
+        if current
+            .disabled_providers
+            .iter()
+            .any(|disabled| disabled == &provider)
+        {
+            let disabled_providers = current
+                .disabled_providers
+                .iter()
+                .filter(|disabled| *disabled != &provider)
+                .cloned()
+                .collect::<Vec<_>>();
+            current = config.update(json!({"disabled_providers": disabled_providers}))?;
+            let _ = app.emit("settings-changed", current.clone());
+        }
         if current.translator == provider {
             engine.apply_config(current)?;
         }
@@ -224,8 +241,24 @@ fn provider_disconnect(
 ) -> Result<providers::ProviderConnection, String> {
     let connection = providers::disconnect(&provider)?;
     let current = config.get()?;
+    let is_subscription_cli = matches!(provider.as_str(), "chatgpt" | "claude" | "gemini");
+    let mut patch = json!({});
+    if is_subscription_cli {
+        let mut disabled_providers = current.disabled_providers.clone();
+        if !disabled_providers
+            .iter()
+            .any(|disabled| disabled == &provider)
+        {
+            disabled_providers.push(provider.clone());
+            disabled_providers.sort();
+        }
+        patch["disabled_providers"] = json!(disabled_providers);
+    }
     if current.translator == provider {
-        let updated = config.update(json!({"translator": "hymt_1_8b"}))?;
+        patch["translator"] = json!("hymt_1_8b");
+    }
+    if patch.as_object().is_some_and(|patch| !patch.is_empty()) {
+        let updated = config.update(patch)?;
         engine.apply_config(updated.clone())?;
         let _ = app.emit("settings-changed", updated);
     }

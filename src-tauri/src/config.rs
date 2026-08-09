@@ -68,6 +68,7 @@ pub struct AppConfig {
     pub change_threshold: f64,
     pub ocr_device: String,
     pub translator: String,
+    pub disabled_providers: Vec<String>,
     pub hymt_device: String,
     pub keep_local_model_warm: bool,
     pub speech_style: String,
@@ -95,6 +96,7 @@ impl Default for AppConfig {
             change_threshold: 0.015,
             ocr_device: "auto".to_string(),
             translator: "hymt_1_8b".to_string(),
+            disabled_providers: Vec::new(),
             hymt_device: "auto".to_string(),
             keep_local_model_warm: true,
             speech_style: "auto".to_string(),
@@ -125,6 +127,22 @@ impl AppConfig {
         }
         object.remove("kanana_device");
         object.remove("kanana_precision");
+
+        let mut disabled_providers = object
+            .get("disabled_providers")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .filter(|provider| matches!(*provider, "chatgpt" | "claude" | "gemini"))
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        disabled_providers.sort();
+        disabled_providers.dedup();
+        object.insert(
+            "disabled_providers".to_string(),
+            Value::Array(disabled_providers.into_iter().map(Value::String).collect()),
+        );
 
         if object.get("update_repository").and_then(Value::as_str) == Some(LEGACY_UPDATE_REPOSITORY)
         {
@@ -324,10 +342,24 @@ mod tests {
         assert_eq!(restored.ui_theme, "system");
         assert!(restored.keep_local_model_warm);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
+        assert!(restored.disabled_providers.is_empty());
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
         assert_eq!(claude.translator, "claude");
+    }
+
+    #[test]
+    fn disabled_subscription_providers_are_filtered_and_deduplicated() {
+        let config = AppConfig::from_value(json!({
+            "disabled_providers": ["gemini", "invalid", "chatgpt", "gemini", 42]
+        }))
+        .expect("normalize disabled providers");
+
+        assert_eq!(
+            config.disabled_providers,
+            vec!["chatgpt".to_string(), "gemini".to_string()]
+        );
     }
 
     #[test]

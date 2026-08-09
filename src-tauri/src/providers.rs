@@ -22,11 +22,26 @@ pub struct ProviderConnection {
     pub can_disconnect: bool,
 }
 
-pub fn list() -> Vec<ProviderConnection> {
+pub fn list(disabled_providers: &[String]) -> Vec<ProviderConnection> {
     vec![
-        cli_status("chatgpt", "ChatGPT", "ChatGPT 구독 · Codex CLI"),
-        cli_status("claude", "Claude", "Claude Pro/Max · Claude Code"),
-        cli_status("gemini", "Gemini", "Google 구독 · Gemini CLI"),
+        cli_status(
+            "chatgpt",
+            "ChatGPT",
+            "ChatGPT 구독 · Codex CLI",
+            disabled_providers,
+        ),
+        cli_status(
+            "claude",
+            "Claude",
+            "Claude Pro/Max · Claude Code",
+            disabled_providers,
+        ),
+        cli_status(
+            "gemini",
+            "Gemini",
+            "Google 구독 · Gemini CLI",
+            disabled_providers,
+        ),
         deepl_status(),
     ]
 }
@@ -40,9 +55,14 @@ pub fn connect(provider: &str, credential: Option<&str>) -> Result<ProviderConne
             Ok(deepl_status())
         }
         "chatgpt" | "claude" | "gemini" => {
-            let probe = connect_subscription_interactively(provider)?;
+            let probe = probe_subscription_connection(provider)?;
+            let probe = if probe.connected {
+                probe
+            } else {
+                connect_subscription_interactively(provider)?
+            };
             let (name, auth_mode) = cli_provider_identity(provider);
-            Ok(cli_connection(provider, name, auth_mode, probe))
+            Ok(cli_connection(provider, name, auth_mode, probe, false))
         }
         _ => Err(format!("지원하지 않는 번역 서비스입니다: {provider}")),
     }
@@ -53,7 +73,7 @@ pub fn install(provider: &str) -> Result<ProviderConnection, String> {
         "chatgpt" | "claude" | "gemini" => {
             let probe = install_subscription_cli(provider)?;
             let (name, auth_mode) = cli_provider_identity(provider);
-            Ok(cli_connection(provider, name, auth_mode, probe))
+            Ok(cli_connection(provider, name, auth_mode, probe, false))
         }
         _ => Err(format!(
             "자동 설치를 지원하지 않는 번역 서비스입니다: {provider}"
@@ -67,10 +87,20 @@ pub fn disconnect(provider: &str) -> Result<ProviderConnection, String> {
             credentials::delete("deepl")?;
             Ok(deepl_status())
         }
-        "chatgpt" | "claude" | "gemini" => Err(
-            "CLI 계정은 다른 앱에서도 사용하므로 Nude Translator에서 강제로 로그아웃하지 않습니다. 해당 CLI에서 계정을 관리하십시오."
-                .to_string(),
-        ),
+        "chatgpt" | "claude" | "gemini" => {
+            let (name, auth_mode) = cli_provider_identity(provider);
+            Ok(cli_connection(
+                provider,
+                name,
+                auth_mode,
+                CliConnectionProbe {
+                    installed: true,
+                    connected: true,
+                    detail: String::new(),
+                },
+                true,
+            ))
+        }
         _ => Err(format!("지원하지 않는 번역 서비스입니다: {provider}")),
     }
 }
@@ -83,14 +113,27 @@ fn cli_provider_identity(provider: &str) -> (&'static str, &'static str) {
     }
 }
 
-fn cli_status(provider: &str, name: &str, auth_mode: &str) -> ProviderConnection {
+fn cli_status(
+    provider: &str,
+    name: &str,
+    auth_mode: &str,
+    disabled_providers: &[String],
+) -> ProviderConnection {
     let probe =
         probe_subscription_connection(provider).unwrap_or_else(|error| CliConnectionProbe {
             installed: false,
             connected: false,
             detail: error,
         });
-    cli_connection(provider, name, auth_mode, probe)
+    cli_connection(
+        provider,
+        name,
+        auth_mode,
+        probe,
+        disabled_providers
+            .iter()
+            .any(|disabled| disabled == provider),
+    )
 }
 
 fn cli_connection(
@@ -98,14 +141,20 @@ fn cli_connection(
     name: &str,
     auth_mode: &str,
     probe: CliConnectionProbe,
+    disabled: bool,
 ) -> ProviderConnection {
+    let authenticated = probe.connected;
+    let disabled = authenticated && disabled;
+    let connected = authenticated && !disabled;
     ProviderConnection {
         id: provider.to_string(),
         name: name.to_string(),
         auth_mode: auth_mode.to_string(),
         installed: probe.installed,
-        connected: probe.connected,
-        state: if probe.connected {
+        connected,
+        state: if disabled {
+            "disabled"
+        } else if connected {
             "connected"
         } else if probe.installed {
             "login-required"
@@ -113,9 +162,13 @@ fn cli_connection(
             "not-installed"
         }
         .to_string(),
-        detail: probe.detail,
+        detail: if disabled {
+            format!("{name} CLI 로그인 정보는 유지되며 Nude Translator에서만 사용을 중지했습니다.")
+        } else {
+            probe.detail
+        },
         credential_required: false,
-        can_disconnect: false,
+        can_disconnect: connected,
     }
 }
 
@@ -152,7 +205,7 @@ fn deepl_status() -> ProviderConnection {
 
 #[cfg(test)]
 mod tests {
-    use super::cli_connection;
+    use super::{cli_connection, disconnect};
     use crate::translation::CliConnectionProbe;
 
     #[test]
@@ -166,6 +219,7 @@ mod tests {
                 connected: false,
                 detail: "missing".to_string(),
             },
+            false,
         );
         assert_eq!(missing.state, "not-installed");
 
@@ -178,7 +232,34 @@ mod tests {
                 connected: true,
                 detail: "ready".to_string(),
             },
+            false,
         );
         assert_eq!(ready.state, "connected");
+        assert!(ready.can_disconnect);
+
+        let disabled = cli_connection(
+            "chatgpt",
+            "ChatGPT",
+            "Codex CLI",
+            CliConnectionProbe {
+                installed: true,
+                connected: true,
+                detail: "ready".to_string(),
+            },
+            true,
+        );
+        assert!(!disabled.connected);
+        assert_eq!(disabled.state, "disabled");
+        assert!(!disabled.can_disconnect);
+        assert!(disabled.detail.contains("CLI 로그인 정보는 유지"));
+    }
+
+    #[test]
+    fn disconnecting_a_cli_does_not_require_or_change_its_login() {
+        let disconnected = disconnect("chatgpt").expect("disable ChatGPT inside the app");
+        assert_eq!(disconnected.state, "disabled");
+        assert!(!disconnected.connected);
+        assert!(disconnected.installed);
+        assert!(disconnected.detail.contains("Nude Translator에서만"));
     }
 }

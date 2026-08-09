@@ -210,6 +210,7 @@ function providerIsConnected(provider) {
 
 function providerStateLabel(connection) {
   if (connection.connected) return "연결됨";
+  if (connection.state === "disabled") return "사용 중지됨";
   if (connection.state === "not-installed") return "설치 필요";
   if (connection.state === "credential-required") return "API 키 필요";
   if (connection.state === "login-required") return "로그인 필요";
@@ -228,6 +229,7 @@ function renderProviderConnections(connections) {
     status.querySelector("strong").textContent = providerStateLabel(connection);
     status.querySelector("span").textContent = connection.detail;
     if (action) {
+      action.hidden = connection.canDisconnect;
       action.disabled = connection.connected;
       action.textContent = connection.connected ? "연결됨" : connection.installed ? "연결" : "설치";
     }
@@ -332,9 +334,13 @@ async function savePendingProviderCredentials() {
 
 async function disconnectProvider(row) {
   const provider = row.dataset.provider;
+  const currentConnection = providerConnection(provider);
+  const isDeepL = provider === "deepl";
   const confirmed = await showModal({
-    title: "DeepL 연결을 해제하시겠습니까?",
-    message: "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다.",
+    title: `${currentConnection?.name || "번역 서비스"} 연결을 해제하시겠습니까?`,
+    message: isDeepL
+      ? "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다."
+      : "CLI 로그인 정보와 설치 상태는 유지되며 Nude Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.",
     acceptText: "연결 해제",
   });
   if (!confirmed) return;
