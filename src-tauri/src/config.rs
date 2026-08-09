@@ -116,7 +116,7 @@ impl AppConfig {
         if object
             .get("translator")
             .and_then(Value::as_str)
-            .is_some_and(|value| matches!(value, "kanana" | "original" | "claude"))
+            .is_some_and(|value| matches!(value, "kanana" | "original"))
         {
             object.insert(
                 "translator".to_string(),
@@ -325,9 +325,9 @@ mod tests {
         assert!(restored.keep_local_model_warm);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
 
-        let public_build = AppConfig::from_value(json!({"translator": "claude"}))
-            .expect("Claude subscription config should migrate");
-        assert_eq!(public_build.translator, "hymt_1_8b");
+        let claude = AppConfig::from_value(json!({"translator": "claude"}))
+            .expect("Claude subscription config should remain available");
+        assert_eq!(claude.translator, "claude");
     }
 
     #[test]

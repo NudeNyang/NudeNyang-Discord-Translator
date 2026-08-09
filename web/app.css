@@ -641,6 +641,8 @@ input:focus-visible,
 
 .provider-credential {
   gap: 7px;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .provider-secret {
@@ -648,16 +650,20 @@ input:focus-visible,
 }
 
 .button.quiet {
-  min-width: auto;
-  padding: 0 7px;
-  border-color: transparent;
+  flex: 0 0 auto;
+  min-width: 78px;
+  padding: 0 12px;
+  border-color: var(--border);
   color: var(--muted);
-  background: transparent;
-  font-size: 11px;
+  background: color-mix(in srgb, var(--control) 72%, transparent);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .button.quiet:hover {
-  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
+  color: color-mix(in srgb, var(--danger) 78%, var(--text));
+  background: color-mix(in srgb, var(--danger) 8%, var(--control));
 }
 
 .section-note {

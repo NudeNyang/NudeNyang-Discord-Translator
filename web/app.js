@@ -32,6 +32,7 @@ const OPTIONS = {
     ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
     ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
     ["chatgpt", "ChatGPT Plus/Pro (Codex CLI)"],
+    ["claude", "Claude Pro/Max (Claude Code)"],
     ["gemini", "Gemini Pro/Ultra (Gemini CLI)"],
     ["deepl", "DeepL (API 키·외부 전송)"],
     ["mock", "Mock 테스트"],
@@ -98,7 +99,7 @@ const elements = {
   providerRows: [...document.querySelectorAll(".provider-row")],
 };
 
-const EXTERNAL_PROVIDERS = new Set(["chatgpt", "gemini", "deepl"]);
+const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
 
 function updateScrollIndicator() {
   const metrics = scrollThumbMetrics(
@@ -295,10 +296,11 @@ async function connectProvider(row) {
     state.providerConnections.set(provider, connection);
     renderProviderConnections([...state.providerConnections.values()]);
     if (secret && connection.connected) secret.value = "";
-    if (provider === "gemini" && !connection.connected) {
+    if (["claude", "gemini"].includes(provider) && !connection.connected) {
+      const providerName = provider === "claude" ? "Claude" : "Gemini";
       await showModal({
-        title: "Gemini 로그인 창을 열었습니다",
-        message: "Gemini CLI 창에서 Google 로그인을 완료한 후 이 화면의 연결 버튼을 다시 선택하십시오.",
+        title: `${providerName} 로그인 창을 열었습니다`,
+        message: `${providerName} CLI 창에서 계정 로그인을 완료한 후 이 화면의 연결 버튼을 다시 선택하십시오.`,
         acceptText: "확인",
         cancelVisible: false,
       });

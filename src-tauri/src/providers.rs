@@ -25,6 +25,7 @@ pub struct ProviderConnection {
 pub fn list() -> Vec<ProviderConnection> {
     vec![
         cli_status("chatgpt", "ChatGPT", "ChatGPT 구독 · Codex CLI"),
+        cli_status("claude", "Claude", "Claude Pro/Max · Claude Code"),
         cli_status("gemini", "Gemini", "Google 구독 · Gemini CLI"),
         deepl_status(),
     ]
@@ -38,22 +39,10 @@ pub fn connect(provider: &str, credential: Option<&str>) -> Result<ProviderConne
             credentials::write("deepl", credential)?;
             Ok(deepl_status())
         }
-        "chatgpt" | "gemini" => {
+        "chatgpt" | "claude" | "gemini" => {
             let probe = connect_subscription_interactively(provider)?;
-            Ok(cli_connection(
-                provider,
-                if provider == "chatgpt" {
-                    "ChatGPT"
-                } else {
-                    "Gemini"
-                },
-                if provider == "chatgpt" {
-                    "ChatGPT 구독 · Codex CLI"
-                } else {
-                    "Google 구독 · Gemini CLI"
-                },
-                probe,
-            ))
+            let (name, auth_mode) = cli_provider_identity(provider);
+            Ok(cli_connection(provider, name, auth_mode, probe))
         }
         _ => Err(format!("지원하지 않는 번역 서비스입니다: {provider}")),
     }
@@ -61,22 +50,10 @@ pub fn connect(provider: &str, credential: Option<&str>) -> Result<ProviderConne
 
 pub fn install(provider: &str) -> Result<ProviderConnection, String> {
     match provider {
-        "chatgpt" | "gemini" => {
+        "chatgpt" | "claude" | "gemini" => {
             let probe = install_subscription_cli(provider)?;
-            Ok(cli_connection(
-                provider,
-                if provider == "chatgpt" {
-                    "ChatGPT"
-                } else {
-                    "Gemini"
-                },
-                if provider == "chatgpt" {
-                    "ChatGPT 구독 · Codex CLI"
-                } else {
-                    "Google 구독 · Gemini CLI"
-                },
-                probe,
-            ))
+            let (name, auth_mode) = cli_provider_identity(provider);
+            Ok(cli_connection(provider, name, auth_mode, probe))
         }
         _ => Err(format!(
             "자동 설치를 지원하지 않는 번역 서비스입니다: {provider}"
@@ -90,11 +67,19 @@ pub fn disconnect(provider: &str) -> Result<ProviderConnection, String> {
             credentials::delete("deepl")?;
             Ok(deepl_status())
         }
-        "chatgpt" | "gemini" => Err(
+        "chatgpt" | "claude" | "gemini" => Err(
             "CLI 계정은 다른 앱에서도 사용하므로 Nude Translator에서 강제로 로그아웃하지 않습니다. 해당 CLI에서 계정을 관리하십시오."
                 .to_string(),
         ),
         _ => Err(format!("지원하지 않는 번역 서비스입니다: {provider}")),
+    }
+}
+
+fn cli_provider_identity(provider: &str) -> (&'static str, &'static str) {
+    match provider {
+        "chatgpt" => ("ChatGPT", "ChatGPT 구독 · Codex CLI"),
+        "claude" => ("Claude", "Claude Pro/Max · Claude Code"),
+        _ => ("Gemini", "Google 구독 · Gemini CLI"),
     }
 }
 

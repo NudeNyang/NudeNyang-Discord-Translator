@@ -13,6 +13,7 @@ const TRANSLATOR_LABELS = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
   chatgpt: "ChatGPT",
+  claude: "Claude",
   gemini: "Gemini",
   deepl: "DeepL",
   mock: "Mock 테스트",
@@ -21,7 +22,7 @@ const TRANSLATOR_LABELS = Object.freeze({
 const VIEW_HEIGHTS = Object.freeze({
   main: 318,
   language: 274,
-  model: 311,
+  model: 353,
 });
 
 const elements = {
@@ -175,7 +176,7 @@ async function selectLanguage(language) {
 async function selectTranslator(translator) {
   if (!invoke || !TRANSLATOR_LABELS[translator]) return;
   try {
-    if (["chatgpt", "gemini", "deepl"].includes(translator)) {
+    if (["chatgpt", "claude", "gemini", "deepl"].includes(translator)) {
       if (!providerConnections.has(translator)) await refreshProviderConnections();
       if (!providerConnections.get(translator)?.connected) {
         await invoke("tray_open_provider_settings", { provider: translator });

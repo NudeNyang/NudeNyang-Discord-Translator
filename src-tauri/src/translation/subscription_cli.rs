@@ -205,7 +205,6 @@ impl SubscriptionCliTranslator {
             }
             Implementation::Claude => {
                 let arguments = vec![
-                    "--safe-mode".to_string(),
                     "--disable-slash-commands".to_string(),
                     "--disallowedTools".to_string(),
                     "*".to_string(),
@@ -229,7 +228,7 @@ impl SubscriptionCliTranslator {
                     self.timeout,
                 )?;
                 raise_for_failure(&output, self.provider)?;
-                decode_payload(&String::from_utf8_lossy(&output.stdout))
+                decode_payload(&decode_process_output(&output.stdout))
             }
             Implementation::Agy | Implementation::Gemini => {
                 let arguments = if implementation == Implementation::Agy {
@@ -256,7 +255,7 @@ impl SubscriptionCliTranslator {
                     self.timeout,
                 )?;
                 raise_for_failure(&output, self.provider)?;
-                decode_payload(&String::from_utf8_lossy(&output.stdout))
+                decode_payload(&decode_process_output(&output.stdout))
             }
         }
     }
@@ -293,8 +292,8 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
             )?;
             let status = format!(
                 "{}\n{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
+                decode_process_output(&output.stdout),
+                decode_process_output(&output.stderr)
             );
             let connected = output.status.success() && status.to_lowercase().contains("chatgpt");
             Ok(CliConnectionProbe {
@@ -319,11 +318,34 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
                 },
             })
         }
-        Implementation::Claude => Ok(CliConnectionProbe {
-            installed: true,
-            connected: false,
-            detail: "공개 앱에서는 Claude 구독 로그인을 사용하지 않습니다.".to_string(),
-        }),
+        Implementation::Claude => {
+            let output = run_process(
+                &executable,
+                &["auth".to_string(), "status".to_string()],
+                None,
+                &translator.workspace_dir()?,
+                &subscription_environment(),
+                Duration::from_secs(10),
+            )?;
+            let status = format!(
+                "{}\n{}",
+                decode_process_output(&output.stdout),
+                decode_process_output(&output.stderr)
+            )
+            .to_lowercase();
+            let connected = output.status.success()
+                && !status.contains("apikey")
+                && !status.contains("\"console\"");
+            Ok(CliConnectionProbe {
+                installed: true,
+                connected,
+                detail: if connected {
+                    "Claude Pro/Max 계정으로 연결되어 있습니다.".to_string()
+                } else {
+                    "Claude Code는 설치되어 있지만 Claude Pro/Max 로그인이 필요합니다.".to_string()
+                },
+            })
+        }
     }
 }
 
@@ -349,15 +371,15 @@ pub fn connect_subscription_interactively(provider: &str) -> Result<CliConnectio
             if !output.status.success() {
                 return Err(format!(
                     "ChatGPT 로그인을 완료하지 못했습니다: {}",
-                    tail_chars(&String::from_utf8_lossy(&output.stderr), 400)
+                    tail_chars(&decode_process_output(&output.stderr), 400)
                 ));
             }
         }
         Implementation::Agy | Implementation::Gemini => {
-            open_cli_login_console(&executable)?;
+            open_cli_login_console(&executable, "Gemini")?;
         }
         Implementation::Claude => {
-            return Err("공개 앱에서는 Claude 구독 로그인을 연결하지 않습니다.".to_string());
+            open_cli_login_console(&executable, "Claude")?;
         }
     }
     probe_subscription_connection(provider.key())
@@ -365,12 +387,13 @@ pub fn connect_subscription_interactively(provider: &str) -> Result<CliConnectio
 
 pub fn install_subscription_cli(provider: &str) -> Result<CliConnectionProbe, String> {
     let provider = SubscriptionProvider::from_key(provider)?;
+    if provider == SubscriptionProvider::Claude {
+        return install_claude_cli();
+    }
     let package = match provider {
         SubscriptionProvider::ChatGpt => "@openai/codex@latest",
         SubscriptionProvider::Gemini => "@google/gemini-cli@latest",
-        SubscriptionProvider::Claude => {
-            return Err("Claude 구독 CLI 설치는 지원하지 않습니다.".to_string());
-        }
+        SubscriptionProvider::Claude => unreachable!(),
     };
     let npm = ensure_npm_available()?;
     let workspace = std::env::temp_dir().join("nude-translator-cli-install");
@@ -393,8 +416,8 @@ pub fn install_subscription_cli(provider: &str) -> Result<CliConnectionProbe, St
     if !output.status.success() {
         let detail = format!(
             "{}\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
+            decode_process_output(&output.stdout),
+            decode_process_output(&output.stderr)
         );
         return Err(format!(
             "{} CLI를 설치하지 못했습니다: {}",
@@ -410,6 +433,64 @@ pub fn install_subscription_cli(provider: &str) -> Result<CliConnectionProbe, St
         ));
     }
     Ok(probe)
+}
+
+#[cfg(windows)]
+fn install_claude_cli() -> Result<CliConnectionProbe, String> {
+    let winget = find_executable("winget").ok_or_else(|| {
+        "Claude Code 자동 설치에 필요한 Windows 앱 설치 관리자(winget)를 찾지 못했습니다. Microsoft Store에서 앱 설치 관리자를 설치한 후 다시 시도하십시오."
+            .to_string()
+    })?;
+    let action = if find_executable("claude").is_some()
+        || common_install_locations(SubscriptionProvider::Claude)
+            .into_iter()
+            .any(|(path, _)| path.is_file())
+    {
+        "upgrade"
+    } else {
+        "install"
+    };
+    let output = run_process(
+        &winget,
+        &[
+            action.to_string(),
+            "--id".to_string(),
+            "Anthropic.ClaudeCode".to_string(),
+            "--exact".to_string(),
+            "--silent".to_string(),
+            "--accept-package-agreements".to_string(),
+            "--accept-source-agreements".to_string(),
+            "--disable-interactivity".to_string(),
+        ],
+        None,
+        &std::env::temp_dir(),
+        &subscription_environment(),
+        Duration::from_secs(900),
+    )?;
+    if !output.status.success() {
+        let detail = format!(
+            "{}\n{}",
+            decode_process_output(&output.stdout),
+            decode_process_output(&output.stderr)
+        );
+        return Err(format!(
+            "Claude Code를 자동으로 설치하지 못했습니다: {}",
+            tail_chars(detail.trim(), 600)
+        ));
+    }
+    let probe = probe_subscription_connection("claude")?;
+    if !probe.installed {
+        return Err(
+            "Claude Code 설치는 완료되었지만 실행 파일을 찾지 못했습니다. 앱을 다시 실행한 후 연결을 시도하십시오."
+                .to_string(),
+        );
+    }
+    Ok(probe)
+}
+
+#[cfg(not(windows))]
+fn install_claude_cli() -> Result<CliConnectionProbe, String> {
+    Err("현재 운영체제에서는 Claude Code 자동 설치를 지원하지 않습니다.".to_string())
 }
 
 fn ensure_npm_available() -> Result<PathBuf, String> {
@@ -482,7 +563,7 @@ fn installed_node_major() -> Option<u32> {
         Duration::from_secs(10),
     )
     .ok()?;
-    parse_node_major(&String::from_utf8_lossy(&output.stdout))
+    parse_node_major(&decode_process_output(&output.stdout))
 }
 
 fn parse_node_major(value: &str) -> Option<u32> {
@@ -528,13 +609,32 @@ fn install_node_runtime() -> Result<(), String> {
     }
     let detail = format!(
         "{}\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        decode_process_output(&output.stdout),
+        decode_process_output(&output.stderr)
     );
     Err(format!(
         "CLI 실행에 필요한 Node.js를 자동으로 설치하지 못했습니다: {}",
         tail_chars(detail.trim(), 600)
     ))
+}
+
+#[cfg(windows)]
+fn find_git_bash() -> Option<PathBuf> {
+    if let Some(path) = env::var_os("CLAUDE_CODE_GIT_BASH_PATH") {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+    for variable in ["ProgramFiles", "ProgramFiles(x86)"] {
+        if let Some(root) = env::var_os(variable) {
+            let candidate = PathBuf::from(root).join("Git/bin/bash.exe");
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
 }
 
 #[cfg(not(windows))]
@@ -553,7 +653,7 @@ fn gemini_oauth_cache_exists() -> bool {
 }
 
 #[cfg(windows)]
-fn open_cli_login_console(executable: &Path) -> Result<(), String> {
+fn open_cli_login_console(executable: &Path, provider_name: &str) -> Result<(), String> {
     use std::os::windows::process::CommandExt;
     const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
     let mut command = process_command(executable, &[]);
@@ -561,12 +661,14 @@ fn open_cli_login_console(executable: &Path) -> Result<(), String> {
     command
         .spawn()
         .map(|_| ())
-        .map_err(|error| format!("Gemini 로그인 창을 열지 못했습니다: {error}"))
+        .map_err(|error| format!("{provider_name} 로그인 창을 열지 못했습니다: {error}"))
 }
 
 #[cfg(not(windows))]
-fn open_cli_login_console(_executable: &Path) -> Result<(), String> {
-    Err("현재 운영체제에서는 터미널에서 Gemini CLI를 한 번 실행하여 로그인하십시오.".to_string())
+fn open_cli_login_console(_executable: &Path, provider_name: &str) -> Result<(), String> {
+    Err(format!(
+        "현재 운영체제에서는 터미널에서 {provider_name} CLI를 한 번 실행하여 로그인하십시오."
+    ))
 }
 
 impl Translator for SubscriptionCliTranslator {
@@ -600,8 +702,8 @@ impl Translator for SubscriptionCliTranslator {
             )?;
             let status = format!(
                 "{}\n{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
+                decode_process_output(&output.stdout),
+                decode_process_output(&output.stderr)
             )
             .to_lowercase();
             if !output.status.success() || !status.contains("chatgpt") {
@@ -621,8 +723,8 @@ impl Translator for SubscriptionCliTranslator {
             )?;
             let status = format!(
                 "{}\n{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
+                decode_process_output(&output.stdout),
+                decode_process_output(&output.stderr)
             )
             .to_lowercase();
             if !output.status.success() {
@@ -1170,7 +1272,7 @@ fn raise_for_failure(output: &Output, provider: SubscriptionProvider) -> Result<
     } else {
         &output.stderr
     };
-    let detail = tail_chars(&String::from_utf8_lossy(raw), 500);
+    let detail = tail_chars(&decode_process_output(raw), 500);
     let suffix = if detail.trim().is_empty() {
         String::new()
     } else {
@@ -1267,6 +1369,15 @@ fn subscription_environment() -> HashMap<String, String> {
     }
     environment.insert("NO_COLOR".to_string(), "1".to_string());
     environment.insert("CLICOLOR".to_string(), "0".to_string());
+    #[cfg(windows)]
+    if !environment.contains_key("CLAUDE_CODE_GIT_BASH_PATH") {
+        if let Some(path) = find_git_bash() {
+            environment.insert(
+                "CLAUDE_CODE_GIT_BASH_PATH".to_string(),
+                path.to_string_lossy().into_owned(),
+            );
+        }
+    }
     environment
 }
 
@@ -1303,6 +1414,10 @@ fn common_install_locations(provider: SubscriptionProvider) -> Vec<(PathBuf, Imp
         ],
         SubscriptionProvider::Claude => vec![
             (home.join(".local/bin/claude.exe"), Implementation::Claude),
+            (
+                local.join("Microsoft/WinGet/Links/claude.exe"),
+                Implementation::Claude,
+            ),
             (roaming.join("npm/claude.cmd"), Implementation::Claude),
         ],
         SubscriptionProvider::Gemini => vec![
@@ -1344,7 +1459,7 @@ fn process_command(executable: &Path, arguments: &[String]) -> Command {
         if extension.eq_ignore_ascii_case("cmd") || extension.eq_ignore_ascii_case("bat") {
             let mut command = Command::new("cmd.exe");
             command
-                .args(["/d", "/s", "/c"])
+                .args(["/d", "/s", "/c", "call"])
                 .arg(executable)
                 .args(arguments);
             return command;
@@ -1353,6 +1468,31 @@ fn process_command(executable: &Path, arguments: &[String]) -> Command {
     let mut command = Command::new(executable);
     command.args(arguments);
     command
+}
+
+fn decode_process_output(bytes: &[u8]) -> String {
+    if bytes.is_empty() {
+        return String::new();
+    }
+    if let Ok(value) = std::str::from_utf8(bytes) {
+        return value.to_string();
+    }
+    if bytes.starts_with(&[0xff, 0xfe]) {
+        let units = bytes[2..]
+            .chunks_exact(2)
+            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect::<Vec<_>>();
+        return String::from_utf16_lossy(&units);
+    }
+    #[cfg(windows)]
+    {
+        let (decoded, _, _) = encoding_rs::EUC_KR.decode(bytes);
+        return decoded.into_owned();
+    }
+    #[cfg(not(windows))]
+    {
+        String::from_utf8_lossy(bytes).into_owned()
+    }
 }
 
 #[cfg(windows)]
@@ -1377,8 +1517,9 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        decode_payload, parse_node_major, subscription_environment, translation_prompt,
-        validated_translations, SubscriptionCliTranslator,
+        decode_payload, decode_process_output, parse_node_major, run_process,
+        subscription_environment, translation_prompt, validated_translations,
+        SubscriptionCliTranslator,
     };
     use crate::language::Language;
     use crate::translation::Translator;
@@ -1388,6 +1529,43 @@ mod tests {
         assert_eq!(parse_node_major("v22.18.0\r\n"), Some(22));
         assert_eq!(parse_node_major("20.12.2"), Some(20));
         assert_eq!(parse_node_major("unknown"), None);
+    }
+
+    #[test]
+    fn decodes_localized_windows_process_output_without_replacement_characters() {
+        let (encoded, _, _) = encoding_rs::EUC_KR.encode("내부 또는 외부 명령이 아닙니다.");
+        let decoded = decode_process_output(encoded.as_ref());
+        assert_eq!(decoded, "내부 또는 외부 명령이 아닙니다.");
+        assert!(!decoded.contains('\u{fffd}'));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn executes_batch_wrappers_from_paths_containing_spaces() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude translator batch command {}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let wrapper = directory.join("sample command.cmd");
+        std::fs::write(&wrapper, "@echo off\r\necho batch-path-ok\r\n").unwrap();
+
+        let output = run_process(
+            &wrapper,
+            &[],
+            None,
+            &directory,
+            &subscription_environment(),
+            std::time::Duration::from_secs(5),
+        )
+        .unwrap();
+
+        let _ = std::fs::remove_dir_all(&directory);
+        assert!(output.status.success());
+        assert_eq!(
+            decode_process_output(&output.stdout).trim(),
+            "batch-path-ok"
+        );
     }
 
     #[test]
@@ -1465,5 +1643,13 @@ mod tests {
 
         assert!(!translated.trim().is_empty());
         assert_ne!(translated, "Hello, how are you?");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "공식 Gemini CLI를 사용자 환경에 설치합니다."]
+    fn live_automatic_gemini_cli_installation() {
+        let probe = super::install_subscription_cli("gemini").unwrap();
+        assert!(probe.installed);
     }
 }
