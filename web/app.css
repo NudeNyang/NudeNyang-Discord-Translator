@@ -624,9 +624,9 @@ input:focus-visible,
 }
 
 .provider-status span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .provider-action {
@@ -646,24 +646,23 @@ input:focus-visible,
 }
 
 .provider-secret {
+  flex: 1 1 auto;
   min-width: 110px;
 }
 
-.button.quiet {
+.button.danger {
   flex: 0 0 auto;
-  min-width: 78px;
+  min-width: 86px;
   padding: 0 12px;
-  border-color: var(--border);
-  color: var(--muted);
-  background: color-mix(in srgb, var(--control) 72%, transparent);
+  border-color: var(--danger);
+  color: var(--bg);
+  background: var(--danger);
   font-size: 12px;
   white-space: nowrap;
 }
 
-.button.quiet:hover {
-  border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
-  color: color-mix(in srgb, var(--danger) 78%, var(--text));
-  background: color-mix(in srgb, var(--danger) 8%, var(--control));
+.button.danger:hover {
+  filter: brightness(0.92);
 }
 
 .section-note {

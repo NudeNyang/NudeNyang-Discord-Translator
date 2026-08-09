@@ -227,13 +227,13 @@ function renderProviderConnections(connections) {
     status.dataset.state = connection.state;
     status.querySelector("strong").textContent = providerStateLabel(connection);
     status.querySelector("span").textContent = connection.detail;
-    action.disabled = connection.connected && connection.id !== "deepl";
-    action.textContent = connection.connected
-      ? connection.id === "deepl" ? "키 변경" : "연결됨"
-      : connection.installed ? "연결" : "설치";
+    if (action) {
+      action.disabled = connection.connected;
+      action.textContent = connection.connected ? "연결됨" : connection.installed ? "연결" : "설치";
+    }
     if (disconnect) disconnect.hidden = !connection.canDisconnect;
     const secret = row.querySelector(".provider-secret");
-    if (secret) secret.placeholder = connection.connected ? "새 API 키로 변경" : "DeepL API 키";
+    if (secret) secret.placeholder = connection.connected ? "새 API 키 입력 시 변경" : "DeepL API 키";
   }
 }
 
@@ -265,6 +265,7 @@ function revealProviderConnection(provider) {
 async function connectProvider(row) {
   const provider = row.dataset.provider;
   const action = row.querySelector(".provider-action");
+  if (!action) return;
   const status = row.querySelector(".provider-status");
   const secret = row.querySelector(".provider-secret");
   const credential = secret?.value.trim() || null;
@@ -313,6 +314,20 @@ async function connectProvider(row) {
       action.disabled = false;
     }
   }
+}
+
+async function savePendingProviderCredentials() {
+  const row = document.querySelector('.provider-row[data-provider="deepl"]');
+  const secret = row?.querySelector(".provider-secret");
+  const credential = secret?.value.trim() || "";
+  if (!credential) return;
+
+  elements.saveStatus.textContent = "DeepL API 키 확인 중";
+  const connection = await invoke("provider_connect", { provider: "deepl", credential });
+  if (!connection.connected) throw new Error("DeepL API 키를 저장하지 못했습니다.");
+  state.providerConnections.set("deepl", connection);
+  renderProviderConnections([...state.providerConnections.values()]);
+  secret.value = "";
 }
 
 async function disconnectProvider(row) {
@@ -724,7 +739,7 @@ elements.viewLicense.addEventListener("click", () => {
   });
 });
 for (const row of elements.providerRows) {
-  row.querySelector(".provider-action").addEventListener("click", () => {
+  row.querySelector(".provider-action")?.addEventListener("click", () => {
     connectProvider(row).catch(error => showError("번역 서비스를 연결하지 못했습니다", String(error)));
   });
   row.querySelector(".provider-disconnect")?.addEventListener("click", () => {
@@ -743,10 +758,14 @@ elements.settingsScroll.addEventListener("scroll", () => {
     550,
   );
 }, { passive: true });
-elements.cancel.addEventListener("click", () => renderConfig(state.saved));
+elements.cancel.addEventListener("click", () => {
+  renderConfig(state.saved);
+  document.querySelectorAll(".provider-secret").forEach(secret => { secret.value = ""; });
+});
 elements.form.addEventListener("submit", async event => {
   event.preventDefault();
   try {
+    await savePendingProviderCredentials();
     const translator = state.selectValues.translator;
     if (EXTERNAL_PROVIDERS.has(translator) && !providerIsConnected(translator)) {
       revealProviderConnection(translator);
