@@ -9,8 +9,8 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://x.com/NudeNyang_VRC" },
-        { "url": "https://github.com/NudeNyang/Nude-Translator" },
-        { "url": "https://github.com/NudeNyang/Nude-Translator/releases/**" }
+        { "url": "https://github.com/NudeNyang/NudeNyang-Translator" },
+        { "url": "https://github.com/NudeNyang/NudeNyang-Translator/releases/**" }
       ]
     }
   ]

@@ -4,7 +4,7 @@ version = "0.3.2-beta"
 description = "NudeNyang Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
-repository = "https://github.com/NudeNyang/Nude-Translator"
+repository = "https://github.com/NudeNyang/NudeNyang-Translator"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

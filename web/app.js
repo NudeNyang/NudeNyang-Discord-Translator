@@ -19,7 +19,7 @@ const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 const SCROLL_INDICATOR_REVEAL_DISTANCE = 44;
 const APP_LINKS = Object.freeze({
   author: "https://x.com/NudeNyang_VRC",
-  repository: "https://github.com/NudeNyang/Nude-Translator",
+  repository: "https://github.com/NudeNyang/NudeNyang-Translator",
 });
 
 const OPTIONS = {

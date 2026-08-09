@@ -13,6 +13,7 @@ const installerHooks = readFileSync(new URL("../../src-tauri/windows/hooks.nsh",
 test("the user-facing product name is NudeNyang Translator", () => {
   assert.match(markup, /NudeNyang Translator/);
   assert.match(tauriConfig, /"productName": "NudeNyang Translator"/);
+  assert.match(script, /https:\/\/github\.com\/NudeNyang\/NudeNyang-Translator/);
   assert.doesNotMatch(markup, /Nude Translator/);
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });

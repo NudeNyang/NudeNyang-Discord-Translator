@@ -6,7 +6,7 @@ use std::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/Nude-Translator";
+const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Translator";
 const LEGACY_UPDATE_REPOSITORY: &str = "NudeNyang/DiscordTranslateOverlay";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -368,7 +368,7 @@ mod tests {
 
         assert!(!restored.enabled);
         assert_eq!(restored.translator, "hymt_1_8b");
-        assert_eq!(restored.update_repository, "NudeNyang/Nude-Translator");
+        assert_eq!(restored.update_repository, "NudeNyang/NudeNyang-Translator");
         assert_eq!(restored.speech_style, "auto");
         assert_eq!(restored.ui_theme, "system");
         assert_eq!(restored.ui_language, "auto");
