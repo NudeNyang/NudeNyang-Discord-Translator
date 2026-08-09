@@ -25,3 +25,9 @@ test("settings can be reverted and native window chrome follows the selected the
   assert.match(rustMain, /DWMWA_TEXT_COLOR/);
   assert.match(rustMain, /DWMWA_BORDER_COLOR/);
 });
+
+test("outgoing message translation is an explicit basic translation setting", () => {
+  assert.match(markup, /<h3>보내는 메시지 번역<\/h3>/);
+  assert.match(markup, /id="outgoing-translation"/);
+  assert.match(script, /outgoing_translation_enabled/);
+});

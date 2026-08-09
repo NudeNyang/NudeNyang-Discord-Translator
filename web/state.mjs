@@ -1,5 +1,6 @@
 export const DEFAULT_CONFIG = Object.freeze({
   enabled: false,
+  outgoing_translation_enabled: false,
   target_language: "ko",
   translator: "hymt_1_8b",
   speech_style: "auto",
@@ -78,7 +79,7 @@ export function restartCountdownMessage(seconds) {
 
 export function shouldPromptRestart(status, flags) {
   return Boolean(
-    status?.enabled &&
+    (status?.controllerEnabled ?? status?.enabled) &&
       status?.connectionIssue &&
       !status?.cdpConnected &&
       !flags.promptActive &&
@@ -99,7 +100,7 @@ export function resolveEnabledState(reportedEnabled, pendingEnabled) {
 export function discordConnectionLabel(status = {}) {
   if (status.cdpConnected) return "Discord 연결됨";
   if (status.connectionIssue) return "연결 확인 필요";
-  return status.enabled ? "Discord 연결 중" : "번역 대기 중";
+  return (status.controllerEnabled ?? status.enabled) ? "Discord 연결 중" : "번역 대기 중";
 }
 
 const TRANSLATOR_RUNTIME_NAMES = Object.freeze({

@@ -56,6 +56,7 @@ impl Default for HotkeyConfig {
 pub struct AppConfig {
     pub target_language: String,
     pub enabled: bool,
+    pub outgoing_translation_enabled: bool,
     pub show_original: bool,
     pub theme: String,
     pub ui_theme: String,
@@ -84,6 +85,7 @@ impl Default for AppConfig {
         Self {
             target_language: "ko".to_string(),
             enabled: true,
+            outgoing_translation_enabled: false,
             show_original: false,
             theme: "auto".to_string(),
             ui_theme: "system".to_string(),
@@ -341,6 +343,7 @@ mod tests {
         assert_eq!(restored.speech_style, "auto");
         assert_eq!(restored.ui_theme, "system");
         assert!(restored.keep_local_model_warm);
+        assert!(!restored.outgoing_translation_enabled);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
         assert!(restored.disabled_providers.is_empty());
 

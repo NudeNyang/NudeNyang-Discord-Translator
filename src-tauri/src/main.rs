@@ -10,6 +10,7 @@ mod engine;
 pub mod image_translation;
 pub mod language;
 pub mod ocr;
+pub mod outgoing;
 mod providers;
 pub mod translation;
 mod updater;
@@ -369,6 +370,14 @@ fn runtime_status(
     if let Some(object) = status.as_object_mut() {
         let current_config = config.get()?;
         object.insert("enabled".to_string(), Value::Bool(current_config.enabled));
+        object.insert(
+            "controllerEnabled".to_string(),
+            Value::Bool(current_config.enabled || current_config.outgoing_translation_enabled),
+        );
+        object.insert(
+            "outgoingTranslationEnabled".to_string(),
+            Value::Bool(current_config.outgoing_translation_enabled),
+        );
         object.insert(
             "targetLanguage".to_string(),
             Value::String(current_config.target_language),

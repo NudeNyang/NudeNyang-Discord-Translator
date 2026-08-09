@@ -75,6 +75,7 @@ const state = {
 const elements = {
   form: document.querySelector("#settings-form"),
   enabled: document.querySelector("#enabled"),
+  outgoingTranslation: document.querySelector("#outgoing-translation"),
   keepWarm: document.querySelector("#keep-warm"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
@@ -573,6 +574,12 @@ function renderConfig(config) {
   state.saved = normalizeConfig(config);
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
+  setSwitch(
+    elements.outgoingTranslation,
+    state.config.outgoing_translation_enabled,
+    "켜짐",
+    "꺼짐",
+  );
   setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "유지", "반환");
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
@@ -586,6 +593,8 @@ function collectPatch() {
     speech_style: state.selectValues.speech_style,
     hymt_device: state.selectValues.hymt_device,
     ui_theme: state.selectValues.ui_theme,
+    outgoing_translation_enabled:
+      elements.outgoingTranslation.getAttribute("aria-checked") === "true",
     keep_local_model_warm: elements.keepWarm.getAttribute("aria-checked") === "true",
     capture_fps: Math.max(2, Math.min(20, Number(elements.captureFps.value) || 8)),
     hotkeys: { toggle_translation: elements.shortcut.value.trim() || "F12" },
@@ -641,6 +650,35 @@ async function toggleTranslation() {
   }
 }
 
+async function setOutgoingTranslationEnabled(enabled) {
+  if (enabled && !(await ensureRestartConsent())) return;
+  if (enabled) state.restartAttempted = false;
+  const previous = state.config.outgoing_translation_enabled;
+  state.config.outgoing_translation_enabled = enabled;
+  setSwitch(elements.outgoingTranslation, enabled, "켜짐", "꺼짐");
+  try {
+    const updated = await invoke("settings_update", {
+      patch: { outgoing_translation_enabled: enabled },
+    });
+    state.config = normalizeConfig(updated);
+    state.saved = normalizeConfig(updated);
+  } catch (error) {
+    state.config.outgoing_translation_enabled = previous;
+    setSwitch(elements.outgoingTranslation, previous, "켜짐", "꺼짐");
+    throw error;
+  }
+}
+
+async function disableTranslationFeaturesForConnectionFailure() {
+  if (state.config.enabled) await setTranslationEnabled(false, false);
+  if (state.config.outgoing_translation_enabled) {
+    const updated = await invoke("settings_update", {
+      patch: { outgoing_translation_enabled: false },
+    });
+    renderConfig(updated);
+  }
+}
+
 function updateEngineState(status) {
   if (!status) return;
   const ready = status.cdpConnected;
@@ -679,11 +717,11 @@ async function handleRestartRequired(status) {
   state.promptActive = true;
   try {
     if (!(await ensureRestartConsent())) {
-      await setTranslationEnabled(false, false);
+      await disableTranslationFeaturesForConnectionFailure();
       return;
     }
     if (state.restartAttempted) {
-      await setTranslationEnabled(false, false);
+      await disableTranslationFeaturesForConnectionFailure();
       await showError(
         "Discord 연결 실패",
         "이번 번역 실행에서 자동 재시작을 이미 한 번 시도했습니다. Discord를 직접 종료한 후 다시 실행하십시오.",
@@ -691,14 +729,14 @@ async function handleRestartRequired(status) {
       return;
     }
     const confirmed = await showModal({
-      title: "Discord 번역 연결을 준비할게요",
+      title: "Discord 번역 연결을 준비합니다",
       message: restartCountdownMessage(15),
       acceptText: "지금 재시작",
       autoSeconds: 15,
       autoMessage: restartCountdownMessage,
     });
     if (!confirmed) {
-      await setTranslationEnabled(false, false);
+      await disableTranslationFeaturesForConnectionFailure();
       return;
     }
     if (state.runtime?.cdpConnected) return;
@@ -709,11 +747,10 @@ async function handleRestartRequired(status) {
     await invoke("discord_restart", {
       expectedProcessId: status.discordProcessId,
     });
-    state.config.enabled = true;
-    setSwitch(elements.enabled, true, "켜짐", "꺼짐");
+    setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   } catch (error) {
     try {
-      await setTranslationEnabled(false, false);
+      await disableTranslationFeaturesForConnectionFailure();
     } catch {
       state.config.enabled = false;
     }
@@ -792,6 +829,14 @@ document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });
 elements.enabled.addEventListener("click", toggleTranslation);
+elements.outgoingTranslation.addEventListener("click", async () => {
+  const enabled = elements.outgoingTranslation.getAttribute("aria-checked") !== "true";
+  try {
+    await setOutgoingTranslationEnabled(enabled);
+  } catch (error) {
+    await showError("보내는 메시지 번역 상태를 변경하지 못했습니다", String(error));
+  }
+});
 elements.keepWarm.addEventListener("click", () => {
   const enabled = elements.keepWarm.getAttribute("aria-checked") !== "true";
   setSwitch(elements.keepWarm, enabled, "유지", "반환");

@@ -22,6 +22,11 @@ use crate::image_translation::{
     restore_images_script, ImageTranslationOutcome, ImageTranslationProcessor, IMAGE_UI_SCRIPT,
 };
 use crate::language::Language;
+use crate::outgoing::{
+    apply_outgoing_error_script, apply_outgoing_suggestion_script, outgoing_ui_script,
+    parse_outgoing_requests, prepare_outgoing_send_script, suggest_recent_language,
+    OUTGOING_CLEANUP_SCRIPT,
+};
 use crate::translation::{
     DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, OriginalTranslator,
     SubscriptionCliTranslator, TranslationService, Translator,
@@ -33,6 +38,7 @@ const MAX_BATCH_ITEMS: usize = 32;
 type Locator = (String, String, usize);
 type PendingKey = (u64, String, String, usize, String);
 type ImagePendingKey = (u64, String);
+type OutgoingPendingKey = (u64, String);
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,7 +61,7 @@ impl RuntimeStatus {
     fn new(config: &AppConfig) -> Self {
         Self {
             enabled: config.enabled,
-            controller_enabled: config.enabled,
+            controller_enabled: config.enabled || config.outgoing_translation_enabled,
             cdp_connected: false,
             connection_issue: String::new(),
             discord_process_id: None,
@@ -102,9 +108,17 @@ struct ImageTranslationBatch {
     image_bytes: Vec<u8>,
 }
 
+struct OutgoingTranslationBatch {
+    generation: u64,
+    target: Language,
+    request_id: String,
+    text: String,
+}
+
 enum WorkerCommand {
     Translate(TranslationBatch),
     TranslateImage(ImageTranslationBatch),
+    TranslateOutgoing(OutgoingTranslationBatch),
     Activate {
         generation: u64,
         name: String,
@@ -128,6 +142,11 @@ enum WorkerResult {
         image_id: String,
         source_key: String,
         outcome: Result<ImageTranslationOutcome, String>,
+    },
+    OutgoingTranslated {
+        generation: u64,
+        request_id: String,
+        value: Result<String, String>,
     },
     Activated {
         generation: u64,
@@ -174,7 +193,6 @@ impl RustEngine {
     pub fn set_enabled(&self, enabled: bool) -> Result<(), String> {
         if let Ok(mut status) = self.status.lock() {
             status.enabled = enabled;
-            status.controller_enabled = enabled;
         }
         self.controls
             .send(Control::SetEnabled(enabled))
@@ -217,11 +235,13 @@ fn run_controller(
     let mut states: HashMap<Locator, PartState> = HashMap::new();
     let mut pending: HashSet<PendingKey> = HashSet::new();
     let mut image_pending: HashSet<ImagePendingKey> = HashSet::new();
+    let mut outgoing_pending: HashSet<OutgoingPendingKey> = HashSet::new();
     let mut generation = 0_u64;
     let mut preparation_generation = 0_u64;
     let mut consecutive_connection_failures = 0_u8;
     let mut connection_issue_reported = false;
     let mut image_ui_needs_cleanup = true;
+    let mut outgoing_ui_needs_cleanup = true;
     let mut stopped = false;
     let mut pending_control = None;
 
@@ -247,6 +267,8 @@ fn run_controller(
                         || updated.hymt_device != config.hymt_device
                         || updated.speech_style != config.speech_style;
                     let enabled_changed = updated.enabled != config.enabled;
+                    let outgoing_changed =
+                        updated.outgoing_translation_enabled != config.outgoing_translation_enabled;
                     let warm_changed =
                         updated.keep_local_model_warm != config.keep_local_model_warm;
                     if target_changed || runtime_changed {
@@ -255,6 +277,7 @@ fn run_controller(
                             &mut states,
                             &mut pending,
                             &mut image_pending,
+                            &mut outgoing_pending,
                             &mut generation,
                         );
                         image_ui_needs_cleanup = client.is_none();
@@ -262,7 +285,8 @@ fn run_controller(
                     config = updated;
                     update_status(&status, |runtime| {
                         runtime.enabled = config.enabled;
-                        runtime.controller_enabled = config.enabled;
+                        runtime.controller_enabled =
+                            config.enabled || config.outgoing_translation_enabled;
                         runtime.target_language = config.target_language.clone();
                         runtime.configured_translator = config.translator.clone();
                     });
@@ -276,7 +300,7 @@ fn run_controller(
                     } else if warm_changed {
                         if config.keep_local_model_warm {
                             let _ = worker_tx.send(WorkerCommand::Warm);
-                        } else if !config.enabled {
+                        } else if !config.enabled && !config.outgoing_translation_enabled {
                             let _ = worker_tx.send(WorkerCommand::Release);
                         }
                     }
@@ -286,11 +310,21 @@ fn run_controller(
                         pending.clear();
                         image_pending.clear();
                         generation += 1;
-                        if !config.keep_local_model_warm {
+                        if !config.keep_local_model_warm && !config.outgoing_translation_enabled {
                             let _ = worker_tx.send(WorkerCommand::Release);
                         }
                     } else if enabled_changed {
                         let _ = worker_tx.send(WorkerCommand::Warm);
+                    }
+                    if outgoing_changed {
+                        outgoing_pending.clear();
+                        generation += 1;
+                        outgoing_ui_needs_cleanup = true;
+                        if config.outgoing_translation_enabled {
+                            let _ = worker_tx.send(WorkerCommand::Warm);
+                        } else if !config.enabled && !config.keep_local_model_warm {
+                            let _ = worker_tx.send(WorkerCommand::Release);
+                        }
                     }
                 }
                 Control::SetEnabled(enabled) => {
@@ -298,7 +332,8 @@ fn run_controller(
                         config.enabled = enabled;
                         update_status(&status, |runtime| {
                             runtime.enabled = enabled;
-                            runtime.controller_enabled = enabled;
+                            runtime.controller_enabled =
+                                enabled || config.outgoing_translation_enabled;
                             if !enabled {
                                 runtime.connection_issue.clear();
                             }
@@ -311,7 +346,8 @@ fn run_controller(
                             generation += 1;
                             consecutive_connection_failures = 0;
                             connection_issue_reported = false;
-                            if !config.keep_local_model_warm {
+                            if !config.keep_local_model_warm && !config.outgoing_translation_enabled
+                            {
                                 let _ = worker_tx.send(WorkerCommand::Release);
                             }
                         } else {
@@ -370,6 +406,7 @@ fn run_controller(
             &mut states,
             &mut pending,
             &mut image_pending,
+            &mut outgoing_pending,
             &mut generation,
             preparation_generation,
             target,
@@ -417,10 +454,28 @@ fn run_controller(
                     .evaluate(&restore_images_script(false), false)?;
                 image_ui_needs_cleanup = false;
             }
+            if config.outgoing_translation_enabled {
+                scan_outgoing(
+                    client.as_mut().expect("connected CDP client"),
+                    &mut outgoing_pending,
+                    generation,
+                    &worker_tx,
+                )?;
+                outgoing_ui_needs_cleanup = true;
+            } else if outgoing_ui_needs_cleanup {
+                client
+                    .as_mut()
+                    .expect("connected CDP client")
+                    .evaluate(&outgoing_ui_script(false), false)?;
+                outgoing_ui_needs_cleanup = false;
+            }
             Ok(())
         })();
         if let Err(error) = result {
-            if !had_client && config.enabled && !connection_issue_reported {
+            if !had_client
+                && (config.enabled || config.outgoing_translation_enabled)
+                && !connection_issue_reported
+            {
                 consecutive_connection_failures += 1;
                 if consecutive_connection_failures >= 2 {
                     connection_issue_reported = true;
@@ -433,6 +488,7 @@ fn run_controller(
                 disconnected.close();
             }
             image_ui_needs_cleanup = true;
+            outgoing_ui_needs_cleanup = true;
             update_status(&status, |runtime| runtime.cdp_connected = false);
         }
 
@@ -452,6 +508,9 @@ fn run_controller(
     }
 
     restore(&mut client, &states, false);
+    if let Some(client) = client.as_mut() {
+        let _ = client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+    }
     let _ = worker_tx.send(WorkerCommand::Stop);
     if let Some(worker) = worker {
         let _ = worker.join();
@@ -624,6 +683,106 @@ fn scan_dom(
     Ok(())
 }
 
+fn scan_outgoing(
+    client: &mut CdpClient,
+    pending: &mut HashSet<OutgoingPendingKey>,
+    generation: u64,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<(), String> {
+    let requests = parse_outgoing_requests(client.evaluate(&outgoing_ui_script(true), false)?)?;
+    for request in requests {
+        if request.id.is_empty() || request.text.trim().is_empty() {
+            continue;
+        }
+        if request.selected_language == "auto" {
+            let suggestion = suggest_recent_language(&request.recent_messages);
+            client.evaluate(
+                &apply_outgoing_suggestion_script(&request.id, suggestion)?,
+                false,
+            )?;
+            continue;
+        }
+        if request.selected_language == "original" {
+            if let Err(error) = dispatch_outgoing_send(client, &request.id, None) {
+                client.evaluate(
+                    &apply_outgoing_error_script(
+                        &request.id,
+                        &format!(
+                            "메시지를 전송하지 못했습니다. 번역하지 않고 원문을 유지합니다. {error}"
+                        ),
+                    )?,
+                    false,
+                )?;
+            }
+            continue;
+        }
+        let target = match Language::try_from(request.selected_language.as_str()) {
+            Ok(target) if target != Language::Unknown => target,
+            _ => {
+                client.evaluate(
+                    &apply_outgoing_error_script(
+                        &request.id,
+                        "선택한 전송 언어를 사용할 수 없습니다. 번역하지 않고 원문을 유지합니다.",
+                    )?,
+                    false,
+                )?;
+                continue;
+            }
+        };
+        let pending_key = (generation, request.id.clone());
+        if !pending.insert(pending_key) {
+            continue;
+        }
+        worker
+            .send(WorkerCommand::TranslateOutgoing(OutgoingTranslationBatch {
+                generation,
+                target,
+                request_id: request.id,
+                text: request.text,
+            }))
+            .map_err(|_| "보내는 메시지 번역 작업을 시작하지 못했습니다.".to_string())?;
+    }
+    Ok(())
+}
+
+fn dispatch_outgoing_send(
+    client: &mut CdpClient,
+    request_id: &str,
+    replacement: Option<&str>,
+) -> Result<(), String> {
+    let prepared = client.evaluate(
+        &prepare_outgoing_send_script(request_id, replacement.is_some())?,
+        false,
+    )?;
+    if prepared.as_bool() != Some(true) {
+        return Err("Discord 메시지 입력창을 찾을 수 없습니다.".to_string());
+    }
+    if let Some(text) = replacement {
+        client.call("Input.insertText", json!({"text": text}))?;
+    }
+    client.call(
+        "Input.dispatchKeyEvent",
+        json!({
+            "type": "rawKeyDown",
+            "key": "Enter",
+            "code": "Enter",
+            "windowsVirtualKeyCode": 13,
+            "nativeVirtualKeyCode": 13
+        }),
+    )?;
+    client.call(
+        "Input.dispatchKeyEvent",
+        json!({
+            "type": "keyUp",
+            "key": "Enter",
+            "code": "Enter",
+            "windowsVirtualKeyCode": 13,
+            "nativeVirtualKeyCode": 13
+        }),
+    )?;
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn drain_worker_results(
     results: &mpsc::Receiver<WorkerResult>,
@@ -632,6 +791,7 @@ fn drain_worker_results(
     states: &mut HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
     image_pending: &mut HashSet<ImagePendingKey>,
+    outgoing_pending: &mut HashSet<OutgoingPendingKey>,
     generation: &mut u64,
     preparation_generation: u64,
     target: Language,
@@ -735,6 +895,45 @@ fn drain_worker_results(
                     }
                 }
             }
+            WorkerResult::OutgoingTranslated {
+                generation: result_generation,
+                request_id,
+                value,
+            } => {
+                outgoing_pending.remove(&(result_generation, request_id.clone()));
+                if result_generation != *generation || !config.outgoing_translation_enabled {
+                    continue;
+                }
+                let Some(client) = client.as_mut() else {
+                    continue;
+                };
+                match value {
+                    Ok(translated) => {
+                        if let Err(error) =
+                            dispatch_outgoing_send(client, &request_id, Some(&translated))
+                        {
+                            if let Ok(script) = apply_outgoing_error_script(
+                                &request_id,
+                                &format!(
+                                    "번역문을 전송하지 못했습니다. 번역하지 않고 원문을 유지합니다. {error}"
+                                ),
+                            ) {
+                                let _ = client.evaluate(&script, false);
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        if let Ok(script) = apply_outgoing_error_script(
+                            &request_id,
+                            &format!(
+                                "메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다. {error}"
+                            ),
+                        ) {
+                            let _ = client.evaluate(&script, false);
+                        }
+                    }
+                }
+            }
             WorkerResult::Activated {
                 generation: activated_generation,
                 name,
@@ -742,7 +941,14 @@ fn drain_worker_results(
                 if activated_generation != preparation_generation || name != config.translator {
                     continue;
                 }
-                reset_translation_state(client, states, pending, image_pending, generation);
+                reset_translation_state(
+                    client,
+                    states,
+                    pending,
+                    image_pending,
+                    outgoing_pending,
+                    generation,
+                );
                 update_status(status, |runtime| {
                     runtime.active_translator = name.clone();
                     if name == runtime.configured_translator {
@@ -750,11 +956,16 @@ fn drain_worker_results(
                         runtime.translator_error.clear();
                         let model_is_prepared = !name.starts_with("hymt_")
                             || config.enabled
+                            || config.outgoing_translation_enabled
                             || config.keep_local_model_warm;
                         runtime.notice = translator_activation_notice(&name, model_is_prepared);
                     }
                 });
-                if name.starts_with("hymt_") && !config.enabled && !config.keep_local_model_warm {
+                if name.starts_with("hymt_")
+                    && !config.enabled
+                    && !config.outgoing_translation_enabled
+                    && !config.keep_local_model_warm
+                {
                     let _ = worker.send(WorkerCommand::Release);
                 }
             }
@@ -808,6 +1019,22 @@ fn run_translation_worker(
                     outcome,
                 });
             }
+            WorkerCommand::TranslateOutgoing(batch) => {
+                let value = service
+                    .translate_many(&[batch.text], batch.target)
+                    .and_then(|mut values| {
+                        if values.len() == 1 {
+                            Ok(values.remove(0))
+                        } else {
+                            Err("번역 서비스가 전송 메시지 결과를 반환하지 않았습니다.".to_string())
+                        }
+                    });
+                let _ = results.send(WorkerResult::OutgoingTranslated {
+                    generation: batch.generation,
+                    request_id: batch.request_id,
+                    value,
+                });
+            }
             WorkerCommand::Activate {
                 generation,
                 name,
@@ -837,8 +1064,10 @@ fn request_translator_preparation(
     let current_generation = *generation;
     let config = config.clone();
     let name = config.translator.clone();
-    let should_prepare =
-        !name.starts_with("hymt_") || config.enabled || config.keep_local_model_warm;
+    let should_prepare = !name.starts_with("hymt_")
+        || config.enabled
+        || config.outgoing_translation_enabled
+        || config.keep_local_model_warm;
     update_status(status, |runtime| {
         runtime.configured_translator = name.clone();
         runtime.translator_state = "preparing".to_string();
@@ -912,12 +1141,14 @@ fn reset_translation_state(
     states: &mut HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
     image_pending: &mut HashSet<ImagePendingKey>,
+    outgoing_pending: &mut HashSet<OutgoingPendingKey>,
     generation: &mut u64,
 ) {
     restore(client, states, true);
     states.clear();
     pending.clear();
     image_pending.clear();
+    outgoing_pending.clear();
     *generation += 1;
 }
 

@@ -62,6 +62,18 @@ test("restart message contains countdown and data-loss warning", () => {
 test("restart prompt only opens for an enabled failed CDP connection", () => {
   assert.equal(
     shouldPromptRestart(
+      {
+        enabled: false,
+        controllerEnabled: true,
+        connectionIssue: "port closed",
+        cdpConnected: false,
+      },
+      { promptActive: false, repairActive: false },
+    ),
+    true,
+  );
+  assert.equal(
+    shouldPromptRestart(
       { enabled: true, connectionIssue: "port closed", cdpConnected: false },
       { promptActive: false, repairActive: false },
     ),
