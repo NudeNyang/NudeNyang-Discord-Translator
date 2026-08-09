@@ -19,10 +19,10 @@ test("the user-facing product name is NudeNyang Translator", () => {
 });
 
 test("the beta version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.3.4-beta");
-  assert.match(tauriConfig, /"version": "0\.3\.4-beta"/);
-  assert.match(cargoManifest, /^version = "0\.3\.4-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.3\.4 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.3.5-beta");
+  assert.match(tauriConfig, /"version": "0\.3\.5-beta"/);
+  assert.match(cargoManifest, /^version = "0\.3\.5-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.3\.5 Beta<\/span>/);
 });
 
 test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
@@ -67,7 +67,7 @@ test("outgoing translation and its first-use confirmation are grouped together",
 
 test("convenience panel exposes separate incoming and outgoing shortcuts", () => {
   assert.match(markup, /<h3>Language<\/h3>/);
-  assert.match(script, /\["auto", "자동 \(시스템 언어\)"\]/);
+  assert.match(script, /\["auto", "Auto\(System\)"\]/);
   assert.match(markup, /data-field="ui_language"/);
   assert.match(markup, /id="toggle-shortcut"/);
   assert.match(markup, /id="toggle-outgoing-shortcut"/);

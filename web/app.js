@@ -62,7 +62,7 @@ const OPTIONS = {
     ["dark", "다크"],
   ],
   ui_language: [
-    ["auto", "자동 (시스템 언어)"],
+    ["auto", "Auto(System)"],
     ["ko", "한국어"],
     ["en", "English"],
     ["ja", "日本語"],

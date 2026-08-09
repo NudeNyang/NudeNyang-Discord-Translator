@@ -97,7 +97,6 @@ const COPY = Object.freeze({
   "항상 반말·비격식체": ["Always casual and informal", "常にタメ口・カジュアル", "始终使用随意非正式语气"],
   "자동 (GPU 우선, CPU 대체)": ["Automatic (GPU first, CPU fallback)", "自動（GPU優先、CPU代替）", "自动（GPU 优先，CPU 备用）"],
   "시스템 설정 따르기": ["Follow system settings", "システム設定に従う", "跟随系统设置"],
-  "자동 (시스템 언어)": ["Auto (system language)", "自動（システム言語）", "自动（系统语言）"],
   "라이트": ["Light", "ライト", "浅色"],
   "다크": ["Dark", "ダーク", "深色"],
   "회/초": ["/sec", "回/秒", "次/秒"],
