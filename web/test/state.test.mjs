@@ -41,6 +41,15 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.translator, "hymt_1_8b");
   assert.equal(config.discord_auto_restart_consent_granted, false);
   assert.equal(config.hotkeys.toggle_translation, "F12");
+  assert.equal(config.hotkeys.toggle_outgoing_translation, "F8");
+  assert.equal(config.ui_language, "auto");
+});
+
+test("settings language defaults to automatic and accepts four explicit languages", () => {
+  for (const language of ["auto", "ko", "en", "ja", "zh"]) {
+    assert.equal(normalizeConfig({ ui_language: language }).ui_language, language);
+  }
+  assert.equal(normalizeConfig({ ui_language: "unsupported" }).ui_language, "auto");
 });
 
 test("all supported display languages survive settings normalization", () => {

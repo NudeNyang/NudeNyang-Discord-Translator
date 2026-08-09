@@ -6,16 +6,16 @@ const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const rustMain = readFileSync(new URL("../../src-tauri/src/main.rs", import.meta.url), "utf8");
 
-test("theme and shortcut settings share one usage environment section", () => {
-  const environmentSection = markup.match(
-    /<section class="settings-section" aria-labelledby="environment-heading">[\s\S]*?<\/section>/,
-  )?.[0] || "";
-
-  assert.match(environmentSection, /<h2 id="environment-heading">사용 환경<\/h2>/);
-  assert.match(environmentSection, /<h3>설정창 테마<\/h3>/);
-  assert.match(environmentSection, /<h3>번역 켜기·끄기<\/h3>/);
-  assert.equal((environmentSection.match(/class="setting-row"/g) || []).length, 2);
-  assert.doesNotMatch(markup, /id="appearance-heading"|id="shortcut-heading"/);
+test("settings use five uniform navigation categories", () => {
+  for (const panel of ["translation", "engine", "image", "convenience", "about"]) {
+    assert.match(markup, new RegExp(`data-settings-panel="${panel}"`));
+    assert.match(markup, new RegExp(`data-settings-view="${panel}"`));
+  }
+  assert.match(markup, /<span>번역<\/span>/);
+  assert.match(markup, /<span>번역 엔진<\/span>/);
+  assert.match(markup, /<span>이미지 번역<\/span>/);
+  assert.match(markup, /<span>편의 기능<\/span>/);
+  assert.match(markup, /<span>앱 정보<\/span>/);
 });
 
 test("settings can be reverted and native window chrome follows the selected theme", () => {
@@ -26,16 +26,29 @@ test("settings can be reverted and native window chrome follows the selected the
   assert.match(rustMain, /DWMWA_BORDER_COLOR/);
 });
 
-test("outgoing message translation is an explicit basic translation setting", () => {
+test("outgoing translation and its first-use confirmation are grouped together", () => {
   assert.match(markup, /<h3>보내는 메시지 번역<\/h3>/);
   assert.match(markup, /id="outgoing-translation"/);
   assert.match(markup, /<h3>기본 전송 언어<\/h3>/);
   assert.match(markup, /data-field="outgoing_target_language"/);
-  assert.match(markup, /<h3>자동 감지 결과 확인<\/h3>/);
+  assert.match(markup, /<h3>채널별 첫 감지 확인<\/h3>/);
   assert.match(markup, /id="outgoing-confirm-language"/);
+  assert.match(markup, /채널별로 처음 사용할 때 한 번만 확인합니다/);
   assert.match(script, /outgoing_translation_enabled/);
   assert.match(script, /outgoing_target_language/);
   assert.match(script, /outgoing_confirm_language/);
+});
+
+test("convenience panel exposes separate incoming and outgoing shortcuts", () => {
+  assert.match(markup, /<h3>Language<\/h3>/);
+  assert.match(script, /\["auto", "자동 \(시스템 언어\)"\]/);
+  assert.match(markup, /data-field="ui_language"/);
+  assert.match(markup, /id="toggle-shortcut"/);
+  assert.match(markup, /id="toggle-outgoing-shortcut"/);
+  assert.match(markup, /<h3>실시간 번역 켜기·끄기<\/h3>/);
+  assert.match(markup, /<h3>보내는 메시지 번역 켜기·끄기<\/h3>/);
+  assert.match(script, /toggle_outgoing_translation/);
+  assert.match(script, /request-outgoing-translation-toggle/);
 });
 
 test("footer action labels stay on one line", () => {

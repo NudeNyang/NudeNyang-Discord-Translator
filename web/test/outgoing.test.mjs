@@ -23,7 +23,7 @@ test("language suggestions use recent message contents and never channel names",
 test("channel memory, one-message overrides, and safe failures are represented", () => {
   assert.match(outgoing, /localStorage/);
   assert.match(outgoing, /이번 메시지만 원문으로 전송/);
-  assert.match(outgoing, /채널에 적용/);
+  assert.match(outgoing, /이 채널에 사용/);
   assert.match(outgoing, /번역하지 않고 원문을 유지합니다/);
   assert.match(engine, /TranslateOutgoing/);
   assert.match(engine, /Input\.insertText/);
@@ -32,6 +32,15 @@ test("channel memory, one-message overrides, and safe failures are represented",
   assert.match(outgoing, />= 30000/);
   assert.match(outgoing, /CONTROLLER_VERSION/);
   assert.match(outgoing, /controller\.prunePending\(\)/);
+});
+
+test("confirming an automatic suggestion remembers it for the channel", () => {
+  assert.match(outgoing, /confirmedStorageKey/);
+  assert.match(outgoing, /readConfirmedLanguage/);
+  assert.match(outgoing, /writeConfirmedLanguage/);
+  assert.match(outgoing, /selectedLanguageForChannel/);
+  assert.match(outgoing, /이 채널에 사용/);
+  assert.doesNotMatch(outgoing, /suggest-once/);
 });
 
 test("configured outgoing defaults and confirmation policy reach Discord", () => {

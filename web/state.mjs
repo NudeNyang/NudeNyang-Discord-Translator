@@ -10,8 +10,12 @@ export const DEFAULT_CONFIG = Object.freeze({
   keep_local_model_warm: true,
   capture_fps: 8,
   ui_theme: "system",
+  ui_language: "auto",
   discord_auto_restart_consent_granted: false,
-  hotkeys: { toggle_translation: "F12" },
+  hotkeys: {
+    toggle_translation: "F12",
+    toggle_outgoing_translation: "F8",
+  },
 });
 
 export const SUPPORTED_TARGET_LANGUAGES = Object.freeze([
@@ -64,11 +68,15 @@ export function normalizeConfig(value = {}) {
   )
     ? value.outgoing_target_language
     : DEFAULT_CONFIG.outgoing_target_language;
+  const uiLanguage = ["auto", "ko", "en", "ja", "zh"].includes(value.ui_language)
+    ? value.ui_language
+    : DEFAULT_CONFIG.ui_language;
   return {
     ...DEFAULT_CONFIG,
     ...value,
     target_language: targetLanguage,
     outgoing_target_language: outgoingTargetLanguage,
+    ui_language: uiLanguage,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),

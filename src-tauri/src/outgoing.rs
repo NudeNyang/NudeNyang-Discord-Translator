@@ -11,10 +11,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 4;
+  const CONTROLLER_VERSION = 5;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const languageLabels = {auto:'자동 감지',ko:'한국어',ja:'日本語',en:'English',zh:'简体中文','zh-Hant':'繁體中文'};
   const storageKey = key => `nude-translator:outgoing-language:${key}`;
+  const confirmedStorageKey = key => `nude-translator:outgoing-confirmed-language:${key}`;
 
   function currentChannelKey() {
     return location.pathname.startsWith('/channels/') ? location.pathname : '';
@@ -27,6 +28,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       if (language === 'auto') localStorage.removeItem(storageKey(key));
       else localStorage.setItem(storageKey(key), language);
     } catch {}
+  }
+  function readConfirmedLanguage(key) {
+    try { return localStorage.getItem(confirmedStorageKey(key)) || ''; } catch { return ''; }
+  }
+  function writeConfirmedLanguage(key, language) {
+    try {
+      if (language && language !== 'auto') localStorage.setItem(confirmedStorageKey(key), language);
+    } catch {}
+  }
+  function selectedLanguageForChannel(key, fallbackLanguage) {
+    const selected = readStoredLanguage(key, fallbackLanguage);
+    return selected === 'auto' ? (readConfirmedLanguage(key) || 'auto') : selected;
   }
   function originalText(root) {
     const originals = window.__nudeTranslatorOriginals;
@@ -165,11 +178,14 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             this.setStatus('다음 메시지는 번역하지 않고 전송합니다.');
           }
         } else if (button.dataset.action === 'suggest-channel') {
-          writeStoredLanguage(this.pending.get(button.dataset.value)?.channel_key || key, button.dataset.language);
+          const channelKey = this.pending.get(button.dataset.value)?.channel_key || key;
+          writeStoredLanguage(channelKey, button.dataset.language);
+          writeConfirmedLanguage(channelKey, button.dataset.language);
           this.retry(button.dataset.value, button.dataset.language);
           this.updateLabel();
-        } else if (button.dataset.action === 'suggest-once') {
-          this.retry(button.dataset.value, button.dataset.language);
+        } else if (button.dataset.action === 'suggest-choose') {
+          this.showLanguageMenu('전송 언어를 선택하십시오.', button.dataset.value);
+          return;
         } else if (button.dataset.action === 'suggest-original') {
           this.retry(button.dataset.value, 'original');
         }
@@ -194,11 +210,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const heading = document.createElement('div');
         heading.className = 'nt-heading';
         heading.textContent = `최근 대화는 ${languageLabels[language]}로 보입니다.`;
-        const channel = makeButton(`${languageLabels[language]} · 채널에 적용`, 'suggest-channel', id);
+        const channel = makeButton(`${languageLabels[language]} · 이 채널에 사용`, 'suggest-channel', id);
         channel.dataset.language = language;
-        const once = makeButton(`${languageLabels[language]} · 이번만`, 'suggest-once', id);
-        once.dataset.language = language;
-        menu.append(heading, channel, once, makeButton('원문 전송', 'suggest-original', id));
+        const choose = makeButton('다른 언어 선택', 'suggest-choose', id);
+        menu.append(heading, channel, choose, makeButton('원문 전송', 'suggest-original', id));
         menu.hidden = false;
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
         this.setStatus('전송 언어를 확인한 후 메시지를 전송합니다.');
@@ -259,7 +274,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           }
         }
         const id = `outgoing-${Date.now()}-${++this.sequence}`;
-        const selected = this.oneShotOriginal ? 'original' : readStoredLanguage(key, this.defaultLanguage);
+        const selected = this.oneShotOriginal ? 'original' : selectedLanguageForChannel(key, this.defaultLanguage);
         this.oneShotOriginal = false;
         const item = {id, channel_key:key, text, selected_language:selected, recent_messages:recentMessages(), created_at:Date.now()};
         this.pending.set(id, {...item, editor});

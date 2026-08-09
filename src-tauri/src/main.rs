@@ -36,16 +36,74 @@ struct LifecycleState {
     exiting: AtomicBool,
 }
 
-struct ShortcutConfig {
-    toggle_translation: Mutex<String>,
+struct ShortcutBinding {
+    configured: Mutex<String>,
     fallback_virtual_key: AtomicU32,
+}
+
+impl ShortcutBinding {
+    fn new(default: &str) -> Self {
+        Self {
+            configured: Mutex::new(default.to_string()),
+            fallback_virtual_key: AtomicU32::new(0),
+        }
+    }
+}
+
+struct ShortcutConfig {
+    toggle_translation: ShortcutBinding,
+    toggle_outgoing_translation: ShortcutBinding,
 }
 
 impl Default for ShortcutConfig {
     fn default() -> Self {
         Self {
-            toggle_translation: Mutex::new("F12".to_string()),
-            fallback_virtual_key: AtomicU32::new(0),
+            toggle_translation: ShortcutBinding::new("F12"),
+            toggle_outgoing_translation: ShortcutBinding::new("F8"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ShortcutAction {
+    Translation,
+    OutgoingTranslation,
+}
+
+fn shortcut_action_for(config: &ShortcutConfig, pressed: &str) -> Option<ShortcutAction> {
+    [
+        ShortcutAction::Translation,
+        ShortcutAction::OutgoingTranslation,
+    ]
+    .into_iter()
+    .find(|action| {
+        config
+            .binding(*action)
+            .configured
+            .lock()
+            .map(|configured| configured.eq_ignore_ascii_case(pressed))
+            .unwrap_or(false)
+    })
+}
+
+fn shortcut_changed(current: &str, next: &str) -> bool {
+    !current.eq_ignore_ascii_case(next)
+}
+
+impl ShortcutConfig {
+    fn binding(&self, action: ShortcutAction) -> &ShortcutBinding {
+        match action {
+            ShortcutAction::Translation => &self.toggle_translation,
+            ShortcutAction::OutgoingTranslation => &self.toggle_outgoing_translation,
+        }
+    }
+}
+
+impl ShortcutAction {
+    fn event_name(self) -> &'static str {
+        match self {
+            Self::Translation => "request-translation-toggle",
+            Self::OutgoingTranslation => "request-outgoing-translation-toggle",
         }
     }
 }
@@ -307,22 +365,50 @@ fn settings_update(
     config: State<'_, ConfigStore>,
     patch: Value,
 ) -> Result<AppConfig, String> {
-    let shortcut = patch
-        .get("hotkeys")
-        .and_then(|hotkeys| hotkeys.get("toggle_translation"))
-        .and_then(Value::as_str)
-        .map(str::to_owned);
-    let previous = if let Some(shortcut) = shortcut.as_deref() {
-        Some(replace_toggle_shortcut(&app, shortcut)?)
-    } else {
-        None
-    };
+    let hotkeys = patch.get("hotkeys");
+    let requested_shortcuts = [
+        (
+            ShortcutAction::Translation,
+            hotkeys
+                .and_then(|value| value.get("toggle_translation"))
+                .and_then(Value::as_str),
+        ),
+        (
+            ShortcutAction::OutgoingTranslation,
+            hotkeys
+                .and_then(|value| value.get("toggle_outgoing_translation"))
+                .and_then(Value::as_str),
+        ),
+    ];
+    if let (Some(translation), Some(outgoing)) =
+        (requested_shortcuts[0].1, requested_shortcuts[1].1)
+    {
+        if translation.eq_ignore_ascii_case(outgoing) {
+            return Err(
+                "실시간 번역과 보내는 메시지 번역에는 서로 다른 단축키를 지정하십시오.".to_string(),
+            );
+        }
+    }
+    let mut previous_shortcuts = Vec::new();
+    for (action, requested) in requested_shortcuts {
+        if let Some(requested) = requested {
+            match replace_shortcut(&app, action, requested) {
+                Ok(previous) => previous_shortcuts.push((action, previous)),
+                Err(error) => {
+                    for (action, previous) in previous_shortcuts.into_iter().rev() {
+                        let _ = replace_shortcut(&app, action, &previous);
+                    }
+                    return Err(error);
+                }
+            }
+        }
+    }
     let previous_config = config.get()?;
     let updated = match config.update(patch.clone()) {
         Ok(updated) => updated,
         Err(error) => {
-            if let Some(previous) = previous {
-                let _ = replace_toggle_shortcut(&app, &previous);
+            for (action, previous) in previous_shortcuts.into_iter().rev() {
+                let _ = replace_shortcut(&app, action, &previous);
             }
             return Err(error);
         }
@@ -334,8 +420,8 @@ fn settings_update(
         }
         Err(error) => {
             let _ = config.replace(previous_config);
-            if let Some(previous) = previous {
-                let _ = replace_toggle_shortcut(&app, &previous);
+            for (action, previous) in previous_shortcuts.into_iter().rev() {
+                let _ = replace_shortcut(&app, action, &previous);
             }
             Err(error)
         }
@@ -395,14 +481,29 @@ fn runtime_status(
         );
         let configured = shortcut
             .toggle_translation
+            .configured
             .lock()
             .map_err(|_| "전역 단축키 설정 잠금을 열지 못했습니다.".to_string())?
             .clone();
-        let polling = shortcut.fallback_virtual_key.load(Ordering::Acquire) != 0;
+        let polling = shortcut
+            .toggle_translation
+            .fallback_virtual_key
+            .load(Ordering::Acquire)
+            != 0;
         object.insert("shortcut".to_string(), Value::String(configured));
         object.insert(
             "shortcutMode".to_string(),
             Value::String(if polling { "polling" } else { "registered" }.to_string()),
+        );
+        let outgoing_shortcut = shortcut
+            .toggle_outgoing_translation
+            .configured
+            .lock()
+            .map_err(|_| "전송 번역 단축키 설정 잠금을 열지 못했습니다.".to_string())?
+            .clone();
+        object.insert(
+            "outgoingShortcut".to_string(),
+            Value::String(outgoing_shortcut),
         );
     }
     Ok(status)
@@ -712,10 +813,11 @@ fn show_tray_menu(app: &AppHandle, cursor_x: f64, cursor_y: f64) {
     let _ = window.emit("tray-menu-opened", ());
 }
 
-fn replace_toggle_shortcut(app: &AppHandle, next: &str) -> Result<String, String> {
+fn replace_shortcut(app: &AppHandle, action: ShortcutAction, next: &str) -> Result<String, String> {
     let shortcut_state = app.state::<ShortcutConfig>();
-    let mut current = shortcut_state
-        .toggle_translation
+    let binding = shortcut_state.binding(action);
+    let mut current = binding
+        .configured
         .lock()
         .map_err(|_| "전역 단축키 설정 잠금을 열지 못했습니다.".to_string())?;
     let fallback_key = if cfg!(windows) {
@@ -723,8 +825,8 @@ fn replace_toggle_shortcut(app: &AppHandle, next: &str) -> Result<String, String
     } else {
         None
     };
-    let fallback_active = fallback_key
-        .is_some_and(|key| shortcut_state.fallback_virtual_key.load(Ordering::Acquire) == key);
+    let fallback_active =
+        fallback_key.is_some_and(|key| binding.fallback_virtual_key.load(Ordering::Acquire) == key);
     if current.eq_ignore_ascii_case(next)
         && (app.global_shortcut().is_registered(next) || fallback_active)
     {
@@ -736,20 +838,22 @@ fn replace_toggle_shortcut(app: &AppHandle, next: &str) -> Result<String, String
         let Some(virtual_key) = fallback_key else {
             return Err(format!("{next} 전역 단축키를 등록하지 못했습니다: {error}"));
         };
-        if app.global_shortcut().is_registered(previous.as_str()) {
+        if shortcut_changed(&previous, next)
+            && app.global_shortcut().is_registered(previous.as_str())
+        {
             app.global_shortcut()
                 .unregister(previous.as_str())
                 .map_err(|unregister_error| {
                     format!("기존 {previous} 단축키를 해제하지 못했습니다: {unregister_error}")
                 })?;
         }
-        shortcut_state
+        binding
             .fallback_virtual_key
             .store(virtual_key, Ordering::Release);
         *current = next.to_ascii_uppercase();
         return Ok(previous);
     }
-    if app.global_shortcut().is_registered(previous.as_str()) {
+    if shortcut_changed(&previous, next) && app.global_shortcut().is_registered(previous.as_str()) {
         if let Err(error) = app.global_shortcut().unregister(previous.as_str()) {
             let _ = app.global_shortcut().unregister(next);
             return Err(format!(
@@ -757,9 +861,7 @@ fn replace_toggle_shortcut(app: &AppHandle, next: &str) -> Result<String, String
             ));
         }
     }
-    shortcut_state
-        .fallback_virtual_key
-        .store(0, Ordering::Release);
+    binding.fallback_virtual_key.store(0, Ordering::Release);
     *current = next.to_string();
     Ok(previous)
 }
@@ -775,8 +877,8 @@ fn start_fallback_shortcut_poller(app: AppHandle) {
     let _ = std::thread::Builder::new()
         .name("f-key-shortcut-poller".to_string())
         .spawn(move || {
-            let mut previous_key = 0;
-            let mut was_pressed = false;
+            let mut previous_keys = [0, 0];
+            let mut was_pressed = [false, false];
             loop {
                 if app
                     .state::<LifecycleState>()
@@ -785,21 +887,31 @@ fn start_fallback_shortcut_poller(app: AppHandle) {
                 {
                     break;
                 }
-                let virtual_key = app
-                    .state::<ShortcutConfig>()
-                    .fallback_virtual_key
-                    .load(Ordering::Acquire);
-                if virtual_key != previous_key {
-                    previous_key = virtual_key;
-                    was_pressed = false;
-                }
-                if virtual_key != 0 {
+                let shortcut_state = app.state::<ShortcutConfig>();
+                for (index, action) in [
+                    ShortcutAction::Translation,
+                    ShortcutAction::OutgoingTranslation,
+                ]
+                .into_iter()
+                .enumerate()
+                {
+                    let virtual_key = shortcut_state
+                        .binding(action)
+                        .fallback_virtual_key
+                        .load(Ordering::Acquire);
+                    if virtual_key != previous_keys[index] {
+                        previous_keys[index] = virtual_key;
+                        was_pressed[index] = false;
+                    }
+                    if virtual_key == 0 {
+                        continue;
+                    }
                     // GetAsyncKeyState의 최상위 비트는 현재 키가 눌린 상태임을 뜻해.
                     let pressed = unsafe { GetAsyncKeyState(virtual_key as i32) } < 0;
-                    if pressed && !was_pressed {
-                        let _ = app.emit("request-translation-toggle", ());
+                    if pressed && !was_pressed[index] {
+                        let _ = app.emit(action.event_name(), ());
                     }
-                    was_pressed = pressed;
+                    was_pressed[index] = pressed;
                 }
                 std::thread::sleep(Duration::from_millis(20));
             }
@@ -845,9 +957,13 @@ fn main() {
     let app = tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, _shortcut, event| {
+                .with_handler(|app, pressed_shortcut, event| {
                     if event.state == ShortcutState::Pressed {
-                        let _ = app.emit("request-translation-toggle", ());
+                        let pressed = pressed_shortcut.to_string();
+                        let shortcut_state = app.state::<ShortcutConfig>();
+                        if let Some(action) = shortcut_action_for(&shortcut_state, &pressed) {
+                            let _ = app.emit(action.event_name(), ());
+                        }
                     }
                 })
                 .build(),
@@ -867,10 +983,20 @@ fn main() {
             let handle = app.handle().clone();
             // Windows가 F12를 디버거 용도로 선점한 경우에도 기존 앱과 동일하게
             // 키 상태 폴링으로 동작시켜 설정 저장과 모델 변경이 막히지 않게 해.
-            let _ = replace_toggle_shortcut(&handle, "F12");
+            let _ = replace_shortcut(&handle, ShortcutAction::Translation, "F12");
+            let _ = replace_shortcut(&handle, ShortcutAction::OutgoingTranslation, "F8");
             start_fallback_shortcut_poller(handle.clone());
             if let Ok(config) = handle.state::<ConfigStore>().get() {
-                let _ = replace_toggle_shortcut(&handle, &config.hotkeys.toggle_translation);
+                let _ = replace_shortcut(
+                    &handle,
+                    ShortcutAction::Translation,
+                    &config.hotkeys.toggle_translation,
+                );
+                let _ = replace_shortcut(
+                    &handle,
+                    ShortcutAction::OutgoingTranslation,
+                    &config.hotkeys.toggle_outgoing_translation,
+                );
                 if let Some(window) = handle.get_webview_window("main") {
                     if let Ok(theme) = requested_window_theme(&window, &config.ui_theme) {
                         let _ = apply_main_window_chrome(&window, &config.ui_theme, theme);
@@ -939,7 +1065,29 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{fallback_function_key, tray_menu_position, ProviderLoginState};
+    use super::{
+        fallback_function_key, shortcut_action_for, shortcut_changed, tray_menu_position,
+        ProviderLoginState, ShortcutAction, ShortcutConfig,
+    };
+
+    #[test]
+    fn default_shortcuts_route_incoming_and_outgoing_toggles_separately() {
+        let shortcuts = ShortcutConfig::default();
+        assert_eq!(
+            shortcut_action_for(&shortcuts, "F12"),
+            Some(ShortcutAction::Translation)
+        );
+        assert_eq!(
+            shortcut_action_for(&shortcuts, "f8"),
+            Some(ShortcutAction::OutgoingTranslation)
+        );
+    }
+
+    #[test]
+    fn registering_the_same_shortcut_keeps_the_new_registration() {
+        assert!(!shortcut_changed("F8", "f8"));
+        assert!(shortcut_changed("F8", "Ctrl+F8"));
+    }
 
     #[test]
     fn unmodified_function_keys_can_use_the_windows_polling_fallback() {

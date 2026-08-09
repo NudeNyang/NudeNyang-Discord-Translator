@@ -12,7 +12,7 @@
         <img class="brand-icon" src="./app-icon.png" alt="" width="52" height="52" />
         <div class="header-copy">
           <h1>설정</h1>
-          <p>Discord DOM 번역과 로컬 모델, 이미지 OCR을 한곳에서 관리합니다.</p>
+          <p>Discord 번역, 번역 엔진 및 이미지 OCR을 관리합니다.</p>
         </div>
         <div class="engine-state" id="engine-state" data-state="loading">
           <span class="state-dot" aria-hidden="true"></span>
@@ -21,278 +21,205 @@
       </header>
 
       <form id="settings-form">
-        <div class="settings-scroll-region">
-          <div id="settings-scroll" class="settings-scroll">
-          <section class="settings-section" aria-labelledby="translation-heading">
-          <h2 id="translation-heading">기본 번역</h2>
-          <div class="settings-surface">
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>실시간 번역</h3>
-                <p>Discord 메시지와 채널명을 선택한 언어로 번역해 표시합니다.</p>
-              </div>
-              <button class="switch" id="enabled" type="button" role="switch" aria-checked="false">
-                <span></span><b>꺼짐</b>
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>보내는 메시지 번역</h3>
-                <p>최근 대화 언어를 기준으로 입력한 메시지를 번역한 후 전송합니다.</p>
-              </div>
-              <button class="switch" id="outgoing-translation" type="button" role="switch" aria-checked="false">
-                <span></span><b>꺼짐</b>
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>기본 전송 언어</h3>
-                <p>채널별 선택이 없는 경우 적용할 전송 언어를 지정합니다.</p>
-              </div>
-              <div class="custom-select" data-field="outgoing_target_language"></div>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>자동 감지 결과 확인</h3>
-                <p>자동 감지한 언어를 채널에 처음 적용하기 전에 확인합니다.</p>
-              </div>
-              <button class="switch" id="outgoing-confirm-language" type="button" role="switch" aria-checked="true">
-                <span></span><b>확인</b>
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>표시 언어</h3>
-                <p>원문과 표시 언어가 같으면 번역하지 않고 그대로 유지합니다.</p>
-              </div>
-              <div class="custom-select" data-field="target_language"></div>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>번역 모델</h3>
-                <p>로컬 Hy-MT2와 구독 CLI, 외부 API 중에서 선택합니다.</p>
-              </div>
-              <div class="custom-select" data-field="translator"></div>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>번역 말투</h3>
-                <p>원문 말투를 유지하거나 존댓말과 반말로 고정할 수 있습니다.</p>
-              </div>
-              <div class="custom-select" data-field="speech_style"></div>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>Hy-MT2 실행 장치</h3>
-                <p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p>
-              </div>
-              <div class="custom-select" data-field="hymt_device"></div>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>로컬 모델 예열 유지</h3>
-                <p>번역을 꺼도 모델을 VRAM에 유지합니다. 끄면 즉시 반환합니다.</p>
-              </div>
-              <button class="switch" id="keep-warm" type="button" role="switch" aria-checked="true">
-                <span></span><b>유지</b>
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>화면 확인 빈도</h3>
-                <p>값이 높으면 반응은 빨라지지만 CPU 사용량이 증가할 수 있습니다.</p>
-              </div>
-              <label class="number-field">
-                <input id="capture-fps" type="number" min="2" max="20" inputmode="numeric" />
-                <span>회/초</span>
-              </label>
-            </div>
-            <div class="privacy-note">
-              <strong>로컬 우선</strong>
-              <span>Hy-MT2와 이미지 OCR은 PC에서 실행됩니다. 외부 모델은 추출된 텍스트만 전송합니다.</span>
-            </div>
-          </div>
-          </section>
+        <div class="settings-workspace">
+          <nav class="settings-navigation" aria-label="설정 분류">
+            <p>설정</p>
+            <button class="settings-nav-item active" type="button" data-settings-panel="translation" aria-current="page">
+              <i aria-hidden="true"></i><span>번역</span>
+            </button>
+            <button class="settings-nav-item" type="button" data-settings-panel="engine">
+              <i aria-hidden="true"></i><span>번역 엔진</span>
+            </button>
+            <button class="settings-nav-item" type="button" data-settings-panel="image">
+              <i aria-hidden="true"></i><span>이미지 번역</span>
+            </button>
+            <button class="settings-nav-item" type="button" data-settings-panel="convenience">
+              <i aria-hidden="true"></i><span>편의 기능</span>
+            </button>
+            <button class="settings-nav-item" type="button" data-settings-panel="about">
+              <i aria-hidden="true"></i><span>앱 정보</span>
+            </button>
+          </nav>
 
-          <section class="settings-section" id="provider-connections" aria-labelledby="connections-heading">
-          <h2 id="connections-heading">번역 서비스 연결</h2>
-          <div class="settings-surface provider-list">
-            <article class="provider-row" data-provider="chatgpt">
-              <div class="provider-identity">
-                <span class="provider-mark" aria-hidden="true">G</span>
-                <div>
-                  <h3>ChatGPT</h3>
-                  <p>ChatGPT 구독 · Codex CLI</p>
+          <div class="settings-scroll-region">
+            <div id="settings-scroll" class="settings-scroll">
+              <section class="settings-view active" data-settings-view="translation" aria-labelledby="translation-heading">
+                <div class="panel-heading">
+                  <h2 id="translation-heading">번역</h2>
+                  <p>받는 메시지와 보내는 메시지의 번역 방식을 설정합니다.</p>
                 </div>
-              </div>
-              <div class="provider-connection">
-                <div class="provider-status" data-state="loading">
-                  <strong>확인 중</strong>
-                  <span>Codex CLI와 로그인 상태를 확인하고 있습니다.</span>
-                </div>
-                <button class="button secondary provider-action" type="button">연결</button>
-                <button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button>
-              </div>
-            </article>
+                <div class="settings-grid two-column">
+                  <article class="settings-card">
+                    <div class="card-heading">
+                      <span class="card-index" aria-hidden="true">01</span>
+                      <div><h3>받는 메시지</h3><p>Discord에서 표시할 번역을 설정합니다.</p></div>
+                    </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>실시간 번역</h3><p>메시지와 채널명을 번역하여 표시합니다.</p></div>
+                      <button class="switch" id="enabled" type="button" role="switch" aria-checked="false"><span></span><b>꺼짐</b></button>
+                    </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>표시 언어</h3><p>원문과 같은 언어는 그대로 표시합니다.</p></div>
+                      <div class="custom-select" data-field="target_language"></div>
+                    </div>
+                  </article>
 
-            <article class="provider-row" data-provider="claude">
-              <div class="provider-identity">
-                <span class="provider-mark" aria-hidden="true">C</span>
-                <div>
-                  <h3>Claude</h3>
-                  <p>Claude Pro/Max · Claude Code</p>
+                  <article class="settings-card">
+                    <div class="card-heading">
+                      <span class="card-index" aria-hidden="true">02</span>
+                      <div><h3>보내는 메시지</h3><p>입력한 메시지를 번역한 후 전송합니다.</p></div>
+                    </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>보내는 메시지 번역</h3><p>최근 대화 언어를 기준으로 번역합니다.</p></div>
+                      <button class="switch" id="outgoing-translation" type="button" role="switch" aria-checked="false"><span></span><b>꺼짐</b></button>
+                    </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>기본 전송 언어</h3><p>채널별 선택이 없을 때 적용합니다.</p></div>
+                      <div class="custom-select" data-field="outgoing_target_language"></div>
+                    </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>채널별 첫 감지 확인</h3><p>자동 감지된 언어를 채널별로 처음 사용할 때 한 번만 확인합니다.</p></div>
+                      <button class="switch" id="outgoing-confirm-language" type="button" role="switch" aria-checked="true"><span></span><b>사용</b></button>
+                    </div>
+                  </article>
                 </div>
-              </div>
-              <div class="provider-connection">
-                <div class="provider-status" data-state="loading">
-                  <strong>확인 중</strong>
-                  <span>Claude Code와 로그인 상태를 확인하고 있습니다.</span>
-                </div>
-                <button class="button secondary provider-action" type="button">연결</button>
-                <button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button>
-              </div>
-            </article>
 
-            <article class="provider-row" data-provider="gemini">
-              <div class="provider-identity">
-                <span class="provider-mark" aria-hidden="true">G</span>
-                <div>
-                  <h3>Gemini</h3>
-                  <p>Google 구독 · Gemini CLI</p>
-                </div>
-              </div>
-              <div class="provider-connection">
-                <div class="provider-status" data-state="loading">
-                  <strong>확인 중</strong>
-                  <span>Gemini CLI와 로그인 상태를 확인하고 있습니다.</span>
-                </div>
-                <button class="button secondary provider-action" type="button">연결</button>
-                <button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button>
-              </div>
-            </article>
+                <article class="settings-card common-card">
+                  <div class="card-heading">
+                    <span class="card-index" aria-hidden="true">03</span>
+                    <div><h3>공통 번역 규칙</h3><p>받는 메시지와 보내는 메시지에 공통으로 적용합니다.</p></div>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>번역 말투</h3><p>원문 말투를 유지하거나 원하는 말투로 고정합니다.</p></div>
+                    <div class="custom-select" data-field="speech_style"></div>
+                  </div>
+                </article>
+              </section>
 
-            <article class="provider-row" data-provider="deepl">
-              <div class="provider-identity">
-                <span class="provider-mark" aria-hidden="true">D</span>
-                <div>
-                  <h3>DeepL</h3>
-                  <p>API 사용량 과금</p>
+              <section class="settings-view" data-settings-view="engine" aria-labelledby="engine-heading" hidden>
+                <div class="panel-heading">
+                  <h2 id="engine-heading">번역 엔진</h2>
+                  <p>번역 모델, 로컬 실행 방식 및 외부 번역 서비스를 설정합니다.</p>
                 </div>
-              </div>
-              <div class="provider-connection provider-credential-connection">
-                <div class="provider-status" data-state="loading">
-                  <strong>확인 중</strong>
-                  <span>저장된 API 키를 확인하고 있습니다.</span>
-                </div>
-                <div class="provider-credential">
-                  <input
-                    class="text-field provider-secret"
-                    type="password"
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder="DeepL API 키"
-                    aria-label="DeepL API 키"
-                  />
-                  <button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button>
-                </div>
-              </div>
-            </article>
-          </div>
-          <p class="section-note">구독 서비스 인증은 각 공식 CLI에서 관리하며 API 키는 운영체제 보안 저장소에 보관합니다.</p>
-          </section>
+                <article class="settings-card">
+                  <div class="setting-row compact-row first-row">
+                    <div class="setting-copy"><h3>번역 모델</h3><p>로컬 Hy-MT2, 구독 CLI 또는 외부 API를 선택합니다.</p></div>
+                    <div class="custom-select" data-field="translator"></div>
+                  </div>
+                </article>
 
-          <section class="settings-section" aria-labelledby="environment-heading">
-          <h2 id="environment-heading">사용 환경</h2>
-          <div class="settings-surface">
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>설정창 테마</h3>
-                <p>시스템 설정을 따르거나 라이트 및 다크 모드를 직접 선택합니다.</p>
-              </div>
-              <div class="custom-select" data-field="ui_theme"></div>
+                <article class="settings-card local-engine-card">
+                  <div class="card-heading">
+                    <span class="card-index" aria-hidden="true">L</span>
+                    <div><h3>로컬 엔진</h3><p>Hy-MT2의 실행 장치와 자원 사용 방식을 설정합니다.</p></div>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>Hy-MT2 실행 장치</h3><p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p></div>
+                    <div class="custom-select" data-field="hymt_device"></div>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>로컬 모델 예열 유지</h3><p>번역을 꺼도 모델을 VRAM에 유지합니다.</p></div>
+                    <button class="switch" id="keep-warm" type="button" role="switch" aria-checked="true"><span></span><b>유지</b></button>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>화면 확인 빈도</h3><p>값이 높을수록 반응이 빨라지며 CPU 사용량이 증가할 수 있습니다.</p></div>
+                    <label class="number-field"><input id="capture-fps" type="number" min="2" max="20" inputmode="numeric" /><span>회/초</span></label>
+                  </div>
+                  <div class="privacy-note"><strong>로컬 우선</strong><span>Hy-MT2와 이미지 OCR은 PC에서 실행됩니다. 외부 모델에는 추출된 텍스트만 전송됩니다.</span></div>
+                </article>
+
+                <section id="provider-connections" aria-labelledby="connections-heading">
+                  <div class="panel-subheading"><h3 id="connections-heading">번역 서비스 연결</h3><p>구독 계정과 API 연결 상태를 관리합니다.</p></div>
+                  <div class="settings-card provider-list">
+                    <article class="provider-row" data-provider="chatgpt">
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>ChatGPT</h3><p>ChatGPT 구독 · Codex CLI</p></div></div>
+                      <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Codex CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
+                    </article>
+                    <article class="provider-row" data-provider="claude">
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">C</span><div><h3>Claude</h3><p>Claude Pro/Max · Claude Code</p></div></div>
+                      <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Claude Code와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
+                    </article>
+                    <article class="provider-row" data-provider="gemini">
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>Gemini</h3><p>Google 구독 · Gemini CLI</p></div></div>
+                      <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Gemini CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
+                    </article>
+                    <article class="provider-row" data-provider="deepl">
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">D</span><div><h3>DeepL</h3><p>API 사용량 과금</p></div></div>
+                      <div class="provider-connection provider-credential-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>저장된 API 키를 확인하고 있습니다.</span></div><div class="provider-credential"><input class="text-field provider-secret" type="password" autocomplete="off" spellcheck="false" placeholder="새 API 키 입력 시 변경" aria-label="DeepL API 키" /><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div></div>
+                    </article>
+                  </div>
+                  <p class="section-note">구독 서비스 인증은 각 공식 CLI에서 관리하며 API 키는 운영체제 보안 저장소에 보관합니다.</p>
+                </section>
+              </section>
+
+              <section class="settings-view" data-settings-view="image" aria-labelledby="image-heading" hidden>
+                <div class="panel-heading"><h2 id="image-heading">이미지 번역</h2><p>Discord 이미지에서 글자를 감지하고 번역하여 표시합니다.</p></div>
+                <article class="settings-card image-feature-card">
+                  <div class="feature-illustration" aria-hidden="true"><span></span><span></span><span></span></div>
+                  <div class="feature-copy">
+                    <span class="feature-badge">기본 기능</span>
+                    <h3>이미지 OCR 자동 번역</h3>
+                    <p>실시간 번역이 켜져 있을 때 Discord 이미지의 글자를 PC에서 감지하여 표시 언어로 번역합니다. 번역이 꺼져 있으면 이미지에 별도 버튼이나 안내 문구를 표시하지 않습니다.</p>
+                  </div>
+                </article>
+                <article class="settings-card">
+                  <div class="information-row"><strong>처리 위치</strong><span>OCR은 PC에서 실행됩니다.</span></div>
+                  <div class="information-row"><strong>번역 언어</strong><span>번역 메뉴의 표시 언어 설정을 따릅니다.</span></div>
+                  <div class="information-row"><strong>표시 조건</strong><span>실시간 번역이 켜져 있을 때만 활성화됩니다.</span></div>
+                </article>
+              </section>
+
+              <section class="settings-view" data-settings-view="convenience" aria-labelledby="convenience-heading" hidden>
+                <div class="panel-heading"><h2 id="convenience-heading">편의 기능</h2><p>설정창 테마와 전역 단축키를 관리합니다.</p></div>
+                <article class="settings-card">
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>Language</h3><p>설정창에 표시할 언어를 선택합니다.</p></div>
+                    <div class="custom-select" data-field="ui_language"></div>
+                  </div>
+                  <div class="setting-row compact-row first-row">
+                    <div class="setting-copy"><h3>설정창 테마</h3><p>시스템 설정을 따르거나 라이트 및 다크 모드를 선택합니다.</p></div>
+                    <div class="custom-select" data-field="ui_theme"></div>
+                  </div>
+                </article>
+                <article class="settings-card shortcut-card">
+                  <div class="card-heading"><span class="card-index" aria-hidden="true">K</span><div><h3>전역 단축키</h3><p>다른 프로그램을 사용 중일 때도 번역 상태를 전환합니다.</p></div></div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>실시간 번역 켜기·끄기</h3><p>받는 메시지의 실시간 번역 상태를 전환합니다.</p></div>
+                    <div class="shortcut-editor"><input class="text-field" id="toggle-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="shortcut-help" readonly /><small id="shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>보내는 메시지 번역 켜기·끄기</h3><p>입력 메시지의 번역 전송 상태를 전환합니다.</p></div>
+                    <div class="shortcut-editor"><input class="text-field" id="toggle-outgoing-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="outgoing-shortcut-help" readonly /><small id="outgoing-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
+                  </div>
+                </article>
+              </section>
+
+              <section class="settings-view" data-settings-view="about" aria-labelledby="app-heading" hidden>
+                <div class="panel-heading"><h2 id="app-heading">앱 정보</h2><p>버전, 업데이트, 프로젝트 및 라이선스 정보를 확인합니다.</p></div>
+                <div class="settings-card app-information">
+                  <div class="app-info-row app-info-product"><div><h3>Nude Translator</h3><p>버전 <span id="app-version">0.3.1 Beta</span></p></div><div class="app-info-links" aria-label="프로젝트 링크"><span>© 2026</span><span aria-hidden="true">·</span><button class="app-link" id="author-link" type="button">NudeNyang</button><span aria-hidden="true">·</span><button class="app-link" id="github-link" type="button">GitHub</button></div></div>
+                  <div class="app-info-row"><div><h3>자동 업데이트</h3><p id="update-status">새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.</p></div><button class="button secondary app-info-button" id="check-update" type="button">지금 확인</button></div>
+                  <div class="app-info-row"><div><p class="app-copyright">Copyright © 2026 NudeNyang</p><p class="app-license-summary">GNU GPL v3에 따라 이용 가능하며 별도 보증은 제공되지 않습니다.</p></div><button class="button secondary app-info-button" id="view-license" type="button">라이선스 보기</button></div>
+                </div>
+              </section>
             </div>
-            <div class="setting-row">
-              <div class="setting-copy">
-                <h3>번역 켜기·끄기</h3>
-                <p>다른 프로그램을 사용 중일 때도 이 키로 번역 상태를 전환합니다.</p>
-              </div>
-              <div class="shortcut-editor">
-                <input
-                  class="text-field"
-                  id="toggle-shortcut"
-                  type="text"
-                  maxlength="24"
-                  autocomplete="off"
-                  aria-describedby="shortcut-help"
-                  readonly
-                />
-                <small id="shortcut-help">클릭한 뒤 원하는 단축키 조합을 누르면 변경할 수 있습니다.</small>
-              </div>
-            </div>
-          </div>
-          </section>
-
-          <section class="settings-section" aria-labelledby="app-heading">
-          <h2 id="app-heading">앱 정보</h2>
-            <div class="settings-surface app-information">
-              <div class="app-info-row app-info-product">
-                <div>
-                  <h3>Nude Translator</h3>
-                  <p>버전 <span id="app-version">0.3.0 Beta</span></p>
-                </div>
-                <div class="app-info-links" aria-label="프로젝트 링크">
-                  <span>© 2026</span>
-                  <span aria-hidden="true">·</span>
-                  <button class="app-link" id="author-link" type="button">NudeNyang</button>
-                  <span aria-hidden="true">·</span>
-                  <button class="app-link" id="github-link" type="button">GitHub</button>
-                </div>
-              </div>
-
-              <div class="app-info-row">
-                <div>
-                  <h3>자동 업데이트</h3>
-                  <p id="update-status">새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.</p>
-                </div>
-                <button class="button secondary app-info-button" id="check-update" type="button">지금 확인</button>
-              </div>
-
-              <div class="app-info-row">
-                <div>
-                  <p class="app-copyright">Copyright © 2026 NudeNyang</p>
-                  <p class="app-license-summary">GNU GPL v3에 따라 이용 가능하며 별도 보증은 제공되지 않습니다.</p>
-                </div>
-                <button class="button secondary app-info-button" id="view-license" type="button">라이선스 보기</button>
-              </div>
-            </div>
-          </section>
-          </div>
-          <div id="settings-scroll-indicator" class="scroll-indicator" aria-hidden="true">
-            <div class="scroll-indicator-thumb"></div>
+            <div id="settings-scroll-indicator" class="scroll-indicator" aria-hidden="true"><div class="scroll-indicator-thumb"></div></div>
           </div>
         </div>
 
         <footer class="form-footer">
           <p id="save-status">설정은 이 PC에만 저장됩니다.</p>
-          <div class="footer-actions">
-            <button class="button secondary" id="cancel" type="button">되돌리기</button>
-            <button class="button primary" type="submit">저장</button>
-          </div>
+          <div class="footer-actions"><button class="button secondary" id="cancel" type="button">되돌리기</button><button class="button primary" type="submit">저장</button></div>
         </footer>
       </form>
     </main>
 
     <div class="modal-layer" id="modal-layer" hidden>
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <h2 id="modal-title"></h2>
-        <p id="modal-message"></p>
-        <div class="modal-actions">
-          <button class="button secondary" id="modal-cancel" type="button">취소</button>
-          <button class="button primary" id="modal-accept" type="button"></button>
-        </div>
+        <h2 id="modal-title"></h2><p id="modal-message"></p>
+        <div class="modal-actions"><button class="button secondary" id="modal-cancel" type="button">취소</button><button class="button primary" id="modal-accept" type="button"></button></div>
       </section>
     </div>
-
     <script type="module" src="./app.js"></script>
   </body>
 </html>

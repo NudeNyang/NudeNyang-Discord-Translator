@@ -35,6 +35,7 @@ impl Default for RegionConfig {
 #[serde(default)]
 pub struct HotkeyConfig {
     pub toggle_translation: String,
+    pub toggle_outgoing_translation: String,
     pub toggle_original: String,
     pub hide_overlay: String,
     pub copy_current: String,
@@ -44,6 +45,7 @@ impl Default for HotkeyConfig {
     fn default() -> Self {
         Self {
             toggle_translation: "F12".to_string(),
+            toggle_outgoing_translation: "F8".to_string(),
             toggle_original: "Ctrl+Alt+O".to_string(),
             hide_overlay: "Ctrl+Alt+H".to_string(),
             copy_current: "Ctrl+Alt+C".to_string(),
@@ -62,6 +64,7 @@ pub struct AppConfig {
     pub show_original: bool,
     pub theme: String,
     pub ui_theme: String,
+    pub ui_language: String,
     pub background_color: String,
     pub text_color: String,
     pub overlay_opacity: f64,
@@ -93,6 +96,7 @@ impl Default for AppConfig {
             show_original: false,
             theme: "auto".to_string(),
             ui_theme: "system".to_string(),
+            ui_language: "auto".to_string(),
             background_color: String::new(),
             text_color: String::new(),
             overlay_opacity: 1.0,
@@ -173,6 +177,13 @@ impl AppConfig {
             .is_some_and(|value| !matches!(value, "system" | "light" | "dark"))
         {
             object.insert("ui_theme".to_string(), Value::String("system".to_string()));
+        }
+        if object
+            .get("ui_language")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "auto" | "ko" | "en" | "ja" | "zh"))
+        {
+            object.insert("ui_language".to_string(), Value::String("auto".to_string()));
         }
         if object
             .get("outgoing_target_language")
@@ -360,11 +371,13 @@ mod tests {
         assert_eq!(restored.update_repository, "NudeNyang/Nude-Translator");
         assert_eq!(restored.speech_style, "auto");
         assert_eq!(restored.ui_theme, "system");
+        assert_eq!(restored.ui_language, "auto");
         assert!(restored.keep_local_model_warm);
         assert!(!restored.outgoing_translation_enabled);
         assert_eq!(restored.outgoing_target_language, "auto");
         assert!(restored.outgoing_confirm_language);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
+        assert_eq!(restored.hotkeys.toggle_outgoing_translation, "F8");
         assert!(restored.disabled_providers.is_empty());
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
@@ -398,6 +411,7 @@ mod tests {
             .expect("update config");
 
         assert_eq!(updated.hotkeys.toggle_translation, "Ctrl+Alt+T");
+        assert_eq!(updated.hotkeys.toggle_outgoing_translation, "F8");
         assert_eq!(updated.hotkeys.toggle_original, "Ctrl+Alt+O");
         assert!(!updated.keep_local_model_warm);
         let restored = ConfigStore::load(path.clone())

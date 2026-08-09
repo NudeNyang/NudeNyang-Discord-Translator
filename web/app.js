@@ -9,6 +9,7 @@ import {
   translatorRuntimeLabel,
 } from "./state.mjs";
 import { LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
+import { applyStaticTranslations, translateCopy } from "./i18n.mjs";
 
 const tauriInvoke = window.__TAURI__?.core?.invoke;
 const tauriListen = window.__TAURI__?.event?.listen;
@@ -60,6 +61,13 @@ const OPTIONS = {
     ["light", "라이트"],
     ["dark", "다크"],
   ],
+  ui_language: [
+    ["auto", "자동 (시스템 언어)"],
+    ["ko", "한국어"],
+    ["en", "English"],
+    ["ja", "日本語"],
+    ["zh", "简体中文"],
+  ],
 };
 
 const state = {
@@ -77,6 +85,7 @@ const state = {
   settingsScrollTimer: 0,
   pendingEnabled: null,
   toggleActive: false,
+  outgoingToggleActive: false,
   providerConnections: new Map(),
   providerLoading: false,
 };
@@ -89,6 +98,7 @@ const elements = {
   keepWarm: document.querySelector("#keep-warm"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
+  outgoingShortcut: document.querySelector("#toggle-outgoing-shortcut"),
   cancel: document.querySelector("#cancel"),
   saveStatus: document.querySelector("#save-status"),
   engineState: document.querySelector("#engine-state"),
@@ -254,6 +264,7 @@ function renderProviderConnections(connections) {
     const secret = row.querySelector(".provider-secret");
     if (secret) secret.placeholder = connection.connected ? "새 API 키 입력 시 변경" : "DeepL API 키";
   }
+  applyUiLanguage(state.selectValues.ui_language || state.config.ui_language);
 }
 
 async function loadProviderConnections() {
@@ -274,11 +285,31 @@ async function loadProviderConnections() {
 }
 
 function revealProviderConnection(provider) {
+  activateSettingsPanel("engine");
   const row = document.querySelector(`.provider-row[data-provider="${provider}"]`);
   if (!row) return;
   row.dataset.highlight = "true";
   row.scrollIntoView({ behavior: "smooth", block: "center" });
   window.setTimeout(() => delete row.dataset.highlight, 1800);
+}
+
+function activateSettingsPanel(panel) {
+  const target = document.querySelector(`[data-settings-view="${panel}"]`);
+  if (!target) return;
+  for (const view of document.querySelectorAll("[data-settings-view]")) {
+    const active = view === target;
+    view.hidden = !active;
+    view.classList.toggle("active", active);
+  }
+  for (const item of document.querySelectorAll("[data-settings-panel]")) {
+    const active = item.dataset.settingsPanel === panel;
+    item.classList.toggle("active", active);
+    if (active) item.setAttribute("aria-current", "page");
+    else item.removeAttribute("aria-current");
+  }
+  elements.settingsScroll.scrollTop = 0;
+  closeAllSelects();
+  window.requestAnimationFrame(updateScrollIndicator);
 }
 
 async function connectProvider(row) {
@@ -502,7 +533,13 @@ async function loadAppInformation() {
 
 function setSwitch(button, checked, onLabel, offLabel) {
   button.setAttribute("aria-checked", String(Boolean(checked)));
-  button.querySelector("b").textContent = checked ? onLabel : offLabel;
+  const language = state.selectValues.ui_language || state.config.ui_language;
+  button.querySelector("b").textContent = translateCopy(language, checked ? onLabel : offLabel);
+}
+
+function applyUiLanguage(language) {
+  applyStaticTranslations(document, language);
+  window.requestAnimationFrame(updateScrollIndicator);
 }
 
 function applyTheme(theme) {
@@ -519,6 +556,11 @@ function applyTheme(theme) {
 systemThemeQuery.addEventListener("change", () => {
   const selectedTheme = state.selectValues.ui_theme || state.config.ui_theme;
   if (selectedTheme === "system") applyTheme("system");
+});
+
+window.addEventListener("languagechange", () => {
+  const selectedLanguage = state.selectValues.ui_language || state.config.ui_language;
+  if (selectedLanguage === "auto") applyUiLanguage("auto");
 });
 
 function renderSelect(element) {
@@ -545,6 +587,7 @@ function renderSelect(element) {
       closeSelect(element);
       trigger.focus();
       if (field === "ui_theme") applyTheme(value);
+      if (field === "ui_language") applyUiLanguage(value);
       if (field === "translator" && EXTERNAL_PROVIDERS.has(value) && !providerIsConnected(value)) {
         elements.saveStatus.textContent = "선택한 외부 번역 서비스를 먼저 연결하십시오.";
         revealProviderConnection(value);
@@ -612,13 +655,15 @@ function renderConfig(config) {
   setSwitch(
     elements.outgoingConfirmLanguage,
     state.config.outgoing_confirm_language,
-    "확인",
-    "자동 적용",
+    "사용",
+    "사용 안 함",
   );
   setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "유지", "반환");
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
+  elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
   applyTheme(state.config.ui_theme);
+  applyUiLanguage(state.config.ui_language);
 }
 
 function collectPatch() {
@@ -628,6 +673,7 @@ function collectPatch() {
     speech_style: state.selectValues.speech_style,
     hymt_device: state.selectValues.hymt_device,
     ui_theme: state.selectValues.ui_theme,
+    ui_language: state.selectValues.ui_language,
     outgoing_translation_enabled:
       elements.outgoingTranslation.getAttribute("aria-checked") === "true",
     outgoing_target_language: state.selectValues.outgoing_target_language,
@@ -635,7 +681,10 @@ function collectPatch() {
       elements.outgoingConfirmLanguage.getAttribute("aria-checked") === "true",
     keep_local_model_warm: elements.keepWarm.getAttribute("aria-checked") === "true",
     capture_fps: Math.max(2, Math.min(20, Number(elements.captureFps.value) || 8)),
-    hotkeys: { toggle_translation: elements.shortcut.value.trim() || "F12" },
+    hotkeys: {
+      toggle_translation: elements.shortcut.value.trim() || "F12",
+      toggle_outgoing_translation: elements.outgoingShortcut.value.trim() || "F8",
+    },
   };
 }
 
@@ -707,6 +756,18 @@ async function setOutgoingTranslationEnabled(enabled) {
   }
 }
 
+async function toggleOutgoingTranslation() {
+  if (state.repairActive || state.outgoingToggleActive) return;
+  state.outgoingToggleActive = true;
+  try {
+    await setOutgoingTranslationEnabled(!state.config.outgoing_translation_enabled);
+  } catch (error) {
+    await showError("보내는 메시지 번역 상태를 변경하지 못했습니다", String(error));
+  } finally {
+    state.outgoingToggleActive = false;
+  }
+}
+
 async function disableTranslationFeaturesForConnectionFailure() {
   if (state.config.enabled) await setTranslationEnabled(false, false);
   if (state.config.outgoing_translation_enabled) {
@@ -722,16 +783,27 @@ function updateEngineState(status) {
   const ready = status.cdpConnected;
   const enabledState = resolveEnabledState(status.enabled, state.pendingEnabled);
   state.pendingEnabled = enabledState.pending;
-  const modelLabel = translatorRuntimeLabel(status);
+  const language = state.selectValues.ui_language || state.config.ui_language;
+  const modelLabel = localizeRuntimeLabel(translatorRuntimeLabel(status), language);
   const hasError = Boolean(status.connectionIssue || status.translatorError);
   elements.engineState.dataset.state = ready && !hasError ? "ready" : hasError ? "error" : "loading";
-  const connectionLabel = discordConnectionLabel(status);
+  const connectionLabel = translateCopy(language, discordConnectionLabel(status));
   elements.engineStateLabel.textContent = ready && modelLabel
     ? `${connectionLabel} · ${modelLabel}`
     : connectionLabel;
   state.config.enabled = enabledState.enabled;
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   if (status.notice) elements.saveStatus.textContent = status.notice;
+}
+
+function localizeRuntimeLabel(label, language) {
+  if (!label || language === "ko") return label;
+  for (const suffix of ["준비 중", "사용 중", "준비 실패"]) {
+    if (label.endsWith(suffix)) {
+      return `${label.slice(0, -suffix.length).trim()} ${translateCopy(language, suffix)}`;
+    }
+  }
+  return translateCopy(language, label);
 }
 
 async function pollRuntime() {
@@ -744,7 +816,10 @@ async function pollRuntime() {
     if (shouldPromptRestart(status, state)) await handleRestartRequired(status);
   } catch (error) {
     elements.engineState.dataset.state = "error";
-    elements.engineStateLabel.textContent = "엔진 연결 실패";
+    elements.engineStateLabel.textContent = translateCopy(
+      state.selectValues.ui_language || state.config.ui_language,
+      "엔진 연결 실패",
+    );
     elements.saveStatus.textContent = String(error);
   } finally {
     state.polling = false;
@@ -877,37 +952,51 @@ elements.outgoingTranslation.addEventListener("click", async () => {
 });
 elements.outgoingConfirmLanguage.addEventListener("click", () => {
   const enabled = elements.outgoingConfirmLanguage.getAttribute("aria-checked") !== "true";
-  setSwitch(elements.outgoingConfirmLanguage, enabled, "확인", "자동 적용");
+  setSwitch(elements.outgoingConfirmLanguage, enabled, "사용", "사용 안 함");
 });
 elements.keepWarm.addEventListener("click", () => {
   const enabled = elements.keepWarm.getAttribute("aria-checked") !== "true";
   setSwitch(elements.keepWarm, enabled, "유지", "반환");
 });
 elements.captureFps.addEventListener("wheel", event => event.preventDefault(), { passive: false });
-elements.shortcut.addEventListener("keydown", event => {
-  if (event.key === "Tab") return;
-  event.preventDefault();
-  event.stopPropagation();
-  const help = document.querySelector("#shortcut-help");
-  if (event.key === "Escape") {
-    elements.shortcut.value = state.saved.hotkeys.toggle_translation;
-    elements.shortcut.blur();
-    return;
-  }
-  const shortcut = shortcutFromKeyboardEvent(event);
-  if (!shortcut) {
-    help.textContent = "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 입력하십시오.";
-    return;
-  }
-  elements.shortcut.value = shortcut;
-  help.textContent = `${shortcut}로 변경됩니다. 저장을 선택하여 적용하십시오.`;
-});
-elements.shortcut.addEventListener("focus", () => {
-  document.querySelector("#shortcut-help").textContent = "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.";
-});
-elements.shortcut.addEventListener("blur", () => {
-  document.querySelector("#shortcut-help").textContent = "클릭한 뒤 원하는 단축키 조합을 누르면 변경할 수 있습니다.";
-});
+function bindShortcutEditor(element, configKey, helpId, fallback) {
+  const help = document.querySelector(`#${helpId}`);
+  element.addEventListener("keydown", event => {
+    if (event.key === "Tab") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      element.value = state.saved.hotkeys[configKey] || fallback;
+      element.blur();
+      return;
+    }
+    const shortcut = shortcutFromKeyboardEvent(event);
+    if (!shortcut) {
+      help.textContent = "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 입력하십시오.";
+      return;
+    }
+    element.value = shortcut;
+    help.textContent = `${shortcut}로 변경됩니다. 저장을 선택하여 적용하십시오.`;
+  });
+  element.addEventListener("focus", () => {
+    help.textContent = "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.";
+  });
+  element.addEventListener("blur", () => {
+    help.textContent = "입력란을 선택한 뒤 원하는 단축키를 누르십시오.";
+  });
+}
+
+bindShortcutEditor(elements.shortcut, "toggle_translation", "shortcut-help", "F12");
+bindShortcutEditor(
+  elements.outgoingShortcut,
+  "toggle_outgoing_translation",
+  "outgoing-shortcut-help",
+  "F8",
+);
+
+for (const item of document.querySelectorAll("[data-settings-panel]")) {
+  item.addEventListener("click", () => activateSettingsPanel(item.dataset.settingsPanel));
+}
 elements.authorLink.addEventListener("click", () => {
   openExternalUrl(APP_LINKS.author).catch(error => showError("링크를 열지 못했습니다", String(error)));
 });
@@ -968,6 +1057,7 @@ elements.form.addEventListener("submit", async event => {
 
 if (tauriListen) {
   tauriListen("request-translation-toggle", toggleTranslation);
+  tauriListen("request-outgoing-translation-toggle", toggleOutgoingTranslation);
   tauriListen("settings-changed", event => renderConfig(event.payload));
   tauriListen("provider-connections-changed", loadProviderConnections);
   tauriListen("focus-provider-connection", event => {

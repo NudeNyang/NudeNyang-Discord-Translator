@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'Nude Translator 0.3.0 비공개 베타',
+    [string]$ReleaseNotes = 'Nude Translator 0.3.1 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )

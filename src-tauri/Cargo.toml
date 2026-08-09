@@ -1,6 +1,6 @@
 [package]
 name = "nude-translator-tauri"
-version = "0.3.0-beta"
+version = "0.3.1-beta"
 description = "Nude Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
