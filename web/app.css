@@ -629,9 +629,13 @@ input:focus-visible,
   white-space: normal;
 }
 
-.provider-action {
-  flex: 0 0 auto;
-  min-width: 78px;
+.provider-action,
+.provider-disconnect {
+  flex: 0 0 86px;
+  width: 86px;
+  min-width: 86px;
+  min-height: 40px;
+  white-space: nowrap;
 }
 
 .provider-credential-connection {
@@ -651,18 +655,15 @@ input:focus-visible,
 }
 
 .button.danger {
-  flex: 0 0 auto;
-  min-width: 86px;
-  padding: 0 12px;
-  border-color: var(--danger);
-  color: var(--bg);
-  background: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 62%, var(--border));
+  color: var(--danger);
+  background: var(--control);
   font-size: 12px;
-  white-space: nowrap;
 }
 
 .button.danger:hover {
-  filter: brightness(0.92);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--control));
 }
 
 .section-note {
@@ -781,6 +782,17 @@ input:focus-visible,
 .button.secondary {
   color: var(--text);
   background: var(--control);
+}
+
+.provider-action:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.provider-action:not(:disabled):hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 76%, var(--surface-hover));
 }
 
 .modal-layer {
