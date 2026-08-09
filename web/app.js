@@ -295,12 +295,24 @@ async function connectProvider(row) {
     status.querySelector("span").textContent = provider === "deepl"
       ? "DeepL API 키의 유효성을 확인하고 있습니다."
       : "계정 로그인 절차를 시작하고 있습니다.";
-    const connection = await invoke("provider_connect", { provider, credential });
+    const loginProgress = provider === "gemini" ? showProviderLoginProgress() : null;
+    let connection;
+    try {
+      connection = await invoke("provider_connect", { provider, credential });
+    } catch (error) {
+      if (loginProgress?.wasCancelled()) {
+        await loadProviderConnections();
+        return;
+      }
+      throw error;
+    } finally {
+      loginProgress?.close();
+    }
     state.providerConnections.set(provider, connection);
     renderProviderConnections([...state.providerConnections.values()]);
     if (secret && connection.connected) secret.value = "";
-    if (["claude", "gemini"].includes(provider) && !connection.connected) {
-      const providerName = provider === "claude" ? "Claude" : "Gemini";
+    if (provider === "claude" && !connection.connected) {
+      const providerName = "Claude";
       await showModal({
         title: `${providerName} 로그인 창을 열었습니다`,
         message: `${providerName} CLI 창에서 계정 로그인을 완료한 후 이 화면의 연결 버튼을 다시 선택하십시오.`,
@@ -316,6 +328,45 @@ async function connectProvider(row) {
       action.disabled = false;
     }
   }
+}
+
+function showProviderLoginProgress() {
+  let cancelled = false;
+  let closed = false;
+  elements.modalTitle.textContent = "Google 계정 연결";
+  elements.modalMessage.textContent = "기본 브라우저에서 Google 계정 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.";
+  elements.modalCancel.textContent = "취소";
+  elements.modalCancel.hidden = false;
+  elements.modalCancel.disabled = false;
+  elements.modalAccept.hidden = true;
+  elements.modalLayer.dataset.variant = "provider-login";
+  elements.modalLayer.hidden = false;
+
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    elements.modalLayer.hidden = true;
+    delete elements.modalLayer.dataset.variant;
+    elements.modalCancel.removeEventListener("click", cancel);
+    elements.modalCancel.textContent = "취소";
+    elements.modalCancel.disabled = false;
+    elements.modalAccept.hidden = false;
+  };
+  const cancel = async () => {
+    if (cancelled) return;
+    cancelled = true;
+    elements.modalCancel.disabled = true;
+    elements.modalCancel.textContent = "취소 중";
+    elements.modalMessage.textContent = "Google 계정 로그인을 취소하고 있습니다.";
+    try {
+      await invoke("provider_login_cancel");
+    } finally {
+      close();
+    }
+  };
+  elements.modalCancel.addEventListener("click", cancel);
+  elements.modalCancel.focus();
+  return { close, wasCancelled: () => cancelled };
 }
 
 async function savePendingProviderCredentials() {

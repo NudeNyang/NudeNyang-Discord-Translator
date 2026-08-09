@@ -40,6 +40,8 @@ pub struct CliConnectionProbe {
     pub detail: String,
 }
 
+pub type LoginProcessObserver = Arc<dyn Fn(Option<u32>) + Send + Sync>;
+
 impl SubscriptionProvider {
     pub fn from_key(value: &str) -> Result<Self, String> {
         match value {
@@ -349,7 +351,10 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
     }
 }
 
-pub fn connect_subscription_interactively(provider: &str) -> Result<CliConnectionProbe, String> {
+pub fn connect_subscription_interactively_with_observer(
+    provider: &str,
+    process_observer: Option<LoginProcessObserver>,
+) -> Result<CliConnectionProbe, String> {
     let provider = SubscriptionProvider::from_key(provider)?;
     let mut translator = SubscriptionCliTranslator::new(
         provider.key(),
@@ -375,14 +380,186 @@ pub fn connect_subscription_interactively(provider: &str) -> Result<CliConnectio
                 ));
             }
         }
-        Implementation::Agy | Implementation::Gemini => {
+        Implementation::Agy => {
             open_cli_login_console(&executable, "Gemini")?;
         }
+        Implementation::Gemini => authenticate_gemini_with_acp(
+            &executable,
+            &translator.workspace_dir()?,
+            process_observer,
+        )?,
         Implementation::Claude => {
             open_cli_login_console(&executable, "Claude")?;
         }
     }
     probe_subscription_connection(provider.key())
+}
+
+fn authenticate_gemini_with_acp(
+    executable: &Path,
+    workspace: &Path,
+    process_observer: Option<LoginProcessObserver>,
+) -> Result<(), String> {
+    let mut command = process_command(executable, &["--acp".to_string()]);
+    command
+        .current_dir(workspace)
+        .env_clear()
+        .envs(subscription_environment())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    configure_hidden(&mut command);
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("Gemini CLI ACP 인증을 시작하지 못했습니다: {error}"))?;
+    let process_id = child.id();
+    if let Some(observer) = process_observer.as_ref() {
+        observer(Some(process_id));
+    }
+
+    let result = authenticate_gemini_acp_process(&mut child);
+    let _ = child.kill();
+    let _ = child.wait();
+    if let Some(observer) = process_observer.as_ref() {
+        observer(None);
+    }
+    result
+}
+
+fn authenticate_gemini_acp_process(child: &mut Child) -> Result<(), String> {
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "Gemini CLI ACP 인증 입력 연결을 열지 못했습니다.".to_string())?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Gemini CLI ACP 인증 출력 연결을 열지 못했습니다.".to_string())?;
+    let mut stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Gemini CLI ACP 인증 오류 연결을 열지 못했습니다.".to_string())?;
+
+    let (line_tx, line_rx) = mpsc::channel();
+    let stdout_thread = thread::spawn(move || {
+        for line in BufReader::new(stdout).lines() {
+            if line_tx.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    let stderr_thread = thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let _ = stderr.read_to_end(&mut bytes);
+        bytes
+    });
+
+    let result = (|| -> Result<(), String> {
+        write_acp_request(
+            &mut stdin,
+            1,
+            "initialize",
+            json!({
+                "protocolVersion": 1,
+                "clientCapabilities": {},
+                "clientInfo": {"name": "Nude Translator", "version": "0.2.0"}
+            }),
+        )?;
+
+        let deadline = Instant::now() + Duration::from_secs(300);
+        let mut authentication_started = false;
+        loop {
+            if Instant::now() >= deadline {
+                return Err("Google 계정 로그인 제한 시간(5분)을 초과했습니다.".to_string());
+            }
+            match line_rx.recv_timeout(Duration::from_millis(200)) {
+                Ok(Ok(line)) => {
+                    let Ok(message) = serde_json::from_str::<Value>(&line) else {
+                        continue;
+                    };
+                    let Some(id) = message.get("id").and_then(Value::as_u64) else {
+                        continue;
+                    };
+                    if let Some(error) = message.get("error") {
+                        return Err(format!(
+                            "Gemini CLI ACP 인증에 실패했습니다: {}",
+                            acp_error_message(error)
+                        ));
+                    }
+                    if id == 1 && !authentication_started {
+                        write_acp_request(
+                            &mut stdin,
+                            2,
+                            "authenticate",
+                            json!({"methodId": "oauth-personal"}),
+                        )?;
+                        authentication_started = true;
+                    } else if id == 2 {
+                        return Ok(());
+                    }
+                }
+                Ok(Err(error)) => {
+                    return Err(format!(
+                        "Gemini CLI ACP 인증 출력을 읽지 못했습니다: {error}"
+                    ));
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    if let Some(status) = child.try_wait().map_err(|error| {
+                        format!("Gemini CLI ACP 인증 상태를 확인하지 못했습니다: {error}")
+                    })? {
+                        return Err(format!(
+                            "Gemini CLI ACP 인증이 완료되기 전에 종료되었습니다: {status}"
+                        ));
+                    }
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err("Gemini CLI ACP 인증 연결이 종료되었습니다.".to_string());
+                }
+            }
+        }
+    })();
+
+    drop(stdin);
+    let _ = child.kill();
+    let _ = child.wait();
+    let _ = stdout_thread.join();
+    let stderr = stderr_thread.join().unwrap_or_default();
+    result.map_err(|error| {
+        let detail = tail_chars(&decode_process_output(&stderr), 500);
+        if detail.trim().is_empty() {
+            error
+        } else {
+            format!("{error} ({})", detail.trim())
+        }
+    })
+}
+
+fn write_acp_request(
+    stdin: &mut impl Write,
+    id: u64,
+    method: &str,
+    params: Value,
+) -> Result<(), String> {
+    let request = json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "method": method,
+        "params": params
+    });
+    serde_json::to_writer(&mut *stdin, &request)
+        .map_err(|error| format!("Gemini CLI ACP 인증 요청을 만들지 못했습니다: {error}"))?;
+    stdin
+        .write_all(b"\n")
+        .and_then(|_| stdin.flush())
+        .map_err(|error| format!("Gemini CLI ACP 인증 요청을 보내지 못했습니다: {error}"))
+}
+
+fn acp_error_message(error: &Value) -> String {
+    error
+        .get("message")
+        .and_then(Value::as_str)
+        .unwrap_or("알 수 없는 인증 오류")
+        .to_string()
 }
 
 pub fn install_subscription_cli(provider: &str) -> Result<CliConnectionProbe, String> {
@@ -1513,12 +1690,13 @@ fn tail_chars(value: &str, limit: usize) -> String {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use std::sync::{Arc, Mutex};
 
     use serde_json::json;
 
     use super::{
-        decode_payload, decode_process_output, parse_node_major, run_process,
-        subscription_environment, translation_prompt, validated_translations,
+        acp_error_message, decode_payload, decode_process_output, parse_node_major, run_process,
+        subscription_environment, translation_prompt, validated_translations, write_acp_request,
         SubscriptionCliTranslator,
     };
     use crate::language::Language;
@@ -1537,6 +1715,54 @@ mod tests {
         let decoded = decode_process_output(encoded.as_ref());
         assert_eq!(decoded, "내부 또는 외부 명령이 아닙니다.");
         assert!(!decoded.contains('\u{fffd}'));
+    }
+
+    #[test]
+    fn builds_official_gemini_acp_google_authentication_requests() {
+        let mut request = Vec::new();
+        write_acp_request(
+            &mut request,
+            2,
+            "authenticate",
+            json!({"methodId": "oauth-personal"}),
+        )
+        .unwrap();
+        let payload: serde_json::Value =
+            serde_json::from_slice(request.strip_suffix(b"\n").unwrap()).unwrap();
+
+        assert_eq!(payload["jsonrpc"], "2.0");
+        assert_eq!(payload["method"], "authenticate");
+        assert_eq!(payload["params"]["methodId"], "oauth-personal");
+        assert_eq!(
+            acp_error_message(&json!({"message": "cancelled"})),
+            "cancelled"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn completes_gemini_login_through_a_hidden_acp_process() {
+        let directory =
+            std::env::temp_dir().join(format!("nude-translator-gemini-acp-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let wrapper = directory.join("gemini mock.cmd");
+        std::fs::write(
+            &wrapper,
+            "@echo off\r\nset /p initialize=\r\necho {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\r\nset /p authenticate=\r\necho {\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}\r\n",
+        )
+        .unwrap();
+        let process_events = Arc::new(Mutex::new(Vec::new()));
+        let observed_events = Arc::clone(&process_events);
+        let observer: super::LoginProcessObserver = Arc::new(move |process_id| {
+            observed_events.lock().unwrap().push(process_id);
+        });
+
+        super::authenticate_gemini_with_acp(&wrapper, &directory, Some(observer)).unwrap();
+
+        let _ = std::fs::remove_dir_all(&directory);
+        let events = process_events.lock().unwrap();
+        assert!(events.first().is_some_and(Option::is_some));
+        assert_eq!(events.last(), Some(&None));
     }
 
     #[cfg(windows)]

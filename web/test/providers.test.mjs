@@ -53,6 +53,19 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
   assert.match(subscriptionCli, /decode_process_output/);
 });
 
+test("Gemini sign-in stays inside the app while the official browser flow runs", () => {
+  assert.match(subscriptionCli, /"--acp"/);
+  assert.match(subscriptionCli, /"oauth-personal"/);
+  assert.match(subscriptionCli, /Gemini CLI ACP 인증/);
+  assert.doesNotMatch(
+    subscriptionCli,
+    /Implementation::Agy \| Implementation::Gemini\s*=>\s*\{\s*open_cli_login_console/,
+  );
+  assert.match(rustMain, /provider_login_cancel/);
+  assert.match(script, /showProviderLoginProgress/);
+  assert.match(script, /기본 브라우저에서 Google 계정 로그인을 완료하십시오/);
+});
+
 test("DeepL API keys are replaced through the main save action", () => {
   const deeplRow = markup.match(/<article class="provider-row" data-provider="deepl">[\s\S]*?<\/article>/)?.[0] || "";
   assert.match(deeplRow, /provider-secret/);

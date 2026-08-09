@@ -838,6 +838,12 @@ input:focus-visible,
   justify-content: flex-end;
 }
 
+.modal-layer[data-variant="provider-login"] .modal p {
+  min-height: 0;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
 .modal-layer[data-variant="license"] .modal {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;

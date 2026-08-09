@@ -15,10 +15,11 @@ pub mod translation;
 mod updater;
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::{json, Value};
+use sysinfo::{Pid, System};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WindowEvent,
@@ -43,6 +44,110 @@ impl Default for ShortcutConfig {
         Self {
             toggle_translation: Mutex::new("F12".to_string()),
             fallback_virtual_key: AtomicU32::new(0),
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+struct ProviderLoginState {
+    inner: Arc<Mutex<ProviderLoginSessionState>>,
+}
+
+#[derive(Default)]
+struct ProviderLoginSessionState {
+    active: bool,
+    cancel_requested: bool,
+    process_id: Option<u32>,
+}
+
+impl ProviderLoginState {
+    fn begin(&self) -> Result<translation::LoginProcessObserver, String> {
+        let mut state = self
+            .inner
+            .lock()
+            .map_err(|_| "번역 서비스 로그인 상태 잠금을 열지 못했습니다.".to_string())?;
+        if state.active {
+            return Err("Google 계정 로그인이 이미 진행 중입니다.".to_string());
+        }
+        state.active = true;
+        state.cancel_requested = false;
+        state.process_id = None;
+        drop(state);
+
+        let inner = Arc::clone(&self.inner);
+        Ok(Arc::new(move |next_process_id| {
+            let mut process_to_cancel = None;
+            if let Ok(mut state) = inner.lock() {
+                match next_process_id {
+                    Some(process_id) => {
+                        if state.cancel_requested {
+                            process_to_cancel = Some(process_id);
+                        } else {
+                            state.process_id = Some(process_id);
+                        }
+                    }
+                    None => {
+                        state.active = false;
+                        state.cancel_requested = false;
+                        state.process_id = None;
+                    }
+                }
+            }
+            if let Some(process_id) = process_to_cancel {
+                terminate_process_tree(process_id);
+            }
+        }))
+    }
+
+    fn cancel(&self) -> Result<bool, String> {
+        let mut state = self
+            .inner
+            .lock()
+            .map_err(|_| "번역 서비스 로그인 상태 잠금을 열지 못했습니다.".to_string())?;
+        if !state.active {
+            return Ok(false);
+        }
+        state.cancel_requested = true;
+        let process_id = state.process_id.take();
+        drop(state);
+        if let Some(process_id) = process_id {
+            terminate_process_tree(process_id);
+        }
+        Ok(true)
+    }
+
+    fn finish(&self) {
+        if let Ok(mut state) = self.inner.lock() {
+            state.active = false;
+            state.cancel_requested = false;
+            state.process_id = None;
+        }
+    }
+}
+
+fn terminate_process_tree(process_id: u32) {
+    let system = System::new_all();
+    let root = Pid::from_u32(process_id);
+    let mut targets = vec![root];
+    loop {
+        let mut added = false;
+        for (pid, process) in system.processes() {
+            if process
+                .parent()
+                .is_some_and(|parent| targets.contains(&parent))
+                && !targets.contains(pid)
+            {
+                targets.push(*pid);
+                added = true;
+            }
+        }
+        if !added {
+            break;
+        }
+    }
+    for pid in targets.into_iter().rev() {
+        if let Some(process) = system.process(pid) {
+            let _ = process.kill();
         }
     }
 }
@@ -198,15 +303,30 @@ async fn provider_connect(
     app: AppHandle,
     engine: State<'_, RustEngine>,
     config: State<'_, ConfigStore>,
+    login_state: State<'_, ProviderLoginState>,
     provider: String,
     credential: Option<String>,
 ) -> Result<providers::ProviderConnection, String> {
+    let is_gemini = provider == "gemini";
+    let process_observer = if is_gemini {
+        Some(login_state.begin()?)
+    } else {
+        None
+    };
     let provider_for_task = provider.clone();
-    let connection = tauri::async_runtime::spawn_blocking(move || {
-        providers::connect(&provider_for_task, credential.as_deref())
+    let connection_result = tauri::async_runtime::spawn_blocking(move || {
+        providers::connect_with_observer(
+            &provider_for_task,
+            credential.as_deref(),
+            process_observer,
+        )
     })
-    .await
-    .map_err(|error| format!("번역 서비스 연결 작업을 기다리지 못했습니다: {error}"))??;
+    .await;
+    if is_gemini {
+        login_state.finish();
+    }
+    let connection = connection_result
+        .map_err(|error| format!("번역 서비스 연결 작업을 기다리지 못했습니다: {error}"))??;
 
     if connection.connected {
         let mut current = config.get()?;
@@ -230,6 +350,11 @@ async fn provider_connect(
     }
     let _ = app.emit("provider-connections-changed", ());
     Ok(connection)
+}
+
+#[tauri::command]
+fn provider_login_cancel(login_state: State<'_, ProviderLoginState>) -> Result<bool, String> {
+    login_state.cancel()
 }
 
 #[tauri::command]
@@ -366,6 +491,7 @@ fn shutdown_translation(app: &AppHandle) {
         return;
     }
     let engine = app.state::<RustEngine>();
+    let _ = app.state::<ProviderLoginState>().cancel();
     let _ = engine.set_enabled(false);
     let config = app.state::<ConfigStore>();
     let _ = config.update(json!({"enabled": false}));
@@ -587,6 +713,7 @@ fn main() {
         }))
         .manage(LifecycleState::default())
         .manage(ShortcutConfig::default())
+        .manage(ProviderLoginState::default())
         .manage(config)
         .manage(engine)
         .setup(|app| {
@@ -633,6 +760,7 @@ fn main() {
             provider_connections_get,
             provider_install,
             provider_connect,
+            provider_login_cancel,
             provider_disconnect,
             discord_restart,
             main_window_show,
@@ -657,7 +785,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{fallback_function_key, tray_menu_position};
+    use super::{fallback_function_key, tray_menu_position, ProviderLoginState};
 
     #[test]
     fn unmodified_function_keys_can_use_the_windows_polling_fallback() {
@@ -683,5 +811,37 @@ mod tests {
             tray_menu_position((-1910, 20), (300, 300), (-1920, 0, 1920, 1080)),
             (-1912, 8)
         );
+    }
+
+    #[test]
+    fn gemini_login_cancel_is_remembered_before_the_cli_process_starts() {
+        let state = ProviderLoginState::default();
+        let observer = state.begin().expect("로그인 세션을 시작해야 합니다");
+
+        assert!(state.cancel().expect("로그인 취소를 기록해야 합니다"));
+        observer(Some(u32::MAX));
+
+        let current = state.inner.lock().expect("로그인 상태를 확인해야 합니다");
+        assert!(current.active);
+        assert!(current.cancel_requested);
+        assert!(current.process_id.is_none());
+        drop(current);
+
+        observer(None);
+        assert!(
+            !state
+                .inner
+                .lock()
+                .expect("로그인 상태를 확인해야 합니다")
+                .active
+        );
+    }
+
+    #[test]
+    fn cancelling_without_an_active_gemini_login_is_a_no_op() {
+        let state = ProviderLoginState::default();
+        assert!(!state
+            .cancel()
+            .expect("비활성 로그인 취소를 처리해야 합니다"));
     }
 }

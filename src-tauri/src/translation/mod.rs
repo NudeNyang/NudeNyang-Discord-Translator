@@ -14,8 +14,9 @@ pub use mock::{MockTranslator, OriginalTranslator};
 pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::TranslationService;
 pub use subscription_cli::{
-    connect_subscription_interactively, install_subscription_cli, probe_subscription_connection,
-    CliConnectionProbe, SubscriptionCliTranslator, SubscriptionProvider,
+    connect_subscription_interactively_with_observer, install_subscription_cli,
+    probe_subscription_connection, CliConnectionProbe, LoginProcessObserver,
+    SubscriptionCliTranslator, SubscriptionProvider,
 };
 
 pub trait Translator: Send {

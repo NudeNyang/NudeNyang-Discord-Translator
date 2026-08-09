@@ -4,8 +4,8 @@ use serde::Serialize;
 
 use crate::credentials;
 use crate::translation::{
-    connect_subscription_interactively, install_subscription_cli, probe_subscription_connection,
-    CliConnectionProbe, DeepLTranslator,
+    connect_subscription_interactively_with_observer, install_subscription_cli,
+    probe_subscription_connection, CliConnectionProbe, DeepLTranslator, LoginProcessObserver,
 };
 
 #[derive(Clone, Debug, Serialize)]
@@ -46,7 +46,11 @@ pub fn list(disabled_providers: &[String]) -> Vec<ProviderConnection> {
     ]
 }
 
-pub fn connect(provider: &str, credential: Option<&str>) -> Result<ProviderConnection, String> {
+pub fn connect_with_observer(
+    provider: &str,
+    credential: Option<&str>,
+    process_observer: Option<LoginProcessObserver>,
+) -> Result<ProviderConnection, String> {
     match provider {
         "deepl" => {
             let credential = credential.unwrap_or_default().trim();
@@ -59,7 +63,7 @@ pub fn connect(provider: &str, credential: Option<&str>) -> Result<ProviderConne
             let probe = if probe.connected {
                 probe
             } else {
-                connect_subscription_interactively(provider)?
+                connect_subscription_interactively_with_observer(provider, process_observer)?
             };
             let (name, auth_mode) = cli_provider_identity(provider);
             Ok(cli_connection(provider, name, auth_mode, probe, false))
