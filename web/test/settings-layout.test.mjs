@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const script = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const rustMain = readFileSync(new URL("../../src-tauri/src/main.rs", import.meta.url), "utf8");
 
 test("theme and shortcut settings share one usage environment section", () => {
   const environmentSection = markup.match(
@@ -14,4 +16,12 @@ test("theme and shortcut settings share one usage environment section", () => {
   assert.match(environmentSection, /<h3>번역 켜기·끄기<\/h3>/);
   assert.equal((environmentSection.match(/class="setting-row"/g) || []).length, 2);
   assert.doesNotMatch(markup, /id="appearance-heading"|id="shortcut-heading"/);
+});
+
+test("settings can be reverted and native window chrome follows the selected theme", () => {
+  assert.match(markup, /<button class="button secondary" id="cancel" type="button">되돌리기<\/button>/);
+  assert.match(script, /invoke\("main_window_set_theme", \{ theme, resolvedTheme \}\)/);
+  assert.match(rustMain, /DWMWA_CAPTION_COLOR/);
+  assert.match(rustMain, /DWMWA_TEXT_COLOR/);
+  assert.match(rustMain, /DWMWA_BORDER_COLOR/);
 });

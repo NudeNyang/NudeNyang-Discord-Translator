@@ -14,6 +14,7 @@ const tauriInvoke = window.__TAURI__?.core?.invoke;
 const tauriListen = window.__TAURI__?.event?.listen;
 const tauriGetVersion = window.__TAURI__?.app?.getVersion;
 const tauriOpenUrl = window.__TAURI__?.opener?.openUrl;
+const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 const SCROLL_INDICATOR_REVEAL_DISTANCE = 44;
 const APP_LINKS = Object.freeze({
   author: "https://x.com/NudeNyang_VRC",
@@ -477,7 +478,18 @@ function setSwitch(button, checked, onLabel, offLabel) {
 function applyTheme(theme) {
   if (theme === "system") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.dataset.theme = theme;
+  const resolvedTheme = theme === "system"
+    ? (systemThemeQuery.matches ? "dark" : "light")
+    : theme;
+  invoke("main_window_set_theme", { theme, resolvedTheme }).catch(() => {
+    // 웹 테마는 이미 적용되었으므로 네이티브 제목 표시줄 실패만 무시합니다.
+  });
 }
+
+systemThemeQuery.addEventListener("change", () => {
+  const selectedTheme = state.selectValues.ui_theme || state.config.ui_theme;
+  if (selectedTheme === "system") applyTheme("system");
+});
 
 function renderSelect(element) {
   const field = element.dataset.field;

@@ -196,6 +196,85 @@ extern "system" {
     fn GetAsyncKeyState(virtual_key: i32) -> i16;
 }
 
+fn requested_window_theme(
+    window: &tauri::WebviewWindow,
+    requested: &str,
+) -> Result<tauri::Theme, String> {
+    match requested {
+        "light" => Ok(tauri::Theme::Light),
+        "dark" => Ok(tauri::Theme::Dark),
+        "system" => window
+            .theme()
+            .map_err(|error| format!("시스템 창 테마를 확인하지 못했습니다: {error}")),
+        _ => Err("지원하지 않는 설정창 테마입니다.".to_string()),
+    }
+}
+
+fn apply_main_window_chrome(
+    window: &tauri::WebviewWindow,
+    requested: &str,
+    resolved: tauri::Theme,
+) -> Result<(), String> {
+    let native_theme = match requested {
+        "system" => None,
+        "light" | "dark" => Some(resolved),
+        _ => return Err("지원하지 않는 설정창 테마입니다.".to_string()),
+    };
+    window
+        .set_theme(native_theme)
+        .map_err(|error| format!("설정창 테마를 적용하지 못했습니다: {error}"))?;
+
+    #[cfg(windows)]
+    apply_windows_title_bar_palette(window, resolved);
+
+    Ok(())
+}
+
+#[cfg(windows)]
+fn apply_windows_title_bar_palette(window: &tauri::WebviewWindow, theme: tauri::Theme) {
+    use std::ffi::c_void;
+    use std::mem::size_of;
+    use windows::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_CAPTION_COLOR, DWMWA_TEXT_COLOR,
+    };
+
+    fn color_ref(red: u32, green: u32, blue: u32) -> u32 {
+        red | (green << 8) | (blue << 16)
+    }
+
+    let (caption, text, border) = match theme {
+        tauri::Theme::Dark => (
+            color_ref(16, 43, 66),
+            color_ref(242, 247, 251),
+            color_ref(45, 92, 128),
+        ),
+        _ => (
+            color_ref(220, 235, 248),
+            color_ref(18, 40, 58),
+            color_ref(170, 203, 228),
+        ),
+    };
+    let Ok(hwnd) = window.hwnd() else {
+        return;
+    };
+    for (attribute, color) in [
+        (DWMWA_CAPTION_COLOR, caption),
+        (DWMWA_TEXT_COLOR, text),
+        (DWMWA_BORDER_COLOR, border),
+    ] {
+        // Windows 10처럼 사용자 지정 캡션 색을 지원하지 않는 환경에서는
+        // set_theme으로 적용한 시스템 제목 표시줄을 그대로 사용해.
+        let _ = unsafe {
+            DwmSetWindowAttribute(
+                hwnd,
+                attribute,
+                (&color as *const u32).cast::<c_void>(),
+                size_of::<u32>() as u32,
+            )
+        };
+    }
+}
+
 #[tauri::command]
 fn engine_health() -> Value {
     json!({"status": "ready", "protocolVersion": 2, "ocrMode": "rust-native"})
@@ -204,6 +283,19 @@ fn engine_health() -> Value {
 #[tauri::command]
 fn settings_get(config: State<'_, ConfigStore>) -> Result<AppConfig, String> {
     config.get()
+}
+
+#[tauri::command]
+fn main_window_set_theme(
+    app: AppHandle,
+    theme: String,
+    resolved_theme: String,
+) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "설정창을 찾지 못했습니다.".to_string())?;
+    let resolved = requested_window_theme(&window, &resolved_theme)?;
+    apply_main_window_chrome(&window, &theme, resolved)
 }
 
 #[tauri::command]
@@ -771,6 +863,11 @@ fn main() {
             start_fallback_shortcut_poller(handle.clone());
             if let Ok(config) = handle.state::<ConfigStore>().get() {
                 let _ = replace_toggle_shortcut(&handle, &config.hotkeys.toggle_translation);
+                if let Some(window) = handle.get_webview_window("main") {
+                    if let Ok(theme) = requested_window_theme(&window, &config.ui_theme) {
+                        let _ = apply_main_window_chrome(&window, &config.ui_theme, theme);
+                    }
+                }
             }
             Ok(())
         })
@@ -800,6 +897,7 @@ fn main() {
             engine_health,
             settings_get,
             settings_update,
+            main_window_set_theme,
             translation_set_enabled,
             runtime_status,
             update_check,
