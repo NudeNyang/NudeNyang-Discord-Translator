@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -127,6 +127,38 @@ enum WorkerCommand {
     Warm,
     Release,
     Stop,
+}
+
+fn worker_command_priority(command: &WorkerCommand) -> u8 {
+    match command {
+        WorkerCommand::Activate { .. }
+        | WorkerCommand::Warm
+        | WorkerCommand::Release
+        | WorkerCommand::Stop => 0,
+        WorkerCommand::TranslateOutgoing(_) => 1,
+        WorkerCommand::Translate(_) | WorkerCommand::TranslateImage(_) => 2,
+    }
+}
+
+fn next_worker_command(
+    commands: &mpsc::Receiver<WorkerCommand>,
+    backlog: &mut VecDeque<WorkerCommand>,
+) -> Result<WorkerCommand, mpsc::RecvError> {
+    if backlog.is_empty() {
+        backlog.push_back(commands.recv()?);
+    }
+    while let Ok(command) = commands.try_recv() {
+        backlog.push_back(command);
+    }
+    let index = backlog
+        .iter()
+        .enumerate()
+        .min_by_key(|(_, command)| worker_command_priority(command))
+        .map(|(index, _)| index)
+        .expect("worker backlog contains at least one command");
+    Ok(backlog
+        .remove(index)
+        .expect("selected worker command exists"))
 }
 
 enum WorkerResult {
@@ -1017,7 +1049,8 @@ fn run_translation_worker(
     };
     let mut service = TranslationService::new(Box::new(OriginalTranslator), cache);
     let mut image_processor = ImageTranslationProcessor::new();
-    while let Ok(command) = commands.recv() {
+    let mut backlog = VecDeque::new();
+    while let Ok(command) = next_worker_command(&commands, &mut backlog) {
         match command {
             WorkerCommand::Translate(batch) => {
                 let texts: Vec<String> = batch.parts.iter().map(|part| part.text.clone()).collect();
@@ -1239,13 +1272,17 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        poll_interval, translator_activation_notice, translator_label, RuntimeStatus, RustEngine,
+        next_worker_command, poll_interval, translator_activation_notice, translator_label,
+        OutgoingTranslationBatch, RuntimeStatus, RustEngine, TranslationBatch, WorkerCommand,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
     use crate::dom::{
         apply_script, parse_snapshot, DomChange, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
+    use crate::language::Language;
+    use std::collections::VecDeque;
+    use std::sync::mpsc;
 
     #[test]
     fn runtime_status_starts_with_the_configured_contract() {
@@ -1272,6 +1309,29 @@ mod tests {
         assert!(!prepared.contains("지금부터"));
         assert!(deferred.contains("번역을 켜면 모델을 준비합니다"));
         assert!(!deferred.contains("준비가 완료되었습니다"));
+    }
+
+    #[test]
+    fn outgoing_messages_overtake_queued_dom_translation() {
+        let (sender, receiver) = mpsc::channel();
+        sender
+            .send(WorkerCommand::Translate(TranslationBatch {
+                generation: 1,
+                target: Language::Korean,
+                parts: Vec::new(),
+            }))
+            .unwrap();
+        sender
+            .send(WorkerCommand::TranslateOutgoing(OutgoingTranslationBatch {
+                generation: 1,
+                target: Language::Japanese,
+                request_id: "outgoing-priority".to_string(),
+                text: "안녕하세요".to_string(),
+            }))
+            .unwrap();
+
+        let command = next_worker_command(&receiver, &mut VecDeque::new()).unwrap();
+        assert!(matches!(command, WorkerCommand::TranslateOutgoing(_)));
     }
 
     #[test]

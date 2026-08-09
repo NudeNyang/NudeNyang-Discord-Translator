@@ -218,14 +218,25 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!key) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        if ([...this.pending.values()].some(item => item.editor === editor)) {
-          this.setStatus('이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.');
-          return;
+        const previous = [...this.pending.entries()].find(([, item]) => item.editor === editor);
+        if (previous) {
+          const [previousId, previousItem] = previous;
+          const expired = Date.now() - previousItem.created_at >= 30000;
+          const changed = previousItem.text !== text;
+          if (!expired && !changed) {
+            this.setStatus('이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.');
+            return;
+          }
+          this.pending.delete(previousId);
+          if (this.activeRequest === previousId) {
+            this.activeRequest = '';
+            this.bypass = 0;
+          }
         }
         const id = `outgoing-${Date.now()}-${++this.sequence}`;
         const selected = this.oneShotOriginal ? 'original' : readStoredLanguage(key, this.defaultLanguage);
         this.oneShotOriginal = false;
-        const item = {id, channel_key:key, text, selected_language:selected, recent_messages:recentMessages()};
+        const item = {id, channel_key:key, text, selected_language:selected, recent_messages:recentMessages(), created_at:Date.now()};
         this.pending.set(id, {...item, editor});
         this.queue.push(item);
         this.setStatus(selected === 'original' ? '원문을 전송합니다.' : '메시지를 번역하고 있습니다.');
