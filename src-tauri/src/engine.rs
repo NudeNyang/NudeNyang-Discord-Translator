@@ -18,8 +18,9 @@ use crate::dom::{
 };
 use crate::image_translation::{
     apply_image_error_script, apply_image_result_script, fetch_image_data_script,
-    image_capture_info_script, parse_image_capture_info, parse_image_data, parse_image_requests,
-    restore_images_script, ImageTranslationOutcome, ImageTranslationProcessor, IMAGE_UI_SCRIPT,
+    image_capture_info_script, image_ui_script, parse_image_capture_info, parse_image_data,
+    parse_image_requests, restore_images_script, ImageTranslationOutcome,
+    ImageTranslationProcessor,
 };
 use crate::language::Language;
 use crate::outgoing::{
@@ -473,6 +474,7 @@ fn run_controller(
             ensure_outgoing_originals(
                 client.as_mut().expect("connected CDP client"),
                 outgoing_original_store.as_ref(),
+                &config.ui_language,
             )?;
             if config.outgoing_translation_enabled {
                 scan_outgoing(
@@ -486,7 +488,11 @@ fn run_controller(
                 outgoing_ui_needs_cleanup = true;
             } else if outgoing_ui_needs_cleanup {
                 client.as_mut().expect("connected CDP client").evaluate(
-                    &outgoing_ui_script(false, &config.outgoing_target_language),
+                    &outgoing_ui_script(
+                        false,
+                        &config.outgoing_target_language,
+                        &config.ui_language,
+                    ),
                     false,
                 )?;
                 outgoing_ui_needs_cleanup = false;
@@ -507,6 +513,7 @@ fn run_controller(
                     target,
                     &worker_tx,
                     &status,
+                    &config.ui_language,
                 )?;
                 image_ui_needs_cleanup = true;
             } else {
@@ -581,8 +588,9 @@ fn scan_images(
     target: Language,
     worker: &mpsc::Sender<WorkerCommand>,
     status: &Arc<Mutex<RuntimeStatus>>,
+    ui_language: &str,
 ) -> Result<(), String> {
-    let requests = parse_image_requests(client.evaluate(IMAGE_UI_SCRIPT, false)?)?;
+    let requests = parse_image_requests(client.evaluate(&image_ui_script(ui_language), false)?)?;
     for request in requests.into_iter().take(2) {
         let pending_key = (generation, request.id.clone());
         if request.id.is_empty() || pending.contains(&pending_key) {
@@ -740,6 +748,7 @@ fn scan_dom(
 fn ensure_outgoing_originals(
     client: &mut CdpClient,
     store: Option<&TranslationCache>,
+    ui_language: &str,
 ) -> Result<(), String> {
     let channel = client
         .evaluate(
@@ -752,10 +761,11 @@ fn ensure_outgoing_originals(
     if channel.is_empty() {
         return Ok(());
     }
-    let encoded_channel = serde_json::to_string(&channel)
-        .map_err(|error| format!("Discord 채널 식별자를 인코딩하지 못했습니다: {error}"))?;
+    let ready_key = format!("{channel}|{ui_language}");
+    let encoded_ready_key = serde_json::to_string(&ready_key)
+        .map_err(|error| format!("Discord 채널 상태 식별자를 인코딩하지 못했습니다: {error}"))?;
     let ready = client.evaluate(
-        &format!("window.__nudeTranslatorOutgoingOriginalsReady === {encoded_channel}"),
+        &format!("window.__nudeTranslatorOutgoingOriginalsReady === {encoded_ready_key}"),
         false,
     )?;
     if ready.as_bool() == Some(true) {
@@ -765,7 +775,10 @@ fn ensure_outgoing_originals(
     let records = store
         .and_then(|store| store.outgoing_originals_for_channel(&channel, 500).ok())
         .unwrap_or_default();
-    client.evaluate(&outgoing_originals_ui_script(&channel, &records)?, false)?;
+    client.evaluate(
+        &outgoing_originals_ui_script(&channel, &records, ui_language)?,
+        false,
+    )?;
     Ok(())
 }
 
@@ -778,7 +791,7 @@ fn scan_outgoing(
     original_store: Option<&TranslationCache>,
 ) -> Result<(), String> {
     let requests = parse_outgoing_requests(client.evaluate(
-        &outgoing_ui_script(true, &config.outgoing_target_language),
+        &outgoing_ui_script(true, &config.outgoing_target_language, &config.ui_language),
         false,
     )?)?;
     let bindings = parse_outgoing_bindings(client.evaluate(OUTGOING_BINDINGS_SCRIPT, false)?)?;

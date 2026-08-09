@@ -115,6 +115,45 @@ impl ShortcutAction {
     }
 }
 
+fn set_translation_enabled_from_app(app: &AppHandle, enabled: bool) -> Result<Value, String> {
+    let config = app.state::<ConfigStore>();
+    let engine = app.state::<RustEngine>();
+    let previous_config = config.get()?;
+    config.update(json!({"enabled": enabled}))?;
+    engine.set_enabled(enabled).inspect_err(|_| {
+        let _ = config.replace(previous_config);
+    })?;
+    let status = serde_json::to_value(engine.status()?)
+        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했습니다: {error}"))?;
+    let _ = app.emit("translation-state-changed", status.clone());
+    Ok(status)
+}
+
+fn toggle_translation_from_app(app: &AppHandle) -> Result<Value, String> {
+    let config = app.state::<ConfigStore>().get()?;
+    if !config.enabled && !config.discord_auto_restart_consent_granted {
+        main_window_show(app.clone());
+        app.emit("request-translation-toggle", ())
+            .map_err(|error| format!("번역 시작 동의 화면을 열지 못했습니다: {error}"))?;
+        return Ok(json!({"deferredForConsent": true}));
+    }
+    let enabled = !config.enabled;
+    diagnostics::info(
+        "shortcut",
+        &format!("native translation toggle requested; enabled={enabled}"),
+    );
+    set_translation_enabled_from_app(app, enabled)
+}
+
+fn dispatch_shortcut_action(app: &AppHandle, action: ShortcutAction) -> Result<(), String> {
+    match action {
+        ShortcutAction::Translation => toggle_translation_from_app(app).map(|_| ()),
+        ShortcutAction::OutgoingTranslation => app
+            .emit(action.event_name(), ())
+            .map_err(|error| format!("보내는 메시지 번역 단축키를 처리하지 못했습니다: {error}")),
+    }
+}
+
 #[derive(Clone, Default)]
 struct ProviderLoginState {
     inner: Arc<Mutex<ProviderLoginSessionState>>,
@@ -436,21 +475,8 @@ fn settings_update(
 }
 
 #[tauri::command]
-fn translation_set_enabled(
-    app: AppHandle,
-    engine: State<'_, RustEngine>,
-    config: State<'_, ConfigStore>,
-    enabled: bool,
-) -> Result<Value, String> {
-    let previous_config = config.get()?;
-    config.update(json!({"enabled": enabled}))?;
-    engine.set_enabled(enabled).inspect_err(|_| {
-        let _ = config.replace(previous_config);
-    })?;
-    let status = serde_json::to_value(engine.status()?)
-        .map_err(|error| format!("Rust 번역 상태를 변환하지 못했습니다: {error}"))?;
-    let _ = app.emit("translation-state-changed", status.clone());
-    Ok(status)
+fn translation_set_enabled(app: AppHandle, enabled: bool) -> Result<Value, String> {
+    set_translation_enabled_from_app(&app, enabled)
 }
 
 #[tauri::command]
@@ -973,7 +999,9 @@ fn start_fallback_shortcut_poller(app: AppHandle) {
                     // GetAsyncKeyState의 최상위 비트는 현재 키가 눌린 상태임을 뜻해.
                     let pressed = unsafe { GetAsyncKeyState(virtual_key as i32) } < 0;
                     if pressed && !was_pressed[index] {
-                        let _ = app.emit(action.event_name(), ());
+                        if let Err(error) = dispatch_shortcut_action(&app, action) {
+                            diagnostics::error("shortcut", &error);
+                        }
                     }
                     was_pressed[index] = pressed;
                 }
@@ -1027,7 +1055,9 @@ fn main() {
                         let pressed = pressed_shortcut.to_string();
                         let shortcut_state = app.state::<ShortcutConfig>();
                         if let Some(action) = shortcut_action_for(&shortcut_state, &pressed) {
-                            let _ = app.emit(action.event_name(), ());
+                            if let Err(error) = dispatch_shortcut_action(app, action) {
+                                diagnostics::error("shortcut", &error);
+                            }
                         }
                     }
                 })

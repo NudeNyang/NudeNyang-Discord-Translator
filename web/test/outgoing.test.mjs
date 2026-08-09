@@ -6,6 +6,7 @@ const outgoing = readFileSync(new URL("../../src-tauri/src/outgoing.rs", import.
 const engine = readFileSync(new URL("../../src-tauri/src/engine.rs", import.meta.url), "utf8");
 const dom = readFileSync(new URL("../../src-tauri/src/dom.rs", import.meta.url), "utf8");
 const cache = readFileSync(new URL("../../src-tauri/src/cache.rs", import.meta.url), "utf8");
+const imageTranslation = readFileSync(new URL("../../src-tauri/src/image_translation.rs", import.meta.url), "utf8");
 
 test("outgoing translation intercepts only normal Enter sends", () => {
   assert.match(outgoing, /event\.key !== 'Enter'/);
@@ -83,6 +84,17 @@ test("outgoing translation preserves Discord Slate mention entities", () => {
   assert.match(outgoing, /if \(mentionPlan && !mentionPlan\.supported\) return/);
   assert.match(outgoing, /function hasActiveAutocomplete\(editor\)/);
   assert.match(outgoing, /if \(hasActiveAutocomplete\(editor\)\) return/);
+});
+
+test("Discord-injected controls follow the settings interface language", () => {
+  assert.match(outgoing, /__UI_LANGUAGE__/);
+  assert.match(outgoing, /requestedUiLanguage/);
+  assert.match(outgoing, /outgoing_ui_script\(enabled: bool, default_language: &str, ui_language: &str\)/);
+  assert.match(outgoing, /outgoing_originals_ui_script[\s\S]*ui_language: &str/);
+  assert.match(imageTranslation, /pub fn image_ui_script\(ui_language: &str\)/);
+  for (const copy of ["Image translation", "画像を翻訳", "翻译图片"]) {
+    assert.match(imageTranslation, new RegExp(copy));
+  }
 });
 
 test("translated outgoing text settles in Discord Slate before Enter is dispatched", () => {

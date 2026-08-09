@@ -77,6 +77,15 @@ test("convenience panel exposes separate incoming and outgoing shortcuts", () =>
   assert.match(script, /request-outgoing-translation-toggle/);
 });
 
+test("the incoming shortcut toggles the native engine without waiting for the settings webview", () => {
+  assert.match(rustMain, /fn toggle_translation_from_app\(/);
+  assert.match(
+    rustMain,
+    /ShortcutAction::Translation\s*=>\s*toggle_translation_from_app\(app\)/,
+  );
+  assert.match(rustMain, /discord_auto_restart_consent_granted/);
+});
+
 test("footer action labels stay on one line", () => {
   assert.match(markup, /id="cancel"[^>]*>되돌리기<\/button>/);
   assert.match(readFileSync(new URL("../app.css", import.meta.url), "utf8"), /\.footer-actions \.button[\s\S]*white-space:\s*nowrap/);

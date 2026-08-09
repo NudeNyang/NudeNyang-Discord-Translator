@@ -10,12 +10,63 @@ const OUTGOING_UI_SCRIPT: &str = r####"
 (() => {
   const enabled = __ENABLED__;
   const defaultLanguage = __DEFAULT_LANGUAGE__;
+  const requestedUiLanguage = __UI_LANGUAGE__;
+  const systemUiLanguage = (navigator.language || 'en').toLowerCase();
+  const uiLanguage = requestedUiLanguage === 'auto'
+    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
+    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 8;
+  const CONTROLLER_VERSION = 9;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
-  const languageLabels = {auto:'자동 감지',ko:'한국어',ja:'日本語',en:'English',zh:'简体中文','zh-Hant':'繁體中文'};
+  const copies = {
+    ko: {
+      auto:'자동 감지', outgoingLanguage:'전송 언어', selectLanguage:'전송 언어 선택', originalOnce:'이번 메시지만 원문으로 전송',
+      nextOriginal:'다음 메시지는 번역하지 않고 전송합니다.', selectLanguageFormal:'전송 언어를 선택하십시오.', sendingOriginal:'원문을 전송합니다.',
+      translating:'메시지를 번역하고 있습니다.', detectionFailed:'대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.',
+      recentLanguage:'최근 대화 언어는 다음과 같이 판단됩니다: {language}', useChannel:'{language} · 이 채널에 사용', chooseOther:'다른 언어 선택',
+      sendOriginal:'원문 전송', confirmLanguage:'전송 언어를 확인한 후 메시지를 전송합니다.', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
+      pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', sendingParts:'번역문을 분할 전송하고 있습니다. ({part}/{total})',
+      longAttachment:'번역문이 길어 텍스트 파일로 전송합니다.'
+    },
+    en: {
+      auto:'Auto detect', outgoingLanguage:'Outgoing language', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
+      nextOriginal:'The next message will be sent without translation.', selectLanguageFormal:'Select an outgoing language.', sendingOriginal:'Sending the original message.',
+      translating:'Translating the message.', detectionFailed:'The conversation language could not be determined. Select an outgoing language.',
+      recentLanguage:'The recent conversation appears to be in {language}.', useChannel:'{language} · Use for this channel', chooseOther:'Select another language',
+      sendOriginal:'Send original', confirmLanguage:'Confirm the outgoing language to send the message.', translationFailed:'The message could not be translated. The original message has been preserved.',
+      pending:'The previous message is still being processed. Try again shortly.', sendingParts:'Sending the translated message in parts. ({part}/{total})',
+      longAttachment:'The translation is long and will be sent as a text file.'
+    },
+    ja: {
+      auto:'自動検出', outgoingLanguage:'送信言語', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
+      nextOriginal:'次のメッセージは翻訳せずに送信します。', selectLanguageFormal:'送信言語を選択してください。', sendingOriginal:'原文を送信します。',
+      translating:'メッセージを翻訳しています。', detectionFailed:'会話の言語を判定できませんでした。送信言語を選択してください。',
+      recentLanguage:'最近の会話は{language}と判定されました。', useChannel:'{language} · このチャンネルで使用', chooseOther:'別の言語を選択',
+      sendOriginal:'原文を送信', confirmLanguage:'送信言語を確認してからメッセージを送信します。', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
+      pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', sendingParts:'翻訳文を分割して送信しています。({part}/{total})',
+      longAttachment:'翻訳文が長いため、テキストファイルとして送信します。'
+    },
+    zh: {
+      auto:'自动检测', outgoingLanguage:'发送语言', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
+      nextOriginal:'下一条消息将不翻译并直接发送。', selectLanguageFormal:'请选择发送语言。', sendingOriginal:'正在发送原文。',
+      translating:'正在翻译消息。', detectionFailed:'无法判断对话语言。请选择发送语言。',
+      recentLanguage:'最近的对话被判断为{language}。', useChannel:'{language} · 用于此频道', chooseOther:'选择其他语言',
+      sendOriginal:'发送原文', confirmLanguage:'请确认发送语言后发送消息。', translationFailed:'无法翻译消息。原文已保持不变。',
+      pending:'上一条消息仍在处理中。请稍后重试。', sendingParts:'正在分段发送译文。({part}/{total})',
+      longAttachment:'译文较长，将以文本文件形式发送。'
+    }
+  };
+  const languageLabelsByUi = {
+    ko:{auto:'자동 감지',ko:'한국어',ja:'일본어',en:'영어',zh:'중국어 간체','zh-Hant':'중국어 번체'},
+    en:{auto:'Auto detect',ko:'Korean',ja:'Japanese',en:'English',zh:'Simplified Chinese','zh-Hant':'Traditional Chinese'},
+    ja:{auto:'自動検出',ko:'韓国語',ja:'日本語',en:'英語',zh:'簡体字中国語','zh-Hant':'繁体字中国語'},
+    zh:{auto:'自动检测',ko:'韩语',ja:'日语',en:'英语',zh:'简体中文','zh-Hant':'繁体中文'}
+  };
+  const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
+  const formatCopy = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), copy(key));
+  const languageLabels = languageLabelsByUi[uiLanguage] || languageLabelsByUi.en;
   const storageKey = key => `nude-translator:outgoing-language:${key}`;
   const confirmedStorageKey = key => `nude-translator:outgoing-confirmed-language:${key}`;
 
@@ -159,7 +210,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (root) return root;
     root = document.createElement('div');
     root.id = ROOT_ID;
-    root.innerHTML = '<button type="button" class="nt-outgoing-trigger" aria-expanded="false"><span>전송 언어</span><b>자동 감지</b><i>⌄</i></button><div class="nt-outgoing-menu" hidden></div><p class="nt-outgoing-status" hidden></p>';
+    root.innerHTML = `<button type="button" class="nt-outgoing-trigger" aria-expanded="false"><span>${copy('outgoingLanguage')}</span><b>${copy('auto')}</b><i>⌄</i></button><div class="nt-outgoing-menu" hidden></div><p class="nt-outgoing-status" hidden></p>`;
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
@@ -186,17 +237,19 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   }
 
   let controller = window[GLOBAL];
-  if (controller && controller.version !== CONTROLLER_VERSION) {
+  if (controller && (controller.version !== CONTROLLER_VERSION || controller.uiLanguage !== uiLanguage)) {
     if (controller.listener) document.removeEventListener('keydown', controller.listener, true);
     clearTimeout(controller.statusTimer);
     document.getElementById(ROOT_ID)?.remove();
     document.getElementById(`${ROOT_ID}-style`)?.remove();
+    window.__nudeTranslatorOutgoingOriginalsReady = '';
     delete window[GLOBAL];
     controller = null;
   }
   if (!controller) {
     controller = {
       version: CONTROLLER_VERSION,
+      uiLanguage,
       enabled: false,
       queue: [],
       pending: new Map(),
@@ -225,7 +278,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const language = readStoredLanguage(key, this.defaultLanguage);
         this.root.querySelector('.nt-outgoing-trigger b').textContent = languageLabels[language] || languageLabels.auto;
       },
-      showLanguageMenu(heading = '전송 언어 선택', requestId = '') {
+      showLanguageMenu(heading = copy('selectLanguage'), requestId = '') {
         this.manualRequest = requestId;
         const menu = this.root.querySelector('.nt-outgoing-menu');
         menu.replaceChildren();
@@ -237,7 +290,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         for (const code of choices) menu.append(makeButton(languageLabels[code], 'language', code));
         const divider = document.createElement('div');
         divider.className = 'nt-divider';
-        menu.append(divider, makeButton('이번 메시지만 원문으로 전송', 'original-once'));
+        menu.append(divider, makeButton(copy('originalOnce'), 'original-once'));
         menu.hidden = false;
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
       },
@@ -261,7 +314,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             this.manualRequest = '';
           } else {
             this.oneShotOriginal = true;
-            this.setStatus('다음 메시지는 번역하지 않고 전송합니다.');
+            this.setStatus(copy('nextOriginal'));
           }
         } else if (button.dataset.action === 'suggest-channel') {
           const channelKey = this.pending.get(button.dataset.value)?.channel_key || key;
@@ -270,7 +323,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.retry(button.dataset.value, button.dataset.language);
           this.updateLabel();
         } else if (button.dataset.action === 'suggest-choose') {
-          this.showLanguageMenu('전송 언어를 선택하십시오.', button.dataset.value);
+          this.showLanguageMenu(copy('selectLanguageFormal'), button.dataset.value);
           return;
         } else if (button.dataset.action === 'suggest-original') {
           this.retry(button.dataset.value, 'original');
@@ -282,7 +335,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const item = this.pending.get(id);
         if (!item) return;
         this.queue.push({...item, selected_language: language});
-        this.setStatus(language === 'original' ? '원문을 전송합니다.' : '메시지를 번역하고 있습니다.');
+        this.setStatus(language === 'original' ? copy('sendingOriginal') : copy('translating'));
       },
       suggest(id, language) {
         const item = this.pending.get(id);
@@ -290,19 +343,19 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const menu = this.root.querySelector('.nt-outgoing-menu');
         menu.replaceChildren();
         if (!language || !languageLabels[language]) {
-          this.showLanguageMenu('대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.', id);
+          this.showLanguageMenu(copy('detectionFailed'), id);
           return;
         }
         const heading = document.createElement('div');
         heading.className = 'nt-heading';
-        heading.textContent = `최근 대화는 ${languageLabels[language]}로 보입니다.`;
-        const channel = makeButton(`${languageLabels[language]} · 이 채널에 사용`, 'suggest-channel', id);
+        heading.textContent = formatCopy('recentLanguage', {language:languageLabels[language]});
+        const channel = makeButton(formatCopy('useChannel', {language:languageLabels[language]}), 'suggest-channel', id);
         channel.dataset.language = language;
-        const choose = makeButton('다른 언어 선택', 'suggest-choose', id);
-        menu.append(heading, channel, choose, makeButton('원문 전송', 'suggest-original', id));
+        const choose = makeButton(copy('chooseOther'), 'suggest-choose', id);
+        menu.append(heading, channel, choose, makeButton(copy('sendOriginal'), 'suggest-original', id));
         menu.hidden = false;
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
-        this.setStatus('전송 언어를 확인한 후 메시지를 전송합니다.');
+        this.setStatus(copy('confirmLanguage'));
       },
       fail(id, message) {
         this.pending.delete(id);
@@ -310,7 +363,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.activeRequest = '';
           this.bypass = 0;
         }
-        this.setStatus(message || '메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.', true);
+        if (message) console.warn('[NudeNyang Translator] outgoing translation failed:', message);
+        this.setStatus(copy('translationFailed'), true);
       },
       prunePending() {
         const now = Date.now();
@@ -402,7 +456,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const expired = Date.now() - previousItem.created_at >= 30000;
           const changed = (previousItem.original_text || previousItem.text) !== originalText;
           if (!expired && !changed) {
-            this.setStatus('이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.');
+            this.setStatus(copy('pending'));
             return;
           }
           this.pending.delete(previousId);
@@ -426,7 +480,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         };
         this.pending.set(id, {...item, editor});
         this.queue.push(item);
-        this.setStatus(selected === 'original' ? '원문을 전송합니다.' : '메시지를 번역하고 있습니다.');
+        this.setStatus(selected === 'original' ? copy('sendingOriginal') : copy('translating'));
       },
       prepare(id, replace, continuation = false, finalPart = true, partNumber = 1, totalParts = 1) {
         const item = this.pending.get(id);
@@ -455,7 +509,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         item.total_parts = totalParts;
         this.activeRequest = id;
         this.bypass += 1;
-        if (totalParts > 1) this.setStatus(`번역문을 분할 전송하고 있습니다. (${partNumber}/${totalParts})`);
+        if (totalParts > 1) this.setStatus(formatCopy('sendingParts', {part:partNumber,total:totalParts}));
         return true;
       },
       verifyInserted(id, expected, timeoutMs = 260) {
@@ -535,7 +589,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           item.keep_after_send = false;
           this.activeRequest = id;
           this.bypass += 1;
-          this.setStatus('번역문이 길어 텍스트 파일로 전송합니다.');
+          this.setStatus(copy('longAttachment'));
           return true;
         } catch (error) {
           editor.focus();
@@ -586,9 +640,21 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
 (() => {
   const channelKey = __CHANNEL_KEY__;
   const records = __RECORDS__;
+  const requestedUiLanguage = __UI_LANGUAGE__;
+  const systemUiLanguage = (navigator.language || 'en').toLowerCase();
+  const uiLanguage = requestedUiLanguage === 'auto'
+    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
+    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
+  const copies = {
+    ko:{inputOriginal:'입력 원문',showOriginal:'원문 보기',showSent:'전송문 보기'},
+    en:{inputOriginal:'Original input',showOriginal:'Show original',showSent:'Show sent message'},
+    ja:{inputOriginal:'入力した原文',showOriginal:'原文を表示',showSent:'送信文を表示'},
+    zh:{inputOriginal:'输入的原文',showOriginal:'查看原文',showSent:'查看已发送内容'}
+  };
+  const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const GLOBAL = '__nudeTranslatorOutgoingOriginalDisplay';
   const STYLE_ID = 'nt-outgoing-original-style';
-  const VERSION = 1;
+  const VERSION = 2;
   const messageId = root => root?.id?.startsWith('message-content-')
     ? root.id.slice('message-content-'.length) : '';
   const recordKey = record => `${record.channel_key}|${record.message_id}`;
@@ -625,16 +691,17 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       view = document.createElement('div');
       view.className = 'nt-outgoing-original-view';
       view.setAttribute('data-nt-outgoing-original-view', record.message_id);
-      view.innerHTML = '<div class="nt-outgoing-original-copy"><span class="nt-outgoing-original-label">입력 원문</span><span class="nt-outgoing-original-text"></span></div><button type="button" class="nt-outgoing-original-toggle"></button>';
+      view.innerHTML = '<div class="nt-outgoing-original-copy"><span class="nt-outgoing-original-label"></span><span class="nt-outgoing-original-text"></span></div><button type="button" class="nt-outgoing-original-toggle"></button>';
       root.insertAdjacentElement('afterend', view);
     }
+    view.querySelector('.nt-outgoing-original-label').textContent = copy('inputOriginal');
     view.querySelector('.nt-outgoing-original-text').textContent = record.original_text;
     const button = view.querySelector('.nt-outgoing-original-toggle');
     const originalText = view.querySelector('.nt-outgoing-original-copy');
     const showSent = view.dataset.mode === 'sent' || record.part_number > 1;
     root.style.display = showSent ? '' : 'none';
     originalText.hidden = showSent;
-    button.textContent = showSent ? '원문 보기' : '전송문 보기';
+    button.textContent = showSent ? copy('showOriginal') : copy('showSent');
     if (button.dataset.bound !== 'true') {
       button.dataset.bound = 'true';
       button.addEventListener('click', () => {
@@ -642,15 +709,17 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
         const sent = view.dataset.mode === 'sent';
         root.style.display = sent ? '' : 'none';
         originalText.hidden = sent;
-        button.textContent = sent ? '원문 보기' : '전송문 보기';
+        button.textContent = sent ? copy('showOriginal') : copy('showSent');
       });
     }
   }
 
   let manager = window[GLOBAL];
-  if (!manager || manager.version !== VERSION) {
+  if (!manager || manager.version !== VERSION || manager.uiLanguage !== uiLanguage) {
+    document.querySelectorAll('.nt-outgoing-original-view').forEach(view => view.remove());
     manager = {
       version: VERSION,
+      uiLanguage,
       records: new Map(),
       register(record) {
         if (!record?.message_id || !record?.channel_key) return;
@@ -676,7 +745,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
   for (const record of records) manager.records.set(recordKey(record), record);
   window.__nudeTranslatorRegisterOutgoingOriginal = record => manager.register(record);
   window.__nudeTranslatorApplyOutgoingOriginals = () => manager.apply();
-  window.__nudeTranslatorOutgoingOriginalsReady = channelKey;
+  window.__nudeTranslatorOutgoingOriginalsReady = `${channelKey}|${requestedUiLanguage}`;
   manager.apply();
   return manager.records.size;
 })()
@@ -692,7 +761,7 @@ pub struct OutgoingRequest {
     pub recent_messages: Vec<String>,
 }
 
-pub fn outgoing_ui_script(enabled: bool, default_language: &str) -> String {
+pub fn outgoing_ui_script(enabled: bool, default_language: &str, ui_language: &str) -> String {
     let default_language = if matches!(
         default_language,
         "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant"
@@ -701,11 +770,20 @@ pub fn outgoing_ui_script(enabled: bool, default_language: &str) -> String {
     } else {
         "auto"
     };
+    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+        ui_language
+    } else {
+        "en"
+    };
     OUTGOING_UI_SCRIPT
         .replace("__ENABLED__", if enabled { "true" } else { "false" })
         .replace(
             "__DEFAULT_LANGUAGE__",
             &serde_json::to_string(default_language).expect("static language code"),
+        )
+        .replace(
+            "__UI_LANGUAGE__",
+            &serde_json::to_string(ui_language).expect("static interface language code"),
         )
 }
 
@@ -722,14 +800,24 @@ pub fn parse_outgoing_bindings(value: Value) -> Result<Vec<OutgoingOriginalRecor
 pub fn outgoing_originals_ui_script(
     channel_key: &str,
     records: &[OutgoingOriginalRecord],
+    ui_language: &str,
 ) -> Result<String, String> {
     let channel_key = serde_json::to_string(channel_key)
         .map_err(|error| format!("Discord 채널 식별자를 인코딩하지 못했습니다: {error}"))?;
     let records = serde_json::to_string(records)
         .map_err(|error| format!("보낸 메시지 원문 목록을 인코딩하지 못했습니다: {error}"))?;
+    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+        ui_language
+    } else {
+        "en"
+    };
     Ok(OUTGOING_ORIGINALS_UI_SCRIPT
         .replace("__CHANNEL_KEY__", &channel_key)
-        .replace("__RECORDS__", &records))
+        .replace("__RECORDS__", &records)
+        .replace(
+            "__UI_LANGUAGE__",
+            &serde_json::to_string(ui_language).expect("static interface language code"),
+        ))
 }
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
@@ -910,6 +998,18 @@ mod tests {
     }
 
     #[test]
+    fn injected_outgoing_controls_receive_the_selected_interface_language() {
+        let script = outgoing_ui_script(true, "auto", "ja");
+        assert!(script.contains("const requestedUiLanguage = \"ja\""));
+        assert!(script.contains("送信言語"));
+        assert!(!script.contains("__UI_LANGUAGE__"));
+
+        let originals = outgoing_originals_ui_script("/channels/1/2", &[], "en").unwrap();
+        assert!(originals.contains("const requestedUiLanguage = \"en\""));
+        assert!(originals.contains("Show original"));
+    }
+
+    #[test]
     fn inserted_translation_verification_json_encodes_expected_text() {
         let script = verify_outgoing_insert_script("outgoing-'1", "번역문\n</script>").unwrap();
         assert!(script.contains("verifyInserted"));
@@ -945,7 +1045,7 @@ mod tests {
             "created_at": 42.0
         }]))
         .unwrap();
-        let script = outgoing_originals_ui_script("/channels/1/2", &records).unwrap();
+        let script = outgoing_originals_ui_script("/channels/1/2", &records, "ko").unwrap();
 
         assert_eq!(
             records,
@@ -981,7 +1081,7 @@ mod tests {
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("remove controller from previous build");
         let requests = client
-            .evaluate(&outgoing_ui_script(true, "auto"), false)
+            .evaluate(&outgoing_ui_script(true, "auto", "ko"), false)
             .expect("outgoing script");
         assert!(requests.is_array());
         let mounted = client
@@ -991,7 +1091,7 @@ mod tests {
             )
             .expect("mounted state");
         assert_eq!(mounted.as_bool(), Some(true));
-        let japanese_controller = outgoing_ui_script(true, "ja");
+        let japanese_controller = outgoing_ui_script(true, "ja", "ko");
         let request_probe = format!(
             "(() => {{ ({japanese_controller}); const label=document.querySelector('#nt-outgoing-translation .nt-outgoing-trigger b')?.textContent; const editor=document.createElement('div'); editor.id='nt-outgoing-live-test'; editor.setAttribute('role','textbox'); editor.setAttribute('contenteditable','true'); editor.textContent='안녕하세요'; document.body.append(editor); editor.dispatchEvent(new KeyboardEvent('keydown',{{key:'Enter',bubbles:true,cancelable:true}})); const requests=({japanese_controller}); return {{label,requests}}; }})()"
         );
@@ -1065,7 +1165,7 @@ mod tests {
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("remove previous controller");
-        let controller = outgoing_ui_script(true, "ja");
+        let controller = outgoing_ui_script(true, "ja", "ko");
         let queued = client
             .evaluate(
                 &format!(
@@ -1156,7 +1256,7 @@ mod tests {
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("remove previous controller");
-        let controller = outgoing_ui_script(true, "ja");
+        let controller = outgoing_ui_script(true, "ja", "ko");
         let queued = client
             .evaluate(
                 &format!(

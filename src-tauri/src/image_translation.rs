@@ -20,17 +20,30 @@ const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v1";
 
 pub const IMAGE_UI_SCRIPT: &str = r##"
 (() => {
-  const version = 'rust-image-ui-v1';
-  if (window.__ntImageUiVersion !== version) {
+  const requestedUiLanguage = __UI_LANGUAGE__;
+  const systemUiLanguage = (navigator.language || 'en').toLowerCase();
+  const uiLanguage = requestedUiLanguage === 'auto'
+    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
+    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
+  const copies = {
+    ko:{translate:'이미지 번역',showOriginal:'원문 보기',showTranslation:'번역 보기',translating:'번역 중…',retry:'다시 시도',failed:'이미지를 번역하지 못했습니다.'},
+    en:{translate:'Image translation',showOriginal:'Show original',showTranslation:'Show translation',translating:'Translating…',retry:'Try again',failed:'The image could not be translated.'},
+    ja:{translate:'画像を翻訳',showOriginal:'原文を表示',showTranslation:'翻訳を表示',translating:'翻訳中…',retry:'再試行',failed:'画像を翻訳できませんでした。'},
+    zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
+  };
+  const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
+  const version = 'rust-image-ui-v2';
+  if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
     document.getElementById('nt-image-translate-style')?.remove();
     window.__ntImageUiAbort = new AbortController();
     window.__ntImageUiVersion = version;
-    window.__ntImageRequests = [];
-    window.__ntImageSequence = 0;
-    window.__ntTranslatedImages = {};
-    window.__ntImageVisibility = {};
+    window.__ntImageUiLanguage = uiLanguage;
+    window.__ntImageRequests ||= [];
+    window.__ntImageSequence ||= 0;
+    window.__ntTranslatedImages ||= {};
+    window.__ntImageVisibility ||= {};
     window.__ntImageUiInstalled = false;
   }
   if (!window.__ntImageUiAbort || window.__ntImageUiAbort.signal.aborted) {
@@ -100,17 +113,18 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     button = document.createElement('button');
     button.id = 'nt-image-translate-button';
     button.type = 'button';
-    button.setAttribute('aria-label', '이미지 번역');
+    button.setAttribute('aria-label', copy('translate'));
     document.body.appendChild(button);
   }
   const update = img => {
     const state = img.dataset.ntImageStatus || 'original';
     button.disabled = state === 'processing';
-    button.title = img.dataset.ntImageError || '';
-    button.textContent = state === 'translated' ? '원문 보기' :
-      state === 'translated-hidden' ? '번역 보기' : state === 'processing' ? '번역 중…' :
-      state === 'error' ? '다시 시도' : '이미지 번역';
+    button.title = state === 'error' ? copy('failed') : '';
+    button.textContent = state === 'translated' ? copy('showOriginal') :
+      state === 'translated-hidden' ? copy('showTranslation') : state === 'processing' ? copy('translating') :
+      state === 'error' ? copy('retry') : copy('translate');
   };
+  window.__ntUpdateImageButton = update;
   const show = img => {
     if (!window.__ntImageEnabled || !eligible(img)) {
       button.style.display = 'none';
@@ -186,6 +200,18 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   return window.__ntImageRequests.splice(0);
 })()
 "##;
+
+pub fn image_ui_script(ui_language: &str) -> String {
+    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+        ui_language
+    } else {
+        "en"
+    };
+    IMAGE_UI_SCRIPT.replace(
+        "__UI_LANGUAGE__",
+        &serde_json::to_string(ui_language).expect("static interface language code"),
+    )
+}
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -420,7 +446,7 @@ pub fn apply_image_result_script(
           img.removeAttribute('srcset'); img.src=src; img.dataset.ntImageStatus='translated';
           delete img.dataset.ntImageError;
           const button=document.getElementById('nt-image-translate-button');
-          if (button?.dataset.ntTarget===id) {{ button.disabled=false; button.textContent='원문 보기'; button.title=''; }}
+          if (button?.dataset.ntTarget===id) {{ window.__ntUpdateImageButton?.(img); button.title=''; }}
           return {{applied:true, remembered:Boolean(key)}};
         }})()"##
     ))
@@ -436,7 +462,8 @@ pub fn apply_image_error_script(image_id: &str, message: &str) -> Result<String,
           if (!img) return {{applied:false}};
           img.dataset.ntImageStatus='error'; img.dataset.ntImageError=message;
           const button=document.getElementById('nt-image-translate-button');
-          if (button?.dataset.ntTarget===id) {{ button.disabled=false; button.textContent='다시 시도'; button.title=message; }}
+          if (message) console.warn('[NudeNyang Translator] image translation failed:', message);
+          if (button?.dataset.ntTarget===id) window.__ntUpdateImageButton?.(img);
           return {{applied:true}};
         }})()"##
     ))
@@ -452,6 +479,7 @@ pub fn restore_images_script(discard: bool) -> String {
           window.__ntImageUiAbort?.abort();
           document.getElementById('nt-image-translate-button')?.remove();
           document.getElementById('nt-image-translate-style')?.remove();
+          delete window.__ntUpdateImageButton;
           window.__ntImageUiInstalled=false;
           let restored=0;
           for (const img of document.querySelectorAll('img[data-nt-image-id]')) {{
@@ -899,7 +927,7 @@ fn default_cache_dir() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_image_error_script, fetch_image_data_script, group_dense_text_lines,
+        apply_image_error_script, fetch_image_data_script, group_dense_text_lines, image_ui_script,
         parse_image_requests, restore_images_script, ImageTranslationProcessor, OcrRecognizer,
         IMAGE_UI_SCRIPT,
     };
@@ -960,6 +988,17 @@ mod tests {
         .unwrap();
         assert_eq!(requests[0].id, "nt-image-1");
         assert!(requests[0].source_key.starts_with("discord-attachment:"));
+    }
+
+    #[test]
+    fn image_controls_receive_the_selected_interface_language() {
+        let japanese = image_ui_script("ja");
+        assert!(japanese.contains("const requestedUiLanguage = \"ja\""));
+        assert!(japanese.contains("画像を翻訳"));
+        assert!(!japanese.contains("__UI_LANGUAGE__"));
+
+        let fallback = image_ui_script("unsupported");
+        assert!(fallback.contains("const requestedUiLanguage = \"en\""));
     }
 
     #[test]

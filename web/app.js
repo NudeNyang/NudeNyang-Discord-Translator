@@ -1123,6 +1123,10 @@ elements.form.addEventListener("submit", async event => {
 if (tauriListen) {
   tauriListen("request-translation-toggle", toggleTranslation);
   tauriListen("request-outgoing-translation-toggle", toggleOutgoingTranslation);
+  tauriListen("translation-state-changed", event => {
+    state.runtime = event.payload;
+    updateEngineState(event.payload);
+  });
   tauriListen("settings-changed", event => renderConfig(event.payload));
   tauriListen("provider-connections-changed", loadProviderConnections);
   tauriListen("request-update-install", () => {
