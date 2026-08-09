@@ -5,7 +5,8 @@ use serde::Serialize;
 use crate::credentials;
 use crate::translation::{
     connect_subscription_interactively_with_observer, install_subscription_cli,
-    probe_subscription_connection, CliConnectionProbe, DeepLTranslator, LoginProcessObserver,
+    probe_subscription_connection, CliConnectionProbe, DeepLTranslator, LoginBrowserGate,
+    LoginProcessObserver,
 };
 
 #[derive(Clone, Debug, Serialize)]
@@ -50,6 +51,7 @@ pub fn connect_with_observer(
     provider: &str,
     credential: Option<&str>,
     process_observer: Option<LoginProcessObserver>,
+    browser_gate: Option<LoginBrowserGate>,
 ) -> Result<ProviderConnection, String> {
     match provider {
         "deepl" => {
@@ -63,7 +65,11 @@ pub fn connect_with_observer(
             let probe = if probe.connected {
                 probe
             } else {
-                connect_subscription_interactively_with_observer(provider, process_observer)?
+                connect_subscription_interactively_with_observer(
+                    provider,
+                    process_observer,
+                    browser_gate,
+                )?
             };
             let (name, auth_mode) = cli_provider_identity(provider);
             Ok(cli_connection(provider, name, auth_mode, probe, false))

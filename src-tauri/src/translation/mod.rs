@@ -15,7 +15,7 @@ pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::TranslationService;
 pub use subscription_cli::{
     connect_subscription_interactively_with_observer, install_subscription_cli,
-    probe_subscription_connection, CliConnectionProbe, LoginProcessObserver,
+    probe_subscription_connection, CliConnectionProbe, LoginBrowserGate, LoginProcessObserver,
     SubscriptionCliTranslator, SubscriptionProvider,
 };
 

@@ -295,7 +295,7 @@ async function connectProvider(row) {
     status.querySelector("span").textContent = provider === "deepl"
       ? "DeepL API 키의 유효성을 확인하고 있습니다."
       : "계정 로그인 절차를 시작하고 있습니다.";
-    const loginProgress = provider === "gemini" ? showProviderLoginProgress() : null;
+    const loginProgress = provider === "gemini" ? await showProviderLoginProgress() : null;
     let connection;
     try {
       connection = await invoke("provider_connect", { provider, credential });
@@ -330,15 +330,18 @@ async function connectProvider(row) {
   }
 }
 
-function showProviderLoginProgress() {
+async function showProviderLoginProgress() {
   let cancelled = false;
   let closed = false;
+  let unlistenReady = null;
   elements.modalTitle.textContent = "Google 계정 연결";
-  elements.modalMessage.textContent = "기본 브라우저에서 Google 계정 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.";
+  elements.modalMessage.textContent = "Google 계정 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.";
   elements.modalCancel.textContent = "취소";
   elements.modalCancel.hidden = false;
   elements.modalCancel.disabled = false;
-  elements.modalAccept.hidden = true;
+  elements.modalAccept.textContent = "이동";
+  elements.modalAccept.hidden = false;
+  elements.modalAccept.disabled = true;
   elements.modalLayer.dataset.variant = "provider-login";
   elements.modalLayer.hidden = false;
 
@@ -348,9 +351,27 @@ function showProviderLoginProgress() {
     elements.modalLayer.hidden = true;
     delete elements.modalLayer.dataset.variant;
     elements.modalCancel.removeEventListener("click", cancel);
+    elements.modalAccept.removeEventListener("click", open);
+    unlistenReady?.();
     elements.modalCancel.textContent = "취소";
     elements.modalCancel.disabled = false;
+    elements.modalAccept.disabled = false;
     elements.modalAccept.hidden = false;
+  };
+  const open = async () => {
+    elements.modalAccept.disabled = true;
+    try {
+      const opened = await invoke("provider_login_open");
+      if (!opened) {
+        elements.modalMessage.textContent = "로그인 준비가 완료되지 않았습니다. 잠시 후 다시 시도하십시오.";
+        elements.modalAccept.disabled = false;
+        return;
+      }
+      elements.modalMessage.textContent = "브라우저에서 Google 계정 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.";
+    } catch (error) {
+      elements.modalMessage.textContent = `로그인 페이지를 열지 못했습니다. 잠시 후 다시 시도하십시오.\n${String(error)}`;
+      elements.modalAccept.disabled = false;
+    }
   };
   const cancel = async () => {
     if (cancelled) return;
@@ -365,6 +386,17 @@ function showProviderLoginProgress() {
     }
   };
   elements.modalCancel.addEventListener("click", cancel);
+  elements.modalAccept.addEventListener("click", open);
+  if (tauriListen) {
+    unlistenReady = await tauriListen("provider-login-ready", () => {
+      elements.modalMessage.textContent = "Google 계정 로그인 페이지로 이동하려면 이동을 선택하십시오.";
+      elements.modalAccept.disabled = false;
+      elements.modalAccept.focus();
+    });
+  } else {
+    elements.modalMessage.textContent = "Google 계정 로그인 페이지로 이동하려면 이동을 선택하십시오.";
+    elements.modalAccept.disabled = false;
+  }
   elements.modalCancel.focus();
   return { close, wasCancelled: () => cancelled };
 }

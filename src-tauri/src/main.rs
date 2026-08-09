@@ -58,10 +58,19 @@ struct ProviderLoginSessionState {
     active: bool,
     cancel_requested: bool,
     process_id: Option<u32>,
+    browser_gate: Option<translation::LoginBrowserGate>,
 }
 
 impl ProviderLoginState {
-    fn begin(&self) -> Result<translation::LoginProcessObserver, String> {
+    fn begin(
+        &self,
+    ) -> Result<
+        (
+            translation::LoginProcessObserver,
+            translation::LoginBrowserGate,
+        ),
+        String,
+    > {
         let mut state = self
             .inner
             .lock()
@@ -72,11 +81,14 @@ impl ProviderLoginState {
         state.active = true;
         state.cancel_requested = false;
         state.process_id = None;
+        let browser_gate = translation::LoginBrowserGate::default();
+        state.browser_gate = Some(browser_gate.clone());
         drop(state);
 
         let inner = Arc::clone(&self.inner);
-        Ok(Arc::new(move |next_process_id| {
+        let observer = Arc::new(move |next_process_id| {
             let mut process_to_cancel = None;
+            let mut gate_to_cancel = None;
             if let Ok(mut state) = inner.lock() {
                 match next_process_id {
                     Some(process_id) => {
@@ -90,13 +102,18 @@ impl ProviderLoginState {
                         state.active = false;
                         state.cancel_requested = false;
                         state.process_id = None;
+                        gate_to_cancel = state.browser_gate.take();
                     }
                 }
             }
             if let Some(process_id) = process_to_cancel {
                 terminate_process_tree(process_id);
             }
-        }))
+            if let Some(gate) = gate_to_cancel {
+                gate.cancel();
+            }
+        });
+        Ok((observer, browser_gate))
     }
 
     fn cancel(&self) -> Result<bool, String> {
@@ -109,11 +126,29 @@ impl ProviderLoginState {
         }
         state.cancel_requested = true;
         let process_id = state.process_id.take();
+        let browser_gate = state.browser_gate.take();
         drop(state);
+        if let Some(browser_gate) = browser_gate {
+            browser_gate.cancel();
+        }
         if let Some(process_id) = process_id {
             terminate_process_tree(process_id);
         }
         Ok(true)
+    }
+
+    fn open_browser(&self) -> Result<bool, String> {
+        let state = self
+            .inner
+            .lock()
+            .map_err(|_| "번역 서비스 로그인 상태 잠금을 열지 못했습니다.".to_string())?;
+        if !state.active || state.cancel_requested {
+            return Ok(false);
+        }
+        Ok(state
+            .browser_gate
+            .as_ref()
+            .is_some_and(translation::LoginBrowserGate::open))
     }
 
     fn finish(&self) {
@@ -121,6 +156,9 @@ impl ProviderLoginState {
             state.active = false;
             state.cancel_requested = false;
             state.process_id = None;
+            if let Some(browser_gate) = state.browser_gate.take() {
+                browser_gate.cancel();
+            }
         }
     }
 }
@@ -308,10 +346,12 @@ async fn provider_connect(
     credential: Option<String>,
 ) -> Result<providers::ProviderConnection, String> {
     let is_gemini = provider == "gemini";
-    let process_observer = if is_gemini {
-        Some(login_state.begin()?)
+    let (process_observer, browser_gate) = if is_gemini {
+        let (process_observer, browser_gate) = login_state.begin()?;
+        let _ = app.emit("provider-login-ready", ());
+        (Some(process_observer), Some(browser_gate))
     } else {
-        None
+        (None, None)
     };
     let provider_for_task = provider.clone();
     let connection_result = tauri::async_runtime::spawn_blocking(move || {
@@ -319,6 +359,7 @@ async fn provider_connect(
             &provider_for_task,
             credential.as_deref(),
             process_observer,
+            browser_gate,
         )
     })
     .await;
@@ -355,6 +396,11 @@ async fn provider_connect(
 #[tauri::command]
 fn provider_login_cancel(login_state: State<'_, ProviderLoginState>) -> Result<bool, String> {
     login_state.cancel()
+}
+
+#[tauri::command]
+fn provider_login_open(login_state: State<'_, ProviderLoginState>) -> Result<bool, String> {
+    login_state.open_browser()
 }
 
 #[tauri::command]
@@ -761,6 +807,7 @@ fn main() {
             provider_install,
             provider_connect,
             provider_login_cancel,
+            provider_login_open,
             provider_disconnect,
             discord_restart,
             main_window_show,
@@ -816,7 +863,7 @@ mod tests {
     #[test]
     fn gemini_login_cancel_is_remembered_before_the_cli_process_starts() {
         let state = ProviderLoginState::default();
-        let observer = state.begin().expect("로그인 세션을 시작해야 합니다");
+        let (observer, _) = state.begin().expect("로그인 세션을 시작해야 합니다");
 
         assert!(state.cancel().expect("로그인 취소를 기록해야 합니다"));
         observer(Some(u32::MAX));

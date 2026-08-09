@@ -4,7 +4,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Output, Stdio};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc, Arc, Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -41,6 +41,73 @@ pub struct CliConnectionProbe {
 }
 
 pub type LoginProcessObserver = Arc<dyn Fn(Option<u32>) + Send + Sync>;
+
+#[derive(Clone)]
+pub struct LoginBrowserGate {
+    inner: Arc<(Mutex<LoginBrowserGateState>, Condvar)>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LoginBrowserGateState {
+    Waiting,
+    Open,
+    Cancelled,
+}
+
+impl Default for LoginBrowserGate {
+    fn default() -> Self {
+        Self {
+            inner: Arc::new((Mutex::new(LoginBrowserGateState::Waiting), Condvar::new())),
+        }
+    }
+}
+
+impl LoginBrowserGate {
+    pub fn open(&self) -> bool {
+        let (state, changed) = &*self.inner;
+        let Ok(mut state) = state.lock() else {
+            return false;
+        };
+        if *state != LoginBrowserGateState::Waiting {
+            return false;
+        }
+        *state = LoginBrowserGateState::Open;
+        changed.notify_all();
+        true
+    }
+
+    pub fn cancel(&self) {
+        let (state, changed) = &*self.inner;
+        if let Ok(mut state) = state.lock() {
+            *state = LoginBrowserGateState::Cancelled;
+            changed.notify_all();
+        }
+    }
+
+    fn wait_until_open(&self, timeout: Duration) -> Result<(), String> {
+        let (state, changed) = &*self.inner;
+        let state = state
+            .lock()
+            .map_err(|_| "Google 로그인 이동 상태를 확인하지 못했습니다.".to_string())?;
+        let (state, timed_out) = changed
+            .wait_timeout_while(state, timeout, |state| {
+                *state == LoginBrowserGateState::Waiting
+            })
+            .map_err(|_| "Google 로그인 이동 요청을 기다리지 못했습니다.".to_string())?;
+        match *state {
+            LoginBrowserGateState::Open => Ok(()),
+            LoginBrowserGateState::Cancelled => {
+                Err("Google 계정 로그인이 취소되었습니다.".to_string())
+            }
+            LoginBrowserGateState::Waiting if timed_out.timed_out() => {
+                Err("Google 로그인 페이지 이동 대기 시간이 초과되었습니다.".to_string())
+            }
+            LoginBrowserGateState::Waiting => {
+                Err("Google 로그인 페이지 이동 요청을 확인하지 못했습니다.".to_string())
+            }
+        }
+    }
+}
 
 impl SubscriptionProvider {
     pub fn from_key(value: &str) -> Result<Self, String> {
@@ -354,6 +421,7 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
 pub fn connect_subscription_interactively_with_observer(
     provider: &str,
     process_observer: Option<LoginProcessObserver>,
+    browser_gate: Option<LoginBrowserGate>,
 ) -> Result<CliConnectionProbe, String> {
     let provider = SubscriptionProvider::from_key(provider)?;
     let mut translator = SubscriptionCliTranslator::new(
@@ -387,6 +455,9 @@ pub fn connect_subscription_interactively_with_observer(
             &executable,
             &translator.workspace_dir()?,
             process_observer,
+            browser_gate.ok_or_else(|| {
+                "Google 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
+            })?,
         )?,
         Implementation::Claude => {
             open_cli_login_console(&executable, "Claude")?;
@@ -399,6 +470,7 @@ fn authenticate_gemini_with_acp(
     executable: &Path,
     workspace: &Path,
     process_observer: Option<LoginProcessObserver>,
+    browser_gate: LoginBrowserGate,
 ) -> Result<(), String> {
     let mut command = process_command(executable, &["--acp".to_string()]);
     command
@@ -417,7 +489,7 @@ fn authenticate_gemini_with_acp(
         observer(Some(process_id));
     }
 
-    let result = authenticate_gemini_acp_process(&mut child);
+    let result = authenticate_gemini_acp_process(&mut child, &browser_gate);
     let _ = child.kill();
     let _ = child.wait();
     if let Some(observer) = process_observer.as_ref() {
@@ -426,7 +498,10 @@ fn authenticate_gemini_with_acp(
     result
 }
 
-fn authenticate_gemini_acp_process(child: &mut Child) -> Result<(), String> {
+fn authenticate_gemini_acp_process(
+    child: &mut Child,
+    browser_gate: &LoginBrowserGate,
+) -> Result<(), String> {
     let mut stdin = child
         .stdin
         .take()
@@ -487,6 +562,8 @@ fn authenticate_gemini_acp_process(child: &mut Child) -> Result<(), String> {
                         ));
                     }
                     if id == 1 && !authentication_started {
+                        browser_gate
+                            .wait_until_open(deadline.saturating_duration_since(Instant::now()))?;
                         write_acp_request(
                             &mut stdin,
                             2,
@@ -1741,7 +1818,7 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn completes_gemini_login_through_a_hidden_acp_process() {
+    fn waits_for_user_navigation_before_gemini_authentication() {
         let directory =
             std::env::temp_dir().join(format!("nude-translator-gemini-acp-{}", std::process::id()));
         std::fs::create_dir_all(&directory).unwrap();
@@ -1757,7 +1834,28 @@ mod tests {
             observed_events.lock().unwrap().push(process_id);
         });
 
-        super::authenticate_gemini_with_acp(&wrapper, &directory, Some(observer)).unwrap();
+        let browser_gate = super::LoginBrowserGate::default();
+        let browser_gate_for_thread = browser_gate.clone();
+        let wrapper_for_thread = wrapper.clone();
+        let directory_for_thread = directory.clone();
+        let authentication = std::thread::spawn(move || {
+            super::authenticate_gemini_with_acp(
+                &wrapper_for_thread,
+                &directory_for_thread,
+                Some(observer),
+                browser_gate_for_thread,
+            )
+        });
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while process_events.lock().unwrap().is_empty() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        assert!(!authentication.is_finished());
+
+        assert!(browser_gate.open());
+        authentication.join().unwrap().unwrap();
 
         let _ = std::fs::remove_dir_all(&directory);
         let events = process_events.lock().unwrap();

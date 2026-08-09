@@ -62,8 +62,11 @@ test("Gemini sign-in stays inside the app while the official browser flow runs",
     /Implementation::Agy \| Implementation::Gemini\s*=>\s*\{\s*open_cli_login_console/,
   );
   assert.match(rustMain, /provider_login_cancel/);
+  assert.match(rustMain, /provider_login_open/);
   assert.match(script, /showProviderLoginProgress/);
-  assert.match(script, /기본 브라우저에서 Google 계정 로그인을 완료하십시오/);
+  assert.match(script, /Google 계정 로그인 페이지로 이동하려면 이동을 선택하십시오/);
+  assert.match(script, /modalAccept\.textContent = "이동"/);
+  assert.match(script, /invoke\("provider_login_open"\)/);
 });
 
 test("DeepL API keys are replaced through the main save action", () => {
