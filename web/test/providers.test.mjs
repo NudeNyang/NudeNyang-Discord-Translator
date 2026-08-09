@@ -53,7 +53,7 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
   assert.match(subscriptionCli, /decode_process_output/);
 });
 
-test("Gemini sign-in stays inside the app while the official browser flow runs", () => {
+test("subscription sign-ins stay inside the app while official browser flows run", () => {
   assert.match(subscriptionCli, /"--acp"/);
   assert.match(subscriptionCli, /"oauth-personal"/);
   assert.match(subscriptionCli, /Gemini CLI ACP 인증/);
@@ -63,10 +63,15 @@ test("Gemini sign-in stays inside the app while the official browser flow runs",
   );
   assert.match(rustMain, /provider_login_cancel/);
   assert.match(rustMain, /provider_login_open/);
-  assert.match(script, /showProviderLoginProgress/);
-  assert.match(script, /Google 계정 로그인 페이지로 이동하려면 이동을 선택하십시오/);
+  assert.match(script, /provider !== "deepl" \? await showProviderLoginProgress\(provider\) : null/);
+  assert.match(script, /공식 로그인 페이지로 이동하려면 이동을 선택하십시오/);
   assert.match(script, /modalAccept\.textContent = "이동"/);
   assert.match(script, /invoke\("provider_login_open"\)/);
+  assert.match(subscriptionCli, /authenticate_browser_login_cli/);
+  assert.match(subscriptionCli, /"auth"\.to_string\(\)[\s\S]*?"login"\.to_string\(\)[\s\S]*?"--claudeai"\.to_string\(\)/);
+  assert.doesNotMatch(subscriptionCli, /CREATE_NEW_CONSOLE/);
+  assert.doesNotMatch(script, /CLI 창에서 계정 로그인을 완료/);
+  assert.doesNotMatch(subscriptionCli, /'codex login'|'claude auth login'|터미널에서/);
 });
 
 test("DeepL API keys are replaced through the main save action", () => {

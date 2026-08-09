@@ -100,6 +100,11 @@ const elements = {
 };
 
 const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
+const PROVIDER_LOGIN_COPY = Object.freeze({
+  chatgpt: { name: "ChatGPT", account: "ChatGPT 계정" },
+  claude: { name: "Claude", account: "Claude Pro/Max 계정" },
+  gemini: { name: "Google", account: "Google 계정" },
+});
 
 function updateScrollIndicator() {
   const metrics = scrollThumbMetrics(
@@ -295,7 +300,7 @@ async function connectProvider(row) {
     status.querySelector("span").textContent = provider === "deepl"
       ? "DeepL API 키의 유효성을 확인하고 있습니다."
       : "계정 로그인 절차를 시작하고 있습니다.";
-    const loginProgress = provider === "gemini" ? await showProviderLoginProgress() : null;
+    const loginProgress = provider !== "deepl" ? await showProviderLoginProgress(provider) : null;
     let connection;
     try {
       connection = await invoke("provider_connect", { provider, credential });
@@ -311,16 +316,6 @@ async function connectProvider(row) {
     state.providerConnections.set(provider, connection);
     renderProviderConnections([...state.providerConnections.values()]);
     if (secret && connection.connected) secret.value = "";
-    if (provider === "claude" && !connection.connected) {
-      const providerName = "Claude";
-      await showModal({
-        title: `${providerName} 로그인 창을 열었습니다`,
-        message: `${providerName} CLI 창에서 계정 로그인을 완료한 후 이 화면의 연결 버튼을 다시 선택하십시오.`,
-        acceptText: "확인",
-        cancelVisible: false,
-      });
-      await loadProviderConnections();
-    }
   } finally {
     if (providerConnection(provider)) {
       renderProviderConnections([...state.providerConnections.values()]);
@@ -330,12 +325,14 @@ async function connectProvider(row) {
   }
 }
 
-async function showProviderLoginProgress() {
+async function showProviderLoginProgress(provider) {
+  const copy = PROVIDER_LOGIN_COPY[provider];
+  if (!copy) throw new Error("지원하지 않는 계정 로그인 방식입니다.");
   let cancelled = false;
   let closed = false;
   let unlistenReady = null;
-  elements.modalTitle.textContent = "Google 계정 연결";
-  elements.modalMessage.textContent = "Google 계정 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.";
+  elements.modalTitle.textContent = `${copy.name} 계정 연결`;
+  elements.modalMessage.textContent = `${copy.name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.`;
   elements.modalCancel.textContent = "취소";
   elements.modalCancel.hidden = false;
   elements.modalCancel.disabled = false;
@@ -367,7 +364,7 @@ async function showProviderLoginProgress() {
         elements.modalAccept.disabled = false;
         return;
       }
-      elements.modalMessage.textContent = "브라우저에서 Google 계정 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.";
+      elements.modalMessage.textContent = `브라우저에서 ${copy.account} 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.`;
     } catch (error) {
       elements.modalMessage.textContent = `로그인 페이지를 열지 못했습니다. 잠시 후 다시 시도하십시오.\n${String(error)}`;
       elements.modalAccept.disabled = false;
@@ -378,7 +375,7 @@ async function showProviderLoginProgress() {
     cancelled = true;
     elements.modalCancel.disabled = true;
     elements.modalCancel.textContent = "취소 중";
-    elements.modalMessage.textContent = "Google 계정 로그인을 취소하고 있습니다.";
+    elements.modalMessage.textContent = `${copy.name} 계정 로그인을 취소하고 있습니다.`;
     try {
       await invoke("provider_login_cancel");
     } finally {
@@ -389,12 +386,12 @@ async function showProviderLoginProgress() {
   elements.modalAccept.addEventListener("click", open);
   if (tauriListen) {
     unlistenReady = await tauriListen("provider-login-ready", () => {
-      elements.modalMessage.textContent = "Google 계정 로그인 페이지로 이동하려면 이동을 선택하십시오.";
+      elements.modalMessage.textContent = `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
       elements.modalAccept.disabled = false;
       elements.modalAccept.focus();
     });
   } else {
-    elements.modalMessage.textContent = "Google 계정 로그인 페이지로 이동하려면 이동을 선택하십시오.";
+    elements.modalMessage.textContent = `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
     elements.modalAccept.disabled = false;
   }
   elements.modalCancel.focus();

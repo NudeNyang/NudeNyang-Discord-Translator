@@ -76,7 +76,7 @@ impl ProviderLoginState {
             .lock()
             .map_err(|_| "번역 서비스 로그인 상태 잠금을 열지 못했습니다.".to_string())?;
         if state.active {
-            return Err("Google 계정 로그인이 이미 진행 중입니다.".to_string());
+            return Err("다른 계정 로그인이 이미 진행 중입니다.".to_string());
         }
         state.active = true;
         state.cancel_requested = false;
@@ -345,8 +345,8 @@ async fn provider_connect(
     provider: String,
     credential: Option<String>,
 ) -> Result<providers::ProviderConnection, String> {
-    let is_gemini = provider == "gemini";
-    let (process_observer, browser_gate) = if is_gemini {
+    let uses_browser_login = matches!(provider.as_str(), "chatgpt" | "claude" | "gemini");
+    let (process_observer, browser_gate) = if uses_browser_login {
         let (process_observer, browser_gate) = login_state.begin()?;
         let _ = app.emit("provider-login-ready", ());
         (Some(process_observer), Some(browser_gate))
@@ -363,7 +363,7 @@ async fn provider_connect(
         )
     })
     .await;
-    if is_gemini {
+    if uses_browser_login {
         login_state.finish();
     }
     let connection = connection_result

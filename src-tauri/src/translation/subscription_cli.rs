@@ -142,22 +142,20 @@ impl LoginBrowserGate {
         let (state, changed) = &*self.inner;
         let state = state
             .lock()
-            .map_err(|_| "Google 로그인 이동 상태를 확인하지 못했습니다.".to_string())?;
+            .map_err(|_| "계정 로그인 이동 상태를 확인하지 못했습니다.".to_string())?;
         let (state, timed_out) = changed
             .wait_timeout_while(state, timeout, |state| {
                 *state == LoginBrowserGateState::Waiting
             })
-            .map_err(|_| "Google 로그인 이동 요청을 기다리지 못했습니다.".to_string())?;
+            .map_err(|_| "계정 로그인 이동 요청을 기다리지 못했습니다.".to_string())?;
         match *state {
             LoginBrowserGateState::Open => Ok(()),
-            LoginBrowserGateState::Cancelled => {
-                Err("Google 계정 로그인이 취소되었습니다.".to_string())
-            }
+            LoginBrowserGateState::Cancelled => Err("계정 로그인이 취소되었습니다.".to_string()),
             LoginBrowserGateState::Waiting if timed_out.timed_out() => {
-                Err("Google 로그인 페이지 이동 대기 시간이 초과되었습니다.".to_string())
+                Err("로그인 페이지 이동 대기 시간이 초과되었습니다.".to_string())
             }
             LoginBrowserGateState::Waiting => {
-                Err("Google 로그인 페이지 이동 요청을 확인하지 못했습니다.".to_string())
+                Err("로그인 페이지 이동 요청을 확인하지 못했습니다.".to_string())
             }
         }
     }
@@ -185,7 +183,7 @@ impl SubscriptionProvider {
         match self {
             Self::ChatGpt => "ChatGPT (Codex CLI)",
             Self::Claude => "Claude (Claude Code)",
-            Self::Gemini => "Gemini (Antigravity CLI)",
+            Self::Gemini => "Gemini (Gemini CLI)",
         }
     }
 
@@ -200,20 +198,28 @@ impl SubscriptionProvider {
     fn install_hint(self) -> &'static str {
         match self {
             Self::ChatGpt => {
-                "Codex CLI를 설치한 후 'codex login'으로 ChatGPT 플랜에 로그인하십시오."
+                "Codex CLI가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오."
             }
             Self::Claude => {
-                "Claude Code를 설치한 후 'claude auth login'으로 플랜에 로그인하십시오."
+                "Claude Code가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오."
             }
-            Self::Gemini => "Gemini CLI를 설치하고 Google AI Pro/Ultra 계정으로 로그인하십시오.",
+            Self::Gemini => {
+                "Gemini CLI가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오."
+            }
         }
     }
 
     fn login_hint(self) -> &'static str {
         match self {
-            Self::ChatGpt => "'codex login'을 실행하고 ChatGPT 계정으로 로그인하십시오.",
-            Self::Claude => "'claude auth login'을 실행하고 Claude 플랜 계정으로 로그인하십시오.",
-            Self::Gemini => "Gemini CLI를 한 번 실행하고 Google 계정 로그인을 완료하십시오.",
+            Self::ChatGpt => {
+                "ChatGPT 계정 연결이 필요합니다. 연결을 선택한 후 공식 로그인 페이지에서 인증하십시오."
+            }
+            Self::Claude => {
+                "Claude Pro/Max 계정 연결이 필요합니다. 연결을 선택한 후 공식 로그인 페이지에서 인증하십시오."
+            }
+            Self::Gemini => {
+                "Google 계정 연결이 필요합니다. 연결을 선택한 후 공식 로그인 페이지에서 인증하십시오."
+            }
         }
     }
 }
@@ -486,25 +492,26 @@ pub fn connect_subscription_interactively_with_observer(
     )?;
     let (executable, implementation) = translator.resolve_command()?;
     match implementation {
-        Implementation::Codex => {
-            let output = run_process(
-                &executable,
-                &["login".to_string()],
-                None,
-                &translator.workspace_dir()?,
-                &subscription_environment(),
-                Duration::from_secs(300),
-            )?;
-            if !output.status.success() {
-                return Err(format!(
-                    "ChatGPT 로그인을 완료하지 못했습니다: {}",
-                    tail_chars(&decode_process_output(&output.stderr), 400)
-                ));
-            }
-        }
-        Implementation::Agy => {
-            open_cli_login_console(&executable, "Gemini")?;
-        }
+        Implementation::Codex => authenticate_browser_login_cli(
+            &executable,
+            &["login".to_string()],
+            &translator.workspace_dir()?,
+            "ChatGPT",
+            process_observer,
+            browser_gate.ok_or_else(|| {
+                "ChatGPT 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
+            })?,
+        )?,
+        Implementation::Agy => authenticate_browser_login_cli(
+            &executable,
+            &[],
+            &translator.workspace_dir()?,
+            "Gemini",
+            process_observer,
+            browser_gate.ok_or_else(|| {
+                "Gemini 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
+            })?,
+        )?,
         Implementation::Gemini => authenticate_gemini_with_acp(
             &executable,
             &translator.workspace_dir()?,
@@ -513,11 +520,60 @@ pub fn connect_subscription_interactively_with_observer(
                 "Google 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
             })?,
         )?,
-        Implementation::Claude => {
-            open_cli_login_console(&executable, "Claude")?;
-        }
+        Implementation::Claude => authenticate_browser_login_cli(
+            &executable,
+            &[
+                "auth".to_string(),
+                "login".to_string(),
+                "--claudeai".to_string(),
+            ],
+            &translator.workspace_dir()?,
+            "Claude",
+            process_observer,
+            browser_gate.ok_or_else(|| {
+                "Claude 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
+            })?,
+        )?,
     }
     probe_subscription_connection(provider.key())
+}
+
+fn authenticate_browser_login_cli(
+    executable: &Path,
+    arguments: &[String],
+    workspace: &Path,
+    provider_name: &str,
+    process_observer: Option<LoginProcessObserver>,
+    browser_gate: LoginBrowserGate,
+) -> Result<(), String> {
+    browser_gate.wait_until_open(Duration::from_secs(300))?;
+    let output = run_process_with_observer(
+        executable,
+        arguments,
+        None,
+        workspace,
+        &subscription_environment(),
+        Duration::from_secs(300),
+        process_observer,
+    )?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let detail = format!(
+        "{}\n{}",
+        decode_process_output(&output.stdout),
+        decode_process_output(&output.stderr)
+    );
+    let detail = tail_chars(detail.trim(), 400);
+    if detail.is_empty() {
+        Err(format!(
+            "{provider_name} 계정 로그인을 완료하지 못했습니다."
+        ))
+    } else {
+        Err(format!(
+            "{provider_name} 계정 로그인을 완료하지 못했습니다: {detail}"
+        ))
+    }
 }
 
 fn authenticate_gemini_with_acp(
@@ -985,25 +1041,6 @@ fn gemini_oauth_cache_exists() -> bool {
         .any(|name| root.join(name).is_file())
 }
 
-#[cfg(windows)]
-fn open_cli_login_console(executable: &Path, provider_name: &str) -> Result<(), String> {
-    use std::os::windows::process::CommandExt;
-    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
-    let mut command = process_command(executable, &[]);
-    command.creation_flags(CREATE_NEW_CONSOLE);
-    command
-        .spawn()
-        .map(|_| ())
-        .map_err(|error| format!("{provider_name} 로그인 창을 열지 못했습니다: {error}"))
-}
-
-#[cfg(not(windows))]
-fn open_cli_login_console(_executable: &Path, provider_name: &str) -> Result<(), String> {
-    Err(format!(
-        "현재 운영체제에서는 터미널에서 {provider_name} CLI를 한 번 실행하여 로그인하십시오."
-    ))
-}
-
 impl Translator for SubscriptionCliTranslator {
     fn display_name(&self) -> &str {
         &self.display_name
@@ -1041,7 +1078,7 @@ impl Translator for SubscriptionCliTranslator {
             .to_lowercase();
             if !output.status.success() || !status.contains("chatgpt") {
                 return Err(
-                    "Codex CLI가 ChatGPT 플랜 로그인 상태가 아닙니다. API 키 로그인이 아닌 'codex login'을 사용하십시오."
+                    "ChatGPT 플랜 계정 연결이 필요합니다. 설정의 번역 서비스 연결에서 ChatGPT 연결을 다시 진행하십시오."
                         .to_string(),
                 );
             }
@@ -1625,6 +1662,26 @@ fn run_process(
     environment: &HashMap<String, String>,
     timeout: Duration,
 ) -> Result<Output, String> {
+    run_process_with_observer(
+        executable,
+        arguments,
+        input,
+        cwd,
+        environment,
+        timeout,
+        None,
+    )
+}
+
+fn run_process_with_observer(
+    executable: &Path,
+    arguments: &[String],
+    input: Option<&str>,
+    cwd: &Path,
+    environment: &HashMap<String, String>,
+    timeout: Duration,
+    process_observer: Option<LoginProcessObserver>,
+) -> Result<Output, String> {
     let mut command = process_command(executable, arguments);
     command
         .current_dir(cwd)
@@ -1656,6 +1713,18 @@ fn run_process(
         .stderr
         .take()
         .ok_or_else(|| "구독 번역 CLI 오류 연결을 열지 못했습니다.".to_string())?;
+    if let Some(observer) = process_observer.as_ref() {
+        observer(Some(child.id()));
+    }
+    struct ObservationGuard(Option<LoginProcessObserver>);
+    impl Drop for ObservationGuard {
+        fn drop(&mut self) {
+            if let Some(observer) = self.0.as_ref() {
+                observer(None);
+            }
+        }
+    }
+    let _observation_guard = ObservationGuard(process_observer);
     let stdout_thread = thread::spawn(move || {
         let mut bytes = Vec::new();
         let _ = stdout.read_to_end(&mut bytes);
@@ -1980,6 +2049,55 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
         std::thread::sleep(std::time::Duration::from_millis(100));
+        assert!(!authentication.is_finished());
+
+        assert!(browser_gate.open());
+        authentication.join().unwrap().unwrap();
+
+        let _ = std::fs::remove_dir_all(&directory);
+        let events = process_events.lock().unwrap();
+        assert!(events.first().is_some_and(Option::is_some));
+        assert_eq!(events.last(), Some(&None));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn waits_for_user_navigation_before_browser_cli_authentication() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-browser-login-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let marker = directory.join("started.txt");
+        let wrapper = directory.join("browser login mock.cmd");
+        std::fs::write(
+            &wrapper,
+            format!("@echo off\r\n>\"{}\" echo started\r\n", marker.display()),
+        )
+        .unwrap();
+        let process_events = Arc::new(Mutex::new(Vec::new()));
+        let observed_events = Arc::clone(&process_events);
+        let observer: super::LoginProcessObserver = Arc::new(move |process_id| {
+            observed_events.lock().unwrap().push(process_id);
+        });
+        let browser_gate = super::LoginBrowserGate::default();
+        let gate_for_thread = browser_gate.clone();
+        let wrapper_for_thread = wrapper.clone();
+        let directory_for_thread = directory.clone();
+
+        let authentication = std::thread::spawn(move || {
+            super::authenticate_browser_login_cli(
+                &wrapper_for_thread,
+                &[],
+                &directory_for_thread,
+                "ChatGPT",
+                Some(observer),
+                gate_for_thread,
+            )
+        });
+
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        assert!(!marker.is_file());
         assert!(!authentication.is_finished());
 
         assert!(browser_gate.open());
