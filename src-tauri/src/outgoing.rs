@@ -11,6 +11,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
+  const CONTROLLER_VERSION = 2;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const languageLabels = {auto:'자동 감지',ko:'한국어',ja:'日本語',en:'English',zh:'简体中文','zh-Hant':'繁體中文'};
   const storageKey = key => `nude-translator:outgoing-language:${key}`;
@@ -88,8 +89,17 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   }
 
   let controller = window[GLOBAL];
+  if (controller && controller.version !== CONTROLLER_VERSION) {
+    if (controller.listener) document.removeEventListener('keydown', controller.listener, true);
+    clearTimeout(controller.statusTimer);
+    document.getElementById(ROOT_ID)?.remove();
+    document.getElementById(`${ROOT_ID}-style`)?.remove();
+    delete window[GLOBAL];
+    controller = null;
+  }
   if (!controller) {
     controller = {
+      version: CONTROLLER_VERSION,
       enabled: false,
       queue: [],
       pending: new Map(),
@@ -201,6 +211,17 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         }
         this.setStatus(message || '메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.', true);
       },
+      prunePending() {
+        const now = Date.now();
+        for (const [id, item] of this.pending) {
+          if (item.editor?.isConnected && now - item.created_at < 30000) continue;
+          this.pending.delete(id);
+          if (this.activeRequest === id) {
+            this.activeRequest = '';
+            this.bypass = 0;
+          }
+        }
+      },
       keydown(event) {
         if (!this.enabled || event.key !== 'Enter' || event.shiftKey || event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
         const editor = event.target.closest?.(composerSelector);
@@ -266,6 +287,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   controller.enabled = enabled;
   controller.root = ensureRoot(controller);
   controller.root.hidden = !enabled;
+  controller.prunePending();
   controller.updateLabel();
   return enabled ? controller.queue.splice(0, 8).map(item => {
     const {editor, ...plain} = item;
