@@ -97,10 +97,9 @@ test("Discord-injected controls follow the settings interface language", () => {
   }
 });
 
-test("translated outgoing text settles in Discord Slate before Enter is dispatched", () => {
-  assert.match(outgoing, /verifyInserted/);
-  assert.match(outgoing, /requestAnimationFrame/);
-  assert.match(outgoing, /stableSince/);
-  assert.match(engine, /verify_outgoing_insert_script/);
-  assert.match(engine, /composer synchronization timed out/);
+test("translated outgoing text is sent without an artificial stabilization delay", () => {
+  assert.doesNotMatch(outgoing, /verifyInserted/);
+  assert.doesNotMatch(outgoing, /stableSince/);
+  assert.doesNotMatch(engine, /verify_outgoing_insert_script/);
+  assert.doesNotMatch(engine, /composer synchronization timed out/);
 });

@@ -17,7 +17,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 9;
+  const CONTROLLER_VERSION = 10;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
   const copies = {
@@ -512,38 +512,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (totalParts > 1) this.setStatus(formatCopy('sendingParts', {part:partNumber,total:totalParts}));
         return true;
       },
-      verifyInserted(id, expected, timeoutMs = 260) {
-        const item = this.pending.get(id);
-        const editor = item?.editor;
-        if (!item || !editor?.isConnected) return Promise.resolve(false);
-        const expectedText = String(expected ?? '').replace(/\u00a0/g, ' ').replace(/\uFEFF/g, '').trim();
-        const deadline = performance.now() + timeoutMs;
-        let stableSince = 0;
-        return new Promise(resolve => {
-          const check = () => {
-            if (!editor.isConnected || this.pending.get(id) !== item) {
-              resolve(false);
-              return;
-            }
-            const now = performance.now();
-            if (sourceTextForItem(editor, item) === expectedText) {
-              if (!stableSince) stableSince = now;
-              if (now - stableSince >= 34) {
-                resolve(true);
-                return;
-              }
-            } else {
-              stableSince = 0;
-            }
-            if (now >= deadline) {
-              resolve(false);
-              return;
-            }
-            requestAnimationFrame(check);
-          };
-          requestAnimationFrame(check);
-        });
-      },
       prepareAttachment(id) {
         const item = this.pending.get(id);
         if (!item) return false;
@@ -891,16 +859,6 @@ pub fn prepare_outgoing_send_script(
     ))
 }
 
-pub fn verify_outgoing_insert_script(request_id: &str, expected: &str) -> Result<String, String> {
-    let id = serde_json::to_string(request_id)
-        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
-    let expected = serde_json::to_string(expected)
-        .map_err(|error| format!("전송 번역문을 인코딩하지 못했습니다: {error}"))?;
-    Ok(format!(
-        "window.__nudeTranslatorOutgoing?.verifyInserted({id},{expected}) ?? Promise.resolve(false)"
-    ))
-}
-
 pub fn prepare_outgoing_attachment_script(request_id: &str) -> Result<String, String> {
     let id = serde_json::to_string(request_id)
         .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
@@ -935,8 +893,7 @@ mod tests {
         apply_outgoing_suggestion_script, attach_outgoing_text_file_script,
         outgoing_originals_ui_script, outgoing_ui_script, parse_outgoing_bindings,
         parse_outgoing_requests, prepare_outgoing_attachment_script, prepare_outgoing_send_script,
-        suggest_recent_language, verify_outgoing_insert_script, OUTGOING_BINDINGS_SCRIPT,
-        OUTGOING_CLEANUP_SCRIPT,
+        suggest_recent_language, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
     };
     use crate::cache::OutgoingOriginalRecord;
     use crate::cdp::{discord_target, CdpClient};
@@ -1007,15 +964,6 @@ mod tests {
         let originals = outgoing_originals_ui_script("/channels/1/2", &[], "en").unwrap();
         assert!(originals.contains("const requestedUiLanguage = \"en\""));
         assert!(originals.contains("Show original"));
-    }
-
-    #[test]
-    fn inserted_translation_verification_json_encodes_expected_text() {
-        let script = verify_outgoing_insert_script("outgoing-'1", "번역문\n</script>").unwrap();
-        assert!(script.contains("verifyInserted"));
-        assert!(script.contains("\\n"));
-        assert!(script.contains("</script>"));
-        assert!(script.contains("Promise.resolve(false)"));
     }
 
     #[test]
