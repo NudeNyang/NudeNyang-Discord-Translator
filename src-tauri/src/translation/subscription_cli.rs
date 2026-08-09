@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::env;
 use std::fs;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Output, Stdio};
@@ -52,6 +53,59 @@ enum LoginBrowserGateState {
     Waiting,
     Open,
     Cancelled,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct GeminiOAuthCacheFingerprint {
+    length: u64,
+    content_hash: u64,
+}
+
+#[derive(Clone, Debug)]
+struct GeminiOAuthCacheSnapshot {
+    path: Option<PathBuf>,
+    initial: Option<GeminiOAuthCacheFingerprint>,
+}
+
+impl GeminiOAuthCacheSnapshot {
+    fn from_environment() -> Self {
+        let path = env::var_os("USERPROFILE")
+            .or_else(|| env::var_os("HOME"))
+            .map(PathBuf::from)
+            .map(|home| home.join(".gemini").join("oauth_creds.json"));
+        let initial = path.as_deref().and_then(gemini_oauth_cache_fingerprint);
+        Self { path, initial }
+    }
+
+    #[cfg(test)]
+    fn from_root(root: &Path) -> Self {
+        let path = Some(root.join("oauth_creds.json"));
+        let initial = path.as_deref().and_then(gemini_oauth_cache_fingerprint);
+        Self { path, initial }
+    }
+
+    fn new_valid_fingerprint(&self) -> Option<GeminiOAuthCacheFingerprint> {
+        let path = self.path.as_deref()?;
+        let current = gemini_oauth_cache_fingerprint(path)?;
+        (Some(current) != self.initial).then_some(current)
+    }
+}
+
+fn gemini_oauth_cache_fingerprint(path: &Path) -> Option<GeminiOAuthCacheFingerprint> {
+    let bytes = fs::read(path).ok()?;
+    if bytes.is_empty()
+        || !serde_json::from_slice::<Value>(&bytes)
+            .ok()
+            .is_some_and(|value| value.is_object())
+    {
+        return None;
+    }
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    Some(GeminiOAuthCacheFingerprint {
+        length: bytes.len() as u64,
+        content_hash: hasher.finish(),
+    })
 }
 
 impl Default for LoginBrowserGate {
@@ -502,6 +556,15 @@ fn authenticate_gemini_acp_process(
     child: &mut Child,
     browser_gate: &LoginBrowserGate,
 ) -> Result<(), String> {
+    let oauth_cache = GeminiOAuthCacheSnapshot::from_environment();
+    authenticate_gemini_acp_process_with_cache(child, browser_gate, &oauth_cache)
+}
+
+fn authenticate_gemini_acp_process_with_cache(
+    child: &mut Child,
+    browser_gate: &LoginBrowserGate,
+    oauth_cache: &GeminiOAuthCacheSnapshot,
+) -> Result<(), String> {
     let mut stdin = child
         .stdin
         .take()
@@ -543,9 +606,25 @@ fn authenticate_gemini_acp_process(
 
         let deadline = Instant::now() + Duration::from_secs(300);
         let mut authentication_started = false;
+        let mut saved_cache: Option<(GeminiOAuthCacheFingerprint, Instant)> = None;
         loop {
             if Instant::now() >= deadline {
                 return Err("Google 계정 로그인 제한 시간(5분)을 초과했습니다.".to_string());
+            }
+            if authentication_started {
+                match oauth_cache.new_valid_fingerprint() {
+                    Some(fingerprint) => match saved_cache {
+                        Some((saved, first_seen))
+                            if saved == fingerprint
+                                && first_seen.elapsed() >= Duration::from_millis(400) =>
+                        {
+                            return Ok(());
+                        }
+                        Some((saved, _)) if saved == fingerprint => {}
+                        _ => saved_cache = Some((fingerprint, Instant::now())),
+                    },
+                    None => saved_cache = None,
+                }
             }
             match line_rx.recv_timeout(Duration::from_millis(200)) {
                 Ok(Ok(line)) => {
@@ -1861,6 +1940,42 @@ mod tests {
         let events = process_events.lock().unwrap();
         assert!(events.first().is_some_and(Option::is_some));
         assert_eq!(events.last(), Some(&None));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn finishes_gemini_authentication_when_oauth_cache_is_saved_without_acp_reply() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-gemini-oauth-cache-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let oauth_cache = directory.join("oauth_creds.json");
+        let wrapper = directory.join("gemini oauth mock.cmd");
+        std::fs::write(
+            &wrapper,
+            format!(
+                "@echo off\r\nset /p initialize=\r\necho {{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{{}}}}\r\nset /p authenticate=\r\n>\"{}\" echo {{\"access_token\":\"saved\"}}\r\nset /p wait=\r\n",
+                oauth_cache.display()
+            ),
+        )
+        .unwrap();
+
+        let mut command = super::process_command(&wrapper, &[]);
+        command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+        let mut child = command.spawn().unwrap();
+        let browser_gate = super::LoginBrowserGate::default();
+        assert!(browser_gate.open());
+        let cache = super::GeminiOAuthCacheSnapshot::from_root(&directory);
+
+        let result =
+            super::authenticate_gemini_acp_process_with_cache(&mut child, &browser_gate, &cache);
+
+        let _ = std::fs::remove_dir_all(&directory);
+        result.unwrap();
     }
 
     #[cfg(windows)]
