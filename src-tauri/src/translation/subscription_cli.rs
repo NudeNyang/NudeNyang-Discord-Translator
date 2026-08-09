@@ -994,8 +994,12 @@ fn common_install_locations(provider: SubscriptionProvider) -> Vec<(PathBuf, Imp
 
 fn find_executable(name: &str) -> Option<PathBuf> {
     let path = env::var_os("PATH")?;
+    find_executable_on_path(name, &path)
+}
+
+fn find_executable_on_path(name: &str, path: &std::ffi::OsStr) -> Option<PathBuf> {
     let extensions: &[&str] = if cfg!(windows) {
-        &["", ".exe", ".cmd", ".bat"]
+        &[".exe", ".cmd", ".bat", ".com"]
     } else {
         &[""]
     };
@@ -1054,8 +1058,10 @@ mod tests {
 
     use super::{
         decode_payload, subscription_environment, translation_prompt, validated_translations,
+        SubscriptionCliTranslator,
     };
     use crate::language::Language;
+    use crate::translation::Translator;
 
     #[test]
     fn prompt_marks_message_content_as_untrusted() {
@@ -1097,5 +1103,40 @@ mod tests {
         for name in super::API_ENVIRONMENT_VARIABLES {
             assert!(!environment.contains_key(name));
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_command_resolution_prefers_the_cmd_wrapper_over_the_unix_shim() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-codex-command-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(directory.join("codex"), "#!/bin/sh").unwrap();
+        std::fs::write(directory.join("codex.cmd"), "@echo off").unwrap();
+
+        let resolved = super::find_executable_on_path("codex", directory.as_os_str()).unwrap();
+
+        let _ = std::fs::remove_dir_all(&directory);
+        assert_eq!(
+            resolved.extension().and_then(|value| value.to_str()),
+            Some("cmd")
+        );
+    }
+
+    #[test]
+    #[ignore = "로그인된 Codex CLI와 ChatGPT 플랜 네트워크 연결이 필요해"]
+    fn live_codex_subscription_translates_through_chatgpt_plan() {
+        let cache_root = std::env::temp_dir().join("nude-translator-live-codex");
+        let mut translator =
+            SubscriptionCliTranslator::new("chatgpt", "auto", 120, cache_root).unwrap();
+
+        let translated = translator
+            .translate("Hello, how are you?", Language::English, Language::Korean)
+            .unwrap();
+
+        assert!(!translated.trim().is_empty());
+        assert_ne!(translated, "Hello, how are you?");
     }
 }
