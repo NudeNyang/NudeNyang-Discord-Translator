@@ -78,8 +78,10 @@ test("provider action buttons share dimensions and semantic colors", () => {
   );
   assert.match(
     styles,
-    /\.button\.danger\s*\{[\s\S]*?color:\s*var\(--danger\)[\s\S]*?background:\s*var\(--control\)/,
+    /\.button\.danger\s*\{[\s\S]*?color:\s*var\(--danger\)[\s\S]*?background:\s*var\(--danger-soft\)/,
   );
+  assert.match(styles, /--danger-soft:\s*#f4e6e9/);
+  assert.match(styles, /--danger-soft:\s*#402a34/);
 });
 
 test("provider status details wrap instead of being clipped", () => {

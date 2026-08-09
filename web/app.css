@@ -14,6 +14,7 @@
   --accent-strong: #2869a8;
   --accent-soft: #dcebf8;
   --danger: #b33b45;
+  --danger-soft: #f4e6e9;
   --scroll: rgb(52 127 199 / 0.46);
   --shadow: 0 18px 50px rgb(38 76 112 / 0.14);
   --radius-card: 14px;
@@ -35,6 +36,7 @@
   --accent-strong: #76b8fa;
   --accent-soft: #173650;
   --danger: #ff8b93;
+  --danger-soft: #402a34;
   --scroll: rgb(90 168 245 / 0.46);
   --shadow: 0 22px 60px rgb(0 0 0 / 0.38);
 }
@@ -55,6 +57,7 @@
     --accent-strong: #76b8fa;
     --accent-soft: #173650;
     --danger: #ff8b93;
+    --danger-soft: #402a34;
     --scroll: rgb(90 168 245 / 0.46);
     --shadow: 0 22px 60px rgb(0 0 0 / 0.38);
   }
@@ -657,13 +660,13 @@ input:focus-visible,
 .button.danger {
   border-color: color-mix(in srgb, var(--danger) 62%, var(--border));
   color: var(--danger);
-  background: var(--control);
+  background: var(--danger-soft);
   font-size: 12px;
 }
 
 .button.danger:hover {
   border-color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 8%, var(--control));
+  background: color-mix(in srgb, var(--danger-soft) 94%, var(--danger));
 }
 
 .section-note {
