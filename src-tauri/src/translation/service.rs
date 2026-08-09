@@ -308,8 +308,8 @@ fn remove_added_terminal_punctuation(source: &str, translated: &str) -> String {
 }
 
 fn has_terminal_punctuation(text: &str) -> bool {
-    let mut characters = text.trim_end().chars().rev();
-    while let Some(character) = characters.next() {
+    let characters = text.trim_end().chars().rev();
+    for character in characters {
         if is_terminal_closer(character) {
             continue;
         }

@@ -12,6 +12,7 @@ Nude Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정�
 | Discord 실행·재시작 | `src-tauri/src/discord.rs` |
 | CDP WebSocket | `src-tauri/src/cdp.rs` |
 | DOM 스냅샷·적용·복원 | `src-tauri/src/dom.rs`, `engine.rs` |
+| 보내는 메시지 번역·장문 첨부 | `src-tauri/src/outgoing.rs`, `engine.rs` |
 | 언어 판별 | `src-tauri/src/language.rs` |
 | 번역기·복구 정책 | `src-tauri/src/translation/` |
 | 외부 서비스 연결 상태 | `src-tauri/src/providers.rs` |
@@ -30,9 +31,12 @@ Nude Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정�
 앱은 Discord를 `--remote-debugging-port`와 함께 실행하고 로컬 CDP 엔드포인트에만 연결한다.
 다음 경계를 지킨다.
 
-- Discord API, 사용자 토큰, self-bot, 메시지 자동 전송을 사용하지 않는다.
+- Discord API, 사용자 토큰, self-bot을 사용하지 않는다.
 - Discord 설치 파일과 서버 데이터는 수정하지 않는다.
 - 현재 렌더링 세션에서 화면에 표시되는 텍스트와 이미지 요소만 바꾼다.
+- 보내는 메시지 번역은 사용자가 Enter로 전송한 입력만 가로채며, 번역 결과를 같은 렌더러의
+  입력창으로 되돌려 보낸다. 1,900 UTF-16 단위를 넘는 번역문은 여러 메시지로 반복 전송하지
+  않고 UTF-8 텍스트 파일 하나로 첨부한다.
 - 번역을 끄거나 엔진을 종료할 때 저장한 원문 DOM을 복원한다.
 - 실시간 번역은 최초 위험 고지 동의 전에는 켜지지 않는다.
 - CDP 연결 실패가 반복될 때만 15초 안내를 시작하고 한 활성화 주기당 자동 재시작은 한 번으로 제한한다.

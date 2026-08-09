@@ -11,7 +11,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 3;
+  const CONTROLLER_VERSION = 4;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const languageLabels = {auto:'자동 감지',ko:'한국어',ja:'日本語',en:'English',zh:'简体中文','zh-Hant':'繁體中文'};
   const storageKey = key => `nude-translator:outgoing-language:${key}`;
@@ -294,6 +294,61 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (totalParts > 1) this.setStatus(`번역문을 분할 전송하고 있습니다. (${partNumber}/${totalParts})`);
         return true;
       },
+      prepareAttachment(id) {
+        const item = this.pending.get(id);
+        if (!item) return false;
+        const editor = item.editor;
+        if (!editor?.isConnected || composerText(editor) !== item.text) return false;
+        const inputs = [...document.querySelectorAll('input[type="file"]')]
+          .filter(input => !input.disabled);
+        let input = null;
+        for (let parent = editor.parentElement; parent && parent !== document.body && !input; parent = parent.parentElement) {
+          input = inputs.find(candidate => parent.contains(candidate)) || null;
+        }
+        input ||= inputs.find(candidate => candidate.multiple) || inputs[0] || null;
+        if (!input) return false;
+        editor.focus();
+        const selection = getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        item.attachment_input = input;
+        return true;
+      },
+      attachTextFile(id, content, filename) {
+        const item = this.pending.get(id);
+        const editor = item?.editor;
+        const input = item?.attachment_input;
+        if (!item || !editor?.isConnected || !input?.isConnected || composerText(editor)) {
+          if (item && editor?.isConnected && !composerText(editor)) {
+            editor.focus();
+            document.execCommand('insertText', false, item.text);
+            if (!composerText(editor)) editor.textContent = item.text;
+          }
+          return false;
+        }
+        try {
+          const transfer = new DataTransfer();
+          const file = new File([content], filename, {type:'text/plain;charset=utf-8'});
+          transfer.items.add(file);
+          input.files = transfer.files;
+          input.dispatchEvent(new Event('input', {bubbles:true, composed:true}));
+          input.dispatchEvent(new Event('change', {bubbles:true, composed:true}));
+          item.attachment_input = null;
+          item.keep_after_send = false;
+          this.activeRequest = id;
+          this.bypass += 1;
+          this.setStatus('번역문이 길어 텍스트 파일로 전송합니다.');
+          return true;
+        } catch (error) {
+          editor.focus();
+          document.execCommand('insertText', false, item.text);
+          if (!composerText(editor)) editor.textContent = item.text;
+          item.attachment_input = null;
+          return false;
+        }
+      },
     };
     controller.listener = event => controller.keydown(event);
     document.addEventListener('keydown', controller.listener, true);
@@ -377,7 +432,7 @@ pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
         return None;
     }
     let mut ranked = counts.into_iter().collect::<Vec<_>>();
-    ranked.sort_by(|left, right| right.1.cmp(&left.1));
+    ranked.sort_by_key(|entry| std::cmp::Reverse(entry.1));
     let (language, count) = ranked[0];
     if ranked.get(1).is_some_and(|(_, next)| *next == count) || count * 5 < detected * 3 {
         None
@@ -425,16 +480,51 @@ pub fn prepare_outgoing_send_script(
     ))
 }
 
+pub fn prepare_outgoing_attachment_script(request_id: &str) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.prepareAttachment({id}) === true"
+    ))
+}
+
+pub fn attach_outgoing_text_file_script(
+    request_id: &str,
+    content: &str,
+    filename: &str,
+) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    let content = serde_json::to_string(content)
+        .map_err(|error| format!("장문 번역문을 인코딩하지 못했습니다: {error}"))?;
+    let filename = serde_json::to_string(filename)
+        .map_err(|error| format!("장문 번역 파일 이름을 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.attachTextFile({id},{content},{filename}) === true"
+    ))
+}
+
 #[cfg(test)]
 mod tests {
+    use std::sync::{Mutex, MutexGuard};
+
     use serde_json::json;
 
     use super::{
-        apply_outgoing_suggestion_script, outgoing_ui_script, parse_outgoing_requests,
-        prepare_outgoing_send_script, suggest_recent_language, OUTGOING_CLEANUP_SCRIPT,
+        apply_outgoing_suggestion_script, attach_outgoing_text_file_script, outgoing_ui_script,
+        parse_outgoing_requests, prepare_outgoing_attachment_script, prepare_outgoing_send_script,
+        suggest_recent_language, OUTGOING_CLEANUP_SCRIPT,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::language::Language;
+
+    static LIVE_OUTGOING_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_live_outgoing() -> MutexGuard<'static, ()> {
+        LIVE_OUTGOING_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
 
     #[test]
     fn recent_message_contents_produce_a_confident_suggestion() {
@@ -484,8 +574,24 @@ mod tests {
     }
 
     #[test]
+    fn attachment_scripts_json_encode_content_and_filename() {
+        let prepare = prepare_outgoing_attachment_script("outgoing-'1").unwrap();
+        assert!(prepare.contains("prepareAttachment"));
+        let attach = attach_outgoing_text_file_script(
+            "outgoing-'1",
+            "첫 줄\n</script>\n마지막 줄",
+            "번역-'문.txt",
+        )
+        .unwrap();
+        assert!(attach.contains("attachTextFile"));
+        assert!(attach.contains("\\n"));
+        assert!(attach.contains("</script>"));
+    }
+
+    #[test]
     #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
     fn live_discord_can_mount_and_remove_the_outgoing_control() {
+        let _guard = lock_live_outgoing();
         let target = discord_target(9222).expect("Discord channel target");
         let mut client = CdpClient::new(target.websocket_url);
         client
@@ -570,6 +676,7 @@ mod tests {
     #[test]
     #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
     fn live_discord_controller_keeps_a_request_across_split_messages() {
+        let _guard = lock_live_outgoing();
         let target = discord_target(9222).expect("Discord channel target");
         let mut client = CdpClient::new(target.websocket_url);
         client
@@ -661,5 +768,96 @@ mod tests {
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("cleanup controller");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_controller_attaches_one_text_file_for_a_long_message() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("remove previous controller");
+        let controller = outgoing_ui_script(true, "ja");
+        let queued = client
+            .evaluate(
+                &format!(
+                    "(() => {{ ({controller}); const wrapper=document.createElement('div'); wrapper.id='nt-outgoing-attachment-test'; const input=document.createElement('input'); input.type='file'; const editor=document.createElement('div'); editor.id='nt-outgoing-attachment-editor'; editor.setAttribute('role','textbox'); editor.setAttribute('contenteditable','true'); editor.textContent='긴 원문'; input.addEventListener('change',event=>{{const file=event.currentTarget.files?.[0];window.__ntOutgoingAttachmentProbe=file?{{name:file.name,content:file.text(),editor:editor.textContent||''}}:null;}},{{capture:true}}); wrapper.append(input,editor); document.body.append(wrapper); editor.dispatchEvent(new KeyboardEvent('keydown',{{key:'Enter',bubbles:true,cancelable:true}})); return ({controller}); }})()"
+                ),
+                true,
+            )
+            .expect("queue synthetic attachment request");
+        let requests = parse_outgoing_requests(queued).expect("outgoing request payload");
+        assert_eq!(requests.len(), 1);
+        let request_id = &requests[0].id;
+        let prepared = client
+            .evaluate(
+                &prepare_outgoing_attachment_script(request_id).expect("prepare attachment script"),
+                false,
+            )
+            .expect("prepare attachment");
+        assert_eq!(prepared.as_bool(), Some(true));
+        for event_type in ["rawKeyDown", "keyUp"] {
+            client
+                .call(
+                    "Input.dispatchKeyEvent",
+                    json!({
+                        "type": event_type,
+                        "key": "Backspace",
+                        "code": "Backspace",
+                        "windowsVirtualKeyCode": 8,
+                        "nativeVirtualKeyCode": 8
+                    }),
+                )
+                .expect("clear original composer text");
+        }
+        let content = "번역문 첫 줄\n번역문 마지막 줄";
+        let attached = client
+            .evaluate(
+                &attach_outgoing_text_file_script(request_id, content, "NudeTranslator-test.txt")
+                    .expect("attach script"),
+                false,
+            )
+            .expect("attach translated text file");
+        assert_eq!(attached.as_bool(), Some(true));
+        let result = client
+            .evaluate(
+                "(async()=>({name:window.__ntOutgoingAttachmentProbe?.name||'',content:await window.__ntOutgoingAttachmentProbe?.content,editor:window.__ntOutgoingAttachmentProbe?.editor||'',pending:window.__nudeTranslatorOutgoing?.pending.size}))()",
+                true,
+            )
+            .expect("read attached file");
+        assert_eq!(result["name"].as_str(), Some("NudeTranslator-test.txt"));
+        assert_eq!(result["content"].as_str(), Some(content));
+        assert_eq!(result["editor"].as_str(), Some(""));
+        assert_eq!(result["pending"].as_u64(), Some(1));
+        client
+            .evaluate(
+                "document.getElementById('nt-outgoing-attachment-test')?.remove();delete window.__ntOutgoingAttachmentProbe",
+                false,
+            )
+            .expect("remove attachment test elements");
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_exposes_a_composer_file_input() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let inputs = client
+            .evaluate(
+                "[...document.querySelectorAll('input[type=file]')].filter(input=>!input.disabled).map(input=>({multiple:input.multiple,accept:input.accept}))",
+                false,
+            )
+            .expect("inspect Discord file inputs");
+        let inputs = inputs.as_array().expect("file input array");
+        assert!(
+            !inputs.is_empty(),
+            "Discord composer does not expose a usable file input"
+        );
     }
 }

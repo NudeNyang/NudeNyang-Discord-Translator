@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
@@ -23,8 +23,9 @@ use crate::image_translation::{
 };
 use crate::language::Language;
 use crate::outgoing::{
-    apply_outgoing_error_script, apply_outgoing_suggestion_script, outgoing_ui_script,
-    parse_outgoing_requests, prepare_outgoing_send_script, suggest_recent_language,
+    apply_outgoing_error_script, apply_outgoing_suggestion_script,
+    attach_outgoing_text_file_script, outgoing_ui_script, parse_outgoing_requests,
+    prepare_outgoing_attachment_script, prepare_outgoing_send_script, suggest_recent_language,
     OutgoingRequest, OUTGOING_CLEANUP_SCRIPT,
 };
 use crate::text_split::split_for_discord;
@@ -811,6 +812,18 @@ fn dispatch_outgoing_send(
     request_id: &str,
     replacement: Option<&str>,
 ) -> Result<(), String> {
+    if let Some(text) =
+        replacement.filter(|text| text.encode_utf16().count() > DISCORD_MESSAGE_UTF16_LIMIT)
+    {
+        if dispatch_outgoing_text_file(client, request_id, text)? {
+            return Ok(());
+        }
+        return Err(
+            "장문 번역문을 텍스트 파일로 첨부하지 못했습니다. 원문은 입력창에 유지됩니다."
+                .to_string(),
+        );
+    }
+
     let parts = replacement
         .map(|text| split_for_discord(text, DISCORD_MESSAGE_UTF16_LIMIT))
         .unwrap_or_else(|| vec![String::new()]);
@@ -863,6 +876,60 @@ fn dispatch_outgoing_send(
             thread::sleep(Duration::from_millis(250));
         }
     }
+    Ok(())
+}
+
+fn dispatch_outgoing_text_file(
+    client: &mut CdpClient,
+    request_id: &str,
+    content: &str,
+) -> Result<bool, String> {
+    let prepared = client.evaluate(&prepare_outgoing_attachment_script(request_id)?, false)?;
+    if prepared.as_bool() != Some(true) {
+        return Ok(false);
+    }
+
+    dispatch_backspace(client)?;
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let filename = format!("NudeTranslator-translation-{timestamp}.txt");
+    let attached = client.evaluate(
+        &attach_outgoing_text_file_script(request_id, content, &filename)?,
+        false,
+    )?;
+    if attached.as_bool() != Some(true) {
+        return Ok(false);
+    }
+
+    // Discord가 change 이벤트로 첨부 파일을 읽고 전송 대기열을 만드는 시간을 확보합니다.
+    thread::sleep(Duration::from_millis(700));
+    dispatch_enter(client)?;
+    Ok(true)
+}
+
+fn dispatch_backspace(client: &mut CdpClient) -> Result<(), String> {
+    client.call(
+        "Input.dispatchKeyEvent",
+        json!({
+            "type": "rawKeyDown",
+            "key": "Backspace",
+            "code": "Backspace",
+            "windowsVirtualKeyCode": 8,
+            "nativeVirtualKeyCode": 8
+        }),
+    )?;
+    client.call(
+        "Input.dispatchKeyEvent",
+        json!({
+            "type": "keyUp",
+            "key": "Backspace",
+            "code": "Backspace",
+            "windowsVirtualKeyCode": 8,
+            "nativeVirtualKeyCode": 8
+        }),
+    )?;
     Ok(())
 }
 
@@ -1388,10 +1455,12 @@ mod tests {
 
     #[test]
     fn applying_a_new_translator_replaces_the_active_rust_backend() {
-        let mut config = AppConfig::default();
-        config.enabled = false;
-        config.translator = "mock".to_string();
-        config.keep_local_model_warm = false;
+        let mut config = AppConfig {
+            enabled: false,
+            translator: "mock".to_string(),
+            keep_local_model_warm: false,
+            ..Default::default()
+        };
         let engine = RustEngine::start(config.clone());
 
         wait_for_translator(&engine, "mock");
@@ -1471,13 +1540,15 @@ mod tests {
             )
             .unwrap();
 
-        let mut config = AppConfig::default();
-        config.enabled = true;
-        config.outgoing_translation_enabled = false;
-        config.translator = "mock".to_string();
-        config.target_language = "ko".to_string();
-        config.keep_local_model_warm = false;
-        config.capture_fps = 20;
+        let config = AppConfig {
+            enabled: true,
+            outgoing_translation_enabled: false,
+            translator: "mock".to_string(),
+            target_language: "ko".to_string(),
+            keep_local_model_warm: false,
+            capture_fps: 20,
+            ..Default::default()
+        };
         let engine = RustEngine::start(config);
         wait_for_dom_text(&mut client, "[ko] ", false);
         client
@@ -1548,10 +1619,12 @@ mod tests {
     #[test]
     #[ignore = "실행 중인 Discord 디버그 렌더러가 필요해"]
     fn live_engine_connects_without_a_python_sidecar() {
-        let mut config = AppConfig::default();
-        config.enabled = false;
-        config.translator = "original".to_string();
-        config.keep_local_model_warm = false;
+        let config = AppConfig {
+            enabled: false,
+            translator: "original".to_string(),
+            keep_local_model_warm: false,
+            ..Default::default()
+        };
         let engine = RustEngine::start(config);
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
         let connected = loop {

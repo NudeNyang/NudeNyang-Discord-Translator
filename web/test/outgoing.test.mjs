@@ -40,3 +40,11 @@ test("configured outgoing defaults and confirmation policy reach Discord", () =>
   assert.match(engine, /outgoing_confirm_language/);
   assert.match(engine, /enqueue_outgoing_translation/);
 });
+
+test("long outgoing translations use one text attachment instead of notification spam", () => {
+  assert.match(outgoing, /prepareAttachment/);
+  assert.match(outgoing, /attachTextFile/);
+  assert.match(outgoing, /new File\(\[content\], filename/);
+  assert.match(outgoing, /번역문이 길어 텍스트 파일로 전송합니다\./);
+  assert.match(engine, /dispatch_outgoing_text_file/);
+});

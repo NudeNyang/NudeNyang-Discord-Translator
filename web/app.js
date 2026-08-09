@@ -472,7 +472,7 @@ async function checkForUpdates(silent = false) {
 async function loadAppInformation() {
   if (tauriGetVersion) {
     try {
-      elements.appVersion.textContent = await tauriGetVersion();
+      elements.appVersion.textContent = (await tauriGetVersion()).replace(/-beta$/i, " Beta");
     } catch {
       // The build-time version in the markup remains as a safe fallback.
     }

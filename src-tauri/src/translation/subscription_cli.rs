@@ -656,7 +656,7 @@ fn authenticate_gemini_acp_process_with_cache(
             json!({
                 "protocolVersion": 1,
                 "clientCapabilities": {},
-                "clientInfo": {"name": "Nude Translator", "version": "0.2.0"}
+                "clientInfo": {"name": "Nude Translator", "version": "0.3.0-beta"}
             }),
         )?;
 
@@ -1343,7 +1343,7 @@ impl CodexAppServer {
         self.send(&json!({
             "method": "initialize",
             "id": initialize_id,
-            "params": {"clientInfo": {"name": "nude_translator", "title": "Nude Translator", "version": "0.2.0"}},
+            "params": {"clientInfo": {"name": "nude_translator", "title": "Nude Translator", "version": "0.3.0-beta"}},
         }))?;
         self.wait_for_response(initialize_id, deadline)?;
         self.send(&json!({"method": "initialized", "params": {}}))?;
@@ -1926,7 +1926,7 @@ fn decode_process_output(bytes: &[u8]) -> String {
     #[cfg(windows)]
     {
         let (decoded, _, _) = encoding_rs::EUC_KR.decode(bytes);
-        return decoded.into_owned();
+        decoded.into_owned()
     }
     #[cfg(not(windows))]
     {

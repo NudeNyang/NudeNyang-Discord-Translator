@@ -55,7 +55,7 @@ pub fn check_for_update(repository: &str, current_version: &str) -> Result<Value
     release_result(release, current)
 }
 
-fn release_result(release: GitHubRelease, current: (u64, u64, u64)) -> Result<Value, String> {
+fn release_result(release: GitHubRelease, current: (u64, u64, u64, bool)) -> Result<Value, String> {
     if release.draft || release.prerelease {
         return Ok(json!({"available": false}));
     }
@@ -111,21 +111,21 @@ fn validate_repository(repository: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn version_tuple(version: &str) -> Result<(u64, u64, u64), String> {
-    let core = version
-        .trim()
-        .strip_prefix('v')
-        .unwrap_or(version.trim())
-        .split(['-', '+'])
-        .next()
-        .unwrap_or_default();
+fn version_tuple(version: &str) -> Result<(u64, u64, u64, bool), String> {
+    let normalized = version.trim().strip_prefix('v').unwrap_or(version.trim());
+    let without_build = normalized
+        .split_once('+')
+        .map_or(normalized, |(core, _)| core);
+    let (core, stable) = without_build
+        .split_once('-')
+        .map_or((without_build, true), |(core, _)| (core, false));
     let values = core
         .split('.')
         .map(str::parse::<u64>)
         .collect::<Result<Vec<_>, _>>()
         .map_err(|_| format!("지원하지 않는 버전 형식입니다: {version}"))?;
     match values.as_slice() {
-        [major, minor, patch] => Ok((*major, *minor, *patch)),
+        [major, minor, patch] => Ok((*major, *minor, *patch, stable)),
         _ => Err(format!("지원하지 않는 버전 형식입니다: {version}")),
     }
 }
@@ -136,9 +136,14 @@ mod tests {
 
     #[test]
     fn semantic_versions_match_the_legacy_updater_rules() {
-        assert_eq!(version_tuple("v1.2.3").unwrap(), (1, 2, 3));
-        assert_eq!(version_tuple("1.2.3-beta+7").unwrap(), (1, 2, 3));
+        assert_eq!(version_tuple("v1.2.3").unwrap(), (1, 2, 3, true));
+        assert_eq!(version_tuple("1.2.3-beta+7").unwrap(), (1, 2, 3, false));
         assert!(version_tuple("1.2").is_err());
+    }
+
+    #[test]
+    fn stable_release_is_newer_than_beta_with_the_same_core_version() {
+        assert!(version_tuple("0.3.0").unwrap() > version_tuple("0.3.0-beta").unwrap());
     }
 
     #[test]
@@ -160,7 +165,7 @@ mod tests {
                 digest: format!("sha256:{}", "a".repeat(64)),
             }],
         };
-        let result = release_result(release, (0, 2, 0)).unwrap();
+        let result = release_result(release, (0, 2, 0, true)).unwrap();
         assert_eq!(result["available"], true);
         assert_eq!(result["version"], "0.3.0");
     }

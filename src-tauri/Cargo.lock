@@ -2826,7 +2826,7 @@ dependencies = [
 
 [[package]]
 name = "nude-translator-tauri"
-version = "0.2.0"
+version = "0.3.0-beta"
 dependencies = [
  "ab_glyph",
  "base64 0.22.1",
