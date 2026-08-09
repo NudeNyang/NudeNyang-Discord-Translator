@@ -12,8 +12,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 6;
+  const CONTROLLER_VERSION = 7;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
+  const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
   const languageLabels = {auto:'자동 감지',ko:'한국어',ja:'日本語',en:'English',zh:'简体中文','zh-Hant':'繁體中文'};
   const storageKey = key => `nude-translator:outgoing-language:${key}`;
   const confirmedStorageKey = key => `nude-translator:outgoing-confirmed-language:${key}`;
@@ -60,8 +61,86 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       .map(node => originalText(node).trim())
       .filter(Boolean);
   }
+  function mentionText(mention) {
+    return [...mention.querySelectorAll('[role="button"]')]
+      .map(node => (node.textContent || '').trim())
+      .find(text => text.startsWith('@')) || '';
+  }
+  function visibleSlateNodeText(node) {
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return '';
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.matches(mentionSelector)) return mentionText(node);
+      if (node.hasAttribute('data-slate-zero-width')) return '';
+      if (node.hasAttribute('data-slate-string')) return node.textContent || '';
+      if (node.tagName === 'BR') return '\n';
+    }
+    return [...node.childNodes].map(visibleSlateNodeText).join('');
+  }
+  function visibleComposerText(root) {
+    const blocks = [...root.childNodes]
+      .filter(node => node.nodeType === Node.ELEMENT_NODE && node.getAttribute('data-slate-node') === 'element');
+    const text = blocks.length
+      ? blocks.map(visibleSlateNodeText).join('\n')
+      : visibleSlateNodeText(root);
+    return text.replace(/\u00a0/g, ' ').replace(/\uFEFF/g, '');
+  }
   function composerText(editor) {
-    return (editor.innerText || editor.textContent || '').replace(/\u00a0/g, ' ').trim();
+    return visibleComposerText(editor).trim();
+  }
+  function translatedTailRange(editor, lastMention) {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!(lastMention.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+      const parent = node.parentElement;
+      if (parent?.closest(mentionSelector) || parent?.closest('[data-slate-zero-width]')) continue;
+      const index = (node.nodeValue || '').search(/[^\s\uFEFF]/u);
+      if (index < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(editor, editor.childNodes.length);
+      return range;
+    }
+    return null;
+  }
+  function prefixMentionPlan(editor) {
+    const mentions = [...editor.querySelectorAll(mentionSelector)];
+    if (!mentions.length) return null;
+    const lastMention = mentions.at(-1);
+    const prefixRange = document.createRange();
+    prefixRange.setStart(editor, 0);
+    prefixRange.setEndAfter(lastMention);
+    const prefix = prefixRange.cloneContents();
+    prefix.querySelectorAll(mentionSelector).forEach(node => node.remove());
+    if (visibleComposerText(prefix).trim()) return {supported:false};
+    const range = translatedTailRange(editor, lastMention);
+    return {
+      supported: true,
+      text: range ? visibleComposerText(range.cloneContents()).trim() : '',
+      range,
+    };
+  }
+  function selectionRangeForItem(editor, item, continuation = false) {
+    if (item.preserve_prefix_mentions && !continuation) {
+      const plan = prefixMentionPlan(editor);
+      return plan?.supported ? plan.range : null;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    return range;
+  }
+  function sourceTextForItem(editor, item) {
+    if (!item.preserve_prefix_mentions) return composerText(editor);
+    const plan = prefixMentionPlan(editor);
+    return plan?.supported ? plan.text : composerText(editor);
+  }
+  function hasActiveAutocomplete(editor) {
+    if (editor.getAttribute('aria-expanded') !== 'true') return false;
+    const active = document.getElementById(editor.getAttribute('aria-activedescendant') || '');
+    if (active?.getAttribute('role') === 'option') return true;
+    const listbox = document.getElementById(editor.getAttribute('aria-controls') || '');
+    return listbox?.getAttribute('role') === 'listbox';
   }
   function discordMessageId(root) {
     const prefix = 'message-content-';
@@ -291,7 +370,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           if (activeItem && sentText) {
             this.sent.push({
               channel_key: activeItem.channel_key,
-              original_text: activeItem.text,
+              original_text: activeItem.original_text || activeItem.text,
               sent_text: sentText,
               part_number: activeItem.part_number || 1,
               total_parts: activeItem.total_parts || 1,
@@ -307,8 +386,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           if (!keepAfterSend) this.setStatus('');
           return;
         }
-        const text = composerText(editor);
+        if (hasActiveAutocomplete(editor)) return;
+        const mentionPlan = prefixMentionPlan(editor);
+        if (mentionPlan && !mentionPlan.supported) return;
+        const text = mentionPlan ? mentionPlan.text : composerText(editor);
         if (!text || text.startsWith('/') || text.includes('```')) return;
+        const originalText = composerText(editor);
         const key = currentChannelKey();
         if (!key) return;
         event.preventDefault();
@@ -317,7 +400,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (previous) {
           const [previousId, previousItem] = previous;
           const expired = Date.now() - previousItem.created_at >= 30000;
-          const changed = previousItem.text !== text;
+          const changed = (previousItem.original_text || previousItem.text) !== originalText;
           if (!expired && !changed) {
             this.setStatus('이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.');
             return;
@@ -331,7 +414,16 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const id = `outgoing-${Date.now()}-${++this.sequence}`;
         const selected = this.oneShotOriginal ? 'original' : selectedLanguageForChannel(key, this.defaultLanguage);
         this.oneShotOriginal = false;
-        const item = {id, channel_key:key, text, selected_language:selected, recent_messages:recentMessages(), created_at:Date.now()};
+        const item = {
+          id,
+          channel_key:key,
+          text,
+          original_text:originalText,
+          preserve_prefix_mentions:Boolean(mentionPlan),
+          selected_language:selected,
+          recent_messages:recentMessages(),
+          created_at:Date.now(),
+        };
         this.pending.set(id, {...item, editor});
         this.queue.push(item);
         this.setStatus(selected === 'original' ? '원문을 전송합니다.' : '메시지를 번역하고 있습니다.');
@@ -348,13 +440,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           if (!editor?.isConnected || composerText(editor)) return false;
           item.editor = editor;
         } else {
-          if (!editor?.isConnected || composerText(editor) !== item.text) return false;
+          if (!editor?.isConnected || composerText(editor) !== (item.original_text || item.text)) return false;
         }
         editor.focus();
         if (replace) {
+          const range = selectionRangeForItem(editor, item, continuation);
+          if (!range) return false;
           const selection = getSelection();
-          const range = document.createRange();
-          range.selectNodeContents(editor);
           selection.removeAllRanges();
           selection.addRange(range);
         }
@@ -370,7 +462,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const item = this.pending.get(id);
         if (!item) return false;
         const editor = item.editor;
-        if (!editor?.isConnected || composerText(editor) !== item.text) return false;
+        if (!editor?.isConnected || composerText(editor) !== (item.original_text || item.text)) return false;
         const inputs = [...document.querySelectorAll('input[type="file"]')]
           .filter(input => !input.disabled);
         let input = null;
@@ -380,9 +472,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         input ||= inputs.find(candidate => candidate.multiple) || inputs[0] || null;
         if (!input) return false;
         editor.focus();
+        const range = selectionRangeForItem(editor, item, false);
+        if (!range) return false;
         const selection = getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(editor);
         selection.removeAllRanges();
         selection.addRange(range);
         item.attachment_input = input;
@@ -392,11 +484,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const item = this.pending.get(id);
         const editor = item?.editor;
         const input = item?.attachment_input;
-        if (!item || !editor?.isConnected || !input?.isConnected || composerText(editor)) {
-          if (item && editor?.isConnected && !composerText(editor)) {
+        if (!item || !editor?.isConnected || !input?.isConnected || sourceTextForItem(editor, item)) {
+          if (item && editor?.isConnected && !sourceTextForItem(editor, item)) {
             editor.focus();
             document.execCommand('insertText', false, item.text);
-            if (!composerText(editor)) editor.textContent = item.text;
+            if (!item.preserve_prefix_mentions && !composerText(editor)) editor.textContent = item.text;
           }
           return false;
         }
@@ -416,7 +508,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         } catch (error) {
           editor.focus();
           document.execCommand('insertText', false, item.text);
-          if (!composerText(editor)) editor.textContent = item.text;
+          if (!item.preserve_prefix_mentions && !composerText(editor)) editor.textContent = item.text;
           item.attachment_input = null;
           return false;
         }

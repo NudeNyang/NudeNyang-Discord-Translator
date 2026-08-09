@@ -72,3 +72,15 @@ test("sent translations restore the exact typed original instead of translating 
   assert.match(dom, /data-nt-outgoing-original/);
   assert.match(cache, /CREATE TABLE IF NOT EXISTS outgoing_originals/);
 });
+
+test("outgoing translation preserves Discord Slate mention entities", () => {
+  assert.match(outgoing, /const mentionSelector = '\[data-slate-inline="true"\]\[data-slate-void="true"\]\[contenteditable="false"\]'/);
+  assert.match(outgoing, /function prefixMentionPlan\(editor\)/);
+  assert.match(outgoing, /function visibleComposerText\(root\)/);
+  assert.match(outgoing, /preserve_prefix_mentions/);
+  assert.match(outgoing, /item\.original_text \|\| item\.text/);
+  assert.match(outgoing, /selectionRangeForItem\(editor, item, continuation\)/);
+  assert.match(outgoing, /if \(mentionPlan && !mentionPlan\.supported\) return/);
+  assert.match(outgoing, /function hasActiveAutocomplete\(editor\)/);
+  assert.match(outgoing, /if \(hasActiveAutocomplete\(editor\)\) return/);
+});
