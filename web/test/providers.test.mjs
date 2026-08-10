@@ -74,15 +74,17 @@ test("subscription sign-ins stay inside the app while official browser flows run
   assert.doesNotMatch(subscriptionCli, /'codex login'|'claude auth login'|터미널에서/);
 });
 
-test("DeepL API keys are replaced through the main save action", () => {
+test("DeepL API keys are applied when editing finishes and before confirmation", () => {
   const deeplRow = markup.match(/<article class="provider-row" data-provider="deepl">[\s\S]*?<\/article>/)?.[0] || "";
   assert.match(deeplRow, /provider-secret/);
   assert.match(deeplRow, /provider-disconnect/);
   assert.doesNotMatch(deeplRow, /provider-action/);
   assert.match(script, /async function savePendingProviderCredentials/);
 
-  const saveHandler = script.match(/elements\.form\.addEventListener\("submit"[\s\S]*?\n\}\);/)?.[0] || "";
-  assert.ok(saveHandler.indexOf("savePendingProviderCredentials") < saveHandler.indexOf("EXTERNAL_PROVIDERS"));
+  assert.match(script, /for \(const secret of document\.querySelectorAll\("\.provider-secret"\)\) \{[\s\S]*secret\.addEventListener\("change"/);
+  const confirmHandler = script.match(/elements\.form\.addEventListener\("submit"[\s\S]*?\n\}\);/)?.[0] || "";
+  assert.match(confirmHandler, /savePendingProviderCredentials/);
+  assert.match(confirmHandler, /main_window_hide/);
   assert.match(providers, /API 키가 운영체제 보안 저장소에 저장되어 있습니다/);
 });
 

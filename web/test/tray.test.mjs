@@ -17,12 +17,13 @@ const tauriConfig = JSON.parse(
   await readFile(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
 );
 
-test("saving settings hides the main window only after a successful update", () => {
-  const updatePosition = appScript.indexOf('invoke("settings_update"');
-  const hidePosition = appScript.indexOf('invoke("main_window_hide")');
+test("confirming waits for real-time settings work before hiding the window", () => {
+  const confirmHandler = appScript.match(/elements\.form\.addEventListener\("submit"[\s\S]*?\n\}\);/)?.[0] || "";
+  const waitPosition = confirmHandler.indexOf("waitForSettingsUpdates");
+  const hidePosition = confirmHandler.indexOf('invoke("main_window_hide")');
 
-  assert.ok(updatePosition >= 0);
-  assert.ok(hidePosition > updatePosition);
+  assert.ok(waitPosition >= 0);
+  assert.ok(hidePosition > waitPosition);
 });
 
 test("custom tray menu exposes the expected actions and current app palette", () => {

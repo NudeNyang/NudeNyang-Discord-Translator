@@ -9,6 +9,7 @@ const tauriConfig = readFileSync(new URL("../../src-tauri/tauri.conf.json", impo
 const packageManifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
 const cargoManifest = readFileSync(new URL("../../src-tauri/Cargo.toml", import.meta.url), "utf8");
 const installerHooks = readFileSync(new URL("../../src-tauri/windows/hooks.nsh", import.meta.url), "utf8");
+const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
 test("the user-facing product name is NudeNyang Translator", () => {
   assert.match(markup, /NudeNyang Translator/);
@@ -52,6 +53,18 @@ test("settings can be reverted and native window chrome follows the selected the
   assert.match(rustMain, /DWMWA_BORDER_COLOR/);
 });
 
+test("settings apply immediately and the primary footer action only confirms", () => {
+  assert.match(markup, /<button class="button primary" id="confirm" type="submit">확인<\/button>/);
+  assert.doesNotMatch(markup, /type="submit">저장<\/button>/);
+  assert.match(markup, /변경 사항은 즉시 적용됩니다/);
+  assert.match(script, /async function applySettingsPatch\(patch/);
+  assert.match(script, /applySettingsPatch\(\{ \[field\]: value \}\)/);
+  assert.match(script, /outgoing_confirm_language: enabled/);
+  assert.match(script, /keep_local_model_warm: enabled/);
+  assert.match(script, /scheduleCaptureFpsUpdate/);
+  assert.match(script, /applyShortcutImmediately/);
+});
+
 test("outgoing translation and its first-use confirmation are grouped together", () => {
   assert.match(markup, /<h3>보내는 메시지 번역<\/h3>/);
   assert.match(markup, /id="outgoing-translation"/);
@@ -88,7 +101,11 @@ test("the incoming shortcut toggles the native engine without waiting for the se
 
 test("footer action labels stay on one line", () => {
   assert.match(markup, /id="cancel"[^>]*>되돌리기<\/button>/);
-  assert.match(readFileSync(new URL("../app.css", import.meta.url), "utf8"), /\.footer-actions \.button[\s\S]*white-space:\s*nowrap/);
+  assert.match(styles, /\.footer-actions \.button[\s\S]*white-space:\s*nowrap/);
+  assert.match(styles, /\.form-footer\s*\{[\s\S]*position:\s*sticky[\s\S]*bottom:\s*0/);
+  assert.match(styles, /\.form-footer\s*\{[\s\S]*min-height:\s*68px/);
+  assert.match(styles, /grid-template-areas:\s*"update"\s*"workspace"\s*"footer"/);
+  assert.match(styles, /\.settings-workspace\s*\{\s*grid-area:\s*workspace/);
 });
 
 test("friends can reveal one privacy-safe diagnostic log file", () => {

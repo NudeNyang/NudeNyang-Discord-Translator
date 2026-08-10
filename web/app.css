@@ -117,6 +117,7 @@ input:focus-visible,
 }
 
 .settings-workspace {
+  grid-area: workspace;
   display: grid;
   grid-template-columns: 168px minmax(0, 1fr);
   gap: 18px;
@@ -245,10 +246,15 @@ input:focus-visible,
 
 #settings-form {
   display: grid;
+  grid-template-areas:
+    "update"
+    "workspace"
+    "footer";
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .update-banner {
+  grid-area: update;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -1044,10 +1050,15 @@ input:focus-visible,
 }
 
 .form-footer {
+  grid-area: footer;
+  position: sticky;
+  z-index: 12;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 68px;
   padding: 14px 2px 16px;
   background: var(--bg);
 }

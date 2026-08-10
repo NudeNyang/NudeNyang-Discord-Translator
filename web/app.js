@@ -88,6 +88,10 @@ const state = {
   updatePromptedVersion: "",
   updateInstalling: false,
   settingsScrollTimer: 0,
+  captureFpsTimer: 0,
+  settingsApplyRevision: 0,
+  settingsUpdatesPending: 0,
+  settingsUpdateQueue: Promise.resolve(),
   pendingEnabled: null,
   toggleActive: false,
   outgoingToggleActive: false,
@@ -656,15 +660,33 @@ function renderSelect(element) {
     option.dataset.value = value;
     option.textContent = translateCopy(currentUiLanguage(), label);
     option.setAttribute("role", "option");
-    option.addEventListener("click", () => {
+    option.addEventListener("click", async () => {
+      const previous = state.selectValues[field];
+      if (previous === value) {
+        closeSelect(element);
+        trigger.focus();
+        return;
+      }
       setSelectValue(field, value);
       closeSelect(element);
       trigger.focus();
       if (field === "ui_theme") applyTheme(value);
       if (field === "ui_language") applyUiLanguage(value);
-      if (field === "translator" && EXTERNAL_PROVIDERS.has(value) && !providerIsConnected(value)) {
-        setLocalizedText(elements.saveStatus, "선택한 외부 번역 서비스를 먼저 연결하십시오.");
-        revealProviderConnection(value);
+      try {
+        if (field === "translator" && EXTERNAL_PROVIDERS.has(value) && !providerIsConnected(value)) {
+          if (value === "deepl") await savePendingProviderCredentials();
+          if (!providerIsConnected(value)) {
+            setLocalizedText(elements.saveStatus, "선택한 외부 번역 서비스를 먼저 연결하십시오.");
+            revealProviderConnection(value);
+            throw new Error("선택한 외부 번역 서비스를 먼저 연결하십시오.");
+          }
+        }
+        await applySettingsPatch({ [field]: value });
+      } catch (error) {
+        setSelectValue(field, previous);
+        if (field === "ui_theme") applyTheme(previous);
+        if (field === "ui_language") applyUiLanguage(previous);
+        await showError("설정을 적용하지 못했습니다", String(error));
       }
     });
     menu.append(option);
@@ -715,9 +737,9 @@ function closeAllSelects() {
   document.querySelectorAll(".custom-select.open").forEach(closeSelect);
 }
 
-function renderConfig(config) {
+function renderConfig(config, { updateBaseline = false } = {}) {
   state.config = normalizeConfig(config);
-  state.saved = normalizeConfig(config);
+  if (updateBaseline) state.saved = normalizeConfig(config);
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   setSwitch(
@@ -740,26 +762,60 @@ function renderConfig(config) {
   applyUiLanguage(state.config.ui_language);
 }
 
-function collectPatch() {
-  return {
-    target_language: state.selectValues.target_language,
-    translator: state.selectValues.translator,
-    speech_style: state.selectValues.speech_style,
-    hymt_device: state.selectValues.hymt_device,
-    ui_theme: state.selectValues.ui_theme,
-    ui_language: state.selectValues.ui_language,
-    outgoing_translation_enabled:
-      elements.outgoingTranslation.getAttribute("aria-checked") === "true",
-    outgoing_target_language: state.selectValues.outgoing_target_language,
-    outgoing_confirm_language:
-      elements.outgoingConfirmLanguage.getAttribute("aria-checked") === "true",
-    keep_local_model_warm: elements.keepWarm.getAttribute("aria-checked") === "true",
-    capture_fps: Math.max(2, Math.min(20, Number(elements.captureFps.value) || 8)),
-    hotkeys: {
-      toggle_translation: elements.shortcut.value.trim() || "F12",
-      toggle_outgoing_translation: elements.outgoingShortcut.value.trim() || "F8",
-    },
-  };
+async function applySettingsPatch(patch, { status = true } = {}) {
+  const revision = ++state.settingsApplyRevision;
+  state.settingsUpdatesPending += 1;
+  if (status) setLocalizedText(elements.saveStatus, "적용 중");
+  const update = state.settingsUpdateQueue.then(() => invoke("settings_update", { patch }));
+  state.settingsUpdateQueue = update.then(() => undefined, () => undefined);
+  try {
+    const updated = normalizeConfig(await update);
+    state.config = updated;
+    if (revision === state.settingsApplyRevision) {
+      renderConfig(updated);
+      if (status) setLocalizedText(elements.saveStatus, "적용되었습니다.");
+    }
+    return updated;
+  } catch (error) {
+    if (revision === state.settingsApplyRevision) {
+      const current = await invoke("settings_get").catch(() => null);
+      if (current) renderConfig(current);
+    }
+    throw error;
+  } finally {
+    state.settingsUpdatesPending = Math.max(0, state.settingsUpdatesPending - 1);
+  }
+}
+
+function captureFpsValue() {
+  const value = Math.max(2, Math.min(20, Number(elements.captureFps.value) || 8));
+  elements.captureFps.value = String(value);
+  return value;
+}
+
+async function applyCaptureFps() {
+  window.clearTimeout(state.captureFpsTimer);
+  state.captureFpsTimer = 0;
+  const value = captureFpsValue();
+  if (value === state.config.capture_fps) return;
+  try {
+    await applySettingsPatch({ capture_fps: value });
+  } catch (error) {
+    elements.captureFps.value = String(state.config.capture_fps);
+    await showError("화면 확인 빈도를 적용하지 못했습니다", String(error));
+  }
+}
+
+function scheduleCaptureFpsUpdate() {
+  window.clearTimeout(state.captureFpsTimer);
+  state.captureFpsTimer = window.setTimeout(() => {
+    applyCaptureFps();
+  }, 180);
+}
+
+async function waitForSettingsUpdates() {
+  if (state.captureFpsTimer) await applyCaptureFps();
+  await state.settingsUpdateQueue;
 }
 
 async function ensureRestartConsent() {
@@ -776,7 +832,6 @@ async function ensureRestartConsent() {
       patch: { discord_auto_restart_consent_granted: true },
     }),
   );
-  state.saved = normalizeConfig(state.config);
   return true;
 }
 
@@ -818,11 +873,12 @@ async function setOutgoingTranslationEnabled(enabled) {
   state.config.outgoing_translation_enabled = enabled;
   setSwitch(elements.outgoingTranslation, enabled, "켜짐", "꺼짐");
   try {
-    const updated = await invoke("settings_update", {
-      patch: { outgoing_translation_enabled: enabled },
-    });
+    const updated = await applySettingsPatch(
+      { outgoing_translation_enabled: enabled },
+      { status: false },
+    );
     state.config = normalizeConfig(updated);
-    state.saved = normalizeConfig(updated);
+    setLocalizedText(elements.saveStatus, "적용되었습니다.");
   } catch (error) {
     state.config.outgoing_translation_enabled = previous;
     setSwitch(elements.outgoingTranslation, previous, "켜짐", "꺼짐");
@@ -1005,8 +1061,8 @@ async function showError(title, message) {
 async function loadSettings() {
   try {
     const config = await invoke("settings_get");
-    renderConfig(config);
-    setLocalizedText(elements.saveStatus, "설정은 이 PC에만 저장됩니다.");
+    renderConfig(config, { updateBaseline: true });
+    setLocalizedText(elements.saveStatus, "변경 사항은 즉시 적용됩니다.");
   } catch (error) {
     elements.saveStatus.textContent = String(error);
     elements.engineState.dataset.state = "error";
@@ -1030,20 +1086,48 @@ elements.outgoingTranslation.addEventListener("click", async () => {
 elements.outgoingConfirmLanguage.addEventListener("click", () => {
   const enabled = elements.outgoingConfirmLanguage.getAttribute("aria-checked") !== "true";
   setSwitch(elements.outgoingConfirmLanguage, enabled, "사용", "사용 안 함");
+  applySettingsPatch({ outgoing_confirm_language: enabled }).catch(async error => {
+    setSwitch(elements.outgoingConfirmLanguage, !enabled, "사용", "사용 안 함");
+    await showError("채널별 첫 감지 확인 설정을 적용하지 못했습니다", String(error));
+  });
 });
 elements.keepWarm.addEventListener("click", () => {
   const enabled = elements.keepWarm.getAttribute("aria-checked") !== "true";
   setSwitch(elements.keepWarm, enabled, "유지", "반환");
+  applySettingsPatch({ keep_local_model_warm: enabled }).catch(async error => {
+    setSwitch(elements.keepWarm, !enabled, "유지", "반환");
+    await showError("로컬 모델 예열 설정을 적용하지 못했습니다", String(error));
+  });
 });
 elements.captureFps.addEventListener("wheel", event => event.preventDefault(), { passive: false });
+elements.captureFps.addEventListener("input", scheduleCaptureFpsUpdate);
+elements.captureFps.addEventListener("change", applyCaptureFps);
+
+async function applyShortcutImmediately(element, configKey, shortcut, help, fallback) {
+  const previous = state.config.hotkeys[configKey] || fallback;
+  const hotkeys = {
+    toggle_translation: elements.shortcut.value.trim() || "F12",
+    toggle_outgoing_translation: elements.outgoingShortcut.value.trim() || "F8",
+    [configKey]: shortcut,
+  };
+  try {
+    await applySettingsPatch({ hotkeys });
+    help.textContent = `${shortcut}로 적용되었습니다.`;
+  } catch (error) {
+    element.value = previous;
+    help.textContent = "단축키를 적용하지 못했습니다.";
+    await showError("단축키를 적용하지 못했습니다", String(error));
+  }
+}
+
 function bindShortcutEditor(element, configKey, helpId, fallback) {
   const help = document.querySelector(`#${helpId}`);
-  element.addEventListener("keydown", event => {
+  element.addEventListener("keydown", async event => {
     if (event.key === "Tab") return;
     event.preventDefault();
     event.stopPropagation();
     if (event.key === "Escape") {
-      element.value = state.saved.hotkeys[configKey] || fallback;
+      element.value = state.config.hotkeys[configKey] || fallback;
       element.blur();
       return;
     }
@@ -1053,7 +1137,8 @@ function bindShortcutEditor(element, configKey, helpId, fallback) {
       return;
     }
     element.value = shortcut;
-    help.textContent = `${shortcut}로 변경됩니다. 저장을 선택하여 적용하십시오.`;
+    help.textContent = `${shortcut} 적용 중`;
+    await applyShortcutImmediately(element, configKey, shortcut, help, fallback);
   });
   element.addEventListener("focus", () => {
     help.textContent = "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.";
@@ -1097,6 +1182,13 @@ for (const row of elements.providerRows) {
     disconnectProvider(row).catch(error => showError("연결을 해제하지 못했습니다", String(error)));
   });
 }
+for (const secret of document.querySelectorAll(".provider-secret")) {
+  secret.addEventListener("change", () => {
+    savePendingProviderCredentials()
+      .then(() => setLocalizedText(elements.saveStatus, "적용되었습니다."))
+      .catch(error => showError("API 키를 적용하지 못했습니다", String(error)));
+  });
+}
 elements.checkUpdate.addEventListener("click", () => {
   checkForUpdates(false).catch(error => showError("업데이트를 확인하지 못했습니다", String(error)));
 });
@@ -1115,23 +1207,29 @@ elements.settingsScroll.addEventListener("scroll", () => {
     550,
   );
 }, { passive: true });
-elements.cancel.addEventListener("click", () => {
-  renderConfig(state.saved);
-  document.querySelectorAll(".provider-secret").forEach(secret => { secret.value = ""; });
+elements.cancel.addEventListener("click", async () => {
+  try {
+    await waitForSettingsUpdates();
+    setLocalizedText(elements.saveStatus, "되돌리는 중");
+    const restored = await applySettingsPatch(state.saved, { status: false });
+    renderConfig(restored);
+    document.querySelectorAll(".provider-secret").forEach(secret => { secret.value = ""; });
+    setLocalizedText(elements.saveStatus, "변경 사항을 되돌렸습니다.");
+  } catch (error) {
+    await showError("설정을 되돌리지 못했습니다", String(error));
+  }
 });
 elements.form.addEventListener("submit", async event => {
   event.preventDefault();
   try {
+    await waitForSettingsUpdates();
     await savePendingProviderCredentials();
     const translator = state.selectValues.translator;
     if (EXTERNAL_PROVIDERS.has(translator) && !providerIsConnected(translator)) {
       revealProviderConnection(translator);
       throw new Error("선택한 외부 번역 서비스를 먼저 연결하십시오.");
     }
-    setLocalizedText(elements.saveStatus, "저장 중");
-    const updated = await invoke("settings_update", { patch: collectPatch() });
-    renderConfig(updated);
-    setLocalizedText(elements.saveStatus, "저장되었습니다.");
+    state.saved = normalizeConfig(state.config);
     await invoke("main_window_hide");
   } catch (error) {
     elements.saveStatus.textContent = String(error);
@@ -1145,7 +1243,9 @@ if (tauriListen) {
     state.runtime = event.payload;
     updateEngineState(event.payload);
   });
-  tauriListen("settings-changed", event => renderConfig(event.payload));
+  tauriListen("settings-changed", event => {
+    if (state.settingsUpdatesPending === 0) renderConfig(event.payload);
+  });
   tauriListen("provider-connections-changed", loadProviderConnections);
   tauriListen("request-update-install", () => {
     installAvailableUpdate().catch(error => showError("업데이트를 설치하지 못했습니다", String(error)));
