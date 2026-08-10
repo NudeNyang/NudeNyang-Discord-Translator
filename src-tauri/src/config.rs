@@ -36,6 +36,8 @@ impl Default for RegionConfig {
 pub struct HotkeyConfig {
     pub toggle_translation: String,
     pub toggle_outgoing_translation: String,
+    pub send_outgoing_immediately: String,
+    pub review_outgoing_before_send: String,
     pub toggle_original: String,
     pub hide_overlay: String,
     pub copy_current: String,
@@ -46,6 +48,8 @@ impl Default for HotkeyConfig {
         Self {
             toggle_translation: "F12".to_string(),
             toggle_outgoing_translation: "F8".to_string(),
+            send_outgoing_immediately: "Ctrl+Enter".to_string(),
+            review_outgoing_before_send: "Alt+Enter".to_string(),
             toggle_original: "Ctrl+Alt+O".to_string(),
             hide_overlay: "Ctrl+Alt+H".to_string(),
             copy_current: "Ctrl+Alt+C".to_string(),
@@ -60,7 +64,7 @@ pub struct AppConfig {
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
-    pub outgoing_confirm_language: bool,
+    pub outgoing_confirm_send: bool,
     pub show_original: bool,
     pub theme: String,
     pub ui_theme: String,
@@ -74,6 +78,7 @@ pub struct AppConfig {
     pub change_threshold: f64,
     pub ocr_device: String,
     pub translator: String,
+    pub outgoing_translator: String,
     pub disabled_providers: Vec<String>,
     pub hymt_device: String,
     pub keep_local_model_warm: bool,
@@ -92,7 +97,7 @@ impl Default for AppConfig {
             enabled: true,
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
-            outgoing_confirm_language: true,
+            outgoing_confirm_send: true,
             show_original: false,
             theme: "auto".to_string(),
             ui_theme: "system".to_string(),
@@ -106,6 +111,7 @@ impl Default for AppConfig {
             change_threshold: 0.015,
             ocr_device: "auto".to_string(),
             translator: "hymt_1_8b".to_string(),
+            outgoing_translator: "hymt_1_8b".to_string(),
             disabled_providers: Vec::new(),
             hymt_device: "auto".to_string(),
             keep_local_model_warm: true,
@@ -134,6 +140,41 @@ impl AppConfig {
                 "translator".to_string(),
                 Value::String("hymt_1_8b".to_string()),
             );
+        }
+        if !object.contains_key("outgoing_translator") {
+            let translator = object
+                .get("translator")
+                .and_then(Value::as_str)
+                .unwrap_or("hymt_1_8b")
+                .to_string();
+            object.insert("outgoing_translator".to_string(), Value::String(translator));
+        }
+        if object
+            .get("outgoing_translator")
+            .and_then(Value::as_str)
+            .is_some_and(|value| matches!(value, "kanana" | "original"))
+        {
+            object.insert(
+                "outgoing_translator".to_string(),
+                Value::String("hymt_1_8b".to_string()),
+            );
+        }
+        let display_local = object
+            .get("translator")
+            .and_then(Value::as_str)
+            .filter(|value| is_local_translator(value))
+            .map(str::to_string);
+        let outgoing_local = object
+            .get("outgoing_translator")
+            .and_then(Value::as_str)
+            .filter(|value| is_local_translator(value));
+        if let (Some(display_local), Some(outgoing_local)) = (display_local, outgoing_local) {
+            if display_local != outgoing_local {
+                object.insert(
+                    "outgoing_translator".to_string(),
+                    Value::String(display_local),
+                );
+            }
         }
         object.remove("kanana_device");
         object.remove("kanana_precision");
@@ -200,12 +241,39 @@ impl AppConfig {
             .map_err(|error| format!("설정 파일을 읽지 못했습니다: {error}"))
     }
 
-    pub fn patched(&self, patch: Value) -> Result<Self, String> {
+    pub fn patched(&self, mut patch: Value) -> Result<Self, String> {
+        if let Some(patch) = patch.as_object_mut() {
+            let display_selection = patch
+                .get("translator")
+                .and_then(Value::as_str)
+                .filter(|value| is_local_translator(value))
+                .map(str::to_string);
+            let outgoing_selection = patch
+                .get("outgoing_translator")
+                .and_then(Value::as_str)
+                .filter(|value| is_local_translator(value))
+                .map(str::to_string);
+            if let Some(selected) = display_selection {
+                if is_local_translator(&self.outgoing_translator)
+                    && !patch.contains_key("outgoing_translator")
+                {
+                    patch.insert("outgoing_translator".to_string(), Value::String(selected));
+                }
+            } else if let Some(selected) = outgoing_selection {
+                if is_local_translator(&self.translator) && !patch.contains_key("translator") {
+                    patch.insert("translator".to_string(), Value::String(selected));
+                }
+            }
+        }
         let mut current = serde_json::to_value(self)
             .map_err(|error| format!("현재 설정을 변환하지 못했습니다: {error}"))?;
         merge_patch(&mut current, &patch);
         Self::from_value(current)
     }
+}
+
+fn is_local_translator(value: &str) -> bool {
+    matches!(value, "hymt_1_8b" | "hymt_7b")
 }
 
 pub struct ConfigStore {
@@ -368,6 +436,7 @@ mod tests {
 
         assert!(!restored.enabled);
         assert_eq!(restored.translator, "hymt_1_8b");
+        assert_eq!(restored.outgoing_translator, "hymt_1_8b");
         assert_eq!(restored.update_repository, "NudeNyang/NudeNyang-Translator");
         assert_eq!(restored.speech_style, "auto");
         assert_eq!(restored.ui_theme, "system");
@@ -375,9 +444,11 @@ mod tests {
         assert!(restored.keep_local_model_warm);
         assert!(!restored.outgoing_translation_enabled);
         assert_eq!(restored.outgoing_target_language, "auto");
-        assert!(restored.outgoing_confirm_language);
+        assert!(restored.outgoing_confirm_send);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
         assert_eq!(restored.hotkeys.toggle_outgoing_translation, "F8");
+        assert_eq!(restored.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
+        assert_eq!(restored.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert!(restored.disabled_providers.is_empty());
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
@@ -412,6 +483,8 @@ mod tests {
 
         assert_eq!(updated.hotkeys.toggle_translation, "Ctrl+Alt+T");
         assert_eq!(updated.hotkeys.toggle_outgoing_translation, "F8");
+        assert_eq!(updated.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
+        assert_eq!(updated.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert_eq!(updated.hotkeys.toggle_original, "Ctrl+Alt+O");
         assert!(!updated.keep_local_model_warm);
         let restored = ConfigStore::load(path.clone())
@@ -430,5 +503,21 @@ mod tests {
             .expect("patch config");
         assert_eq!(updated.capture_fps, 20);
         assert_eq!(updated.target_language, "ko");
+    }
+
+    #[test]
+    fn local_model_selection_is_shared_between_translation_roles() {
+        let config = AppConfig::default();
+        let outgoing = config
+            .patched(json!({"outgoing_translator": "hymt_7b"}))
+            .expect("select outgoing local model");
+        assert_eq!(outgoing.translator, "hymt_7b");
+        assert_eq!(outgoing.outgoing_translator, "hymt_7b");
+
+        let display = outgoing
+            .patched(json!({"translator": "hymt_1_8b"}))
+            .expect("select display local model");
+        assert_eq!(display.translator, "hymt_1_8b");
+        assert_eq!(display.outgoing_translator, "hymt_1_8b");
     }
 }

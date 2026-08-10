@@ -59,34 +59,64 @@ test("settings apply immediately and the primary footer action only confirms", (
   assert.match(markup, /변경 사항은 즉시 적용됩니다/);
   assert.match(script, /async function applySettingsPatch\(patch/);
   assert.match(script, /applySettingsPatch\(\{ \[field\]: value \}\)/);
-  assert.match(script, /outgoing_confirm_language: enabled/);
+  assert.doesNotMatch(script, /outgoing_confirm_language/);
+  assert.match(script, /outgoing_confirm_send: enabled/);
+  assert.match(
+    script,
+    /function renderConfig[\s\S]*?elements\.outgoingConfirmSend[\s\S]*?state\.config\.outgoing_confirm_send[\s\S]*?async function applySettingsPatch/,
+  );
   assert.match(script, /keep_local_model_warm: enabled/);
   assert.match(script, /scheduleCaptureFpsUpdate/);
   assert.match(script, /applyShortcutImmediately/);
 });
 
-test("outgoing translation and its first-use confirmation are grouped together", () => {
-  assert.match(markup, /<h3>보내는 메시지 번역<\/h3>/);
+test("outgoing interpretation asks only when automatic language detection is uncertain", () => {
+  assert.match(markup, /<h3>전송 메시지 통역<\/h3>/);
   assert.match(markup, /id="outgoing-translation"/);
   assert.match(markup, /<h3>기본 전송 언어<\/h3>/);
   assert.match(markup, /data-field="outgoing_target_language"/);
-  assert.match(markup, /<h3>채널별 첫 감지 확인<\/h3>/);
-  assert.match(markup, /id="outgoing-confirm-language"/);
-  assert.match(markup, /채널별로 처음 사용할 때 한 번만 확인합니다/);
+  assert.doesNotMatch(markup, /채널별 첫 감지 확인/);
+  assert.doesNotMatch(markup, /id="outgoing-confirm-language"/);
+  assert.match(markup, /<h3>전송 전 확인<\/h3>/);
+  assert.match(markup, /id="outgoing-confirm-send"/);
+  assert.match(markup, /켜면 번역문을 입력창에 남겨 확인하거나 수정할 수 있습니다/);
+  assert.doesNotMatch(markup, /<div class="privacy-note"><strong>자동 감지<\/strong>/);
+  assert.match(markup, /id="outgoing-auto-help"/);
+  assert.match(markup, /언어를 판단하기 어려울 때만 전송 언어를 확인합니다/);
   assert.match(script, /outgoing_translation_enabled/);
   assert.match(script, /outgoing_target_language/);
-  assert.match(script, /outgoing_confirm_language/);
+  assert.match(
+    script,
+    /elements\.outgoingAutoHelp\.hidden = state\.config\.outgoing_target_language !== "auto"/,
+  );
+  assert.doesNotMatch(script, /outgoing_confirm_language/);
+  assert.match(script, /outgoing_confirm_send/);
 });
 
-test("convenience panel exposes separate incoming and outgoing shortcuts", () => {
+test("display translation and real-time interpretation choose models independently", () => {
+  assert.match(markup, /<h3>표시 언어 번역 모델<\/h3>/);
+  assert.match(markup, /data-field="translator"/);
+  assert.match(markup, /<h3>실시간 통역 모델<\/h3>/);
+  assert.match(markup, /data-field="outgoing_translator"/);
+  assert.match(markup, /1\.8B와 7B 중 하나의 로컬 모델만 사용합니다/);
+  assert.match(script, /outgoing_translator: TRANSLATOR_OPTIONS/);
+});
+
+test("convenience panel exposes global toggles and editable composer shortcuts", () => {
   assert.match(markup, /<h3>Language<\/h3>/);
   assert.match(script, /\["auto", "Auto\(System\)"\]/);
   assert.match(markup, /data-field="ui_language"/);
   assert.match(markup, /id="toggle-shortcut"/);
   assert.match(markup, /id="toggle-outgoing-shortcut"/);
+  assert.match(markup, /id="send-immediately-shortcut"/);
+  assert.match(markup, /id="review-before-send-shortcut"/);
   assert.match(markup, /<h3>실시간 번역 켜기·끄기<\/h3>/);
-  assert.match(markup, /<h3>보내는 메시지 번역 켜기·끄기<\/h3>/);
+  assert.match(markup, /<h3>전송 메시지 통역 켜기·끄기<\/h3>/);
+  assert.match(markup, /<h3>즉시 전송<\/h3>/);
+  assert.match(markup, /<h3>항상 첨삭<\/h3>/);
   assert.match(script, /toggle_outgoing_translation/);
+  assert.match(script, /send_outgoing_immediately/);
+  assert.match(script, /review_outgoing_before_send/);
   assert.match(script, /request-outgoing-translation-toggle/);
 });
 

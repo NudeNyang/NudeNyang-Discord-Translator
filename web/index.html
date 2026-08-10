@@ -78,16 +78,19 @@
                       <div><h3>보내는 메시지</h3><p>입력한 메시지를 번역한 후 전송합니다.</p></div>
                     </div>
                     <div class="setting-row compact-row">
-                      <div class="setting-copy"><h3>보내는 메시지 번역</h3><p>최근 대화 언어를 기준으로 번역합니다.</p></div>
+                      <div class="setting-copy"><h3>전송 메시지 통역</h3><p>최근 대화 언어를 기준으로 번역합니다.</p></div>
                       <button class="switch" id="outgoing-translation" type="button" role="switch" aria-checked="false"><span></span><b>꺼짐</b></button>
                     </div>
                     <div class="setting-row compact-row">
                       <div class="setting-copy"><h3>기본 전송 언어</h3><p>채널별 선택이 없을 때 적용합니다.</p></div>
-                      <div class="custom-select" data-field="outgoing_target_language"></div>
+                      <div class="select-with-help">
+                        <div class="custom-select" data-field="outgoing_target_language"></div>
+                        <small class="select-help" id="outgoing-auto-help">언어를 판단하기 어려울 때만 전송 언어를 확인합니다.</small>
+                      </div>
                     </div>
                     <div class="setting-row compact-row">
-                      <div class="setting-copy"><h3>채널별 첫 감지 확인</h3><p>자동 감지된 언어를 채널별로 처음 사용할 때 한 번만 확인합니다.</p></div>
-                      <button class="switch" id="outgoing-confirm-language" type="button" role="switch" aria-checked="true"><span></span><b>사용</b></button>
+                      <div class="setting-copy"><h3>전송 전 확인</h3><p>켜면 번역문을 입력창에 남겨 확인하거나 수정할 수 있습니다.</p></div>
+                      <button class="switch" id="outgoing-confirm-send" type="button" role="switch" aria-checked="true"><span></span><b>확인</b></button>
                     </div>
                   </article>
                 </div>
@@ -111,9 +114,14 @@
                 </div>
                 <article class="settings-card">
                   <div class="setting-row compact-row first-row">
-                    <div class="setting-copy"><h3>번역 모델</h3><p>로컬 Hy-MT2, 구독 CLI 또는 외부 API를 선택합니다.</p></div>
+                    <div class="setting-copy"><h3>표시 언어 번역 모델</h3><p>받은 메시지와 이미지에 사용할 모델입니다.</p></div>
                     <div class="custom-select" data-field="translator"></div>
                   </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>실시간 통역 모델</h3><p>내가 입력한 메시지를 번역할 모델입니다.</p></div>
+                    <div class="custom-select" data-field="outgoing_translator"></div>
+                  </div>
+                  <div class="privacy-note"><strong>VRAM 보호</strong><span>1.8B와 7B 중 하나의 로컬 모델만 사용합니다. 한쪽에서 로컬 모델을 바꾸면 다른 쪽의 로컬 선택도 함께 바뀝니다.</span></div>
                 </article>
 
                 <article class="settings-card local-engine-card">
@@ -140,16 +148,16 @@
                   <div class="panel-subheading"><h3 id="connections-heading">번역 서비스 연결</h3><p>구독 계정과 API 연결 상태를 관리합니다.</p></div>
                   <div class="settings-card provider-list">
                     <article class="provider-row" data-provider="chatgpt">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>ChatGPT</h3><p>ChatGPT 구독 · Codex CLI</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>ChatGPT</h3><p>GPT-5.6 Luna · low · 지속 연결</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Codex CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="claude">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">C</span><div><h3>Claude</h3><p>Claude Pro/Max · Claude Code</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">C</span><div><h3>Claude</h3><p>Claude Haiku 4.5 · 지속 연결</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Claude Code와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="gemini">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>Gemini</h3><p>Google 구독 · Gemini CLI</p></div></div>
-                      <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Gemini CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>Gemini</h3><p>Gemini 3.6 Flash · low · 지속 세션</p></div></div>
+                      <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Antigravity CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="deepl">
                       <div class="provider-identity"><span class="provider-mark" aria-hidden="true">D</span><div><h3>DeepL</h3><p>API 사용량 과금</p></div></div>
@@ -178,7 +186,7 @@
               </section>
 
               <section class="settings-view" data-settings-view="convenience" aria-labelledby="convenience-heading" hidden>
-                <div class="panel-heading"><h2 id="convenience-heading">편의 기능</h2><p>설정창 테마와 전역 단축키를 관리합니다.</p></div>
+                <div class="panel-heading"><h2 id="convenience-heading">편의 기능</h2><p>설정창 테마와 번역 단축키를 관리합니다.</p></div>
                 <article class="settings-card">
                   <div class="setting-row compact-row">
                     <div class="setting-copy"><h3>Language</h3><p>설정창에 표시할 언어를 선택합니다.</p></div>
@@ -196,8 +204,19 @@
                     <div class="shortcut-editor"><input class="text-field" id="toggle-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="shortcut-help" readonly /><small id="shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
                   </div>
                   <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>보내는 메시지 번역 켜기·끄기</h3><p>입력 메시지의 번역 전송 상태를 전환합니다.</p></div>
+                    <div class="setting-copy"><h3>전송 메시지 통역 켜기·끄기</h3><p>입력 메시지의 번역 전송 상태를 전환합니다.</p></div>
                     <div class="shortcut-editor"><input class="text-field" id="toggle-outgoing-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="outgoing-shortcut-help" readonly /><small id="outgoing-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
+                  </div>
+                </article>
+                <article class="settings-card shortcut-card">
+                  <div class="card-heading"><span class="card-index" aria-hidden="true">↵</span><div><h3>메시지 입력 단축키</h3><p>Discord 메시지 입력창에서 통역 결과의 전송 방식을 선택합니다.</p></div></div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>즉시 전송</h3><p>전송 전 확인 설정과 관계없이 번역 후 바로 전송합니다.</p></div>
+                    <div class="shortcut-editor"><input class="text-field" id="send-immediately-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="send-immediately-shortcut-help" readonly /><small id="send-immediately-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>항상 첨삭</h3><p>자동 전송 상태에서도 번역문을 입력창에 남겨 수정합니다.</p></div>
+                    <div class="shortcut-editor"><input class="text-field" id="review-before-send-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="review-before-send-shortcut-help" readonly /><small id="review-before-send-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
                   </div>
                 </article>
               </section>

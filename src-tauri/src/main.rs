@@ -97,6 +97,14 @@ fn shortcut_changed(current: &str, next: &str) -> bool {
     !current.eq_ignore_ascii_case(next)
 }
 
+fn shortcuts_are_unique(shortcuts: &[&str]) -> bool {
+    shortcuts.iter().enumerate().all(|(index, shortcut)| {
+        shortcuts[index + 1..]
+            .iter()
+            .all(|other| !shortcut.eq_ignore_ascii_case(other))
+    })
+}
+
 impl ShortcutConfig {
     fn binding(&self, action: ShortcutAction) -> &ShortcutBinding {
         match action {
@@ -150,7 +158,7 @@ fn dispatch_shortcut_action(app: &AppHandle, action: ShortcutAction) -> Result<(
         ShortcutAction::Translation => toggle_translation_from_app(app).map(|_| ()),
         ShortcutAction::OutgoingTranslation => app
             .emit(action.event_name(), ())
-            .map_err(|error| format!("보내는 메시지 번역 단축키를 처리하지 못했습니다: {error}")),
+            .map_err(|error| format!("전송 메시지 통역 단축키를 처리하지 못했습니다: {error}")),
     }
 }
 
@@ -411,6 +419,16 @@ fn settings_update(
     config: State<'_, ConfigStore>,
     patch: Value,
 ) -> Result<AppConfig, String> {
+    let previous_config = config.get()?;
+    let preview = previous_config.patched(patch.clone())?;
+    if !shortcuts_are_unique(&[
+        &preview.hotkeys.toggle_translation,
+        &preview.hotkeys.toggle_outgoing_translation,
+        &preview.hotkeys.send_outgoing_immediately,
+        &preview.hotkeys.review_outgoing_before_send,
+    ]) {
+        return Err("편의 기능의 각 동작에는 서로 다른 단축키를 지정하십시오.".to_string());
+    }
     let hotkeys = patch.get("hotkeys");
     let requested_shortcuts = [
         (
@@ -431,7 +449,7 @@ fn settings_update(
     {
         if translation.eq_ignore_ascii_case(outgoing) {
             return Err(
-                "실시간 번역과 보내는 메시지 번역에는 서로 다른 단축키를 지정하십시오.".to_string(),
+                "실시간 번역과 전송 메시지 통역에는 서로 다른 단축키를 지정하십시오.".to_string(),
             );
         }
     }
@@ -449,7 +467,6 @@ fn settings_update(
             }
         }
     }
-    let previous_config = config.get()?;
     let updated = match config.update(patch.clone()) {
         Ok(updated) => updated,
         Err(error) => {
@@ -667,7 +684,7 @@ async fn provider_connect(
             current = config.update(json!({"disabled_providers": disabled_providers}))?;
             let _ = app.emit("settings-changed", current.clone());
         }
-        if current.translator == provider {
+        if current.translator == provider || current.outgoing_translator == provider {
             engine.apply_config(current)?;
         }
     }
@@ -709,6 +726,9 @@ fn provider_disconnect(
     }
     if current.translator == provider {
         patch["translator"] = json!("hymt_1_8b");
+    }
+    if current.outgoing_translator == provider {
+        patch["outgoing_translator"] = json!("hymt_1_8b");
     }
     if patch.as_object().is_some_and(|patch| !patch.is_empty()) {
         let updated = config.update(patch)?;
@@ -1075,6 +1095,7 @@ fn main() {
         .manage(config)
         .manage(engine)
         .setup(|app| {
+            app.state::<RustEngine>().attach_app(app.handle().clone())?;
             create_tray(app)?;
             let handle = app.handle().clone();
             // Windows가 F12를 디버거 용도로 선점한 경우에도 기존 앱과 동일하게
@@ -1166,8 +1187,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        fallback_function_key, shortcut_action_for, shortcut_changed, tray_menu_position,
-        ProviderLoginState, ShortcutAction, ShortcutConfig,
+        fallback_function_key, shortcut_action_for, shortcut_changed, shortcuts_are_unique,
+        tray_menu_position, ProviderLoginState, ShortcutAction, ShortcutConfig,
     };
 
     #[test]
@@ -1187,6 +1208,22 @@ mod tests {
     fn registering_the_same_shortcut_keeps_the_new_registration() {
         assert!(!shortcut_changed("F8", "f8"));
         assert!(shortcut_changed("F8", "Ctrl+F8"));
+    }
+
+    #[test]
+    fn editable_shortcuts_are_case_insensitively_unique() {
+        assert!(shortcuts_are_unique(&[
+            "F12",
+            "F8",
+            "Ctrl+Enter",
+            "Alt+Enter"
+        ]));
+        assert!(!shortcuts_are_unique(&[
+            "F12",
+            "F8",
+            "Ctrl+Enter",
+            "ctrl+enter"
+        ]));
     }
 
     #[test]

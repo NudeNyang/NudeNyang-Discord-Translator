@@ -612,6 +612,19 @@ input:focus-visible,
   min-width: 0;
 }
 
+.select-with-help {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.select-help {
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .select-trigger,
 .text-field,
 .number-field {

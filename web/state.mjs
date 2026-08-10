@@ -2,9 +2,10 @@ export const DEFAULT_CONFIG = Object.freeze({
   enabled: false,
   outgoing_translation_enabled: false,
   outgoing_target_language: "auto",
-  outgoing_confirm_language: true,
+  outgoing_confirm_send: true,
   target_language: "ko",
   translator: "hymt_1_8b",
+  outgoing_translator: "hymt_1_8b",
   speech_style: "auto",
   hymt_device: "auto",
   keep_local_model_warm: true,
@@ -15,6 +16,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   hotkeys: {
     toggle_translation: "F12",
     toggle_outgoing_translation: "F8",
+    send_outgoing_immediately: "Ctrl+Enter",
+    review_outgoing_before_send: "Alt+Enter",
   },
 });
 
@@ -122,9 +125,9 @@ export function discordConnectionLabel(status = {}) {
 const TRANSLATOR_RUNTIME_NAMES = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
-  chatgpt: "ChatGPT",
-  claude: "Claude",
-  gemini: "Gemini",
+  chatgpt: "GPT-5.6 Luna · low",
+  claude: "Claude Haiku 4.5",
+  gemini: "Gemini 3.6 Flash · low",
   deepl: "DeepL",
   mock: "Mock 테스트",
   original: "원문",

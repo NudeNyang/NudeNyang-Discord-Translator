@@ -429,6 +429,52 @@ impl TranslationCache {
         .collect()
     }
 
+    pub fn set_outgoing_channel_language(
+        &self,
+        channel_key: &str,
+        language: &str,
+    ) -> Result<(), String> {
+        if !channel_key.starts_with("/channels/") {
+            return Err("채널별 전송 언어를 저장할 Discord 채널을 찾지 못했습니다.".to_string());
+        }
+        if !matches!(language, "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant") {
+            return Err("채널별 전송 언어 값이 올바르지 않습니다.".to_string());
+        }
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| "채널별 전송 언어 저장소 잠금을 열지 못했습니다.".to_string())?;
+        connection
+            .execute(
+                "INSERT INTO outgoing_channel_languages (channel_key, language, updated_at) \
+                 VALUES (?1, ?2, ?3) \
+                 ON CONFLICT(channel_key) DO UPDATE SET \
+                   language=excluded.language, updated_at=excluded.updated_at",
+                params![channel_key, language, now_seconds()],
+            )
+            .map_err(|error| format!("채널별 전송 언어를 저장하지 못했습니다: {error}"))?;
+        Ok(())
+    }
+
+    pub fn outgoing_channel_languages(&self) -> Result<HashMap<String, String>, String> {
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| "채널별 전송 언어 저장소 잠금을 열지 못했습니다.".to_string())?;
+        let mut statement = connection
+            .prepare("SELECT channel_key, language FROM outgoing_channel_languages")
+            .map_err(|error| format!("채널별 전송 언어 조회를 준비하지 못했습니다: {error}"))?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|error| format!("채널별 전송 언어를 조회하지 못했습니다: {error}"))?;
+        rows.map(|row| {
+            row.map_err(|error| format!("채널별 전송 언어 행을 읽지 못했습니다: {error}"))
+        })
+        .collect()
+    }
+
     fn remember(&self, entry: CacheEntry) -> Result<(), String> {
         self.memory
             .lock()
@@ -460,6 +506,11 @@ fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
                total_parts INTEGER NOT NULL DEFAULT 1,\
                created_at REAL NOT NULL,\
                PRIMARY KEY (channel_key, message_id)\
+             );\
+             CREATE TABLE IF NOT EXISTS outgoing_channel_languages (\
+               channel_key TEXT NOT NULL PRIMARY KEY,\
+               language TEXT NOT NULL,\
+               updated_at REAL NOT NULL\
              );",
         )
         .map_err(|error| format!("번역 캐시 테이블을 만들지 못했습니다: {error}"))?;
@@ -606,6 +657,7 @@ impl<T> OptionalRow<T> for rusqlite::Result<T> {
 #[cfg(test)]
 mod tests {
     use super::{OutgoingOriginalRecord, TranslationCache};
+    use std::collections::HashMap;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -726,6 +778,31 @@ mod tests {
             .unwrap();
 
         assert_eq!(loaded, vec![record]);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn outgoing_channel_languages_survive_reopening_and_remember_auto() {
+        let path = temporary_cache_path("outgoing-channel-language");
+        {
+            let cache = TranslationCache::open(path.clone(), 8).unwrap();
+            cache
+                .set_outgoing_channel_language("/channels/1/2", "ja")
+                .unwrap();
+        }
+
+        let reopened = TranslationCache::open(path.clone(), 8).unwrap();
+        assert_eq!(
+            reopened.outgoing_channel_languages().unwrap(),
+            HashMap::from([("/channels/1/2".to_string(), "ja".to_string())])
+        );
+        reopened
+            .set_outgoing_channel_language("/channels/1/2", "auto")
+            .unwrap();
+        assert_eq!(
+            reopened.outgoing_channel_languages().unwrap(),
+            HashMap::from([("/channels/1/2".to_string(), "auto".to_string())])
+        );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 }

@@ -9,53 +9,63 @@ use crate::language::{detect_explicit_language, Language};
 const OUTGOING_UI_SCRIPT: &str = r####"
 (() => {
   const enabled = __ENABLED__;
+  const displayEnabled = __DISPLAY_ENABLED__;
+  const displayLanguage = __DISPLAY_LANGUAGE__;
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const requestedUiLanguage = __UI_LANGUAGE__;
+  const rememberedChannelLanguages = __CHANNEL_LANGUAGES__;
+  const confirmSend = __CONFIRM_SEND__;
+  const sendImmediatelyShortcut = __SEND_IMMEDIATELY_SHORTCUT__;
+  const reviewBeforeSendShortcut = __REVIEW_BEFORE_SEND_SHORTCUT__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
   const uiLanguage = requestedUiLanguage === 'auto'
     ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 10;
+  const CONTROLLER_VERSION = 28;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
   const copies = {
     ko: {
-      auto:'자동 감지', outgoingLanguage:'전송 언어', selectLanguage:'전송 언어 선택', originalOnce:'이번 메시지만 원문으로 전송',
+      auto:'자동 감지', outgoingLanguage:'전송', selectLanguage:'전송 언어 선택', originalOnce:'이번 메시지만 원문으로 전송',
       nextOriginal:'다음 메시지는 번역하지 않고 전송합니다.', selectLanguageFormal:'전송 언어를 선택하십시오.', sendingOriginal:'원문을 전송합니다.',
       translating:'메시지를 번역하고 있습니다.', detectionFailed:'대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.',
-      recentLanguage:'최근 대화 언어는 다음과 같이 판단됩니다: {language}', useChannel:'{language} · 이 채널에 사용', chooseOther:'다른 언어 선택',
-      sendOriginal:'원문 전송', confirmLanguage:'전송 언어를 확인한 후 메시지를 전송합니다.', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
+      detectedLanguage:'{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.',
+      sendOriginal:'원문 전송', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
       pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', sendingParts:'번역문을 분할 전송하고 있습니다. ({part}/{total})',
-      longAttachment:'번역문이 길어 텍스트 파일로 전송합니다.'
+      longAttachment:'번역문이 길어 텍스트 파일로 전송합니다.', reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.', reviewHint:'번역문을 수정하거나 Enter로 전송하십시오.',
+      realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택'
     },
     en: {
-      auto:'Auto detect', outgoingLanguage:'Outgoing language', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
+      auto:'Auto detect', outgoingLanguage:'Send', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
       nextOriginal:'The next message will be sent without translation.', selectLanguageFormal:'Select an outgoing language.', sendingOriginal:'Sending the original message.',
       translating:'Translating the message.', detectionFailed:'The conversation language could not be determined. Select an outgoing language.',
-      recentLanguage:'The recent conversation appears to be in {language}.', useChannel:'{language} · Use for this channel', chooseOther:'Select another language',
-      sendOriginal:'Send original', confirmLanguage:'Confirm the outgoing language to send the message.', translationFailed:'The message could not be translated. The original message has been preserved.',
+      detectedLanguage:'Detected {language}. You can change it from the outgoing language menu.',
+      sendOriginal:'Send original', translationFailed:'The message could not be translated. The original message has been preserved.',
       pending:'The previous message is still being processed. Try again shortly.', sendingParts:'Sending the translated message in parts. ({part}/{total})',
-      longAttachment:'The translation is long and will be sent as a text file.'
+      longAttachment:'The translation is long and will be sent as a text file.', reviewReady:'Review or edit the translation, then press Enter to send.', reviewHint:'Edit the translation or press Enter to send it.',
+      realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language'
     },
     ja: {
-      auto:'自動検出', outgoingLanguage:'送信言語', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
+      auto:'自動検出', outgoingLanguage:'送信', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
       nextOriginal:'次のメッセージは翻訳せずに送信します。', selectLanguageFormal:'送信言語を選択してください。', sendingOriginal:'原文を送信します。',
       translating:'メッセージを翻訳しています。', detectionFailed:'会話の言語を判定できませんでした。送信言語を選択してください。',
-      recentLanguage:'最近の会話は{language}と判定されました。', useChannel:'{language} · このチャンネルで使用', chooseOther:'別の言語を選択',
-      sendOriginal:'原文を送信', confirmLanguage:'送信言語を確認してからメッセージを送信します。', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
+      detectedLanguage:'{language}と判定しました。送信言語メニューから変更できます。',
+      sendOriginal:'原文を送信', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
       pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', sendingParts:'翻訳文を分割して送信しています。({part}/{total})',
-      longAttachment:'翻訳文が長いため、テキストファイルとして送信します。'
+      longAttachment:'翻訳文が長いため、テキストファイルとして送信します。', reviewReady:'翻訳文を確認・修正し、Enterで送信してください。', reviewHint:'翻訳文を修正するか、Enterで送信してください。',
+      realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択'
     },
     zh: {
-      auto:'自动检测', outgoingLanguage:'发送语言', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
+      auto:'自动检测', outgoingLanguage:'发送', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
       nextOriginal:'下一条消息将不翻译并直接发送。', selectLanguageFormal:'请选择发送语言。', sendingOriginal:'正在发送原文。',
       translating:'正在翻译消息。', detectionFailed:'无法判断对话语言。请选择发送语言。',
-      recentLanguage:'最近的对话被判断为{language}。', useChannel:'{language} · 用于此频道', chooseOther:'选择其他语言',
-      sendOriginal:'发送原文', confirmLanguage:'请确认发送语言后发送消息。', translationFailed:'无法翻译消息。原文已保持不变。',
+      detectedLanguage:'已检测为{language}。可在发送语言菜单中更改。',
+      sendOriginal:'发送原文', translationFailed:'无法翻译消息。原文已保持不变。',
       pending:'上一条消息仍在处理中。请稍后重试。', sendingParts:'正在分段发送译文。({part}/{total})',
-      longAttachment:'译文较长，将以文本文件形式发送。'
+      longAttachment:'译文较长，将以文本文件形式发送。', reviewReady:'请检查或修改译文，然后按 Enter 发送。', reviewHint:'请修改译文或按 Enter 发送。',
+      realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言'
     }
   };
   const languageLabelsByUi = {
@@ -64,35 +74,29 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     ja:{auto:'自動検出',ko:'韓国語',ja:'日本語',en:'英語',zh:'簡体字中国語','zh-Hant':'繁体字中国語'},
     zh:{auto:'自动检测',ko:'韩语',ja:'日语',en:'英语',zh:'简体中文','zh-Hant':'繁体中文'}
   };
+  const compactLanguageLabels = {auto:'AU',ko:'KO',ja:'JP',en:'EN',zh:'CN','zh-Hant':'TW'};
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const formatCopy = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), copy(key));
+  const shortcutFromEvent = event => {
+    const rawKey = String(event.key || '');
+    if (['Control','Alt','Shift','Meta','Tab','Escape'].includes(rawKey)) return '';
+    const namedKeys = {' ':'Space',Spacebar:'Space',Enter:'Enter',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',Home:'Home',End:'End',PageUp:'PageUp',PageDown:'PageDown',Insert:'Insert'};
+    const key = /^F(?:[1-9]|1\d|2[0-4])$/i.test(rawKey) || /^[a-z0-9]$/i.test(rawKey) ? rawKey.toUpperCase() : (namedKeys[rawKey] || '');
+    if (!key) return '';
+    const modifiers = [];
+    if (event.ctrlKey) modifiers.push('Ctrl');
+    if (event.altKey) modifiers.push('Alt');
+    if (event.shiftKey) modifiers.push('Shift');
+    if (event.metaKey) modifiers.push('Super');
+    return [...modifiers,key].join('+');
+  };
+  const sameShortcut = (left, right) => Boolean(left && right && left.toLowerCase() === right.toLowerCase());
   const languageLabels = languageLabelsByUi[uiLanguage] || languageLabelsByUi.en;
-  const storageKey = key => `nude-translator:outgoing-language:${key}`;
-  const confirmedStorageKey = key => `nude-translator:outgoing-confirmed-language:${key}`;
-
   function currentChannelKey() {
     return location.pathname.startsWith('/channels/') ? location.pathname : '';
   }
-  function readStoredLanguage(key, fallbackLanguage) {
-    try { return localStorage.getItem(storageKey(key)) || fallbackLanguage; } catch { return fallbackLanguage; }
-  }
-  function writeStoredLanguage(key, language) {
-    try {
-      if (language === 'auto') localStorage.removeItem(storageKey(key));
-      else localStorage.setItem(storageKey(key), language);
-    } catch {}
-  }
-  function readConfirmedLanguage(key) {
-    try { return localStorage.getItem(confirmedStorageKey(key)) || ''; } catch { return ''; }
-  }
-  function writeConfirmedLanguage(key, language) {
-    try {
-      if (language && language !== 'auto') localStorage.setItem(confirmedStorageKey(key), language);
-    } catch {}
-  }
-  function selectedLanguageForChannel(key, fallbackLanguage) {
-    const selected = readStoredLanguage(key, fallbackLanguage);
-    return selected === 'auto' ? (readConfirmedLanguage(key) || 'auto') : selected;
+  function selectedLanguageForChannel(key, fallbackLanguage, channelLanguages) {
+    return channelLanguages[key] || fallbackLanguage;
   }
   function originalText(root) {
     const originals = window.__nudeTranslatorOriginals;
@@ -138,6 +142,21 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   }
   function composerText(editor) {
     return visibleComposerText(editor).trim();
+  }
+  function selectionCoversComposer(editor) {
+    const selection = getSelection();
+    if (!selection || selection.rangeCount !== 1 || selection.isCollapsed) return false;
+    const selected = selection.getRangeAt(0);
+    const contains = node => node === editor || editor.contains(node);
+    if (!contains(selected.startContainer) || !contains(selected.endContainer)) return false;
+    const normalize = value => value.replace(/\u00a0/g, ' ').replace(/\uFEFF/g, '').trim();
+    const before = document.createRange();
+    before.setStart(editor, 0);
+    before.setEnd(selected.startContainer, selected.startOffset);
+    const after = document.createRange();
+    after.setStart(selected.endContainer, selected.endOffset);
+    after.setEnd(editor, editor.childNodes.length);
+    return Boolean(normalize(selected.toString())) && !normalize(before.toString()) && !normalize(after.toString());
   }
   function translatedTailRange(editor, lastMention) {
     const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
@@ -210,35 +229,45 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (root) return root;
     root = document.createElement('div');
     root.id = ROOT_ID;
-    root.innerHTML = `<button type="button" class="nt-outgoing-trigger" aria-expanded="false"><span>${copy('outgoingLanguage')}</span><b>${copy('auto')}</b><i>⌄</i></button><div class="nt-outgoing-menu" hidden></div><p class="nt-outgoing-status" hidden></p>`;
+    root.innerHTML = `<div class="nt-controls-row"><div class="nt-control-wrap nt-role-control nt-outgoing-control"><button type="button" class="nt-outgoing-trigger" aria-label="${copy('selectLanguage')}" title="${copy('selectLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-outgoing-icon" aria-hidden="true">↑</span><b>${compactLanguageLabels.auto}</b></button><div class="nt-outgoing-menu" hidden></div></div><div class="nt-control-wrap nt-role-control nt-display-control"><button type="button" class="nt-display-trigger" aria-label="${copy('selectDisplayLanguage')}" title="${copy('selectDisplayLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-display-icon" aria-hidden="true">↓</span><b></b></button><div class="nt-display-menu" hidden></div></div></div><p class="nt-outgoing-status" hidden></p>`;
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
-      #${ROOT_ID}{position:fixed;right:18px;bottom:82px;z-index:2147483000;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID}{position:fixed;right:18px;bottom:82px;z-index:2147483000;display:flex;max-width:calc(100vw - 32px);flex-direction:column;align-items:flex-end;gap:6px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} [hidden]{display:none!important}
       #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
-      #${ROOT_ID} .nt-outgoing-trigger{display:flex;align-items:center;gap:7px;min-height:30px;padding:5px 10px;border:1px solid color-mix(in srgb,#5aa8f5 45%,transparent);border-radius:9px;background:var(--background-secondary,#2b2d31);box-shadow:0 3px 10px #0004}
-      #${ROOT_ID} .nt-outgoing-trigger:hover{background:color-mix(in srgb,var(--background-secondary,#2b2d31) 82%,#5aa8f5)}
-      #${ROOT_ID} .nt-outgoing-trigger span{color:var(--text-muted,#949ba4)}
-      #${ROOT_ID} .nt-outgoing-trigger b{font-weight:650}
-      #${ROOT_ID} .nt-outgoing-trigger i{font-style:normal;color:#78b7f5}
-      #${ROOT_ID} .nt-outgoing-menu{position:absolute;right:0;bottom:38px;width:238px;padding:6px;border:1px solid color-mix(in srgb,#5aa8f5 35%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008}
-      #${ROOT_ID} .nt-outgoing-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
-      #${ROOT_ID} .nt-outgoing-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
-      #${ROOT_ID} .nt-outgoing-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
+      #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:5px;max-width:100%}
+      #${ROOT_ID} .nt-control-wrap{position:relative;flex:none}
+      #${ROOT_ID} .nt-outgoing-control{--nt-role-bg:#0f202c;--nt-role-border:#2d4558;--nt-role-text:#f2f7fb;--nt-role-muted:#9bb7cb;--nt-role-accent:#5aa8f5;--nt-icon-bg:#08141d;--nt-icon-text:#76b8fa}
+      #${ROOT_ID} .nt-display-control{--nt-role-bg:#0f202c;--nt-role-border:#2d4558;--nt-role-text:#f2f7fb;--nt-role-muted:#9bb7cb;--nt-role-accent:#d98243;--nt-icon-bg:#2a1d14;--nt-icon-text:#f0a15c}
+      #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{display:flex;width:auto;min-width:56px;min-height:32px;align-items:center;gap:4px;padding:3px 5px;border:1px solid var(--nt-role-border);border-radius:9px;background:var(--nt-role-bg);box-shadow:0 3px 10px #0004;color:var(--nt-role-text);transition:transform 100ms ease,background-color 120ms ease,border-color 120ms ease}
+      #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:color-mix(in srgb,var(--nt-role-accent) 66%,var(--nt-role-border));background:color-mix(in srgb,var(--nt-role-bg) 90%,var(--nt-role-accent))}
+      #${ROOT_ID} .nt-outgoing-trigger:active,#${ROOT_ID} .nt-display-trigger:active{transform:translateY(1px)}
+      #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-role-accent) 58%,transparent);outline-offset:2px}
+      #${ROOT_ID} .nt-role-icon{display:inline-flex;width:20px;height:20px;flex:none;align-items:center;justify-content:center;border:1px solid color-mix(in srgb,var(--nt-role-accent) 50%,var(--nt-role-border));border-radius:50%;background:var(--nt-icon-bg);color:var(--nt-icon-text);font-size:13px;font-weight:750;line-height:1}
+      #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:11px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;padding:6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
+      #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
+      #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
       #${ROOT_ID} .nt-outgoing-menu .nt-divider{height:1px;margin:5px;background:var(--background-modifier-accent,#ffffff14)}
-      #${ROOT_ID} .nt-outgoing-status{max-width:270px;margin:6px 0 0;padding:7px 9px;border-radius:7px;background:var(--background-floating,#111214);box-shadow:0 4px 16px #0008;white-space:pre-line}
+      #${ROOT_ID} .nt-outgoing-status{order:-1;max-width:270px;margin:0 0 6px;padding:7px 9px;border-radius:7px;background:var(--background-floating,#111214);box-shadow:0 4px 16px #0008;white-space:pre-line}
       #${ROOT_ID} .nt-outgoing-status[data-error="true"]{color:#ff9ca3}
     `;
     document.head.append(style);
     document.body.append(root);
     root.querySelector('.nt-outgoing-trigger').addEventListener('click', () => controller.toggleMenu());
     root.querySelector('.nt-outgoing-menu').addEventListener('click', event => controller.onMenu(event));
+    root.querySelector('.nt-display-trigger').addEventListener('click', () => controller.toggleDisplayMenu());
+    root.querySelector('.nt-display-menu').addEventListener('click', event => controller.onDisplayMenu(event));
     return root;
   }
 
   let controller = window[GLOBAL];
   if (controller && (controller.version !== CONTROLLER_VERSION || controller.uiLanguage !== uiLanguage)) {
     if (controller.listener) document.removeEventListener('keydown', controller.listener, true);
+    if (controller.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
+    if (controller.inputListener) document.removeEventListener('input', controller.inputListener, true);
     clearTimeout(controller.statusTimer);
     document.getElementById(ROOT_ID)?.remove();
     document.getElementById(`${ROOT_ID}-style`)?.remove();
@@ -263,6 +292,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       statusTimer: 0,
       root: null,
       defaultLanguage: 'auto',
+      displayEnabled: false,
+      displayLanguage: 'ko',
+      channelLanguages: {},
+      confirmSend: true,
+      sendImmediatelyShortcut: 'Ctrl+Enter',
+      reviewBeforeSendShortcut: 'Alt+Enter',
       setStatus(message, error = false) {
         if (!this.root) return;
         const status = this.root.querySelector('.nt-outgoing-status');
@@ -272,11 +307,48 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         clearTimeout(this.statusTimer);
         if (message) this.statusTimer = setTimeout(() => { status.hidden = true; }, 5000);
       },
+      reposition() {
+        if (!this.root) return;
+        const editors = [...document.querySelectorAll(composerSelector)].filter(editor => {
+          const bounds = editor.getBoundingClientRect();
+          return bounds.width > 120
+            && bounds.height > 24
+            && bounds.top > window.innerHeight * 0.4
+            && bounds.bottom <= window.innerHeight + 1;
+        });
+        const editor = editors.sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top).at(-1);
+        if (!editor) {
+          this.root.style.visibility = 'hidden';
+          return;
+        }
+        const composer = editor.closest('form') || editor.closest('[class*="channelTextArea"]') || editor.parentElement;
+        const composerBounds = composer.getBoundingClientRect();
+        this.root.style.right = `${Math.max(12, window.innerWidth - composerBounds.right)}px`;
+        this.root.style.bottom = `${Math.max(78, window.innerHeight - composerBounds.top + 8)}px`;
+        this.root.style.visibility = '';
+      },
       updateLabel() {
         if (!this.root) return;
         const key = currentChannelKey();
-        const language = readStoredLanguage(key, this.defaultLanguage);
-        this.root.querySelector('.nt-outgoing-trigger b').textContent = languageLabels[language] || languageLabels.auto;
+        const language = selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
+        this.root.querySelector('.nt-outgoing-trigger b').textContent = compactLanguageLabels[language] || compactLanguageLabels.auto;
+        this.root.querySelector('.nt-display-trigger b').textContent = compactLanguageLabels[this.displayLanguage] || compactLanguageLabels.ko;
+        this.root.querySelector('.nt-outgoing-control').hidden = !this.enabled;
+        this.root.querySelector('.nt-display-control').hidden = !this.displayEnabled;
+        this.root.hidden = !this.enabled && !this.displayEnabled;
+      },
+      rememberLanguage(key, language) {
+        if (!key) return;
+        this.channelLanguages[key] = language;
+        this.queue.push({
+          id:`outgoing-language-${Date.now()}-${++this.sequence}`,
+          channel_key:key,
+          text:'',
+          action:'remember-language',
+          selected_language:language,
+          recent_messages:[],
+          send_immediately:false,
+        });
       },
       showLanguageMenu(heading = copy('selectLanguage'), requestId = '') {
         this.manualRequest = requestId;
@@ -292,6 +364,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         divider.className = 'nt-divider';
         menu.append(divider, makeButton(copy('originalOnce'), 'original-once'));
         menu.hidden = false;
+        this.root.querySelector('.nt-display-menu').hidden = true;
+        this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
       },
       toggleMenu() {
@@ -299,12 +373,50 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (menu.hidden) this.showLanguageMenu();
         else { menu.hidden = true; this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false'); }
       },
+      showDisplayLanguageMenu() {
+        const menu = this.root.querySelector('.nt-display-menu');
+        menu.replaceChildren();
+        const title = document.createElement('div');
+        title.className = 'nt-heading';
+        title.textContent = copy('selectDisplayLanguage');
+        menu.append(title);
+        for (const code of ['ko','ja','en','zh','zh-Hant']) {
+          menu.append(makeButton(languageLabels[code], 'display-language', code));
+        }
+        menu.hidden = false;
+        this.root.querySelector('.nt-outgoing-menu').hidden = true;
+        this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
+        this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'true');
+      },
+      toggleDisplayMenu() {
+        const menu = this.root.querySelector('.nt-display-menu');
+        if (menu.hidden) this.showDisplayLanguageMenu();
+        else { menu.hidden = true; this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false'); }
+      },
+      onDisplayMenu(event) {
+        const button = event.target.closest('button[data-action="display-language"]');
+        if (!button) return;
+        this.displayLanguage = button.dataset.value;
+        this.queue.push({
+          id:`display-language-${Date.now()}-${++this.sequence}`,
+          channel_key:currentChannelKey(),
+          text:'',
+          action:'display-language',
+          selected_language:this.displayLanguage,
+          recent_messages:[],
+          send_immediately:false,
+        });
+        const menu = this.root.querySelector('.nt-display-menu');
+        menu.hidden = true;
+        this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
+        this.updateLabel();
+      },
       onMenu(event) {
         const button = event.target.closest('button');
         if (!button) return;
         const key = currentChannelKey();
         if (button.dataset.action === 'language') {
-          writeStoredLanguage(key, button.dataset.value);
+          this.rememberLanguage(key, button.dataset.value);
           if (this.manualRequest) this.retry(this.manualRequest, button.dataset.value);
           this.manualRequest = '';
           this.updateLabel();
@@ -316,15 +428,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             this.oneShotOriginal = true;
             this.setStatus(copy('nextOriginal'));
           }
-        } else if (button.dataset.action === 'suggest-channel') {
-          const channelKey = this.pending.get(button.dataset.value)?.channel_key || key;
-          writeStoredLanguage(channelKey, button.dataset.language);
-          writeConfirmedLanguage(channelKey, button.dataset.language);
-          this.retry(button.dataset.value, button.dataset.language);
-          this.updateLabel();
-        } else if (button.dataset.action === 'suggest-choose') {
-          this.showLanguageMenu(copy('selectLanguageFormal'), button.dataset.value);
-          return;
         } else if (button.dataset.action === 'suggest-original') {
           this.retry(button.dataset.value, 'original');
         }
@@ -340,22 +443,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       suggest(id, language) {
         const item = this.pending.get(id);
         if (!item) return;
-        const menu = this.root.querySelector('.nt-outgoing-menu');
-        menu.replaceChildren();
-        if (!language || !languageLabels[language]) {
-          this.showLanguageMenu(copy('detectionFailed'), id);
-          return;
-        }
-        const heading = document.createElement('div');
-        heading.className = 'nt-heading';
-        heading.textContent = formatCopy('recentLanguage', {language:languageLabels[language]});
-        const channel = makeButton(formatCopy('useChannel', {language:languageLabels[language]}), 'suggest-channel', id);
-        channel.dataset.language = language;
-        const choose = makeButton(copy('chooseOther'), 'suggest-choose', id);
-        menu.append(heading, channel, choose, makeButton(copy('sendOriginal'), 'suggest-original', id));
-        menu.hidden = false;
-        this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
-        this.setStatus(copy('confirmLanguage'));
+        this.showLanguageMenu(copy('detectionFailed'), id);
+      },
+      detected(id, language) {
+        if (!this.pending.has(id) || !languageLabels[language]) return;
+        this.setStatus(formatCopy('detectedLanguage', {language:languageLabels[language]}));
       },
       fail(id, message) {
         this.pending.delete(id);
@@ -369,7 +461,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       prunePending() {
         const now = Date.now();
         for (const [id, item] of this.pending) {
-          if (item.editor?.isConnected && now - item.created_at < 30000) continue;
+          if (item.editor?.isConnected && (item.review_ready || now - item.created_at < 30000)) continue;
           this.pending.delete(id);
           if (this.activeRequest === id) {
             this.activeRequest = '';
@@ -411,8 +503,41 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         }
         this.sent = remaining;
       },
+      cancelReview(editor) {
+        let cancelled = false;
+        for (const [id, item] of [...this.pending.entries()]) {
+          if (item.editor !== editor || !item.review_ready || item.installing_review) continue;
+          this.pending.delete(id);
+          cancelled = true;
+          if (this.activeRequest === id) {
+            this.activeRequest = '';
+            this.bypass = 0;
+          }
+        }
+        if (cancelled) this.setStatus('');
+        return cancelled;
+      },
+      onBeforeInput(event) {
+        const inputType = String(event.inputType || '');
+        if (!inputType.startsWith('insert') && !inputType.startsWith('delete')) return;
+        const editor = event.target.closest?.(composerSelector);
+        if (!editor || !selectionCoversComposer(editor)) return;
+        this.cancelReview(editor);
+      },
+      onInput(event) {
+        const editor = event.target.closest?.(composerSelector);
+        if (!editor || composerText(editor)) return;
+        const inputType = String(event.inputType || '');
+        if (inputType && !inputType.startsWith('delete')) return;
+        this.cancelReview(editor);
+      },
       keydown(event) {
-        if (!this.enabled || event.key !== 'Enter' || event.shiftKey || event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
+        if (!this.enabled) return;
+        const pressedShortcut = shortcutFromEvent(event);
+        const sendImmediately = sameShortcut(pressedShortcut, this.sendImmediatelyShortcut);
+        const reviewBeforeSend = sameShortcut(pressedShortcut, this.reviewBeforeSendShortcut);
+        const ordinaryEnter = event.key === 'Enter' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && !event.isComposing;
+        if (!ordinaryEnter && !sendImmediately && !reviewBeforeSend) return;
         const editor = event.target.closest?.(composerSelector);
         if (!editor) return;
         if (this.bypass > 0) {
@@ -420,7 +545,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const activeId = this.activeRequest;
           const activeItem = activeId ? this.pending.get(activeId) : null;
           const keepAfterSend = Boolean(activeItem?.keep_after_send);
-          const sentText = composerText(editor);
+          const sentText = activeItem?.prepared_sent_text || composerText(editor);
           if (activeItem && sentText) {
             this.sent.push({
               channel_key: activeItem.channel_key,
@@ -428,19 +553,36 @@ const OUTGOING_UI_SCRIPT: &str = r####"
               sent_text: sentText,
               part_number: activeItem.part_number || 1,
               total_parts: activeItem.total_parts || 1,
-              existing_message_ids: [...document.querySelectorAll('[id^="message-content-"]')]
-                .map(discordMessageId)
-                .filter(Boolean),
+              existing_message_ids: activeItem.prepared_existing_message_ids || [],
               created_at: Date.now(),
             });
           }
-          if (activeItem) activeItem.keep_after_send = false;
+          if (activeItem) {
+            activeItem.keep_after_send = false;
+            activeItem.prepared_sent_text = '';
+            activeItem.prepared_existing_message_ids = null;
+          }
           if (activeId && !keepAfterSend) this.pending.delete(activeId);
           this.activeRequest = '';
           if (!keepAfterSend) this.setStatus('');
           return;
         }
         if (hasActiveAutocomplete(editor)) return;
+        const review = [...this.pending.entries()].find(([, item]) => item.editor === editor && item.review_ready);
+        if (review) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          if (!ordinaryEnter && !sendImmediately) {
+            this.setStatus(copy('reviewHint'));
+            return;
+          }
+          const [id, item] = review;
+          const text = composerText(editor);
+          if (!text) return;
+          this.queue.push({...item, id, text, action:'send-reviewed', send_immediately:true});
+          this.setStatus(copy('sendingOriginal'));
+          return;
+        }
         const mentionPlan = prefixMentionPlan(editor);
         if (mentionPlan && !mentionPlan.supported) return;
         const text = mentionPlan ? mentionPlan.text : composerText(editor);
@@ -466,7 +608,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           }
         }
         const id = `outgoing-${Date.now()}-${++this.sequence}`;
-        const selected = this.oneShotOriginal ? 'original' : selectedLanguageForChannel(key, this.defaultLanguage);
+        const selected = this.oneShotOriginal
+          ? 'original'
+          : selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
         this.oneShotOriginal = false;
         const item = {
           id,
@@ -476,13 +620,15 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           preserve_prefix_mentions:Boolean(mentionPlan),
           selected_language:selected,
           recent_messages:recentMessages(),
+          action:'translate',
+          send_immediately:sendImmediately || (!this.confirmSend && !reviewBeforeSend),
           created_at:Date.now(),
         };
         this.pending.set(id, {...item, editor});
         this.queue.push(item);
         this.setStatus(selected === 'original' ? copy('sendingOriginal') : copy('translating'));
       },
-      prepare(id, replace, continuation = false, finalPart = true, partNumber = 1, totalParts = 1) {
+      prepare(id, replace, continuation = false, finalPart = true, partNumber = 1, totalParts = 1, sendAfter = true) {
         const item = this.pending.get(id);
         if (!item) return false;
         let editor = item.editor;
@@ -504,19 +650,52 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           selection.removeAllRanges();
           selection.addRange(range);
         }
-        item.keep_after_send = !finalPart;
+        item.keep_after_send = sendAfter && !finalPart;
         item.part_number = partNumber;
         item.total_parts = totalParts;
+        if (sendAfter) {
+          this.activeRequest = id;
+          this.bypass += 1;
+          if (totalParts > 1) this.setStatus(formatCopy('sendingParts', {part:partNumber,total:totalParts}));
+        } else {
+          item.installing_review = true;
+          item.review_ready = true;
+          this.setStatus(copy('reviewReady'));
+        }
+        return true;
+      },
+      finishReview(id) {
+        const item = this.pending.get(id);
+        if (!item?.installing_review || !item.editor?.isConnected || !composerText(item.editor)) return false;
+        item.installing_review = false;
+        item.review_ready = true;
+        return true;
+      },
+      captureSend(id) {
+        const item = this.pending.get(id);
+        const editor = item?.editor;
+        const text = editor?.isConnected ? composerText(editor) : '';
+        if (!item || !text) return false;
+        item.prepared_sent_text = text;
+        item.prepared_existing_message_ids = [...document.querySelectorAll('[id^="message-content-"]')]
+          .map(discordMessageId)
+          .filter(Boolean);
+        return true;
+      },
+      prepareReviewed(id) {
+        const item = this.pending.get(id);
+        if (!item?.review_ready || item.installing_review || !item.editor?.isConnected || !composerText(item.editor)) return false;
+        item.editor.focus();
+        item.keep_after_send = false;
         this.activeRequest = id;
         this.bypass += 1;
-        if (totalParts > 1) this.setStatus(formatCopy('sendingParts', {part:partNumber,total:totalParts}));
         return true;
       },
       prepareAttachment(id) {
         const item = this.pending.get(id);
         if (!item) return false;
         const editor = item.editor;
-        if (!editor?.isConnected || composerText(editor) !== (item.original_text || item.text)) return false;
+        if (!editor?.isConnected || (!item.review_ready && composerText(editor) !== (item.original_text || item.text))) return false;
         const inputs = [...document.querySelectorAll('input[type="file"]')]
           .filter(input => !input.disabled);
         let input = null;
@@ -538,7 +717,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const item = this.pending.get(id);
         const editor = item?.editor;
         const input = item?.attachment_input;
-        if (!item || !editor?.isConnected || !input?.isConnected || sourceTextForItem(editor, item)) {
+        if (!item || !editor?.isConnected || !input?.isConnected || (!item.review_ready && sourceTextForItem(editor, item))) {
           if (item && editor?.isConnected && !sourceTextForItem(editor, item)) {
             editor.focus();
             document.execCommand('insertText', false, item.text);
@@ -569,18 +748,34 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
     };
     controller.listener = event => controller.keydown(event);
+    controller.beforeInputListener = event => controller.onBeforeInput(event);
+    controller.inputListener = event => controller.onInput(event);
     document.addEventListener('keydown', controller.listener, true);
+    document.addEventListener('beforeinput', controller.beforeInputListener, true);
+    document.addEventListener('input', controller.inputListener, true);
     window[GLOBAL] = controller;
   }
   controller.defaultLanguage = defaultLanguage;
+  const optimisticLanguages = controller.queue
+    .filter(item => item.action === 'remember-language' && item.channel_key)
+    .map(item => [item.channel_key, item.selected_language]);
+  controller.channelLanguages = {...rememberedChannelLanguages};
+  for (const [channelKey, language] of optimisticLanguages) {
+    controller.channelLanguages[channelKey] = language;
+  }
+  controller.confirmSend = confirmSend;
+  controller.sendImmediatelyShortcut = sendImmediatelyShortcut;
+  controller.reviewBeforeSendShortcut = reviewBeforeSendShortcut;
   controller.enabled = enabled;
+  controller.displayEnabled = displayEnabled;
+  controller.displayLanguage = displayLanguage;
   controller.root = ensureRoot(controller);
-  controller.root.hidden = !enabled;
   controller.prunePending();
   controller.reconcileSent();
   window.__nudeTranslatorApplyOutgoingOriginals?.();
   controller.updateLabel();
-  return enabled ? controller.queue.splice(0, 8).map(item => {
+  controller.reposition();
+  return enabled || displayEnabled ? controller.queue.splice(0, 8).map(item => {
     const {editor, ...plain} = item;
     return plain;
   }) : [];
@@ -591,6 +786,8 @@ pub const OUTGOING_CLEANUP_SCRIPT: &str = r#"
 (() => {
   const controller = window.__nudeTranslatorOutgoing;
   if (controller?.listener) document.removeEventListener('keydown', controller.listener, true);
+  if (controller?.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
+  if (controller?.inputListener) document.removeEventListener('input', controller.inputListener, true);
   document.getElementById('nt-outgoing-translation')?.remove();
   document.getElementById('nt-outgoing-translation-style')?.remove();
   delete window.__nudeTranslatorOutgoing;
@@ -609,35 +806,54 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
   const channelKey = __CHANNEL_KEY__;
   const records = __RECORDS__;
   const requestedUiLanguage = __UI_LANGUAGE__;
+  const displayTranslationEnabled = __DISPLAY_TRANSLATION_ENABLED__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
   const uiLanguage = requestedUiLanguage === 'auto'
     ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const copies = {
-    ko:{inputOriginal:'입력 원문',showOriginal:'원문 보기',showSent:'전송문 보기'},
-    en:{inputOriginal:'Original input',showOriginal:'Show original',showSent:'Show sent message'},
-    ja:{inputOriginal:'入力した原文',showOriginal:'原文を表示',showSent:'送信文を表示'},
-    zh:{inputOriginal:'输入的原文',showOriginal:'查看原文',showSent:'查看已发送内容'}
+    ko:{showOriginal:'원문 보기',showSent:'전송문 보기'},
+    en:{showOriginal:'Show original',showSent:'Show sent message'},
+    ja:{showOriginal:'原文を表示',showSent:'送信文を表示'},
+    zh:{showOriginal:'查看原文',showSent:'查看发送内容'}
   };
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const GLOBAL = '__nudeTranslatorOutgoingOriginalDisplay';
   const STYLE_ID = 'nt-outgoing-original-style';
-  const VERSION = 2;
+  const VERSION = __VERSION__;
   const messageId = root => root?.id?.startsWith('message-content-')
     ? root.id.slice('message-content-'.length) : '';
+  function messageRow(root) {
+    return root?.closest(
+      'li[id^="chat-messages-"], [data-list-item-id^="chat-messages___"], [class*="messageListItem"]'
+    ) || root?.closest('[role="listitem"]') || root?.parentElement || null;
+  }
   const recordKey = record => `${record.channel_key}|${record.message_id}`;
   function ensureStyle() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement('style');
-    style.id = STYLE_ID;
+    let style = document.getElementById(STYLE_ID);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = STYLE_ID;
+      document.head.append(style);
+    }
+    if (style.dataset.version === String(VERSION)) return;
+    style.dataset.version = String(VERSION);
     style.textContent = `
-      .nt-outgoing-original-view{display:flex;align-items:flex-start;gap:8px;max-width:100%;white-space:pre-wrap;color:var(--text-normal,#dbdee1)}
-      .nt-outgoing-original-copy{min-width:0;overflow-wrap:anywhere}
-      .nt-outgoing-original-label{margin-right:6px;color:var(--text-muted,#949ba4);font-size:11px;font-weight:650}
-      .nt-outgoing-original-toggle{flex:none;margin-top:1px;padding:1px 5px;border:0;border-radius:4px;background:transparent;color:var(--text-link,#00a8fc);font:inherit;font-size:11px;cursor:pointer}
+      [data-nt-outgoing-original="true"]{display:inline}
+      .nt-outgoing-original-view{display:inline-flex;flex-direction:row;align-items:baseline;gap:8px;max-width:100%;white-space:pre-wrap;vertical-align:baseline;color:var(--text-normal,#dbdee1)}
+      .nt-outgoing-original-copy{display:inline;min-width:0;overflow-wrap:anywhere}
+      .nt-outgoing-original-copy[hidden]{display:none}
+      .nt-outgoing-original-copy[hidden]+.nt-outgoing-original-toggle{margin-inline-start:8px}
+      .nt-outgoing-original-toggle{align-self:baseline;flex:none;margin:0;padding:1px 0;border:0;border-radius:4px;background:transparent;color:var(--text-link,#00a8fc);font:inherit;font-size:11px;line-height:1.25;cursor:pointer;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease,background-color .12s ease}
+      li[id^="chat-messages-"]:hover .nt-outgoing-original-toggle,
+      [id^="chat-messages___chat-messages-"]:hover .nt-outgoing-original-toggle,
+      [data-list-item-id^="chat-messages___"]:hover .nt-outgoing-original-toggle,
+      [class*="messageListItem"]:hover .nt-outgoing-original-toggle,
+      [data-nt-outgoing-message-row="true"]:hover .nt-outgoing-original-toggle,
+      .nt-outgoing-original-toggle:focus-visible{opacity:1;pointer-events:auto}
+      .nt-outgoing-original-view[data-mode="sent"] .nt-outgoing-original-toggle{color:#f0a15c}
       .nt-outgoing-original-toggle:hover{background:var(--background-modifier-hover,#ffffff0f)}
     `;
-    document.head.append(style);
   }
   function restoreSentText(root, record) {
     const originals = window.__nudeTranslatorOriginals;
@@ -653,23 +869,26 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
     const current = (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
     if (current !== record.sent_text) root.textContent = record.sent_text;
   }
-  function ensureView(root, record) {
+  function ensureView(root, record, defaultMode) {
     let view = root.nextElementSibling;
     if (view?.getAttribute('data-nt-outgoing-original-view') !== record.message_id) {
       view = document.createElement('div');
       view.className = 'nt-outgoing-original-view';
       view.setAttribute('data-nt-outgoing-original-view', record.message_id);
-      view.innerHTML = '<div class="nt-outgoing-original-copy"><span class="nt-outgoing-original-label"></span><span class="nt-outgoing-original-text"></span></div><button type="button" class="nt-outgoing-original-toggle"></button>';
+      view.dataset.mode = defaultMode;
+      view.innerHTML = '<div class="nt-outgoing-original-copy"><span class="nt-outgoing-original-text"></span></div><button type="button" class="nt-outgoing-original-toggle"></button>';
       root.insertAdjacentElement('afterend', view);
     }
-    view.querySelector('.nt-outgoing-original-label').textContent = copy('inputOriginal');
-    view.querySelector('.nt-outgoing-original-text').textContent = record.original_text;
+    messageRow(root)?.setAttribute('data-nt-outgoing-message-row', 'true');
+    const text = view.querySelector('.nt-outgoing-original-text');
+    if (text.textContent !== record.original_text) text.textContent = record.original_text;
     const button = view.querySelector('.nt-outgoing-original-toggle');
     const originalText = view.querySelector('.nt-outgoing-original-copy');
-    const showSent = view.dataset.mode === 'sent' || record.part_number > 1;
+    const showSent = view.dataset.mode !== 'original';
     root.style.display = showSent ? '' : 'none';
     originalText.hidden = showSent;
-    button.textContent = showSent ? copy('showOriginal') : copy('showSent');
+    const label = showSent ? copy('showSent') : copy('showOriginal');
+    if (button.textContent !== label) button.textContent = label;
     if (button.dataset.bound !== 'true') {
       button.dataset.bound = 'true';
       button.addEventListener('click', () => {
@@ -677,43 +896,99 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
         const sent = view.dataset.mode === 'sent';
         root.style.display = sent ? '' : 'none';
         originalText.hidden = sent;
-        button.textContent = sent ? copy('showOriginal') : copy('showSent');
+        button.textContent = sent ? copy('showSent') : copy('showOriginal');
       });
     }
   }
 
   let manager = window[GLOBAL];
   if (!manager || manager.version !== VERSION || manager.uiLanguage !== uiLanguage) {
+    manager?.observer?.disconnect();
     document.querySelectorAll('.nt-outgoing-original-view').forEach(view => view.remove());
     manager = {
       version: VERSION,
       uiLanguage,
+      translationEnabled: displayTranslationEnabled,
       records: new Map(),
+      applyScheduled: false,
       register(record) {
         if (!record?.message_id || !record?.channel_key) return;
         this.records.set(recordKey(record), record);
         this.apply();
       },
+      reconcileMessageIds(currentChannel, roots) {
+        const used = new Set();
+        const rootsById = new Map(roots.map(root => [messageId(root), root]));
+        const channelRecords = [...this.records.values()]
+          .filter(record => record.channel_key === currentChannel)
+          .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0));
+        for (const record of channelRecords) {
+          const exact = rootsById.get(record.message_id);
+          if (exact) used.add(exact);
+        }
+        for (const record of channelRecords) {
+          if (rootsById.has(record.message_id)) continue;
+          const confirmed = roots.slice().reverse().find(root => {
+            if (used.has(root)) return false;
+            const text = (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
+            return text === record.sent_text;
+          });
+          if (!confirmed) continue;
+          const confirmedId = messageId(confirmed);
+          if (!confirmedId) continue;
+          const oldKey = recordKey(record);
+          const corrected = {...record, message_id:confirmedId};
+          this.records.delete(oldKey);
+          this.records.set(recordKey(corrected), corrected);
+          used.add(confirmed);
+          document.querySelector(`[data-nt-outgoing-original-view="${CSS.escape(record.message_id)}"]`)?.remove();
+          const bindings = window.__nudeTranslatorOutgoing?.bindings;
+          if (Array.isArray(bindings) && !bindings.some(item => item.message_id === confirmedId)) {
+            bindings.push(corrected);
+          }
+        }
+      },
+      scheduleApply() {
+        if (this.applyScheduled) return;
+        this.applyScheduled = true;
+        requestAnimationFrame(() => {
+          this.applyScheduled = false;
+          this.apply();
+        });
+      },
       apply() {
         ensureStyle();
         const currentChannel = location.pathname.startsWith('/channels/') ? location.pathname : '';
-        for (const root of document.querySelectorAll('[id^="message-content-"]')) {
-          if (root.closest('[id^="message-reply-context-"]')) continue;
+        const roots = [...document.querySelectorAll('[id^="message-content-"]')]
+          .filter(root => !root.closest('[id^="message-reply-context-"]'));
+        this.reconcileMessageIds(currentChannel, roots);
+        for (const root of roots) {
           const record = this.records.get(`${currentChannel}|${messageId(root)}`);
           if (!record) continue;
           root.setAttribute('data-nt-outgoing-original', 'true');
           restoreSentText(root, record);
-          ensureView(root, record);
+          ensureView(root, record, this.translationEnabled ? 'original' : 'sent');
         }
       },
     };
+    manager.observer = new MutationObserver(() => manager.scheduleApply());
+    manager.observer.observe(document.body, {childList:true, subtree:true});
     window[GLOBAL] = manager;
   }
+  if (manager.translationEnabled !== displayTranslationEnabled) {
+    const bulkMode = displayTranslationEnabled ? 'original' : 'sent';
+    document.querySelectorAll('.nt-outgoing-original-view').forEach(view => {
+      view.dataset.mode = bulkMode;
+      const button = view.querySelector('.nt-outgoing-original-toggle');
+      button?.blur();
+    });
+  }
+  manager.translationEnabled = displayTranslationEnabled;
   manager.records.clear();
   for (const record of records) manager.records.set(recordKey(record), record);
   window.__nudeTranslatorRegisterOutgoingOriginal = record => manager.register(record);
   window.__nudeTranslatorApplyOutgoingOriginals = () => manager.apply();
-  window.__nudeTranslatorOutgoingOriginalsReady = `${channelKey}|${requestedUiLanguage}`;
+  window.__nudeTranslatorOutgoingOriginalsReady = `${channelKey}|${requestedUiLanguage}|${displayTranslationEnabled}`;
   manager.apply();
   return manager.records.size;
 })()
@@ -724,12 +999,31 @@ pub struct OutgoingRequest {
     pub id: String,
     pub channel_key: String,
     pub text: String,
+    #[serde(default)]
+    pub action: String,
+    #[serde(default)]
+    pub send_immediately: bool,
     pub selected_language: String,
     #[serde(default)]
     pub recent_messages: Vec<String>,
 }
 
-pub fn outgoing_ui_script(enabled: bool, default_language: &str, ui_language: &str) -> String {
+pub fn outgoing_ui_script(
+    enabled: bool,
+    display_enabled: bool,
+    display_language: &str,
+    default_language: &str,
+    ui_language: &str,
+    channel_languages: &HashMap<String, String>,
+    confirm_send: bool,
+    send_immediately_shortcut: &str,
+    review_before_send_shortcut: &str,
+) -> String {
+    let display_language = if matches!(display_language, "ko" | "ja" | "en" | "zh" | "zh-Hant") {
+        display_language
+    } else {
+        "ko"
+    };
     let default_language = if matches!(
         default_language,
         "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant"
@@ -746,6 +1040,14 @@ pub fn outgoing_ui_script(enabled: bool, default_language: &str, ui_language: &s
     OUTGOING_UI_SCRIPT
         .replace("__ENABLED__", if enabled { "true" } else { "false" })
         .replace(
+            "__DISPLAY_ENABLED__",
+            if display_enabled { "true" } else { "false" },
+        )
+        .replace(
+            "__DISPLAY_LANGUAGE__",
+            &serde_json::to_string(display_language).expect("static display language code"),
+        )
+        .replace(
             "__DEFAULT_LANGUAGE__",
             &serde_json::to_string(default_language).expect("static language code"),
         )
@@ -753,11 +1055,27 @@ pub fn outgoing_ui_script(enabled: bool, default_language: &str, ui_language: &s
             "__UI_LANGUAGE__",
             &serde_json::to_string(ui_language).expect("static interface language code"),
         )
+        .replace(
+            "__CHANNEL_LANGUAGES__",
+            &serde_json::to_string(channel_languages).expect("remembered channel languages"),
+        )
+        .replace(
+            "__CONFIRM_SEND__",
+            if confirm_send { "true" } else { "false" },
+        )
+        .replace(
+            "__SEND_IMMEDIATELY_SHORTCUT__",
+            &serde_json::to_string(send_immediately_shortcut).expect("configured shortcut"),
+        )
+        .replace(
+            "__REVIEW_BEFORE_SEND_SHORTCUT__",
+            &serde_json::to_string(review_before_send_shortcut).expect("configured shortcut"),
+        )
 }
 
 pub fn parse_outgoing_requests(value: Value) -> Result<Vec<OutgoingRequest>, String> {
     serde_json::from_value(value)
-        .map_err(|error| format!("보내는 메시지 번역 요청을 읽지 못했습니다: {error}"))
+        .map_err(|error| format!("전송 메시지 통역 요청을 읽지 못했습니다: {error}"))
 }
 
 pub fn parse_outgoing_bindings(value: Value) -> Result<Vec<OutgoingOriginalRecord>, String> {
@@ -769,6 +1087,7 @@ pub fn outgoing_originals_ui_script(
     channel_key: &str,
     records: &[OutgoingOriginalRecord],
     ui_language: &str,
+    display_translation_enabled: bool,
 ) -> Result<String, String> {
     let channel_key = serde_json::to_string(channel_key)
         .map_err(|error| format!("Discord 채널 식별자를 인코딩하지 못했습니다: {error}"))?;
@@ -780,13 +1099,24 @@ pub fn outgoing_originals_ui_script(
         "en"
     };
     Ok(OUTGOING_ORIGINALS_UI_SCRIPT
+        .replace("__VERSION__", &OUTGOING_ORIGINALS_UI_VERSION.to_string())
         .replace("__CHANNEL_KEY__", &channel_key)
         .replace("__RECORDS__", &records)
+        .replace(
+            "__DISPLAY_TRANSLATION_ENABLED__",
+            if display_translation_enabled {
+                "true"
+            } else {
+                "false"
+            },
+        )
         .replace(
             "__UI_LANGUAGE__",
             &serde_json::to_string(ui_language).expect("static interface language code"),
         ))
 }
+
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 16;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();
@@ -834,6 +1164,19 @@ pub fn apply_outgoing_suggestion_script(
     ))
 }
 
+pub fn apply_outgoing_detected_script(
+    request_id: &str,
+    language: Language,
+) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    let code = serde_json::to_string(language.code())
+        .map_err(|error| format!("감지 언어를 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.detected({id},{code})"
+    ))
+}
+
 pub fn apply_outgoing_error_script(request_id: &str, message: &str) -> Result<String, String> {
     let id = serde_json::to_string(request_id)
         .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
@@ -855,7 +1198,39 @@ pub fn prepare_outgoing_send_script(
     let id = serde_json::to_string(request_id)
         .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
     Ok(format!(
-        "window.__nudeTranslatorOutgoing?.prepare({id},{replace},{continuation},{final_part},{part_number},{total_parts}) === true"
+        "window.__nudeTranslatorOutgoing?.prepare({id},{replace},{continuation},{final_part},{part_number},{total_parts},true) === true"
+    ))
+}
+
+pub fn apply_outgoing_review_script(request_id: &str) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.prepare({id},true,false,true,1,1,false) === true"
+    ))
+}
+
+pub fn finish_outgoing_review_script(request_id: &str) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.finishReview({id}) === true"
+    ))
+}
+
+pub fn prepare_outgoing_reviewed_send_script(request_id: &str) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.prepareReviewed({id}) === true"
+    ))
+}
+
+pub fn capture_outgoing_send_script(request_id: &str) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.captureSend({id}) === true"
     ))
 }
 
@@ -885,18 +1260,23 @@ pub fn attach_outgoing_text_file_script(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::sync::{Mutex, MutexGuard};
+    use std::thread;
+    use std::time::Duration;
 
     use serde_json::json;
 
     use super::{
         apply_outgoing_suggestion_script, attach_outgoing_text_file_script,
-        outgoing_originals_ui_script, outgoing_ui_script, parse_outgoing_bindings,
-        parse_outgoing_requests, prepare_outgoing_attachment_script, prepare_outgoing_send_script,
+        finish_outgoing_review_script, outgoing_originals_ui_script, outgoing_ui_script,
+        parse_outgoing_bindings, parse_outgoing_requests, prepare_outgoing_attachment_script,
+        prepare_outgoing_reviewed_send_script, prepare_outgoing_send_script,
         suggest_recent_language, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
     };
     use crate::cache::OutgoingOriginalRecord;
     use crate::cdp::{discord_target, CdpClient};
+    use crate::config::ConfigStore;
     use crate::language::Language;
 
     static LIVE_OUTGOING_LOCK: Mutex<()> = Mutex::new(());
@@ -938,6 +1318,7 @@ mod tests {
         }]))
         .unwrap();
         assert_eq!(requests[0].selected_language, "ja");
+        assert!(!requests[0].send_immediately);
     }
 
     #[test]
@@ -951,17 +1332,42 @@ mod tests {
     #[test]
     fn continuation_send_script_keeps_request_until_the_final_part() {
         let script = prepare_outgoing_send_script("outgoing-1", true, true, false, 2, 3).unwrap();
-        assert!(script.contains("prepare(\"outgoing-1\",true,true,false,2,3)"));
+        assert!(script.contains("prepare(\"outgoing-1\",true,true,false,2,3,true)"));
+        assert!(prepare_outgoing_reviewed_send_script("outgoing-1")
+            .unwrap()
+            .contains("prepareReviewed"));
     }
 
     #[test]
     fn injected_outgoing_controls_receive_the_selected_interface_language() {
-        let script = outgoing_ui_script(true, "auto", "ja");
+        let channel_languages = HashMap::from([("/channels/1/2".to_string(), "ja".to_string())]);
+        let script = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "auto",
+            "ja",
+            &channel_languages,
+            true,
+            "Ctrl+Shift+Enter",
+            "Alt+J",
+        );
         assert!(script.contains("const requestedUiLanguage = \"ja\""));
+        assert!(script.contains("const displayEnabled = true"));
+        assert!(script.contains("const displayLanguage = \"ko\""));
+        assert!(script.contains("action:'display-language'"));
+        assert!(script.contains("const sendImmediatelyShortcut = \"Ctrl+Shift+Enter\""));
+        assert!(script.contains("const reviewBeforeSendShortcut = \"Alt+J\""));
+        assert!(script.contains("\"/channels/1/2\":\"ja\""));
         assert!(script.contains("送信言語"));
         assert!(!script.contains("__UI_LANGUAGE__"));
+        assert!(!script.contains("__SEND_IMMEDIATELY_SHORTCUT__"));
+        assert!(!script.contains("__REVIEW_BEFORE_SEND_SHORTCUT__"));
+        assert!(!script.contains("__CHANNEL_LANGUAGES__"));
+        assert!(!script.contains("__DISPLAY_ENABLED__"));
+        assert!(!script.contains("__DISPLAY_LANGUAGE__"));
 
-        let originals = outgoing_originals_ui_script("/channels/1/2", &[], "en").unwrap();
+        let originals = outgoing_originals_ui_script("/channels/1/2", &[], "en", true).unwrap();
         assert!(originals.contains("const requestedUiLanguage = \"en\""));
         assert!(originals.contains("Show original"));
     }
@@ -993,7 +1399,7 @@ mod tests {
             "created_at": 42.0
         }]))
         .unwrap();
-        let script = outgoing_originals_ui_script("/channels/1/2", &records, "ko").unwrap();
+        let script = outgoing_originals_ui_script("/channels/1/2", &records, "ko", true).unwrap();
 
         assert_eq!(
             records,
@@ -1009,8 +1415,916 @@ mod tests {
         );
         assert!(script.contains("전송문 보기"));
         assert!(script.contains("원문 보기"));
+        assert!(!script.contains("nt-outgoing-original-label"));
         assert!(script.contains("data-nt-outgoing-original"));
         assert!(OUTGOING_BINDINGS_SCRIPT.contains("bindings"));
+    }
+
+    #[test]
+    fn outgoing_original_display_tracks_display_translation_state() {
+        let script = outgoing_originals_ui_script("/channels/1/2", &[], "ko", true).unwrap();
+
+        assert!(script.contains("const displayTranslationEnabled"));
+        assert!(script.contains("manager.translationEnabled !== displayTranslationEnabled"));
+        assert!(script.contains("view.dataset.mode = bulkMode"));
+        assert!(script.contains("const bulkMode = displayTranslationEnabled ? 'original' : 'sent'"));
+        assert!(script.contains("this.translationEnabled ? 'original' : 'sent'"));
+        assert!(script.contains("opacity:0;pointer-events:none"));
+        assert!(script.contains("function messageRow(root)"));
+        assert!(script.contains("data-nt-outgoing-message-row"));
+        assert!(script.contains(
+            "[data-nt-outgoing-message-row=\"true\"]:hover .nt-outgoing-original-toggle"
+        ));
+        assert!(script.contains(
+            "[data-list-item-id^=\"chat-messages___\"]:hover .nt-outgoing-original-toggle"
+        ));
+        assert!(script.contains(".nt-outgoing-original-toggle:focus-visible"));
+        assert!(script.contains("button?.blur()"));
+        assert!(script.contains("const label = showSent ? copy('showSent') : copy('showOriginal')"));
+        assert!(
+            script.contains("button.textContent = sent ? copy('showSent') : copy('showOriginal')")
+        );
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러와 전송 메시지가 필요합니다"]
+    fn live_discord_outgoing_view_toggle_only_appears_on_message_hover() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        client
+            .call(
+                "Input.dispatchMouseEvent",
+                json!({"type":"mouseMoved","x":1,"y":1}),
+            )
+            .expect("move pointer away from messages");
+        thread::sleep(Duration::from_millis(180));
+
+        let before = client
+            .evaluate(
+                "(() => { const selector='[data-list-item-id^=\"chat-messages___\"], [id^=\"chat-messages___chat-messages-\"], li[id^=\"chat-messages-\"], [class*=\"messageListItem\"]';const candidates=[...document.querySelectorAll(selector)].map(row=>{const rect=row.getBoundingClientRect();const button=row.querySelector('.nt-outgoing-original-toggle');return {row,rect,button};}).filter(item=>item.button&&item.rect.width>0&&item.rect.height>0&&item.rect.top>=0&&item.rect.bottom<=innerHeight&&item.rect.left>=0&&item.rect.right<=innerWidth);for(const item of candidates){const x=item.rect.right-Math.min(40,item.rect.width/2),y=item.rect.top+item.rect.height/2;const hit=document.elementFromPoint(x,y);if(hit&&(hit===item.row||item.row.contains(hit))){const style=getComputedStyle(item.button);return {x,y,opacity:style.opacity,pointerEvents:style.pointerEvents,rowId:item.row.id||item.row.getAttribute('data-list-item-id')||''};}}return null;})()",
+                true,
+            )
+            .expect("hidden outgoing toggle state");
+        if before.is_null() {
+            let diagnostics = client
+                .evaluate(
+                    "(() => ({viewport:{width:innerWidth,height:innerHeight},views:[...document.querySelectorAll('.nt-outgoing-original-view')].slice(0,3).map(view=>{const chain=[];for(let node=view;node&&chain.length<8;node=node.parentElement){const r=node.getBoundingClientRect();chain.push({tag:node.tagName,id:node.id,className:String(node.className),role:node.getAttribute('role'),listId:node.getAttribute('data-list-item-id'),rect:{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}});}return chain;})}))()",
+                    true,
+                )
+                .expect("outgoing row diagnostics");
+            panic!("no visible outgoing message row: {diagnostics}");
+        }
+        assert_eq!(before["opacity"].as_str(), Some("0"), "state: {before}");
+        assert_eq!(
+            before["pointerEvents"].as_str(),
+            Some("none"),
+            "state: {before}"
+        );
+        eprintln!("outgoing hover target: {before}");
+
+        client
+            .call(
+                "Input.dispatchMouseEvent",
+                json!({
+                    "type":"mouseMoved",
+                    "x":before["x"].as_f64().expect("message x"),
+                    "y":before["y"].as_f64().expect("message y")
+                }),
+            )
+            .expect("hover outgoing message");
+        thread::sleep(Duration::from_millis(180));
+        let hovered = client
+            .evaluate(
+                "(() => { const selector='[data-list-item-id^=\"chat-messages___\"], [id^=\"chat-messages___chat-messages-\"], li[id^=\"chat-messages-\"], [class*=\"messageListItem\"]';const row=[...document.querySelectorAll(selector)].find(row=>row.matches(':hover')&&row.querySelector('.nt-outgoing-original-toggle'));const button=row?.querySelector('.nt-outgoing-original-toggle');if(!button)return null;const style=getComputedStyle(button);return {opacity:style.opacity,pointerEvents:style.pointerEvents,rowId:row.id||row.getAttribute('data-list-item-id')||''};})()",
+                true,
+            )
+            .expect("hovered outgoing toggle state");
+        let opacity = hovered["opacity"]
+            .as_str()
+            .and_then(|value| value.parse::<f64>().ok())
+            .unwrap_or_default();
+        assert!(opacity > 0.9, "state: {hovered}");
+        assert_eq!(
+            hovered["pointerEvents"].as_str(),
+            Some("auto"),
+            "state: {hovered}"
+        );
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_outgoing_original_follows_optimistic_message_id_replacement() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let channel = client
+            .evaluate(
+                "location.pathname.startsWith('/channels/') ? location.pathname : ''",
+                false,
+            )
+            .expect("current Discord channel")
+            .as_str()
+            .expect("channel path")
+            .to_string();
+        let records = vec![OutgoingOriginalRecord {
+            message_id: "nt-optimistic-message".to_string(),
+            channel_key: channel.clone(),
+            original_text: "임시 ID 원문".to_string(),
+            sent_text: "一時 ID の送信文".to_string(),
+            part_number: 1,
+            total_parts: 1,
+            created_at: 0.0,
+        }];
+        client
+            .evaluate(
+                "document.querySelectorAll('[data-nt-id-replacement-test]').forEach(node => node.remove()); document.getElementById('nt-outgoing-original-style')?.remove(); window.__nudeTranslatorOutgoingOriginalDisplay?.observer?.disconnect(); delete window.__nudeTranslatorOutgoingOriginalDisplay; delete window.__nudeTranslatorOutgoingOriginalsReady",
+                false,
+            )
+            .expect("reset outgoing original display probe");
+        client
+            .evaluate(
+                "(() => { const host=document.createElement('div'); host.setAttribute('data-nt-id-replacement-test','host'); const root=document.createElement('div'); root.id='message-content-nt-optimistic-message'; root.textContent='一時 ID の送信文'; host.append(root); document.body.append(host); return true; })()",
+                false,
+            )
+            .expect("mount optimistic message");
+        client
+            .evaluate(
+                &outgoing_originals_ui_script(&channel, &records, "ko", true).unwrap(),
+                false,
+            )
+            .expect("mount outgoing original on optimistic message");
+        let result = client
+            .evaluate(
+                "(() => { const old=document.getElementById('message-content-nt-optimistic-message'); const confirmed=document.createElement('div'); confirmed.id='message-content-nt-confirmed-message'; confirmed.textContent='一時 ID の送信文'; old.replaceWith(confirmed); window.__nudeTranslatorApplyOutgoingOriginals?.(); const manager=window.__nudeTranslatorOutgoingOriginalDisplay; const view=confirmed.nextElementSibling; const button=view?.querySelector('.nt-outgoing-original-toggle'); const copy=view?.querySelector('.nt-outgoing-original-copy'); const overlaps=(a,b)=>{const x=a?.getBoundingClientRect(),y=b?.getBoundingClientRect();return Boolean(x&&y&&Math.min(x.bottom,y.bottom)>Math.max(x.top,y.top));}; const sentInline=overlaps(confirmed,button); const sentCopyHidden=Boolean(copy&&getComputedStyle(copy).display==='none'); button?.click(); const originalInline=overlaps(copy,button); return {viewId:view?.getAttribute('data-nt-outgoing-original-view')||'',marked:confirmed.getAttribute('data-nt-outgoing-original')||'',hasConfirmed:manager?.records?.has(`${location.pathname}|nt-confirmed-message`)||false,hasOptimistic:manager?.records?.has(`${location.pathname}|nt-optimistic-message`)||false,originalInline,sentInline,sentCopyHidden}; })()",
+                true,
+            )
+            .expect("reconcile confirmed message ID");
+        client
+            .evaluate(
+                "document.querySelectorAll('[data-nt-id-replacement-test]').forEach(node => node.remove()); document.getElementById('nt-outgoing-original-style')?.remove(); window.__nudeTranslatorOutgoingOriginalDisplay?.observer?.disconnect(); delete window.__nudeTranslatorOutgoingOriginalDisplay; delete window.__nudeTranslatorOutgoingOriginalsReady",
+                false,
+            )
+            .expect("remove ID replacement probe");
+        assert_eq!(result["viewId"].as_str(), Some("nt-confirmed-message"));
+        assert_eq!(result["marked"].as_str(), Some("true"));
+        assert_eq!(result["hasConfirmed"].as_bool(), Some(true));
+        assert_eq!(result["hasOptimistic"].as_bool(), Some(false));
+        assert_eq!(result["originalInline"].as_bool(), Some(true));
+        assert_eq!(result["sentInline"].as_bool(), Some(true));
+        assert_eq!(result["sentCopyHidden"].as_bool(), Some(true));
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_programmatic_review_insertion_keeps_enter_send_state() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let controller = outgoing_ui_script(
+            true,
+            false,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let prepared = client
+            .evaluate(
+                &format!(
+                    r#"(() => {{
+                      ({controller});
+                      const active = window.__nudeTranslatorOutgoing;
+                      const editor = document.createElement('div');
+                      editor.id = 'nt-outgoing-review-insertion-test';
+                      editor.setAttribute('role', 'textbox');
+                      editor.setAttribute('contenteditable', 'true');
+                      editor.textContent = '원문';
+                      document.body.append(editor);
+                      active.pending.set('review-insertion', {{
+                        id:'review-insertion', editor, original_text:'원문', text:'원문',
+                        channel_key:location.pathname, selected_language:'ja', created_at:Date.now()
+                      }});
+                      return active.prepare('review-insertion', true, false, true, 1, 1, false);
+                    }})()"#
+                ),
+                true,
+            )
+            .expect("prepare review insertion");
+        assert_eq!(prepared.as_bool(), Some(true));
+        client
+            .call("Input.insertText", json!({"text": "翻訳文"}))
+            .expect("insert translated review text");
+        let finished = client
+            .evaluate(
+                &finish_outgoing_review_script("review-insertion").unwrap(),
+                true,
+            )
+            .expect("finish review insertion");
+        assert_eq!(finished.as_bool(), Some(true));
+        let result = client
+            .evaluate(
+                r#"(() => {
+                  const active = window.__nudeTranslatorOutgoing;
+                  const editor = document.getElementById('nt-outgoing-review-insertion-test');
+                  const item = active.pending.get('review-insertion');
+                  const event = {
+                    key:'Enter', ctrlKey:false, altKey:false, shiftKey:false, metaKey:false,
+                    isComposing:false, target:editor,
+                    preventDefault(){this.prevented=true;}, stopImmediatePropagation(){}
+                  };
+                  active.keydown(event);
+                  const request = active.queue.at(-1) || null;
+                  return {pending:Boolean(item),reviewReady:Boolean(item?.review_ready),request};
+                })()"#,
+                true,
+            )
+            .expect("read review insertion state");
+        client
+            .evaluate(
+                "document.getElementById('nt-outgoing-review-insertion-test')?.remove()",
+                false,
+            )
+            .expect("remove review insertion probe");
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+        assert_eq!(result["pending"].as_bool(), Some(true));
+        assert_eq!(result["reviewReady"].as_bool(), Some(true));
+        assert_eq!(result["request"]["action"].as_str(), Some("send-reviewed"));
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_send_tracking_survives_composer_clear_before_controller_listener() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let controller = outgoing_ui_script(
+            true,
+            false,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let result = client
+            .evaluate(
+                &format!(
+                    r#"(() => {{
+                      ({controller});
+                      const active = window.__nudeTranslatorOutgoing;
+                      const editor = document.createElement('div');
+                      editor.id = 'nt-outgoing-cleared-before-listener-test';
+                      editor.setAttribute('role', 'textbox');
+                      editor.setAttribute('contenteditable', 'true');
+                      editor.textContent = '送信文';
+                      document.body.append(editor);
+                      active.pending.set('cleared-before-listener', {{
+                        id:'cleared-before-listener', editor, review_ready:true,
+                        original_text:'원문', text:'送信文', channel_key:location.pathname,
+                        selected_language:'ja', created_at:Date.now()
+                      }});
+                      const prepared = active.prepareReviewed('cleared-before-listener');
+                      const captured = active.captureSend('cleared-before-listener');
+                      editor.textContent = '';
+                      const event = {{
+                        key:'Enter', ctrlKey:false, altKey:false, shiftKey:false, metaKey:false,
+                        isComposing:false, target:editor
+                      }};
+                      active.keydown(event);
+                      const tracked = active.sent.at(-1) || null;
+                      const message = document.createElement('div');
+                      message.id = 'message-content-nt-synthetic-tracked';
+                      message.textContent = '送信文';
+                      document.body.append(message);
+                      active.reconcileSent();
+                      const binding = active.bindings.at(-1) || null;
+                      message.remove();
+                      editor.remove();
+                      return {{prepared,captured,tracked,binding}};
+                    }})()"#
+                ),
+                true,
+            )
+            .expect("composer clear tracking probe");
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+        assert_eq!(result["prepared"].as_bool(), Some(true));
+        assert_eq!(result["captured"].as_bool(), Some(true));
+        assert_eq!(result["tracked"]["original_text"].as_str(), Some("원문"));
+        assert_eq!(result["tracked"]["sent_text"].as_str(), Some("送信文"));
+        assert_eq!(result["binding"]["original_text"].as_str(), Some("원문"));
+        assert_eq!(result["binding"]["sent_text"].as_str(), Some("送信文"));
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_composer_shortcuts_work_during_ime_composition() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            false,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let probe = format!(
+            r#"(() => {{
+              ({controller});
+              const active = window.__nudeTranslatorOutgoing;
+              const editor = document.createElement('div');
+              editor.setAttribute('role', 'textbox');
+              editor.setAttribute('contenteditable', 'true');
+              document.body.append(editor);
+              const results = [];
+              for (const modifiers of [{{ctrlKey:true,altKey:false}},{{ctrlKey:false,altKey:true}}]) {{
+                active.queue.length = 0;
+                active.pending.clear();
+                editor.textContent = '한';
+                const event = {{
+                  key:'Enter', ctrlKey:modifiers.ctrlKey, altKey:modifiers.altKey,
+                  shiftKey:false, metaKey:false, isComposing:true, target:editor,
+                  preventDefault(){{this.prevented=true;}}, stopImmediatePropagation(){{}}
+                }};
+                active.keydown(event);
+                results.push({{prevented:Boolean(event.prevented),request:active.queue[0] || null}});
+              }}
+              active.queue.length = 0;
+              active.pending.clear();
+              editor.textContent = '確認した翻訳文';
+              active.pending.set('review-enter', {{editor,review_ready:true,original_text:'원문',text:'確認した翻訳文'}});
+              const reviewedEvent = {{
+                key:'Enter', ctrlKey:false, altKey:false, shiftKey:false, metaKey:false,
+                isComposing:false, target:editor,
+                preventDefault(){{this.prevented=true;}}, stopImmediatePropagation(){{}}
+              }};
+              active.keydown(reviewedEvent);
+              results.push({{prevented:Boolean(reviewedEvent.prevented),request:active.queue[0] || null}});
+              active.queue.length = 0;
+              active.pending.clear();
+              editor.remove();
+              return results;
+            }})()"#
+        );
+        let results = client.evaluate(&probe, true).expect("IME shortcut probe");
+        assert_eq!(results[0]["prevented"].as_bool(), Some(true));
+        assert_eq!(
+            results[0]["request"]["send_immediately"].as_bool(),
+            Some(true)
+        );
+        assert_eq!(results[1]["prevented"].as_bool(), Some(true));
+        assert_eq!(
+            results[1]["request"]["send_immediately"].as_bool(),
+            Some(false)
+        );
+        assert_eq!(results[2]["prevented"].as_bool(), Some(true));
+        assert_eq!(
+            results[2]["request"]["action"].as_str(),
+            Some("send-reviewed")
+        );
+        assert_eq!(
+            results[2]["request"]["send_immediately"].as_bool(),
+            Some(true)
+        );
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_cleared_review_is_translated_as_a_new_message() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let probe = format!(
+            r#"(() => {{
+              ({controller});
+              const active = window.__nudeTranslatorOutgoing;
+              const editor = document.createElement('div');
+              editor.setAttribute('role', 'textbox');
+              editor.setAttribute('contenteditable', 'true');
+              document.body.append(editor);
+              editor.textContent = '기존 번역문';
+              active.pending.set('review-cleared', {{
+                id:'review-cleared', editor, review_ready:true,
+                original_text:'기존 원문', text:'기존 번역문',
+                channel_key:location.pathname, selected_language:'ja', created_at:Date.now()
+              }});
+
+              editor.textContent = '';
+              const inputEvent = new Event('input', {{bubbles:true}});
+              Object.defineProperty(inputEvent, 'inputType', {{value:'deleteContentBackward'}});
+              editor.dispatchEvent(inputEvent);
+
+              editor.textContent = '새로 번역할 원문';
+              const event = {{
+                key:'Enter', ctrlKey:false, altKey:false, shiftKey:false, metaKey:false,
+                isComposing:false, target:editor,
+                preventDefault(){{this.prevented=true;}}, stopImmediatePropagation(){{}}
+              }};
+              active.keydown(event);
+              const result = {{
+                reviewStillPending:active.pending.has('review-cleared'),
+                prevented:Boolean(event.prevented), request:active.queue.at(-1) || null
+              }};
+              active.queue.length = 0;
+              active.pending.clear();
+              editor.remove();
+              return result;
+            }})()"#
+        );
+        let result = client.evaluate(&probe, true).expect("cleared review probe");
+        assert_eq!(result["reviewStillPending"].as_bool(), Some(false));
+        assert_eq!(result["prevented"].as_bool(), Some(true));
+        assert_eq!(result["request"]["action"].as_str(), Some("translate"));
+        assert_eq!(result["request"]["text"].as_str(), Some("새로 번역할 원문"));
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요하며 실제 입력창이 비어 있어야 합니다"]
+    fn live_discord_actual_composer_ctrl_a_backspace_starts_new_translation() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let prepared = client
+            .evaluate(
+                &format!(
+                    r#"(() => {{
+                      ({controller});
+                      if (window.__ntBackspaceCapture) {{
+                        document.removeEventListener('beforeinput', window.__ntBackspaceCapture, true);
+                        document.removeEventListener('input', window.__ntBackspaceCapture, true);
+                      }}
+                      window.__nudeTranslatorOutgoing.queue.length = 0;
+                      window.__nudeTranslatorOutgoing.pending.clear();
+                      const editors = [...document.querySelectorAll('[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]')]
+                        .filter(editor => {{
+                          const bounds = editor.getBoundingClientRect();
+                          return bounds.width > 120 && bounds.height > 24 && bounds.top > innerHeight * 0.4 && bounds.bottom <= innerHeight + 1;
+                        }})
+                        .sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top);
+                      const editor = editors.at(-1);
+                      let text = (editor?.innerText || editor?.textContent || '').trim();
+                      if (editor && ['ABCDE','새로 번역할 원문'].includes(text)) {{
+                        editor.focus();
+                        const staleRange = document.createRange();
+                        staleRange.selectNodeContents(editor);
+                        const staleSelection = getSelection();
+                        staleSelection.removeAllRanges();
+                        staleSelection.addRange(staleRange);
+                        document.execCommand('delete', false);
+                        text = (editor.innerText || editor.textContent || '').trim();
+                      }}
+                      if (!editor || text) return {{ready:false,text}};
+                      window.__ntBackspaceEditor = editor;
+                      window.__ntBackspaceEvents = [];
+                      window.__ntBackspaceCapture = event => {{
+                        if (event.target !== editor) return;
+                        window.__ntBackspaceEvents.push({{
+                          phase:event.type, inputType:event.inputType || '',
+                          text:(editor.innerText || editor.textContent || '').trim()
+                        }});
+                      }};
+                      document.addEventListener('beforeinput', window.__ntBackspaceCapture, true);
+                      document.addEventListener('input', window.__ntBackspaceCapture, true);
+                      editor.focus();
+                      return {{ready:true,text:''}};
+                    }})()"#
+                ),
+                true,
+            )
+            .expect("prepare actual Discord composer probe");
+        assert_eq!(
+            prepared["ready"].as_bool(),
+            Some(true),
+            "actual Discord composer must be empty before the probe: {prepared}"
+        );
+        client
+            .call("Input.insertText", json!({"text": "ABCDE"}))
+            .expect("insert reviewed text into the actual composer");
+        client
+            .evaluate(
+                "window.__nudeTranslatorOutgoing.pending.set('review-backspaced',{id:'review-backspaced',editor:window.__ntBackspaceEditor,review_ready:true,original_text:'기존 원문',text:'ABCDE',channel_key:location.pathname,selected_language:'ja',created_at:Date.now()})",
+                false,
+            )
+            .expect("mark actual composer as review ready");
+        for event_type in ["rawKeyDown", "keyUp"] {
+            client
+                .call(
+                    "Input.dispatchKeyEvent",
+                    json!({
+                        "type": event_type,
+                        "key": "a",
+                        "code": "KeyA",
+                        "modifiers": 2,
+                        "windowsVirtualKeyCode": 65,
+                        "nativeVirtualKeyCode": 65
+                    }),
+                )
+                .expect("select all reviewed text in the actual composer");
+        }
+        for event_type in ["rawKeyDown", "keyUp"] {
+            client
+                .call(
+                    "Input.dispatchKeyEvent",
+                    json!({
+                        "type": event_type,
+                        "key": "Backspace",
+                        "code": "Backspace",
+                        "windowsVirtualKeyCode": 8,
+                        "nativeVirtualKeyCode": 8
+                    }),
+                )
+                .expect("backspace all reviewed text in the actual composer");
+        }
+        client
+            .call("Input.insertText", json!({"text": "새로 번역할 원문"}))
+            .expect("insert a new source message into the actual composer");
+        let result = client
+            .evaluate(
+                r#"(() => {
+                  const active = window.__nudeTranslatorOutgoing;
+                  const editor = window.__ntBackspaceEditor;
+                  const event = {
+                    key:'Enter', ctrlKey:false, altKey:false, shiftKey:false, metaKey:false,
+                    isComposing:false, target:editor,
+                    preventDefault(){this.prevented=true;}, stopImmediatePropagation(){}
+                  };
+                  active.keydown(event);
+                  const queued = active.queue.at(-1);
+                  return {
+                    reviewStillPending:active.pending.has('review-backspaced'),
+                    prevented:Boolean(event.prevented),
+                    request:queued ? {action:queued.action,text:queued.text,send_immediately:queued.send_immediately} : null,
+                    events:window.__ntBackspaceEvents,
+                    text:(editor.innerText || editor.textContent || '').trim()
+                  };
+                })()"#,
+                true,
+            )
+            .expect("read actual backspace result");
+        client
+            .evaluate(
+                "(() => { document.removeEventListener('beforeinput',window.__ntBackspaceCapture,true);document.removeEventListener('input',window.__ntBackspaceCapture,true);window.__nudeTranslatorOutgoing.queue.length=0;window.__nudeTranslatorOutgoing.pending.clear();const editor=window.__ntBackspaceEditor;editor.focus();const range=document.createRange();range.selectNodeContents(editor);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);delete window.__ntBackspaceCapture;delete window.__ntBackspaceEvents;delete window.__ntBackspaceEditor; })()",
+                false,
+            )
+            .expect("prepare actual composer cleanup");
+        for event_type in ["rawKeyDown", "keyUp"] {
+            client
+                .call(
+                    "Input.dispatchKeyEvent",
+                    json!({
+                        "type": event_type,
+                        "key": "Backspace",
+                        "code": "Backspace",
+                        "windowsVirtualKeyCode": 8,
+                        "nativeVirtualKeyCode": 8
+                    }),
+                )
+                .expect("clear actual composer probe text");
+        }
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+        assert_eq!(
+            result["reviewStillPending"].as_bool(),
+            Some(false),
+            "actual backspace events: {}",
+            result["events"]
+        );
+        assert_eq!(result["prevented"].as_bool(), Some(true));
+        assert_eq!(result["request"]["action"].as_str(), Some("translate"));
+        assert_eq!(result["request"]["text"].as_str(), Some("새로 번역할 원문"));
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_replaced_review_is_translated_as_a_new_message() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        client
+            .evaluate(
+                &format!(
+                    r#"(() => {{
+                      ({controller});
+                      const active = window.__nudeTranslatorOutgoing;
+                      const editor = document.createElement('div');
+                      editor.id = 'nt-outgoing-replaced-review-test';
+                      editor.setAttribute('role', 'textbox');
+                      editor.setAttribute('contenteditable', 'true');
+                      editor.textContent = '기존 번역문';
+                      document.body.append(editor);
+                      active.pending.set('review-replaced', {{
+                        id:'review-replaced', editor, review_ready:true,
+                        original_text:'기존 원문', text:'기존 번역문',
+                        channel_key:location.pathname, selected_language:'ja', created_at:Date.now()
+                      }});
+                      editor.focus();
+                      const range = document.createRange();
+                      range.selectNodeContents(editor);
+                      const selection = getSelection();
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }})()"#
+                ),
+                false,
+            )
+            .expect("prepare native replacement probe");
+        client
+            .call("Input.insertText", json!({"text": "새로 번역할 원문"}))
+            .expect("replace the complete reviewed translation");
+        let result = client
+            .evaluate(
+                r#"(() => {
+                  const active = window.__nudeTranslatorOutgoing;
+                  const editor = document.getElementById('nt-outgoing-replaced-review-test');
+                  const event = {
+                    key:'Enter', ctrlKey:false, altKey:false, shiftKey:false, metaKey:false,
+                    isComposing:false, target:editor,
+                    preventDefault(){this.prevented=true;}, stopImmediatePropagation(){}
+                  };
+                  active.keydown(event);
+                  return {
+                    reviewStillPending:active.pending.has('review-replaced'),
+                    prevented:Boolean(event.prevented), request:active.queue.at(-1) || null
+                  };
+                })()"#,
+                true,
+            )
+            .expect("read native replacement result");
+        assert_eq!(result["reviewStillPending"].as_bool(), Some(false));
+        assert_eq!(result["prevented"].as_bool(), Some(true));
+        assert_eq!(result["request"]["action"].as_str(), Some("translate"));
+        assert_eq!(result["request"]["text"].as_str(), Some("새로 번역할 원문"));
+        client
+            .evaluate(
+                "document.getElementById('nt-outgoing-replaced-review-test')?.remove()",
+                false,
+            )
+            .expect("remove replacement probe editor");
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_running_app_mounts_enabled_outgoing_control() {
+        let _guard = lock_live_outgoing();
+        let config = ConfigStore::load_default()
+            .and_then(|store| store.get())
+            .expect("saved app config");
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let state = client
+            .evaluate(
+                "(() => { const root=document.getElementById('nt-outgoing-translation'); const outgoing=root?.querySelector('.nt-outgoing-control'); const display=root?.querySelector('.nt-display-control'); const outgoingButton=outgoing?.querySelector('.nt-outgoing-trigger'); const displayButton=display?.querySelector('.nt-display-trigger'); const outgoingIcon=outgoing?.querySelector('.nt-role-icon'); const displayIcon=display?.querySelector('.nt-role-icon'); const rect=root?.getBoundingClientRect(); const outgoingRect=outgoing?.getBoundingClientRect(); const displayRect=display?.getBoundingClientRect(); const editors=[...document.querySelectorAll('[role=\"textbox\"][contenteditable=\"true\"], [contenteditable=\"true\"][data-slate-editor=\"true\"]')].map(editor=>{const r=editor.getBoundingClientRect();return {width:r.width,height:r.height,left:r.left,right:r.right,top:r.top,bottom:r.bottom}}); const originalToggles=[...document.querySelectorAll('.nt-outgoing-original-toggle')].map(button=>({text:button.textContent||'',messageId:button.closest('.nt-outgoing-original-view')?.previousElementSibling?.id||''})); const styleOf=element=>element?{width:getComputedStyle(element).width,minHeight:getComputedStyle(element).minHeight,backgroundColor:getComputedStyle(element).backgroundColor,color:getComputedStyle(element).color,borderColor:getComputedStyle(element).borderColor,borderRadius:getComputedStyle(element).borderRadius}:null; const codeNode=outgoingButton?.querySelector('b'); const savedCode=codeNode?.textContent||''; if(codeNode)codeNode.textContent='AU'; const autoFits=Boolean(outgoingButton&&outgoingButton.scrollWidth<=outgoingButton.clientWidth); if(codeNode)codeNode.textContent=savedCode; return {root:Boolean(root),version:window.__nudeTranslatorOutgoing?.version??null,originalVersion:window.__nudeTranslatorOutgoingOriginalDisplay?.version??null,originalToggles,rootHidden:root?.hidden??null,rootDisplay:root?getComputedStyle(root).display:null,outgoingHidden:outgoing?.hidden??null,displayHidden:display?.hidden??null,enabled:window.__nudeTranslatorOutgoing?.enabled??null,displayEnabled:window.__nudeTranslatorOutgoing?.displayEnabled??null,autoFits,outgoingCode:savedCode,displayCode:displayButton?.querySelector('b')?.textContent||'',outgoingLabel:outgoingButton?.querySelector('.nt-role-label')?.textContent||'',displayLabel:displayButton?.querySelector('.nt-role-label')?.textContent||'',outgoingIcon:outgoingIcon?.textContent||'',displayIcon:displayIcon?.textContent||'',outgoingStyle:styleOf(outgoingButton),displayStyle:styleOf(displayButton),outgoingIconStyle:styleOf(outgoingIcon),displayIconStyle:styleOf(displayIcon),stacked:Boolean(outgoingRect&&displayRect&&outgoingRect.bottom<=displayRect.top+1),rect:rect?{left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height}:null,viewport:{width:innerWidth,height:innerHeight},editors}; })()",
+                true,
+            )
+            .expect("running app control state");
+        eprintln!("running app overlay state: {state}");
+        let any_enabled = config.enabled || config.outgoing_translation_enabled;
+        assert_eq!(state["version"].as_u64(), Some(28), "state: {state}");
+        assert_eq!(
+            state["originalVersion"].as_u64(),
+            Some(16),
+            "state: {state}"
+        );
+        assert_eq!(state["root"].as_bool(), Some(true), "state: {state}");
+        assert_eq!(
+            state["rootHidden"].as_bool(),
+            Some(!any_enabled),
+            "state: {state}"
+        );
+        assert_eq!(
+            state["outgoingHidden"].as_bool(),
+            Some(!config.outgoing_translation_enabled),
+            "state: {state}"
+        );
+        assert_eq!(
+            state["displayHidden"].as_bool(),
+            Some(!config.enabled),
+            "state: {state}"
+        );
+        assert_eq!(
+            state["enabled"].as_bool(),
+            Some(config.outgoing_translation_enabled),
+            "state: {state}"
+        );
+        assert_eq!(
+            state["displayEnabled"].as_bool(),
+            Some(config.enabled),
+            "state: {state}"
+        );
+        if any_enabled {
+            assert!(
+                state["rect"]["top"].as_f64().unwrap_or(-1.0) >= 0.0,
+                "state: {state}"
+            );
+            assert!(
+                state["rect"]["bottom"].as_f64().unwrap_or(f64::MAX)
+                    <= state["viewport"]["height"].as_f64().unwrap_or(0.0),
+                "state: {state}"
+            );
+            assert!(
+                state["rect"]["width"].as_f64().unwrap_or(f64::MAX) <= 180.0,
+                "compact overlay is too wide: {state}"
+            );
+        }
+        let compact_code = |language: &str| match language {
+            "ko" => "KO",
+            "ja" => "JP",
+            "en" => "EN",
+            "zh" => "CN",
+            "zh-Hant" => "TW",
+            _ => "AU",
+        };
+        assert_eq!(state["outgoingLabel"].as_str(), Some(""), "state: {state}");
+        assert_eq!(state["displayLabel"].as_str(), Some(""), "state: {state}");
+        assert_eq!(state["outgoingIcon"].as_str(), Some("↑"), "state: {state}");
+        assert_eq!(state["displayIcon"].as_str(), Some("↓"), "state: {state}");
+        assert!(
+            matches!(
+                state["outgoingCode"].as_str(),
+                Some("AU" | "KO" | "JP" | "EN" | "CN" | "TW")
+            ),
+            "state: {state}"
+        );
+        assert_eq!(
+            state["displayCode"].as_str(),
+            Some(compact_code(&config.target_language)),
+            "state: {state}"
+        );
+        for (role, hidden) in [
+            ("outgoingStyle", "outgoingHidden"),
+            ("displayStyle", "displayHidden"),
+        ] {
+            if state[hidden].as_bool() == Some(true) {
+                continue;
+            }
+            let width = state[role]["width"]
+                .as_str()
+                .and_then(|value| value.trim_end_matches("px").parse::<f64>().ok())
+                .unwrap_or(f64::MAX);
+            assert!(
+                (56.0..=72.0).contains(&width),
+                "{role} is not content-hugging: {state}"
+            );
+            assert_eq!(state[role]["minHeight"].as_str(), Some("32px"));
+        }
+        assert_eq!(state["autoFits"].as_bool(), Some(true), "state: {state}");
+        assert_eq!(
+            state["outgoingStyle"]["backgroundColor"].as_str(),
+            Some("rgb(15, 32, 44)")
+        );
+        assert_eq!(
+            state["displayStyle"]["backgroundColor"].as_str(),
+            Some("rgb(15, 32, 44)")
+        );
+        assert_eq!(
+            state["outgoingIconStyle"]["color"].as_str(),
+            Some("rgb(118, 184, 250)")
+        );
+        assert_eq!(
+            state["displayIconStyle"]["color"].as_str(),
+            Some("rgb(240, 161, 92)")
+        );
+        assert_eq!(
+            state["outgoingIconStyle"]["borderRadius"].as_str(),
+            Some("50%")
+        );
+        assert_eq!(
+            state["displayIconStyle"]["borderRadius"].as_str(),
+            Some("50%")
+        );
+        if config.enabled && config.outgoing_translation_enabled {
+            assert_eq!(state["stacked"].as_bool(), Some(true), "state: {state}");
+        }
+        for toggle in state["originalToggles"]
+            .as_array()
+            .expect("original toggle list")
+        {
+            assert_eq!(
+                toggle["text"].as_str(),
+                Some(if config.enabled {
+                    "원문 보기"
+                } else {
+                    "전송문 보기"
+                }),
+                "state: {state}"
+            );
+            assert!(
+                toggle["messageId"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .starts_with("message-content-"),
+                "state: {state}"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord와 NudeNyang Translator가 필요합니다"]
+    fn live_running_app_f12_controls_all_outgoing_message_views() {
+        let _guard = lock_live_outgoing();
+        let config = ConfigStore::load_default()
+            .and_then(|store| store.get())
+            .expect("saved app config");
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let state = client
+            .evaluate(
+                "(() => { const manager=window.__nudeTranslatorOutgoingOriginalDisplay; const views=[...document.querySelectorAll('.nt-outgoing-original-view')].map(view=>({mode:view.dataset.mode||'',button:view.querySelector('.nt-outgoing-original-toggle')?.textContent||'',sentDisplay:view.previousElementSibling?.style.display||'',originalHidden:view.querySelector('.nt-outgoing-original-copy')?.hidden??null})); return {version:manager?.version??null,translationEnabled:manager?.translationEnabled??null,views}; })()",
+                true,
+            )
+            .expect("running app outgoing original state");
+        eprintln!("F12 outgoing view state: {state}");
+
+        assert_eq!(state["version"].as_u64(), Some(16), "state: {state}");
+        assert_eq!(
+            state["translationEnabled"].as_bool(),
+            Some(config.enabled),
+            "state: {state}"
+        );
+        let views = state["views"].as_array().expect("outgoing message views");
+        assert!(!views.is_empty(), "no outgoing message views: {state}");
+        for view in views {
+            if config.enabled {
+                assert_eq!(view["mode"].as_str(), Some("original"), "state: {state}");
+                assert_eq!(view["button"].as_str(), Some("원문 보기"), "state: {state}");
+                assert_eq!(view["sentDisplay"].as_str(), Some("none"), "state: {state}");
+                assert_eq!(
+                    view["originalHidden"].as_bool(),
+                    Some(false),
+                    "state: {state}"
+                );
+            } else {
+                assert_eq!(view["mode"].as_str(), Some("sent"), "state: {state}");
+                assert_eq!(
+                    view["button"].as_str(),
+                    Some("전송문 보기"),
+                    "state: {state}"
+                );
+                assert_eq!(view["sentDisplay"].as_str(), Some(""), "state: {state}");
+                assert_eq!(
+                    view["originalHidden"].as_bool(),
+                    Some(true),
+                    "state: {state}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -1029,7 +2343,20 @@ mod tests {
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("remove controller from previous build");
         let requests = client
-            .evaluate(&outgoing_ui_script(true, "auto", "ko"), false)
+            .evaluate(
+                &outgoing_ui_script(
+                    true,
+                    true,
+                    "ko",
+                    "auto",
+                    "ko",
+                    &HashMap::new(),
+                    true,
+                    "Ctrl+Enter",
+                    "Alt+Enter",
+                ),
+                false,
+            )
             .expect("outgoing script");
         assert!(requests.is_array());
         let mounted = client
@@ -1039,14 +2366,49 @@ mod tests {
             )
             .expect("mounted state");
         assert_eq!(mounted.as_bool(), Some(true));
-        let japanese_controller = outgoing_ui_script(true, "ja", "ko");
+        let placement = client
+            .evaluate(
+                "(() => { const root=document.getElementById('nt-outgoing-translation'); const editors=[...document.querySelectorAll('[role=\"textbox\"][contenteditable=\"true\"], [contenteditable=\"true\"][data-slate-editor=\"true\"]')].filter(editor=>{const r=editor.getBoundingClientRect();return r.width>120&&r.height>24&&r.top>innerHeight*0.4&&r.bottom<=innerHeight+1}); const editor=editors.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top).at(-1); const composer=editor?.closest('form')||editor?.closest('[class*=\"channelTextArea\"]')||editor?.parentElement; const rootBounds=root?.getBoundingClientRect(); const composerBounds=composer?.getBoundingClientRect(); return {displayIcon:root?.querySelector('.nt-display-icon')?.textContent,rightGap:Math.abs((rootBounds?.right||0)-(composerBounds?.right||0)),aboveComposer:(rootBounds?.bottom||99999)<=(composerBounds?.top||0)+1,insideLeft:(rootBounds?.left||0)>=(composerBounds?.left||0),fitsWidth:(rootBounds?.width||99999)<=(composerBounds?.width||0)}; })()",
+                true,
+            )
+            .expect("chat control placement");
+        assert_eq!(placement["displayIcon"].as_str(), Some("↓"));
+        assert!(
+            placement["rightGap"].as_f64().unwrap_or(999.0) <= 12.5,
+            "unexpected placement: {placement}"
+        );
+        assert_eq!(placement["aboveComposer"].as_bool(), Some(true));
+        assert_eq!(placement["insideLeft"].as_bool(), Some(true));
+        assert_eq!(placement["fitsWidth"].as_bool(), Some(true));
+        let display_requests = client
+            .evaluate(
+                "document.querySelector('#nt-outgoing-translation .nt-display-trigger')?.click();document.querySelector('#nt-outgoing-translation .nt-display-menu button[data-value=\"ja\"]')?.click();window.__nudeTranslatorOutgoing?.queue?.splice(0,8)||[]",
+                true,
+            )
+            .expect("display language selection");
+        let display_requests =
+            parse_outgoing_requests(display_requests).expect("display language request payload");
+        assert_eq!(display_requests.len(), 1);
+        assert_eq!(display_requests[0].action, "display-language");
+        assert_eq!(display_requests[0].selected_language, "ja");
+        let japanese_controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
         let request_probe = format!(
             "(() => {{ ({japanese_controller}); const label=document.querySelector('#nt-outgoing-translation .nt-outgoing-trigger b')?.textContent; const editor=document.createElement('div'); editor.id='nt-outgoing-live-test'; editor.setAttribute('role','textbox'); editor.setAttribute('contenteditable','true'); editor.textContent='안녕하세요'; document.body.append(editor); editor.dispatchEvent(new KeyboardEvent('keydown',{{key:'Enter',bubbles:true,cancelable:true}})); const requests=({japanese_controller}); return {{label,requests}}; }})()"
         );
         let probe = client
             .evaluate(&request_probe, true)
             .expect("updated language and synthetic composer event");
-        assert_eq!(probe["label"].as_str(), Some("日本語"));
+        assert_eq!(probe["label"].as_str(), Some("일본어"));
         let queued =
             parse_outgoing_requests(probe["requests"].clone()).expect("outgoing request payload");
         assert_eq!(queued.len(), 1);
@@ -1113,7 +2475,17 @@ mod tests {
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("remove previous controller");
-        let controller = outgoing_ui_script(true, "ja", "ko");
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
         let queued = client
             .evaluate(
                 &format!(
@@ -1197,6 +2569,71 @@ mod tests {
 
     #[test]
     #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_channel_language_selection_uses_the_app_queue() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("remove controller from previous build");
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let reinjected = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let probe = format!(
+            r#"(() => {{
+              ({controller});
+              const active = window.__nudeTranslatorOutgoing;
+              const channelKey = location.pathname;
+              active.queue.length = 0;
+              active.showLanguageMenu();
+              active.root.querySelector('.nt-outgoing-menu button[data-value="auto"]').click();
+              const requests = ({reinjected});
+              return {{
+                request: requests[0] || null,
+                remembered: active.channelLanguages[channelKey] || '',
+                label: active.root.querySelector('.nt-outgoing-trigger b')?.textContent || '',
+              }};
+            }})()"#
+        );
+        let result = client
+            .evaluate(&probe, true)
+            .expect("channel language memory probe");
+        assert_eq!(
+            result["request"]["action"].as_str(),
+            Some("remember-language")
+        );
+        assert_eq!(
+            result["request"]["selected_language"].as_str(),
+            Some("auto")
+        );
+        assert_eq!(result["remembered"].as_str(), Some("auto"));
+        assert_eq!(result["label"].as_str(), Some("AU"));
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("cleanup controller");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
     fn live_discord_controller_attaches_one_text_file_for_a_long_message() {
         let _guard = lock_live_outgoing();
         let target = discord_target(9222).expect("Discord channel target");
@@ -1204,7 +2641,17 @@ mod tests {
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("remove previous controller");
-        let controller = outgoing_ui_script(true, "ja", "ko");
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
         let queued = client
             .evaluate(
                 &format!(

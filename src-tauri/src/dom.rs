@@ -18,7 +18,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       const protectedParent = parent.closest(
         'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
       );
-      if (protectedParent && root.contains(protectedParent)) continue;
+      if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
       nodes.push(node);
@@ -40,9 +40,26 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       '[class*="name__"][aria-hidden="true"] > div'
     );
   }
+  function canonicalOriginal(kind, id, index, node) {
+    const displayed = node.nodeType === Node.TEXT_NODE ? node.nodeValue : node.textContent;
+    const originals = window.__nudeTranslatorOriginals;
+    if (originals instanceof Map && originals.has(node)) {
+      const original = originals.get(node);
+      if (typeof original === 'string') return original;
+    }
+    const locators = window.__nudeTranslatorOriginalsByLocator;
+    const stored = locators instanceof Map
+      ? locators.get(JSON.stringify([kind, id, index]))
+      : null;
+    return typeof stored?.text === 'string' ? stored.text : displayed;
+  }
   function parts(kind, id, root) {
     return eligibleTextNodes(root).map((node, index) => ({
-      kind, id, index, text: node.nodeValue,
+      kind,
+      id,
+      index,
+      text: canonicalOriginal(kind, id, index, node),
+      displayedText: node.nodeValue,
     }));
   }
   function messageRootCandidates() {
@@ -60,11 +77,21 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     }
     return [...roots];
   }
+  function isOutgoingMessage(root) {
+    if (root.getAttribute('data-nt-outgoing-original') === 'true') return true;
+    const manager = window.__nudeTranslatorOutgoingOriginalDisplay;
+    if (!(manager?.records instanceof Map)) return false;
+    const prefix = 'message-content-';
+    if (!root.id?.startsWith(prefix)) return false;
+    const messageId = root.id.slice(prefix.length);
+    const channel = location.pathname.startsWith('/channels/') ? location.pathname : '';
+    return Boolean(channel && messageId && manager.records.has(`${channel}|${messageId}`));
+  }
 
   const out = [];
   for (const root of messageRootCandidates()) {
     if (root.closest('[id^="message-reply-context-"]')) continue;
-    if (root.getAttribute('data-nt-outgoing-original') === 'true') continue;
+    if (isOutgoingMessage(root)) continue;
     if (!isVisible(root)) continue;
     const id = ensureRootId(root, 'data-dto-message-id', 'message');
     out.push(...parts('message', id, root));
@@ -94,7 +121,11 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const visual = channelVisual(channel);
     const itemId = channel.getAttribute('data-list-item-id');
     if (visual && itemId && visual.textContent?.trim()) {
-      out.push({kind: 'channel', id: itemId, index: 0, text: visual.textContent});
+      out.push({
+        kind: 'channel', id: itemId, index: 0,
+        text: canonicalOriginal('channel', itemId, 0, visual),
+        displayedText: visual.textContent,
+      });
     }
   }
   for (const category of document.querySelectorAll(
@@ -104,7 +135,11 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const visual = category.querySelector('h3 > div');
     const itemId = category.getAttribute('data-list-item-id');
     if (visual && itemId && visual.textContent?.trim()) {
-      out.push({kind: 'category', id: itemId, index: 0, text: visual.textContent});
+      out.push({
+        kind: 'category', id: itemId, index: 0,
+        text: canonicalOriginal('category', itemId, 0, visual),
+        displayedText: visual.textContent,
+      });
     }
   }
   for (const root of document.querySelectorAll('[class*="postTitleText"]')) {
@@ -164,7 +199,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       const protectedParent = parent.closest(
         'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
       );
-      if (protectedParent && root.contains(protectedParent)) continue;
+      if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
       nodes.push(node);
@@ -216,11 +251,17 @@ pub struct DomPart {
     pub item_id: String,
     pub index: usize,
     pub text: String,
+    #[serde(default, rename = "displayedText")]
+    pub displayed_text: Option<String>,
 }
 
 impl DomPart {
     pub fn locator(&self) -> (String, String, usize) {
         (self.kind.clone(), self.item_id.clone(), self.index)
+    }
+
+    pub fn rendered_text(&self) -> &str {
+        self.displayed_text.as_deref().unwrap_or(&self.text)
     }
 }
 
@@ -289,12 +330,22 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       const protectedParent = parent.closest(
         'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
       );
-      if (protectedParent && root.contains(protectedParent)) continue;
+      if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
       nodes.push(node);
     }}
     return nodes;
+  }}
+  function isOutgoingMessage(root) {{
+    if (root?.getAttribute('data-nt-outgoing-original') === 'true') return true;
+    const manager = window.__nudeTranslatorOutgoingOriginalDisplay;
+    if (!(manager?.records instanceof Map)) return false;
+    const prefix = 'message-content-';
+    if (!root?.id?.startsWith(prefix)) return false;
+    const messageId = root.id.slice(prefix.length);
+    const channel = location.pathname.startsWith('/channels/') ? location.pathname : '';
+    return Boolean(channel && messageId && manager.records.has(`${{channel}}|${{messageId}}`));
   }}
   let applied = 0;
   for (const change of changes) {{
@@ -344,7 +395,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
         continue;
       }}
     }}
-    if (!root) continue;
+    if (!root || (change.kind === 'message' && isOutgoingMessage(root))) continue;
     const nodes = eligibleTextNodes(root);
     const node = nodes[change.index];
     if (!node) continue;
@@ -364,6 +415,7 @@ mod tests {
         apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
         RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
+    use crate::cdp::{discord_target, CdpClient};
     use serde_json::json;
 
     #[test]
@@ -371,13 +423,21 @@ mod tests {
         let snapshot = parse_snapshot(json!({
             "url": "https://discord.com/channels/1/2",
             "title": "Discord",
-            "parts": [{"kind": "message", "id": "dto-message-1", "index": 2, "text": "hello"}]
+            "parts": [{
+                "kind": "message",
+                "id": "dto-message-1",
+                "index": 2,
+                "text": "hello",
+                "displayedText": "안녕"
+            }]
         }))
         .unwrap();
         assert_eq!(
             snapshot.parts[0].locator(),
             ("message".into(), "dto-message-1".into(), 2)
         );
+        assert_eq!(snapshot.parts[0].text, "hello");
+        assert_eq!(snapshot.parts[0].rendered_text(), "안녕");
         assert!(SNAPSHOT_SCRIPT.contains("message-reply-context-"));
         assert!(SNAPSHOT_SCRIPT.contains("data-nt-outgoing-original"));
         assert!(SNAPSHOT_SCRIPT.contains("postTitleText"));
@@ -392,12 +452,119 @@ mod tests {
     }
 
     #[test]
+    fn embed_link_root_text_remains_eligible_for_translation() {
+        assert_eq!(
+            SNAPSHOT_SCRIPT.matches("protectedParent !== root").count(),
+            1
+        );
+        assert_eq!(
+            RESTORE_TEXT_SCRIPT
+                .matches("protectedParent !== root")
+                .count(),
+            1
+        );
+
+        let part = DomPart {
+            kind: "embed".to_string(),
+            item_id: "dto-embed-link-title".to_string(),
+            index: 0,
+            text: "원문 제목".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "번역된 제목")]).unwrap();
+        assert_eq!(script.matches("protectedParent !== root").count(), 1);
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러와 화면에 보이는 링크 미리보기가 필요해"]
+    fn live_embed_title_translates_without_breaking_its_link() {
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        client.connect().unwrap();
+
+        let scrolled = client
+            .evaluate(
+                r#"(() => { const root=[...document.querySelectorAll('a[class*="embedTitle_"]')].find(node => node.textContent?.trim()); if (!root) return false; root.scrollIntoView({block:'center'}); return true; })()"#,
+                false,
+            )
+            .unwrap();
+        assert_eq!(scrolled, true);
+        let before = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
+        let title_id = client
+            .evaluate(
+                r#"(() => [...document.querySelectorAll('a[class*="embedTitle_"][data-dto-root-id]')].find(node => { const rect=node.getBoundingClientRect(); return rect.bottom > 0 && rect.top < innerHeight; })?.getAttribute('data-dto-root-id') || null)()"#,
+                false,
+            )
+            .unwrap();
+        let title_id = title_id
+            .as_str()
+            .expect("화면에 번역 검증용 링크 미리보기 제목이 필요해");
+        let title = before
+            .parts
+            .iter()
+            .find(|part| part.kind == "embed" && part.item_id == title_id)
+            .cloned()
+            .expect("화면에 번역 검증용 링크 미리보기 제목이 필요해");
+        let id = serde_json::to_string(&title.item_id).unwrap();
+        let href_before = client
+            .evaluate(
+                &format!(
+                    "(() => document.querySelector(`[data-dto-root-id=\"${{CSS.escape({id})}}\"]`)?.href || null)()"
+                ),
+                false,
+            )
+            .unwrap();
+        assert!(href_before.as_str().is_some_and(|href| !href.is_empty()));
+
+        let marker = "링크 미리보기 제목 번역 검증";
+        let script = apply_script(&[DomChange::new(&title, marker)]).unwrap();
+        client.evaluate(&script, false).unwrap();
+        let translated = client
+            .evaluate(
+                &format!(
+                    "(() => {{ const root=document.querySelector(`[data-dto-root-id=\"${{CSS.escape({id})}}\"]`); return {{text: root?.textContent || null, href: root?.href || null}}; }})()"
+                ),
+                false,
+            )
+            .unwrap();
+        client.evaluate(RESTORE_TEXT_SCRIPT, false).unwrap();
+        client.close();
+
+        assert_eq!(translated["text"], marker);
+        assert_eq!(translated["href"], href_before);
+    }
+
+    #[test]
+    fn snapshot_keeps_canonical_original_separate_from_rendered_translation() {
+        assert!(SNAPSHOT_SCRIPT.contains("canonicalOriginal"));
+        assert!(SNAPSHOT_SCRIPT.contains("displayedText"));
+        assert!(SNAPSHOT_SCRIPT.contains("__nudeTranslatorOriginalsByLocator"));
+    }
+
+    #[test]
+    fn outgoing_messages_are_excluded_during_discord_scroll_remounts() {
+        assert!(SNAPSHOT_SCRIPT.contains("__nudeTranslatorOutgoingOriginalDisplay"));
+        assert!(SNAPSHOT_SCRIPT.contains("manager.records.has"));
+
+        let part = DomPart {
+            kind: "message".to_string(),
+            item_id: "dto-message-scroll-remount".to_string(),
+            index: 0,
+            text: "送信した文".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "번역된 문장")]).unwrap();
+        assert!(script.contains("data-nt-outgoing-original"));
+    }
+
+    #[test]
     fn changes_are_json_encoded_without_script_injection() {
         let part = DomPart {
             kind: "message".to_string(),
             item_id: "dto-message-1".to_string(),
             index: 0,
             text: "original".to_string(),
+            displayed_text: None,
         };
         let script = apply_script(&[DomChange::new(&part, "` ${alert(1)} \"번역\"")]).unwrap();
         assert!(script.contains(r#""text":"` ${alert(1)} \"번역\"""#));
@@ -411,6 +578,7 @@ mod tests {
             item_id: "dto-message-1".to_string(),
             index: 0,
             text: "원문".to_string(),
+            displayed_text: None,
         };
         let script = apply_script(&[DomChange::new(&part, "번역문")]).unwrap();
         assert!(script.contains("__nudeTranslatorOriginals"));

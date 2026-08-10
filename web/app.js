@@ -26,6 +26,16 @@ const APP_LINKS = Object.freeze({
   repository: "https://github.com/NudeNyang/NudeNyang-Translator",
 });
 
+const TRANSLATOR_OPTIONS = [
+  ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
+  ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
+  ["chatgpt", "GPT-5.6 Luna · low · 지속 연결"],
+  ["claude", "Claude Haiku 4.5 · 지속 연결"],
+  ["gemini", "Gemini 3.6 Flash · low · 지속 세션"],
+  ["deepl", "DeepL (API 키·외부 전송)"],
+  ["mock", "Mock 테스트"],
+];
+
 const OPTIONS = {
   target_language: [
     ["ko", "한국어"],
@@ -34,15 +44,8 @@ const OPTIONS = {
     ["zh", "简体中文"],
     ["zh-Hant", "繁體中文"],
   ],
-  translator: [
-    ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
-    ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
-    ["chatgpt", "ChatGPT Plus/Pro (Codex CLI)"],
-    ["claude", "Claude Pro/Max (Claude Code)"],
-    ["gemini", "Gemini Pro/Ultra (Gemini CLI)"],
-    ["deepl", "DeepL (API 키·외부 전송)"],
-    ["mock", "Mock 테스트"],
-  ],
+  translator: TRANSLATOR_OPTIONS,
+  outgoing_translator: TRANSLATOR_OPTIONS,
   speech_style: [
     ["auto", "원문 말투 유지 (자동)"],
     ["polite", "항상 존댓말·격식체"],
@@ -104,11 +107,14 @@ const elements = {
   form: document.querySelector("#settings-form"),
   enabled: document.querySelector("#enabled"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
-  outgoingConfirmLanguage: document.querySelector("#outgoing-confirm-language"),
+  outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
+  outgoingAutoHelp: document.querySelector("#outgoing-auto-help"),
   keepWarm: document.querySelector("#keep-warm"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
   outgoingShortcut: document.querySelector("#toggle-outgoing-shortcut"),
+  sendImmediatelyShortcut: document.querySelector("#send-immediately-shortcut"),
+  reviewBeforeSendShortcut: document.querySelector("#review-before-send-shortcut"),
   cancel: document.querySelector("#cancel"),
   saveStatus: document.querySelector("#save-status"),
   engineState: document.querySelector("#engine-state"),
@@ -138,8 +144,8 @@ const elements = {
 const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
 const PROVIDER_LOGIN_COPY = Object.freeze({
   chatgpt: { name: "ChatGPT", account: "ChatGPT 계정" },
-  claude: { name: "Claude", account: "Claude Pro/Max 계정" },
-  gemini: { name: "Google", account: "Google 계정" },
+  claude: { name: "Claude", account: "Claude 계정" },
+  gemini: { name: "Google", account: "Google 계정", terminal: true },
 });
 
 function updateScrollIndicator() {
@@ -406,11 +412,13 @@ async function showProviderLoginProgress(provider) {
   let closed = false;
   let unlistenReady = null;
   elements.modalTitle.textContent = `${copy.name} 계정 연결`;
-  elements.modalMessage.textContent = `${copy.name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.`;
+  elements.modalMessage.textContent = copy.terminal
+    ? "Antigravity 로그인 터미널을 준비하고 있습니다. 잠시 기다리십시오."
+    : `${copy.name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.`;
   elements.modalCancel.textContent = "취소";
   elements.modalCancel.hidden = false;
   elements.modalCancel.disabled = false;
-  elements.modalAccept.textContent = "이동";
+  elements.modalAccept.textContent = copy.terminal ? "터미널 열기" : "이동";
   elements.modalAccept.hidden = false;
   elements.modalAccept.disabled = true;
   elements.modalLayer.dataset.variant = "provider-login";
@@ -438,7 +446,9 @@ async function showProviderLoginProgress(provider) {
         elements.modalAccept.disabled = false;
         return;
       }
-      elements.modalMessage.textContent = `브라우저에서 ${copy.account} 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.`;
+      elements.modalMessage.textContent = copy.terminal
+        ? `열린 터미널에서 Google OAuth를 선택하십시오.\n브라우저 로그인 후 인증 코드를 터미널에 붙여넣으면 앱이 완료를 자동으로 감지합니다.`
+        : `브라우저에서 ${copy.account} 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.`;
     } catch (error) {
       elements.modalMessage.textContent = `로그인 페이지를 열지 못했습니다. 잠시 후 다시 시도하십시오.\n${String(error)}`;
       elements.modalAccept.disabled = false;
@@ -460,12 +470,16 @@ async function showProviderLoginProgress(provider) {
   elements.modalAccept.addEventListener("click", open);
   if (tauriListen) {
     unlistenReady = await tauriListen("provider-login-ready", () => {
-      elements.modalMessage.textContent = `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
+      elements.modalMessage.textContent = copy.terminal
+        ? "Antigravity 최초 로그인을 진행하려면 터미널 열기를 선택하십시오."
+        : `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
       elements.modalAccept.disabled = false;
       elements.modalAccept.focus();
     });
   } else {
-    elements.modalMessage.textContent = `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
+    elements.modalMessage.textContent = copy.terminal
+      ? "Antigravity 최초 로그인을 진행하려면 터미널 열기를 선택하십시오."
+      : `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
     elements.modalAccept.disabled = false;
   }
   elements.modalCancel.focus();
@@ -673,7 +687,7 @@ function renderSelect(element) {
       if (field === "ui_theme") applyTheme(value);
       if (field === "ui_language") applyUiLanguage(value);
       try {
-        if (field === "translator" && EXTERNAL_PROVIDERS.has(value) && !providerIsConnected(value)) {
+        if (["translator", "outgoing_translator"].includes(field) && EXTERNAL_PROVIDERS.has(value) && !providerIsConnected(value)) {
           if (value === "deepl") await savePendingProviderCredentials();
           if (!providerIsConnected(value)) {
             setLocalizedText(elements.saveStatus, "선택한 외부 번역 서비스를 먼저 연결하십시오.");
@@ -741,6 +755,7 @@ function renderConfig(config, { updateBaseline = false } = {}) {
   state.config = normalizeConfig(config);
   if (updateBaseline) state.saved = normalizeConfig(config);
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
+  elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   setSwitch(
     elements.outgoingTranslation,
@@ -749,15 +764,17 @@ function renderConfig(config, { updateBaseline = false } = {}) {
     "꺼짐",
   );
   setSwitch(
-    elements.outgoingConfirmLanguage,
-    state.config.outgoing_confirm_language,
-    "사용",
-    "사용 안 함",
+    elements.outgoingConfirmSend,
+    state.config.outgoing_confirm_send,
+    "확인",
+    "즉시",
   );
   setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "유지", "반환");
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
+  elements.sendImmediatelyShortcut.value = state.config.hotkeys.send_outgoing_immediately;
+  elements.reviewBeforeSendShortcut.value = state.config.hotkeys.review_outgoing_before_send;
   applyTheme(state.config.ui_theme);
   applyUiLanguage(state.config.ui_language);
 }
@@ -892,7 +909,7 @@ async function toggleOutgoingTranslation() {
   try {
     await setOutgoingTranslationEnabled(!state.config.outgoing_translation_enabled);
   } catch (error) {
-    await showError("보내는 메시지 번역 상태를 변경하지 못했습니다", String(error));
+    await showError("전송 메시지 통역 상태를 변경하지 못했습니다", String(error));
   } finally {
     state.outgoingToggleActive = false;
   }
@@ -1080,15 +1097,15 @@ elements.outgoingTranslation.addEventListener("click", async () => {
   try {
     await setOutgoingTranslationEnabled(enabled);
   } catch (error) {
-    await showError("보내는 메시지 번역 상태를 변경하지 못했습니다", String(error));
+    await showError("전송 메시지 통역 상태를 변경하지 못했습니다", String(error));
   }
 });
-elements.outgoingConfirmLanguage.addEventListener("click", () => {
-  const enabled = elements.outgoingConfirmLanguage.getAttribute("aria-checked") !== "true";
-  setSwitch(elements.outgoingConfirmLanguage, enabled, "사용", "사용 안 함");
-  applySettingsPatch({ outgoing_confirm_language: enabled }).catch(async error => {
-    setSwitch(elements.outgoingConfirmLanguage, !enabled, "사용", "사용 안 함");
-    await showError("채널별 첫 감지 확인 설정을 적용하지 못했습니다", String(error));
+elements.outgoingConfirmSend.addEventListener("click", () => {
+  const enabled = elements.outgoingConfirmSend.getAttribute("aria-checked") !== "true";
+  setSwitch(elements.outgoingConfirmSend, enabled, "확인", "즉시");
+  applySettingsPatch({ outgoing_confirm_send: enabled }).catch(async error => {
+    setSwitch(elements.outgoingConfirmSend, !enabled, "확인", "즉시");
+    await showError("전송 전 확인 설정을 적용하지 못했습니다", String(error));
   });
 });
 elements.keepWarm.addEventListener("click", () => {
@@ -1108,6 +1125,8 @@ async function applyShortcutImmediately(element, configKey, shortcut, help, fall
   const hotkeys = {
     toggle_translation: elements.shortcut.value.trim() || "F12",
     toggle_outgoing_translation: elements.outgoingShortcut.value.trim() || "F8",
+    send_outgoing_immediately: elements.sendImmediatelyShortcut.value.trim() || "Ctrl+Enter",
+    review_outgoing_before_send: elements.reviewBeforeSendShortcut.value.trim() || "Alt+Enter",
     [configKey]: shortcut,
   };
   try {
@@ -1154,6 +1173,18 @@ bindShortcutEditor(
   "toggle_outgoing_translation",
   "outgoing-shortcut-help",
   "F8",
+);
+bindShortcutEditor(
+  elements.sendImmediatelyShortcut,
+  "send_outgoing_immediately",
+  "send-immediately-shortcut-help",
+  "Ctrl+Enter",
+);
+bindShortcutEditor(
+  elements.reviewBeforeSendShortcut,
+  "review_outgoing_before_send",
+  "review-before-send-shortcut-help",
+  "Alt+Enter",
 );
 
 for (const item of document.querySelectorAll("[data-settings-panel]")) {
