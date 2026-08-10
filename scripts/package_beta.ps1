@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'Hy-MT2 1.8B 번역 안정성과 메시지별 오류 격리를 개선한 0.3.7 비공개 베타',
+    [string]$ReleaseNotes = 'CLI 번역 예열, 전송 전용 워커, 지연 진단과 백그라운드 실행을 개선한 0.4.1 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
