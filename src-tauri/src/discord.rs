@@ -81,16 +81,29 @@ pub fn restart(expected_process_id: Option<u32>, port: u16) -> Result<DiscordPro
     }
     stop_matching_processes(&executable)?;
     let launch = discord_launch_plan(&executable, port)?;
-    Command::new(&launch.program)
+    let mut command = Command::new(&launch.program);
+    command
         .args(&launch.arguments)
         .current_dir(&launch.current_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::null());
+    configure_background(&mut command);
+    command
         .spawn()
         .map_err(|error| format!("Discord를 디버그 모드로 실행하지 못했습니다: {error}"))?;
     wait_for_restarted_process(&executable, Duration::from_secs(15))
 }
+
+#[cfg(windows)]
+fn configure_background(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn configure_background(_command: &mut Command) {}
 
 pub fn wait_for_debug_port(port: u16, timeout: Duration) -> Result<(), String> {
     let deadline = Instant::now() + timeout;

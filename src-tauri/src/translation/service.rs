@@ -1,4 +1,5 @@
 use std::sync::LazyLock;
+use std::time::Instant;
 
 use regex::Regex;
 use sha2::{Digest, Sha256};
@@ -135,10 +136,14 @@ impl TranslationService {
         }
         let mut results: Vec<Option<String>> = vec![None; texts.len()];
         let mut pending = Vec::new();
+        let started = Instant::now();
+        let mut cache_hits = 0_usize;
+        let mut passthrough = 0_usize;
         for (index, text) in texts.iter().enumerate() {
             let protected = protect_text(text);
             if !protected.has_translatable_text() {
                 results[index] = Some(text.clone());
+                passthrough += 1;
                 continue;
             }
             let source = self.detector.detect(text, true);
@@ -148,6 +153,7 @@ impl TranslationService {
             }
             if source == Language::Unknown {
                 results[index] = Some(text.clone());
+                passthrough += 1;
                 continue;
             }
             let source_hash = source_hash(text);
@@ -160,11 +166,13 @@ impl TranslationService {
                 false,
             )? {
                 results[index] = Some(preserve_terminal_punctuation(text, &cached));
+                cache_hits += 1;
                 continue;
             }
             pending.push((index, text.clone(), protected, source, source_hash));
         }
 
+        let provider_items = pending.len();
         if !pending.is_empty() {
             let items: Vec<_> = pending
                 .iter()
@@ -195,6 +203,18 @@ impl TranslationService {
                 results[index] = Some(restored);
             }
         }
+
+        crate::diagnostics::info(
+            "translation-batch",
+            &format!(
+                "translator={}; items={}; chars={}; cache_hits={cache_hits}; passthrough={passthrough}; provider_items={}; elapsed_ms={}",
+                self.translator.display_name(),
+                texts.len(),
+                texts.iter().map(|text| text.chars().count()).sum::<usize>(),
+                provider_items,
+                started.elapsed().as_millis(),
+            ),
+        );
 
         results
             .into_iter()
@@ -488,6 +508,36 @@ mod tests {
                 .translate("(•ω•)つス.....", Language::Korean)
                 .unwrap(),
             "(•ω•)つス....."
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_batch_sends_only_non_native_languages_to_the_model() {
+        let path = cache_path("foreign-only-batch");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(RecordingIdentityTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = vec![
+            "안녕하세요".to_string(),
+            "Hello there".to_string(),
+            "こんにちは".to_string(),
+        ];
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming(&source, Language::Korean)
+                .unwrap(),
+            source
+        );
+        assert_eq!(
+            inputs.lock().unwrap().as_slice(),
+            &["Hello there".to_string(), "こんにちは".to_string()]
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }

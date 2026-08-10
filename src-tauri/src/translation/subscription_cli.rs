@@ -18,6 +18,12 @@ use crate::language::Language;
 use super::Translator;
 
 const PROMPT_VERSION: &str = "subscription-cli-tone-and-punctuation-v2";
+const CODEX_TRANSLATION_MODEL: &str = "gpt-5.6-luna";
+const CODEX_TRANSLATION_EFFORT: &str = "low";
+const CLAUDE_TRANSLATION_MODEL: &str = "claude-haiku-4-5-20251001";
+const AGY_TRANSLATION_MODEL: &str = "flash";
+const AGY_TRANSLATION_EFFORT: &str = "low";
+const PERSISTENT_SESSION_TURN_LIMIT: u32 = 32;
 const API_ENVIRONMENT_VARIABLES: [&str; 5] = [
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
@@ -183,7 +189,15 @@ impl SubscriptionProvider {
         match self {
             Self::ChatGpt => "ChatGPT (Codex CLI)",
             Self::Claude => "Claude (Claude Code)",
-            Self::Gemini => "Gemini (Gemini CLI)",
+            Self::Gemini => "Gemini (Antigravity CLI)",
+        }
+    }
+
+    fn model_cache_key(self) -> &'static str {
+        match self {
+            Self::ChatGpt => "gpt-5.6-luna-low",
+            Self::Claude => "claude-haiku-4-5-20251001",
+            Self::Gemini => "gemini-flash-low",
         }
     }
 
@@ -191,7 +205,7 @@ impl SubscriptionProvider {
         match self {
             Self::ChatGpt => &["codex"],
             Self::Claude => &["claude"],
-            Self::Gemini => &["agy", "gemini"],
+            Self::Gemini => &["agy"],
         }
     }
 
@@ -204,7 +218,7 @@ impl SubscriptionProvider {
                 "Claude Code가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오."
             }
             Self::Gemini => {
-                "Gemini CLI가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오."
+                "Google Antigravity CLI가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오."
             }
         }
     }
@@ -215,10 +229,10 @@ impl SubscriptionProvider {
                 "ChatGPT 계정 연결이 필요합니다. 연결을 선택한 후 공식 로그인 페이지에서 인증하십시오."
             }
             Self::Claude => {
-                "Claude Pro/Max 계정 연결이 필요합니다. 연결을 선택한 후 공식 로그인 페이지에서 인증하십시오."
+                "Claude 계정 연결이 필요합니다. 연결을 선택한 후 공식 로그인 페이지에서 인증하십시오."
             }
             Self::Gemini => {
-                "Google 계정 연결이 필요합니다. 연결을 선택한 후 공식 로그인 페이지에서 인증하십시오."
+                "Google 계정 연결이 필요합니다. 연결을 선택한 후 Antigravity 터미널과 공식 로그인 페이지에서 인증하십시오."
             }
         }
     }
@@ -241,6 +255,10 @@ pub struct SubscriptionCliTranslator {
     resolved_command: Option<(PathBuf, Implementation)>,
     prepared: bool,
     codex_server: Option<CodexAppServer>,
+    claude_server: Option<ClaudeStreamServer>,
+    agy_conversation_id: Option<String>,
+    agy_session_turns: u32,
+    completed_requests: u64,
     workspace_root: PathBuf,
 }
 
@@ -260,10 +278,18 @@ impl SubscriptionCliTranslator {
             speech_style: speech_style.to_string(),
             timeout: Duration::from_secs(timeout_seconds.max(15)),
             display_name: provider.display_name().to_string(),
-            cache_namespace: format!("{PROMPT_VERSION}:{}:{speech_style}", provider.key()),
+            cache_namespace: format!(
+                "{PROMPT_VERSION}:{}:{}:{speech_style}",
+                provider.key(),
+                provider.model_cache_key()
+            ),
             resolved_command: None,
             prepared: false,
             codex_server: None,
+            claude_server: None,
+            agy_conversation_id: None,
+            agy_session_turns: 0,
+            completed_requests: 0,
             workspace_root: cache_root
                 .as_ref()
                 .join("subscription-cli")
@@ -299,7 +325,9 @@ impl SubscriptionCliTranslator {
         Ok(self.workspace_root.clone())
     }
 
-    fn invoke(&mut self, prompt: &str) -> Result<Value, String> {
+    fn invoke(&mut self, prompt: &str, items: usize, chars: usize) -> Result<Value, String> {
+        let request_started = Instant::now();
+        let request_deadline = request_started + self.timeout;
         let (executable, implementation) = self.resolve_command()?;
         self.prepare()?;
         let schema = translation_schema();
@@ -316,65 +344,144 @@ impl SubscriptionCliTranslator {
                     ));
                 }
                 if let Some(server) = self.codex_server.as_mut() {
-                    if let Ok(result) = server.invoke(prompt, &schema) {
-                        return Ok(result);
+                    let persistent_started = Instant::now();
+                    match server.invoke(prompt, &schema) {
+                        Ok(result) => {
+                            self.completed_requests += 1;
+                            log_cli_latency(
+                                self.provider,
+                                "persistent",
+                                self.completed_requests == 1,
+                                items,
+                                chars,
+                                persistent_started.elapsed(),
+                                "ok",
+                                None,
+                            );
+                            return Ok(result);
+                        }
+                        Err(error) => {
+                            log_cli_latency(
+                                self.provider,
+                                "persistent",
+                                self.completed_requests == 0,
+                                items,
+                                chars,
+                                persistent_started.elapsed(),
+                                "fallback",
+                                Some(failure_category(&error)),
+                            );
+                        }
                     }
                     server.close();
                 }
                 self.codex_server = None;
-                invoke_codex_once(
+                let remaining = remaining_request_time(request_deadline)?;
+                let fallback_started = Instant::now();
+                let result = invoke_codex_once(
                     &executable,
                     prompt,
                     &schema,
                     &workspace,
                     &environment,
-                    self.timeout,
+                    remaining,
                     self.provider,
-                )
+                );
+                log_cli_latency(
+                    self.provider,
+                    "one-shot-fallback",
+                    self.completed_requests == 0,
+                    items,
+                    chars,
+                    fallback_started.elapsed(),
+                    if result.is_ok() { "ok" } else { "error" },
+                    result.as_ref().err().map(|error| failure_category(error)),
+                );
+                if result.is_ok() {
+                    self.completed_requests += 1;
+                }
+                result
             }
             Implementation::Claude => {
-                let arguments = vec![
-                    "--disable-slash-commands".to_string(),
-                    "--disallowedTools".to_string(),
-                    "*".to_string(),
-                    "--no-session-persistence".to_string(),
-                    "--output-format".to_string(),
-                    "json".to_string(),
-                    "--json-schema".to_string(),
-                    schema.to_string(),
-                    "--system-prompt".to_string(),
-                    "You are a translation engine. Never use tools. Return only the requested data."
-                        .to_string(),
-                    "-p".to_string(),
-                    "Process the translation request provided through standard input.".to_string(),
-                ];
-                let output = run_process(
+                if self.claude_server.is_none() {
+                    self.claude_server = Some(ClaudeStreamServer::new(
+                        executable.clone(),
+                        workspace.clone(),
+                        environment.clone(),
+                        self.timeout,
+                    ));
+                }
+                if let Some(server) = self.claude_server.as_mut() {
+                    let persistent_started = Instant::now();
+                    match server.invoke(prompt, &schema) {
+                        Ok(result) => {
+                            self.completed_requests += 1;
+                            log_cli_latency(
+                                self.provider,
+                                "persistent",
+                                self.completed_requests == 1,
+                                items,
+                                chars,
+                                persistent_started.elapsed(),
+                                "ok",
+                                None,
+                            );
+                            return Ok(result);
+                        }
+                        Err(error) => {
+                            log_cli_latency(
+                                self.provider,
+                                "persistent",
+                                self.completed_requests == 0,
+                                items,
+                                chars,
+                                persistent_started.elapsed(),
+                                "fallback",
+                                Some(failure_category(&error)),
+                            );
+                        }
+                    }
+                    server.close();
+                }
+                self.claude_server = None;
+                let remaining = remaining_request_time(request_deadline)?;
+                let fallback_started = Instant::now();
+                let result = invoke_claude_once(
                     &executable,
-                    &arguments,
-                    Some(prompt),
+                    prompt,
+                    &schema,
                     &workspace,
                     &environment,
-                    self.timeout,
-                )?;
-                raise_for_failure(&output, self.provider)?;
-                decode_payload(&decode_process_output(&output.stdout))
+                    remaining,
+                    self.provider,
+                );
+                log_cli_latency(
+                    self.provider,
+                    "one-shot-fallback",
+                    self.completed_requests == 0,
+                    items,
+                    chars,
+                    fallback_started.elapsed(),
+                    if result.is_ok() { "ok" } else { "error" },
+                    result.as_ref().err().map(|error| failure_category(error)),
+                );
+                if result.is_ok() {
+                    self.completed_requests += 1;
+                }
+                result
             }
             Implementation::Agy | Implementation::Gemini => {
                 let arguments = if implementation == Implementation::Agy {
-                    vec![
-                        "-p".to_string(),
-                        prompt.to_string(),
-                        "--cwd".to_string(),
-                        workspace.display().to_string(),
-                    ]
+                    agy_invocation_arguments(
+                        prompt,
+                        &schema,
+                        self.timeout.as_secs(),
+                        self.agy_conversation_id.as_deref(),
+                    )
                 } else {
-                    vec![
-                        "-p".to_string(),
-                        prompt.to_string(),
-                        "--output-format".to_string(),
-                        "json".to_string(),
-                    ]
+                    gemini_invocation_arguments(prompt)
                 };
+                let process_started = Instant::now();
                 let output = run_process(
                     &executable,
                     &arguments,
@@ -382,12 +489,223 @@ impl SubscriptionCliTranslator {
                     &workspace,
                     &environment,
                     self.timeout,
-                )?;
-                raise_for_failure(&output, self.provider)?;
-                decode_payload(&decode_process_output(&output.stdout))
+                );
+                let output = match output {
+                    Ok(output) => output,
+                    Err(error) => {
+                        log_cli_latency(
+                            self.provider,
+                            "process-per-request",
+                            self.completed_requests == 0,
+                            items,
+                            chars,
+                            process_started.elapsed(),
+                            "error",
+                            Some(failure_category(&error)),
+                        );
+                        return Err(error);
+                    }
+                };
+                if let Err(error) = raise_for_failure(&output, self.provider) {
+                    log_cli_latency(
+                        self.provider,
+                        "process-per-request",
+                        self.completed_requests == 0,
+                        items,
+                        chars,
+                        process_started.elapsed(),
+                        "error",
+                        Some(failure_category(&error)),
+                    );
+                    return Err(error);
+                }
+                let payload = if implementation == Implementation::Agy {
+                    decode_stream_result(&decode_process_output(&output.stdout))?
+                } else {
+                    decode_payload(&decode_process_output(&output.stdout))?
+                };
+                if implementation == Implementation::Agy {
+                    if let Some(conversation_id) = find_string_field(&payload, "conversation_id") {
+                        self.agy_conversation_id = Some(conversation_id.to_string());
+                    }
+                    self.agy_session_turns += 1;
+                    if self.agy_session_turns >= PERSISTENT_SESSION_TURN_LIMIT {
+                        self.agy_conversation_id = None;
+                        self.agy_session_turns = 0;
+                    }
+                }
+                self.completed_requests += 1;
+                log_cli_latency(
+                    self.provider,
+                    "process-per-request",
+                    self.completed_requests == 1,
+                    items,
+                    chars,
+                    process_started.elapsed(),
+                    "ok",
+                    None,
+                );
+                Ok(payload)
             }
         }
     }
+}
+
+fn remaining_request_time(deadline: Instant) -> Result<Duration, String> {
+    deadline
+        .checked_duration_since(Instant::now())
+        .filter(|remaining| !remaining.is_zero())
+        .ok_or_else(|| "구독 번역기의 전체 응답 시간이 초과되었습니다.".to_string())
+}
+
+fn failure_category(error: &str) -> &'static str {
+    let normalized = error.to_ascii_lowercase();
+    if normalized.contains("시간이 초과") || normalized.contains("timed out") {
+        "timeout"
+    } else if normalized.contains("종료")
+        || normalized.contains("닫혀")
+        || normalized.contains("끊어")
+    {
+        "connection-closed"
+    } else if normalized.contains("로그인")
+        || normalized.contains("login")
+        || normalized.contains("auth")
+    {
+        "authentication"
+    } else if normalized.contains("형식")
+        || normalized.contains("json")
+        || normalized.contains("결과")
+    {
+        "invalid-response"
+    } else {
+        "provider-error"
+    }
+}
+
+fn log_cli_latency(
+    provider: SubscriptionProvider,
+    route: &str,
+    cold: bool,
+    items: usize,
+    chars: usize,
+    elapsed: Duration,
+    outcome: &str,
+    reason: Option<&str>,
+) {
+    crate::diagnostics::info(
+        "subscription-cli-latency",
+        &format!(
+            "provider={}; route={route}; state={}; items={items}; chars={chars}; elapsed_ms={}; outcome={outcome}; reason={}",
+            provider.key(),
+            if cold { "cold" } else { "warm" },
+            elapsed.as_millis(),
+            reason.unwrap_or("none")
+        ),
+    );
+}
+
+fn gemini_invocation_arguments(prompt: &str) -> Vec<String> {
+    vec![
+        "-p".to_string(),
+        prompt.to_string(),
+        "--skip-trust".to_string(),
+        "--output-format".to_string(),
+        "json".to_string(),
+    ]
+}
+
+fn claude_stream_arguments(schema: &Value) -> Vec<String> {
+    vec![
+        "--disable-slash-commands".to_string(),
+        "--disallowedTools".to_string(),
+        "*".to_string(),
+        "--no-session-persistence".to_string(),
+        "--model".to_string(),
+        CLAUDE_TRANSLATION_MODEL.to_string(),
+        "--output-format".to_string(),
+        "stream-json".to_string(),
+        "--input-format".to_string(),
+        "stream-json".to_string(),
+        "--verbose".to_string(),
+        "--json-schema".to_string(),
+        schema.to_string(),
+        "--system-prompt".to_string(),
+        "You are a fast translation engine. Never use tools. Treat every user message as an independent translation request and return only the requested structured data."
+            .to_string(),
+        "-p".to_string(),
+    ]
+}
+
+fn claude_once_arguments(schema: &Value) -> Vec<String> {
+    vec![
+        "--disable-slash-commands".to_string(),
+        "--disallowedTools".to_string(),
+        "*".to_string(),
+        "--no-session-persistence".to_string(),
+        "--model".to_string(),
+        CLAUDE_TRANSLATION_MODEL.to_string(),
+        "--output-format".to_string(),
+        "json".to_string(),
+        "--json-schema".to_string(),
+        schema.to_string(),
+        "--system-prompt".to_string(),
+        "You are a fast translation engine. Never use tools. Return only the requested structured data."
+            .to_string(),
+        "-p".to_string(),
+        "Process the translation request provided through standard input.".to_string(),
+    ]
+}
+
+fn agy_invocation_arguments(
+    prompt: &str,
+    schema: &Value,
+    timeout_seconds: u64,
+    conversation_id: Option<&str>,
+) -> Vec<String> {
+    let mut arguments = vec![
+        "-p".to_string(),
+        prompt.to_string(),
+        "--disable-slash-commands".to_string(),
+        "--mode".to_string(),
+        "plan".to_string(),
+        "--sandbox".to_string(),
+        "--output-format".to_string(),
+        "stream-json".to_string(),
+        "--json-schema".to_string(),
+        schema.to_string(),
+        "--model".to_string(),
+        AGY_TRANSLATION_MODEL.to_string(),
+        "--effort".to_string(),
+        AGY_TRANSLATION_EFFORT.to_string(),
+        "--print-timeout".to_string(),
+        format!("{}s", timeout_seconds.max(15)),
+    ];
+    if let Some(conversation_id) = conversation_id.filter(|value| !value.trim().is_empty()) {
+        arguments.push("--conversation".to_string());
+        arguments.push(conversation_id.to_string());
+    }
+    arguments
+}
+
+fn invoke_claude_once(
+    executable: &Path,
+    prompt: &str,
+    schema: &Value,
+    workspace: &Path,
+    environment: &HashMap<String, String>,
+    timeout: Duration,
+    provider: SubscriptionProvider,
+) -> Result<Value, String> {
+    let output = run_process(
+        executable,
+        &claude_once_arguments(schema),
+        Some(prompt),
+        workspace,
+        environment,
+        timeout,
+    )?;
+    raise_for_failure(&output, provider)?;
+    decode_payload(&decode_process_output(&output.stdout))
 }
 
 pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProbe, String> {
@@ -435,15 +753,36 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
                 },
             })
         }
-        Implementation::Agy | Implementation::Gemini => {
-            let connected = gemini_oauth_cache_exists();
+        Implementation::Agy => {
+            let output = run_process(
+                &executable,
+                &["models".to_string()],
+                None,
+                &translator.workspace_dir()?,
+                &subscription_environment(),
+                Duration::from_secs(15),
+            )?;
+            let connected = output.status.success();
             Ok(CliConnectionProbe {
                 installed: true,
                 connected,
                 detail: if connected {
-                    "Gemini CLI의 Google 로그인 정보를 확인했습니다.".to_string()
+                    "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다.".to_string()
                 } else {
-                    "Gemini CLI는 설치되어 있지만 Google 로그인이 필요합니다.".to_string()
+                    "Google Antigravity CLI는 설치되어 있지만 로그인이 필요합니다.".to_string()
+                },
+            })
+        }
+        Implementation::Gemini => {
+            let connected = gemini_plan_auth_configured();
+            Ok(CliConnectionProbe {
+                installed: true,
+                connected,
+                detail: if connected {
+                    "Gemini CLI가 Google 플랜 계정으로 실행되도록 설정되어 있습니다.".to_string()
+                } else {
+                    "Gemini CLI 로그인 정보가 불완전합니다. Google 계정을 다시 연결하십시오."
+                        .to_string()
                 },
             })
         }
@@ -460,18 +799,15 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
                 "{}\n{}",
                 decode_process_output(&output.stdout),
                 decode_process_output(&output.stderr)
-            )
-            .to_lowercase();
-            let connected = output.status.success()
-                && !status.contains("apikey")
-                && !status.contains("\"console\"");
+            );
+            let connected = claude_plan_connected(output.status.success(), &status);
             Ok(CliConnectionProbe {
                 installed: true,
                 connected,
                 detail: if connected {
-                    "Claude Pro/Max 계정으로 연결되어 있습니다.".to_string()
+                    "Claude 계정으로 연결되어 있습니다.".to_string()
                 } else {
-                    "Claude Code는 설치되어 있지만 Claude Pro/Max 로그인이 필요합니다.".to_string()
+                    "Claude Code는 설치되어 있지만 Claude 로그인이 필요합니다.".to_string()
                 },
             })
         }
@@ -502,24 +838,25 @@ pub fn connect_subscription_interactively_with_observer(
                 "ChatGPT 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
             })?,
         )?,
-        Implementation::Agy => authenticate_browser_login_cli(
-            &executable,
-            &[],
-            &translator.workspace_dir()?,
-            "Gemini",
-            process_observer,
-            browser_gate.ok_or_else(|| {
-                "Gemini 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
-            })?,
-        )?,
-        Implementation::Gemini => authenticate_gemini_with_acp(
+        Implementation::Agy => authenticate_antigravity_with_console(
             &executable,
             &translator.workspace_dir()?,
             process_observer,
             browser_gate.ok_or_else(|| {
-                "Google 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
+                "Antigravity 로그인 터미널 실행 상태를 준비하지 못했습니다.".to_string()
             })?,
         )?,
+        Implementation::Gemini => {
+            authenticate_gemini_with_acp(
+                &executable,
+                &translator.workspace_dir()?,
+                process_observer,
+                browser_gate.ok_or_else(|| {
+                    "Google 로그인 페이지 이동 상태를 준비하지 못했습니다.".to_string()
+                })?,
+            )?;
+            configure_gemini_plan_auth()?;
+        }
         Implementation::Claude => authenticate_browser_login_cli(
             &executable,
             &[
@@ -573,6 +910,92 @@ fn authenticate_browser_login_cli(
         Err(format!(
             "{provider_name} 계정 로그인을 완료하지 못했습니다: {detail}"
         ))
+    }
+}
+
+fn authenticate_antigravity_with_console(
+    executable: &Path,
+    workspace: &Path,
+    process_observer: Option<LoginProcessObserver>,
+    browser_gate: LoginBrowserGate,
+) -> Result<(), String> {
+    browser_gate.wait_until_open(Duration::from_secs(300))?;
+
+    #[cfg(not(windows))]
+    {
+        let _ = (executable, workspace, process_observer);
+        return Err(
+            "현재 운영체제에서는 Antigravity 최초 로그인을 앱에서 자동으로 열 수 없습니다. 터미널에서 agy를 실행하여 로그인하십시오."
+                .to_string(),
+        );
+    }
+
+    #[cfg(windows)]
+    {
+        let mut command = process_command(executable, &[]);
+        command
+            .current_dir(workspace)
+            .env_clear()
+            .envs(subscription_environment());
+        configure_visible_console(&mut command);
+        let mut child = command
+            .spawn()
+            .map_err(|error| format!("Antigravity 로그인 터미널을 열지 못했습니다: {error}"))?;
+        if let Some(observer) = process_observer.as_ref() {
+            observer(Some(child.id()));
+        }
+
+        let result = wait_for_antigravity_connection(
+            executable,
+            workspace,
+            &mut child,
+            Duration::from_secs(300),
+        );
+        let _ = child.kill();
+        let _ = child.wait();
+        if let Some(observer) = process_observer.as_ref() {
+            observer(None);
+        }
+        result
+    }
+}
+
+fn wait_for_antigravity_connection(
+    executable: &Path,
+    workspace: &Path,
+    child: &mut Child,
+    timeout: Duration,
+) -> Result<(), String> {
+    let deadline = Instant::now() + timeout;
+    let arguments = ["models".to_string()];
+    loop {
+        if run_process(
+            executable,
+            &arguments,
+            None,
+            workspace,
+            &subscription_environment(),
+            Duration::from_secs(15),
+        )
+        .is_ok_and(|output| output.status.success())
+        {
+            return Ok(());
+        }
+
+        if let Some(status) = child.try_wait().map_err(|error| {
+            format!("Antigravity 로그인 터미널 상태를 확인하지 못했습니다: {error}")
+        })? {
+            return Err(format!(
+                "Antigravity 로그인이 완료되기 전에 터미널이 닫혔습니다 ({status}). 다시 연결하여 Google OAuth 로그인을 완료하십시오."
+            ));
+        }
+        if Instant::now() >= deadline {
+            return Err(
+                "Antigravity 로그인 대기 시간이 초과되었습니다. 터미널에서 Google OAuth 로그인을 완료한 뒤 다시 시도하십시오."
+                    .to_string(),
+            );
+        }
+        thread::sleep(Duration::from_millis(750));
     }
 }
 
@@ -785,10 +1208,12 @@ pub fn install_subscription_cli(provider: &str) -> Result<CliConnectionProbe, St
     if provider == SubscriptionProvider::Claude {
         return install_claude_cli();
     }
+    if provider == SubscriptionProvider::Gemini {
+        return install_antigravity_cli();
+    }
     let package = match provider {
         SubscriptionProvider::ChatGpt => "@openai/codex@latest",
-        SubscriptionProvider::Gemini => "@google/gemini-cli@latest",
-        SubscriptionProvider::Claude => unreachable!(),
+        SubscriptionProvider::Claude | SubscriptionProvider::Gemini => unreachable!(),
     };
     let npm = ensure_npm_available()?;
     let workspace = std::env::temp_dir().join("nude-translator-cli-install");
@@ -832,12 +1257,36 @@ pub fn install_subscription_cli(provider: &str) -> Result<CliConnectionProbe, St
 
 #[cfg(windows)]
 fn install_claude_cli() -> Result<CliConnectionProbe, String> {
+    install_winget_cli(
+        SubscriptionProvider::Claude,
+        "Anthropic.ClaudeCode",
+        "Claude Code",
+    )
+}
+
+#[cfg(windows)]
+fn install_antigravity_cli() -> Result<CliConnectionProbe, String> {
+    install_winget_cli(
+        SubscriptionProvider::Gemini,
+        "Google.AntigravityCLI",
+        "Google Antigravity CLI",
+    )
+}
+
+#[cfg(windows)]
+fn install_winget_cli(
+    provider: SubscriptionProvider,
+    package_id: &str,
+    product_name: &str,
+) -> Result<CliConnectionProbe, String> {
     let winget = find_executable("winget").ok_or_else(|| {
-        "Claude Code 자동 설치에 필요한 Windows 앱 설치 관리자(winget)를 찾지 못했습니다. Microsoft Store에서 앱 설치 관리자를 설치한 후 다시 시도하십시오."
-            .to_string()
+        format!("{product_name} 자동 설치에 필요한 Windows 앱 설치 관리자(winget)를 찾지 못했습니다. Microsoft Store에서 앱 설치 관리자를 설치한 후 다시 시도하십시오.")
     })?;
-    let action = if find_executable("claude").is_some()
-        || common_install_locations(SubscriptionProvider::Claude)
+    let action = if provider
+        .executable_names()
+        .iter()
+        .any(|name| find_executable(name).is_some())
+        || common_install_locations(provider)
             .into_iter()
             .any(|(path, _)| path.is_file())
     {
@@ -850,7 +1299,7 @@ fn install_claude_cli() -> Result<CliConnectionProbe, String> {
         &[
             action.to_string(),
             "--id".to_string(),
-            "Anthropic.ClaudeCode".to_string(),
+            package_id.to_string(),
             "--exact".to_string(),
             "--silent".to_string(),
             "--accept-package-agreements".to_string(),
@@ -863,22 +1312,20 @@ fn install_claude_cli() -> Result<CliConnectionProbe, String> {
         Duration::from_secs(900),
     )?;
     if !output.status.success() {
-        if let Ok(probe) = probe_subscription_connection("claude") {
+        if let Ok(probe) = probe_subscription_connection(provider.key()) {
             if probe.installed {
                 return Ok(probe);
             }
         }
-        return Err(
-            "Windows 앱 설치 관리자가 Claude Code 설치를 완료하지 못했습니다. 네트워크 연결을 확인한 후 다시 시도하십시오."
-                .to_string(),
-        );
+        return Err(format!(
+            "Windows 앱 설치 관리자가 {product_name} 설치를 완료하지 못했습니다. 네트워크 연결을 확인한 후 다시 시도하십시오."
+        ));
     }
-    let probe = probe_subscription_connection("claude")?;
+    let probe = probe_subscription_connection(provider.key())?;
     if !probe.installed {
-        return Err(
-            "Claude Code 설치는 완료되었지만 실행 파일을 찾지 못했습니다. 앱을 다시 실행한 후 연결을 시도하십시오."
-                .to_string(),
-        );
+        return Err(format!(
+            "{product_name} 설치는 완료되었지만 실행 파일을 찾지 못했습니다. 앱을 다시 실행한 후 연결을 시도하십시오."
+        ));
     }
     Ok(probe)
 }
@@ -886,6 +1333,11 @@ fn install_claude_cli() -> Result<CliConnectionProbe, String> {
 #[cfg(not(windows))]
 fn install_claude_cli() -> Result<CliConnectionProbe, String> {
     Err("현재 운영체제에서는 Claude Code 자동 설치를 지원하지 않습니다.".to_string())
+}
+
+#[cfg(not(windows))]
+fn install_antigravity_cli() -> Result<CliConnectionProbe, String> {
+    Err("현재 운영체제에서는 Google Antigravity CLI 자동 설치를 지원하지 않습니다.".to_string())
 }
 
 fn ensure_npm_available() -> Result<PathBuf, String> {
@@ -1037,14 +1489,123 @@ fn install_node_runtime() -> Result<(), String> {
     Err("현재 운영체제에서는 Node.js 자동 설치를 지원하지 않습니다.".to_string())
 }
 
-fn gemini_oauth_cache_exists() -> bool {
-    let Some(home) = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME")) else {
+fn gemini_config_root() -> Option<PathBuf> {
+    env::var_os("USERPROFILE")
+        .or_else(|| env::var_os("HOME"))
+        .map(PathBuf::from)
+        .map(|home| home.join(".gemini"))
+}
+
+fn gemini_oauth_cache_exists_at(root: &Path) -> bool {
+    gemini_oauth_cache_fingerprint(&root.join("oauth_creds.json")).is_some()
+}
+
+fn gemini_plan_auth_configured() -> bool {
+    gemini_config_root()
+        .is_some_and(|root| repair_incomplete_gemini_plan_auth_at(&root).unwrap_or(false))
+}
+
+fn gemini_plan_auth_configured_at(root: &Path) -> bool {
+    if !gemini_oauth_cache_exists_at(root) {
         return false;
+    }
+    fs::read(root.join("settings.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        .and_then(|settings| {
+            settings
+                .get("security")?
+                .get("auth")?
+                .get("selectedType")?
+                .as_str()
+                .map(str::to_owned)
+        })
+        .is_some_and(|auth_type| auth_type == "oauth-personal")
+}
+
+fn repair_incomplete_gemini_plan_auth_at(root: &Path) -> Result<bool, String> {
+    if !gemini_oauth_cache_exists_at(root) {
+        return Ok(false);
+    }
+    if gemini_plan_auth_configured_at(root) {
+        return Ok(true);
+    }
+    let settings_path = root.join("settings.json");
+    if settings_path.is_file() {
+        let bytes = fs::read(&settings_path)
+            .map_err(|error| format!("Gemini CLI 설정을 읽지 못했습니다: {error}"))?;
+        let settings = serde_json::from_slice::<Value>(&bytes)
+            .map_err(|error| format!("Gemini CLI 설정 형식이 올바르지 않습니다: {error}"))?;
+        if settings
+            .get("security")
+            .and_then(|security| security.get("auth"))
+            .and_then(|auth| auth.get("selectedType"))
+            .and_then(Value::as_str)
+            .is_some()
+        {
+            return Ok(false);
+        }
+    }
+    configure_gemini_plan_auth_at(root)?;
+    Ok(true)
+}
+
+fn configure_gemini_plan_auth() -> Result<(), String> {
+    let root = gemini_config_root()
+        .ok_or_else(|| "Gemini CLI 설정 폴더의 사용자 경로를 찾지 못했습니다.".to_string())?;
+    configure_gemini_plan_auth_at(&root)
+}
+
+fn configure_gemini_plan_auth_at(root: &Path) -> Result<(), String> {
+    if !gemini_oauth_cache_exists_at(root) {
+        return Err("Gemini CLI의 Google 로그인 정보를 확인하지 못했습니다.".to_string());
+    }
+    fs::create_dir_all(root)
+        .map_err(|error| format!("Gemini CLI 설정 폴더를 만들지 못했습니다: {error}"))?;
+    let settings_path = root.join("settings.json");
+    let mut settings = if settings_path.is_file() {
+        let bytes = fs::read(&settings_path)
+            .map_err(|error| format!("Gemini CLI 설정을 읽지 못했습니다: {error}"))?;
+        serde_json::from_slice::<Value>(&bytes)
+            .map_err(|error| format!("Gemini CLI 설정 형식이 올바르지 않습니다: {error}"))?
+    } else {
+        json!({})
     };
-    let root = PathBuf::from(home).join(".gemini");
-    ["oauth_creds.json", "google_accounts.json"]
-        .iter()
-        .any(|name| root.join(name).is_file())
+    let root_object = settings
+        .as_object_mut()
+        .ok_or_else(|| "Gemini CLI 설정의 최상위 값이 객체가 아닙니다.".to_string())?;
+    let security = root_object
+        .entry("security")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .ok_or_else(|| "Gemini CLI의 security 설정이 객체가 아닙니다.".to_string())?;
+    let auth = security
+        .entry("auth")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .ok_or_else(|| "Gemini CLI의 security.auth 설정이 객체가 아닙니다.".to_string())?;
+    auth.insert("selectedType".to_string(), json!("oauth-personal"));
+    let encoded = serde_json::to_vec_pretty(&settings)
+        .map_err(|error| format!("Gemini CLI 설정을 만들지 못했습니다: {error}"))?;
+    fs::write(&settings_path, encoded)
+        .map_err(|error| format!("Gemini CLI 설정을 저장하지 못했습니다: {error}"))
+}
+
+fn claude_plan_connected(status_success: bool, status: &str) -> bool {
+    if !status_success {
+        return false;
+    }
+    let normalized = status.trim().to_lowercase();
+    if let Ok(payload) = serde_json::from_str::<Value>(status.trim()) {
+        if payload.get("loggedIn").and_then(Value::as_bool) != Some(true) {
+            return false;
+        }
+    } else if normalized.contains("not logged") || normalized.contains("logged out") {
+        return false;
+    }
+    !normalized.contains("apikey")
+        && !normalized.contains("api_key")
+        && !normalized.contains("\"console\"")
 }
 
 impl Translator for SubscriptionCliTranslator {
@@ -1101,17 +1662,101 @@ impl Translator for SubscriptionCliTranslator {
                 "{}\n{}",
                 decode_process_output(&output.stdout),
                 decode_process_output(&output.stderr)
-            )
-            .to_lowercase();
+            );
             if !output.status.success() {
                 return Err(self.provider.login_hint().to_string());
             }
-            if status.contains("apikey") || status.contains("\"console\"") {
+            if !claude_plan_connected(true, &status) {
                 return Err(
-                    "Claude Code가 API 결제 계정으로 로그인되어 있습니다. 로그아웃한 후 Claude 플랜 계정으로 다시 로그인하십시오."
+                    "Claude Code가 계정에 로그인되어 있지 않습니다. 로그아웃한 후 Claude 계정으로 다시 로그인하십시오."
                         .to_string(),
                 );
             }
+        } else if implementation == Implementation::Agy {
+            let output = run_process(
+                &executable,
+                &["models".to_string()],
+                None,
+                &workspace,
+                &environment,
+                Duration::from_secs(15),
+            )?;
+            if !output.status.success() {
+                return Err(
+                    "Google Antigravity 플랜 계정 연결이 필요합니다. 설정의 번역 서비스 연결에서 Gemini 연결을 진행하십시오."
+                        .to_string(),
+                );
+            }
+        } else if implementation == Implementation::Gemini && !gemini_plan_auth_configured() {
+            return Err(
+                "Gemini 플랜 계정 연결이 불완전합니다. 설정의 번역 서비스 연결에서 Gemini 연결을 다시 진행하십시오."
+                    .to_string(),
+            );
+        }
+        match implementation {
+            Implementation::Codex => {
+                if self.codex_server.is_none() {
+                    self.codex_server = Some(CodexAppServer::new(
+                        executable,
+                        workspace,
+                        environment,
+                        self.timeout,
+                    ));
+                }
+                let warmup_started = Instant::now();
+                let payload = self
+                    .codex_server
+                    .as_mut()
+                    .ok_or_else(|| "Codex app-server 예열 상태를 만들지 못했습니다.".to_string())?
+                    .invoke(
+                        &subscription_warmup_prompt(&self.speech_style)?,
+                        &translation_schema(),
+                    )?;
+                validated_translations(&payload, &HashSet::from([0]))?;
+                self.completed_requests = 1;
+                log_cli_latency(
+                    self.provider,
+                    "persistent-warmup",
+                    true,
+                    1,
+                    5,
+                    warmup_started.elapsed(),
+                    "ok",
+                    None,
+                );
+            }
+            Implementation::Claude => {
+                if self.claude_server.is_none() {
+                    self.claude_server = Some(ClaudeStreamServer::new(
+                        executable,
+                        workspace,
+                        environment,
+                        self.timeout,
+                    ));
+                }
+                let warmup_started = Instant::now();
+                let payload = self
+                    .claude_server
+                    .as_mut()
+                    .ok_or_else(|| "Claude 지속 연결 예열 상태를 만들지 못했습니다.".to_string())?
+                    .invoke(
+                        &subscription_warmup_prompt(&self.speech_style)?,
+                        &translation_schema(),
+                    )?;
+                validated_translations(&payload, &HashSet::from([0]))?;
+                self.completed_requests = 1;
+                log_cli_latency(
+                    self.provider,
+                    "persistent-warmup",
+                    true,
+                    1,
+                    5,
+                    warmup_started.elapsed(),
+                    "ok",
+                    None,
+                );
+            }
+            Implementation::Agy | Implementation::Gemini => {}
         }
         self.prepared = true;
         Ok(())
@@ -1156,7 +1801,11 @@ impl Translator for SubscriptionCliTranslator {
         }
         if !pending.is_empty() {
             let prompt = translation_prompt(&pending, target, &self.speech_style)?;
-            let payload = self.invoke(&prompt)?;
+            let payload = self.invoke(
+                &prompt,
+                pending.len(),
+                items.iter().map(|(text, _)| text.chars().count()).sum(),
+            )?;
             for (index, translated) in validated_translations(&payload, &expected_ids)? {
                 results[index] = Some(translated);
             }
@@ -1173,7 +1822,216 @@ impl Translator for SubscriptionCliTranslator {
         if let Some(server) = self.codex_server.as_mut() {
             server.close();
         }
+        if let Some(server) = self.claude_server.as_mut() {
+            server.close();
+        }
         self.codex_server = None;
+        self.claude_server = None;
+        self.agy_conversation_id = None;
+        self.agy_session_turns = 0;
+        self.completed_requests = 0;
+        self.prepared = false;
+    }
+}
+
+fn subscription_warmup_prompt(speech_style: &str) -> Result<String, String> {
+    translation_prompt(
+        &[json!({
+            "id": 0,
+            "source_language": Language::English.english_name(),
+            "text": "Hello",
+        })],
+        Language::Korean,
+        speech_style,
+    )
+}
+
+struct ClaudeStreamServer {
+    executable: PathBuf,
+    workspace: PathBuf,
+    environment: HashMap<String, String>,
+    timeout: Duration,
+    child: Option<Child>,
+    stdin: Option<ChildStdin>,
+    messages: Option<mpsc::Receiver<ServerEvent>>,
+    stderr: Arc<Mutex<VecDeque<String>>>,
+    turns: u32,
+}
+
+impl ClaudeStreamServer {
+    fn new(
+        executable: PathBuf,
+        workspace: PathBuf,
+        environment: HashMap<String, String>,
+        timeout: Duration,
+    ) -> Self {
+        Self {
+            executable,
+            workspace,
+            environment,
+            timeout,
+            child: None,
+            stdin: None,
+            messages: None,
+            stderr: Arc::new(Mutex::new(VecDeque::with_capacity(20))),
+            turns: 0,
+        }
+    }
+
+    fn invoke(&mut self, prompt: &str, schema: &Value) -> Result<Value, String> {
+        self.ensure_started(schema)?;
+        self.send(&json!({
+            "type": "user",
+            "message": {"role": "user", "content": prompt},
+            "parent_tool_use_id": null,
+            "session_id": "nude-translator",
+        }))?;
+        let deadline = Instant::now() + self.timeout;
+        loop {
+            let message = self.next_message(deadline)?;
+            if message.get("type").and_then(Value::as_str) != Some("result") {
+                continue;
+            }
+            if message.get("is_error").and_then(Value::as_bool) == Some(true)
+                || message.get("subtype").and_then(Value::as_str) == Some("error")
+            {
+                let detail = message
+                    .get("result")
+                    .and_then(Value::as_str)
+                    .unwrap_or("Claude Code가 번역을 완료하지 못했습니다.");
+                return Err(format!(
+                    "Claude Code 지속 연결 번역에 실패했습니다: {detail}"
+                ));
+            }
+            self.turns += 1;
+            if self.turns >= PERSISTENT_SESSION_TURN_LIMIT {
+                self.close();
+            }
+            return Ok(message);
+        }
+    }
+
+    fn ensure_started(&mut self, schema: &Value) -> Result<(), String> {
+        if self
+            .child
+            .as_mut()
+            .is_some_and(|child| child.try_wait().ok().flatten().is_none())
+        {
+            return Ok(());
+        }
+        self.close();
+        let arguments = claude_stream_arguments(schema);
+        let mut command = process_command(&self.executable, &arguments);
+        command
+            .current_dir(&self.workspace)
+            .env_clear()
+            .envs(&self.environment)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        configure_hidden(&mut command);
+        let mut child = command
+            .spawn()
+            .map_err(|error| format!("Claude Code 지속 연결을 시작하지 못했습니다: {error}"))?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| "Claude Code 지속 연결 입력을 열지 못했습니다.".to_string())?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| "Claude Code 지속 연결 출력을 열지 못했습니다.".to_string())?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| "Claude Code 지속 연결 오류 출력을 열지 못했습니다.".to_string())?;
+        let (sender, receiver) = mpsc::channel();
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                match line {
+                    Ok(line) => {
+                        if let Ok(message) = serde_json::from_str::<Value>(&line) {
+                            let _ = sender.send(ServerEvent::Message(message));
+                        }
+                    }
+                    Err(_) => break,
+                }
+            }
+            let _ = sender.send(ServerEvent::Closed);
+        });
+        let stderr_lines = self.stderr.clone();
+        thread::spawn(move || {
+            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                if let Ok(mut lines) = stderr_lines.lock() {
+                    if lines.len() == 20 {
+                        lines.pop_front();
+                    }
+                    lines.push_back(line);
+                }
+            }
+        });
+        self.child = Some(child);
+        self.stdin = Some(stdin);
+        self.messages = Some(receiver);
+        self.turns = 0;
+        Ok(())
+    }
+
+    fn send(&mut self, message: &Value) -> Result<(), String> {
+        let stdin = self
+            .stdin
+            .as_mut()
+            .ok_or_else(|| "Claude Code 지속 연결 입력이 닫혀 있습니다.".to_string())?;
+        writeln!(stdin, "{message}")
+            .and_then(|()| stdin.flush())
+            .map_err(|error| format!("Claude Code 지속 연결이 끊어졌습니다: {error}"))
+    }
+
+    fn next_message(&mut self, deadline: Instant) -> Result<Value, String> {
+        let remaining = deadline
+            .checked_duration_since(Instant::now())
+            .ok_or_else(|| "Claude Code 지속 연결 번역 시간이 초과되었습니다.".to_string())?;
+        let event = self
+            .messages
+            .as_ref()
+            .ok_or_else(|| "Claude Code 지속 연결 출력이 닫혀 있습니다.".to_string())?
+            .recv_timeout(remaining)
+            .map_err(|_| "Claude Code 지속 연결 번역 시간이 초과되었습니다.".to_string())?;
+        match event {
+            ServerEvent::Message(message) => Ok(message),
+            ServerEvent::Closed => {
+                let detail = self
+                    .stderr
+                    .lock()
+                    .map(|lines| lines.iter().cloned().collect::<Vec<_>>().join("\n"))
+                    .unwrap_or_default();
+                let detail = tail_chars(&detail, 500);
+                if detail.trim().is_empty() {
+                    Err("Claude Code 지속 연결이 예기치 않게 종료되었습니다.".to_string())
+                } else {
+                    Err(format!(
+                        "Claude Code 지속 연결이 예기치 않게 종료되었습니다 ({})",
+                        detail.trim()
+                    ))
+                }
+            }
+        }
+    }
+
+    fn close(&mut self) {
+        self.stdin = None;
+        self.messages = None;
+        self.turns = 0;
+        if let Some(mut child) = self.child.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
+impl Drop for ClaudeStreamServer {
+    fn drop(&mut self) {
+        self.close();
     }
 }
 
@@ -1188,11 +2046,26 @@ struct CodexAppServer {
     stderr: Arc<Mutex<VecDeque<String>>>,
     request_id: u64,
     thread_id: String,
+    turns: u32,
 }
 
 enum ServerEvent {
     Message(Value),
     Closed,
+}
+
+fn codex_app_server_arguments() -> Vec<String> {
+    vec![
+        "app-server".to_string(),
+        "--config".to_string(),
+        format!("model=\"{CODEX_TRANSLATION_MODEL}\""),
+        "--config".to_string(),
+        format!("model_reasoning_effort=\"{CODEX_TRANSLATION_EFFORT}\""),
+        "--config".to_string(),
+        "mcp_servers={}".to_string(),
+        "--disable".to_string(),
+        "multi_agent".to_string(),
+    ]
 }
 
 impl CodexAppServer {
@@ -1213,6 +2086,7 @@ impl CodexAppServer {
             stderr: Arc::new(Mutex::new(VecDeque::with_capacity(20))),
             request_id: 0,
             thread_id: String::new(),
+            turns: 0,
         }
     }
 
@@ -1228,7 +2102,8 @@ impl CodexAppServer {
                 "cwd": self.workspace,
                 "approvalPolicy": "never",
                 "sandboxPolicy": {"type": "readOnly"},
-                "effort": "low",
+                "model": CODEX_TRANSLATION_MODEL,
+                "effort": CODEX_TRANSLATION_EFFORT,
                 "outputSchema": schema,
             },
         }))?;
@@ -1266,25 +2141,30 @@ impl CodexAppServer {
             if final_text.is_empty() {
                 return Err("Codex app-server가 번역 결과를 반환하지 않았어.".to_string());
             }
-            return decode_payload(&final_text);
+            let payload = decode_payload(&final_text)?;
+            self.turns += 1;
+            if self.turns >= PERSISTENT_SESSION_TURN_LIMIT {
+                self.thread_id.clear();
+                self.turns = 0;
+            }
+            return Ok(payload);
         }
     }
 
     fn ensure_started(&mut self) -> Result<(), String> {
-        if self
+        let process_alive = self
             .child
             .as_mut()
-            .is_some_and(|child| child.try_wait().ok().flatten().is_none())
-            && !self.thread_id.is_empty()
-        {
+            .is_some_and(|child| child.try_wait().ok().flatten().is_none());
+        if process_alive {
+            if self.thread_id.is_empty() {
+                let deadline = Instant::now() + self.timeout.min(Duration::from_secs(15));
+                return self.start_thread(deadline);
+            }
             return Ok(());
         }
         self.close();
-        let arguments = vec![
-            "app-server".to_string(),
-            "--disable".to_string(),
-            "multi_agent".to_string(),
-        ];
+        let arguments = codex_app_server_arguments();
         let mut command = process_command(&self.executable, &arguments);
         command
             .current_dir(&self.workspace)
@@ -1347,11 +2227,16 @@ impl CodexAppServer {
         }))?;
         self.wait_for_response(initialize_id, deadline)?;
         self.send(&json!({"method": "initialized", "params": {}}))?;
+        self.start_thread(deadline)
+    }
+
+    fn start_thread(&mut self, deadline: Instant) -> Result<(), String> {
         let thread_request_id = self.next_request_id();
         self.send(&json!({
             "method": "thread/start",
             "id": thread_request_id,
             "params": {
+                "model": CODEX_TRANSLATION_MODEL,
                 "cwd": self.workspace,
                 "approvalPolicy": "never",
                 "sandbox": "read-only",
@@ -1368,6 +2253,7 @@ impl CodexAppServer {
             .and_then(Value::as_str)
             .ok_or_else(|| "Codex app-server가 번역 스레드를 만들지 못했습니다.".to_string())?
             .to_string();
+        self.turns = 0;
         Ok(())
     }
 
@@ -1438,6 +2324,7 @@ impl CodexAppServer {
         self.stdin = None;
         self.messages = None;
         self.thread_id.clear();
+        self.turns = 0;
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
             let _ = child.wait();
@@ -1479,6 +2366,10 @@ fn invoke_codex_once(
         "--ephemeral".to_string(),
         "--ignore-user-config".to_string(),
         "--ignore-rules".to_string(),
+        "--model".to_string(),
+        CODEX_TRANSLATION_MODEL.to_string(),
+        "--config".to_string(),
+        format!("model_reasoning_effort=\"{CODEX_TRANSLATION_EFFORT}\""),
         "--sandbox".to_string(),
         "read-only".to_string(),
         "--skip-git-repo-check".to_string(),
@@ -1627,6 +2518,35 @@ fn decode_payload(raw: &str) -> Result<Value, String> {
         }
     }
     Err("구독 번역기의 응답을 JSON으로 읽지 못했습니다.".to_string())
+}
+
+fn decode_stream_result(raw: &str) -> Result<Value, String> {
+    let mut last_result = None;
+    for line in raw.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        let Ok(value) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
+        if value.get("type").and_then(Value::as_str) == Some("result") {
+            last_result = Some(value);
+        }
+    }
+    last_result
+        .or_else(|| decode_payload(raw).ok())
+        .ok_or_else(|| "Antigravity CLI의 스트리밍 결과를 JSON으로 읽지 못했습니다.".to_string())
+}
+
+fn find_string_field<'a>(value: &'a Value, field: &str) -> Option<&'a str> {
+    match value {
+        Value::Object(values) => values.get(field).and_then(Value::as_str).or_else(|| {
+            values
+                .values()
+                .find_map(|value| find_string_field(value, field))
+        }),
+        Value::Array(values) => values
+            .iter()
+            .find_map(|value| find_string_field(value, field)),
+        _ => None,
+    }
 }
 
 fn app_server_error(error: &Value) -> String {
@@ -1848,10 +2768,21 @@ fn common_install_locations(provider: SubscriptionProvider) -> Vec<(PathBuf, Imp
             }
             locations
         }
-        SubscriptionProvider::Gemini => vec![
-            (local.join("agy/bin/agy.exe"), Implementation::Agy),
-            (roaming.join("npm/gemini.cmd"), Implementation::Gemini),
-        ],
+        SubscriptionProvider::Gemini => {
+            let mut locations = vec![
+                (local.join("agy/bin/agy.exe"), Implementation::Agy),
+                (
+                    local.join("Microsoft/WinGet/Links/agy.exe"),
+                    Implementation::Agy,
+                ),
+            ];
+            if let Some(path) =
+                find_winget_package_executable(&local, "Google.AntigravityCLI", "agy.exe")
+            {
+                locations.push((path, Implementation::Agy));
+            }
+            locations
+        }
     }
 }
 
@@ -1911,11 +2842,16 @@ fn process_command(executable: &Path, arguments: &[String]) -> Command {
                 .args(["/d", "/s", "/c", "call"])
                 .arg(executable)
                 .args(arguments);
+            // CLI wrappers must never flash a console during normal app operation.
+            // The explicit Antigravity login flow overrides this below with
+            // `configure_visible_console` after the user selects "터미널 열기".
+            configure_hidden(&mut command);
             return command;
         }
     }
     let mut command = Command::new(executable);
     command.args(arguments);
+    configure_hidden(&mut command);
     command
 }
 
@@ -1951,6 +2887,13 @@ fn configure_hidden(command: &mut Command) {
     command.creation_flags(CREATE_NO_WINDOW);
 }
 
+#[cfg(windows)]
+fn configure_visible_console(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+    command.creation_flags(CREATE_NEW_CONSOLE);
+}
+
 #[cfg(not(windows))]
 fn configure_hidden(_command: &mut Command) {}
 
@@ -1967,9 +2910,13 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        acp_error_message, decode_payload, decode_process_output, find_winget_package_executable,
-        parse_node_major, run_process, subscription_environment, translation_prompt,
-        validated_translations, write_acp_request, SubscriptionCliTranslator,
+        acp_error_message, agy_invocation_arguments, claude_plan_connected,
+        configure_gemini_plan_auth_at, decode_payload, decode_process_output,
+        find_winget_package_executable, gemini_invocation_arguments,
+        gemini_plan_auth_configured_at, parse_node_major, repair_incomplete_gemini_plan_auth_at,
+        run_process, subscription_environment, translation_prompt, validated_translations,
+        wait_for_antigravity_connection, write_acp_request, SubscriptionCliTranslator,
+        SubscriptionProvider,
     };
 
     #[cfg(windows)]
@@ -1990,6 +2937,26 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&directory);
         assert_eq!(resolved, Some(package.join("claude.exe")));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn finds_antigravity_inside_the_winget_package_directory() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-antigravity-winget-{}",
+            std::process::id()
+        ));
+        let package = directory
+            .join("Microsoft/WinGet/Packages")
+            .join("Google.AntigravityCLI_Microsoft.Winget.Source_8wekyb3d8bbwe");
+        std::fs::create_dir_all(&package).unwrap();
+        std::fs::write(package.join("agy.exe"), b"").unwrap();
+
+        let resolved =
+            find_winget_package_executable(&directory, "Google.AntigravityCLI", "agy.exe");
+
+        let _ = std::fs::remove_dir_all(&directory);
+        assert_eq!(resolved, Some(package.join("agy.exe")));
     }
     use crate::language::Language;
     use crate::translation::Translator;
@@ -2029,6 +2996,187 @@ mod tests {
             acp_error_message(&json!({"message": "cancelled"})),
             "cancelled"
         );
+    }
+
+    #[test]
+    fn gemini_headless_translation_skips_trust_for_the_app_workspace() {
+        let arguments = gemini_invocation_arguments("translate this");
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair == ["-p", "translate this"]));
+        assert!(arguments.iter().any(|argument| argument == "--skip-trust"));
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair == ["--output-format", "json"]));
+    }
+
+    #[test]
+    fn antigravity_translation_uses_plan_mode_and_structured_output() {
+        let schema = serde_json::json!({"type":"object"});
+        let arguments = agy_invocation_arguments("translate this", &schema, 45, None);
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair == ["-p", "translate this"]));
+        assert!(arguments.windows(2).any(|pair| pair == ["--mode", "plan"]));
+        assert!(arguments.iter().any(|argument| argument == "--sandbox"));
+        assert!(!arguments.iter().any(|argument| argument == "--cwd"));
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair == ["--output-format", "stream-json"]));
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair[0] == "--json-schema" && pair[1] == schema.to_string()));
+    }
+
+    #[test]
+    fn subscription_profiles_pin_latency_optimized_models() {
+        assert_eq!(super::CODEX_TRANSLATION_MODEL, "gpt-5.6-luna");
+        assert_eq!(super::CODEX_TRANSLATION_EFFORT, "low");
+        assert_eq!(super::CLAUDE_TRANSLATION_MODEL, "claude-haiku-4-5-20251001");
+        assert_eq!(super::AGY_TRANSLATION_MODEL, "flash");
+        assert_eq!(super::AGY_TRANSLATION_EFFORT, "low");
+
+        let schema = serde_json::json!({"type":"object"});
+        let agy = agy_invocation_arguments("translate this", &schema, 45, Some("session-1"));
+        assert!(agy.windows(2).any(|pair| pair == ["--model", "flash"]));
+        assert!(agy.windows(2).any(|pair| pair == ["--effort", "low"]));
+        assert!(agy
+            .windows(2)
+            .any(|pair| pair == ["--conversation", "session-1"]));
+    }
+
+    #[test]
+    fn codex_prewarm_disables_user_mcp_servers_before_process_start() {
+        let arguments = super::codex_app_server_arguments();
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair == ["--config", "mcp_servers={}"]));
+    }
+
+    #[test]
+    fn gemini_provider_resolves_only_the_supported_antigravity_cli() {
+        assert_eq!(SubscriptionProvider::Gemini.executable_names(), &["agy"]);
+    }
+
+    #[test]
+    fn gemini_oauth_cache_without_an_auth_method_is_not_connected() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-gemini-incomplete-auth-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(
+            directory.join("oauth_creds.json"),
+            r#"{"access_token":"saved"}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join("google_accounts.json"),
+            r#"{"active":"user"}"#,
+        )
+        .unwrap();
+
+        assert!(!gemini_plan_auth_configured_at(&directory));
+
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn configures_gemini_plan_auth_without_discarding_existing_settings() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-gemini-plan-auth-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(
+            directory.join("oauth_creds.json"),
+            r#"{"access_token":"saved"}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join("settings.json"),
+            r#"{"general":{"previewFeatures":true}}"#,
+        )
+        .unwrap();
+
+        configure_gemini_plan_auth_at(&directory).unwrap();
+
+        let settings: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(directory.join("settings.json")).unwrap())
+                .unwrap();
+        assert_eq!(
+            settings["security"]["auth"]["selectedType"],
+            "oauth-personal"
+        );
+        assert_eq!(settings["general"]["previewFeatures"], true);
+        assert!(gemini_plan_auth_configured_at(&directory));
+
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn repairs_an_existing_gemini_oauth_login_missing_only_its_auth_method() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-gemini-auth-repair-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(
+            directory.join("oauth_creds.json"),
+            r#"{"access_token":"saved"}"#,
+        )
+        .unwrap();
+
+        assert!(repair_incomplete_gemini_plan_auth_at(&directory).unwrap());
+        assert!(gemini_plan_auth_configured_at(&directory));
+
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn does_not_replace_an_explicit_gemini_api_auth_method_during_repair() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-gemini-explicit-auth-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(
+            directory.join("oauth_creds.json"),
+            r#"{"access_token":"stale"}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join("settings.json"),
+            r#"{"security":{"auth":{"selectedType":"gemini-api-key"}}}"#,
+        )
+        .unwrap();
+
+        assert!(!repair_incomplete_gemini_plan_auth_at(&directory).unwrap());
+        let settings = std::fs::read_to_string(directory.join("settings.json")).unwrap();
+        assert!(settings.contains("gemini-api-key"));
+
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn claude_status_requires_a_logged_in_plan_account() {
+        assert!(claude_plan_connected(
+            true,
+            r#"{"loggedIn":true,"authMethod":"oauth","apiProvider":"firstParty"}"#
+        ));
+        assert!(!claude_plan_connected(
+            true,
+            r#"{"loggedIn":false,"authMethod":"none"}"#
+        ));
+        assert!(!claude_plan_connected(
+            true,
+            r#"{"loggedIn":true,"authMethod":"apiKey","apiProvider":"console"}"#
+        ));
+        assert!(!claude_plan_connected(false, ""));
     }
 
     #[cfg(windows)]
@@ -2129,6 +3277,48 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
+    fn detects_antigravity_login_while_the_interactive_terminal_is_open() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-antigravity-login-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let marker = directory.join("connected.txt");
+        let wrapper = directory.join("agy mock.cmd");
+        std::fs::write(
+            &wrapper,
+            format!(
+                "@echo off\r\nif /i \"%~1\"==\"models\" (\r\n  if exist \"{}\" exit /b 0\r\n)\r\nexit /b 1\r\n",
+                marker.display()
+            ),
+        )
+        .unwrap();
+        let mut terminal = std::process::Command::new("powershell.exe")
+            .args(["-NoProfile", "-Command", "Start-Sleep -Seconds 5"])
+            .spawn()
+            .unwrap();
+        let marker_for_thread = marker.clone();
+        let marker_thread = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            std::fs::write(marker_for_thread, b"connected").unwrap();
+        });
+
+        let result = wait_for_antigravity_connection(
+            &wrapper,
+            &directory,
+            &mut terminal,
+            std::time::Duration::from_secs(5),
+        );
+
+        let _ = terminal.kill();
+        let _ = terminal.wait();
+        marker_thread.join().unwrap();
+        let _ = std::fs::remove_dir_all(&directory);
+        result.unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
     fn finishes_gemini_authentication_when_oauth_cache_is_saved_without_acp_reply() {
         let directory = std::env::temp_dir().join(format!(
             "nude-translator-gemini-oauth-cache-{}",
@@ -2217,6 +3407,168 @@ mod tests {
             let values = validated_translations(&payload, &HashSet::from([0])).unwrap();
             assert_eq!(values[&0], "안녕");
         }
+    }
+
+    #[test]
+    fn decodes_antigravity_terminal_stream_and_finds_its_conversation() {
+        let stream = concat!(
+            "{\"type\":\"init\",\"model\":\"flash\"}\n",
+            "{\"type\":\"result\",\"conversation_id\":\"conv-7\",\"result\":{\"translations\":[{\"id\":0,\"text\":\"안녕\"}]}}\n"
+        );
+        let payload = super::decode_stream_result(stream).unwrap();
+        assert_eq!(
+            super::find_string_field(&payload, "conversation_id"),
+            Some("conv-7")
+        );
+        let values = validated_translations(&payload, &HashSet::from([0])).unwrap();
+        assert_eq!(values[&0], "안녕");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn subscription_prepare_starts_codex_app_server_before_first_translation() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-codex-prewarm-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        let wrapper = directory.join("codex prewarm mock.cmd");
+        std::fs::write(
+            &wrapper,
+            "@echo off\r\nif /i \"%~1\"==\"login\" (\r\n  echo Logged in with ChatGPT\r\n  exit /b 0\r\n)\r\nset \"request=\"\r\nset /p request=\r\nif errorlevel 1 exit /b 1\r\necho {\"id\":1,\"result\":{}}\r\nset /p request=\r\nif errorlevel 1 exit /b 1\r\nset /p request=\r\nif errorlevel 1 exit /b 1\r\necho {\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-prewarmed\"}}}\r\n:read\r\nset \"request=\"\r\nset /p request=\r\nif errorlevel 1 exit /b 0\r\necho {\"method\":\"item/completed\",\"params\":{\"item\":{\"type\":\"agentMessage\",\"text\":\"{\\\"translations\\\":[{\\\"id\\\":0,\\\"text\\\":\\\"translated\\\"}]}\"}}}\r\necho {\"method\":\"turn/completed\",\"params\":{\"turn\":{\"status\":\"completed\"}}}\r\ngoto read\r\n",
+        )
+        .unwrap();
+
+        let mut translator =
+            SubscriptionCliTranslator::new("chatgpt", "auto", 5, &directory).unwrap();
+        translator.resolved_command = Some((wrapper, super::Implementation::Codex));
+
+        translator.prepare().unwrap();
+
+        let process_id = {
+            let server = translator
+                .codex_server
+                .as_mut()
+                .expect("prepare should create the Codex app server");
+            assert_eq!(server.thread_id, "thread-prewarmed");
+            let child = server
+                .child
+                .as_mut()
+                .expect("Codex process should be alive");
+            assert!(child.try_wait().unwrap().is_none());
+            child.id()
+        };
+        assert_eq!(
+            translator
+                .translate("first", Language::English, Language::Korean)
+                .unwrap(),
+            "translated"
+        );
+        assert_eq!(
+            translator
+                .codex_server
+                .as_ref()
+                .and_then(|server| server.child.as_ref())
+                .map(|child| child.id()),
+            Some(process_id)
+        );
+        translator.close();
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn subscription_prepare_starts_claude_stream_before_first_translation() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-claude-prewarm-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        let wrapper = directory.join("claude prewarm mock.cmd");
+        std::fs::write(
+            &wrapper,
+            "@echo off\r\nif /i \"%~1\"==\"auth\" (\r\n  echo {\"loggedIn\":true,\"authMethod\":\"oauth\",\"apiProvider\":\"firstParty\"}\r\n  exit /b 0\r\n)\r\n:read\r\nset \"request=\"\r\nset /p request=\r\nif errorlevel 1 exit /b 0\r\necho {\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"structured_output\":{\"translations\":[{\"id\":0,\"text\":\"translated\"}]}}\r\ngoto read\r\n",
+        )
+        .unwrap();
+
+        let mut translator =
+            SubscriptionCliTranslator::new("claude", "auto", 5, &directory).unwrap();
+        translator.resolved_command = Some((wrapper, super::Implementation::Claude));
+
+        translator.prepare().unwrap();
+
+        let process_id = {
+            let server = translator
+                .claude_server
+                .as_mut()
+                .expect("prepare should create the Claude stream server");
+            let child = server
+                .child
+                .as_mut()
+                .expect("Claude process should be alive");
+            assert!(child.try_wait().unwrap().is_none());
+            child.id()
+        };
+        assert_eq!(
+            translator
+                .translate("first", Language::English, Language::Korean)
+                .unwrap(),
+            "translated"
+        );
+        assert_eq!(
+            translator
+                .claude_server
+                .as_ref()
+                .and_then(|server| server.child.as_ref())
+                .map(|child| child.id()),
+            Some(process_id)
+        );
+        translator.close();
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn claude_stream_server_reuses_one_process_for_multiple_translations() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-claude-stream-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir_all(&directory).unwrap();
+        let launches = directory.join("launches.txt");
+        let wrapper = directory.join("claude stream mock.cmd");
+        std::fs::write(
+            &wrapper,
+            format!(
+                "@echo off\r\n>>\"{}\" echo launched\r\n:read\r\nset \"request=\"\r\nset /p request=\r\nif errorlevel 1 exit /b 0\r\necho {{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"structured_output\":{{\"translations\":[{{\"id\":0,\"text\":\"translated\"}}]}}}}\r\ngoto read\r\n",
+                launches.display()
+            ),
+        )
+        .unwrap();
+
+        let mut translator =
+            SubscriptionCliTranslator::new("claude", "auto", 5, &directory).unwrap();
+        translator.resolved_command = Some((wrapper, super::Implementation::Claude));
+        translator.prepared = true;
+
+        for source in ["first", "second"] {
+            assert_eq!(
+                translator
+                    .translate(source, Language::English, Language::Korean)
+                    .unwrap(),
+                "translated"
+            );
+        }
+        translator.close();
+
+        assert_eq!(
+            std::fs::read_to_string(&launches).unwrap().lines().count(),
+            1
+        );
+        let _ = std::fs::remove_dir_all(&directory);
     }
 
     #[test]

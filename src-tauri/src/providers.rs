@@ -34,13 +34,13 @@ pub fn list(disabled_providers: &[String]) -> Vec<ProviderConnection> {
         cli_status(
             "claude",
             "Claude",
-            "Claude Pro/Max · Claude Code",
+            "Claude · Claude Code",
             disabled_providers,
         ),
         cli_status(
             "gemini",
             "Gemini",
-            "Google 구독 · Gemini CLI",
+            "Google 구독 · Antigravity CLI",
             disabled_providers,
         ),
         deepl_status(),
@@ -118,8 +118,8 @@ pub fn disconnect(provider: &str) -> Result<ProviderConnection, String> {
 fn cli_provider_identity(provider: &str) -> (&'static str, &'static str) {
     match provider {
         "chatgpt" => ("ChatGPT", "ChatGPT 구독 · Codex CLI"),
-        "claude" => ("Claude", "Claude Pro/Max · Claude Code"),
-        _ => ("Gemini", "Google 구독 · Gemini CLI"),
+        "claude" => ("Claude", "Claude · Claude Code"),
+        _ => ("Gemini", "Google 구독 · Antigravity CLI"),
     }
 }
 

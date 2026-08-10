@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [markup, styles, script, rustMain, credentials, config, providers, subscriptionCli, trayMarkup, trayScript] = await Promise.all([
+const [markup, styles, script, rustMain, credentials, config, providers, subscriptionCli, discord, trayMarkup, trayScript] = await Promise.all([
   readFile(new URL("../index.html", import.meta.url), "utf8"),
   readFile(new URL("../app.css", import.meta.url), "utf8"),
   readFile(new URL("../app.js", import.meta.url), "utf8"),
@@ -11,6 +11,7 @@ const [markup, styles, script, rustMain, credentials, config, providers, subscri
   readFile(new URL("../../src-tauri/src/config.rs", import.meta.url), "utf8"),
   readFile(new URL("../../src-tauri/src/providers.rs", import.meta.url), "utf8"),
   readFile(new URL("../../src-tauri/src/translation/subscription_cli.rs", import.meta.url), "utf8"),
+  readFile(new URL("../../src-tauri/src/discord.rs", import.meta.url), "utf8"),
   readFile(new URL("../tray.html", import.meta.url), "utf8"),
   readFile(new URL("../tray.js", import.meta.url), "utf8"),
 ]);
@@ -27,9 +28,9 @@ test("provider setup is available without exposing credentials in settings", () 
   assert.doesNotMatch(config, /api_key\s*:/i);
 });
 
-test("Claude Pro and Max connect through the official local Claude Code CLI", () => {
+test("Claude connects through the official local Claude Code CLI", () => {
   assert.match(markup, /data-provider="claude"/);
-  assert.match(script, /\["claude",\s*"Claude Pro\/Max/);
+  assert.match(script, /\["claude",\s*"Claude Haiku 4\.5 · 지속 연결"\]/);
   assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "deepl"\]\)/);
   assert.doesNotMatch(config, /"kanana" \| "original" \| "claude"/);
   assert.match(providers, /cli_status\(\s*"claude",\s*"Claude"/);
@@ -51,9 +52,34 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
   assert.match(rustMain, /provider_install/);
   assert.match(subscriptionCli, /\["\/d", "\/s", "\/c", "call"\]/);
   assert.match(subscriptionCli, /decode_process_output/);
+  assert.match(subscriptionCli, /Google\.AntigravityCLI/);
 });
 
-test("subscription sign-ins stay inside the app while official browser flows run", () => {
+test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
+  assert.match(markup, /Gemini 3\.6 Flash · low · 지속 세션/);
+  assert.match(script, /\["gemini",\s*"Gemini 3\.6 Flash · low · 지속 세션"\]/);
+  assert.match(providers, /Google 구독 · Antigravity CLI/);
+  assert.match(subscriptionCli, /Self::Gemini => &\["agy"\]/);
+  assert.match(subscriptionCli, /\["models"\.to_string\(\)\]/);
+  assert.match(subscriptionCli, /"--mode"\.to_string\(\)[\s\S]*?"plan"\.to_string\(\)/);
+});
+
+test("subscription translators expose the pinned fast model and connection mode", () => {
+  assert.match(script, /GPT-5\.6 Luna · low · 지속 연결/);
+  assert.match(script, /Claude Haiku 4\.5 · 지속 연결/);
+  assert.match(script, /Gemini 3\.6 Flash · low · 지속 세션/);
+  assert.match(subscriptionCli, /gpt-5\.6-luna/);
+  assert.match(subscriptionCli, /claude-haiku-4-5-20251001/);
+  assert.match(subscriptionCli, /"flash"/);
+  assert.match(subscriptionCli, /ClaudeStreamServer/);
+  assert.match(subscriptionCli, /--conversation/);
+  for (const tier of [/ChatGPT Plus\/Pro/, /Claude Pro\/Max/, /Gemini Pro\/Ultra/]) {
+    assert.doesNotMatch(script, tier);
+    assert.doesNotMatch(trayMarkup, tier);
+  }
+});
+
+test("ChatGPT and Claude sign-ins stay inside the app while official browser flows run", () => {
   assert.match(subscriptionCli, /"--acp"/);
   assert.match(subscriptionCli, /"oauth-personal"/);
   assert.match(subscriptionCli, /Gemini CLI ACP 인증/);
@@ -65,13 +91,27 @@ test("subscription sign-ins stay inside the app while official browser flows run
   assert.match(rustMain, /provider_login_open/);
   assert.match(script, /provider !== "deepl" \? await showProviderLoginProgress\(provider\) : null/);
   assert.match(script, /공식 로그인 페이지로 이동하려면 이동을 선택하십시오/);
-  assert.match(script, /modalAccept\.textContent = "이동"/);
+  assert.match(script, /modalAccept\.textContent = copy\.terminal \? "터미널 열기" : "이동"/);
   assert.match(script, /invoke\("provider_login_open"\)/);
   assert.match(subscriptionCli, /authenticate_browser_login_cli/);
   assert.match(subscriptionCli, /"auth"\.to_string\(\)[\s\S]*?"login"\.to_string\(\)[\s\S]*?"--claudeai"\.to_string\(\)/);
-  assert.doesNotMatch(subscriptionCli, /CREATE_NEW_CONSOLE/);
-  assert.doesNotMatch(script, /CLI 창에서 계정 로그인을 완료/);
-  assert.doesNotMatch(subscriptionCli, /'codex login'|'claude auth login'|터미널에서/);
+  assert.doesNotMatch(subscriptionCli, /'codex login'|'claude auth login'/);
+});
+
+test("Antigravity first sign-in opens a visible terminal and is detected automatically", () => {
+  assert.match(subscriptionCli, /Implementation::Agy\s*=>\s*authenticate_antigravity_with_console/);
+  assert.match(subscriptionCli, /CREATE_NEW_CONSOLE/);
+  assert.match(subscriptionCli, /wait_for_antigravity_connection/);
+  assert.match(script, /gemini:\s*\{[^}]*terminal:\s*true/);
+  assert.match(script, /터미널 열기/);
+  assert.match(script, /인증 코드를 터미널에 붙여넣/);
+});
+
+test("normal child processes stay in the background without console flashes", () => {
+  assert.match(subscriptionCli, /fn process_command[\s\S]*?configure_hidden\(&mut command\)/);
+  assert.match(subscriptionCli, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
+  assert.match(discord, /configure_background\(&mut command\)/);
+  assert.match(discord, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
 });
 
 test("DeepL API keys are applied when editing finishes and before confirmation", () => {
