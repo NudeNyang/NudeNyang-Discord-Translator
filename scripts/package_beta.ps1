@@ -14,6 +14,10 @@ $TokenFile = Join-Path $SecretDirectory 'beta-token.txt'
 $PrivateKey = Join-Path $SecretDirectory 'updater.key'
 $PrivateKeyPasswordFile = Join-Path $SecretDirectory 'updater-password.txt'
 $StagingRuntime = Join-Path $ProjectRoot 'src-tauri\bundle-resources\runtime'
+$DeveloperBuildTargets = @(
+    (Join-Path $ProjectRoot 'dist\NudeNyangTranslator\NudeNyangTranslator.exe'),
+    (Join-Path $ProjectRoot 'dist\NudeTranslator\NudeTranslator.exe')
+)
 $TauriConfig = Get-Content -Raw (Join-Path $ProjectRoot 'src-tauri\tauri.conf.json') | ConvertFrom-Json
 $Version = [string]$TauriConfig.version
 
@@ -50,6 +54,48 @@ function Resolve-LlamaSource {
     if ($path) { return (Split-Path -Parent $path) }
     throw 'llama.cpp가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
 }
+
+function Assert-DeveloperBuildStopped {
+    $targets = $DeveloperBuildTargets | ForEach-Object { [IO.Path]::GetFullPath($_) }
+    $running = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ExecutablePath -and
+            $targets.Contains([IO.Path]::GetFullPath([string]$_.ExecutablePath))
+        } |
+        Select-Object -First 1
+    if ($running) {
+        throw "개발자 실행본이 열려 있습니다. 앱을 완전히 종료한 뒤 다시 패키징하십시오: $($running.ExecutablePath)"
+    }
+}
+
+function Sync-DeveloperBuild {
+    param([Parameter(Mandatory)][string]$SourceExecutable)
+
+    if (-not (Test-Path -LiteralPath $SourceExecutable)) {
+        throw "동기화할 개발자 실행 파일이 없습니다: $SourceExecutable"
+    }
+    foreach ($target in $DeveloperBuildTargets) {
+        $directory = Split-Path -Parent $target
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+        Copy-Item -LiteralPath $SourceExecutable -Destination $target -Force
+
+        $runtimeSource = Join-Path $StagingRuntime 'llama'
+        if (Test-Path -LiteralPath $runtimeSource) {
+            $runtimeDestination = Join-Path $directory 'runtime\llama'
+            New-Item -ItemType Directory -Path $runtimeDestination -Force | Out-Null
+            Get-ChildItem -LiteralPath $runtimeSource -File |
+                Copy-Item -Destination $runtimeDestination -Force
+        }
+
+        $developerVersion = (Get-Item -LiteralPath $target).VersionInfo.ProductVersion
+        if ([string]$developerVersion -ne $Version) {
+            throw "개발자 실행본 버전이 일치하지 않습니다: $target ($developerVersion)"
+        }
+        Write-Host "개발자 실행본 동기화 완료: $target ($developerVersion)"
+    }
+}
+
+Assert-DeveloperBuildStopped
 
 if (-not $SkipBuild) {
     $resolvedStaging = [System.IO.Path]::GetFullPath($StagingRuntime)
@@ -92,6 +138,9 @@ if (-not $SkipBuild) {
         Pop-Location
     }
 }
+
+$BuiltExecutable = Join-Path $ProjectRoot 'src-tauri\target\release\nude-translator-tauri.exe'
+Sync-DeveloperBuild -SourceExecutable $BuiltExecutable
 
 $BundleDirectory = Join-Path $ProjectRoot 'src-tauri\target\release\bundle\nsis'
 $Installer = Get-ChildItem -LiteralPath $BundleDirectory -Filter '*setup.exe' -File -ErrorAction SilentlyContinue |
