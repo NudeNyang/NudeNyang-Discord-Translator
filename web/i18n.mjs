@@ -43,6 +43,12 @@ const COPY = Object.freeze({
   "연결": ["Connect", "接続", "连接"],
   "연결됨": ["Connected", "接続済み", "已连接"],
   "연결 해제": ["Disconnect", "接続解除", "断开连接"],
+  "사용 중지됨": ["Disabled", "無効", "已停用"],
+  "설치 필요": ["Installation required", "インストールが必要", "需要安装"],
+  "API 키 필요": ["API key required", "APIキーが必要", "需要 API 密钥"],
+  "로그인 필요": ["Login required", "ログインが必要", "需要登录"],
+  "확인 필요": ["Action required", "確認が必要", "需要确认"],
+  "확인 실패": ["Check failed", "確認に失敗", "检查失败"],
   "엔진 연결 중": ["Connecting engine", "エンジン接続中", "正在连接引擎"],
   "엔진 연결 실패": ["Engine connection failed", "エンジン接続失敗", "引擎连接失败"],
   "번역 대기 중": ["Translation ready", "翻訳待機中", "翻译待机中"],
@@ -73,18 +79,30 @@ const COPY = Object.freeze({
   "입력 메시지의 번역 전송 상태를 전환합니다.": ["Toggle translation before sending messages.", "入力メッセージの翻訳送信を切り替えます。", "切换发送前翻译输入消息。"],
   "입력란을 선택한 뒤 원하는 단축키를 누르십시오.": ["Select the field, then press the desired shortcut.", "入力欄を選択し、使用するショートカットを押してください。", "请选择输入框，然后按下所需快捷键。"],
   "버전, 업데이트, 프로젝트 및 라이선스 정보를 확인합니다.": ["View version, update, project, and license information.", "バージョン、更新、プロジェクト、ライセンス情報を確認します。", "查看版本、更新、项目和许可证信息。"],
+  "버전": ["Version", "バージョン", "版本"],
   "자동 업데이트": ["Automatic updates", "自動更新", "自动更新"],
+  "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": ["Automatically check for new versions and notify you when one is available.", "新しいバージョンを自動的に確認し、利用可能になったらお知らせします。", "自动检查新版本，并在可用时通知你。"],
+  "비공개 베타 업데이트를 확인하고 있습니다...": ["Checking for private beta updates...", "非公開ベータ版のアップデートを確認しています…", "正在检查私有测试版更新…"],
+  "현재 베타 버전이 최신입니다.": ["The current beta version is up to date.", "現在のベータ版は最新です。", "当前测试版已是最新版本。"],
+  "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": ["Update installation has started. The app will restart shortly.", "アップデートのインストールを開始しました。アプリはまもなく再起動します。", "已开始安装更新，应用即将重启。"],
+  "업데이트 서명을 확인하고 설치하고 있습니다...": ["Verifying the update signature and installing...", "アップデートの署名を確認してインストールしています…", "正在验证更新签名并安装…"],
   "새 업데이트가 있습니다": ["A new update is available", "新しいアップデートがあります", "有新的更新可用"],
   "업데이트 설치": ["Install update", "アップデートをインストール", "安装更新"],
   "설치 준비 중": ["Preparing installation", "インストール準備中", "正在准备安装"],
+  "버전을 설치할 수 있습니다. 작업이 끝났을 때 설치해도 됩니다.": ["is available to install. You can install it after you finish your work.", "をインストールできます。作業が終わってからインストールすることもできます。", "可供安装。你也可以在完成工作后再安装。"],
+  "나중에": ["Later", "後で", "稍后"],
   "지금 확인": ["Check now", "今すぐ確認", "立即检查"],
   "진단 로그": ["Diagnostic log", "診断ログ", "诊断日志"],
   "오류 확인에 필요한 기록을 개인정보와 인증 정보를 가린 하나의 파일에 저장합니다.": ["Store troubleshooting details in one file with personal and authentication data redacted.", "トラブルシューティングに必要な記録を、個人情報と認証情報を伏せた1つのファイルに保存します。", "将排查错误所需的记录保存到一个文件中，并隐藏个人信息和身份验证信息。"],
   "로그 파일 찾기": ["Show log file", "ログファイルを表示", "显示日志文件"],
+  "GNU GPL v3에 따라 이용 가능하며 별도 보증은 제공되지 않습니다.": ["Available under GNU GPL v3 without any warranty.", "GNU GPL v3に基づいて利用でき、保証はありません。", "可依据 GNU GPL v3 使用，不提供任何担保。"],
   "라이선스 보기": ["View license", "ライセンスを表示", "查看许可证"],
   "되돌리기": ["Revert", "元に戻す", "还原"],
   "저장": ["Save", "保存", "保存"],
   "설정은 이 PC에만 저장됩니다.": ["Settings are stored only on this PC.", "設定はこのPCにのみ保存されます。", "设置仅保存在此电脑上。"],
+  "저장 중": ["Saving", "保存中", "正在保存"],
+  "저장되었습니다.": ["Saved.", "保存しました。", "已保存。"],
+  "선택한 외부 번역 서비스를 먼저 연결하십시오.": ["Connect the selected external translation service first.", "選択した外部翻訳サービスに先に接続してください。", "请先连接所选的外部翻译服务。"],
   "켜짐": ["On", "オン", "开启"],
   "꺼짐": ["Off", "オフ", "关闭"],
   "사용": ["On", "使用", "启用"],
@@ -99,6 +117,12 @@ const COPY = Object.freeze({
   "시스템 설정 따르기": ["Follow system settings", "システム設定に従う", "跟随系统设置"],
   "라이트": ["Light", "ライト", "浅色"],
   "다크": ["Dark", "ダーク", "深色"],
+  "Hy-MT2 1.8B Q4 (로컬·기본)": ["Hy-MT2 1.8B Q4 (local · default)", "Hy-MT2 1.8B Q4（ローカル・標準）", "Hy-MT2 1.8B Q4（本地・默认）"],
+  "Hy-MT2 7B Q4 (로컬·품질 우선)": ["Hy-MT2 7B Q4 (local · quality first)", "Hy-MT2 7B Q4（ローカル・品質優先）", "Hy-MT2 7B Q4（本地・质量优先）"],
+  "Hy-MT2 1.8B Q4 (경량·기본)": ["Hy-MT2 1.8B Q4 (lightweight · default)", "Hy-MT2 1.8B Q4（軽量・標準）", "Hy-MT2 1.8B Q4（轻量・默认）"],
+  "Hy-MT2 7B Q4 (품질·약 4.6GB)": ["Hy-MT2 7B Q4 (quality · approx. 4.6GB)", "Hy-MT2 7B Q4（品質・約4.6GB）", "Hy-MT2 7B Q4（质量・约4.6GB）"],
+  "DeepL (API 키·외부 전송)": ["DeepL (API key · external transfer)", "DeepL（APIキー・外部送信）", "DeepL（API 密钥・外部传输）"],
+  "Mock 테스트": ["Mock test", "モックテスト", "模拟测试"],
   "회/초": ["/sec", "回/秒", "次/秒"],
 });
 
@@ -118,6 +142,78 @@ export function translateCopy(language, korean) {
   if (language === "ko") return korean;
   const index = LANGUAGE_INDEX[language];
   return index === undefined ? korean : (COPY[korean]?.[index] || korean);
+}
+
+const DYNAMIC_COPY = Object.freeze([
+  {
+    pattern: /^선택한 번역 모델: (.+)\. 번역 준비가 완료되었습니다\.$/,
+    render: {
+      en: model => `Selected translation model: ${translateCopy("en", model)}. Translation is ready.`,
+      ja: model => `選択した翻訳モデル: ${translateCopy("ja", model)}。翻訳の準備が完了しました。`,
+      zh: model => `已选择翻译模型：${translateCopy("zh", model)}。翻译准备已完成。`,
+    },
+  },
+  {
+    pattern: /^선택한 번역 모델: (.+)\. 번역을 켜면 모델을 준비합니다\.$/,
+    render: {
+      en: model => `Selected translation model: ${translateCopy("en", model)}. The model will be prepared when translation is enabled.`,
+      ja: model => `選択した翻訳モデル: ${translateCopy("ja", model)}。翻訳をオンにするとモデルを準備します。`,
+      zh: model => `已选择翻译模型：${translateCopy("zh", model)}。开启翻译后将准备模型。`,
+    },
+  },
+  {
+    pattern: /^새 버전 (.+)을 사용할 수 있습니다\.$/,
+    render: {
+      en: version => `Version ${version} is available.`,
+      ja: version => `新しいバージョン ${version} を利用できます。`,
+      zh: version => `新版本 ${version} 可用。`,
+    },
+  },
+  {
+    pattern: /^(.+) 버전을 설치할 수 있습니다\. 지금 설치하면 앱이 다시 실행됩니다\. 작업 중이라면 나중에 설치해도 됩니다\.$/,
+    render: {
+      en: version => `Version ${version} is available. Installing it now will restart the app. You can install it later if you are working.`,
+      ja: version => `バージョン ${version} をインストールできます。今インストールするとアプリが再起動します。作業中の場合は後でインストールできます。`,
+      zh: version => `可以安装版本 ${version}。立即安装会重启应用；如果正在工作，也可以稍后安装。`,
+    },
+  },
+  {
+    pattern: /^(.+) 업데이트를 다운로드하고 있습니다\.\.\.$/,
+    render: {
+      en: version => `Downloading update ${version}...`,
+      ja: version => `アップデート ${version} をダウンロードしています…`,
+      zh: version => `正在下载更新 ${version}…`,
+    },
+  },
+  {
+    pattern: /^업데이트 다운로드 중 (.+)$/,
+    render: {
+      en: progress => `Downloading update ${progress}`,
+      ja: progress => `アップデートをダウンロード中 ${progress}`,
+      zh: progress => `正在下载更新 ${progress}`,
+    },
+  },
+  {
+    pattern: /^(업데이트 확인 실패|업데이트 설치 실패): (.+)$/,
+    render: {
+      en: (kind, error) => `${kind === "업데이트 확인 실패" ? "Update check failed" : "Update installation failed"}: ${error}`,
+      ja: (kind, error) => `${kind === "업데이트 확인 실패" ? "アップデートの確認に失敗しました" : "アップデートのインストールに失敗しました"}: ${error}`,
+      zh: (kind, error) => `${kind === "업데이트 확인 실패" ? "检查更新失败" : "安装更新失败"}：${error}`,
+    },
+  },
+]);
+
+export function translateDynamicCopy(language, korean) {
+  language = resolveUiLanguage(language);
+  const value = String(korean ?? "");
+  if (language === "ko" || !value) return value;
+  const exact = translateCopy(language, value);
+  if (exact !== value) return exact;
+  for (const entry of DYNAMIC_COPY) {
+    const match = value.match(entry.pattern);
+    if (match) return entry.render[language](...match.slice(1));
+  }
+  return value;
 }
 
 function matchesKnownTranslation(value, key) {

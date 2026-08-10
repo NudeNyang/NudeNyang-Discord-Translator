@@ -115,3 +115,11 @@ test("automatic updates are announced outside the app information panel", () => 
   assert.match(script, /title: "새 업데이트가 있습니다"/);
   assert.match(script, /cancelText: "나중에"/);
 });
+
+test("dynamic app information and runtime notices follow the interface language", () => {
+  assert.match(markup, /data-i18n-key="버전"/);
+  assert.match(markup, /data-i18n-key="버전을 설치할 수 있습니다/);
+  assert.match(script, /setLocalizedText\(elements\.updateStatus/);
+  assert.match(script, /setLocalizedText\(elements\.saveStatus, status\.notice\)/);
+  assert.match(script, /translateDynamicCopy\(currentUiLanguage\(\), title\)/);
+});

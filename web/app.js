@@ -9,7 +9,11 @@ import {
   translatorRuntimeLabel,
 } from "./state.mjs";
 import { LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
-import { applyStaticTranslations, translateCopy } from "./i18n.mjs";
+import {
+  applyStaticTranslations,
+  translateCopy,
+  translateDynamicCopy,
+} from "./i18n.mjs";
 
 const tauriInvoke = window.__TAURI__?.core?.invoke;
 const tauriListen = window.__TAURI__?.event?.listen;
@@ -90,6 +94,7 @@ const state = {
   providerConnections: new Map(),
   providerLoading: false,
 };
+const localizedText = new Map();
 
 const elements = {
   form: document.querySelector("#settings-form"),
@@ -275,12 +280,12 @@ function renderProviderConnections(connections) {
     const action = row.querySelector(".provider-action");
     const disconnect = row.querySelector(".provider-disconnect");
     status.dataset.state = connection.state;
-    status.querySelector("strong").textContent = providerStateLabel(connection);
-    status.querySelector("span").textContent = connection.detail;
+    setLocalizedText(status.querySelector("strong"), providerStateLabel(connection));
+    setLocalizedText(status.querySelector("span"), connection.detail);
     if (action) {
       action.hidden = connection.canDisconnect;
       action.disabled = connection.connected;
-      action.textContent = connection.connected ? "연결됨" : connection.installed ? "연결" : "설치";
+      setLocalizedText(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
     }
     if (disconnect) disconnect.hidden = !connection.canDisconnect;
     const secret = row.querySelector(".provider-secret");
@@ -298,8 +303,8 @@ async function loadProviderConnections() {
     for (const row of elements.providerRows) {
       const status = row.querySelector(".provider-status");
       status.dataset.state = "error";
-      status.querySelector("strong").textContent = "확인 실패";
-      status.querySelector("span").textContent = String(error);
+      setLocalizedText(status.querySelector("strong"), "확인 실패");
+      setLocalizedText(status.querySelector("span"), String(error));
     }
   } finally {
     state.providerLoading = false;
@@ -502,18 +507,18 @@ async function checkForUpdates(silent = false) {
   }
   state.updateCheckActive = true;
   elements.checkUpdate.disabled = true;
-  if (!silent) elements.updateStatus.textContent = "비공개 베타 업데이트를 확인하고 있습니다...";
+  if (!silent) setLocalizedText(elements.updateStatus, "비공개 베타 업데이트를 확인하고 있습니다...");
   try {
     const result = await invoke("update_check");
     if (result.available) {
       await showAvailableUpdate(result.version, { prompt: silent });
     } else {
       renderAvailableUpdate("");
-      elements.updateStatus.textContent = "현재 베타 버전이 최신입니다.";
-      elements.checkUpdate.textContent = "지금 확인";
+      setLocalizedText(elements.updateStatus, "현재 베타 버전이 최신입니다.");
+      setLocalizedText(elements.checkUpdate, "지금 확인");
     }
   } catch (error) {
-    if (!silent) elements.updateStatus.textContent = `업데이트 확인 실패: ${String(error)}`;
+    if (!silent) setLocalizedText(elements.updateStatus, `업데이트 확인 실패: ${String(error)}`);
   } finally {
     state.updateCheckActive = false;
     elements.checkUpdate.disabled = false;
@@ -526,13 +531,13 @@ function renderAvailableUpdate(version) {
   elements.updateBanner.hidden = !available;
   elements.updateBannerVersion.textContent = state.availableUpdateVersion;
   elements.updateBannerInstall.disabled = state.updateInstalling;
-  elements.updateBannerInstall.textContent = state.updateInstalling ? "설치 준비 중" : "업데이트 설치";
-  elements.checkUpdate.textContent = available ? "업데이트 설치" : "지금 확인";
+  setLocalizedText(elements.updateBannerInstall, state.updateInstalling ? "설치 준비 중" : "업데이트 설치");
+  setLocalizedText(elements.checkUpdate, available ? "업데이트 설치" : "지금 확인");
 }
 
 async function showAvailableUpdate(version, { prompt = false } = {}) {
   renderAvailableUpdate(version);
-  elements.updateStatus.textContent = `새 버전 ${version}을 사용할 수 있습니다.`;
+  setLocalizedText(elements.updateStatus, `새 버전 ${version}을 사용할 수 있습니다.`);
   if (!prompt || state.updatePromptedVersion === version) return;
 
   state.updatePromptedVersion = version;
@@ -559,12 +564,12 @@ async function installAvailableUpdate() {
   state.updateInstalling = true;
   elements.checkUpdate.disabled = true;
   renderAvailableUpdate(state.availableUpdateVersion);
-  elements.updateStatus.textContent = `${state.availableUpdateVersion} 업데이트를 다운로드하고 있습니다...`;
+  setLocalizedText(elements.updateStatus, `${state.availableUpdateVersion} 업데이트를 다운로드하고 있습니다...`);
   try {
     await invoke("update_install");
-    elements.updateStatus.textContent = "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.";
+    setLocalizedText(elements.updateStatus, "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.");
   } catch (error) {
-    elements.updateStatus.textContent = `업데이트 설치 실패: ${String(error)}`;
+    setLocalizedText(elements.updateStatus, `업데이트 설치 실패: ${String(error)}`);
     elements.checkUpdate.disabled = false;
   } finally {
     state.updateInstalling = false;
@@ -593,8 +598,21 @@ function setSwitch(button, checked, onLabel, offLabel) {
   button.querySelector("b").textContent = translateCopy(language, checked ? onLabel : offLabel);
 }
 
+function currentUiLanguage() {
+  return state.selectValues.ui_language || state.config.ui_language;
+}
+
+function setLocalizedText(element, korean) {
+  if (!element) return;
+  localizedText.set(element, String(korean ?? ""));
+  element.textContent = translateDynamicCopy(currentUiLanguage(), korean);
+}
+
 function applyUiLanguage(language) {
   applyStaticTranslations(document, language);
+  for (const [element, korean] of localizedText) {
+    element.textContent = translateDynamicCopy(language, korean);
+  }
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -636,7 +654,7 @@ function renderSelect(element) {
     option.type = "button";
     option.className = "select-option";
     option.dataset.value = value;
-    option.textContent = label;
+    option.textContent = translateCopy(currentUiLanguage(), label);
     option.setAttribute("role", "option");
     option.addEventListener("click", () => {
       setSelectValue(field, value);
@@ -645,7 +663,7 @@ function renderSelect(element) {
       if (field === "ui_theme") applyTheme(value);
       if (field === "ui_language") applyUiLanguage(value);
       if (field === "translator" && EXTERNAL_PROVIDERS.has(value) && !providerIsConnected(value)) {
-        elements.saveStatus.textContent = "선택한 외부 번역 서비스를 먼저 연결하십시오.";
+        setLocalizedText(elements.saveStatus, "선택한 외부 번역 서비스를 먼저 연결하십시오.");
         revealProviderConnection(value);
       }
     });
@@ -682,7 +700,7 @@ function setSelectValue(field, value) {
   state.selectValues[field] = value;
   const element = document.querySelector(`.custom-select[data-field="${field}"]`);
   const label = OPTIONS[field].find(item => item[0] === value)?.[1] || value;
-  element.querySelector(".select-trigger").textContent = label;
+  element.querySelector(".select-trigger").textContent = translateCopy(currentUiLanguage(), label);
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === value));
   }
@@ -849,7 +867,7 @@ function updateEngineState(status) {
     : connectionLabel;
   state.config.enabled = enabledState.enabled;
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
-  if (status.notice) elements.saveStatus.textContent = status.notice;
+  if (status.notice) setLocalizedText(elements.saveStatus, status.notice);
 }
 
 function localizeRuntimeLabel(label, language) {
@@ -940,10 +958,10 @@ function showModal({
   cancelVisible = true,
   variant = "",
 }) {
-  elements.modalTitle.textContent = title;
-  elements.modalMessage.textContent = message;
-  elements.modalAccept.textContent = acceptText;
-  elements.modalCancel.textContent = cancelText;
+  elements.modalTitle.textContent = translateDynamicCopy(currentUiLanguage(), title);
+  elements.modalMessage.textContent = translateDynamicCopy(currentUiLanguage(), message);
+  elements.modalAccept.textContent = translateDynamicCopy(currentUiLanguage(), acceptText);
+  elements.modalCancel.textContent = translateDynamicCopy(currentUiLanguage(), cancelText);
   elements.modalCancel.hidden = !cancelVisible;
   if (variant) elements.modalLayer.dataset.variant = variant;
   else delete elements.modalLayer.dataset.variant;
@@ -988,7 +1006,7 @@ async function loadSettings() {
   try {
     const config = await invoke("settings_get");
     renderConfig(config);
-    elements.saveStatus.textContent = "설정은 이 PC에만 저장됩니다.";
+    setLocalizedText(elements.saveStatus, "설정은 이 PC에만 저장됩니다.");
   } catch (error) {
     elements.saveStatus.textContent = String(error);
     elements.engineState.dataset.state = "error";
@@ -1110,10 +1128,10 @@ elements.form.addEventListener("submit", async event => {
       revealProviderConnection(translator);
       throw new Error("선택한 외부 번역 서비스를 먼저 연결하십시오.");
     }
-    elements.saveStatus.textContent = "저장 중";
+    setLocalizedText(elements.saveStatus, "저장 중");
     const updated = await invoke("settings_update", { patch: collectPatch() });
     renderConfig(updated);
-    elements.saveStatus.textContent = "저장되었습니다.";
+    setLocalizedText(elements.saveStatus, "저장되었습니다.");
     await invoke("main_window_hide");
   } catch (error) {
     elements.saveStatus.textContent = String(error);
@@ -1138,10 +1156,10 @@ if (tauriListen) {
   tauriListen("update-download-progress", event => {
     const downloaded = formatMegabytes(event.payload?.downloaded);
     const total = event.payload?.total ? ` / ${formatMegabytes(event.payload.total)}` : "";
-    elements.updateStatus.textContent = `업데이트 다운로드 중 ${downloaded}${total}`;
+    setLocalizedText(elements.updateStatus, `업데이트 다운로드 중 ${downloaded}${total}`);
   });
   tauriListen("update-download-finished", () => {
-    elements.updateStatus.textContent = "업데이트 서명을 확인하고 설치하고 있습니다...";
+    setLocalizedText(elements.updateStatus, "업데이트 서명을 확인하고 설치하고 있습니다...");
   });
 }
 
