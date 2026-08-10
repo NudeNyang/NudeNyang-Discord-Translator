@@ -45,9 +45,24 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       kind, id, index, text: node.nodeValue,
     }));
   }
+  function messageRootCandidates() {
+    const roots = new Set(document.querySelectorAll(
+      '[id^="message-content-"],[id^="message-content_"]'
+    ));
+    const rowSelector = [
+      '[id^="chat-messages-"]',
+      '[data-list-item-id^="chat-messages___"]'
+    ].join(',');
+    for (const row of document.querySelectorAll(rowSelector)) {
+      for (const root of row.querySelectorAll('[class*="messageContent_"]')) {
+        roots.add(root);
+      }
+    }
+    return [...roots];
+  }
 
   const out = [];
-  for (const root of document.querySelectorAll('[id^="message-content-"]')) {
+  for (const root of messageRootCandidates()) {
     if (root.closest('[id^="message-reply-context-"]')) continue;
     if (root.getAttribute('data-nt-outgoing-original') === 'true') continue;
     if (!isVisible(root)) continue;
@@ -56,7 +71,11 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
   }
   for (const context of document.querySelectorAll('[id^="message-reply-context-"]')) {
     if (!isVisible(context)) continue;
-    const root = context.querySelector('[class*="repliedTextPreview"] [id^="message-content-"]');
+    const root = context.querySelector(
+      '[class*="repliedTextPreview"] [id^="message-content-"],' +
+      '[class*="repliedTextPreview"] [id^="message-content_"],' +
+      '[class*="repliedTextPreview"] [class*="messageContent_"]'
+    );
     if (!root) continue;
     const id = ensureRootId(root, 'data-dto-reply-id', 'reply');
     out.push(...parts('reply', id, root));
@@ -362,6 +381,14 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("message-reply-context-"));
         assert!(SNAPSHOT_SCRIPT.contains("data-nt-outgoing-original"));
         assert!(SNAPSHOT_SCRIPT.contains("postTitleText"));
+    }
+
+    #[test]
+    fn snapshot_supports_read_only_rules_channel_message_containers() {
+        assert!(SNAPSHOT_SCRIPT.contains("messageRootCandidates"));
+        assert!(SNAPSHOT_SCRIPT.contains("[id^=\"chat-messages-\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id^=\"chat-messages___\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"messageContent_\"]"));
     }
 
     #[test]
