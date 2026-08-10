@@ -32,7 +32,8 @@ use windows::Win32::System::JobObjects::{
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 
-const PROMPT_VERSION: &str = "model-aware-v6";
+const PROMPT_VERSION: &str = "meaning-preserving-v7";
+const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const PROMPT_ECHO_HINTS: [&str; 17] = [
     "zxqkeep",
@@ -387,14 +388,7 @@ impl HyMtTranslator {
                 self.port
             ))
             .timeout(self.request_timeout)
-            .json(&json!({
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": output_limit,
-                "temperature": 0.2,
-                "top_p": 0.6,
-                "top_k": 20,
-                "repeat_penalty": 1.05,
-            }))
+            .json(&completion_payload(prompt, output_limit))
             .send()
             .and_then(|response| response.error_for_status())
             .map_err(|error| format!("Hy-MT2 번역 요청이 실패했습니다: {error}"))?;
@@ -422,6 +416,17 @@ impl HyMtTranslator {
         }
         result
     }
+}
+
+fn completion_payload(prompt: &str, output_limit: usize) -> Value {
+    json!({
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": output_limit,
+        "temperature": INFERENCE_TEMPERATURE,
+        "top_p": 0.6,
+        "top_k": 20,
+        "repeat_penalty": 1.05,
+    })
 }
 
 fn completion_result(payload: &Value) -> Result<String, String> {
@@ -749,6 +754,7 @@ fn translation_prompt(text: &str, source: Language, target: Language, style: &st
     format!(
         "Translate the following {} text into {}.\n\
          Translate every clause and preserve every piece of information without adding or omitting anything.\n\
+         Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts in the translation; never replace an animal, person, object, or place with a related but different one.\n\
          Preserve the speaker's exact social register, warmth, directness, slang, contractions, fragments, and emotional intensity. Do not make casual language polite, formal, literary, or businesslike.\n\
          Style requirement: {}\n\
          Preserve paragraph boundaries, line breaks, emojis, and punctuation intent. If a source line has no sentence-final punctuation, do not add a period, full stop, question mark, or exclamation mark. Preserve ellipses and repeated punctuation.\n\
@@ -786,7 +792,7 @@ fn compact_translation_prompt(
         format!(" {style}")
     };
     format!(
-        "Translate the following {} segment into {}. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders.{} Output only the translation without explanation:\n\n{}",
+        "Translate the following {} segment into {}. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders.{} Output only the translation without explanation:\n\n{}",
         source.english_name(),
         target.english_name(),
         style,
@@ -832,7 +838,7 @@ fn retryable_completion_error(error: &str) -> bool {
 
 fn minimal_translation_prompt(text: &str, target: Language) -> String {
     format!(
-        "Translate the following segment into {}, without additional explanation:\n{}",
+        "Translate the following segment into {}. Preserve the exact identity of every concrete noun, and keep distinct source nouns as distinct concepts. Output only the translation without additional explanation:\n{}",
         target.english_name(),
         text
     )
@@ -1160,9 +1166,10 @@ fn free_tcp_port() -> Result<u16, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        clean_translation, complete_translation_with_retry, completion_result, detect_speech_style,
-        find_llama_server, max_output_tokens, rewrite_style_prompt, startup_device_attempts,
-        translate_with_completion, translation_prompt_for_model, HyMtModelSize, HyMtTranslator,
+        clean_translation, complete_translation_with_retry, completion_payload, completion_result,
+        detect_speech_style, find_llama_server, max_output_tokens, rewrite_style_prompt,
+        startup_device_attempts, translate_with_completion, translation_prompt_for_model,
+        HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
@@ -1234,6 +1241,27 @@ mod tests {
         );
         assert!(prompt.contains("Translate every clause"));
         assert!(prompt.contains("exact social register"));
+    }
+
+    #[test]
+    fn prompts_preserve_concrete_nouns_and_distinct_concepts() {
+        for model_size in [HyMtModelSize::Small, HyMtModelSize::Large] {
+            let prompt = translation_prompt_for_model(
+                model_size,
+                "너구리가 다람쥐를 만났어",
+                Language::Korean,
+                Language::Japanese,
+                "casual",
+            );
+            assert!(prompt.contains("Preserve the exact identity of every concrete noun"));
+            assert!(prompt.contains("Distinct source nouns must remain distinct concepts"));
+        }
+    }
+
+    #[test]
+    fn local_translation_sampling_is_deterministic() {
+        let payload = completion_payload("translate", 96);
+        assert_eq!(payload["temperature"].as_f64(), Some(0.0));
     }
 
     #[test]
@@ -1370,6 +1398,7 @@ mod tests {
         let polite = HyMtTranslator::new(HyMtModelSize::Small, "auto", "polite").unwrap();
         let casual = HyMtTranslator::new(HyMtModelSize::Small, "auto", "casual").unwrap();
         assert_ne!(polite.cache_namespace(), casual.cache_namespace());
+        assert!(polite.cache_namespace().contains("meaning-preserving-v7"));
         assert!(
             rewrite_style_prompt("고마워요.", Language::Korean, "casual")
                 .contains("Korean casual banmal")
@@ -1498,6 +1527,19 @@ mod tests {
             Language::Japanese,
             "unexpected translation: {translated}"
         );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 7B 모델과 llama-server가 필요합니다"]
+    fn live_large_model_preserves_the_reported_raccoon_dog_noun() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Large, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start Hy-MT2 7B server");
+        let translated = translator
+            .translate("너구리", Language::Korean, Language::Japanese)
+            .expect("translate the reported Korean noun into Japanese");
+        assert_eq!(translated, "タヌキ");
         translator.close();
     }
 }
