@@ -88,6 +88,43 @@ impl TranslationService {
             .collect()
     }
 
+    pub fn translate_many_best_effort(
+        &mut self,
+        texts: &[String],
+        target: Language,
+    ) -> Vec<String> {
+        let mut output = Vec::with_capacity(texts.len());
+        for text in texts {
+            match self.translate(text, target) {
+                Ok(translated) => output.push(translated),
+                Err(failure) => {
+                    crate::diagnostics::warn(
+                        "incoming-translation",
+                        &format!(
+                            "item kept as original; chars={}; hash={}; error={failure}",
+                            text.chars().count(),
+                            source_hash(text)
+                        ),
+                    );
+                    output.push(text.clone());
+                }
+            }
+        }
+        output
+    }
+
+    pub fn translate_many_for_incoming(
+        &mut self,
+        texts: &[String],
+        target: Language,
+    ) -> Result<Vec<String>, String> {
+        if self.translator.isolate_incoming_failures() {
+            Ok(self.translate_many_best_effort(texts, target))
+        } else {
+            self.translate_many(texts, target)
+        }
+    }
+
     fn translate_many_unchunked(
         &mut self,
         texts: &[String],
@@ -348,6 +385,8 @@ mod tests {
         inputs: Arc<Mutex<Vec<String>>>,
     }
 
+    struct FailOnTextTranslator;
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -395,6 +434,33 @@ mod tests {
             _target: Language,
         ) -> bool {
             false
+        }
+    }
+
+    impl Translator for FailOnTextTranslator {
+        fn display_name(&self) -> &str {
+            "fail-on-text"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "fail-on-text:v1"
+        }
+
+        fn isolate_incoming_failures(&self) -> bool {
+            true
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            if text == "Rules still apply in the server and common filters." {
+                Err("length".to_string())
+            } else {
+                Ok(format!("번역:{text}"))
+            }
         }
     }
 
@@ -468,6 +534,27 @@ mod tests {
         assert!(recorded.len() >= 2, "recorded inputs: {}", recorded.len());
         assert!(recorded.iter().all(|text| text.chars().count() <= 700));
         assert_eq!(translated, source);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn best_effort_batch_isolates_one_failure_without_dropping_other_messages() {
+        let path = cache_path("best-effort-isolation");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(FailOnTextTranslator), cache);
+        let source = vec![
+            "Hello Welcome to BugCat 3.0".to_string(),
+            "Rules still apply in the server and common filters.".to_string(),
+            "Please check other servers".to_string(),
+        ];
+
+        let translated = service
+            .translate_many_for_incoming(&source, Language::Korean)
+            .unwrap();
+
+        assert_eq!(translated[0], "번역:Hello Welcome to BugCat 3.0");
+        assert_eq!(translated[1], source[1]);
+        assert_eq!(translated[2], "번역:Please check other servers");
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

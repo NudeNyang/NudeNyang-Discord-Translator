@@ -1256,7 +1256,7 @@ fn run_translation_worker(
         match command {
             WorkerCommand::Translate(batch) => {
                 let texts: Vec<String> = batch.parts.iter().map(|part| part.text.clone()).collect();
-                let values = service.translate_many(&texts, batch.target);
+                let values = service.translate_many_for_incoming(&texts, batch.target);
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,
                     target: batch.target,

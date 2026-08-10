@@ -19,7 +19,20 @@ use crate::language::Language;
 
 use super::Translator;
 
-const PROMPT_VERSION: &str = "long-text-v5";
+#[cfg(windows)]
+use std::os::windows::io::AsRawHandle;
+#[cfg(windows)]
+use windows::core::PCWSTR;
+#[cfg(windows)]
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
+#[cfg(windows)]
+use windows::Win32::System::JobObjects::{
+    AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+    SetInformationJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+    JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+};
+
+const PROMPT_VERSION: &str = "model-aware-v6";
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const PROMPT_ECHO_HINTS: [&str; 17] = [
     "zxqkeep",
@@ -94,6 +107,8 @@ pub struct HyMtTranslator {
     display_name: String,
     cache_namespace: String,
     process: Option<Child>,
+    #[cfg(windows)]
+    process_job: Option<ProcessJob>,
     port: u16,
     client: Client,
 }
@@ -131,6 +146,8 @@ impl HyMtTranslator {
                 model.key
             ),
             process: None,
+            #[cfg(windows)]
+            process_job: None,
             port: 0,
             client,
         })
@@ -201,6 +218,14 @@ impl HyMtTranslator {
             let mut child = command
                 .spawn()
                 .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했습니다: {error}"))?;
+            #[cfg(windows)]
+            match ProcessJob::attach(&child) {
+                Ok(job) => self.process_job = Some(job),
+                Err(error) => crate::diagnostics::warn(
+                    "hy-mt2",
+                    &format!("server process job unavailable: {error}"),
+                ),
+            }
             if let Some(stdout) = child.stdout.take() {
                 crate::diagnostics::pipe_external_output(stdout, "hy-mt2-server");
             }
@@ -354,6 +379,7 @@ impl HyMtTranslator {
     }
 
     fn complete(&self, prompt: &str, text: &str) -> Result<String, String> {
+        let output_limit = max_output_tokens(text);
         let response = self
             .client
             .post(format!(
@@ -363,7 +389,7 @@ impl HyMtTranslator {
             .timeout(self.request_timeout)
             .json(&json!({
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": max_output_tokens(text),
+                "max_tokens": output_limit,
                 "temperature": 0.2,
                 "top_p": 0.6,
                 "top_k": 20,
@@ -375,7 +401,26 @@ impl HyMtTranslator {
         let payload: Value = response
             .json()
             .map_err(|error| format!("Hy-MT2 번역 응답을 읽지 못했습니다: {error}"))?;
-        completion_result(&payload)
+        let finish_reason = payload
+            .get("choices")
+            .and_then(Value::as_array)
+            .and_then(|choices| choices.first())
+            .and_then(|choice| choice.get("finish_reason"))
+            .and_then(Value::as_str)
+            .unwrap_or("missing");
+        let result = completion_result(&payload);
+        if let Err(error) = &result {
+            crate::diagnostics::warn(
+                "hy-mt2",
+                &format!(
+                    "completion failed; model={}; chars={}; hash={}; max_tokens={output_limit}; finish_reason={finish_reason}; error={error}",
+                    self.model.key,
+                    text.chars().count(),
+                    diagnostic_text_hash(text)
+                ),
+            );
+        }
+        result
     }
 }
 
@@ -429,6 +474,10 @@ impl Translator for HyMtTranslator {
         model_is_verified(&self.model_path, self.model).unwrap_or(false)
     }
 
+    fn isolate_incoming_failures(&self) -> bool {
+        true
+    }
+
     fn prepare(&mut self) -> Result<(), String> {
         self.ensure_server()
     }
@@ -444,9 +493,19 @@ impl Translator for HyMtTranslator {
         }
         self.ensure_server()?;
         let style = self.speech_style.clone();
-        translate_with_completion(text, source, target, &style, |prompt, fragment| {
-            self.complete(prompt, fragment)
-        })
+        let model_size = if self.model.key == HyMtModelSize::Small.model().key {
+            HyMtModelSize::Small
+        } else {
+            HyMtModelSize::Large
+        };
+        translate_with_completion_for_model(
+            model_size,
+            text,
+            source,
+            target,
+            &style,
+            |prompt, fragment| self.complete(prompt, fragment),
+        )
     }
 
     fn close(&mut self) {
@@ -456,7 +515,57 @@ impl Translator for HyMtTranslator {
                 let _ = process.wait();
             }
         }
+        #[cfg(windows)]
+        {
+            self.process_job.take();
+        }
         self.port = 0;
+    }
+}
+
+#[cfg(windows)]
+struct ProcessJob(HANDLE);
+
+#[cfg(windows)]
+unsafe impl Send for ProcessJob {}
+
+#[cfg(windows)]
+impl ProcessJob {
+    fn attach(child: &Child) -> Result<Self, String> {
+        let job = unsafe { CreateJobObjectW(None, PCWSTR::null()) }
+            .map_err(|error| format!("작업 객체를 만들지 못했습니다: {error}"))?;
+        let mut information = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+        information.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        let configured = unsafe {
+            SetInformationJobObject(
+                job,
+                JobObjectExtendedLimitInformation,
+                (&information as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
+                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+            )
+        };
+        if let Err(error) = configured {
+            let _ = unsafe { CloseHandle(job) };
+            return Err(format!(
+                "작업 객체 종료 정책을 설정하지 못했습니다: {error}"
+            ));
+        }
+        let process_handle = HANDLE(child.as_raw_handle());
+        if let Err(error) = unsafe { AssignProcessToJobObject(job, process_handle) } {
+            let _ = unsafe { CloseHandle(job) };
+            return Err(format!(
+                "서버 프로세스를 작업 객체에 연결하지 못했습니다: {error}"
+            ));
+        }
+        Ok(Self(job))
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ProcessJob {
+    fn drop(&mut self) {
+        let _ = unsafe { CloseHandle(self.0) };
+        self.0 = HANDLE::default();
     }
 }
 
@@ -466,12 +575,55 @@ impl Drop for HyMtTranslator {
     }
 }
 
+#[cfg(test)]
 fn translate_with_completion<F>(
     text: &str,
     source: Language,
     target: Language,
     speech_style: &str,
     mut complete: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str, &str) -> Result<String, String>,
+{
+    translate_with_completion_using_prompt(
+        text,
+        source,
+        target,
+        speech_style,
+        HyMtModelSize::Large,
+        &mut complete,
+    )
+}
+
+fn translate_with_completion_for_model<F>(
+    model_size: HyMtModelSize,
+    text: &str,
+    source: Language,
+    target: Language,
+    speech_style: &str,
+    mut complete: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str, &str) -> Result<String, String>,
+{
+    translate_with_completion_using_prompt(
+        text,
+        source,
+        target,
+        speech_style,
+        model_size,
+        &mut complete,
+    )
+}
+
+fn translate_with_completion_using_prompt<F>(
+    text: &str,
+    source: Language,
+    target: Language,
+    speech_style: &str,
+    model_size: HyMtModelSize,
+    complete: &mut F,
 ) -> Result<String, String>
 where
     F: FnMut(&str, &str) -> Result<String, String>,
@@ -501,16 +653,22 @@ where
         let leading_len = part.len() - part.trim_start().len();
         let trailing_start = part.trim_end().len();
         let core = part.trim();
-        let prompt = translation_prompt(core, source, target, resolved_style);
-        let mut result = complete(&prompt, core)?;
+        let prompt = translation_prompt_for_model(model_size, core, source, target, resolved_style);
+        let model_key = model_size.model().key;
+        let mut result = complete_translation_with_retry(
+            model_key,
+            &prompt,
+            core,
+            target,
+            |retry_prompt, retry_text| complete(retry_prompt, retry_text),
+        )?;
         if matches!(resolved_style, "polite" | "casual")
             && (detect_speech_style(&result, target) != resolved_style
                 || has_register_artifact(&result, target))
         {
-            let rewritten = complete(
-                &rewrite_style_prompt(&result, target, resolved_style),
-                &result,
-            )?;
+            let rewrite_prompt =
+                rewrite_style_prompt_for_model(model_size, &result, target, resolved_style);
+            let rewritten = complete(&rewrite_prompt, &result)?;
             if rewrite_preserves_content(&result, &rewritten) {
                 result = rewritten;
             } else {
@@ -602,6 +760,89 @@ fn translation_prompt(text: &str, source: Language, target: Language, style: &st
     )
 }
 
+fn translation_prompt_for_model(
+    model_size: HyMtModelSize,
+    text: &str,
+    source: Language,
+    target: Language,
+    style: &str,
+) -> String {
+    match model_size {
+        HyMtModelSize::Small => compact_translation_prompt(text, source, target, style),
+        HyMtModelSize::Large => translation_prompt(text, source, target, style),
+    }
+}
+
+fn compact_translation_prompt(
+    text: &str,
+    source: Language,
+    target: Language,
+    style: &str,
+) -> String {
+    let style = compact_style_requirement(target, style);
+    let style = if style.is_empty() {
+        String::new()
+    } else {
+        format!(" {style}")
+    };
+    format!(
+        "Translate the following {} segment into {}. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders.{} Output only the translation without explanation:\n\n{}",
+        source.english_name(),
+        target.english_name(),
+        style,
+        text
+    )
+}
+
+fn complete_translation_with_retry<F>(
+    model_key: &str,
+    primary_prompt: &str,
+    text: &str,
+    target: Language,
+    mut complete: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str, &str) -> Result<String, String>,
+{
+    let first = complete(primary_prompt, text);
+    let needs_retry = match &first {
+        Ok(value) => looks_like_prompt_echo(value),
+        Err(error) => retryable_completion_error(error),
+    };
+    if !needs_retry {
+        return first;
+    }
+    crate::diagnostics::warn(
+        "hy-mt2",
+        &format!(
+            "completion retry with minimal prompt; model={model_key}; chars={}; hash={}",
+            text.chars().count(),
+            diagnostic_text_hash(text)
+        ),
+    );
+    complete(&minimal_translation_prompt(text, target), text)
+}
+
+fn retryable_completion_error(error: &str) -> bool {
+    error.contains("길이 제한")
+        || error.contains("빈 결과")
+        || error.contains("지시문")
+        || error.contains("결과를 반환하지")
+}
+
+fn minimal_translation_prompt(text: &str, target: Language) -> String {
+    format!(
+        "Translate the following segment into {}, without additional explanation:\n{}",
+        target.english_name(),
+        text
+    )
+}
+
+fn diagnostic_text_hash(text: &str) -> String {
+    let digest = Sha256::digest(text.as_bytes());
+    format!("{digest:x}").chars().take(12).collect()
+}
+
 pub fn rewrite_style_prompt(text: &str, target: Language, style: &str) -> String {
     format!(
         "Rewrite the following {} text to meet this style requirement.\nStyle requirement: {}\n\
@@ -610,6 +851,41 @@ pub fn rewrite_style_prompt(text: &str, target: Language, style: &str) -> String
         style_requirement(target, style),
         text
     )
+}
+
+fn rewrite_style_prompt_for_model(
+    model_size: HyMtModelSize,
+    text: &str,
+    target: Language,
+    style: &str,
+) -> String {
+    if model_size == HyMtModelSize::Large {
+        return rewrite_style_prompt(text, target, style);
+    }
+    format!(
+        "Rewrite this {} text. {} Preserve its meaning, line breaks, emojis, punctuation, and ZXQKEEP placeholders. Output only the rewritten text:\n\n{}",
+        target.english_name(),
+        compact_style_requirement(target, style),
+        text
+    )
+}
+
+fn compact_style_requirement(target: Language, style: &str) -> &'static str {
+    match (style, target) {
+        ("polite", Language::Korean) => "Use polite Korean honorific speech.",
+        ("polite", Language::Japanese) => "Use polite Japanese です/ます forms.",
+        ("polite", Language::English) => "Use polite formal English.",
+        ("polite", Language::ChineseSimplified) => "Use polite Simplified Chinese.",
+        ("polite", Language::ChineseTraditional) => "Use polite Traditional Chinese.",
+        ("casual", Language::Korean) => "Use natural Korean banmal, never 존댓말.",
+        ("casual", Language::Japanese) => {
+            "Use natural Japanese casual plain form, never です/ます."
+        }
+        ("casual", Language::English) => "Use natural casual English.",
+        ("casual", Language::ChineseSimplified) => "Use casual Simplified Chinese.",
+        ("casual", Language::ChineseTraditional) => "Use casual Traditional Chinese.",
+        _ => "",
+    }
 }
 
 fn style_requirement(target: Language, style: &str) -> &'static str {
@@ -884,14 +1160,17 @@ fn free_tcp_port() -> Result<u16, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        clean_translation, completion_result, detect_speech_style, find_llama_server,
-        max_output_tokens, rewrite_style_prompt, startup_device_attempts,
-        translate_with_completion, HyMtModelSize, HyMtTranslator,
+        clean_translation, complete_translation_with_retry, completion_result, detect_speech_style,
+        find_llama_server, max_output_tokens, rewrite_style_prompt, startup_device_attempts,
+        translate_with_completion, translation_prompt_for_model, HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[cfg(windows)]
+    use super::ProcessJob;
 
     #[test]
     fn prompt_preserves_markers_locally_and_uses_target_language() {
@@ -929,6 +1208,35 @@ mod tests {
     }
 
     #[test]
+    fn small_model_uses_a_compact_prompt_that_does_not_echo_detailed_instructions() {
+        let prompt = translation_prompt_for_model(
+            HyMtModelSize::Small,
+            "Rules still apply in the server and common filters.",
+            Language::English,
+            Language::Korean,
+            "neutral",
+        );
+        assert!(prompt.contains("ZXQKEEP placeholders"));
+        assert!(prompt.contains("Output only the translation"));
+        assert!(!prompt.contains("Translate every clause"));
+        assert!(!prompt.contains("exact social register"));
+        assert!(!prompt.contains("sentence-final punctuation"));
+    }
+
+    #[test]
+    fn large_model_keeps_the_detailed_translation_prompt() {
+        let prompt = translation_prompt_for_model(
+            HyMtModelSize::Large,
+            "Rules still apply in the server and common filters.",
+            Language::English,
+            Language::Korean,
+            "neutral",
+        );
+        assert!(prompt.contains("Translate every clause"));
+        assert!(prompt.contains("exact social register"));
+    }
+
+    #[test]
     fn automatic_style_is_included_in_the_initial_prompt() {
         let mut captured = String::new();
         let result = translate_with_completion(
@@ -963,6 +1271,32 @@ mod tests {
         });
         let error = completion_result(&payload).unwrap_err();
         assert!(error.contains("길이 제한"), "unexpected error: {error}");
+    }
+
+    #[test]
+    fn length_failure_retries_once_with_the_minimal_official_style_prompt() {
+        let mut prompts = Vec::new();
+        let translated = complete_translation_with_retry(
+            "1.8b",
+            "detailed prompt",
+            "Rules still apply in the server and common filters.",
+            Language::Korean,
+            |prompt, _text| {
+                prompts.push(prompt.to_string());
+                if prompts.len() == 1 {
+                    Err("Hy-MT2 번역 결과가 길이 제한에 도달했습니다.".to_string())
+                } else {
+                    Ok("서버와 공통 필터에도 규칙은 여전히 적용돼요.".to_string())
+                }
+            },
+        )
+        .unwrap();
+
+        assert_eq!(translated, "서버와 공통 필터에도 규칙은 여전히 적용돼요.");
+        assert_eq!(prompts.len(), 2);
+        assert_eq!(prompts[0], "detailed prompt");
+        assert!(prompts[1].starts_with("Translate the following segment into Korean"));
+        assert!(!prompts[1].contains("Preserve its tone"));
     }
 
     #[test]
@@ -1069,6 +1403,32 @@ mod tests {
         assert_eq!(startup_device_attempts("cpu"), vec!["cpu"]);
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn dropping_process_job_terminates_the_attached_server_process() {
+        use std::process::Command;
+        use std::thread;
+        use std::time::{Duration, Instant};
+
+        let mut child = Command::new("cmd")
+            .args(["/C", "ping -n 30 127.0.0.1 >NUL"])
+            .spawn()
+            .expect("spawn long-running child");
+        let job = ProcessJob::attach(&child).expect("attach process job");
+        drop(job);
+
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < deadline && child.try_wait().unwrap().is_none() {
+            thread::sleep(Duration::from_millis(25));
+        }
+        let exited = child.try_wait().unwrap().is_some();
+        if !exited {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        assert!(exited, "job close did not terminate the child process");
+    }
+
     #[test]
     #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
     fn live_small_model_translates_without_python() {
@@ -1084,6 +1444,25 @@ mod tests {
             .expect("translate with Hy-MT2");
         assert!(!translated.trim().is_empty());
         assert_ne!(translated, "Hello, nice to meet you.");
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_the_previous_prompt_echo_trigger() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        let translated = translator
+            .translate(
+                "Rules still apply in the server and common filters.",
+                Language::English,
+                Language::Korean,
+            )
+            .expect("translate the prompt-echo trigger with Hy-MT2 1.8B");
+        assert_eq!(detect_explicit_language(&translated), Language::Korean);
+        assert!(!translated.contains("스타일 요구사항"));
+        assert!(!translated.contains("번역하고 모든 정보를"));
         translator.close();
     }
 

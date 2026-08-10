@@ -25,6 +25,9 @@ pub trait Translator: Send {
     fn sends_text_externally(&self) -> bool {
         false
     }
+    fn isolate_incoming_failures(&self) -> bool {
+        false
+    }
     fn translate(
         &mut self,
         text: &str,
