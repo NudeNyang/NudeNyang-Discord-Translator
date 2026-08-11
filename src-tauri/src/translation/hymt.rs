@@ -204,7 +204,7 @@ impl HyMtModelSize {
                 repository: "mradermacher/MiLMMT-46-4B-v0.1-i1-GGUF",
                 filename: "MiLMMT-46-4B-v0.1.i1-Q4_K_M.gguf",
                 expected_bytes: 2_867_472_896,
-                expected_sha256: "73c2b70fa52cde777254cd16ca6791525b1296ff470107684824304d55e22113",
+                expected_sha256: "f1c4e2356931393f3971c0694532dda07e40ba538611e2a7c02b72d63efa50f9",
             },
         }
     }
@@ -2103,7 +2103,7 @@ mod tests {
         assert_eq!(model.expected_bytes, 2_867_472_896);
         assert_eq!(
             model.expected_sha256,
-            "73c2b70fa52cde777254cd16ca6791525b1296ff470107684824304d55e22113"
+            "f1c4e2356931393f3971c0694532dda07e40ba538611e2a7c02b72d63efa50f9"
         );
         assert!(local_model_storage_status()
             .iter()
