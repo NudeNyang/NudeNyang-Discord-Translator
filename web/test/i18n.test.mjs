@@ -16,6 +16,8 @@ test("automatic settings language follows supported system locales", () => {
 
 test("automatic settings language falls back to English", () => {
   assert.equal(resolveUiLanguage("auto", "fr-FR"), "en");
+  assert.equal(resolveUiLanguage("auto", "de-DE"), "en");
+  assert.equal(resolveUiLanguage("auto", "es-MX"), "en");
   assert.equal(resolveUiLanguage("auto", ""), "en");
 });
 
@@ -73,6 +75,20 @@ test("local engine notices describe every selectable local model", () => {
       "로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다. 외부 서비스를 선택하면 번역할 텍스트만 해당 서비스로 전송됩니다.",
     ),
     "ローカル翻訳モデルと画像OCRはこのPC上で処理されます。外部サービスを選択した場合のみ、翻訳するテキストがそのサービスへ送信されます。",
+  );
+});
+
+test("image translation explanations are translated completely", () => {
+  assert.equal(
+    translateCopy("ja", "Discord 이미지에서 글자를 감지하고 번역하여 표시합니다."),
+    "Discord画像内の文字を検出し、翻訳して表示します。",
+  );
+  assert.equal(
+    translateCopy(
+      "ja",
+      "실시간 번역이 켜져 있을 때 Discord 이미지의 글자를 PC에서 감지하여 표시 언어로 번역합니다. 번역이 꺼져 있으면 이미지에 별도 버튼이나 안내 문구를 표시하지 않습니다.",
+    ),
+    "リアルタイム翻訳がオンのとき、Discord画像内の文字をPC上で検出し、表示言語へ翻訳します。翻訳がオフのときは、画像にボタンや案内を表示しません。",
   );
 });
 
