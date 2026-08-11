@@ -65,6 +65,7 @@ pub enum HyMtModelSize {
     Small,
     Large,
     TranslateGemma4B,
+    MiLmMt4B,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -196,14 +197,24 @@ impl HyMtModelSize {
                 expected_bytes: 2_489_909_312,
                 expected_sha256: "526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd",
             },
+            Self::MiLmMt4B => HyMtModel {
+                key: "46-4b-v0.1",
+                family: "milmmt",
+                label: "MiLMMT-46 4B Q4_K_M",
+                repository: "mradermacher/MiLMMT-46-4B-v0.1-i1-GGUF",
+                filename: "MiLMMT-46-4B-v0.1.i1-Q4_K_M.gguf",
+                expected_bytes: 2_867_472_896,
+                expected_sha256: "73c2b70fa52cde777254cd16ca6791525b1296ff470107684824304d55e22113",
+            },
         }
     }
 }
 
-const LOCAL_MODEL_SIZES: [HyMtModelSize; 3] = [
+const LOCAL_MODEL_SIZES: [HyMtModelSize; 4] = [
     HyMtModelSize::Small,
     HyMtModelSize::Large,
     HyMtModelSize::TranslateGemma4B,
+    HyMtModelSize::MiLmMt4B,
 ];
 
 fn model_size_from_config_id(id: &str) -> Option<HyMtModelSize> {
@@ -211,6 +222,7 @@ fn model_size_from_config_id(id: &str) -> Option<HyMtModelSize> {
         "hymt_1_8b" => Some(HyMtModelSize::Small),
         "hymt_7b" => Some(HyMtModelSize::Large),
         "translategemma_4b" => Some(HyMtModelSize::TranslateGemma4B),
+        "milmmt_4b" => Some(HyMtModelSize::MiLmMt4B),
         _ => None,
     }
 }
@@ -220,6 +232,7 @@ fn config_id_for_model_size(size: HyMtModelSize) -> &'static str {
         HyMtModelSize::Small => "hymt_1_8b",
         HyMtModelSize::Large => "hymt_7b",
         HyMtModelSize::TranslateGemma4B => "translategemma_4b",
+        HyMtModelSize::MiLmMt4B => "milmmt_4b",
     }
 }
 
@@ -340,16 +353,19 @@ impl HyMtTranslator {
             startup_timeout: Duration::from_secs(240),
             request_timeout: Duration::from_secs(90),
             display_name: format!("{} (로컬)", model.label),
-            cache_namespace: if model_size == HyMtModelSize::TranslateGemma4B {
-                format!(
+            cache_namespace: match model_size {
+                HyMtModelSize::TranslateGemma4B => format!(
                     "translategemma:{}:q4_k_m:register-aware-v2:{speech_style}",
                     model.key
-                )
-            } else {
-                format!(
+                ),
+                HyMtModelSize::MiLmMt4B => format!(
+                    "milmmt:{}:q4_k_m:official-prompt-v1:{speech_style}",
+                    model.key
+                ),
+                _ => format!(
                     "hy-mt2:{}:q4_k_m:{PROMPT_VERSION}:{speech_style}",
                     model.key
-                )
+                ),
             },
             runtime,
             runtime_attached: false,
@@ -448,7 +464,10 @@ impl HyMtTranslator {
         let log_path = crate::diagnostics::log_path();
         let attempts = startup_device_attempts(&self.device);
         let diagnostics_scope = self.model.family;
-        let context_size = if self.model_size == HyMtModelSize::TranslateGemma4B {
+        let context_size = if matches!(
+            self.model_size,
+            HyMtModelSize::TranslateGemma4B | HyMtModelSize::MiLmMt4B
+        ) {
             "2048"
         } else {
             "8192"
@@ -470,10 +489,13 @@ impl HyMtTranslator {
                 "--parallel",
                 "1",
             ]);
-            if self.model_size == HyMtModelSize::TranslateGemma4B {
+            if matches!(
+                self.model_size,
+                HyMtModelSize::TranslateGemma4B | HyMtModelSize::MiLmMt4B
+            ) {
                 // The current llama.cpp build cannot initialize its generic parser from
-                // TranslateGemma's structured template. The request path renders the
-                // model's official text-translation template directly instead.
+                // these translation models' templates. Their request paths render the
+                // official text-translation prompts directly instead.
                 command.args(["--no-jinja", "--skip-chat-parsing"]);
             }
             if *attempt == "cpu" {
@@ -744,6 +766,32 @@ impl HyMtTranslator {
             .map_err(|error| format!("TranslateGemma 번역 응답을 읽지 못했습니다: {error}"))?;
         translate_gemma_completion_result(&payload)
     }
+
+    fn complete_milmmt(
+        &self,
+        text: &str,
+        source: Language,
+        target: Language,
+    ) -> Result<String, String> {
+        let output_limit = max_output_tokens(text);
+        let response = self
+            .client
+            .post(format!("http://127.0.0.1:{}/completion", self.port))
+            .timeout(self.request_timeout)
+            .json(&milmmt_completion_payload(
+                text,
+                source,
+                target,
+                output_limit,
+            ))
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|error| format!("MiLMMT 번역 요청이 실패했습니다: {error}"))?;
+        let payload: Value = response
+            .json()
+            .map_err(|error| format!("MiLMMT 번역 응답을 읽지 못했습니다: {error}"))?;
+        milmmt_completion_result(&payload)
+    }
 }
 
 fn completion_payload(prompt: &str, output_limit: usize) -> Value {
@@ -771,6 +819,39 @@ fn translate_gemma_completion_payload(
         "stop": ["<end_of_turn>"],
         "cache_prompt": true,
     })
+}
+
+fn milmmt_completion_payload(
+    text: &str,
+    source: Language,
+    target: Language,
+    output_limit: usize,
+) -> Value {
+    json!({
+        "prompt": milmmt_prompt(text, source, target),
+        "n_predict": output_limit,
+        "temperature": INFERENCE_TEMPERATURE,
+        "top_k": 1,
+        "cache_prompt": true,
+    })
+}
+
+fn milmmt_prompt(text: &str, source: Language, target: Language) -> String {
+    let source_name = milmmt_language_name(source);
+    let target_name = milmmt_language_name(target);
+    format!(
+        "Translate this from {source_name} to {target_name}:\n{source_name}: {}\n{target_name}:",
+        text.trim()
+    )
+}
+
+fn milmmt_language_name(language: Language) -> &'static str {
+    match language {
+        Language::ChineseSimplified => "Chinese (Simplified)",
+        Language::ChineseTraditional => "Chinese (Traditional)",
+        Language::Unknown => "the source language",
+        other => other.english_name(),
+    }
 }
 
 fn translate_gemma_prompt(
@@ -869,6 +950,30 @@ fn translate_gemma_completion_result(payload: &Value) -> Result<String, String> 
     }
 }
 
+fn milmmt_completion_result(payload: &Value) -> Result<String, String> {
+    if payload
+        .get("stop_type")
+        .and_then(Value::as_str)
+        .is_some_and(|reason| reason == "limit")
+    {
+        return Err(
+            "MiLMMT 번역 결과가 길이 제한에 도달했습니다. 텍스트를 나누어 다시 시도하십시오."
+                .to_string(),
+        );
+    }
+    let result = clean_translation(
+        payload
+            .get("content")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
+    );
+    if result.is_empty() {
+        Err("MiLMMT가 빈 번역 결과를 반환했습니다.".to_string())
+    } else {
+        Ok(result)
+    }
+}
+
 fn completion_result(payload: &Value) -> Result<String, String> {
     let choice = payload
         .get("choices")
@@ -948,6 +1053,12 @@ impl Translator for HyMtTranslator {
                     self.complete_translate_gemma(fragment, source, target, resolved_style)
                 },
             );
+        }
+        if self.model_size == HyMtModelSize::MiLmMt4B {
+            let style = self.speech_style.clone();
+            return translate_with_milmmt(text, source, target, &style, |fragment| {
+                self.complete_milmmt(fragment, source, target)
+            });
         }
         let style = self.speech_style.clone();
         translate_with_completion_for_model(
@@ -1102,6 +1213,53 @@ where
     }
 
     let _ = (source, target);
+    Ok(output)
+}
+
+fn translate_with_milmmt<F>(
+    text: &str,
+    source: Language,
+    target: Language,
+    speech_style: &str,
+    mut complete: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str) -> Result<String, String>,
+{
+    let resolved_style = if speech_style == "auto" {
+        detect_speech_style(text, source)
+    } else {
+        speech_style
+    };
+    let mut output = String::new();
+    let mut cursor = 0;
+    let mut segments = Vec::new();
+    for marker in PROTECTED_MARKER_RE.find_iter(text) {
+        segments.push((&text[cursor..marker.start()], false));
+        segments.push((marker.as_str(), true));
+        cursor = marker.end();
+    }
+    segments.push((&text[cursor..], false));
+
+    for (part, protected) in segments {
+        if part.is_empty() {
+            continue;
+        }
+        if protected || !part.chars().any(|character| character.is_alphanumeric()) {
+            output.push_str(part);
+            continue;
+        }
+        let leading_len = part.len() - part.trim_start().len();
+        let trailing_start = part.trim_end().len();
+        let core = part.trim();
+        let translated = complete(core)?;
+        let translated = fallback_register_cleanup(&translated, target, resolved_style);
+        let translated = clean_register_artifacts(&translated, target);
+        output.push_str(&part[..leading_len]);
+        output.push_str(&translated);
+        output.push_str(&part[trailing_start..]);
+    }
+
     Ok(output)
 }
 
@@ -1260,6 +1418,7 @@ fn translation_prompt_for_model(
         HyMtModelSize::Small => compact_translation_prompt(text, source, target, style),
         HyMtModelSize::Large => translation_prompt(text, source, target, style),
         HyMtModelSize::TranslateGemma4B => compact_translation_prompt(text, source, target, style),
+        HyMtModelSize::MiLmMt4B => compact_translation_prompt(text, source, target, style),
     }
 }
 
@@ -1655,9 +1814,10 @@ fn free_tcp_port() -> Result<u16, String> {
 mod tests {
     use super::{
         clean_translation, complete_translation_with_retry, completion_payload, completion_result,
-        detect_speech_style, find_llama_server, max_output_tokens, remove_cached_model_files,
-        rewrite_style_prompt, startup_device_attempts, translate_gemma_completion_payload,
-        translate_with_completion, translate_with_translate_gemma, translation_prompt_for_model,
+        detect_speech_style, find_llama_server, local_model_storage_status, max_output_tokens,
+        milmmt_completion_payload, remove_cached_model_files, rewrite_style_prompt,
+        startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
+        translate_with_milmmt, translate_with_translate_gemma, translation_prompt_for_model,
         HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
@@ -1892,6 +2052,62 @@ mod tests {
             model.expected_sha256,
             "526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd"
         );
+    }
+
+    #[test]
+    fn milmmt_uses_the_official_translation_prompt() {
+        let payload = milmmt_completion_payload(
+            "오늘 같이 게임할래?",
+            Language::Korean,
+            Language::Japanese,
+            256,
+        );
+        assert_eq!(
+            payload["prompt"],
+            "Translate this from Korean to Japanese:\nKorean: 오늘 같이 게임할래?\nJapanese:"
+        );
+        assert_eq!(payload["n_predict"], 256);
+        assert_eq!(payload["top_k"], 1);
+        assert_eq!(payload["temperature"].as_f64(), Some(0.0));
+    }
+
+    #[test]
+    fn milmmt_preserves_protected_markers_without_sending_them_to_the_model() {
+        let mut fragments = Vec::new();
+        let translated = translate_with_milmmt(
+            "Hello ZXQKEEP000QXZ friend",
+            Language::English,
+            Language::Korean,
+            "casual",
+            |fragment| {
+                fragments.push(fragment.to_string());
+                Ok(if fragment == "Hello" {
+                    "안녕"
+                } else {
+                    "친구"
+                }
+                .to_string())
+            },
+        )
+        .unwrap();
+        assert_eq!(translated, "안녕 ZXQKEEP000QXZ 친구");
+        assert_eq!(fragments, ["Hello", "friend"]);
+    }
+
+    #[test]
+    fn milmmt_model_metadata_is_pinned_and_exposed_to_storage_management() {
+        let model = HyMtModelSize::MiLmMt4B.model();
+        assert_eq!(model.family, "milmmt");
+        assert_eq!(model.repository, "mradermacher/MiLMMT-46-4B-v0.1-i1-GGUF");
+        assert_eq!(model.filename, "MiLMMT-46-4B-v0.1.i1-Q4_K_M.gguf");
+        assert_eq!(model.expected_bytes, 2_867_472_896);
+        assert_eq!(
+            model.expected_sha256,
+            "73c2b70fa52cde777254cd16ca6791525b1296ff470107684824304d55e22113"
+        );
+        assert!(local_model_storage_status()
+            .iter()
+            .any(|entry| entry.id == "milmmt_4b" && entry.deletable == (entry.stored_bytes > 0)));
     }
 
     #[test]

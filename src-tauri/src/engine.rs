@@ -1880,6 +1880,7 @@ fn make_translator(
         "translategemma_4b" => {
             make_local_translator(config, HyMtModelSize::TranslateGemma4B, progress_observer)
         }
+        "milmmt_4b" => make_local_translator(config, HyMtModelSize::MiLmMt4B, progress_observer),
         "chatgpt" | "claude" | "gemini" => Ok(Box::new(SubscriptionCliTranslator::new(
             name,
             &config.speech_style,
@@ -1972,9 +1973,10 @@ fn translator_label(name: &str) -> &str {
         "hymt_1_8b" => "Hy-MT2 1.8B Q4 (경량·기본)",
         "hymt_7b" => "Hy-MT2 7B Q4 (품질·약 4.6GB)",
         "translategemma_4b" => "TranslateGemma 4B Q4 (실험·약 2.5GB)",
+        "milmmt_4b" => "MiLMMT 4B Q4 (실험·약 2.9GB)",
         "chatgpt" => "GPT-5.6 · 품질 최우선 (Codex CLI)",
-        "claude" => "Claude Haiku 4.5 · 품질 최우선 (Claude Code)",
-        "gemini" => "Gemini 3.6 Flash · 품질 최우선 (Antigravity CLI)",
+        "claude" => "Claude · 품질 최우선 (Claude Code)",
+        "gemini" => "Gemini · 품질 최우선 (Antigravity CLI)",
         "deepl" => "DeepL API",
         "mock" => "Mock 테스트",
         _ => "원문 표시",
@@ -1982,7 +1984,10 @@ fn translator_label(name: &str) -> &str {
 }
 
 fn is_local_model_name(name: &str) -> bool {
-    matches!(name, "hymt_1_8b" | "hymt_7b" | "translategemma_4b")
+    matches!(
+        name,
+        "hymt_1_8b" | "hymt_7b" | "translategemma_4b" | "milmmt_4b"
+    )
 }
 
 fn translator_activation_notice(name: &str, model_is_prepared: bool) -> String {
@@ -2039,6 +2044,7 @@ mod tests {
         assert_eq!(poll_interval(100), Duration::from_millis(50));
         assert!(translator_label("chatgpt").contains("Codex"));
         assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
+        assert!(translator_label("milmmt_4b").contains("MiLMMT 4B"));
         for provider in ["chatgpt", "claude", "gemini"] {
             assert!(translator_label(provider).contains("품질 최우선"));
             assert!(!translator_label(provider).contains("지속"));

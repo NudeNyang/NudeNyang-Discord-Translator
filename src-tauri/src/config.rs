@@ -273,7 +273,10 @@ impl AppConfig {
 }
 
 fn is_local_translator(value: &str) -> bool {
-    matches!(value, "hymt_1_8b" | "hymt_7b" | "translategemma_4b")
+    matches!(
+        value,
+        "hymt_1_8b" | "hymt_7b" | "translategemma_4b" | "milmmt_4b"
+    )
 }
 
 pub struct ConfigStore {
@@ -525,5 +528,11 @@ mod tests {
             .expect("select TranslateGemma local model");
         assert_eq!(experiment.translator, "translategemma_4b");
         assert_eq!(experiment.outgoing_translator, "translategemma_4b");
+
+        let xiaomi_experiment = experiment
+            .patched(json!({"translator": "milmmt_4b"}))
+            .expect("select MiLMMT local model");
+        assert_eq!(xiaomi_experiment.translator, "milmmt_4b");
+        assert_eq!(xiaomi_experiment.outgoing_translator, "milmmt_4b");
     }
 }

@@ -696,6 +696,7 @@ Apache License 2.0이 별도로 적용된다. 각 모델의 공식 라이선스 
 | Hy-MT2 1.8B GGUF | 기본 로컬 번역 모델 | Apache-2.0, Copyright (C) 2026 Tencent, <https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF> |
 | Hy-MT2 7B GGUF | 품질 우선 로컬 번역 모델 | Apache-2.0, Copyright (C) 2026 Tencent, <https://huggingface.co/tencent/Hy-MT2-7B-GGUF> |
 | TranslateGemma 4B Q4_K_M | 사용자가 선택할 수 있는 실험용 로컬 번역 모델 | Gemma Terms of Use, <https://ai.google.dev/gemma/terms>, 양자화 출처: <https://huggingface.co/SandLogicTechnologies/translategemma-4b-it-GGUF> |
+| MiLMMT-46 4B Q4_K_M | 사용자가 선택할 수 있는 실험용 로컬 번역 모델 | Gemma Terms of Use, 원본: <https://huggingface.co/xiaomi-research/MiLMMT-46-4B-v0.1>, 양자화 출처: <https://huggingface.co/mradermacher/MiLMMT-46-4B-v0.1-i1-GGUF> |
 | llama.cpp | GGUF 추론 서버 | MIT, <https://github.com/ggml-org/llama.cpp> |
 | ocr-rs | Rust OCR 전·후처리와 MNN 바인딩 | Apache-2.0, <https://github.com/zibo-chen/rust-paddle-ocr> |
 | MNN | 네이티브 OCR 추론 런타임 | Apache-2.0, <https://github.com/alibaba/MNN> |
@@ -705,6 +706,9 @@ DeepL은 모델이나 SDK를 번들하지 않고 사용자가 제공한 API 키�
 사용자는 DeepL의 별도 서비스 약관과 사용량 제한을 따른다.
 
 TranslateGemma is provided under and subject to the Gemma Terms of Use found at
+<https://ai.google.dev/gemma/terms>.
+
+MiLMMT-46 is based on Gemma and is provided under and subject to the Gemma Terms of Use found at
 <https://ai.google.dev/gemma/terms>.
 `;
 
