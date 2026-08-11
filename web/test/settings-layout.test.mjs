@@ -10,6 +10,7 @@ const packageManifest = JSON.parse(readFileSync(new URL("../../package.json", im
 const cargoManifest = readFileSync(new URL("../../src-tauri/Cargo.toml", import.meta.url), "utf8");
 const capabilities = readFileSync(new URL("../../src-tauri/capabilities/default.json", import.meta.url), "utf8");
 const installerHooks = readFileSync(new URL("../../src-tauri/windows/hooks.nsh", import.meta.url), "utf8");
+const discordStartup = readFileSync(new URL("../../src-tauri/src/discord_startup.rs", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
 test("the user-facing product name is NudeNyang Translator", () => {
@@ -165,19 +166,30 @@ test("convenience panel exposes global toggles and editable composer shortcuts",
 
 test("system autostart is a cross-platform convenience setting that defaults to off", () => {
   assert.match(markup, /<h3>시스템 시작 시 자동 실행<\/h3>/);
-  assert.match(markup, /컴퓨터에 로그인하면 NudeNyang Translator를 자동으로 실행합니다/);
+  assert.match(markup, /컴퓨터에 로그인하면 앱을 실행하고 Discord 번역 연결을 자동으로 준비합니다/);
   assert.match(markup, /id="autostart"[^>]*aria-checked="false"/);
   assert.doesNotMatch(markup, /Windows 시작 시 자동 실행/);
-  assert.match(script, /window\.__TAURI__\?\.autostart\?\.isEnabled/);
-  assert.match(script, /window\.__TAURI__\?\.autostart\?\.enable/);
-  assert.match(script, /window\.__TAURI__\?\.autostart\?\.disable/);
+  assert.match(script, /invoke\("autostart_get"\)/);
+  assert.match(script, /invoke\("autostart_set", \{ enabled \}\)/);
   assert.match(script, /autostartEnabled:\s*false/);
-  assert.match(script, /await tauriAutostartIsEnabled\(\)/);
+  assert.match(rustMain, /fn autostart_get\(/);
+  assert.match(rustMain, /fn autostart_set\(/);
+  assert.match(rustMain, /autolaunch\(\)\.is_enabled\(\)/);
   assert.match(cargoManifest, /tauri-plugin-autostart = "2"/);
   assert.match(rustMain, /tauri_plugin_autostart::init/);
-  assert.match(capabilities, /autostart:allow-is-enabled/);
-  assert.match(capabilities, /autostart:allow-enable/);
-  assert.match(capabilities, /autostart:allow-disable/);
+  assert.doesNotMatch(capabilities, /autostart:allow-/);
+});
+
+test("Windows autostart prepares Discord for translation without taking over external compatible registrations", () => {
+  assert.match(discordStartup, /--force-renderer-accessibility/);
+  assert.match(discordStartup, /--remote-debugging-port=9222/);
+  assert.match(discordStartup, /DiscordStartupBackup/);
+  assert.match(discordStartup, /command_is_compatible/);
+  assert.match(discordStartup, /read_run_command\(\)\?\.as_ref\(\) == Some\(&backup\.managed\)/);
+  assert.match(rustMain, /discord_startup::synchronize\(enabled\)/);
+  assert.match(rustMain, /--restore-discord-startup/);
+  assert.match(installerHooks, /NSIS_HOOK_PREUNINSTALL/);
+  assert.match(installerHooks, /--restore-discord-startup/);
 });
 
 test("the incoming shortcut toggles the native engine without waiting for the settings webview", () => {

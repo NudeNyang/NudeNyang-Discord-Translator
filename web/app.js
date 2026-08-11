@@ -22,9 +22,6 @@ const tauriInvoke = window.__TAURI__?.core?.invoke;
 const tauriListen = window.__TAURI__?.event?.listen;
 const tauriGetVersion = window.__TAURI__?.app?.getVersion;
 const tauriOpenUrl = window.__TAURI__?.opener?.openUrl;
-const tauriAutostartIsEnabled = window.__TAURI__?.autostart?.isEnabled;
-const tauriAutostartEnable = window.__TAURI__?.autostart?.enable;
-const tauriAutostartDisable = window.__TAURI__?.autostart?.disable;
 const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 const SCROLL_INDICATOR_REVEAL_DISTANCE = 44;
 const APP_LINKS = Object.freeze({
@@ -927,33 +924,29 @@ function setLocalizedText(element, korean) {
 
 function renderAutostart() {
   setSwitch(elements.autostart, state.autostartEnabled, "켜짐", "꺼짐");
-  const unavailable = !tauriAutostartIsEnabled
-    || !tauriAutostartEnable
-    || !tauriAutostartDisable;
+  const unavailable = !tauriInvoke;
   elements.autostart.disabled = unavailable || state.autostartLoading;
   elements.autostart.setAttribute("aria-busy", String(state.autostartLoading));
 }
 
 async function loadAutostartState() {
-  if (!tauriAutostartIsEnabled) {
+  if (!tauriInvoke) {
     state.autostartEnabled = false;
     renderAutostart();
     return;
   }
-  state.autostartEnabled = Boolean(await tauriAutostartIsEnabled());
+  state.autostartEnabled = Boolean(await invoke("autostart_get"));
   renderAutostart();
 }
 
 async function setAutostartEnabled(enabled) {
-  if (!tauriAutostartIsEnabled || !tauriAutostartEnable || !tauriAutostartDisable) {
+  if (!tauriInvoke) {
     throw new Error("Tauri 앱에서만 사용할 수 있는 기능입니다.");
   }
   state.autostartLoading = true;
   renderAutostart();
   try {
-    if (enabled) await tauriAutostartEnable();
-    else await tauriAutostartDisable();
-    state.autostartEnabled = Boolean(await tauriAutostartIsEnabled());
+    state.autostartEnabled = Boolean(await invoke("autostart_set", { enabled }));
   } finally {
     state.autostartLoading = false;
     renderAutostart();

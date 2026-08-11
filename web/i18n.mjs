@@ -143,7 +143,7 @@ const COPY = Object.freeze({
   "설정창 테마": ["Settings theme", "設定画面のテーマ", "设置主题"],
   "시스템 설정을 따르거나 라이트 및 다크 모드를 선택합니다.": ["Follow the system theme or select light or dark mode.", "システム設定に従うか、ライトまたはダークモードを選択します。", "跟随系统主题，或选择浅色或深色模式。"],
   "시스템 시작 시 자동 실행": ["Launch at system startup", "システム起動時に自動実行", "系统启动时自动运行"],
-  "컴퓨터에 로그인하면 NudeNyang Translator를 자동으로 실행합니다.": ["Launch NudeNyang Translator automatically when you sign in to your computer.", "コンピューターにログインすると、NudeNyang Translatorを自動的に起動します。", "登录电脑时自动运行 NudeNyang Translator。"],
+  "컴퓨터에 로그인하면 앱을 실행하고 Discord 번역 연결을 자동으로 준비합니다.": ["Launch the app when you sign in and automatically prepare the Discord translation connection.", "コンピューターへのログイン時にアプリを起動し、Discordの翻訳接続を自動的に準備します。", "登录电脑时启动应用，并自动准备 Discord 翻译连接。"],
   "전역 단축키": ["Global shortcuts", "グローバルショートカット", "全局快捷键"],
   "다른 프로그램을 사용 중일 때도 번역 상태를 전환합니다.": ["Toggle translation while using other applications.", "他のプログラムを使用中でも翻訳状態を切り替えます。", "使用其他程序时也可切换翻译状态。"],
   "실시간 번역 켜기·끄기": ["Toggle real-time translation", "リアルタイム翻訳の切り替え", "切换实时翻译"],

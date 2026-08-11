@@ -6,6 +6,7 @@ mod config;
 mod credentials;
 pub mod diagnostics;
 mod discord;
+mod discord_startup;
 pub mod dom;
 mod engine;
 pub mod image_translation;
@@ -27,6 +28,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WindowEvent,
 };
+use tauri_plugin_autostart::ManagerExt as AutostartManagerExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use tauri_plugin_opener::OpenerExt;
 
@@ -655,6 +657,40 @@ async fn storage_status_get() -> Result<Value, String> {
 }
 
 #[tauri::command]
+fn autostart_get(app: AppHandle) -> Result<bool, String> {
+    let enabled = app
+        .autolaunch()
+        .is_enabled()
+        .map_err(|error| format!("자동 시작 상태를 확인하지 못했습니다: {error}"))?;
+    discord_startup::synchronize(enabled)?;
+    Ok(enabled)
+}
+
+#[tauri::command]
+fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
+    let autolaunch = app.autolaunch();
+    if enabled {
+        autolaunch
+            .enable()
+            .map_err(|error| format!("자동 시작을 켜지 못했습니다: {error}"))?;
+        if let Err(error) = discord_startup::synchronize(true) {
+            let _ = autolaunch.disable();
+            let _ = discord_startup::restore();
+            return Err(error);
+        }
+    } else {
+        discord_startup::restore()?;
+        if let Err(error) = autolaunch.disable() {
+            let _ = discord_startup::synchronize(true);
+            return Err(format!("자동 시작을 끄지 못했습니다: {error}"));
+        }
+    }
+    autolaunch
+        .is_enabled()
+        .map_err(|error| format!("변경된 자동 시작 상태를 확인하지 못했습니다: {error}"))
+}
+
+#[tauri::command]
 fn local_model_storage_folder_open(app: AppHandle) -> Result<String, String> {
     let path = translation::local_model_storage_root();
     std::fs::create_dir_all(&path)
@@ -1153,6 +1189,13 @@ fn create_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 fn main() {
+    if std::env::args().any(|argument| argument == "--restore-discord-startup") {
+        if let Err(error) = discord_startup::restore() {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     let _ = diagnostics::initialize(env!("CARGO_PKG_VERSION"));
     match translation::hymt::remove_retired_milmmt_files() {
         Ok(removed_bytes) if removed_bytes > 0 => diagnostics::info(
@@ -1202,6 +1245,17 @@ fn main() {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
             create_tray(app)?;
             let handle = app.handle().clone();
+            match handle.autolaunch().is_enabled() {
+                Ok(enabled) => {
+                    if let Err(error) = discord_startup::synchronize(enabled) {
+                        diagnostics::warn("discord-startup", &error);
+                    }
+                }
+                Err(error) => diagnostics::warn(
+                    "discord-startup",
+                    &format!("자동 시작 상태를 확인하지 못했습니다: {error}"),
+                ),
+            }
             // Windows가 F12를 디버거 용도로 선점한 경우에도 기존 앱과 동일하게
             // 키 상태 폴링으로 동작시켜 설정 저장과 모델 변경이 막히지 않게 해.
             let _ = replace_shortcut(&handle, ShortcutAction::Translation, "F12");
@@ -1271,6 +1325,8 @@ fn main() {
             diagnostic_log_reveal,
             diagnostic_log_write,
             storage_status_get,
+            autostart_get,
+            autostart_set,
             local_model_storage_folder_open,
             local_model_delete,
             translation_cache_clear,

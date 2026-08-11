@@ -21,6 +21,10 @@
   shortcut_migration_done:
 !macroend
 
+!macro NSIS_HOOK_PREUNINSTALL
+  ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --restore-discord-startup'
+!macroend
+
 !macro NSIS_HOOK_POSTUNINSTALL
   Delete "$DESKTOP\Nude Translator.lnk"
   Delete "$DESKTOP\Nude Translator (Tauri).lnk"
