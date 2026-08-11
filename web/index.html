@@ -42,14 +42,14 @@
             <button class="settings-nav-item" type="button" data-settings-panel="engine">
               <i aria-hidden="true"></i><span>번역 엔진</span>
             </button>
-            <button class="settings-nav-item" type="button" data-settings-panel="storage">
-              <i aria-hidden="true"></i><span>저장 공간</span>
-            </button>
             <button class="settings-nav-item" type="button" data-settings-panel="image">
               <i aria-hidden="true"></i><span>이미지 번역</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="convenience">
               <i aria-hidden="true"></i><span>편의 기능</span>
+            </button>
+            <button class="settings-nav-item" type="button" data-settings-panel="storage">
+              <i aria-hidden="true"></i><span>저장 공간</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="about">
               <i aria-hidden="true"></i><span>앱 정보</span>
@@ -70,7 +70,7 @@
                       <div><h3>받는 메시지</h3><p>Discord에서 표시할 번역을 설정합니다.</p></div>
                     </div>
                     <div class="setting-row compact-row">
-                      <div class="setting-copy"><h3>실시간 번역</h3><p>메시지와 채널명을 번역하여 표시합니다.</p></div>
+                      <div class="setting-copy"><h3>실시간 번역</h3><p>메시지와 채널명을 번역하여 표시합니다.</p><small class="inline-shortcut"><span>단축키</span><kbd id="translation-shortcut-hint">F12</kbd></small></div>
                       <button class="switch" id="enabled" type="button" role="switch" aria-checked="false"><span></span><b>꺼짐</b></button>
                     </div>
                     <div class="setting-row compact-row">
@@ -85,7 +85,7 @@
                       <div><h3>보내는 메시지</h3><p>입력한 메시지를 번역한 후 전송합니다.</p></div>
                     </div>
                     <div class="setting-row compact-row">
-                      <div class="setting-copy"><h3>전송 메시지 통역</h3><p>최근 대화 언어를 기준으로 번역합니다.</p></div>
+                      <div class="setting-copy"><h3>전송 메시지 통역</h3><p>최근 대화 언어를 기준으로 번역합니다.</p><small class="inline-shortcut"><span>단축키</span><kbd id="outgoing-shortcut-hint">F8</kbd></small></div>
                       <button class="switch" id="outgoing-translation" type="button" role="switch" aria-checked="false"><span></span><b>꺼짐</b></button>
                     </div>
                     <div class="setting-row compact-row">
@@ -155,19 +155,19 @@
                   <div class="panel-subheading"><h3 id="connections-heading">번역 서비스 연결</h3><p>구독 계정과 API 연결 상태를 관리합니다.</p></div>
                   <div class="settings-card provider-list">
                     <article class="provider-row" data-provider="chatgpt">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>ChatGPT</h3><p>GPT-5.6 (품질 최우선)</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-openai.svg" alt="" /></span><div><h3>ChatGPT</h3><p>GPT-5.6 (품질 최우선)</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Codex CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="claude">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">C</span><div><h3>Claude</h3><p>Claude Haiku 4.5 (품질 최우선)</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark provider-mark-claude" aria-hidden="true"><img src="./assets/provider-claude.svg" alt="" /></span><div><h3>Claude</h3><p>품질 최우선</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Claude Code와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="gemini">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>Gemini</h3><p>Gemini 3.6 Flash (품질 최우선)</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-gemini.svg" alt="" /></span><div><h3>Gemini</h3><p>품질 최우선</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Antigravity CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="deepl">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">D</span><div><h3>DeepL</h3><p>API 사용량 과금</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-deepl.svg" alt="" /></span><div><h3>DeepL</h3><p>API 사용량 과금</p></div></div>
                       <div class="provider-connection provider-credential-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>저장된 API 키를 확인하고 있습니다.</span></div><div class="provider-credential"><input class="text-field provider-secret" type="password" autocomplete="off" spellcheck="false" placeholder="새 API 키 입력 시 변경" aria-label="DeepL API 키" /><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div></div>
                     </article>
                   </div>
@@ -178,13 +178,18 @@
               <section id="storage-management" class="settings-view" data-settings-view="storage" aria-labelledby="storage-heading" hidden>
                 <div class="panel-heading"><h2 id="storage-heading">저장 공간 관리</h2><p>다운로드한 로컬 모델과 번역 기록을 관리합니다.</p></div>
                 <div class="settings-card storage-card">
-                  <div class="storage-group-heading"><div><h3>로컬 번역 모델</h3><p>사용하지 않는 다운로드 모델을 삭제하여 저장 공간을 확보합니다.</p></div></div>
+                  <div class="storage-group-heading"><span class="card-index" aria-hidden="true">L</span><div><h3>로컬 번역 모델</h3><p>사용하지 않는 다운로드 모델을 삭제하여 저장 공간을 확보합니다.</p></div></div>
                   <div id="local-model-storage-list" class="local-model-storage-list" aria-live="polite"></div>
-                  <div class="storage-cache-row">
-                    <div><h3>SQLite 번역 기록</h3><p>저장된 번역 결과와 보낸 메시지 원문을 정리합니다. 설정, 채널별 언어 및 인증 정보는 유지됩니다.</p><small id="translation-cache-summary">저장 공간을 확인하고 있습니다.</small></div>
-                    <button class="button secondary storage-action" id="clear-translation-cache" type="button">기록 정리</button>
-                  </div>
                 </div>
+                <section class="storage-history-section" aria-labelledby="storage-history-heading">
+                  <div class="panel-subheading"><h3 id="storage-history-heading">번역 기록</h3><p>로컬에 저장된 번역 데이터의 사용량을 관리합니다.</p></div>
+                  <div class="settings-card storage-history-card">
+                    <div class="storage-cache-row">
+                      <div><h3>SQLite 번역 기록</h3><p>저장된 번역 결과와 보낸 메시지 원문을 정리합니다. 설정, 채널별 언어 및 인증 정보는 유지됩니다.</p><small id="translation-cache-summary">저장 공간을 확인하고 있습니다.</small></div>
+                      <button class="button secondary storage-action" id="clear-translation-cache" type="button">기록 정리</button>
+                    </div>
+                  </div>
+                </section>
               </section>
 
               <section class="settings-view" data-settings-view="image" aria-labelledby="image-heading" hidden>

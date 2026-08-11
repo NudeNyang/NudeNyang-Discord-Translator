@@ -15,6 +15,11 @@ const [markup, styles, script, rustMain, credentials, config, providers, subscri
   readFile(new URL("../tray.html", import.meta.url), "utf8"),
   readFile(new URL("../tray.js", import.meta.url), "utf8"),
 ]);
+const providerIcons = await Promise.all(
+  ["openai", "claude", "gemini", "deepl"].map(name =>
+    readFile(new URL(`../assets/provider-${name}.svg`, import.meta.url), "utf8"),
+  ),
+);
 
 test("provider setup is available without exposing credentials in settings", () => {
   for (const provider of ["chatgpt", "claude", "gemini", "deepl"]) {
@@ -30,7 +35,7 @@ test("provider setup is available without exposing credentials in settings", () 
 
 test("Claude connects through the official local Claude Code CLI", () => {
   assert.match(markup, /data-provider="claude"/);
-  assert.match(script, /\["claude",\s*"Claude Haiku 4\.5 \(품질 최우선\)"\]/);
+  assert.match(script, /\["claude",\s*"Claude \(품질 최우선\)"\]/);
   assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "deepl"\]\)/);
   assert.doesNotMatch(config, /"kanana" \| "original" \| "claude"/);
   assert.match(providers, /cli_status\(\s*"claude",\s*"Claude"/);
@@ -56,8 +61,8 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
 });
 
 test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
-  assert.match(markup, /Gemini 3\.6 Flash \(품질 최우선\)/);
-  assert.match(script, /\["gemini",\s*"Gemini 3\.6 Flash \(품질 최우선\)"\]/);
+  assert.match(markup, /<h3>Gemini<\/h3><p>품질 최우선<\/p>/);
+  assert.match(script, /\["gemini",\s*"Gemini \(품질 최우선\)"\]/);
   assert.match(providers, /Google 구독 · Antigravity CLI/);
   assert.match(subscriptionCli, /Self::Gemini => &\["agy"\]/);
   assert.match(subscriptionCli, /\["models"\.to_string\(\)\]/);
@@ -68,8 +73,9 @@ test("subscription translators use a simple quality-first label", () => {
   assert.match(script, /GPT-5\.6 \(품질 최우선\)/);
   assert.match(providers, /ChatGPT 무료 플랜 이상 · Codex CLI/);
   assert.match(providers, /Claude 유료 플랜 · Claude Code/);
-  assert.match(script, /Claude Haiku 4\.5 \(품질 최우선\)/);
-  assert.match(script, /Gemini 3\.6 Flash \(품질 최우선\)/);
+  assert.match(script, /Claude \(품질 최우선\)/);
+  assert.match(script, /Gemini \(품질 최우선\)/);
+  assert.doesNotMatch(`${markup}${script}${trayMarkup}`, /Claude Haiku|Gemini 3\.6 Flash/);
   assert.doesNotMatch(`${markup}${script}`, /지속 연결|지속 세션/);
   assert.match(subscriptionCli, /gpt-5\.6-luna/);
   assert.match(subscriptionCli, /gpt-5\.6-terra/);
@@ -82,6 +88,17 @@ test("subscription translators use a simple quality-first label", () => {
     assert.doesNotMatch(script, tier);
     assert.doesNotMatch(trayMarkup, tier);
   }
+});
+
+test("provider cards use bundled brand icons instead of letter placeholders", () => {
+  for (const provider of ["openai", "claude", "gemini", "deepl"]) {
+    assert.match(markup, new RegExp(`src="\\./assets/provider-${provider}\\.svg"`));
+  }
+  assert.equal(providerIcons.length, 4);
+  for (const icon of providerIcons) {
+    assert.match(icon, /<svg[\s\S]*<path/);
+  }
+  assert.doesNotMatch(markup, /<span class="provider-mark"[^>]*>[GCD]<\/span>/);
 });
 
 test("ChatGPT and Claude sign-ins stay inside the app while official browser flows run", () => {

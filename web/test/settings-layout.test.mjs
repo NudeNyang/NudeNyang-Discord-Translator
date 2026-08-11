@@ -44,6 +44,9 @@ test("settings use six uniform navigation categories", () => {
   assert.match(markup, /<span>이미지 번역<\/span>/);
   assert.match(markup, /<span>편의 기능<\/span>/);
   assert.match(markup, /<span>앱 정보<\/span>/);
+  assert.ok(
+    markup.indexOf('data-settings-panel="storage"') < markup.indexOf('data-settings-panel="about"'),
+  );
 });
 
 test("settings can be reverted and native window chrome follows the selected theme", () => {
@@ -92,6 +95,10 @@ test("outgoing interpretation asks only when automatic language detection is unc
   );
   assert.doesNotMatch(script, /outgoing_confirm_language/);
   assert.match(script, /outgoing_confirm_send/);
+  assert.match(markup, /id="translation-shortcut-hint">F12<\/kbd>/);
+  assert.match(markup, /id="outgoing-shortcut-hint">F8<\/kbd>/);
+  assert.match(script, /elements\.translationShortcutHint\.textContent = state\.config\.hotkeys\.toggle_translation/);
+  assert.match(script, /elements\.outgoingShortcutHint\.textContent = state\.config\.hotkeys\.toggle_outgoing_translation/);
 });
 
 test("display translation and real-time interpretation choose models independently", () => {
@@ -101,6 +108,7 @@ test("display translation and real-time interpretation choose models independent
   assert.match(markup, /data-field="outgoing_translator"/);
   assert.match(markup, /1\.8B와 7B 중 하나의 로컬 모델만 사용합니다/);
   assert.match(script, /outgoing_translator: TRANSLATOR_OPTIONS/);
+  assert.match(script, /\["milmmt_4b", "MiLMMT 4B Q4 \(실험·약 2\.9GB\)"\]/);
 });
 
 test("convenience panel exposes global toggles and editable composer shortcuts", () => {

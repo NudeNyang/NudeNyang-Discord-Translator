@@ -16,12 +16,24 @@ test("storage management exposes downloaded models and SQLite history cleanup", 
   assert.match(markup, /data-settings-view="storage"/);
   assert.match(markup, /id="local-model-storage-list"/);
   assert.match(markup, /id="clear-translation-cache"/);
+  assert.match(markup, /class="storage-group-heading"><span class="card-index" aria-hidden="true">L<\/span>/);
+  assert.match(markup, /class="storage-history-section"[\s\S]*id="storage-history-heading">번역 기록<\/h3>[\s\S]*class="settings-card storage-history-card"/);
   assert.match(script, /invoke\("storage_status_get"\)/);
   assert.match(script, /invoke\("local_model_delete", \{ modelId: model\.id \}\)/);
   assert.match(script, /invoke\("translation_cache_clear"\)/);
   assert.match(rustMain, /storage_status_get/);
   assert.match(rustMain, /local_model_delete/);
   assert.match(rustMain, /translation_cache_clear/);
+  assert.match(script, /\["milmmt_4b", "MiLMMT 4B Q4 \(실험·약 2\.9GB\)"\]/);
+});
+
+test("storage navigation sits immediately above app information", () => {
+  const storagePosition = markup.indexOf('data-settings-panel="storage"');
+  const aboutPosition = markup.indexOf('data-settings-panel="about"');
+  const conveniencePosition = markup.indexOf('data-settings-panel="convenience"');
+
+  assert.ok(conveniencePosition < storagePosition);
+  assert.ok(storagePosition < aboutPosition);
 });
 
 test("SQLite cleanup preserves channel language preferences", () => {

@@ -31,9 +31,10 @@ const TRANSLATOR_OPTIONS = [
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
   ["translategemma_4b", "TranslateGemma 4B Q4 (실험·약 2.5GB)"],
+  ["milmmt_4b", "MiLMMT 4B Q4 (실험·약 2.9GB)"],
   ["chatgpt", "GPT-5.6 (품질 최우선)"],
-  ["claude", "Claude Haiku 4.5 (품질 최우선)"],
-  ["gemini", "Gemini 3.6 Flash (품질 최우선)"],
+  ["claude", "Claude (품질 최우선)"],
+  ["gemini", "Gemini (품질 최우선)"],
   ["deepl", "DeepL (API 키·외부 전송)"],
   ["mock", "Mock 테스트"],
 ];
@@ -113,6 +114,8 @@ const elements = {
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
   outgoingAutoHelp: document.querySelector("#outgoing-auto-help"),
+  translationShortcutHint: document.querySelector("#translation-shortcut-hint"),
+  outgoingShortcutHint: document.querySelector("#outgoing-shortcut-hint"),
   keepWarm: document.querySelector("#keep-warm"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
@@ -909,6 +912,8 @@ function renderConfig(config, { updateBaseline = false } = {}) {
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
+  elements.translationShortcutHint.textContent = state.config.hotkeys.toggle_translation;
+  elements.outgoingShortcutHint.textContent = state.config.hotkeys.toggle_outgoing_translation;
   elements.sendImmediatelyShortcut.value = state.config.hotkeys.send_outgoing_immediately;
   elements.reviewBeforeSendShortcut.value = state.config.hotkeys.review_outgoing_before_send;
   applyTheme(state.config.ui_theme);

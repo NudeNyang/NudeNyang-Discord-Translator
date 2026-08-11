@@ -58,6 +58,13 @@ test("quality-first Codex model labels are translated", () => {
   );
 });
 
+test("experimental MiLMMT model labels are translated", () => {
+  assert.equal(
+    translateCopy("en", "MiLMMT 4B Q4 (실험·약 2.9GB)"),
+    "MiLMMT 4B Q4 (experimental · about 2.9GB)",
+  );
+});
+
 test("update prompts preserve the version while following the interface language", () => {
   assert.equal(
     translateDynamicCopy(
