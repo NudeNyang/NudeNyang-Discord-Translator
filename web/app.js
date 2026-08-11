@@ -1240,6 +1240,18 @@ async function loadSettings() {
   }
 }
 
+function waitForStableUiFrame() {
+  return new Promise(resolve => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
+  });
+}
+
+async function initializeSettingsUi() {
+  await loadSettings();
+  await waitForStableUiFrame();
+  await invoke("engine_ui_ready");
+}
+
 document.querySelectorAll(".custom-select").forEach(renderSelect);
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
@@ -1453,7 +1465,11 @@ if (tauriListen) {
 bindOverlayScrollIndicator();
 new ResizeObserver(updateScrollIndicator).observe(elements.settingsScroll);
 window.requestAnimationFrame(updateScrollIndicator);
-loadSettings();
+initializeSettingsUi().catch(error => {
+  elements.saveStatus.textContent = String(error);
+  elements.engineState.dataset.state = "error";
+  elements.engineStateLabel.textContent = "엔진 연결 실패";
+});
 loadProviderConnections();
 loadStorageStatus().catch(error => showError("저장 공간 정보를 확인하지 못했습니다", String(error)));
 loadAppInformation();

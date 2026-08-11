@@ -103,6 +103,7 @@ enum Control {
     SetEnabled(bool),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
+    UiReady,
     Stop,
 }
 
@@ -284,6 +285,18 @@ fn translator_preparation_plan(
     }
 }
 
+fn preparation_plan_for_active_lanes(
+    config: &AppConfig,
+    plan: TranslatorPreparationPlan,
+) -> TranslatorPreparationPlan {
+    TranslatorPreparationPlan {
+        display: plan.display && (config.enabled || !is_local_model_name(&config.translator)),
+        outgoing: plan.outgoing
+            && (config.outgoing_translation_enabled
+                || !is_local_model_name(&config.outgoing_translator)),
+    }
+}
+
 impl RustEngine {
     pub fn start(config: AppConfig) -> Self {
         let (control_tx, control_rx) = mpsc::channel();
@@ -319,6 +332,12 @@ impl RustEngine {
         self.controls
             .send(Control::AttachApp(app))
             .map_err(|_| "Rust 번역 엔진에 앱 설정 연결을 전달하지 못했습니다.".to_string())
+    }
+
+    pub fn ui_ready(&self) -> Result<(), String> {
+        self.controls
+            .send(Control::UiReady)
+            .map_err(|_| "Rust 번역 엔진에 UI 준비 상태를 전달하지 못했습니다.".to_string())
     }
 
     pub fn clear_cache(&self) -> Result<CacheCleanupResult, String> {
@@ -389,17 +408,9 @@ fn run_controller(
     let mut image_ui_needs_cleanup = true;
     let mut outgoing_ui_needs_cleanup = true;
     let mut app_handle: Option<AppHandle> = None;
+    let mut ui_ready = false;
     let mut stopped = false;
     let mut pending_control = None;
-
-    request_translator_preparation(
-        &config,
-        TranslatorPreparationPlan::all(),
-        &preparation_tx,
-        &progress_result_tx,
-        &status,
-        &mut preparation_generation,
-    );
 
     while !stopped {
         let started = Instant::now();
@@ -412,16 +423,16 @@ fn run_controller(
                 Control::ApplyConfig(updated) => {
                     let updated = *updated;
                     let target_changed = updated.target_language != config.target_language;
-                    let mut preparation_plan = translator_preparation_plan(&config, &updated);
-                    if preparation_plan.any() {
+                    let mut requested_preparation = translator_preparation_plan(&config, &updated);
+                    if ui_ready && requested_preparation.any() {
                         if let Ok(runtime) = status.lock() {
-                            preparation_plan.display |=
+                            requested_preparation.display |=
                                 runtime.active_translator != updated.translator;
-                            preparation_plan.outgoing |=
+                            requested_preparation.outgoing |=
                                 runtime.active_outgoing_translator != updated.outgoing_translator;
                         }
                     }
-                    let runtime_changed = preparation_plan.any();
+                    let runtime_changed = requested_preparation.any();
                     let enabled_changed = updated.enabled != config.enabled;
                     let outgoing_changed =
                         updated.outgoing_translation_enabled != config.outgoing_translation_enabled;
@@ -447,7 +458,10 @@ fn run_controller(
                         runtime.configured_translator = config.translator.clone();
                         runtime.configured_outgoing_translator = config.outgoing_translator.clone();
                     });
-                    if runtime_changed {
+                    let preparation_plan =
+                        preparation_plan_for_active_lanes(&config, requested_preparation);
+                    let mut preparation_requested = false;
+                    if ui_ready && preparation_plan.any() {
                         request_translator_preparation(
                             &config,
                             preparation_plan,
@@ -456,13 +470,23 @@ fn run_controller(
                             &status,
                             &mut preparation_generation,
                         );
-                    } else if warm_changed {
-                        if config.keep_local_model_warm {
-                            let _ = worker_tx.send(WorkerCommand::Warm);
-                            let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
-                        } else if !config.enabled && !config.outgoing_translation_enabled {
+                        preparation_requested = true;
+                    } else if runtime_changed {
+                        preparation_generation += 1;
+                        if requested_preparation.display && !preparation_plan.display {
                             let _ = worker_tx.send(WorkerCommand::Release);
+                        }
+                        if requested_preparation.outgoing && !preparation_plan.outgoing {
                             let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
+                        }
+                    } else if warm_changed {
+                        if !config.keep_local_model_warm {
+                            if !config.enabled {
+                                let _ = worker_tx.send(WorkerCommand::Release);
+                            }
+                            if !config.outgoing_translation_enabled {
+                                let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
+                            }
                         }
                     }
                     if enabled_changed && !config.enabled {
@@ -471,21 +495,54 @@ fn run_controller(
                         pending.clear();
                         image_pending.clear();
                         generation += 1;
-                        if !config.keep_local_model_warm && !config.outgoing_translation_enabled {
+                        if !config.keep_local_model_warm {
                             let _ = worker_tx.send(WorkerCommand::Release);
-                            let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                         }
                     } else if enabled_changed {
-                        let _ = worker_tx.send(WorkerCommand::Warm);
-                        let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
+                        let needs_preparation = status
+                            .lock()
+                            .is_ok_and(|runtime| runtime.active_translator != config.translator);
+                        if ui_ready && needs_preparation && !preparation_requested {
+                            request_translator_preparation(
+                                &config,
+                                TranslatorPreparationPlan {
+                                    display: true,
+                                    outgoing: false,
+                                },
+                                &preparation_tx,
+                                &progress_result_tx,
+                                &status,
+                                &mut preparation_generation,
+                            );
+                            preparation_requested = true;
+                        } else if !needs_preparation {
+                            let _ = worker_tx.send(WorkerCommand::Warm);
+                        }
                     }
                     if outgoing_changed {
                         outgoing_pending.clear();
                         generation += 1;
                         outgoing_ui_needs_cleanup = true;
                         if config.outgoing_translation_enabled {
-                            let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
-                        } else if !config.enabled && !config.keep_local_model_warm {
+                            let needs_preparation = status.lock().is_ok_and(|runtime| {
+                                runtime.active_outgoing_translator != config.outgoing_translator
+                            });
+                            if ui_ready && needs_preparation && !preparation_requested {
+                                request_translator_preparation(
+                                    &config,
+                                    TranslatorPreparationPlan {
+                                        display: false,
+                                        outgoing: true,
+                                    },
+                                    &preparation_tx,
+                                    &progress_result_tx,
+                                    &status,
+                                    &mut preparation_generation,
+                                );
+                            } else if !needs_preparation {
+                                let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
+                            }
+                        } else if !config.keep_local_model_warm {
                             let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                         }
                     }
@@ -509,14 +566,28 @@ fn run_controller(
                             generation += 1;
                             consecutive_connection_failures = 0;
                             connection_issue_reported = false;
-                            if !config.keep_local_model_warm && !config.outgoing_translation_enabled
-                            {
+                            if !config.keep_local_model_warm {
                                 let _ = worker_tx.send(WorkerCommand::Release);
-                                let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                             }
                         } else {
-                            let _ = worker_tx.send(WorkerCommand::Warm);
-                            let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
+                            let needs_preparation = status.lock().is_ok_and(|runtime| {
+                                runtime.active_translator != config.translator
+                            });
+                            if ui_ready && needs_preparation {
+                                request_translator_preparation(
+                                    &config,
+                                    TranslatorPreparationPlan {
+                                        display: true,
+                                        outgoing: false,
+                                    },
+                                    &preparation_tx,
+                                    &progress_result_tx,
+                                    &status,
+                                    &mut preparation_generation,
+                                );
+                            } else {
+                                let _ = worker_tx.send(WorkerCommand::Warm);
+                            }
                         }
                     }
                 }
@@ -532,6 +603,31 @@ fn run_controller(
                     let _ = result_tx.send(result);
                 }
                 Control::AttachApp(app) => app_handle = Some(app),
+                Control::UiReady => {
+                    if !ui_ready {
+                        ui_ready = true;
+                        let preparation_plan = preparation_plan_for_active_lanes(
+                            &config,
+                            TranslatorPreparationPlan::all(),
+                        );
+                        if preparation_plan.any() {
+                            request_translator_preparation(
+                                &config,
+                                preparation_plan,
+                                &preparation_tx,
+                                &progress_result_tx,
+                                &status,
+                                &mut preparation_generation,
+                            );
+                        } else {
+                            update_status(&status, |runtime| {
+                                runtime.translator_state = "ready".to_string();
+                                runtime.notice =
+                                    "로컬 모델은 번역 기능을 켤 때 준비합니다.".to_string();
+                            });
+                        }
+                    }
+                }
                 Control::Stop => {
                     stopped = true;
                     break;
@@ -1599,9 +1695,13 @@ fn finish_activation_status(
 ) {
     let mut release = false;
     update_status(status, |runtime| {
-        if runtime.active_translator != runtime.configured_translator
-            || runtime.active_outgoing_translator != runtime.configured_outgoing_translator
-        {
+        let display_ready = runtime.active_translator == runtime.configured_translator
+            || (!config.enabled && is_local_model_name(&runtime.configured_translator));
+        let outgoing_ready = runtime.active_outgoing_translator
+            == runtime.configured_outgoing_translator
+            || (!config.outgoing_translation_enabled
+                && is_local_model_name(&runtime.configured_outgoing_translator));
+        if !display_ready || !outgoing_ready {
             return;
         }
         runtime.translator_state = "ready".to_string();
@@ -2014,10 +2114,10 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        plan_dom_updates, poll_interval, run_outgoing_translation_worker,
-        translator_activation_notice, translator_label, translator_preparation_plan,
-        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
-        TranslatorPreparationPlan, WorkerResult,
+        plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
+        run_outgoing_translation_worker, translator_activation_notice, translator_label,
+        translator_preparation_plan, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
+        RuntimeStatus, RustEngine, TranslatorPreparationPlan, WorkerResult,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -2082,6 +2182,83 @@ mod tests {
                 outgoing: true,
             }
         );
+    }
+
+    #[test]
+    fn inactive_local_lanes_are_deferred_until_the_feature_uses_them() {
+        let display_inactive = AppConfig {
+            enabled: false,
+            outgoing_translation_enabled: true,
+            translator: "hymt_1_8b".to_string(),
+            outgoing_translator: "chatgpt".to_string(),
+            keep_local_model_warm: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            preparation_plan_for_active_lanes(&display_inactive, TranslatorPreparationPlan::all()),
+            TranslatorPreparationPlan {
+                display: false,
+                outgoing: true,
+            }
+        );
+
+        let outgoing_inactive = AppConfig {
+            enabled: true,
+            outgoing_translation_enabled: false,
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "milmmt_4b".to_string(),
+            keep_local_model_warm: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            preparation_plan_for_active_lanes(&outgoing_inactive, TranslatorPreparationPlan::all()),
+            TranslatorPreparationPlan {
+                display: true,
+                outgoing: false,
+            }
+        );
+    }
+
+    #[test]
+    fn translator_activation_waits_for_the_ui_ready_signal() {
+        let config = AppConfig {
+            enabled: true,
+            outgoing_translation_enabled: false,
+            translator: "mock".to_string(),
+            outgoing_translator: "original".to_string(),
+            keep_local_model_warm: false,
+            ..Default::default()
+        };
+        let engine = RustEngine::start(config);
+
+        thread::sleep(Duration::from_millis(150));
+        assert_eq!(engine.status().unwrap().active_translator, "original");
+
+        engine.ui_ready().unwrap();
+        wait_for_translator(&engine, "mock");
+        engine.stop();
+    }
+
+    #[test]
+    fn ui_ready_prepares_only_the_enabled_lane_when_the_other_lane_is_local() {
+        let config = AppConfig {
+            enabled: false,
+            outgoing_translation_enabled: true,
+            translator: "hymt_1_8b".to_string(),
+            outgoing_translator: "mock".to_string(),
+            keep_local_model_warm: true,
+            ..Default::default()
+        };
+        let engine = RustEngine::start(config);
+        engine.ui_ready().unwrap();
+
+        wait_for_outgoing_translator(&engine, "mock");
+        let status = engine.status().unwrap();
+        engine.stop();
+
+        assert_eq!(status.active_translator, "original");
+        assert_eq!(status.active_outgoing_translator, "mock");
+        assert_eq!(status.translator_state, "ready");
     }
 
     #[test]
@@ -2162,6 +2339,7 @@ mod tests {
             ..Default::default()
         };
         let engine = RustEngine::start(config.clone());
+        engine.ui_ready().unwrap();
 
         wait_for_translator(&engine, "mock");
         config.translator = "original".to_string();
@@ -2348,6 +2526,7 @@ mod tests {
             ..Default::default()
         };
         let engine = RustEngine::start(config);
+        engine.ui_ready().unwrap();
         wait_for_dom_text(&mut client, "[ko] ", false);
         client
             .evaluate(
@@ -2414,6 +2593,21 @@ mod tests {
             assert!(
                 std::time::Instant::now() < deadline,
                 "{expected} 번역기로 전환되지 않았어: {status:?}"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    fn wait_for_outgoing_translator(engine: &RustEngine, expected: &str) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(6);
+        loop {
+            let status = engine.status().unwrap();
+            if status.active_outgoing_translator == expected && status.translator_state == "ready" {
+                return;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "{expected} 전송 번역기로 전환되지 않았어: {status:?}"
             );
             std::thread::sleep(Duration::from_millis(20));
         }

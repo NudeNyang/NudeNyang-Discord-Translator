@@ -395,6 +395,11 @@ fn engine_health() -> Value {
 }
 
 #[tauri::command]
+fn engine_ui_ready(engine: State<'_, RustEngine>) -> Result<(), String> {
+    engine.ui_ready()
+}
+
+#[tauri::command]
 fn settings_get(config: State<'_, ConfigStore>) -> Result<AppConfig, String> {
     config.get()
 }
@@ -1185,6 +1190,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             engine_health,
+            engine_ui_ready,
             settings_get,
             settings_update,
             main_window_set_theme,
