@@ -65,6 +65,17 @@ test("experimental MiLMMT model labels are translated", () => {
   );
 });
 
+test("local engine notices describe every selectable local model", () => {
+  assert.equal(translateCopy("en", "로컬 모델 하나만 실행"), "One local model at a time");
+  assert.equal(
+    translateCopy(
+      "ja",
+      "로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다. 외부 서비스를 선택하면 번역할 텍스트만 해당 서비스로 전송됩니다.",
+    ),
+    "ローカル翻訳モデルと画像OCRはこのPC上で処理されます。外部サービスを選択した場合のみ、翻訳するテキストがそのサービスへ送信されます。",
+  );
+});
+
 test("update prompts preserve the version while following the interface language", () => {
   assert.equal(
     translateDynamicCopy(

@@ -128,27 +128,27 @@
                     <div class="setting-copy"><h3>실시간 통역 모델</h3><p>내가 입력한 메시지를 번역할 모델입니다.</p></div>
                     <div class="custom-select" data-field="outgoing_translator"></div>
                   </div>
-                  <div class="privacy-note"><strong>VRAM 보호</strong><span>1.8B와 7B 중 하나의 로컬 모델만 사용합니다. 한쪽에서 로컬 모델을 바꾸면 다른 쪽의 로컬 선택도 함께 바뀝니다.</span></div>
+                  <div class="privacy-note"><strong>로컬 모델 하나만 실행</strong><span>표시 번역과 실시간 통역에서 로컬 모델을 선택하면 하나만 실행되며, 한쪽의 선택을 바꾸면 다른 쪽도 같은 모델로 맞춰집니다.</span></div>
                 </article>
 
                 <article class="settings-card local-engine-card">
                   <div class="card-heading">
                     <span class="card-index" aria-hidden="true">L</span>
-                    <div><h3>로컬 엔진</h3><p>Hy-MT2의 실행 장치와 자원 사용 방식을 설정합니다.</p></div>
+                    <div><h3>로컬 엔진</h3><p>로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다.</p></div>
                   </div>
                   <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>Hy-MT2 실행 장치</h3><p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p></div>
+                    <div class="setting-copy"><h3>로컬 모델 실행 장치</h3><p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p></div>
                     <div class="custom-select" data-field="hymt_device"></div>
                   </div>
                   <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>로컬 모델 예열 유지</h3><p>번역을 꺼도 모델을 VRAM에 유지합니다.</p></div>
+                    <div class="setting-copy"><h3>로컬 모델 예열 유지</h3><p>번역을 꺼도 모델을 메모리에 유지합니다.</p></div>
                     <button class="switch" id="keep-warm" type="button" role="switch" aria-checked="true"><span></span><b>유지</b></button>
                   </div>
                   <div class="setting-row compact-row">
                     <div class="setting-copy"><h3>화면 확인 빈도</h3><p>값이 높을수록 반응이 빨라지며 CPU 사용량이 증가할 수 있습니다.</p></div>
                     <label class="number-field"><input id="capture-fps" type="number" min="2" max="20" inputmode="numeric" /><span>회/초</span></label>
                   </div>
-                  <div class="privacy-note"><strong>로컬 우선</strong><span>Hy-MT2와 이미지 OCR은 PC에서 실행됩니다. 외부 모델에는 추출된 텍스트만 전송됩니다.</span></div>
+                  <div class="privacy-note"><strong>처리 위치 안내</strong><span>로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다. 외부 서비스를 선택하면 번역할 텍스트만 해당 서비스로 전송됩니다.</span></div>
                 </article>
 
                 <section id="provider-connections" aria-labelledby="connections-heading">
