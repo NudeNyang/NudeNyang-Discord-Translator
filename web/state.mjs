@@ -126,7 +126,7 @@ const TRANSLATOR_RUNTIME_NAMES = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
   translategemma_4b: "TranslateGemma 4B",
-  chatgpt: "GPT-5.6 Luna",
+  chatgpt: "GPT-5.6",
   claude: "Claude Haiku 4.5",
   gemini: "Gemini 3.6 Flash",
   deepl: "DeepL",

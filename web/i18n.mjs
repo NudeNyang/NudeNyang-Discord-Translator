@@ -33,7 +33,7 @@ const COPY = Object.freeze({
   "실시간 통역 모델": ["Real-time interpretation model", "リアルタイム通訳モデル", "实时翻译模型"],
   "내가 입력한 메시지를 번역할 모델입니다.": ["Used to translate messages you type.", "入力したメッセージを翻訳するモデルです。", "用于翻译你输入的消息。"],
   "TranslateGemma 4B Q4 (실험·약 2.5GB)": ["TranslateGemma 4B Q4 (experimental · about 2.5GB)", "TranslateGemma 4B Q4（実験・約2.5GB）", "TranslateGemma 4B Q4（实验 · 约2.5GB）"],
-  "GPT-5.6 Luna (품질 최우선)": ["GPT-5.6 Luna (quality first)", "GPT-5.6 Luna（品質最優先）", "GPT-5.6 Luna（质量优先）"],
+  "GPT-5.6 (플랜 자동 선택)": ["GPT-5.6 (selected for your plan)", "GPT-5.6（プランに合わせて自動選択）", "GPT-5.6（根据套餐自动选择）"],
   "Claude Haiku 4.5 (품질 최우선)": ["Claude Haiku 4.5 (quality first)", "Claude Haiku 4.5（品質最優先）", "Claude Haiku 4.5（质量优先）"],
   "Gemini 3.6 Flash (품질 최우선)": ["Gemini 3.6 Flash (quality first)", "Gemini 3.6 Flash（品質最優先）", "Gemini 3.6 Flash（质量优先）"],
   "VRAM 보호": ["VRAM protection", "VRAM保護", "显存保护"],

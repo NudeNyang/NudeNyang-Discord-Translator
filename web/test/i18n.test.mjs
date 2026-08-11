@@ -47,6 +47,17 @@ test("runtime notices keep model details while following the interface language"
   );
 });
 
+test("plan-aware Codex model labels are translated", () => {
+  assert.equal(
+    translateCopy("en", "GPT-5.6 (플랜 자동 선택)"),
+    "GPT-5.6 (selected for your plan)",
+  );
+  assert.equal(
+    translateCopy("ja", "GPT-5.6 (플랜 자동 선택)"),
+    "GPT-5.6（プランに合わせて自動選択）",
+  );
+});
+
 test("update prompts preserve the version while following the interface language", () => {
   assert.equal(
     translateDynamicCopy(

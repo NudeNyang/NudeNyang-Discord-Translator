@@ -65,11 +65,15 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
 });
 
 test("subscription translators use a simple quality-first label", () => {
-  assert.match(script, /GPT-5\.6 Luna \(품질 최우선\)/);
+  assert.match(script, /GPT-5\.6 \(플랜 자동 선택\)/);
+  assert.match(providers, /ChatGPT 무료 플랜 이상 · Codex CLI/);
+  assert.match(providers, /Claude 유료 플랜 · Claude Code/);
   assert.match(script, /Claude Haiku 4\.5 \(품질 최우선\)/);
   assert.match(script, /Gemini 3\.6 Flash \(품질 최우선\)/);
   assert.doesNotMatch(`${markup}${script}`, /지속 연결|지속 세션/);
   assert.match(subscriptionCli, /gpt-5\.6-luna/);
+  assert.match(subscriptionCli, /gpt-5\.6-terra/);
+  assert.match(subscriptionCli, /"method": "model\/list"/);
   assert.match(subscriptionCli, /claude-haiku-4-5-20251001/);
   assert.match(subscriptionCli, /"flash"/);
   assert.match(subscriptionCli, /ClaudeStreamServer/);

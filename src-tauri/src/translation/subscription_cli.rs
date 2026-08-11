@@ -18,7 +18,8 @@ use crate::language::Language;
 use super::Translator;
 
 const PROMPT_VERSION: &str = "subscription-cli-tone-and-punctuation-v2";
-const CODEX_TRANSLATION_MODEL: &str = "gpt-5.6-luna";
+const CODEX_PREFERRED_MODEL: &str = "gpt-5.6-luna";
+const CODEX_FREE_MODEL: &str = "gpt-5.6-terra";
 const CODEX_TRANSLATION_EFFORT: &str = "low";
 const CLAUDE_TRANSLATION_MODEL: &str = "claude-haiku-4-5-20251001";
 const AGY_TRANSLATION_MODEL: &str = "flash";
@@ -195,7 +196,7 @@ impl SubscriptionProvider {
 
     fn model_cache_key(self) -> &'static str {
         match self {
-            Self::ChatGpt => "gpt-5.6-luna-low",
+            Self::ChatGpt => "gpt-5.6-plan-auto-low",
             Self::Claude => "claude-haiku-4-5-20251001",
             Self::Gemini => "gemini-flash-low",
         }
@@ -335,6 +336,8 @@ impl SubscriptionCliTranslator {
         let environment = subscription_environment();
         match implementation {
             Implementation::Codex => {
+                let mut fallback_model = CODEX_FREE_MODEL.to_string();
+                let mut fallback_effort = CODEX_TRANSLATION_EFFORT.to_string();
                 if self.codex_server.is_none() {
                     self.codex_server = Some(CodexAppServer::new(
                         executable.clone(),
@@ -361,6 +364,8 @@ impl SubscriptionCliTranslator {
                             return Ok(result);
                         }
                         Err(error) => {
+                            fallback_model = server.model().to_string();
+                            fallback_effort = server.effort().to_string();
                             log_cli_latency(
                                 self.provider,
                                 "persistent",
@@ -386,6 +391,8 @@ impl SubscriptionCliTranslator {
                     &environment,
                     remaining,
                     self.provider,
+                    &fallback_model,
+                    &fallback_effort,
                 );
                 log_cli_latency(
                     self.provider,
@@ -747,7 +754,7 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
                 installed: true,
                 connected,
                 detail: if connected {
-                    "ChatGPT 구독 계정으로 연결되어 있습니다.".to_string()
+                    "ChatGPT 계정으로 연결되어 있습니다.".to_string()
                 } else {
                     "Codex CLI는 설치되어 있지만 ChatGPT 로그인이 필요합니다.".to_string()
                 },
@@ -2064,6 +2071,69 @@ impl Drop for ClaudeStreamServer {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CodexModelProfile {
+    model: String,
+    effort: String,
+}
+
+fn codex_model_id(entry: &Value) -> Option<&str> {
+    entry
+        .get("model")
+        .or_else(|| entry.get("id"))
+        .and_then(Value::as_str)
+}
+
+fn codex_translation_profile(catalog: &Value) -> CodexModelProfile {
+    let entries = catalog
+        .get("data")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    let selected = [CODEX_PREFERRED_MODEL, CODEX_FREE_MODEL]
+        .into_iter()
+        .find_map(|preferred| {
+            entries
+                .iter()
+                .find(|entry| codex_model_id(entry) == Some(preferred))
+        })
+        .or_else(|| {
+            entries
+                .iter()
+                .find(|entry| entry.get("isDefault").and_then(Value::as_bool) == Some(true))
+        })
+        .or_else(|| entries.first());
+    let Some(selected) = selected else {
+        return CodexModelProfile {
+            model: CODEX_FREE_MODEL.to_string(),
+            effort: CODEX_TRANSLATION_EFFORT.to_string(),
+        };
+    };
+    let supports_low = selected
+        .get("supportedReasoningEfforts")
+        .and_then(Value::as_array)
+        .is_some_and(|efforts| {
+            efforts.iter().any(|effort| {
+                effort.get("reasoningEffort").and_then(Value::as_str)
+                    == Some(CODEX_TRANSLATION_EFFORT)
+            })
+        });
+    let effort = if supports_low {
+        CODEX_TRANSLATION_EFFORT
+    } else {
+        selected
+            .get("defaultReasoningEffort")
+            .and_then(Value::as_str)
+            .unwrap_or("medium")
+    };
+    CodexModelProfile {
+        model: codex_model_id(selected)
+            .unwrap_or(CODEX_FREE_MODEL)
+            .to_string(),
+        effort: effort.to_string(),
+    }
+}
+
 struct CodexAppServer {
     executable: PathBuf,
     workspace: PathBuf,
@@ -2076,6 +2146,8 @@ struct CodexAppServer {
     request_id: u64,
     thread_id: String,
     turns: u32,
+    model: String,
+    effort: String,
 }
 
 enum ServerEvent {
@@ -2086,10 +2158,6 @@ enum ServerEvent {
 fn codex_app_server_arguments() -> Vec<String> {
     vec![
         "app-server".to_string(),
-        "--config".to_string(),
-        format!("model=\"{CODEX_TRANSLATION_MODEL}\""),
-        "--config".to_string(),
-        format!("model_reasoning_effort=\"{CODEX_TRANSLATION_EFFORT}\""),
         "--config".to_string(),
         "mcp_servers={}".to_string(),
         "--disable".to_string(),
@@ -2116,7 +2184,17 @@ impl CodexAppServer {
             request_id: 0,
             thread_id: String::new(),
             turns: 0,
+            model: CODEX_FREE_MODEL.to_string(),
+            effort: CODEX_TRANSLATION_EFFORT.to_string(),
         }
+    }
+
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn effort(&self) -> &str {
+        &self.effort
     }
 
     fn invoke(&mut self, prompt: &str, schema: &Value) -> Result<Value, String> {
@@ -2131,8 +2209,8 @@ impl CodexAppServer {
                 "cwd": self.workspace,
                 "approvalPolicy": "never",
                 "sandboxPolicy": {"type": "readOnly"},
-                "model": CODEX_TRANSLATION_MODEL,
-                "effort": CODEX_TRANSLATION_EFFORT,
+                "model": self.model.as_str(),
+                "effort": self.effort.as_str(),
                 "outputSchema": schema,
             },
         }))?;
@@ -2256,7 +2334,22 @@ impl CodexAppServer {
         }))?;
         self.wait_for_response(initialize_id, deadline)?;
         self.send(&json!({"method": "initialized", "params": {}}))?;
+        self.select_translation_model(deadline)?;
         self.start_thread(deadline)
+    }
+
+    fn select_translation_model(&mut self, deadline: Instant) -> Result<(), String> {
+        let request_id = self.next_request_id();
+        self.send(&json!({
+            "method": "model/list",
+            "id": request_id,
+            "params": {"limit": 100, "includeHidden": false},
+        }))?;
+        let catalog = self.wait_for_response(request_id, deadline)?;
+        let profile = codex_translation_profile(&catalog);
+        self.model = profile.model;
+        self.effort = profile.effort;
+        Ok(())
     }
 
     fn start_thread(&mut self, deadline: Instant) -> Result<(), String> {
@@ -2265,7 +2358,7 @@ impl CodexAppServer {
             "method": "thread/start",
             "id": thread_request_id,
             "params": {
-                "model": CODEX_TRANSLATION_MODEL,
+                "model": self.model.as_str(),
                 "cwd": self.workspace,
                 "approvalPolicy": "never",
                 "sandbox": "read-only",
@@ -2375,6 +2468,8 @@ fn invoke_codex_once(
     environment: &HashMap<String, String>,
     timeout: Duration,
     provider: SubscriptionProvider,
+    model: &str,
+    effort: &str,
 ) -> Result<Value, String> {
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -2396,9 +2491,9 @@ fn invoke_codex_once(
         "--ignore-user-config".to_string(),
         "--ignore-rules".to_string(),
         "--model".to_string(),
-        CODEX_TRANSLATION_MODEL.to_string(),
+        model.to_string(),
         "--config".to_string(),
-        format!("model_reasoning_effort=\"{CODEX_TRANSLATION_EFFORT}\""),
+        format!("model_reasoning_effort=\"{effort}\""),
         "--sandbox".to_string(),
         "read-only".to_string(),
         "--skip-git-repo-check".to_string(),
@@ -3126,7 +3221,8 @@ mod tests {
 
     #[test]
     fn subscription_profiles_pin_latency_optimized_models() {
-        assert_eq!(super::CODEX_TRANSLATION_MODEL, "gpt-5.6-luna");
+        assert_eq!(super::CODEX_PREFERRED_MODEL, "gpt-5.6-luna");
+        assert_eq!(super::CODEX_FREE_MODEL, "gpt-5.6-terra");
         assert_eq!(super::CODEX_TRANSLATION_EFFORT, "low");
         assert_eq!(super::CLAUDE_TRANSLATION_MODEL, "claude-haiku-4-5-20251001");
         assert_eq!(super::AGY_TRANSLATION_MODEL, "flash");
@@ -3142,11 +3238,54 @@ mod tests {
     }
 
     #[test]
+    fn codex_translation_model_follows_the_signed_in_plan() {
+        let paid = serde_json::json!({
+            "data": [
+                {"id": "gpt-5.6-terra", "supportedReasoningEfforts": [{"reasoningEffort": "low"}]},
+                {"id": "gpt-5.6-luna", "supportedReasoningEfforts": [{"reasoningEffort": "low"}]}
+            ]
+        });
+        let free = serde_json::json!({
+            "data": [
+                {"id": "gpt-5.6-terra", "supportedReasoningEfforts": [{"reasoningEffort": "low"}]}
+            ]
+        });
+
+        assert_eq!(
+            super::codex_translation_profile(&paid).model,
+            "gpt-5.6-luna"
+        );
+        assert_eq!(
+            super::codex_translation_profile(&free).model,
+            "gpt-5.6-terra"
+        );
+    }
+
+    #[test]
+    fn codex_translation_model_uses_account_default_as_a_future_safe_fallback() {
+        let catalog = serde_json::json!({
+            "data": [{
+                "id": "future-codex-model",
+                "isDefault": true,
+                "defaultReasoningEffort": "medium",
+                "supportedReasoningEfforts": [{"reasoningEffort": "medium"}]
+            }]
+        });
+
+        let profile = super::codex_translation_profile(&catalog);
+        assert_eq!(profile.model, "future-codex-model");
+        assert_eq!(profile.effort, "medium");
+    }
+
+    #[test]
     fn codex_prewarm_disables_user_mcp_servers_before_process_start() {
         let arguments = super::codex_app_server_arguments();
         assert!(arguments
             .windows(2)
             .any(|pair| pair == ["--config", "mcp_servers={}"]));
+        assert!(!arguments
+            .iter()
+            .any(|argument| argument.contains("gpt-5.6-luna")));
     }
 
     #[test]
@@ -3530,9 +3669,44 @@ mod tests {
         let _ = std::fs::remove_dir_all(&directory);
         std::fs::create_dir_all(&directory).unwrap();
         let wrapper = directory.join("codex prewarm mock.cmd");
+        let server = directory.join("codex prewarm mock.ps1");
+        std::fs::write(
+            &server,
+            r#"if ($args.Count -gt 0 -and $args[0] -eq 'login') {
+  [Console]::Out.WriteLine('Logged in with ChatGPT')
+  exit 0
+}
+while ($null -ne ($line = [Console]::In.ReadLine())) {
+  try { $request = $line | ConvertFrom-Json } catch { continue }
+  switch ($request.method) {
+    'initialize' {
+      @{ id = $request.id; result = @{} } | ConvertTo-Json -Compress -Depth 8
+    }
+    'model/list' {
+      @{ id = $request.id; result = @{ data = @(@{
+        id = 'gpt-5.6-terra'
+        supportedReasoningEfforts = @(@{ reasoningEffort = 'low' })
+      }) } } | ConvertTo-Json -Compress -Depth 8
+    }
+    'thread/start' {
+      @{ id = $request.id; result = @{ thread = @{ id = 'thread-prewarmed' } } } | ConvertTo-Json -Compress -Depth 8
+    }
+    'turn/start' {
+      @{ method = 'item/completed'; params = @{ item = @{
+        type = 'agentMessage'
+        text = '{"translations":[{"id":0,"text":"translated"}]}'
+      } } } | ConvertTo-Json -Compress -Depth 8
+      @{ method = 'turn/completed'; params = @{ turn = @{ status = 'completed' } } } | ConvertTo-Json -Compress -Depth 8
+    }
+  }
+  [Console]::Out.Flush()
+}
+"#,
+        )
+        .unwrap();
         std::fs::write(
             &wrapper,
-            "@echo off\r\nif /i \"%~1\"==\"login\" (\r\n  echo Logged in with ChatGPT\r\n  exit /b 0\r\n)\r\nset \"request=\"\r\nset /p request=\r\nif errorlevel 1 exit /b 1\r\necho {\"id\":1,\"result\":{}}\r\nset /p request=\r\nif errorlevel 1 exit /b 1\r\nset /p request=\r\nif errorlevel 1 exit /b 1\r\necho {\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-prewarmed\"}}}\r\n:read\r\nset \"request=\"\r\nset /p request=\r\nif errorlevel 1 exit /b 0\r\necho {\"method\":\"item/completed\",\"params\":{\"item\":{\"type\":\"agentMessage\",\"text\":\"{\\\"translations\\\":[{\\\"id\\\":0,\\\"text\\\":\\\"translated\\\"}]}\"}}}\r\necho {\"method\":\"turn/completed\",\"params\":{\"turn\":{\"status\":\"completed\"}}}\r\ngoto read\r\n",
+            "@echo off\r\npowershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"%~dp0codex prewarm mock.ps1\" %*\r\n",
         )
         .unwrap();
 
