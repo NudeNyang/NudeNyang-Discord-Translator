@@ -543,6 +543,34 @@ mod tests {
     }
 
     #[test]
+    fn punctuation_only_messages_bypass_the_translation_provider() {
+        let path = cache_path("punctuation-only");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(RecordingIdentityTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = vec![
+            "?".to_string(),
+            ";;".to_string(),
+            "-".to_string(),
+            "?!…".to_string(),
+        ];
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming(&source, Language::Korean)
+                .unwrap(),
+            source
+        );
+        assert!(inputs.lock().unwrap().is_empty());
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn protects_tokens_and_reuses_exact_cache_entries() {
         let path = cache_path("cache");
         let calls = Arc::new(Mutex::new(0));
