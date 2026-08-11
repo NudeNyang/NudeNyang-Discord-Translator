@@ -187,11 +187,17 @@ const elements = {
   outgoingModelGuidanceTitle: document.querySelector("#outgoing-model-guidance-title"),
   outgoingModelGuidanceDetail: document.querySelector("#outgoing-model-guidance-detail"),
   outgoingModelGuidanceAction: document.querySelector("#outgoing-model-guidance-action"),
+  vramProtectionNote: document.querySelector("#vram-protection-note"),
   providerRows: [...document.querySelectorAll(".provider-row")],
 };
 
 const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
 const CLI_PROVIDERS = new Set(["chatgpt", "claude", "gemini"]);
+const LOCAL_TRANSLATORS = new Set(
+  DISPLAY_TRANSLATOR_OPTIONS
+    .filter(([, , group]) => group === "local")
+    .map(([value]) => value),
+);
 const RECOMMENDED_PROVIDER_ORDER = ["chatgpt", "claude", "gemini"];
 const PROVIDER_LOGIN_COPY = Object.freeze({
   chatgpt: { name: "ChatGPT", account: "ChatGPT 계정" },
@@ -341,6 +347,9 @@ function renderOutgoingModelGuidance() {
   const action = elements.outgoingModelGuidanceAction;
   if (!selected || !elements.outgoingModelGuidance || !action) return;
 
+  if (elements.vramProtectionNote) {
+    elements.vramProtectionNote.hidden = !LOCAL_TRANSLATORS.has(selected);
+  }
   action.hidden = false;
   action.disabled = false;
   delete action.dataset.provider;

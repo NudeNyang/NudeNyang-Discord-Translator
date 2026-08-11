@@ -921,6 +921,10 @@ input:focus-visible,
   color: var(--accent-strong);
 }
 
+.privacy-note[hidden] {
+  display: none;
+}
+
 .outgoing-model-guidance {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -107,11 +107,12 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(markup, /data-field="translator"/);
   assert.match(markup, /<h3>보내는 메시지 통역 모델<\/h3>/);
   assert.match(markup, /data-field="outgoing_translator"/);
-  assert.match(markup, /VRAM 보호/);
-  assert.match(markup, /표시 번역과 보내는 메시지 통역에서 로컬 모델을 선택하면 하나만 실행되며/);
+  assert.match(markup, /id="vram-protection-note" hidden/);
+  assert.match(markup, /로컬 모델은 하나만 실행됩니다\. 표시 번역과 보내는 메시지 통역의 로컬 모델 선택은 함께 변경됩니다\./);
+  assert.match(script, /elements\.vramProtectionNote\.hidden = !LOCAL_TRANSLATORS\.has\(selected\)/);
   assert.doesNotMatch(markup, /1\.8B와 7B 중 하나의 로컬 모델만 사용합니다/);
-  assert.match(markup, /처리 위치 안내/);
-  assert.match(markup, /로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다/);
+  assert.doesNotMatch(markup, /처리 위치 안내/);
+  assert.doesNotMatch(markup, /로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다/);
   assert.doesNotMatch(markup, /Hy-MT2와 이미지 OCR은 PC에서 실행됩니다/);
   assert.match(markup, /로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다/);
   assert.match(markup, /로컬 모델 실행 장치/);
