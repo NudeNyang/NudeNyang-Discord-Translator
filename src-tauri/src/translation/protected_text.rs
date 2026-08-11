@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -152,6 +153,93 @@ pub fn protect_text(text: &str) -> ProtectedText {
     }
 }
 
+pub fn remove_unwritten_decorations(source: &str, translated: &str) -> String {
+    let mut available = HashMap::<String, usize>::new();
+    for (start, end) in decoration_spans(source) {
+        *available.entry(source[start..end].to_string()).or_default() += 1;
+    }
+
+    let spans = decoration_spans(translated);
+    if spans.is_empty() {
+        return translated.to_string();
+    }
+
+    let mut output = String::with_capacity(translated.len());
+    let mut cursor = 0;
+    let mut removed = false;
+    for (start, end) in spans {
+        output.push_str(&translated[cursor..start]);
+        let token = &translated[start..end];
+        if available.get_mut(token).is_some_and(|count| {
+            if *count == 0 {
+                false
+            } else {
+                *count -= 1;
+                true
+            }
+        }) {
+            output.push_str(token);
+        } else {
+            removed = true;
+        }
+        cursor = end;
+    }
+    output.push_str(&translated[cursor..]);
+
+    if !removed {
+        return output;
+    }
+    output
+        .split('\n')
+        .map(|line| {
+            Regex::new(r"[ \t]{2,}")
+                .unwrap()
+                .replace_all(line.trim_matches([' ', '\t']), " ")
+                .into_owned()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn decoration_spans(text: &str) -> Vec<(usize, usize)> {
+    let mut spans = Vec::new();
+    for pattern in [
+        &*CUSTOM_EMOJI_RE,
+        &*ASCII_EMOTICON_RE,
+        &*SHRUG_RE,
+        &*BOW_RE,
+        &*CHAT_FACE_RE,
+        &*EMOJI_RE,
+    ] {
+        spans.extend(
+            pattern
+                .find_iter(text)
+                .map(|found| (found.start(), found.end())),
+        );
+    }
+    for found in KAOMOJI_RE.find_iter(text) {
+        if found
+            .as_str()
+            .chars()
+            .any(|character| KAOMOJI_HINTS.contains(character))
+        {
+            spans.push((found.start(), found.end()));
+        }
+    }
+    spans.sort_by_key(|(start, end)| (*start, usize::MAX - (*end - *start)));
+    let mut selected = Vec::new();
+    for (start, end) in spans {
+        if selected
+            .last()
+            .is_some_and(|(_, selected_end)| start < *selected_end)
+        {
+            continue;
+        }
+        selected.push((start, end));
+    }
+    selected
+}
+
 fn marker(index: usize) -> String {
     format!("{MARKER_PREFIX}{index:03}{MARKER_SUFFIX}")
 }
@@ -174,7 +262,7 @@ fn is_text_emoticon(token: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::protect_text;
+    use super::{protect_text, remove_unwritten_decorations};
 
     #[test]
     fn masks_and_restores_mentions_emoji_and_emoticons() {
@@ -234,5 +322,22 @@ mod tests {
             assert!(!protected.tokens.is_empty(), "{source}");
             assert_eq!(protected.restore(&protected.masked), source);
         }
+    }
+
+    #[test]
+    fn removes_only_decorations_that_are_absent_from_the_source() {
+        assert_eq!(
+            remove_unwritten_decorations("なるほど！", "알겠습니다! 🤖"),
+            "알겠습니다!"
+        );
+        assert_eq!(
+            remove_unwritten_decorations("なるほど！ 😊", "알겠습니다! 😊 🤖"),
+            "알겠습니다! 😊"
+        );
+        assert_eq!(
+            remove_unwritten_decorations("고마워 ^_^", "ありがとう ^_^ :robot:"),
+            "ありがとう ^_^"
+        );
+        assert_eq!(remove_unwritten_decorations("😊", "😊 😊"), "😊");
     }
 }

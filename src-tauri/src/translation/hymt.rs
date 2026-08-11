@@ -19,6 +19,7 @@ use sha2::{Digest, Sha256};
 
 use crate::language::Language;
 
+use super::protected_text::remove_unwritten_decorations;
 use super::Translator;
 
 #[cfg(windows)]
@@ -34,7 +35,8 @@ use windows::Win32::System::JobObjects::{
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 
-const PROMPT_VERSION: &str = "meaning-preserving-v7";
+const PROMPT_VERSION: &str = "meaning-preserving-v8";
+const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const PROMPT_ECHO_HINTS: [&str; 17] = [
@@ -355,11 +357,11 @@ impl HyMtTranslator {
             display_name: format!("{} (로컬)", model.label),
             cache_namespace: match model_size {
                 HyMtModelSize::TranslateGemma4B => format!(
-                    "translategemma:{}:q4_k_m:register-aware-v2:{speech_style}",
+                    "translategemma:{}:q4_k_m:source-faithful-v3:{speech_style}",
                     model.key
                 ),
                 HyMtModelSize::MiLmMt4B => format!(
-                    "milmmt:{}:q4_k_m:source-faithful-v9:{speech_style}",
+                    "milmmt:{}:q4_k_m:source-faithful-v10:{speech_style}",
                     model.key
                 ),
                 _ => format!(
@@ -832,7 +834,7 @@ fn milmmt_prompt(text: &str, source: Language, target: Language, style: &str) ->
     };
     let style_instruction = milmmt_style_instruction(target, style);
     format!(
-        "Translate this from {source_name} to {target_name}:{style_instruction}\n{source_name}: {}\n{target_name}:",
+        "Translate this from {source_name} to {target_name}:{style_instruction}\n{NO_UNWRITTEN_DECORATIONS}\n{source_name}: {}\n{target_name}:",
         guarded_text
     )
 }
@@ -948,7 +950,7 @@ fn translate_gemma_prompt(
     };
     let register_instruction = translate_gemma_register_instruction(target, resolved_style);
     format!(
-        "<bos><start_of_turn>user\nYou are a professional {source_name} ({source_code}) to {target_name} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_name} text while adhering to {target_name} grammar, vocabulary, and cultural sensitivities.\nPreserve the source text's exact level of politeness and social register. {register_instruction}\nProduce only the {target_name} translation, without any additional explanations or commentary. Please translate the following {source_name} text into {target_name}:\n\n\n{}<end_of_turn>\n<start_of_turn>model\n",
+        "<bos><start_of_turn>user\nYou are a professional {source_name} ({source_code}) to {target_name} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_name} text while adhering to {target_name} grammar, vocabulary, and cultural sensitivities.\nPreserve the source text's exact level of politeness and social register. {register_instruction}\n{NO_UNWRITTEN_DECORATIONS}\nProduce only the {target_name} translation, without any additional explanations or commentary. Please translate the following {source_name} text into {target_name}:\n\n\n{}<end_of_turn>\n<start_of_turn>model\n",
         text.trim()
     )
 }
@@ -1284,6 +1286,7 @@ where
         let trailing_start = part.trim_end().len();
         let core = part.trim();
         let translated = complete(core, resolved_style)?;
+        let translated = remove_unwritten_decorations(core, &translated);
         output.push_str(&part[..leading_len]);
         output.push_str(&translated);
         output.push_str(&part[trailing_start..]);
@@ -1334,6 +1337,7 @@ where
         translated = remove_unwritten_milmmt_fillers(core, &translated, source, target);
         translated = fallback_register_cleanup(&translated, target, resolved_style);
         translated = clean_register_artifacts(&translated, target);
+        translated = remove_unwritten_decorations(core, &translated);
         output.push_str(&part[..leading_len]);
         output.push_str(&translated);
         output.push_str(&part[trailing_start..]);
@@ -1402,6 +1406,7 @@ where
         }
         result = fallback_register_cleanup(&result, target, resolved_style);
         result = clean_register_artifacts(&result, target);
+        result = remove_unwritten_decorations(core, &result);
         output.push_str(&part[..leading_len]);
         output.push_str(&result);
         output.push_str(&part[trailing_start..]);
@@ -1477,7 +1482,7 @@ fn translation_prompt(text: &str, source: Language, target: Language, style: &st
          Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts in the translation; never replace an animal, person, object, or place with a related but different one.\n\
          Preserve the speaker's exact social register, warmth, directness, slang, contractions, fragments, and emotional intensity. Do not make casual language polite, formal, literary, or businesslike.\n\
          Style requirement: {}\n\
-         Preserve paragraph boundaries, line breaks, emojis, and punctuation intent. If a source line has no sentence-final punctuation, do not add a period, full stop, question mark, or exclamation mark. Preserve ellipses and repeated punctuation.\n\
+         Preserve paragraph boundaries, line breaks, emojis, and punctuation intent. {NO_UNWRITTEN_DECORATIONS} If a source line has no sentence-final punctuation, do not add a period, full stop, question mark, or exclamation mark. Preserve ellipses and repeated punctuation.\n\
          Only output the translated result without an explanation.\n\n{}",
         source.english_name(),
         target.english_name(),
@@ -1514,7 +1519,7 @@ fn compact_translation_prompt(
         format!(" {style}")
     };
     format!(
-        "Translate the following {} segment into {}. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders.{} Output only the translation without explanation:\n\n{}",
+        "Translate the following {} segment into {}. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
         source.english_name(),
         target.english_name(),
         style,
@@ -1560,7 +1565,7 @@ fn retryable_completion_error(error: &str) -> bool {
 
 fn minimal_translation_prompt(text: &str, target: Language) -> String {
     format!(
-        "Translate the following segment into {}. Preserve the exact identity of every concrete noun, and keep distinct source nouns as distinct concepts. Output only the translation without additional explanation:\n{}",
+        "Translate the following segment into {}. Preserve the exact identity of every concrete noun, and keep distinct source nouns as distinct concepts. {NO_UNWRITTEN_DECORATIONS} Output only the translation without additional explanation:\n{}",
         target.english_name(),
         text
     )
@@ -1574,7 +1579,7 @@ fn diagnostic_text_hash(text: &str) -> String {
 pub fn rewrite_style_prompt(text: &str, target: Language, style: &str) -> String {
     format!(
         "Rewrite the following {} text to meet this style requirement.\nStyle requirement: {}\n\
-         Keep the meaning, line breaks, emojis, punctuation intent, warmth, and directness unchanged. Do not add sentence-final punctuation where the input has none. Only output the rewritten text without an explanation.\n\n{}",
+         Keep the meaning, line breaks, emojis, punctuation intent, warmth, and directness unchanged. {NO_UNWRITTEN_DECORATIONS} Do not add sentence-final punctuation where the input has none. Only output the rewritten text without an explanation.\n\n{}",
         target.english_name(),
         style_requirement(target, style),
         text
@@ -1591,7 +1596,7 @@ fn rewrite_style_prompt_for_model(
         return rewrite_style_prompt(text, target, style);
     }
     format!(
-        "Rewrite this {} text. {} Preserve its meaning, line breaks, emojis, punctuation, and ZXQKEEP placeholders. Output only the rewritten text:\n\n{}",
+        "Rewrite this {} text. {} Preserve its meaning, line breaks, emojis, punctuation, and ZXQKEEP placeholders. {NO_UNWRITTEN_DECORATIONS} Output only the rewritten text:\n\n{}",
         target.english_name(),
         compact_style_requirement(target, style),
         text
@@ -1896,8 +1901,8 @@ mod tests {
         detect_speech_style, find_llama_server, local_model_storage_status, max_output_tokens,
         milmmt_completion_payload, milmmt_prompt, remove_cached_model_files, rewrite_style_prompt,
         startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
-        translate_with_milmmt, translate_with_translate_gemma, translation_prompt_for_model,
-        HyMtModelSize, HyMtTranslator,
+        translate_with_completion_for_model, translate_with_milmmt, translate_with_translate_gemma,
+        translation_prompt_for_model, HyMtModelSize, HyMtTranslator, NO_UNWRITTEN_DECORATIONS,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
@@ -2032,6 +2037,86 @@ mod tests {
     }
 
     #[test]
+    fn every_local_model_removes_emojis_that_are_absent_from_the_source() {
+        let source = "なるほど！";
+        for model_size in [HyMtModelSize::Small, HyMtModelSize::Large] {
+            let translated = translate_with_completion_for_model(
+                model_size,
+                source,
+                Language::Japanese,
+                Language::Korean,
+                "auto",
+                |_prompt, _text| Ok("알겠습니다! 🤖".to_string()),
+            )
+            .unwrap();
+            assert_eq!(translated, "알겠습니다!", "{:?}", model_size);
+        }
+
+        let translated = translate_with_translate_gemma(
+            source,
+            Language::Japanese,
+            Language::Korean,
+            "auto",
+            |_text, _style| Ok("알겠습니다! 🤖".to_string()),
+        )
+        .unwrap();
+        assert_eq!(translated, "알겠습니다!", "TranslateGemma 4B");
+
+        let translated = translate_with_milmmt(
+            source,
+            Language::Japanese,
+            Language::Korean,
+            "auto",
+            |_prompt, _text| Ok("알겠습니다! 🤖".to_string()),
+        )
+        .unwrap();
+        assert_eq!(translated, "알겠습니다!", "MiLMMT 4B");
+    }
+
+    #[test]
+    fn local_models_keep_source_emojis_but_remove_extra_ones() {
+        let translated = translate_with_completion_for_model(
+            HyMtModelSize::Large,
+            "なるほど！ 😊",
+            Language::Japanese,
+            Language::Korean,
+            "auto",
+            |_prompt, _text| Ok("알겠습니다! 😊 🤖".to_string()),
+        )
+        .unwrap();
+        assert_eq!(translated, "알겠습니다! 😊");
+    }
+
+    #[test]
+    fn every_local_model_prompt_forbids_unwritten_emojis() {
+        for model_size in [HyMtModelSize::Small, HyMtModelSize::Large] {
+            let prompt = translation_prompt_for_model(
+                model_size,
+                "なるほど！",
+                Language::Japanese,
+                Language::Korean,
+                "casual",
+            );
+            assert!(prompt.contains("Never add emojis"), "{:?}", model_size);
+        }
+
+        let gemma = translate_gemma_completion_payload(
+            "なるほど！",
+            Language::Japanese,
+            Language::Korean,
+            "casual",
+            128,
+        );
+        assert!(gemma["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("Never add emojis"));
+
+        let milmmt = milmmt_prompt("なるほど！", Language::Japanese, Language::Korean, "casual");
+        assert!(milmmt.contains("Never add emojis"));
+    }
+
+    #[test]
     fn local_translation_sampling_is_deterministic() {
         let payload = completion_payload("translate", 96);
         assert_eq!(payload["temperature"].as_f64(), Some(0.0));
@@ -2134,7 +2219,7 @@ mod tests {
     }
 
     #[test]
-    fn milmmt_uses_the_official_translation_prompt() {
+    fn milmmt_uses_the_translation_prompt_with_source_and_target_labels() {
         let prompt = milmmt_prompt(
             "오늘 같이 게임할래?",
             Language::Korean,
@@ -2142,10 +2227,10 @@ mod tests {
             "neutral",
         );
         let payload = milmmt_completion_payload(&prompt, 256);
-        assert_eq!(
-            payload["prompt"],
-            "Translate this from Korean to Japanese:\nKorean: 오늘 같이 게임할래?\nJapanese:"
-        );
+        let prompt = payload["prompt"].as_str().unwrap();
+        assert!(prompt.starts_with("Translate this from Korean to Japanese:"));
+        assert!(prompt.contains(NO_UNWRITTEN_DECORATIONS));
+        assert!(prompt.ends_with("Korean: 오늘 같이 게임할래?\nJapanese:"));
         assert_eq!(payload["n_predict"], 256);
         assert_eq!(payload["top_k"], 1);
         assert_eq!(payload["temperature"].as_f64(), Some(0.0));
@@ -2383,7 +2468,7 @@ mod tests {
         let polite = HyMtTranslator::new(HyMtModelSize::Small, "auto", "polite").unwrap();
         let casual = HyMtTranslator::new(HyMtModelSize::Small, "auto", "casual").unwrap();
         assert_ne!(polite.cache_namespace(), casual.cache_namespace());
-        assert!(polite.cache_namespace().contains("meaning-preserving-v7"));
+        assert!(polite.cache_namespace().contains("meaning-preserving-v8"));
         assert!(
             rewrite_style_prompt("고마워요.", Language::Korean, "casual")
                 .contains("Korean casual banmal")
@@ -2397,7 +2482,9 @@ mod tests {
             gemma_polite.cache_namespace(),
             gemma_casual.cache_namespace()
         );
-        assert!(gemma_polite.cache_namespace().contains("register-aware-v2"));
+        assert!(gemma_polite
+            .cache_namespace()
+            .contains("source-faithful-v3"));
         assert!(rewrite_style_prompt("Thanks", Language::English, "polite")
             .contains("polite/formal English"));
     }
