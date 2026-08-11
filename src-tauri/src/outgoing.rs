@@ -23,8 +23,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 30;
+  const CONTROLLER_VERSION = 31;
   const HEARTBEAT_TIMEOUT_MS = 5000;
+  const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
   const copies = {
@@ -223,6 +224,19 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (!item.preserve_prefix_mentions) return composerText(editor);
     const plan = prefixMentionPlan(editor);
     return plan?.supported ? plan.text : composerText(editor);
+  }
+  function currentComposerForItem(item) {
+    const expected = item.original_text || item.text || '';
+    const current = item.editor;
+    if (current?.isConnected && sourceTextForItem(current, item) === expected) return current;
+    const messageRowSelector = 'li[id^="chat-messages-"], [data-list-item-id^="chat-messages___"], [class*="messageListItem"]';
+    const candidates = [...document.querySelectorAll(composerSelector)]
+      .filter(candidate => candidate.isConnected && !candidate.closest(messageRowSelector))
+      .filter(candidate => sourceTextForItem(candidate, item) === expected);
+    const focused = document.activeElement;
+    return candidates.find(candidate => candidate === focused || candidate.contains(focused))
+      || candidates.sort((left, right) => left.getBoundingClientRect().bottom - right.getBoundingClientRect().bottom).at(-1)
+      || null;
   }
   function hasActiveAutocomplete(editor) {
     if (editor.getAttribute('aria-expanded') !== 'true') return false;
@@ -550,13 +564,26 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       prunePending() {
         const now = Date.now();
         for (const [id, item] of this.pending) {
-          if (item.editor?.isConnected && (item.review_ready || now - item.created_at < 30000)) continue;
+          if (item.review_ready && item.editor?.isConnected) continue;
+          if (now - item.created_at < PENDING_TIMEOUT_MS) continue;
           this.pending.delete(id);
           if (this.activeRequest === id) {
             this.activeRequest = '';
             this.bypass = 0;
           }
         }
+      },
+      pendingForEditor(editor) {
+        for (const entry of this.pending.entries()) {
+          const [, item] = entry;
+          if (item.editor === editor) return entry;
+          if (item.channel_key !== currentChannelKey()) continue;
+          const expected = item.original_text || item.text || '';
+          if (sourceTextForItem(editor, item) !== expected) continue;
+          item.editor = editor;
+          return entry;
+        }
+        return null;
       },
       reconcileSent() {
         const now = Date.now();
@@ -685,7 +712,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!key) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        const previous = [...this.pending.entries()].find(([, item]) => item.editor === editor);
+        const previous = this.pendingForEditor(editor);
         if (previous) {
           const [previousId, previousItem] = previous;
           const expired = Date.now() - previousItem.created_at >= 30000;
@@ -733,7 +760,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           if (!editor?.isConnected || composerHasText(editor)) return false;
           item.editor = editor;
         } else {
-          if (!editor?.isConnected || composerText(editor) !== (item.original_text || item.text)) return false;
+          editor = currentComposerForItem(item);
+          if (!editor) return false;
+          item.editor = editor;
         }
         editor.focus();
         if (replace) {
@@ -977,16 +1006,16 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       .nt-outgoing-original-toggle:hover{background:var(--background-modifier-hover,#ffffff0f)}
     `;
   }
-  function restoreSentText(root) {
+  function sentTextForMatching(root) {
     const originals = window.__nudeTranslatorOriginals;
     if (originals instanceof Map) {
+      const values = [];
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {
         const node = walker.currentNode;
-        if (!originals.has(node)) continue;
-        node.nodeValue = originals.get(node);
-        originals.delete(node);
+        values.push(originals.has(node) ? originals.get(node) : node.nodeValue || '');
       }
+      return values.join('').replace(/\u00a0/g, ' ').trim();
     }
     return (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
   }
@@ -1108,7 +1137,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
             detachView(root);
             continue;
           }
-          const currentText = comparableMessageText(restoreSentText(root));
+          const currentText = comparableMessageText(sentTextForMatching(root));
           if (currentText !== comparableMessageText(record.sent_text)) {
             detachView(root);
             continue;
@@ -1263,7 +1292,7 @@ pub fn outgoing_originals_ui_script(
         ))
 }
 
-pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 18;
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 19;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();
@@ -1610,9 +1639,9 @@ mod tests {
             "comparableMessageText(originalText(candidate)) === comparableMessageText(item.sent_text)"
         ));
         assert!(originals.contains("function comparableMessageText(value)"));
-        assert!(
-            originals.contains("const currentText = comparableMessageText(restoreSentText(root))")
-        );
+        assert!(originals
+            .contains("const currentText = comparableMessageText(sentTextForMatching(root))"));
+        assert!(!originals.contains("node.nodeValue = originals.get(node)"));
         assert!(originals.contains("comparableMessageText(record.sent_text)"));
     }
 

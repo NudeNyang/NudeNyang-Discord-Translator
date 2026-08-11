@@ -142,6 +142,21 @@ test("outgoing translation preserves Discord Slate mention entities", () => {
   assert.match(outgoing, /if \(hasActiveAutocomplete\(editor\)\) return/);
 });
 
+test("slow CLI replies survive Discord replacing the composer", () => {
+  assert.match(outgoing, /function currentComposerForItem\(item\)/);
+  assert.match(outgoing, /editor = currentComposerForItem\(item\)/);
+  assert.match(outgoing, /item\.editor = editor/);
+  assert.match(outgoing, /const previous = this\.pendingForEditor\(editor\)/);
+});
+
+test("outgoing original matching never rewrites translated message DOM", () => {
+  assert.match(outgoing, /function sentTextForMatching\(root\)/);
+  assert.match(outgoing, /comparableMessageText\(sentTextForMatching\(root\)\)/);
+  const matcher = outgoing.match(/function sentTextForMatching\(root\) \{([\s\S]*?)\n  \}/);
+  assert.ok(matcher, "non-mutating sent text matcher must exist");
+  assert.doesNotMatch(matcher[1], /node\.nodeValue = originals\.get\(node\)/);
+});
+
 test("outgoing original matching treats rendered Discord markdown as the same message", () => {
   const comparableMessageText = outgoingComparableMessageText();
 
@@ -175,7 +190,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 24/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 30/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 31/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
