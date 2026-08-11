@@ -107,7 +107,6 @@ const OPTIONS = {
 
 const state = {
   config: normalizeConfig(),
-  saved: normalizeConfig(),
   runtime: null,
   selectValues: {},
   promptActive: false,
@@ -128,7 +127,6 @@ const state = {
   toggleActive: false,
   outgoingToggleActive: false,
   autostartEnabled: false,
-  autostartSaved: false,
   autostartLoading: false,
   providerConnections: new Map(),
   providerLoading: false,
@@ -153,7 +151,7 @@ const elements = {
   outgoingShortcut: document.querySelector("#toggle-outgoing-shortcut"),
   sendImmediatelyShortcut: document.querySelector("#send-immediately-shortcut"),
   reviewBeforeSendShortcut: document.querySelector("#review-before-send-shortcut"),
-  cancel: document.querySelector("#cancel"),
+  resetSettings: document.querySelector("#reset-settings"),
   saveStatus: document.querySelector("#save-status"),
   engineState: document.querySelector("#engine-state"),
   engineStateLabel: document.querySelector("#engine-state-label"),
@@ -861,6 +859,28 @@ async function clearTranslationCache() {
   }
 }
 
+async function resetSettings() {
+  const confirmed = await showModal({
+    title: "설정 초기화",
+    message: "앱 설정과 단축키를 기본값으로 초기화합니다. 번역 기록, 다운로드한 모델 및 번역 서비스 인증 정보는 유지됩니다.",
+    acceptText: "초기화",
+    cancelText: "취소",
+  });
+  if (!confirmed) return;
+  elements.resetSettings.disabled = true;
+  try {
+    await waitForSettingsUpdates();
+    setLocalizedText(elements.saveStatus, "초기화 중");
+    const reset = await invoke("settings_reset");
+    if (state.autostartEnabled) await setAutostartEnabled(false);
+    renderConfig(reset);
+    document.querySelectorAll(".provider-secret").forEach(secret => { secret.value = ""; });
+    setLocalizedText(elements.saveStatus, "설정을 초기화했습니다.");
+  } finally {
+    elements.resetSettings.disabled = false;
+  }
+}
+
 async function loadAppInformation() {
   if (tauriGetVersion) {
     try {
@@ -899,15 +919,13 @@ function renderAutostart() {
   elements.autostart.setAttribute("aria-busy", String(state.autostartLoading));
 }
 
-async function loadAutostartState({ updateBaseline = false } = {}) {
+async function loadAutostartState() {
   if (!tauriAutostartIsEnabled) {
     state.autostartEnabled = false;
-    if (updateBaseline) state.autostartSaved = false;
     renderAutostart();
     return;
   }
   state.autostartEnabled = Boolean(await tauriAutostartIsEnabled());
-  if (updateBaseline) state.autostartSaved = state.autostartEnabled;
   renderAutostart();
 }
 
@@ -1110,9 +1128,8 @@ function closeAllSelects() {
   document.querySelectorAll(".custom-select.open").forEach(closeSelect);
 }
 
-function renderConfig(config, { updateBaseline = false } = {}) {
+function renderConfig(config) {
   state.config = normalizeConfig(config);
-  if (updateBaseline) state.saved = normalizeConfig(config);
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
@@ -1443,7 +1460,7 @@ async function showError(title, message) {
 async function loadSettings() {
   try {
     const config = await invoke("settings_get");
-    renderConfig(config, { updateBaseline: true });
+    renderConfig(config);
     setLocalizedText(elements.saveStatus, "변경 사항은 즉시 적용됩니다.");
   } catch (error) {
     setLocalizedError(elements.saveStatus, error);
@@ -1461,10 +1478,9 @@ function waitForStableUiFrame() {
 async function initializeSettingsUi() {
   await loadSettings();
   try {
-    await loadAutostartState({ updateBaseline: true });
+    await loadAutostartState();
   } catch (error) {
     state.autostartEnabled = false;
-    state.autostartSaved = false;
     renderAutostart();
     writeDiagnostic("warn", `autostart-state: ${String(error)}`);
   }
@@ -1645,6 +1661,9 @@ elements.autostart.addEventListener("click", async () => {
 elements.clearTranslationCache.addEventListener("click", () => {
   clearTranslationCache().catch(error => showError("번역 기록을 정리하지 못했습니다", String(error)));
 });
+elements.resetSettings.addEventListener("click", () => {
+  resetSettings().catch(error => showError("설정을 초기화하지 못했습니다", String(error)));
+});
 elements.settingsScroll.addEventListener("scroll", () => {
   updateScrollIndicator();
   elements.settingsScrollRegion.classList.add("scrolling");
@@ -1654,21 +1673,6 @@ elements.settingsScroll.addEventListener("scroll", () => {
     550,
   );
 }, { passive: true });
-elements.cancel.addEventListener("click", async () => {
-  try {
-    await waitForSettingsUpdates();
-    setLocalizedText(elements.saveStatus, "되돌리는 중");
-    const restored = await applySettingsPatch(state.saved, { status: false });
-    if (state.autostartEnabled !== state.autostartSaved) {
-      await setAutostartEnabled(state.autostartSaved);
-    }
-    renderConfig(restored);
-    document.querySelectorAll(".provider-secret").forEach(secret => { secret.value = ""; });
-    setLocalizedText(elements.saveStatus, "변경 사항을 되돌렸습니다.");
-  } catch (error) {
-    await showError("설정을 되돌리지 못했습니다", String(error));
-  }
-});
 elements.form.addEventListener("submit", async event => {
   event.preventDefault();
   try {
@@ -1679,8 +1683,6 @@ elements.form.addEventListener("submit", async event => {
       revealProviderConnection(translator);
       throw new Error("선택한 외부 번역 서비스를 먼저 연결하십시오.");
     }
-    state.saved = normalizeConfig(state.config);
-    state.autostartSaved = state.autostartEnabled;
     await invoke("main_window_hide");
   } catch (error) {
     setLocalizedError(elements.saveStatus, error);

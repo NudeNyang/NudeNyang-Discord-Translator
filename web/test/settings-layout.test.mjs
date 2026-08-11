@@ -50,8 +50,11 @@ test("settings use six uniform navigation categories", () => {
   );
 });
 
-test("settings can be reverted and native window chrome follows the selected theme", () => {
-  assert.match(markup, /<button class="button secondary" id="cancel" type="button">되돌리기<\/button>/);
+test("settings reset is separated from the confirmation footer and native window chrome follows the selected theme", () => {
+  assert.doesNotMatch(markup, /id="cancel"/);
+  assert.match(markup, /id="reset-settings"[^>]*>초기화<\/button>/);
+  assert.match(script, /invoke\("settings_reset"\)/);
+  assert.match(rustMain, /fn settings_reset\(/);
   assert.match(script, /invoke\("main_window_set_theme", \{ theme, resolvedTheme \}\)/);
   assert.match(rustMain, /DWMWA_CAPTION_COLOR/);
   assert.match(rustMain, /DWMWA_TEXT_COLOR/);
@@ -187,7 +190,8 @@ test("the incoming shortcut toggles the native engine without waiting for the se
 });
 
 test("footer action labels stay on one line", () => {
-  assert.match(markup, /id="cancel"[^>]*>되돌리기<\/button>/);
+  assert.doesNotMatch(markup, /id="cancel"/);
+  assert.match(markup, /<div class="footer-actions"><button class="button primary" id="confirm"/);
   assert.match(styles, /\.footer-actions \.button[\s\S]*white-space:\s*nowrap/);
   assert.match(styles, /\.form-footer\s*\{[\s\S]*position:\s*sticky[\s\S]*bottom:\s*0/);
   assert.match(styles, /\.form-footer\s*\{[\s\S]*min-height:\s*68px/);

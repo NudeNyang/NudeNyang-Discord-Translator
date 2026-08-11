@@ -504,6 +504,17 @@ fn settings_update(
 }
 
 #[tauri::command]
+fn settings_reset(
+    app: AppHandle,
+    engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
+) -> Result<AppConfig, String> {
+    let defaults = serde_json::to_value(AppConfig::default())
+        .map_err(|error| format!("기본 설정을 준비하지 못했습니다: {error}"))?;
+    settings_update(app, engine, config, defaults)
+}
+
+#[tauri::command]
 fn translation_set_enabled(app: AppHandle, enabled: bool) -> Result<Value, String> {
     set_translation_enabled_from_app(&app, enabled)
 }
@@ -1238,6 +1249,7 @@ fn main() {
             shortcut_capture_set_active,
             settings_get,
             settings_update,
+            settings_reset,
             main_window_set_theme,
             translation_set_enabled,
             runtime_status,
