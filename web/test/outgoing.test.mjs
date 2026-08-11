@@ -111,7 +111,7 @@ test("sent translations restore the exact typed original instead of translating 
   assert.match(outgoing, /\.nt-outgoing-original-copy::before\{content:attr\(data-text\)/);
   assert.match(outgoing, /function isEditingMessage\(root\)/);
   assert.match(outgoing, /if \(isEditingMessage\(root\)\)/);
-  assert.match(outgoing, /if \(currentText !== record\.sent_text\)/);
+  assert.match(outgoing, /if \(currentText !== comparableMessageText\(record\.sent_text\)\)/);
   assert.doesNotMatch(outgoing, /root\.textContent = record\.sent_text/);
   assert.match(outgoing, /\.nt-outgoing-original-toggle\{[^}]*font-size:11px/);
   assert.doesNotMatch(outgoing, /view\.innerHTML = '[^']*nt-outgoing-original-label/);

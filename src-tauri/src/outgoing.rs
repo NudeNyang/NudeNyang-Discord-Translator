@@ -1652,7 +1652,7 @@ mod tests {
         assert!(script.contains("function detachView(root)"));
         assert!(script.contains("if (isEditingMessage(root))"));
         assert!(script.contains("cleanupDetachedViews()"));
-        assert!(script.contains("if (currentText !== record.sent_text)"));
+        assert!(script.contains("if (currentText !== comparableMessageText(record.sent_text))"));
         let destructive_replacement = ["root.textContent", " = record.sent_text"].concat();
         assert!(!script.contains(&destructive_replacement));
     }
