@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'CLI 번역 예열, 전송 전용 워커, 지연 진단과 백그라운드 실행을 개선한 0.4.1 비공개 베타',
+    [string]$ReleaseNotes = 'MiLMMT 4B 실험 모델, 저장 공간 관리, Discord 종료 복원과 설정 화면을 개선한 0.4.2 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
