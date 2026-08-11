@@ -15,6 +15,7 @@ import {
   applyStaticTranslations,
   translateCopy,
   translateDynamicCopy,
+  translateUserFacingError,
 } from "./i18n.mjs";
 
 const tauriInvoke = window.__TAURI__?.core?.invoke;
@@ -108,6 +109,8 @@ const state = {
   storageStatus: null,
 };
 const localizedText = new Map();
+const localizedErrors = new Map();
+const localizedBackendText = new Map();
 
 const elements = {
   form: document.querySelector("#settings-form"),
@@ -308,7 +311,7 @@ function renderProviderConnections(connections) {
     const disconnect = row.querySelector(".provider-disconnect");
     status.dataset.state = connection.state;
     setLocalizedText(status.querySelector("strong"), providerStateLabel(connection));
-    setLocalizedText(status.querySelector("span"), connection.detail);
+    setLocalizedBackendText(status.querySelector("span"), connection.detail);
     if (action) {
       action.hidden = connection.canDisconnect;
       action.disabled = connection.connected;
@@ -316,7 +319,10 @@ function renderProviderConnections(connections) {
     }
     if (disconnect) disconnect.hidden = !connection.canDisconnect;
     const secret = row.querySelector(".provider-secret");
-    if (secret) secret.placeholder = connection.connected ? "새 API 키 입력 시 변경" : "DeepL API 키";
+    if (secret) secret.placeholder = translateCopy(
+      currentUiLanguage(),
+      connection.connected ? "새 API 키 입력 시 변경" : "DeepL API 키",
+    );
   }
   applyUiLanguage(state.selectValues.ui_language || state.config.ui_language);
 }
@@ -331,7 +337,7 @@ async function loadProviderConnections() {
       const status = row.querySelector(".provider-status");
       status.dataset.state = "error";
       setLocalizedText(status.querySelector("strong"), "확인 실패");
-      setLocalizedText(status.querySelector("span"), String(error));
+      setLocalizedError(status.querySelector("span"), error);
     }
   } finally {
     state.providerLoading = false;
@@ -381,22 +387,31 @@ async function connectProvider(row) {
   try {
     let current = providerConnection(provider);
     if (current && !current.installed) {
-      action.textContent = "설치 중";
+      setLocalizedText(action, "설치 중");
       status.dataset.state = "loading";
-      status.querySelector("strong").textContent = "설치 중";
-      status.querySelector("span").textContent = `${current.name} CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.`;
+      setLocalizedText(status.querySelector("strong"), "설치 중");
+      setLocalizedText(
+        status.querySelector("span"),
+        `${current.name} CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.`,
+      );
       current = await invoke("provider_install", { provider });
       state.providerConnections.set(provider, current);
       renderProviderConnections([...state.providerConnections.values()]);
     }
 
     action.disabled = true;
-    action.textContent = provider === "deepl" ? "확인 중" : "로그인 중";
+    setLocalizedText(action, provider === "deepl" ? "확인 중" : "로그인 중");
     status.dataset.state = "loading";
-    status.querySelector("strong").textContent = provider === "deepl" ? "확인 중" : "로그인 중";
-    status.querySelector("span").textContent = provider === "deepl"
-      ? "DeepL API 키의 유효성을 확인하고 있습니다."
-      : "계정 로그인 절차를 시작하고 있습니다.";
+    setLocalizedText(
+      status.querySelector("strong"),
+      provider === "deepl" ? "확인 중" : "로그인 중",
+    );
+    setLocalizedText(
+      status.querySelector("span"),
+      provider === "deepl"
+        ? "DeepL API 키의 유효성을 확인하고 있습니다."
+        : "계정 로그인 절차를 시작하고 있습니다.",
+    );
     const loginProgress = provider !== "deepl" ? await showProviderLoginProgress(provider) : null;
     let connection;
     try {
@@ -428,14 +443,17 @@ async function showProviderLoginProgress(provider) {
   let cancelled = false;
   let closed = false;
   let unlistenReady = null;
-  elements.modalTitle.textContent = `${copy.name} 계정 연결`;
-  elements.modalMessage.textContent = copy.terminal
-    ? "Antigravity 로그인 터미널을 준비하고 있습니다. 잠시 기다리십시오."
-    : `${copy.name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.`;
-  elements.modalCancel.textContent = "취소";
+  setLocalizedText(elements.modalTitle, `${copy.name} 계정 연결`);
+  setLocalizedText(
+    elements.modalMessage,
+    copy.terminal
+      ? "Antigravity 로그인 터미널을 준비하고 있습니다. 잠시 기다리십시오."
+      : `${copy.name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.`,
+  );
+  setLocalizedText(elements.modalCancel, "취소");
   elements.modalCancel.hidden = false;
   elements.modalCancel.disabled = false;
-  elements.modalAccept.textContent = copy.terminal ? "터미널 열기" : "이동";
+  setLocalizedText(elements.modalAccept, copy.terminal ? "터미널 열기" : "이동");
   elements.modalAccept.hidden = false;
   elements.modalAccept.disabled = true;
   elements.modalLayer.dataset.variant = "provider-login";
@@ -449,7 +467,7 @@ async function showProviderLoginProgress(provider) {
     elements.modalCancel.removeEventListener("click", cancel);
     elements.modalAccept.removeEventListener("click", open);
     unlistenReady?.();
-    elements.modalCancel.textContent = "취소";
+    setLocalizedText(elements.modalCancel, "취소");
     elements.modalCancel.disabled = false;
     elements.modalAccept.disabled = false;
     elements.modalAccept.hidden = false;
@@ -459,15 +477,21 @@ async function showProviderLoginProgress(provider) {
     try {
       const opened = await invoke("provider_login_open");
       if (!opened) {
-        elements.modalMessage.textContent = "로그인 준비가 완료되지 않았습니다. 잠시 후 다시 시도하십시오.";
+        setLocalizedText(
+          elements.modalMessage,
+          "로그인 준비가 완료되지 않았습니다. 잠시 후 다시 시도하십시오.",
+        );
         elements.modalAccept.disabled = false;
         return;
       }
-      elements.modalMessage.textContent = copy.terminal
-        ? `열린 터미널에서 Google OAuth를 선택하십시오.\n브라우저 로그인 후 인증 코드를 터미널에 붙여넣으면 앱이 완료를 자동으로 감지합니다.`
-        : `브라우저에서 ${copy.account} 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.`;
+      setLocalizedText(
+        elements.modalMessage,
+        copy.terminal
+          ? `열린 터미널에서 Google OAuth를 선택하십시오.\n브라우저 로그인 후 인증 코드를 터미널에 붙여넣으면 앱이 완료를 자동으로 감지합니다.`
+          : `브라우저에서 ${copy.account} 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.`,
+      );
     } catch (error) {
-      elements.modalMessage.textContent = `로그인 페이지를 열지 못했습니다. 잠시 후 다시 시도하십시오.\n${String(error)}`;
+      setLocalizedError(elements.modalMessage, error);
       elements.modalAccept.disabled = false;
     }
   };
@@ -475,8 +499,8 @@ async function showProviderLoginProgress(provider) {
     if (cancelled) return;
     cancelled = true;
     elements.modalCancel.disabled = true;
-    elements.modalCancel.textContent = "취소 중";
-    elements.modalMessage.textContent = `${copy.name} 계정 로그인을 취소하고 있습니다.`;
+    setLocalizedText(elements.modalCancel, "취소 중");
+    setLocalizedText(elements.modalMessage, `${copy.name} 계정 로그인을 취소하고 있습니다.`);
     try {
       await invoke("provider_login_cancel");
     } finally {
@@ -487,16 +511,22 @@ async function showProviderLoginProgress(provider) {
   elements.modalAccept.addEventListener("click", open);
   if (tauriListen) {
     unlistenReady = await tauriListen("provider-login-ready", () => {
-      elements.modalMessage.textContent = copy.terminal
-        ? "Antigravity 최초 로그인을 진행하려면 터미널 열기를 선택하십시오."
-        : `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
+      setLocalizedText(
+        elements.modalMessage,
+        copy.terminal
+          ? "Antigravity 최초 로그인을 진행하려면 터미널 열기를 선택하십시오."
+          : `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`,
+      );
       elements.modalAccept.disabled = false;
       elements.modalAccept.focus();
     });
   } else {
-    elements.modalMessage.textContent = copy.terminal
-      ? "Antigravity 최초 로그인을 진행하려면 터미널 열기를 선택하십시오."
-      : `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`;
+    setLocalizedText(
+      elements.modalMessage,
+      copy.terminal
+        ? "Antigravity 최초 로그인을 진행하려면 터미널 열기를 선택하십시오."
+        : `${copy.name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.`,
+    );
     elements.modalAccept.disabled = false;
   }
   elements.modalCancel.focus();
@@ -509,7 +539,7 @@ async function savePendingProviderCredentials() {
   const credential = secret?.value.trim() || "";
   if (!credential) return;
 
-  elements.saveStatus.textContent = "DeepL API 키 확인 중";
+  setLocalizedText(elements.saveStatus, "DeepL API 키 확인 중");
   const connection = await invoke("provider_connect", { provider: "deepl", credential });
   if (!connection.connected) throw new Error("DeepL API 키를 저장하지 못했습니다.");
   state.providerConnections.set("deepl", connection);
@@ -770,14 +800,45 @@ function currentUiLanguage() {
 
 function setLocalizedText(element, korean) {
   if (!element) return;
+  localizedErrors.delete(element);
+  localizedBackendText.delete(element);
   localizedText.set(element, String(korean ?? ""));
   element.textContent = translateDynamicCopy(currentUiLanguage(), korean);
+}
+
+function setLocalizedError(element, error) {
+  if (!element) return;
+  localizedText.delete(element);
+  localizedBackendText.delete(element);
+  localizedErrors.set(element, String(error ?? ""));
+  element.textContent = translateUserFacingError(currentUiLanguage(), error);
+}
+
+function translateBackendText(language, value) {
+  const source = String(value ?? "");
+  const translated = translateDynamicCopy(language, source);
+  if (translated !== source || !/[가-힣]/.test(source)) return translated;
+  return translateUserFacingError(language, source);
+}
+
+function setLocalizedBackendText(element, value) {
+  if (!element) return;
+  localizedText.delete(element);
+  localizedErrors.delete(element);
+  localizedBackendText.set(element, String(value ?? ""));
+  element.textContent = translateBackendText(currentUiLanguage(), value);
 }
 
 function applyUiLanguage(language) {
   applyStaticTranslations(document, language);
   for (const [element, korean] of localizedText) {
     element.textContent = translateDynamicCopy(language, korean);
+  }
+  for (const [element, error] of localizedErrors) {
+    element.textContent = translateUserFacingError(language, error);
+  }
+  for (const [element, value] of localizedBackendText) {
+    element.textContent = translateBackendText(language, value);
   }
   renderStorageStatus();
   window.requestAnimationFrame(updateScrollIndicator);
@@ -1093,7 +1154,7 @@ function updateEngineState(status) {
     : connectionLabel;
   state.config.enabled = enabledState.enabled;
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
-  if (status.notice) setLocalizedText(elements.saveStatus, status.notice);
+  if (status.notice) setLocalizedBackendText(elements.saveStatus, status.notice);
 }
 
 function localizeRuntimeLabel(label, language) {
@@ -1116,11 +1177,8 @@ async function pollRuntime() {
     if (shouldPromptRestart(status, state)) await handleRestartRequired(status);
   } catch (error) {
     elements.engineState.dataset.state = "error";
-    elements.engineStateLabel.textContent = translateCopy(
-      state.selectValues.ui_language || state.config.ui_language,
-      "엔진 연결 실패",
-    );
-    elements.saveStatus.textContent = String(error);
+    setLocalizedText(elements.engineStateLabel, "엔진 연결 실패");
+    setLocalizedError(elements.saveStatus, error);
   } finally {
     state.polling = false;
   }
@@ -1156,7 +1214,7 @@ async function handleRestartRequired(status) {
     state.restartAttempted = true;
     state.repairActive = true;
     elements.engineState.dataset.state = "loading";
-    elements.engineStateLabel.textContent = "Discord 재시작 중";
+    setLocalizedText(elements.engineStateLabel, "Discord 재시작 중");
     await invoke("discord_restart", {
       expectedProcessId: status.discordProcessId,
     });
@@ -1211,7 +1269,12 @@ function showModal({
       timer = window.setInterval(() => {
         remaining -= 1;
         if (remaining <= 0) finish(true);
-        else if (autoMessage) elements.modalMessage.textContent = autoMessage(remaining);
+        else if (autoMessage) {
+          elements.modalMessage.textContent = translateDynamicCopy(
+            currentUiLanguage(),
+            autoMessage(remaining),
+          );
+        }
       }, 1000);
     }
     (cancelVisible ? elements.modalCancel : elements.modalAccept).focus();
@@ -1222,7 +1285,7 @@ async function showError(title, message) {
   writeDiagnostic("error", `${title}: ${message}`);
   await showModal({
     title,
-    message,
+    message: translateUserFacingError(currentUiLanguage(), message),
     acceptText: "확인",
     cancelVisible: false,
   });
@@ -1234,9 +1297,9 @@ async function loadSettings() {
     renderConfig(config, { updateBaseline: true });
     setLocalizedText(elements.saveStatus, "변경 사항은 즉시 적용됩니다.");
   } catch (error) {
-    elements.saveStatus.textContent = String(error);
+    setLocalizedError(elements.saveStatus, error);
     elements.engineState.dataset.state = "error";
-    elements.engineStateLabel.textContent = "엔진 연결 실패";
+    setLocalizedText(elements.engineStateLabel, "엔진 연결 실패");
   }
 }
 
@@ -1296,10 +1359,10 @@ async function applyShortcutImmediately(element, configKey, shortcut, help, fall
   };
   try {
     await applySettingsPatch({ hotkeys });
-    help.textContent = `${shortcut}로 적용되었습니다.`;
+    setLocalizedText(help, `${shortcut}로 적용되었습니다.`);
   } catch (error) {
     element.value = previous;
-    help.textContent = "단축키를 적용하지 못했습니다.";
+    setLocalizedText(help, "단축키를 적용하지 못했습니다.");
     await showError("단축키를 적용하지 못했습니다", String(error));
   }
 }
@@ -1317,20 +1380,20 @@ function bindShortcutEditor(element, configKey, helpId, fallback) {
     }
     const shortcut = shortcutFromKeyboardEvent(event);
     if (!shortcut) {
-      help.textContent = "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 입력하십시오.";
+      setLocalizedText(help, "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 입력하십시오.");
       return;
     }
     element.value = shortcut;
-    help.textContent = `${shortcut} 적용 중`;
+    setLocalizedText(help, `${shortcut} 적용 중`);
     await applyShortcutImmediately(element, configKey, shortcut, help, fallback);
   });
   element.addEventListener("focus", () => {
     invoke("shortcut_capture_set_active", { active: true }).catch(() => {});
-    help.textContent = "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.";
+    setLocalizedText(help, "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.");
   });
   element.addEventListener("blur", () => {
     invoke("shortcut_capture_set_active", { active: false }).catch(() => {});
-    help.textContent = "입력란을 선택한 뒤 원하는 단축키를 누르십시오.";
+    setLocalizedText(help, "입력란을 선택한 뒤 원하는 단축키를 누르십시오.");
   });
 }
 
@@ -1433,7 +1496,7 @@ elements.form.addEventListener("submit", async event => {
     state.saved = normalizeConfig(state.config);
     await invoke("main_window_hide");
   } catch (error) {
-    elements.saveStatus.textContent = String(error);
+    setLocalizedError(elements.saveStatus, error);
   }
 });
 
@@ -1468,9 +1531,9 @@ bindOverlayScrollIndicator();
 new ResizeObserver(updateScrollIndicator).observe(elements.settingsScroll);
 window.requestAnimationFrame(updateScrollIndicator);
 initializeSettingsUi().catch(error => {
-  elements.saveStatus.textContent = String(error);
+  setLocalizedError(elements.saveStatus, error);
   elements.engineState.dataset.state = "error";
-  elements.engineStateLabel.textContent = "엔진 연결 실패";
+  setLocalizedText(elements.engineStateLabel, "엔진 연결 실패");
 });
 loadProviderConnections();
 loadStorageStatus().catch(error => showError("저장 공간 정보를 확인하지 못했습니다", String(error)));

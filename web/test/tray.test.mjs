@@ -16,6 +16,7 @@ const rustShell = await readFile(
 const tauriConfig = JSON.parse(
   await readFile(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
 );
+const { translateCopy } = await import("../i18n.mjs");
 
 test("confirming waits for real-time settings work before hiding the window", () => {
   const confirmHandler = appScript.match(/elements\.form\.addEventListener\("submit"[\s\S]*?\n\}\);/)?.[0] || "";
@@ -41,6 +42,19 @@ test("custom tray menu exposes the expected actions and current app palette", ()
   assert.match(trayStyles, /--accent: #347fc7/);
   assert.match(trayStyles, /--accent: #5aa8f5/);
   assert.doesNotMatch(`${trayMarkup}${trayScript}`, /[—–]/);
+});
+
+test("tray menu follows the configured interface language", () => {
+  assert.match(trayScript, /from "\.\/i18n\.mjs"/);
+  assert.match(trayScript, /applyTrayLanguage\(config\.ui_language/);
+  assert.match(trayScript, /translateDynamicCopy\(currentUiLanguage/);
+  const directKoreanAssignments = trayScript
+    .split(/\r?\n/)
+    .filter(line => /\.textContent\s*=/.test(line) && /[가-힣]/.test(line))
+    .filter(line => !/translate(?:Copy|DynamicCopy)|LANGUAGE_LABELS/.test(line));
+  assert.deepEqual(directKoreanAssignments, []);
+  const keys = [...trayMarkup.matchAll(/data-i18n-key="([^"]+)"/g)].map(match => match[1]);
+  for (const key of keys) assert.notEqual(translateCopy("ja", key), key, key);
 });
 
 test("translation state changes are broadcast to the open tray menu", () => {

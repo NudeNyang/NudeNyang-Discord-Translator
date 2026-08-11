@@ -5,7 +5,12 @@ import {
   resolveUiLanguage,
   translateCopy,
   translateDynamicCopy,
+  translateUserFacingError,
 } from "../i18n.mjs";
+import { readFile } from "node:fs/promises";
+
+const appScript = await readFile(new URL("../app.js", import.meta.url), "utf8");
+const settingsMarkup = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
 test("automatic settings language follows supported system locales", () => {
   assert.equal(resolveUiLanguage("auto", "ko-KR"), "ko");
@@ -100,4 +105,96 @@ test("update prompts preserve the version while following the interface language
     ),
     "Version 0.3.6-beta is available. Installing it now will restart the app. You can install it later if you are working.",
   );
+});
+
+test("global shortcut registration errors are localized without raw platform diagnostics", () => {
+  const source = "Shift+F12 전역 단축키를 등록하지 못했습니다: HotKey already registered: HotKey { mods: Modifiers(SHIFT), key: F12, id: 33554603 }";
+  assert.equal(
+    translateUserFacingError("ja", source),
+    "Shift+F12 グローバルショートカットを登録できませんでした。このショートカットは別のアプリですでに使用されています。別の組み合わせを選択してください。",
+  );
+  assert.equal(
+    translateUserFacingError("en", source),
+    "Could not register the Shift+F12 global shortcut. Another app is already using this shortcut. Choose a different combination.",
+  );
+  assert.doesNotMatch(translateUserFacingError("zh", source), /[가-힣]|HotKey \{/);
+});
+
+test("every literal settings error title has translations", () => {
+  const titles = [...appScript.matchAll(/showError\(\s*"([^"]+)"/g)].map(match => match[1]);
+  assert.ok(titles.length >= 15);
+  for (const title of titles) {
+    assert.notEqual(translateDynamicCopy("ja", title), title, title);
+    assert.notEqual(translateDynamicCopy("en", title), title, title);
+    assert.notEqual(translateDynamicCopy("zh", title), title, title);
+  }
+});
+
+test("unknown backend errors use a localized safe fallback instead of leaking another UI language", () => {
+  for (const language of ["en", "ja", "zh"]) {
+    const translated = translateUserFacingError(language, "내부 저장소의 알 수 없는 오류입니다: opaque detail");
+    assert.doesNotMatch(translated, /[가-힣]/);
+    assert.match(translated, /opaque detail/);
+  }
+});
+
+test("settings script routes backend errors and direct status copy through localization", () => {
+  assert.match(appScript, /translateUserFacingError\(currentUiLanguage\(\), message\)/);
+  assert.match(appScript, /setLocalizedBackendText\(status\.querySelector\("span"\), connection\.detail\)/);
+  assert.match(appScript, /setLocalizedBackendText\(elements\.saveStatus, status\.notice\)/);
+  const directKoreanAssignments = appScript
+    .split(/\r?\n/)
+    .filter(line => /\.textContent\s*=/.test(line) && /[가-힣]/.test(line))
+    .filter(line => !/translate(?:Copy|DynamicCopy)/.test(line));
+  assert.deepEqual(directKoreanAssignments, []);
+});
+
+test("every static Korean settings label and accessibility attribute has translations", () => {
+  const leafText = [...settingsMarkup.matchAll(/<(?:h1|h2|h3|p|span|strong|b|button|small)[^>]*>([^<>]*[가-힣][^<>]*)<\//g)]
+    .map(match => match[1].trim())
+    .filter(Boolean);
+  const attributes = [...settingsMarkup.matchAll(/(?:aria-label|placeholder)="([^"]*[가-힣][^"]*)"/g)]
+    .map(match => match[1].trim());
+  for (const value of [...new Set([...leafText, ...attributes])]) {
+    assert.notEqual(translateCopy("ja", value), value, value);
+    assert.notEqual(translateCopy("en", value), value, value);
+    assert.notEqual(translateCopy("zh", value), value, value);
+  }
+});
+
+test("backend runtime notices and provider details do not leak Korean into other UI languages", () => {
+  const samples = [
+    "로컬 모델은 번역 기능을 켤 때 준비합니다.",
+    "표시 언어를 변경했습니다.",
+    "이미지 OCR과 번역을 처리하고 있습니다. 최초 실행 시에는 모델 준비에 시간이 걸릴 수 있습니다.",
+    "번역 서비스가 요청한 메시지 수와 다른 결과를 반환했습니다.",
+    "캐시된 이미지 번역을 적용했습니다.",
+    "번역할 이미지 텍스트를 찾지 못했습니다.",
+    "이미지에서 3개 글자 영역을 번역했습니다.",
+    "표시 번역은 Hy-MT2 1.8B Q4 (경량·기본), 실시간 통역은 Claude (품질 최우선)을 사용합니다.",
+    "MiLMMT 4B Q4 (실험·약 2.9GB) 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
+    "ChatGPT 계정으로 연결되어 있습니다.",
+    "Codex CLI는 설치되어 있지만 ChatGPT 로그인이 필요합니다.",
+    "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다.",
+    "Google Antigravity CLI는 설치되어 있지만 로그인이 필요합니다.",
+    "Claude 계정으로 연결되어 있습니다.",
+    "Claude Code는 설치되어 있지만 Claude 로그인이 필요합니다.",
+    "API 키가 운영체제 보안 저장소에 저장되어 있습니다.",
+    "DeepL API Free 또는 Pro 키를 입력하여 연결하십시오.",
+  ];
+  for (const language of ["en", "ja", "zh"]) {
+    for (const sample of samples) {
+      assert.doesNotMatch(translateDynamicCopy(language, sample), /[가-힣]/, sample);
+    }
+  }
+});
+
+test("every literal localized status assignment has translations", () => {
+  const values = [...appScript.matchAll(/setLocalizedText\([^,\n]+,\s*"([^"]*[가-힣][^"]*)"/g)]
+    .map(match => match[1]);
+  for (const value of [...new Set(values)]) {
+    assert.notEqual(translateDynamicCopy("ja", value), value, value);
+    assert.notEqual(translateDynamicCopy("en", value), value, value);
+    assert.notEqual(translateDynamicCopy("zh", value), value, value);
+  }
 });

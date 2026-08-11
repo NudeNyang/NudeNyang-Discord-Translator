@@ -155,6 +155,102 @@ const COPY = Object.freeze({
   "저장 중": ["Saving", "保存中", "正在保存"],
   "저장되었습니다.": ["Saved.", "保存しました。", "已保存。"],
   "선택한 외부 번역 서비스를 먼저 연결하십시오.": ["Connect the selected external translation service first.", "選択した外部翻訳サービスに先に接続してください。", "请先连接所选的外部翻译服务。"],
+  "로컬 모델을 삭제하지 못했습니다": ["Could not delete the local model", "ローカルモデルを削除できませんでした", "无法删除本地模型"],
+  "설정을 적용하지 못했습니다": ["Could not apply settings", "設定を適用できませんでした", "无法应用设置"],
+  "화면 확인 빈도를 적용하지 못했습니다": ["Could not apply the screen scan rate", "画面確認頻度を適用できませんでした", "无法应用屏幕检查频率"],
+  "번역 상태를 변경하지 못했습니다": ["Could not change translation state", "翻訳状態を変更できませんでした", "无法更改翻译状态"],
+  "전송 메시지 통역 상태를 변경하지 못했습니다": ["Could not change outgoing interpretation state", "送信メッセージ通訳の状態を変更できませんでした", "无法更改发送消息翻译状态"],
+  "Discord 연결 실패": ["Discord connection failed", "Discordへの接続に失敗しました", "Discord 连接失败"],
+  "Discord 자동 재시작 실패": ["Discord automatic restart failed", "Discordの自動再起動に失敗しました", "Discord 自动重启失败"],
+  "전송 전 확인 설정을 적용하지 못했습니다": ["Could not apply the review-before-send setting", "送信前確認の設定を適用できませんでした", "无法应用发送前确认设置"],
+  "로컬 모델 예열 설정을 적용하지 못했습니다": ["Could not apply the local model warm-up setting", "ローカルモデル常駐の設定を適用できませんでした", "无法应用本地模型预热设置"],
+  "단축키를 적용하지 못했습니다": ["Could not apply the shortcut", "ショートカットを適用できませんでした", "无法应用快捷键"],
+  "링크를 열지 못했습니다": ["Could not open the link", "リンクを開けませんでした", "无法打开链接"],
+  "번역 서비스를 연결하지 못했습니다": ["Could not connect the translation service", "翻訳サービスに接続できませんでした", "无法连接翻译服务"],
+  "연결을 해제하지 못했습니다": ["Could not disconnect", "接続を解除できませんでした", "无法断开连接"],
+  "API 키를 적용하지 못했습니다": ["Could not apply the API key", "APIキーを適用できませんでした", "无法应用 API 密钥"],
+  "업데이트를 확인하지 못했습니다": ["Could not check for updates", "アップデートを確認できませんでした", "无法检查更新"],
+  "업데이트를 설치하지 못했습니다": ["Could not install the update", "アップデートをインストールできませんでした", "无法安装更新"],
+  "로그 파일을 열지 못했습니다": ["Could not open the log file", "ログファイルを開けませんでした", "无法打开日志文件"],
+  "번역 기록을 정리하지 못했습니다": ["Could not clear translation history", "翻訳履歴を消去できませんでした", "无法清理翻译记录"],
+  "설정을 되돌리지 못했습니다": ["Could not revert settings", "設定を元に戻せませんでした", "无法还原设置"],
+  "저장 공간 정보를 확인하지 못했습니다": ["Could not check storage information", "ストレージ情報を確認できませんでした", "无法检查存储信息"],
+  "Discord 자동 재시작을 허용하시겠습니까?": ["Allow Discord to restart automatically?", "Discordの自動再起動を許可しますか？", "是否允许 Discord 自动重启？"],
+  "실시간 번역을 켜면 Discord가 디버그 렌더러 모드로 실행되지 않았을 때 15초 안내 후 자동으로 다시 시작합니다.\n\n재시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.": ["When real-time translation is enabled and Discord is not running in debug renderer mode, it will restart automatically after a 15-second notice.\n\nRestarting may discard a message you are typing or end a call.", "リアルタイム翻訳をオンにした際、Discordがデバッグレンダラーモードで動作していない場合は、15秒の案内後に自動で再起動します。\n\n再起動すると、入力中のメッセージが消えたり、通話が終了したりする場合があります。", "开启实时翻译后，如果 Discord 未以调试渲染器模式运行，将在提示 15 秒后自动重启。\n\n重启可能会丢失正在输入的消息或结束通话。"],
+  "동의하고 켜기": ["Allow and enable", "許可してオンにする", "允许并开启"],
+  "이번 번역 실행에서 자동 재시작을 이미 한 번 시도했습니다. Discord를 직접 종료한 후 다시 실행하십시오.": ["An automatic restart has already been attempted during this translation session. Close Discord completely and start it again.", "今回の翻訳実行では自動再起動をすでに一度試しました。Discordを完全に終了してから、もう一度起動してください。", "本次翻译运行中已尝试过一次自动重启。请完全退出 Discord 后重新启动。"],
+  "Discord 번역 연결을 준비합니다": ["Preparing the Discord translation connection", "Discord翻訳への接続を準備しています", "正在准备 Discord 翻译连接"],
+  "지금 재시작": ["Restart now", "今すぐ再起動", "立即重启"],
+  "Discord 재시작 중": ["Restarting Discord", "Discordを再起動中", "正在重启 Discord"],
+  "설치 중": ["Installing", "インストール中", "正在安装"],
+  "로그인 중": ["Signing in", "ログイン中", "正在登录"],
+  "취소": ["Cancel", "キャンセル", "取消"],
+  "취소 중": ["Cancelling", "キャンセル中", "正在取消"],
+  "터미널 열기": ["Open terminal", "ターミナルを開く", "打开终端"],
+  "이동": ["Continue", "移動", "继续"],
+  "로그인 준비가 완료되지 않았습니다. 잠시 후 다시 시도하십시오.": ["Sign-in is not ready yet. Try again shortly.", "ログインの準備がまだ完了していません。しばらくしてからもう一度お試しください。", "登录尚未准备完成，请稍后重试。"],
+  "Antigravity 로그인 터미널을 준비하고 있습니다. 잠시 기다리십시오.": ["Preparing the Antigravity sign-in terminal. Please wait.", "Antigravityのログインターミナルを準備しています。しばらくお待ちください。", "正在准备 Antigravity 登录终端，请稍候。"],
+  "Antigravity 최초 로그인을 진행하려면 터미널 열기를 선택하십시오.": ["Select Open terminal to complete the first Antigravity sign-in.", "Antigravityの初回ログインを行うには「ターミナルを開く」を選択してください。", "请选择“打开终端”以完成 Antigravity 首次登录。"],
+  "열린 터미널에서 Google OAuth를 선택하십시오.\n브라우저 로그인 후 인증 코드를 터미널에 붙여넣으면 앱이 완료를 자동으로 감지합니다.": ["Select Google OAuth in the opened terminal.\nAfter signing in through the browser, paste the authorization code into the terminal. The app will detect completion automatically.", "開いたターミナルでGoogle OAuthを選択してください。\nブラウザでログインした後、認証コードをターミナルに貼り付けると、アプリが完了を自動で検出します。", "请在打开的终端中选择 Google OAuth。\n通过浏览器登录后，将授权码粘贴到终端，应用会自动检测完成状态。"],
+  "DeepL API 키 확인 중": ["Checking DeepL API key", "DeepL APIキーを確認中", "正在检查 DeepL API 密钥"],
+  "DeepL API 키": ["DeepL API key", "DeepL APIキー", "DeepL API 密钥"],
+  "새 API 키 입력 시 변경": ["Enter a new API key to replace it", "新しいAPIキーを入力すると変更されます", "输入新的 API 密钥即可更换"],
+  "라이선스 및 제3자 고지": ["Licenses and third-party notices", "ライセンスと第三者への通知", "许可证和第三方声明"],
+  "열기": ["Open", "開く", "打开"],
+  "뒤로": ["Back", "戻る", "返回"],
+  "종료": ["Quit", "終了", "退出"],
+  "연결 필요": ["Connection required", "接続が必要", "需要连接"],
+  "상태 확인 중": ["Checking status", "状態を確認中", "正在检查状态"],
+  "상태를 확인할 수 없음": ["Status unavailable", "状態を確認できません", "无法检查状态"],
+  "요청을 처리할 수 없음": ["Could not process the request", "リクエストを処理できません", "无法处理请求"],
+  "표시 언어를 바꾸지 못함": ["Could not change the display language", "表示言語を変更できません", "无法更改显示语言"],
+  "번역 모델을 바꾸지 못함": ["Could not change the translation model", "翻訳モデルを変更できません", "无法更改翻译模型"],
+  "오류": ["Error", "エラー", "错误"],
+  "버전을 사용할 수 있습니다": ["version is available", "バージョンを利用できます", "版本可用"],
+  "NudeNyang Translator 트레이 메뉴": ["NudeNyang Translator tray menu", "NudeNyang Translator トレイメニュー", "NudeNyang Translator 托盘菜单"],
+  "표시 언어 선택": ["Select display language", "表示言語を選択", "选择显示语言"],
+  "번역 모델 선택": ["Select translation model", "翻訳モデルを選択", "选择翻译模型"],
+  "모델 다운로드 진행률": ["Model download progress", "モデルのダウンロード進行状況", "模型下载进度"],
+  "설정 분류": ["Settings categories", "設定カテゴリ", "设置分类"],
+  "프로젝트 링크": ["Project links", "プロジェクトリンク", "项目链接"],
+  "Tauri 앱에서만 사용할 수 있는 기능입니다.": ["This feature is available only in the Tauri app.", "この機能はTauriアプリでのみ使用できます。", "此功能仅可在 Tauri 应用中使用。"],
+  "허용되지 않은 외부 주소입니다.": ["This external address is not allowed.", "許可されていない外部アドレスです。", "不允许访问此外部地址。"],
+  "DeepL API 키를 입력하십시오.": ["Enter a DeepL API key.", "DeepL APIキーを入力してください。", "请输入 DeepL API 密钥。"],
+  "지원하지 않는 계정 로그인 방식입니다.": ["This account sign-in method is not supported.", "このアカウントログイン方式には対応していません。", "不支持此账户登录方式。"],
+  "DeepL API 키를 저장하지 못했습니다.": ["Could not save the DeepL API key.", "DeepL APIキーを保存できませんでした。", "无法保存 DeepL API 密钥。"],
+  "번역 서비스": ["Translation service", "翻訳サービス", "翻译服务"],
+  "로컬 모델은 번역 기능을 켤 때 준비합니다.": ["The local model will be prepared when translation is enabled.", "ローカルモデルは翻訳機能をオンにしたときに準備します。", "本地模型将在开启翻译功能时准备。"],
+  "표시 언어를 변경했습니다.": ["Display language changed.", "表示言語を変更しました。", "已更改显示语言。"],
+  "이미지 OCR과 번역을 처리하고 있습니다. 최초 실행 시에는 모델 준비에 시간이 걸릴 수 있습니다.": ["Processing image OCR and translation. Preparing models may take some time on the first run.", "画像OCRと翻訳を処理しています。初回実行時はモデルの準備に時間がかかる場合があります。", "正在处理图片 OCR 和翻译。首次运行时准备模型可能需要一些时间。"],
+  "번역 서비스가 요청한 메시지 수와 다른 결과를 반환했습니다.": ["The translation service returned a different number of results than requested.", "翻訳サービスが要求したメッセージ数と異なる件数の結果を返しました。", "翻译服务返回的结果数量与请求的消息数量不同。"],
+  "캐시된 이미지 번역을 적용했습니다.": ["Applied the cached image translation.", "キャッシュ済みの画像翻訳を適用しました。", "已应用缓存的图片翻译。"],
+  "번역할 이미지 텍스트를 찾지 못했습니다.": ["No image text was found to translate.", "翻訳できる画像内テキストが見つかりませんでした。", "未找到可翻译的图片文字。"],
+  "Codex CLI와 로그인 상태를 확인하고 있습니다.": ["Checking Codex CLI and sign-in status.", "Codex CLIとログイン状態を確認しています。", "正在检查 Codex CLI 和登录状态。"],
+  "Claude Code와 로그인 상태를 확인하고 있습니다.": ["Checking Claude Code and sign-in status.", "Claude Codeとログイン状態を確認しています。", "正在检查 Claude Code 和登录状态。"],
+  "Antigravity CLI와 로그인 상태를 확인하고 있습니다.": ["Checking Antigravity CLI and sign-in status.", "Antigravity CLIとログイン状態を確認しています。", "正在检查 Antigravity CLI 和登录状态。"],
+  "API 사용량 과금": ["Usage-based API billing", "API使用量に応じた課金", "按 API 使用量计费"],
+  "저장된 API 키를 확인하고 있습니다.": ["Checking the saved API key.", "保存済みのAPIキーを確認しています。", "正在检查已保存的 API 密钥。"],
+  "구독 서비스 인증은 각 공식 CLI에서 관리하며 API 키는 운영체제 보안 저장소에 보관합니다.": ["Subscription authentication is managed by each official CLI, and API keys are stored in the operating system secure storage.", "サブスクリプションサービスの認証は各公式CLIで管理され、APIキーはOSのセキュアストレージに保存されます。", "订阅服务身份验证由各官方 CLI 管理，API 密钥保存在操作系统安全存储中。"],
+  "ChatGPT 계정으로 연결되어 있습니다.": ["Connected with a ChatGPT account.", "ChatGPTアカウントで接続されています。", "已连接 ChatGPT 账户。"],
+  "Codex CLI는 설치되어 있지만 ChatGPT 로그인이 필요합니다.": ["Codex CLI is installed, but ChatGPT sign-in is required.", "Codex CLIはインストールされていますが、ChatGPTへのログインが必要です。", "Codex CLI 已安装，但需要登录 ChatGPT。"],
+  "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다.": ["Gemini is connected with a Google Antigravity plan account.", "GeminiはGoogle Antigravityプランのアカウントで接続されています。", "Gemini 已连接 Google Antigravity 订阅账户。"],
+  "Google Antigravity CLI는 설치되어 있지만 로그인이 필요합니다.": ["Google Antigravity CLI is installed, but sign-in is required.", "Google Antigravity CLIはインストールされていますが、ログインが必要です。", "Google Antigravity CLI 已安装，但需要登录。"],
+  "Gemini CLI가 Google 플랜 계정으로 실행되도록 설정되어 있습니다.": ["Gemini CLI is configured to use a Google plan account.", "Gemini CLIはGoogleプランのアカウントで実行するよう設定されています。", "Gemini CLI 已配置为使用 Google 订阅账户运行。"],
+  "Gemini CLI 로그인 정보가 불완전합니다. Google 계정을 다시 연결하십시오.": ["Gemini CLI sign-in information is incomplete. Reconnect the Google account.", "Gemini CLIのログイン情報が不完全です。Googleアカウントを再接続してください。", "Gemini CLI 登录信息不完整，请重新连接 Google 账户。"],
+  "Claude 계정으로 연결되어 있습니다.": ["Connected with a Claude account.", "Claudeアカウントで接続されています。", "已连接 Claude 账户。"],
+  "Claude Code는 설치되어 있지만 Claude 로그인이 필요합니다.": ["Claude Code is installed, but Claude sign-in is required.", "Claude Codeはインストールされていますが、Claudeへのログインが必要です。", "Claude Code 已安装，但需要登录 Claude。"],
+  "API 키가 운영체제 보안 저장소에 저장되어 있습니다.": ["The API key is stored in the operating system secure storage.", "APIキーはOSのセキュアストレージに保存されています。", "API 密钥已保存在操作系统安全存储中。"],
+  "DeepL API Free 또는 Pro 키를 입력하여 연결하십시오.": ["Enter a DeepL API Free or Pro key to connect.", "DeepL API FreeまたはProキーを入力して接続してください。", "请输入 DeepL API Free 或 Pro 密钥以连接。"],
+  "Codex CLI가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오.": ["Codex CLI is not installed. Select Install to prepare the connection.", "Codex CLIがインストールされていません。「インストール」を選択して接続準備を開始してください。", "Codex CLI 未安装。请选择“安装”以准备连接。"],
+  "Claude Code가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오.": ["Claude Code is not installed. Select Install to prepare the connection.", "Claude Codeがインストールされていません。「インストール」を選択して接続準備を開始してください。", "Claude Code 未安装。请选择“安装”以准备连接。"],
+  "Google Antigravity CLI가 설치되어 있지 않습니다. 설치를 선택하여 연결 준비를 시작하십시오.": ["Google Antigravity CLI is not installed. Select Install to prepare the connection.", "Google Antigravity CLIがインストールされていません。「インストール」を選択して接続準備を開始してください。", "Google Antigravity CLI 未安装。请选择“安装”以准备连接。"],
+  "DeepL API 키의 유효성을 확인하고 있습니다.": ["Checking the DeepL API key.", "DeepL APIキーの有効性を確認しています。", "正在检查 DeepL API 密钥的有效性。"],
+  "계정 로그인 절차를 시작하고 있습니다.": ["Starting the account sign-in process.", "アカウントのログイン手続きを開始しています。", "正在启动账户登录流程。"],
+  "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 입력하십시오.": ["Enter F1-F24 or a regular key combined with Ctrl, Alt, or Shift.", "F1～F24、またはCtrl・Alt・Shiftと一般キーの組み合わせを入力してください。", "请输入 F1-F24，或 Ctrl、Alt、Shift 与普通按键的组合。"],
+  "단축키를 적용하지 못했습니다.": ["Could not apply the shortcut.", "ショートカットを適用できませんでした。", "无法应用快捷键。"],
+  "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.": ["Enter a new shortcut combination. Press Esc to cancel.", "新しいショートカットの組み合わせを入力してください。Escでキャンセルできます。", "请输入新的快捷键组合。按 Esc 可取消。"],
+  "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다.": ["Delete the DeepL API key from the operating system secure storage. If DeepL is selected, switch to the default local model.", "OSのセキュアストレージからDeepL APIキーを削除します。DeepLが選択されている場合は、標準のローカルモデルへ切り替えます。", "从操作系统安全存储中删除 DeepL API 密钥。如果当前选择了 DeepL，将切换到默认本地模型。"],
+  "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.": ["Keep the CLI sign-in and installation, but disable the service only in NudeNyang Translator. If the service is selected, switch to the default local model.", "CLIのログイン情報とインストール状態は保持し、NudeNyang Translatorでのみ使用を停止します。そのサービスが選択されている場合は、標準のローカルモデルへ切り替えます。", "保留 CLI 登录信息和安装状态，仅在 NudeNyang Translator 中停用该服务。如果当前选择了该服务，将切换到默认本地模型。"],
   "켜짐": ["On", "オン", "开启"],
   "꺼짐": ["Off", "オフ", "关闭"],
   "사용": ["On", "使用", "启用"],
@@ -197,6 +293,149 @@ export function translateCopy(language, korean) {
 }
 
 const DYNAMIC_COPY = Object.freeze([
+  {
+    pattern: /^(\d+)초 후 Discord를 자동으로 다시 시작합니다\.$/,
+    render: {
+      en: seconds => `Discord will restart automatically in ${seconds} seconds.`,
+      ja: seconds => `${seconds}秒後にDiscordを自動で再起動します。`,
+      zh: seconds => `Discord 将在 ${seconds} 秒后自动重启。`,
+    },
+  },
+  {
+    pattern: /^이미지에서 (\d+)개 글자 영역을 번역했습니다\.$/,
+    render: {
+      en: count => `Translated ${count} text regions in the image.`,
+      ja: count => `画像内の文字領域を${count}件翻訳しました。`,
+      zh: count => `已翻译图片中的 ${count} 个文字区域。`,
+    },
+  },
+  {
+    pattern: /^표시 번역은 (.+), 실시간 통역은 (.+)을 사용합니다\.$/,
+    render: {
+      en: (display, outgoing) => `Display translation uses ${translateCopy("en", display)}, and real-time interpretation uses ${translateCopy("en", outgoing)}.`,
+      ja: (display, outgoing) => `表示翻訳には${translateCopy("ja", display)}、リアルタイム通訳には${translateCopy("ja", outgoing)}を使用します。`,
+      zh: (display, outgoing) => `显示翻译使用 ${translateCopy("zh", display)}，实时翻译使用 ${translateCopy("zh", outgoing)}。`,
+    },
+  },
+  {
+    pattern: /^(.+) 준비를 백그라운드에서 시작했습니다\. 완료 전까지 현재 모델로 계속 번역합니다\.$/,
+    render: {
+      en: model => `Started preparing ${translateCopy("en", model)} in the background. The current model will remain in use until it is ready.`,
+      ja: model => `${translateCopy("ja", model)}の準備をバックグラウンドで開始しました。完了するまでは現在のモデルで翻訳を続けます。`,
+      zh: model => `已在后台开始准备 ${translateCopy("zh", model)}。准备完成前将继续使用当前模型翻译。`,
+    },
+  },
+  {
+    pattern: /^(번역 모델 준비 실패|이미지를 읽지 못했습니다|이미지 번역에 실패했습니다|로컬 모델 예열에 실패했습니다): (.+)$/,
+    render: {
+      en: (kind, error) => `${({
+        "번역 모델 준비 실패": "Translation model preparation failed",
+        "이미지를 읽지 못했습니다": "Could not read the image",
+        "이미지 번역에 실패했습니다": "Image translation failed",
+        "로컬 모델 예열에 실패했습니다": "Local model warm-up failed",
+      })[kind]}: ${translateUserFacingError("en", error)}`,
+      ja: (kind, error) => `${({
+        "번역 모델 준비 실패": "翻訳モデルの準備に失敗しました",
+        "이미지를 읽지 못했습니다": "画像を読み込めませんでした",
+        "이미지 번역에 실패했습니다": "画像翻訳に失敗しました",
+        "로컬 모델 예열에 실패했습니다": "ローカルモデルの常駐に失敗しました",
+      })[kind]}: ${translateUserFacingError("ja", error)}`,
+      zh: (kind, error) => `${({
+        "번역 모델 준비 실패": "翻译模型准备失败",
+        "이미지를 읽지 못했습니다": "无法读取图片",
+        "이미지 번역에 실패했습니다": "图片翻译失败",
+        "로컬 모델 예열에 실패했습니다": "本地模型预热失败",
+      })[kind]}：${translateUserFacingError("zh", error)}`,
+    },
+  },
+  {
+    pattern: /^Discord 디버그 렌더러에 연결할 수 없습니다\.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다\.\n\n(\d+)초 후 Discord를 자동으로 다시 시작합니다\.$/,
+    render: {
+      en: seconds => `Could not connect to the Discord debug renderer.\nA message you are typing may be discarded or a call may end.\n\nDiscord will restart automatically in ${seconds} seconds.`,
+      ja: seconds => `Discordのデバッグレンダラーに接続できません。\n入力中のメッセージが消えたり、通話が終了したりする場合があります。\n\n${seconds}秒後にDiscordを自動で再起動します。`,
+      zh: seconds => `无法连接 Discord 调试渲染器。\n正在输入的消息可能会丢失，通话也可能会结束。\n\nDiscord 将在 ${seconds} 秒后自动重启。`,
+    },
+  },
+  {
+    pattern: /^(.+) CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다\.$/,
+    render: {
+      en: name => `Installing ${name} CLI and its required runtime automatically.`,
+      ja: name => `${name} CLIと必要な実行環境を自動でインストールしています。`,
+      zh: name => `正在自动安装 ${name} CLI 及其所需运行环境。`,
+    },
+  },
+  {
+    pattern: /^(.+) 계정 연결$/,
+    render: {
+      en: name => `Connect ${name} account`,
+      ja: name => `${name}アカウントに接続`,
+      zh: name => `连接 ${name} 账户`,
+    },
+  },
+  {
+    pattern: /^(.+) CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다\.$/,
+    render: {
+      en: name => `${name} CLI sign-in is retained and disabled only in NudeNyang Translator.`,
+      ja: name => `${name} CLIのログイン情報は保持され、NudeNyang Translatorでのみ使用を停止しました。`,
+      zh: name => `${name} CLI 登录信息已保留，仅在 NudeNyang Translator 中停用。`,
+    },
+  },
+  {
+    pattern: /^(.+) 공식 로그인 페이지를 준비하고 있습니다\. 잠시 기다리십시오\.$/,
+    render: {
+      en: name => `Preparing the official ${name} sign-in page. Please wait.`,
+      ja: name => `${name}の公式ログインページを準備しています。しばらくお待ちください。`,
+      zh: name => `正在准备 ${name} 官方登录页面，请稍候。`,
+    },
+  },
+  {
+    pattern: /^(.+) 계정 로그인을 취소하고 있습니다\.$/,
+    render: {
+      en: name => `Cancelling ${name} account sign-in.`,
+      ja: name => `${name}アカウントへのログインをキャンセルしています。`,
+      zh: name => `正在取消 ${name} 账户登录。`,
+    },
+  },
+  {
+    pattern: /^(.+) 공식 로그인 페이지로 이동하려면 이동을 선택하십시오\.$/,
+    render: {
+      en: name => `Select Continue to open the official ${name} sign-in page.`,
+      ja: name => `${name}の公式ログインページへ移動するには「移動」を選択してください。`,
+      zh: name => `请选择“继续”以打开 ${name} 官方登录页面。`,
+    },
+  },
+  {
+    pattern: /^브라우저에서 (.+) 로그인을 완료하십시오\.\n로그인이 완료되면 이 창이 자동으로 닫힙니다\.$/,
+    render: {
+      en: account => `Complete ${account} sign-in in the browser.\nThis window will close automatically when sign-in finishes.`,
+      ja: account => `ブラウザで${account}へのログインを完了してください。\nログインが完了すると、この画面は自動で閉じます。`,
+      zh: account => `请在浏览器中完成 ${account} 登录。\n登录完成后，此窗口会自动关闭。`,
+    },
+  },
+  {
+    pattern: /^(.+) 연결을 해제하시겠습니까\?$/,
+    render: {
+      en: name => `Disconnect ${name}?`,
+      ja: name => `${name}との接続を解除しますか？`,
+      zh: name => `要断开与 ${name} 的连接吗？`,
+    },
+  },
+  {
+    pattern: /^(.+)로 적용되었습니다\.$/,
+    render: {
+      en: shortcut => `Applied ${shortcut}.`,
+      ja: shortcut => `${shortcut}を適用しました。`,
+      zh: shortcut => `已应用 ${shortcut}。`,
+    },
+  },
+  {
+    pattern: /^(.+) 적용 중$/,
+    render: {
+      en: shortcut => `Applying ${shortcut}`,
+      ja: shortcut => `${shortcut}を適用中`,
+      zh: shortcut => `正在应用 ${shortcut}`,
+    },
+  },
   {
     pattern: /^로컬 모델 파일 ([0-9.]+(?:GB|MB|KB|B))를 삭제했습니다\.$/,
     render: {
@@ -328,9 +567,9 @@ const DYNAMIC_COPY = Object.freeze([
   {
     pattern: /^(업데이트 확인 실패|업데이트 설치 실패): (.+)$/,
     render: {
-      en: (kind, error) => `${kind === "업데이트 확인 실패" ? "Update check failed" : "Update installation failed"}: ${error}`,
-      ja: (kind, error) => `${kind === "업데이트 확인 실패" ? "アップデートの確認に失敗しました" : "アップデートのインストールに失敗しました"}: ${error}`,
-      zh: (kind, error) => `${kind === "업데이트 확인 실패" ? "检查更新失败" : "安装更新失败"}：${error}`,
+      en: (kind, error) => `${kind === "업데이트 확인 실패" ? "Update check failed" : "Update installation failed"}: ${translateUserFacingError("en", error)}`,
+      ja: (kind, error) => `${kind === "업데이트 확인 실패" ? "アップデートの確認に失敗しました" : "アップデートのインストールに失敗しました"}: ${translateUserFacingError("ja", error)}`,
+      zh: (kind, error) => `${kind === "업데이트 확인 실패" ? "检查更新失败" : "安装更新失败"}：${translateUserFacingError("zh", error)}`,
     },
   },
 ]);
@@ -346,6 +585,39 @@ export function translateDynamicCopy(language, korean) {
     if (match) return entry.render[language](...match.slice(1));
   }
   return value;
+}
+
+export function translateUserFacingError(language, error) {
+  language = resolveUiLanguage(language);
+  const value = String(error ?? "").replace(/^Error:\s*/, "").trim();
+  if (!value || language === "ko") return value;
+
+  const shortcut = value.match(/^(.+?) 전역 단축키를 등록하지 못했습니다:\s*(.+)$/);
+  if (shortcut) {
+    const [, binding, detail] = shortcut;
+    if (/already registered/i.test(detail)) {
+      return {
+        en: `Could not register the ${binding} global shortcut. Another app is already using this shortcut. Choose a different combination.`,
+        ja: `${binding} グローバルショートカットを登録できませんでした。このショートカットは別のアプリですでに使用されています。別の組み合わせを選択してください。`,
+        zh: `无法注册 ${binding} 全局快捷键。其他应用已在使用此快捷键，请选择其他组合。`,
+      }[language];
+    }
+  }
+
+  const translated = translateDynamicCopy(language, value);
+  if (translated !== value && !/[가-힣]/.test(translated)) return translated;
+
+  const separator = value.indexOf(": ");
+  const detail = separator >= 0 ? value.slice(separator + 2).trim() : "";
+  const safeDetail = detail && !/[가-힣]/.test(detail) && !/HotKey\s*\{/i.test(detail)
+    ? detail
+    : "";
+  const fallback = {
+    en: "An unexpected error occurred. Check the diagnostic log for details.",
+    ja: "予期しないエラーが発生しました。詳細は診断ログを確認してください。",
+    zh: "发生意外错误。请查看诊断日志了解详情。",
+  }[language];
+  return safeDetail ? `${fallback} ${safeDetail}` : fallback;
 }
 
 function matchesKnownTranslation(value, key) {
@@ -368,5 +640,18 @@ export function applyStaticTranslations(root, language) {
       if (key) element.dataset.i18nKey = key;
     }
     if (key) element.textContent = translateCopy(language, key);
+  }
+  for (const element of root.querySelectorAll("[aria-label], [placeholder]")) {
+    for (const attribute of ["aria-label", "placeholder"]) {
+      const value = element.getAttribute(attribute)?.trim();
+      if (!value) continue;
+      const datasetKey = attribute === "aria-label" ? "i18nAriaLabel" : "i18nPlaceholder";
+      let key = element.dataset[datasetKey];
+      if (!key || !matchesKnownTranslation(value, key)) {
+        key = COPY[value] ? value : "";
+        if (key) element.dataset[datasetKey] = key;
+      }
+      if (key) element.setAttribute(attribute, translateCopy(language, key));
+    }
   }
 }

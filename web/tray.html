@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="./tray.css" />
   </head>
   <body>
-    <main class="tray-panel" aria-label="NudeNyang Translator 트레이 메뉴">
+    <main class="tray-panel" aria-label="NudeNyang Translator 트레이 메뉴" data-i18n-aria-label="NudeNyang Translator 트레이 메뉴">
       <button class="brand-row" id="open-settings" type="button">
         <img src="./app-icon.png" alt="" width="34" height="34" />
         <span class="brand-copy">
           <strong>NudeNyang Translator</strong>
-          <small id="engine-summary">상태 확인 중</small>
+          <small id="engine-summary" data-i18n-key="상태 확인 중">상태 확인 중</small>
         </span>
-        <span class="open-label" id="open-label">열기</span>
+        <span class="open-label" id="open-label" data-i18n-key="열기">열기</span>
       </button>
 
       <div id="main-menu">
@@ -22,8 +22,8 @@
           <button class="menu-row update-row" id="install-update" type="button" hidden>
             <span class="update-indicator" aria-hidden="true">↻</span>
             <span class="menu-copy">
-              <strong>업데이트 설치</strong>
-              <small><span id="tray-update-version"></span> 버전을 사용할 수 있습니다</small>
+              <strong data-i18n-key="업데이트 설치">업데이트 설치</strong>
+              <small><span id="tray-update-version"></span> <span data-i18n-key="버전을 사용할 수 있습니다">버전을 사용할 수 있습니다</span></small>
             </span>
             <span class="menu-value arrow-value" aria-hidden="true"><b>›</b></span>
           </button>
@@ -34,21 +34,21 @@
               <span></span>
             </span>
             <span class="menu-copy">
-              <strong>실시간 번역</strong>
+              <strong data-i18n-key="실시간 번역">실시간 번역</strong>
             </span>
-            <span class="menu-value" id="translation-state">확인 중</span>
+            <span class="menu-value" id="translation-state" data-i18n-key="확인 중">확인 중</span>
           </button>
 
           <button class="menu-row compact" id="open-language-settings" type="button">
             <span class="menu-copy">
-              <strong>표시 언어</strong>
+              <strong data-i18n-key="표시 언어">표시 언어</strong>
             </span>
             <span class="menu-value arrow-value"><span id="target-language">한국어</span><b>›</b></span>
           </button>
 
           <button class="menu-row compact" id="open-model-settings" type="button">
             <span class="menu-copy">
-              <strong>번역 모델</strong>
+              <strong data-i18n-key="번역 모델">번역 모델</strong>
             </span>
             <span class="menu-value arrow-value"><span id="translator-name">Hy-MT2 1.8B</span><b>›</b></span>
           </button>
@@ -56,16 +56,16 @@
 
         <div class="menu-group bottom-group">
           <button class="menu-row compact" id="open-settings-secondary" type="button">
-            <span class="menu-copy"><strong>설정</strong></span>
+            <span class="menu-copy"><strong data-i18n-key="설정">설정</strong></span>
             <span class="menu-value arrow-value" aria-hidden="true"><b>›</b></span>
           </button>
           <button class="menu-row compact danger" id="quit-app" type="button">
-            <span class="menu-copy"><strong>종료</strong></span>
+            <span class="menu-copy"><strong data-i18n-key="종료">종료</strong></span>
           </button>
         </div>
       </div>
 
-      <div class="menu-group language-view" id="language-view" aria-label="표시 언어 선택" hidden>
+      <div class="menu-group language-view" id="language-view" aria-label="표시 언어 선택" data-i18n-aria-label="표시 언어 선택" hidden>
         <button class="menu-row compact language-option" data-language="ko" type="button">
           <span class="menu-copy"><strong>한국어</strong></span><span class="language-check" aria-hidden="true">✓</span>
         </button>
@@ -83,7 +83,7 @@
         </button>
       </div>
 
-      <div class="menu-group model-view" id="model-view" aria-label="번역 모델 선택" hidden>
+      <div class="menu-group model-view" id="model-view" aria-label="번역 모델 선택" data-i18n-aria-label="번역 모델 선택" hidden>
         <button class="menu-row compact model-option" data-translator="hymt_1_8b" type="button">
           <span class="menu-copy"><strong>Hy-MT2 1.8B Q4</strong></span><span class="model-check" aria-hidden="true">✓</span>
         </button>
@@ -109,7 +109,7 @@
           <span class="menu-copy"><strong>DeepL API</strong></span><span class="model-connection" aria-hidden="true"></span><span class="model-check" aria-hidden="true">✓</span>
         </button>
         <button class="menu-row compact model-option" data-translator="mock" type="button">
-          <span class="menu-copy"><strong>Mock 테스트</strong></span><span class="model-check" aria-hidden="true">✓</span>
+          <span class="menu-copy"><strong data-i18n-key="Mock 테스트">Mock 테스트</strong></span><span class="model-check" aria-hidden="true">✓</span>
         </button>
       </div>
     </main>

@@ -52,7 +52,7 @@ test("an unconnected external model is routed to provider setup", () => {
 
 test("missing subscription CLIs use the in-app automatic installer", () => {
   assert.match(script, /invoke\("provider_install", \{ provider \}\)/);
-  assert.match(script, /action\.textContent = "설치 중"/);
+  assert.match(script, /setLocalizedText\(action, "설치 중"\)/);
   assert.doesNotMatch(script, /npm install -g/);
   assert.match(rustMain, /provider_install/);
   assert.match(subscriptionCli, /\["\/d", "\/s", "\/c", "call"\]/);
@@ -113,7 +113,7 @@ test("ChatGPT and Claude sign-ins stay inside the app while official browser flo
   assert.match(rustMain, /provider_login_open/);
   assert.match(script, /provider !== "deepl" \? await showProviderLoginProgress\(provider\) : null/);
   assert.match(script, /공식 로그인 페이지로 이동하려면 이동을 선택하십시오/);
-  assert.match(script, /modalAccept\.textContent = copy\.terminal \? "터미널 열기" : "이동"/);
+  assert.match(script, /setLocalizedText\(elements\.modalAccept, copy\.terminal \? "터미널 열기" : "이동"\)/);
   assert.match(script, /invoke\("provider_login_open"\)/);
   assert.match(subscriptionCli, /authenticate_browser_login_cli/);
   assert.match(subscriptionCli, /"auth"\.to_string\(\)[\s\S]*?"login"\.to_string\(\)[\s\S]*?"--claudeai"\.to_string\(\)/);

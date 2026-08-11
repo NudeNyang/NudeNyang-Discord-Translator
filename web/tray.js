@@ -1,3 +1,9 @@
+import {
+  resolveUiLanguage,
+  translateCopy,
+  translateDynamicCopy,
+} from "./i18n.mjs";
+
 const invoke = window.__TAURI__?.core?.invoke;
 const listen = window.__TAURI__?.event?.listen;
 
@@ -49,12 +55,36 @@ let currentStatus = null;
 let refreshing = false;
 let providerConnections = new Map();
 let availableUpdateVersion = "";
+let selectedUiLanguage = "auto";
+
+function currentUiLanguage() {
+  return selectedUiLanguage;
+}
+
+function setTrayText(element, korean) {
+  if (element) element.textContent = translateDynamicCopy(currentUiLanguage(), korean);
+}
+
+function applyTrayLanguage(language) {
+  selectedUiLanguage = language || "auto";
+  const resolved = resolveUiLanguage(selectedUiLanguage);
+  document.documentElement.lang = resolved === "zh" ? "zh-CN" : resolved;
+  for (const element of document.querySelectorAll("[data-i18n-key]")) {
+    element.textContent = translateCopy(selectedUiLanguage, element.dataset.i18nKey);
+  }
+  for (const element of document.querySelectorAll("[data-i18n-aria-label]")) {
+    element.setAttribute(
+      "aria-label",
+      translateCopy(selectedUiLanguage, element.dataset.i18nAriaLabel),
+    );
+  }
+}
 
 function showMainView() {
   elements.mainMenu.hidden = false;
   elements.languageView.hidden = true;
   elements.modelView.hidden = true;
-  elements.openLabel.textContent = "열기";
+  setTrayText(elements.openLabel, "열기");
   resizeTray(VIEW_HEIGHTS.main + (availableUpdateVersion ? UPDATE_ROW_HEIGHT : 0));
 }
 
@@ -82,7 +112,7 @@ function showLanguageView() {
   elements.mainMenu.hidden = true;
   elements.languageView.hidden = false;
   elements.modelView.hidden = true;
-  elements.openLabel.textContent = "뒤로";
+  setTrayText(elements.openLabel, "뒤로");
   resizeTray(VIEW_HEIGHTS.language);
   elements.languageOptions.find(option => option.getAttribute("aria-pressed") === "true")?.focus();
 }
@@ -91,7 +121,7 @@ function showModelView() {
   elements.mainMenu.hidden = true;
   elements.languageView.hidden = true;
   elements.modelView.hidden = false;
-  elements.openLabel.textContent = "뒤로";
+  setTrayText(elements.openLabel, "뒤로");
   resizeTray(VIEW_HEIGHTS.model);
   elements.translatorOptions.find(option => option.getAttribute("aria-pressed") === "true")?.focus();
   void refreshProviderConnections();
@@ -107,7 +137,7 @@ async function refreshProviderConnections() {
       const label = option.querySelector(".model-connection");
       if (!connection || !label) return;
       option.classList.toggle("needs-connection", !connection.connected);
-      label.textContent = connection.connected ? "" : "연결 필요";
+      setTrayText(label, connection.connected ? "" : "연결 필요");
     });
   } catch {
     providerConnections = new Map();
@@ -137,22 +167,25 @@ function renderStatus(status, config) {
   const enabled = Boolean(status?.enabled ?? config?.enabled);
   const connected = Boolean(status?.cdpConnected);
   elements.translationIndicator.classList.toggle("enabled", enabled);
-  elements.translationState.textContent = enabled ? "켜짐" : "꺼짐";
-  elements.engineSummary.textContent = connected
+  setTrayText(elements.translationState, enabled ? "켜짐" : "꺼짐");
+  setTrayText(elements.engineSummary, connected
     ? "Discord 연결됨"
-    : enabled ? "Discord 연결 중" : "번역 대기 중";
+    : enabled ? "Discord 연결 중" : "번역 대기 중");
   const targetLanguage = config?.target_language || status?.targetLanguage || "ko";
   elements.targetLanguage.textContent = LANGUAGE_LABELS[targetLanguage] || "한국어";
   updateLanguageSelection(targetLanguage);
   const translator = config?.translator || status?.configuredTranslator || "hymt_1_8b";
-  const translatorLabel = TRANSLATOR_LABELS[translator] || translator;
+  const translatorLabel = translateCopy(
+    currentUiLanguage(),
+    TRANSLATOR_LABELS[translator] || translator,
+  );
   const translatorPending = status?.configuredTranslator === translator
     && ["queued", "preparing"].includes(status?.translatorState);
   const translatorFailed = status?.configuredTranslator === translator
     && status?.translatorState === "error";
   elements.translatorName.textContent = translatorPending
-    ? `${translatorLabel} 준비 중`
-    : translatorFailed ? `${translatorLabel} 오류` : translatorLabel;
+    ? `${translatorLabel} ${translateCopy(currentUiLanguage(), "준비 중")}`
+    : translatorFailed ? `${translatorLabel} ${translateCopy(currentUiLanguage(), "오류")}` : translatorLabel;
   elements.translatorName.title = translatorLabel;
   updateTranslatorSelection(translator);
 }
@@ -167,9 +200,10 @@ async function refresh() {
     ]);
     currentConfig = config;
     applyTheme(config.ui_theme || "system");
+    applyTrayLanguage(config.ui_language || "auto");
     renderStatus(status, config);
   } catch {
-    elements.engineSummary.textContent = "상태를 확인할 수 없음";
+    setTrayText(elements.engineSummary, "상태를 확인할 수 없음");
   } finally {
     refreshing = false;
   }
@@ -180,7 +214,7 @@ async function run(command) {
   try {
     await invoke(command);
   } catch {
-    elements.engineSummary.textContent = "요청을 처리할 수 없음";
+    setTrayText(elements.engineSummary, "요청을 처리할 수 없음");
   }
 }
 
@@ -196,7 +230,7 @@ async function selectLanguage(language) {
     renderStatus(currentStatus, updated);
     showMainView();
   } catch {
-    elements.engineSummary.textContent = "표시 언어를 바꾸지 못함";
+    setTrayText(elements.engineSummary, "표시 언어를 바꾸지 못함");
   }
 }
 
@@ -217,7 +251,7 @@ async function selectTranslator(translator) {
     showMainView();
     await refresh();
   } catch {
-    elements.engineSummary.textContent = "번역 모델을 바꾸지 못함";
+    setTrayText(elements.engineSummary, "번역 모델을 바꾸지 못함");
   }
 }
 
@@ -255,9 +289,11 @@ if (listen) {
   listen("settings-changed", event => {
     currentConfig = event.payload;
     applyTheme(currentConfig.ui_theme || "system");
+    applyTrayLanguage(currentConfig.ui_language || "auto");
     renderStatus(currentStatus, currentConfig);
   });
 }
+applyTrayLanguage("auto");
 showMainView();
 refresh();
 refreshUpdateAvailability();
