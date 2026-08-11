@@ -48,9 +48,9 @@ const OUTGOING_TRANSLATOR_OPTIONS = [
   ["claude", "Claude CLI (권장·품질 우선)", "recommended"],
   ["gemini", "Gemini CLI (권장·품질 우선)", "recommended"],
   ["deepl", "DeepL (API 키·외부 전송)", "recommended"],
-  ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·간단한 문장)", "local-limited"],
-  ["hymt_7b", "Hy-MT2 7B Q4 (로컬·간단한 문장)", "local-limited"],
-  ["translategemma_4b", "TranslateGemma 4B Q4 (실험·간단한 문장)", "local-limited"],
+  ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·속도 우선)", "local-limited"],
+  ["hymt_7b", "Hy-MT2 7B Q4 (로컬·속도 우선)", "local-limited"],
+  ["translategemma_4b", "TranslateGemma 4B Q4 (실험·속도 우선)", "local-limited"],
   ["mock", "Mock 테스트", "testing"],
 ];
 

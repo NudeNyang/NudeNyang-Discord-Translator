@@ -76,6 +76,17 @@ test("quality-first Codex model labels are translated", () => {
   );
 });
 
+test("outgoing local model speed labels follow the interface language", () => {
+  assert.equal(
+    translateCopy("en", "Hy-MT2 1.8B Q4 (로컬·속도 우선)"),
+    "Hy-MT2 1.8B Q4 (local · speed first)",
+  );
+  assert.equal(
+    translateCopy("ja", "TranslateGemma 4B Q4 (실험·속도 우선)"),
+    "TranslateGemma 4B Q4（実験・速度優先）",
+  );
+});
+
 test("local engine notices describe every selectable local model", () => {
   assert.equal(translateCopy("en", "VRAM 보호"), "VRAM protection");
   assert.equal(

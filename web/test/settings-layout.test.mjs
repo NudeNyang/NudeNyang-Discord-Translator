@@ -126,6 +126,10 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(script, /translator: DISPLAY_TRANSLATOR_OPTIONS/);
   assert.match(script, /outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS/);
   assert.match(script, /const OUTGOING_TRANSLATOR_OPTIONS = \[\s*\["chatgpt", "ChatGPT CLI \(권장·품질 우선\)"/);
+  assert.match(script, /Hy-MT2 1\.8B Q4 \(로컬·속도 우선\)/);
+  assert.match(script, /Hy-MT2 7B Q4 \(로컬·속도 우선\)/);
+  assert.match(script, /TranslateGemma 4B Q4 \(실험·속도 우선\)/);
+  assert.doesNotMatch(script, /로컬·간단한 문장|실험·간단한 문장/);
   assert.match(markup, /id="outgoing-model-guidance"/);
   assert.match(markup, /보내는 메시지에는 CLI 모델을 권장합니다/);
   assert.match(styles, /\.outgoing-model-guidance\s*\{[\s\S]*?margin:\s*16px 18px 18px/);
