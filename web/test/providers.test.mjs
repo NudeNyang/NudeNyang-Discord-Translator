@@ -35,7 +35,7 @@ test("provider setup is available without exposing credentials in settings", () 
 
 test("Claude connects through the official local Claude Code CLI", () => {
   assert.match(markup, /data-provider="claude"/);
-  assert.match(script, /\["claude",\s*"Claude \(품질 최우선\)"\]/);
+  assert.match(script, /\["claude",\s*"Claude CLI \(권장·품질 우선\)"/);
   assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "deepl"\]\)/);
   assert.doesNotMatch(config, /"kanana" \| "original" \| "claude"/);
   assert.match(providers, /cli_status\(\s*"claude",\s*"Claude"/);
@@ -62,7 +62,7 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
 
 test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
   assert.match(markup, /<h3>Gemini<\/h3><p>품질 최우선<\/p>/);
-  assert.match(script, /\["gemini",\s*"Gemini \(품질 최우선\)"\]/);
+  assert.match(script, /\["gemini",\s*"Gemini CLI \(권장·품질 우선\)"/);
   assert.match(providers, /Google 구독 · Antigravity CLI/);
   assert.match(subscriptionCli, /Self::Gemini => &\["agy"\]/);
   assert.match(subscriptionCli, /\["models"\.to_string\(\)\]/);
@@ -70,11 +70,11 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
 });
 
 test("subscription translators use a simple quality-first label", () => {
-  assert.match(script, /GPT-5\.6 \(품질 최우선\)/);
+  assert.match(script, /ChatGPT CLI \(권장·품질 우선\)/);
   assert.match(providers, /ChatGPT 무료 플랜 이상 · Codex CLI/);
   assert.match(providers, /Claude 유료 플랜 · Claude Code/);
-  assert.match(script, /Claude \(품질 최우선\)/);
-  assert.match(script, /Gemini \(품질 최우선\)/);
+  assert.match(script, /Claude CLI \(권장·품질 우선\)/);
+  assert.match(script, /Gemini CLI \(권장·품질 우선\)/);
   assert.doesNotMatch(`${markup}${script}${trayMarkup}`, /Claude Haiku|Gemini 3\.6 Flash/);
   assert.doesNotMatch(`${markup}${script}`, /지속 연결|지속 세션/);
   assert.match(subscriptionCli, /gpt-5\.6-luna/);

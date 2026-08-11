@@ -102,13 +102,13 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.match(script, /elements\.outgoingShortcutHint\.textContent = state\.config\.hotkeys\.toggle_outgoing_translation/);
 });
 
-test("display translation and real-time interpretation choose models independently", () => {
+test("display translation and outgoing interpretation present role-appropriate model choices", () => {
   assert.match(markup, /<h3>표시 언어 번역 모델<\/h3>/);
   assert.match(markup, /data-field="translator"/);
-  assert.match(markup, /<h3>실시간 통역 모델<\/h3>/);
+  assert.match(markup, /<h3>보내는 메시지 통역 모델<\/h3>/);
   assert.match(markup, /data-field="outgoing_translator"/);
   assert.match(markup, /VRAM 보호/);
-  assert.match(markup, /표시 번역과 실시간 통역에서 로컬 모델을 선택하면 하나만 실행되며/);
+  assert.match(markup, /표시 번역과 보내는 메시지 통역에서 로컬 모델을 선택하면 하나만 실행되며/);
   assert.doesNotMatch(markup, /1\.8B와 7B 중 하나의 로컬 모델만 사용합니다/);
   assert.match(markup, /처리 위치 안내/);
   assert.match(markup, /로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다/);
@@ -117,7 +117,14 @@ test("display translation and real-time interpretation choose models independent
   assert.match(markup, /로컬 모델 실행 장치/);
   assert.match(markup, /번역을 꺼도 모델을 메모리에 유지합니다/);
   assert.doesNotMatch(markup, /Hy-MT2 실행 장치/);
-  assert.match(script, /outgoing_translator: TRANSLATOR_OPTIONS/);
+  assert.match(script, /translator: DISPLAY_TRANSLATOR_OPTIONS/);
+  assert.match(script, /outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS/);
+  assert.match(script, /const OUTGOING_TRANSLATOR_OPTIONS = \[\s*\["chatgpt", "ChatGPT CLI \(권장·품질 우선\)"/);
+  assert.match(markup, /id="outgoing-model-guidance"/);
+  assert.match(markup, /보내는 메시지에는 CLI 모델을 권장합니다/);
+  assert.match(script, /connectedRecommendedProvider/);
+  assert.match(script, /applySettingsPatch\(\{ outgoing_translator: provider \}\)/);
+  assert.ok(markup.indexOf('id="provider-connections"') < markup.indexOf('class="settings-card local-engine-card"'));
   assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
 });
 

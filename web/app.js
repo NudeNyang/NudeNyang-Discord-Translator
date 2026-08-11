@@ -32,16 +32,35 @@ const APP_LINKS = Object.freeze({
   repository: "https://github.com/NudeNyang/NudeNyang-Translator",
 });
 
-const TRANSLATOR_OPTIONS = [
-  ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
-  ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
-  ["translategemma_4b", "TranslateGemma 4B Q4 (실험·약 2.5GB)"],
-  ["chatgpt", "GPT-5.6 (품질 최우선)"],
-  ["claude", "Claude (품질 최우선)"],
-  ["gemini", "Gemini (품질 최우선)"],
-  ["deepl", "DeepL (API 키·외부 전송)"],
-  ["mock", "Mock 테스트"],
+const DISPLAY_TRANSLATOR_OPTIONS = [
+  ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)", "local"],
+  ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)", "local"],
+  ["translategemma_4b", "TranslateGemma 4B Q4 (실험·약 2.5GB)", "local"],
+  ["chatgpt", "ChatGPT CLI (외부·품질 우선)", "external"],
+  ["claude", "Claude CLI (외부·품질 우선)", "external"],
+  ["gemini", "Gemini CLI (외부·품질 우선)", "external"],
+  ["deepl", "DeepL (API 키·외부 전송)", "external"],
+  ["mock", "Mock 테스트", "testing"],
 ];
+
+const OUTGOING_TRANSLATOR_OPTIONS = [
+  ["chatgpt", "ChatGPT CLI (권장·품질 우선)", "recommended"],
+  ["claude", "Claude CLI (권장·품질 우선)", "recommended"],
+  ["gemini", "Gemini CLI (권장·품질 우선)", "recommended"],
+  ["deepl", "DeepL (API 키·외부 전송)", "recommended"],
+  ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·간단한 문장)", "local-limited"],
+  ["hymt_7b", "Hy-MT2 7B Q4 (로컬·간단한 문장)", "local-limited"],
+  ["translategemma_4b", "TranslateGemma 4B Q4 (실험·간단한 문장)", "local-limited"],
+  ["mock", "Mock 테스트", "testing"],
+];
+
+const SELECT_GROUP_LABELS = Object.freeze({
+  local: "로컬 모델",
+  external: "외부 번역 서비스",
+  recommended: "권장 CLI 및 번역 서비스",
+  "local-limited": "로컬 및 실험 모델",
+  testing: "테스트 모델",
+});
 
 const OPTIONS = {
   target_language: [
@@ -51,8 +70,8 @@ const OPTIONS = {
     ["zh", "简体中文"],
     ["zh-Hant", "繁體中文"],
   ],
-  translator: TRANSLATOR_OPTIONS,
-  outgoing_translator: TRANSLATOR_OPTIONS,
+  translator: DISPLAY_TRANSLATOR_OPTIONS,
+  outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
   speech_style: [
     ["auto", "원문 말투 유지 (자동)"],
     ["polite", "항상 존댓말·격식체"],
@@ -164,10 +183,16 @@ const elements = {
   localModelStorageList: document.querySelector("#local-model-storage-list"),
   translationCacheSummary: document.querySelector("#translation-cache-summary"),
   clearTranslationCache: document.querySelector("#clear-translation-cache"),
+  outgoingModelGuidance: document.querySelector("#outgoing-model-guidance"),
+  outgoingModelGuidanceTitle: document.querySelector("#outgoing-model-guidance-title"),
+  outgoingModelGuidanceDetail: document.querySelector("#outgoing-model-guidance-detail"),
+  outgoingModelGuidanceAction: document.querySelector("#outgoing-model-guidance-action"),
   providerRows: [...document.querySelectorAll(".provider-row")],
 };
 
 const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
+const CLI_PROVIDERS = new Set(["chatgpt", "claude", "gemini"]);
+const RECOMMENDED_PROVIDER_ORDER = ["chatgpt", "claude", "gemini"];
 const PROVIDER_LOGIN_COPY = Object.freeze({
   chatgpt: { name: "ChatGPT", account: "ChatGPT 계정" },
   claude: { name: "Claude", account: "Claude 계정" },
@@ -307,6 +332,46 @@ function providerStateLabel(connection) {
   return "확인 필요";
 }
 
+function connectedRecommendedProvider() {
+  return RECOMMENDED_PROVIDER_ORDER.find(providerIsConnected) || "";
+}
+
+function renderOutgoingModelGuidance() {
+  const selected = state.selectValues.outgoing_translator || state.config.outgoing_translator;
+  const action = elements.outgoingModelGuidanceAction;
+  if (!selected || !elements.outgoingModelGuidance || !action) return;
+
+  action.hidden = false;
+  action.disabled = false;
+  delete action.dataset.provider;
+  if (CLI_PROVIDERS.has(selected)) {
+    elements.outgoingModelGuidance.dataset.state = "external";
+    setLocalizedText(elements.outgoingModelGuidanceTitle, "CLI 모델로 보내는 메시지를 통역합니다.");
+    setLocalizedText(elements.outgoingModelGuidanceDetail, "번역할 텍스트만 선택한 서비스로 전송됩니다. 로컬 모델보다 의미와 말투를 안정적으로 보존하는 데 적합합니다.");
+    action.hidden = true;
+    return;
+  }
+  if (selected === "deepl") {
+    elements.outgoingModelGuidance.dataset.state = "external";
+    setLocalizedText(elements.outgoingModelGuidanceTitle, "외부 번역 서비스로 보내는 메시지를 통역합니다.");
+    setLocalizedText(elements.outgoingModelGuidanceDetail, "번역할 텍스트만 DeepL로 전송됩니다.");
+    action.hidden = true;
+    return;
+  }
+
+  elements.outgoingModelGuidance.dataset.state = "local";
+  setLocalizedText(elements.outgoingModelGuidanceTitle, "보내는 메시지에는 CLI 모델을 권장합니다.");
+  const connectedProvider = connectedRecommendedProvider();
+  if (connectedProvider) {
+    setLocalizedText(elements.outgoingModelGuidanceDetail, "연결된 CLI 모델을 사용하면 의미와 말투를 더 안정적으로 보존할 수 있습니다.");
+    setLocalizedText(action, "권장 모델 사용");
+    action.dataset.provider = connectedProvider;
+  } else {
+    setLocalizedText(elements.outgoingModelGuidanceDetail, "로컬 모델은 짧고 단순한 문장에 적합합니다. 문맥과 말투가 중요한 메시지는 CLI 모델 사용을 권장합니다.");
+    setLocalizedText(action, "CLI 모델 연결");
+  }
+}
+
 function renderProviderConnections(connections) {
   state.providerConnections = new Map(connections.map(connection => [connection.id, connection]));
   for (const row of elements.providerRows) {
@@ -331,6 +396,7 @@ function renderProviderConnections(connections) {
     );
   }
   applyUiLanguage(state.selectValues.ui_language || state.config.ui_language);
+  renderOutgoingModelGuidance();
 }
 
 async function loadProviderConnections() {
@@ -347,6 +413,7 @@ async function loadProviderConnections() {
     }
   } finally {
     state.providerLoading = false;
+    renderOutgoingModelGuidance();
   }
 }
 
@@ -921,7 +988,15 @@ function renderSelect(element) {
   menu.setAttribute("role", "listbox");
   element.append(trigger, menu);
 
-  for (const [value, label] of OPTIONS[field]) {
+  let previousGroup = "";
+  for (const [value, label, group] of OPTIONS[field]) {
+    if (group && group !== previousGroup) {
+      const groupLabel = document.createElement("span");
+      groupLabel.className = "select-group-label";
+      groupLabel.textContent = translateCopy(currentUiLanguage(), SELECT_GROUP_LABELS[group]);
+      menu.append(groupLabel);
+      previousGroup = group;
+    }
     const option = document.createElement("button");
     option.type = "button";
     option.className = "select-option";
@@ -994,6 +1069,7 @@ function setSelectValue(field, value) {
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === value));
   }
+  if (field === "outgoing_translator") renderOutgoingModelGuidance();
 }
 
 function closeSelect(element) {
@@ -1495,6 +1571,22 @@ for (const row of elements.providerRows) {
     disconnectProvider(row).catch(error => showError("연결을 해제하지 못했습니다", String(error)));
   });
 }
+elements.outgoingModelGuidanceAction.addEventListener("click", async () => {
+  const provider = elements.outgoingModelGuidanceAction.dataset.provider;
+  if (!provider) {
+    revealProviderConnection("chatgpt");
+    return;
+  }
+  elements.outgoingModelGuidanceAction.disabled = true;
+  try {
+    setSelectValue("outgoing_translator", provider);
+    await applySettingsPatch({ outgoing_translator: provider });
+  } catch (error) {
+    await showError("권장 모델을 적용하지 못했습니다", String(error));
+  } finally {
+    renderOutgoingModelGuidance();
+  }
+});
 for (const secret of document.querySelectorAll(".provider-secret")) {
   secret.addEventListener("change", () => {
     savePendingProviderCredentials()

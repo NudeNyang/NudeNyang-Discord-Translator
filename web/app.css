@@ -784,6 +784,20 @@ input:focus-visible,
   outline-offset: -2px;
 }
 
+.select-group-label {
+  display: block;
+  padding: 8px 11px 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.select-group-label:not(:first-child) {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
 .switch {
   justify-self: end;
   display: inline-grid;
@@ -905,6 +919,44 @@ input:focus-visible,
 
 .privacy-note strong {
   color: var(--accent-strong);
+}
+
+.outgoing-model-guidance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 18px 0;
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--border));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
+}
+
+.outgoing-model-guidance[data-state="external"] {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 38%, var(--surface));
+}
+
+.outgoing-model-guidance-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.outgoing-model-guidance-copy strong {
+  font-size: 13px;
+}
+
+.outgoing-model-guidance-copy span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.outgoing-model-guidance .button {
+  min-width: 112px;
+  white-space: nowrap;
 }
 
 .provider-list {
@@ -1400,6 +1452,14 @@ input:focus-visible,
 
   .provider-row {
     gap: 12px;
+  }
+
+  .outgoing-model-guidance {
+    grid-template-columns: 1fr;
+  }
+
+  .outgoing-model-guidance .button {
+    justify-self: start;
   }
 
   .storage-model-row,
