@@ -1137,6 +1137,10 @@ fn main() {
         .expect("NudeNyang Translator 초기 설정을 읽지 못했습니다");
     let engine = RustEngine::start(initial_config);
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, pressed_shortcut, event| {

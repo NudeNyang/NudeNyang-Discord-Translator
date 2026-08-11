@@ -8,6 +8,7 @@ const rustMain = readFileSync(new URL("../../src-tauri/src/main.rs", import.meta
 const tauriConfig = readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8");
 const packageManifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
 const cargoManifest = readFileSync(new URL("../../src-tauri/Cargo.toml", import.meta.url), "utf8");
+const capabilities = readFileSync(new URL("../../src-tauri/capabilities/default.json", import.meta.url), "utf8");
 const installerHooks = readFileSync(new URL("../../src-tauri/windows/hooks.nsh", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
@@ -136,6 +137,23 @@ test("convenience panel exposes global toggles and editable composer shortcuts",
   assert.match(script, /send_outgoing_immediately/);
   assert.match(script, /review_outgoing_before_send/);
   assert.match(script, /request-outgoing-translation-toggle/);
+});
+
+test("system autostart is a cross-platform convenience setting that defaults to off", () => {
+  assert.match(markup, /<h3>시스템 시작 시 자동 실행<\/h3>/);
+  assert.match(markup, /컴퓨터에 로그인하면 NudeNyang Translator를 자동으로 실행합니다/);
+  assert.match(markup, /id="autostart"[^>]*aria-checked="false"/);
+  assert.doesNotMatch(markup, /Windows 시작 시 자동 실행/);
+  assert.match(script, /window\.__TAURI__\?\.autostart\?\.isEnabled/);
+  assert.match(script, /window\.__TAURI__\?\.autostart\?\.enable/);
+  assert.match(script, /window\.__TAURI__\?\.autostart\?\.disable/);
+  assert.match(script, /autostartEnabled:\s*false/);
+  assert.match(script, /await tauriAutostartIsEnabled\(\)/);
+  assert.match(cargoManifest, /tauri-plugin-autostart = "2"/);
+  assert.match(rustMain, /tauri_plugin_autostart::init/);
+  assert.match(capabilities, /autostart:allow-is-enabled/);
+  assert.match(capabilities, /autostart:allow-enable/);
+  assert.match(capabilities, /autostart:allow-disable/);
 });
 
 test("the incoming shortcut toggles the native engine without waiting for the settings webview", () => {

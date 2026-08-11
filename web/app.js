@@ -22,6 +22,9 @@ const tauriInvoke = window.__TAURI__?.core?.invoke;
 const tauriListen = window.__TAURI__?.event?.listen;
 const tauriGetVersion = window.__TAURI__?.app?.getVersion;
 const tauriOpenUrl = window.__TAURI__?.opener?.openUrl;
+const tauriAutostartIsEnabled = window.__TAURI__?.autostart?.isEnabled;
+const tauriAutostartEnable = window.__TAURI__?.autostart?.enable;
+const tauriAutostartDisable = window.__TAURI__?.autostart?.disable;
 const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 const SCROLL_INDICATOR_REVEAL_DISTANCE = 44;
 const APP_LINKS = Object.freeze({
@@ -104,6 +107,9 @@ const state = {
   pendingEnabled: null,
   toggleActive: false,
   outgoingToggleActive: false,
+  autostartEnabled: false,
+  autostartSaved: false,
+  autostartLoading: false,
   providerConnections: new Map(),
   providerLoading: false,
   storageStatus: null,
@@ -117,6 +123,7 @@ const elements = {
   enabled: document.querySelector("#enabled"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
+  autostart: document.querySelector("#autostart"),
   outgoingAutoHelp: document.querySelector("#outgoing-auto-help"),
   translationShortcutHint: document.querySelector("#translation-shortcut-hint"),
   outgoingShortcutHint: document.querySelector("#outgoing-shortcut-hint"),
@@ -806,6 +813,43 @@ function setLocalizedText(element, korean) {
   element.textContent = translateDynamicCopy(currentUiLanguage(), korean);
 }
 
+function renderAutostart() {
+  setSwitch(elements.autostart, state.autostartEnabled, "켜짐", "꺼짐");
+  const unavailable = !tauriAutostartIsEnabled
+    || !tauriAutostartEnable
+    || !tauriAutostartDisable;
+  elements.autostart.disabled = unavailable || state.autostartLoading;
+  elements.autostart.setAttribute("aria-busy", String(state.autostartLoading));
+}
+
+async function loadAutostartState({ updateBaseline = false } = {}) {
+  if (!tauriAutostartIsEnabled) {
+    state.autostartEnabled = false;
+    if (updateBaseline) state.autostartSaved = false;
+    renderAutostart();
+    return;
+  }
+  state.autostartEnabled = Boolean(await tauriAutostartIsEnabled());
+  if (updateBaseline) state.autostartSaved = state.autostartEnabled;
+  renderAutostart();
+}
+
+async function setAutostartEnabled(enabled) {
+  if (!tauriAutostartIsEnabled || !tauriAutostartEnable || !tauriAutostartDisable) {
+    throw new Error("Tauri 앱에서만 사용할 수 있는 기능입니다.");
+  }
+  state.autostartLoading = true;
+  renderAutostart();
+  try {
+    if (enabled) await tauriAutostartEnable();
+    else await tauriAutostartDisable();
+    state.autostartEnabled = Boolean(await tauriAutostartIsEnabled());
+  } finally {
+    state.autostartLoading = false;
+    renderAutostart();
+  }
+}
+
 function setLocalizedError(element, error) {
   if (!element) return;
   localizedText.delete(element);
@@ -840,6 +884,7 @@ function applyUiLanguage(language) {
   for (const [element, value] of localizedBackendText) {
     element.textContent = translateBackendText(language, value);
   }
+  renderAutostart();
   renderStorageStatus();
   window.requestAnimationFrame(updateScrollIndicator);
 }
@@ -1311,6 +1356,14 @@ function waitForStableUiFrame() {
 
 async function initializeSettingsUi() {
   await loadSettings();
+  try {
+    await loadAutostartState({ updateBaseline: true });
+  } catch (error) {
+    state.autostartEnabled = false;
+    state.autostartSaved = false;
+    renderAutostart();
+    writeDiagnostic("warn", `autostart-state: ${String(error)}`);
+  }
   await waitForStableUiFrame();
   await invoke("engine_ui_ready");
 }
@@ -1459,6 +1512,16 @@ elements.updateBannerInstall.addEventListener("click", () => {
 elements.openDiagnosticLog.addEventListener("click", () => {
   invoke("diagnostic_log_reveal").catch(error => showError("로그 파일을 열지 못했습니다", String(error)));
 });
+elements.autostart.addEventListener("click", async () => {
+  const previous = state.autostartEnabled;
+  try {
+    await setAutostartEnabled(!previous);
+  } catch (error) {
+    state.autostartEnabled = previous;
+    renderAutostart();
+    await showError("자동 시작 설정을 변경하지 못했습니다", String(error));
+  }
+});
 elements.clearTranslationCache.addEventListener("click", () => {
   clearTranslationCache().catch(error => showError("번역 기록을 정리하지 못했습니다", String(error)));
 });
@@ -1476,6 +1539,9 @@ elements.cancel.addEventListener("click", async () => {
     await waitForSettingsUpdates();
     setLocalizedText(elements.saveStatus, "되돌리는 중");
     const restored = await applySettingsPatch(state.saved, { status: false });
+    if (state.autostartEnabled !== state.autostartSaved) {
+      await setAutostartEnabled(state.autostartSaved);
+    }
     renderConfig(restored);
     document.querySelectorAll(".provider-secret").forEach(secret => { secret.value = ""; });
     setLocalizedText(elements.saveStatus, "변경 사항을 되돌렸습니다.");
@@ -1494,6 +1560,7 @@ elements.form.addEventListener("submit", async event => {
       throw new Error("선택한 외부 번역 서비스를 먼저 연결하십시오.");
     }
     state.saved = normalizeConfig(state.config);
+    state.autostartSaved = state.autostartEnabled;
     await invoke("main_window_hide");
   } catch (error) {
     setLocalizedError(elements.saveStatus, error);
