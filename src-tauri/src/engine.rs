@@ -171,7 +171,8 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
         | WorkerCommand::Release
         | WorkerCommand::ClearCacheMemory
         | WorkerCommand::Stop => 0,
-        WorkerCommand::Translate(_) | WorkerCommand::TranslateImage(_) => 1,
+        WorkerCommand::Translate(_) => 1,
+        WorkerCommand::TranslateImage(_) => 2,
     }
 }
 
@@ -185,12 +186,22 @@ fn next_worker_command(
     while let Ok(command) = commands.try_recv() {
         backlog.push_back(command);
     }
-    let index = backlog
+    let priority = backlog
         .iter()
-        .enumerate()
-        .min_by_key(|(_, command)| worker_command_priority(command))
-        .map(|(index, _)| index)
+        .map(worker_command_priority)
+        .min()
         .expect("worker backlog contains at least one command");
+    let index = if priority == 1 {
+        backlog
+            .iter()
+            .rposition(|command| worker_command_priority(command) == priority)
+            .expect("latest visible display command exists")
+    } else {
+        backlog
+            .iter()
+            .position(|command| worker_command_priority(command) == priority)
+            .expect("highest priority worker command exists")
+    };
     Ok(backlog
         .remove(index)
         .expect("selected worker command exists"))
@@ -2096,10 +2107,11 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
+        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
         run_outgoing_translation_worker, translator_activation_notice, translator_label,
         translator_preparation_plan, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
-        RuntimeStatus, RustEngine, TranslatorPreparationPlan, WorkerResult,
+        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
+        WorkerResult,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -2107,7 +2119,7 @@ mod tests {
         apply_script, parse_snapshot, DomChange, DomPart, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
     use crate::language::{detect_explicit_language, Language};
-    use std::collections::{HashMap, HashSet};
+    use std::collections::{HashMap, HashSet, VecDeque};
     use std::sync::mpsc;
     use std::thread;
     use std::time::{Duration, Instant};
@@ -2267,6 +2279,68 @@ mod tests {
         ));
         sender.send(OutgoingWorkerCommand::Stop).unwrap();
         worker.join().unwrap();
+    }
+
+    #[test]
+    fn newest_visible_display_batch_precedes_stale_viewport_backlog() {
+        let (sender, receiver) = mpsc::channel();
+        for item_id in ["previous-viewport", "current-viewport"] {
+            sender
+                .send(WorkerCommand::Translate(TranslationBatch {
+                    generation: 1,
+                    target: Language::Korean,
+                    parts: vec![DomPart {
+                        kind: "message".to_string(),
+                        item_id: item_id.to_string(),
+                        index: 0,
+                        text: item_id.to_string(),
+                        displayed_text: None,
+                    }],
+                    queued_at: Instant::now(),
+                }))
+                .unwrap();
+        }
+
+        let command = next_worker_command(&receiver, &mut VecDeque::new()).unwrap();
+        let WorkerCommand::Translate(batch) = command else {
+            panic!("display translation batch expected");
+        };
+        assert_eq!(batch.parts[0].item_id, "current-viewport");
+    }
+
+    #[test]
+    fn control_commands_still_preempt_the_latest_visible_display_batch() {
+        let (sender, receiver) = mpsc::channel();
+        for item_id in ["previous-viewport", "current-viewport"] {
+            sender
+                .send(WorkerCommand::Translate(TranslationBatch {
+                    generation: 1,
+                    target: Language::Korean,
+                    parts: vec![DomPart {
+                        kind: "message".to_string(),
+                        item_id: item_id.to_string(),
+                        index: 0,
+                        text: item_id.to_string(),
+                        displayed_text: None,
+                    }],
+                    queued_at: Instant::now(),
+                }))
+                .unwrap();
+            if item_id == "previous-viewport" {
+                sender.send(WorkerCommand::Warm).unwrap();
+            }
+        }
+
+        let mut backlog = VecDeque::new();
+        assert!(matches!(
+            next_worker_command(&receiver, &mut backlog).unwrap(),
+            WorkerCommand::Warm
+        ));
+        let command = next_worker_command(&receiver, &mut backlog).unwrap();
+        let WorkerCommand::Translate(batch) = command else {
+            panic!("display translation batch expected");
+        };
+        assert_eq!(batch.parts[0].item_id, "current-viewport");
     }
 
     #[test]
