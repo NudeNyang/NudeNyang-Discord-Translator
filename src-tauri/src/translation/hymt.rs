@@ -615,59 +615,64 @@ impl HyMtTranslator {
             downloaded = 0;
         }
         self.report_progress("downloading", downloaded);
-        let url = format!(
-            "https://huggingface.co/{}/resolve/main/{}?download=true",
-            self.model.repository, self.model.filename
-        );
-        let download_client = Client::builder()
-            .connect_timeout(Duration::from_secs(30))
-            .timeout(None)
-            .build()
-            .map_err(|error| format!("모델 다운로드 클라이언트를 만들지 못했습니다: {error}"))?;
-        let mut request = download_client.get(url);
-        if downloaded > 0 {
-            request = request.header(RANGE, format!("bytes={downloaded}-"));
-        }
-        let mut response = request
-            .send()
-            .and_then(|response| response.error_for_status())
-            .map_err(|error| {
-                format!("{} 모델 다운로드에 실패했습니다: {error}", self.model.label)
-            })?;
-        let append = downloaded > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
-        if !append {
-            downloaded = 0;
-        }
-        let mut output = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .append(append)
-            .truncate(!append)
-            .open(&partial)
-            .map_err(|error| format!("로컬 모델 임시 파일을 열지 못했습니다: {error}"))?;
-        let mut buffer = vec![0_u8; 1024 * 1024];
-        let mut last_reported = downloaded;
-        loop {
-            let count = response
-                .read(&mut buffer)
-                .map_err(|error| format!("로컬 모델을 내려받지 못했습니다: {error}"))?;
-            if count == 0 {
-                break;
+        if downloaded < self.model.expected_bytes {
+            let url = format!(
+                "https://huggingface.co/{}/resolve/main/{}?download=true",
+                self.model.repository, self.model.filename
+            );
+            let download_client = Client::builder()
+                .connect_timeout(Duration::from_secs(30))
+                .timeout(None)
+                .build()
+                .map_err(|error| {
+                    format!("모델 다운로드 클라이언트를 만들지 못했습니다: {error}")
+                })?;
+            let mut request = download_client.get(url);
+            if downloaded > 0 {
+                request = request.header(RANGE, format!("bytes={downloaded}-"));
+            }
+            let mut response = request
+                .send()
+                .and_then(|response| response.error_for_status())
+                .map_err(|error| {
+                    format!("{} 모델 다운로드에 실패했습니다: {error}", self.model.label)
+                })?;
+            let append =
+                downloaded > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
+            if !append {
+                downloaded = 0;
+            }
+            let mut output = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .append(append)
+                .truncate(!append)
+                .open(&partial)
+                .map_err(|error| format!("로컬 모델 임시 파일을 열지 못했습니다: {error}"))?;
+            let mut buffer = vec![0_u8; 1024 * 1024];
+            let mut last_reported = downloaded;
+            loop {
+                let count = response
+                    .read(&mut buffer)
+                    .map_err(|error| format!("로컬 모델을 내려받지 못했습니다: {error}"))?;
+                if count == 0 {
+                    break;
+                }
+                output
+                    .write_all(&buffer[..count])
+                    .map_err(|error| format!("로컬 모델을 저장하지 못했습니다: {error}"))?;
+                downloaded += count as u64;
+                if downloaded.saturating_sub(last_reported) >= 8 * 1024 * 1024
+                    || downloaded == self.model.expected_bytes
+                {
+                    self.report_progress("downloading", downloaded);
+                    last_reported = downloaded;
+                }
             }
             output
-                .write_all(&buffer[..count])
-                .map_err(|error| format!("로컬 모델을 저장하지 못했습니다: {error}"))?;
-            downloaded += count as u64;
-            if downloaded.saturating_sub(last_reported) >= 8 * 1024 * 1024
-                || downloaded == self.model.expected_bytes
-            {
-                self.report_progress("downloading", downloaded);
-                last_reported = downloaded;
-            }
+                .flush()
+                .map_err(|error| format!("로컬 모델 파일을 마무리하지 못했습니다: {error}"))?;
         }
-        output
-            .flush()
-            .map_err(|error| format!("로컬 모델 파일을 마무리하지 못했습니다: {error}"))?;
         if downloaded != self.model.expected_bytes {
             return Err(format!(
                 "로컬 모델 다운로드 크기가 일치하지 않습니다({downloaded}/{} bytes).",
@@ -1670,7 +1675,7 @@ mod tests {
         detect_speech_style, find_llama_server, max_output_tokens, remove_cached_model_files,
         rewrite_style_prompt, startup_device_attempts, translate_gemma_completion_payload,
         translate_with_completion, translate_with_completion_for_model,
-        translate_with_translate_gemma, translation_prompt_for_model, HyMtModelSize,
+        translate_with_translate_gemma, translation_prompt_for_model, HyMtModel, HyMtModelSize,
         HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
@@ -1700,6 +1705,41 @@ mod tests {
         assert!(!super::partial_path(&model).exists());
         assert!(!super::hash_marker(&model).exists());
         assert!(unrelated.exists());
+        let _ = std::fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn completed_partial_download_is_verified_without_requesting_past_eof() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-completed-model-download-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let model_path = directory.join("model.gguf");
+        std::fs::write(super::partial_path(&model_path), b"abc").unwrap();
+        let model = HyMtModel {
+            key: "test",
+            family: "test",
+            label: "Test model",
+            repository: "invalid/repository-that-must-not-be-requested",
+            filename: "model.gguf",
+            expected_bytes: 3,
+            expected_sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        };
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto")
+            .unwrap()
+            .with_paths(model_path.clone(), None);
+        translator.model = model;
+
+        translator.ensure_model().unwrap();
+
+        assert_eq!(std::fs::read(&model_path).unwrap(), b"abc");
+        assert!(!super::partial_path(&model_path).exists());
+        assert!(super::hash_marker(&model_path).exists());
         let _ = std::fs::remove_dir_all(directory);
     }
 
