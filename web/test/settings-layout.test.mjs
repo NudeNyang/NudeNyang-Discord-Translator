@@ -33,13 +33,14 @@ test("the installer migrates legacy shortcuts to the NudeNyang Translator name",
   assert.match(installerHooks, /Delete "\$SMPROGRAMS\\Nude Translator\.lnk"/);
 });
 
-test("settings use five uniform navigation categories", () => {
-  for (const panel of ["translation", "engine", "image", "convenience", "about"]) {
+test("settings use six uniform navigation categories", () => {
+  for (const panel of ["translation", "engine", "storage", "image", "convenience", "about"]) {
     assert.match(markup, new RegExp(`data-settings-panel="${panel}"`));
     assert.match(markup, new RegExp(`data-settings-view="${panel}"`));
   }
   assert.match(markup, /<span>번역<\/span>/);
   assert.match(markup, /<span>번역 엔진<\/span>/);
+  assert.match(markup, /<span>저장 공간<\/span>/);
   assert.match(markup, /<span>이미지 번역<\/span>/);
   assert.match(markup, /<span>편의 기능<\/span>/);
   assert.match(markup, /<span>앱 정보<\/span>/);

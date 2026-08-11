@@ -12,6 +12,8 @@ const model = readFileSync(new URL("../../src-tauri/src/translation/hymt.rs", im
 
 test("storage management exposes downloaded models and SQLite history cleanup", () => {
   assert.match(markup, /id="storage-management"/);
+  assert.match(markup, /data-settings-panel="storage"/);
+  assert.match(markup, /data-settings-view="storage"/);
   assert.match(markup, /id="local-model-storage-list"/);
   assert.match(markup, /id="clear-translation-cache"/);
   assert.match(script, /invoke\("storage_status_get"\)/);

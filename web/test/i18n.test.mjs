@@ -47,14 +47,14 @@ test("runtime notices keep model details while following the interface language"
   );
 });
 
-test("plan-aware Codex model labels are translated", () => {
+test("quality-first Codex model labels are translated", () => {
   assert.equal(
-    translateCopy("en", "GPT-5.6 (플랜 자동 선택)"),
-    "GPT-5.6 (selected for your plan)",
+    translateCopy("en", "GPT-5.6 (품질 최우선)"),
+    "GPT-5.6 (quality first)",
   );
   assert.equal(
-    translateCopy("ja", "GPT-5.6 (플랜 자동 선택)"),
-    "GPT-5.6（プランに合わせて自動選択）",
+    translateCopy("ja", "GPT-5.6 (품질 최우선)"),
+    "GPT-5.6（品質最優先）",
   );
 });
 

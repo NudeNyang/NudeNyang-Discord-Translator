@@ -65,7 +65,7 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
 });
 
 test("subscription translators use a simple quality-first label", () => {
-  assert.match(script, /GPT-5\.6 \(플랜 자동 선택\)/);
+  assert.match(script, /GPT-5\.6 \(품질 최우선\)/);
   assert.match(providers, /ChatGPT 무료 플랜 이상 · Codex CLI/);
   assert.match(providers, /Claude 유료 플랜 · Claude Code/);
   assert.match(script, /Claude Haiku 4\.5 \(품질 최우선\)/);
