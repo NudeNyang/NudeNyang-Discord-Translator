@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = '앱 재실행 시 로컬 모델 지연 로딩, 단축키 안정성, 오류와 트레이 문구 지역화를 보완한 0.4.4 비공개 베타',
+    [string]$ReleaseNotes = '로컬 모델의 원문 없는 이모지 추가를 방지하고 시스템 시작 시 자동 실행 옵션을 추가한 0.4.5 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
