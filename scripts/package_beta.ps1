@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = '번역 말투 설정을 제거하고 받는 메시지와 보내는 메시지의 방향 아이콘 및 로컬 모델의 속도 우선 표기를 적용한 0.4.8 비공개 베타',
+    [string]$ReleaseNotes = '빠르게 스크롤할 때 현재 보고 있는 화면의 메시지를 먼저 번역하도록 대기열 우선순위를 개선한 0.4.9 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
