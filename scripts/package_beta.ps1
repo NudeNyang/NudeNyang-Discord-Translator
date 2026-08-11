@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'MiLMMT를 제거하고 기존 다운로드 파일을 정리하며, 보내는 메시지 통역에 CLI 모델을 권장하도록 개선한 0.4.6 비공개 베타',
+    [string]$ReleaseNotes = 'Discord 메시지의 줄바꿈과 서식을 보존하고 설정 화면의 안내 문구, 여백 및 번역 서비스 모델 표기를 정리한 0.4.7 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
