@@ -39,7 +39,7 @@ const COPY = Object.freeze({
   "Claude (품질 최우선)": ["Claude (quality first)", "Claude（品質最優先）", "Claude（质量优先）"],
   "Gemini (품질 최우선)": ["Gemini (quality first)", "Gemini（品質最優先）", "Gemini（质量优先）"],
   "품질 최우선": ["Quality first", "品質最優先", "质量优先"],
-  "로컬 모델 하나만 실행": ["One local model at a time", "ローカルモデルは一度に一つ", "一次仅运行一个本地模型"],
+  "VRAM 보호": ["VRAM protection", "VRAM 保護", "VRAM 保护"],
   "표시 번역과 실시간 통역에서 로컬 모델을 선택하면 하나만 실행되며, 한쪽의 선택을 바꾸면 다른 쪽도 같은 모델로 맞춰집니다.": ["When local models are selected for display translation and real-time interpretation, only one runs at a time. Changing one selection aligns the other to the same model.", "表示翻訳とリアルタイム通訳でローカルモデルを選択した場合、実行されるのは一つだけです。一方の選択を変更すると、もう一方も同じモデルに揃います。", "显示翻译和实时翻译都选择本地模型时，一次只运行一个。更改一侧的选择后，另一侧也会同步为相同模型。"],
   "로컬 엔진": ["Local engine", "ローカルエンジン", "本地引擎"],
   "로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다.": ["Configure local translation model execution and resource use.", "ローカル翻訳モデルの実行デバイスとリソース使用方法を設定します。", "设置本地翻译模型的运行设备和资源使用方式。"],

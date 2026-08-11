@@ -66,7 +66,7 @@ test("experimental MiLMMT model labels are translated", () => {
 });
 
 test("local engine notices describe every selectable local model", () => {
-  assert.equal(translateCopy("en", "로컬 모델 하나만 실행"), "One local model at a time");
+  assert.equal(translateCopy("en", "VRAM 보호"), "VRAM protection");
   assert.equal(
     translateCopy(
       "ja",

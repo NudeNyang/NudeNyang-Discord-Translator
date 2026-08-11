@@ -106,7 +106,7 @@ test("display translation and real-time interpretation choose models independent
   assert.match(markup, /data-field="translator"/);
   assert.match(markup, /<h3>실시간 통역 모델<\/h3>/);
   assert.match(markup, /data-field="outgoing_translator"/);
-  assert.match(markup, /로컬 모델 하나만 실행/);
+  assert.match(markup, /VRAM 보호/);
   assert.match(markup, /표시 번역과 실시간 통역에서 로컬 모델을 선택하면 하나만 실행되며/);
   assert.doesNotMatch(markup, /1\.8B와 7B 중 하나의 로컬 모델만 사용합니다/);
   assert.match(markup, /처리 위치 안내/);
