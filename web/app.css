@@ -456,6 +456,12 @@ input:focus-visible,
   font-weight: 750;
 }
 
+.message-direction-icon {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1;
+}
+
 .settings-card .setting-row {
   margin: 0 16px;
 }

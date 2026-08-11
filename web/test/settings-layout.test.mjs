@@ -76,6 +76,9 @@ test("settings apply immediately and the primary footer action only confirms", (
 });
 
 test("outgoing interpretation asks only when automatic language detection is uncertain", () => {
+  assert.match(markup, /class="card-index message-direction-icon" aria-hidden="true">↓<\/span>[\s\S]*?<h3>받는 메시지<\/h3>/);
+  assert.match(markup, /class="card-index message-direction-icon" aria-hidden="true">↑<\/span>[\s\S]*?<h3>보내는 메시지<\/h3>/);
+  assert.doesNotMatch(markup, /class="card-index" aria-hidden="true">0[123]<\/span>/);
   assert.match(markup, /<h3>전송 메시지 통역<\/h3>/);
   assert.match(markup, /id="outgoing-translation"/);
   assert.match(markup, /<h3>기본 전송 언어<\/h3>/);
