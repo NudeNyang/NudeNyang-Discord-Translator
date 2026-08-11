@@ -16,20 +16,24 @@ test("storage management exposes downloaded models and SQLite history cleanup", 
   assert.match(markup, /data-settings-panel="storage"/);
   assert.match(markup, /data-settings-view="storage"/);
   assert.match(markup, /id="local-model-storage-list"/);
+  assert.match(markup, /id="open-local-model-folder"/);
   assert.match(markup, /id="clear-translation-cache"/);
   assert.match(markup, /data-field="translation_history_retention_days"/);
   assert.match(markup, /로컬에 저장된 번역 데이터의 용량을 관리합니다\./);
   assert.match(markup, /class="storage-group-heading"><span class="card-index" aria-hidden="true">L<\/span>/);
   assert.match(markup, /class="storage-history-section"[\s\S]*id="storage-history-heading">번역 기록<\/h3>[\s\S]*class="settings-card storage-history-card"/);
   assert.match(script, /invoke\("storage_status_get"\)/);
+  assert.match(script, /invoke\("local_model_storage_folder_open"\)/);
   assert.match(script, /invoke\("local_model_delete", \{ modelId: model\.id \}\)/);
   assert.match(script, /invoke\("translation_cache_clear"\)/);
   assert.match(script, /\[180, "180일 보관"\]/);
   assert.match(rustMain, /storage_status_get/);
+  assert.match(rustMain, /local_model_storage_folder_open/);
   assert.match(rustMain, /local_model_delete/);
   assert.match(rustMain, /translation_cache_clear/);
   assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
   assert.match(model, /remove_retired_milmmt_files/);
+  assert.match(model, /pub fn local_model_storage_root\(\)/);
 });
 
 test("storage navigation sits immediately above app information", () => {
@@ -66,6 +70,7 @@ test("local model deletion removes only cache artifacts and blocks selected mode
 
 test("storage management copy follows the selected interface language", () => {
   assert.equal(translateCopy("en", "저장 공간 관리"), "Storage management");
+  assert.equal(translateCopy("en", "폴더 열기"), "Open folder");
   assert.equal(translateCopy("ja", "기록 정리"), "履歴を消去");
   assert.equal(translateCopy("en", "30일 보관"), "Keep for 30 days");
   assert.equal(

@@ -1518,6 +1518,10 @@ fn default_cache_root() -> PathBuf {
     env::temp_dir().join("DiscordTranslateOverlay")
 }
 
+pub fn local_model_storage_root() -> PathBuf {
+    default_cache_root().join("models")
+}
+
 fn default_model_path(model: HyMtModel) -> PathBuf {
     if let Some(path) = bundled_model_path(model) {
         return path;
@@ -1526,8 +1530,7 @@ fn default_model_path(model: HyMtModel) -> PathBuf {
 }
 
 fn cached_model_path(model: HyMtModel) -> PathBuf {
-    default_cache_root()
-        .join("models")
+    local_model_storage_root()
         .join(model.family)
         .join(model.key)
         .join(model.filename)

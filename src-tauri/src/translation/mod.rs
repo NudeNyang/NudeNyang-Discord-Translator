@@ -11,8 +11,8 @@ use crate::language::Language;
 
 pub use deepl::DeepLTranslator;
 pub use hymt::{
-    delete_cached_local_model, local_model_storage_status, HyMtModelSize, HyMtTranslator,
-    LocalModelDeleteResult, LocalModelStorageStatus, ModelPreparationProgress,
+    delete_cached_local_model, local_model_storage_root, local_model_storage_status, HyMtModelSize,
+    HyMtTranslator, LocalModelDeleteResult, LocalModelStorageStatus, ModelPreparationProgress,
     ModelProgressObserver,
 };
 pub use mock::{MockTranslator, OriginalTranslator};

@@ -655,6 +655,18 @@ async fn storage_status_get() -> Result<Value, String> {
 }
 
 #[tauri::command]
+fn local_model_storage_folder_open(app: AppHandle) -> Result<String, String> {
+    let path = translation::local_model_storage_root();
+    std::fs::create_dir_all(&path)
+        .map_err(|error| format!("로컬 모델 데이터 폴더를 만들지 못했습니다: {error}"))?;
+    let display_path = path.to_string_lossy().into_owned();
+    app.opener()
+        .open_path(display_path.clone(), None::<&str>)
+        .map_err(|error| format!("로컬 모델 데이터 폴더를 열지 못했습니다: {error}"))?;
+    Ok(display_path)
+}
+
+#[tauri::command]
 async fn local_model_delete(
     config: State<'_, ConfigStore>,
     model_id: String,
@@ -1259,6 +1271,7 @@ fn main() {
             diagnostic_log_reveal,
             diagnostic_log_write,
             storage_status_get,
+            local_model_storage_folder_open,
             local_model_delete,
             translation_cache_clear,
             provider_connections_get,

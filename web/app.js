@@ -181,6 +181,7 @@ const elements = {
   openDiagnosticLog: document.querySelector("#open-diagnostic-log"),
   viewLicense: document.querySelector("#view-license"),
   localModelStorageList: document.querySelector("#local-model-storage-list"),
+  openLocalModelFolder: document.querySelector("#open-local-model-folder"),
   translationCacheSummary: document.querySelector("#translation-cache-summary"),
   clearTranslationCache: document.querySelector("#clear-translation-cache"),
   outgoingModelGuidance: document.querySelector("#outgoing-model-guidance"),
@@ -826,6 +827,20 @@ function renderStorageStatus() {
 async function loadStorageStatus() {
   state.storageStatus = await invoke("storage_status_get");
   renderStorageStatus();
+}
+
+async function openLocalModelFolder() {
+  elements.openLocalModelFolder.disabled = true;
+  elements.openLocalModelFolder.setAttribute("aria-busy", "true");
+  setLocalizedText(elements.openLocalModelFolder, "여는 중");
+  try {
+    await invoke("local_model_storage_folder_open");
+    setLocalizedText(elements.saveStatus, "로컬 모델 데이터 폴더를 열었습니다.");
+  } finally {
+    elements.openLocalModelFolder.disabled = false;
+    elements.openLocalModelFolder.removeAttribute("aria-busy");
+    setLocalizedText(elements.openLocalModelFolder, "폴더 열기");
+  }
 }
 
 async function deleteLocalModel(model) {
@@ -1660,6 +1675,9 @@ elements.autostart.addEventListener("click", async () => {
 });
 elements.clearTranslationCache.addEventListener("click", () => {
   clearTranslationCache().catch(error => showError("번역 기록을 정리하지 못했습니다", String(error)));
+});
+elements.openLocalModelFolder.addEventListener("click", () => {
+  openLocalModelFolder().catch(error => showError("모델 폴더를 열지 못했습니다", String(error)));
 });
 elements.resetSettings.addEventListener("click", () => {
   resetSettings().catch(error => showError("설정을 초기화하지 못했습니다", String(error)));

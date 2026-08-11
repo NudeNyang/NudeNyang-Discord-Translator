@@ -999,7 +999,7 @@ input:focus-visible,
 }
 
 .storage-group-heading {
-  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   gap: 11px;
   min-height: 64px;
   background: color-mix(in srgb, var(--accent-soft) 34%, var(--surface));
@@ -1044,6 +1044,11 @@ input:focus-visible,
 }
 
 .storage-action {
+  min-width: 92px;
+  white-space: nowrap;
+}
+
+.storage-heading-action {
   min-width: 92px;
   white-space: nowrap;
 }
@@ -1505,6 +1510,15 @@ input:focus-visible,
 
   .app-header {
     grid-template-columns: auto 1fr;
+  }
+
+  .storage-group-heading {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .storage-heading-action {
+    grid-column: 2;
+    justify-self: stretch;
   }
 
   .storage-model-row,
