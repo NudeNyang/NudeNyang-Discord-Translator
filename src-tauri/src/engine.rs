@@ -2402,7 +2402,9 @@ mod tests {
     }
 
     fn wait_for_translator(engine: &RustEngine, expected: &str) {
-        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        // The controller can cross two CDP discovery boundaries before it observes
+        // an asynchronous activation result. Each discovery is capped at two seconds.
+        let deadline = std::time::Instant::now() + Duration::from_secs(6);
         loop {
             let status = engine.status().unwrap();
             if status.active_translator == expected && status.translator_state == "ready" {
