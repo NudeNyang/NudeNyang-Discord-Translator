@@ -17,7 +17,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::language::Language;
+use crate::language::{detect_explicit_language, Language};
 
 use super::protected_text::remove_unwritten_decorations;
 use super::Translator;
@@ -361,7 +361,7 @@ impl HyMtTranslator {
                     model.key
                 ),
                 HyMtModelSize::MiLmMt4B => format!(
-                    "milmmt:{}:q4_k_m:source-faithful-v10:{speech_style}",
+                    "milmmt:{}:q4_k_m:source-faithful-v11:{speech_style}",
                     model.key
                 ),
                 _ => format!(
@@ -827,35 +827,30 @@ fn milmmt_prompt(text: &str, source: Language, target: Language, style: &str) ->
     let source_name = milmmt_language_name(source);
     let target_name = milmmt_language_name(target);
     let guarded_text = milmmt_lexical_guard(text.trim(), source, target);
-    let guarded_text = if milmmt_needs_casual_cue(text, source, target, style) {
-        format!("야, {guarded_text}")
-    } else {
-        guarded_text
+    let target_prefix = match (source, target, style) {
+        (Language::Korean, Language::Japanese, "casual") => " ねえ、",
+        _ => "",
     };
-    let style_instruction = milmmt_style_instruction(target, style);
     format!(
-        "Translate this from {source_name} to {target_name}:{style_instruction}\n{NO_UNWRITTEN_DECORATIONS}\n{source_name}: {}\n{target_name}:",
-        guarded_text
+        "Translate this from {source_name} to {target_name}:\n{source_name}: {}\n{target_name}:{target_prefix}",
+        guarded_text,
     )
 }
 
-fn milmmt_needs_casual_cue(text: &str, source: Language, target: Language, style: &str) -> bool {
-    source == Language::Korean
-        && target == Language::Japanese
-        && style == "casual"
-        && !Regex::new(r"^\s*야\s*[,，]").unwrap().is_match(text)
+fn milmmt_retry_prompt(text: &str, source: Language, target: Language) -> String {
+    let source_name = milmmt_language_name(source);
+    let target_name = milmmt_language_name(target);
+    let guarded_text = milmmt_lexical_guard(text.trim(), source, target);
+    format!(
+        "Translate the following {source_name} text to {target_name}. Return only the {target_name} translation.\n{guarded_text}\n{target_name}:",
+    )
 }
 
-fn milmmt_style_instruction(target: Language, style: &str) -> &'static str {
-    match (target, style) {
-        (Language::Japanese, "casual") => {
-            "\nPreserve the source meaning and tone exactly. Use casual Japanese plain form, not desu/masu form. Do not add interjections, discourse markers, or other content that is absent from the source."
-        }
-        (Language::Japanese, "polite") => {
-            "\nPreserve the source meaning and tone exactly. Use polite Japanese desu/masu form. Do not add interjections, discourse markers, or other content that is absent from the source."
-        }
-        _ => "",
-    }
+fn milmmt_stayed_in_source_language(translated: &str, source: Language, target: Language) -> bool {
+    source != Language::Unknown
+        && source != target
+        && matches!(source, Language::Korean | Language::Japanese)
+        && detect_explicit_language(translated) == source
 }
 
 fn remove_unwritten_milmmt_fillers(
@@ -918,6 +913,7 @@ fn milmmt_lexical_guard(text: &str, source: Language, target: Language) -> Strin
         // coined repetition 너굴너굴. Supplying the known Japanese terms in the
         // source slot keeps the official prompt shape while preserving the meaning.
         (Language::Korean, Language::Japanese) => text
+            .replace("너구리는 너굴너굴", "タヌキはヌグルヌグル")
             .replace("너굴너굴", "ヌグルヌグル")
             .replace("너구리", "タヌキ"),
         _ => text.to_string(),
@@ -1334,6 +1330,27 @@ where
         let core = part.trim();
         let prompt = milmmt_prompt(core, source, target, resolved_style);
         let mut translated = complete(&prompt, core)?;
+        if milmmt_stayed_in_source_language(&translated, source, target) {
+            crate::diagnostics::warn(
+                "milmmt",
+                &format!(
+                    "retry after source-language output; source={}; target={}; chars={}; hash={}",
+                    source.code(),
+                    target.code(),
+                    core.chars().count(),
+                    diagnostic_text_hash(core)
+                ),
+            );
+            let retry_prompt = milmmt_retry_prompt(core, source, target);
+            translated = complete(&retry_prompt, core)?;
+            if milmmt_stayed_in_source_language(&translated, source, target) {
+                return Err(format!(
+                    "MiLMMT가 {} 번역 대신 {} 결과를 반환했습니다. 다시 시도하십시오.",
+                    target.english_name(),
+                    source.english_name()
+                ));
+            }
+        }
         translated = remove_unwritten_milmmt_fillers(core, &translated, source, target);
         translated = fallback_register_cleanup(&translated, target, resolved_style);
         translated = clean_register_artifacts(&translated, target);
@@ -1902,7 +1919,7 @@ mod tests {
         milmmt_completion_payload, milmmt_prompt, remove_cached_model_files, rewrite_style_prompt,
         startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
         translate_with_completion_for_model, translate_with_milmmt, translate_with_translate_gemma,
-        translation_prompt_for_model, HyMtModelSize, HyMtTranslator, NO_UNWRITTEN_DECORATIONS,
+        translation_prompt_for_model, HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
@@ -2088,7 +2105,7 @@ mod tests {
     }
 
     #[test]
-    fn every_local_model_prompt_forbids_unwritten_emojis() {
+    fn instruction_following_local_model_prompts_forbid_unwritten_emojis() {
         for model_size in [HyMtModelSize::Small, HyMtModelSize::Large] {
             let prompt = translation_prompt_for_model(
                 model_size,
@@ -2113,7 +2130,7 @@ mod tests {
             .contains("Never add emojis"));
 
         let milmmt = milmmt_prompt("なるほど！", Language::Japanese, Language::Korean, "casual");
-        assert!(milmmt.contains("Never add emojis"));
+        assert!(!milmmt.contains("Never add emojis"));
     }
 
     #[test]
@@ -2228,32 +2245,33 @@ mod tests {
         );
         let payload = milmmt_completion_payload(&prompt, 256);
         let prompt = payload["prompt"].as_str().unwrap();
-        assert!(prompt.starts_with("Translate this from Korean to Japanese:"));
-        assert!(prompt.contains(NO_UNWRITTEN_DECORATIONS));
-        assert!(prompt.ends_with("Korean: 오늘 같이 게임할래?\nJapanese:"));
+        assert_eq!(
+            prompt,
+            "Translate this from Korean to Japanese:\nKorean: 오늘 같이 게임할래?\nJapanese:"
+        );
         assert_eq!(payload["n_predict"], 256);
         assert_eq!(payload["top_k"], 1);
         assert_eq!(payload["temperature"].as_f64(), Some(0.0));
     }
 
     #[test]
-    fn milmmt_prompt_keeps_the_casual_cue_outside_the_translation_result() {
+    fn milmmt_prompt_preserves_casual_style_without_mutating_the_source() {
         let prompt = milmmt_prompt(
             "너구리는 너굴너굴",
             Language::Korean,
             Language::Japanese,
             "casual",
         );
-        assert!(prompt.contains("Korean: 야, タヌキ는 ヌグルヌグル"));
-        assert!(prompt.contains("Use casual Japanese plain form"));
-        assert!(prompt.contains("Do not add interjections"));
+        assert!(prompt.contains("Korean: タヌキはヌグルヌグル"));
+        assert!(!prompt.contains("Korean: 야,"));
+        assert!(prompt.ends_with("Japanese: ねえ、"));
     }
 
     #[test]
     fn milmmt_removes_temporary_style_fillers_from_every_output_line() {
         let source = "음\n말할 때 모델은 무조건 CLI로 고정하는 게 좋으려나\n빠르긴한데 뭔가 좀 많이 별론데 번역 퀄리티가";
         let prompt = milmmt_prompt(source, Language::Korean, Language::Japanese, "casual");
-        assert!(prompt.contains(&format!("Korean: 야, {source}")));
+        assert!(prompt.contains(&format!("Korean: {source}")));
 
         let translated = translate_with_milmmt(
             source,
@@ -2311,7 +2329,54 @@ mod tests {
         .unwrap();
         assert_eq!(translated, "うーん");
         assert_eq!(prompts.len(), 1);
-        assert!(prompts[0].contains("Korean: 야, 음"));
+        assert!(prompts[0].contains("Korean: 음"));
+    }
+
+    #[test]
+    fn milmmt_retries_when_translation_stays_in_the_source_language() {
+        let mut prompts = Vec::new();
+        let translated = translate_with_milmmt(
+            "이제 제대로 되는 건가",
+            Language::Korean,
+            Language::Japanese,
+            "auto",
+            |prompt, _text| {
+                prompts.push(prompt.to_string());
+                Ok(if prompts.len() == 1 {
+                    "이제 제대로 되는 건가"
+                } else {
+                    "今度こそちゃんと動くのかな"
+                }
+                .to_string())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(translated, "今度こそちゃんと動くのかな");
+        assert_eq!(prompts.len(), 2);
+        assert_eq!(
+            prompts[1],
+            "Translate the following Korean text to Japanese. Return only the Japanese translation.\n이제 제대로 되는 건가\nJapanese:"
+        );
+    }
+
+    #[test]
+    fn milmmt_rejects_a_second_source_language_result() {
+        let mut calls = 0;
+        let error = translate_with_milmmt(
+            "웅냥냥",
+            Language::Korean,
+            Language::Japanese,
+            "auto",
+            |_prompt, _text| {
+                calls += 1;
+                Ok("웅냥냥".to_string())
+            },
+        )
+        .unwrap_err();
+
+        assert_eq!(calls, 2);
+        assert!(error.contains("Japanese 번역 대신 Korean 결과"));
     }
 
     #[test]
@@ -2714,6 +2779,31 @@ mod tests {
             .unwrap()
             .is_match(&translated));
         assert!(translated.contains("CLI"), "content was lost: {translated}");
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "MiLMMT 4B 모델 다운로드와 llama-server가 필요합니다"]
+    fn live_milmmt_4b_does_not_return_korean_for_a_japanese_target() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::MiLmMt4B, "auto", "auto").unwrap();
+        translator.prepare().expect("start MiLMMT 4B server");
+
+        for source in [
+            "이제 제대로 되는 건가",
+            "뭔데 한국어로 번역하냐 한국어를",
+            "웅냥냥",
+        ] {
+            let translated = translator
+                .translate(source, Language::Korean, Language::Japanese)
+                .unwrap_or_else(|error| {
+                    panic!("translate the reported source-language regression case: source={source}; error={error}")
+                });
+            assert_ne!(
+                detect_explicit_language(&translated),
+                Language::Korean,
+                "Japanese target stayed in Korean: source={source}; translated={translated}"
+            );
+        }
         translator.close();
     }
 }
