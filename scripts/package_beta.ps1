@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = '이미지 번역 화면 지역화와 자동 언어 영어 폴백을 보완한 0.4.3 비공개 베타',
+    [string]$ReleaseNotes = '앱 재실행 시 로컬 모델 지연 로딩, 단축키 안정성, 오류와 트레이 문구 지역화를 보완한 0.4.4 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
