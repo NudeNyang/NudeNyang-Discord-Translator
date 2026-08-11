@@ -22,10 +22,14 @@
 
       <form id="settings-form">
         <aside class="update-banner" id="update-banner" hidden role="status" aria-live="polite">
-          <span class="update-banner-mark" aria-hidden="true">↻</span>
+          <span class="update-banner-mark" id="activity-banner-mark" aria-hidden="true">↻</span>
           <div class="update-banner-copy">
-            <strong>새 업데이트가 있습니다</strong>
-            <p><span id="update-banner-version"></span> <span data-i18n-key="버전을 설치할 수 있습니다. 작업이 끝났을 때 설치해도 됩니다.">버전을 설치할 수 있습니다. 작업이 끝났을 때 설치해도 됩니다.</span></p>
+            <strong id="activity-banner-title">새 업데이트가 있습니다</strong>
+            <p id="update-banner-detail"><span id="update-banner-version"></span> <span data-i18n-key="버전을 설치할 수 있습니다. 작업이 끝났을 때 설치해도 됩니다.">버전을 설치할 수 있습니다. 작업이 끝났을 때 설치해도 됩니다.</span></p>
+            <p id="model-banner-detail" hidden></p>
+            <div class="activity-progress" id="activity-progress" hidden role="progressbar" aria-label="모델 다운로드 진행률" aria-valuemin="0" aria-valuemax="100">
+              <span class="activity-progress-bar" id="activity-progress-bar"></span>
+            </div>
           </div>
           <button class="button primary" id="update-banner-install" type="button">업데이트 설치</button>
         </aside>
@@ -148,15 +152,15 @@
                   <div class="panel-subheading"><h3 id="connections-heading">번역 서비스 연결</h3><p>구독 계정과 API 연결 상태를 관리합니다.</p></div>
                   <div class="settings-card provider-list">
                     <article class="provider-row" data-provider="chatgpt">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>ChatGPT</h3><p>GPT-5.6 Luna · low · 지속 연결</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>ChatGPT</h3><p>GPT-5.6 Luna · 품질 최우선</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Codex CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="claude">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">C</span><div><h3>Claude</h3><p>Claude Haiku 4.5 · 지속 연결</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">C</span><div><h3>Claude</h3><p>Claude Haiku 4.5 · 품질 최우선</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Claude Code와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="gemini">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>Gemini</h3><p>Gemini 3.6 Flash · low · 지속 세션</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true">G</span><div><h3>Gemini</h3><p>Gemini 3.6 Flash · 품질 최우선</p></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Antigravity CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action" type="button">연결</button><button class="button secondary provider-disconnect" type="button" hidden>연결 해제</button></div>
                     </article>
                     <article class="provider-row" data-provider="deepl">

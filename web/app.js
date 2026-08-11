@@ -1,5 +1,6 @@
 import {
   discordConnectionLabel,
+  modelPreparationBanner,
   normalizeConfig,
   resolveEnabledState,
   restartCountdownMessage,
@@ -29,9 +30,10 @@ const APP_LINKS = Object.freeze({
 const TRANSLATOR_OPTIONS = [
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
-  ["chatgpt", "GPT-5.6 Luna · low · 지속 연결"],
-  ["claude", "Claude Haiku 4.5 · 지속 연결"],
-  ["gemini", "Gemini 3.6 Flash · low · 지속 세션"],
+  ["translategemma_4b", "TranslateGemma 4B Q4 (실험·약 2.5GB)"],
+  ["chatgpt", "GPT-5.6 Luna · 품질 최우선"],
+  ["claude", "Claude Haiku 4.5 · 품질 최우선"],
+  ["gemini", "Gemini 3.6 Flash · 품질 최우선"],
   ["deepl", "DeepL (API 키·외부 전송)"],
   ["mock", "Mock 테스트"],
 ];
@@ -90,6 +92,7 @@ const state = {
   availableUpdateVersion: "",
   updatePromptedVersion: "",
   updateInstalling: false,
+  modelPreparationActive: false,
   settingsScrollTimer: 0,
   captureFpsTimer: 0,
   settingsApplyRevision: 0,
@@ -134,7 +137,13 @@ const elements = {
   updateStatus: document.querySelector("#update-status"),
   checkUpdate: document.querySelector("#check-update"),
   updateBanner: document.querySelector("#update-banner"),
+  activityBannerMark: document.querySelector("#activity-banner-mark"),
+  activityBannerTitle: document.querySelector("#activity-banner-title"),
   updateBannerVersion: document.querySelector("#update-banner-version"),
+  updateBannerDetail: document.querySelector("#update-banner-detail"),
+  modelBannerDetail: document.querySelector("#model-banner-detail"),
+  activityProgress: document.querySelector("#activity-progress"),
+  activityProgressBar: document.querySelector("#activity-progress-bar"),
   updateBannerInstall: document.querySelector("#update-banner-install"),
   openDiagnosticLog: document.querySelector("#open-diagnostic-log"),
   viewLicense: document.querySelector("#view-license"),
@@ -546,11 +555,45 @@ async function checkForUpdates(silent = false) {
 function renderAvailableUpdate(version) {
   state.availableUpdateVersion = version || "";
   const available = Boolean(state.availableUpdateVersion);
+  setLocalizedText(elements.checkUpdate, available ? "업데이트 설치" : "지금 확인");
+  if (state.modelPreparationActive) return;
+
   elements.updateBanner.hidden = !available;
+  elements.activityBannerMark.textContent = "↻";
+  setLocalizedText(elements.activityBannerTitle, "새 업데이트가 있습니다");
   elements.updateBannerVersion.textContent = state.availableUpdateVersion;
+  elements.updateBannerDetail.hidden = false;
+  elements.modelBannerDetail.hidden = true;
+  elements.activityProgress.hidden = true;
+  elements.updateBannerInstall.hidden = false;
   elements.updateBannerInstall.disabled = state.updateInstalling;
   setLocalizedText(elements.updateBannerInstall, state.updateInstalling ? "설치 준비 중" : "업데이트 설치");
-  setLocalizedText(elements.checkUpdate, available ? "업데이트 설치" : "지금 확인");
+}
+
+function renderModelPreparation(progress) {
+  const banner = modelPreparationBanner(progress);
+  state.modelPreparationActive = Boolean(banner);
+  if (!banner) {
+    renderAvailableUpdate(state.availableUpdateVersion);
+    return;
+  }
+
+  elements.updateBanner.hidden = false;
+  elements.activityBannerMark.textContent = progress.phase === "downloading" ? "↓" : "◌";
+  setLocalizedText(elements.activityBannerTitle, banner.title);
+  setLocalizedText(elements.modelBannerDetail, banner.detail);
+  elements.updateBannerDetail.hidden = true;
+  elements.modelBannerDetail.hidden = false;
+  elements.updateBannerInstall.hidden = true;
+  elements.activityProgress.hidden = false;
+  elements.activityProgress.dataset.indeterminate = String(banner.indeterminate);
+  const percentage = Math.round(Math.min(1, Math.max(0, banner.progress)) * 100);
+  elements.activityProgressBar.style.width = `${percentage}%`;
+  if (banner.indeterminate) {
+    elements.activityProgress.removeAttribute("aria-valuenow");
+  } else {
+    elements.activityProgress.setAttribute("aria-valuenow", String(percentage));
+  }
 }
 
 async function showAvailableUpdate(version, { prompt = false } = {}) {
@@ -927,6 +970,7 @@ async function disableTranslationFeaturesForConnectionFailure() {
 
 function updateEngineState(status) {
   if (!status) return;
+  renderModelPreparation(status.modelProgress);
   const ready = status.cdpConnected;
   const enabledState = resolveEnabledState(status.enabled, state.pendingEnabled);
   state.pendingEnabled = enabledState.pending;

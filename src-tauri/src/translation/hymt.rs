@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock, Mutex, Weak};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -12,6 +13,7 @@ use fs2::available_space;
 use regex::Regex;
 use reqwest::blocking::Client;
 use reqwest::header::RANGE;
+use serde::Serialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -62,11 +64,13 @@ static PROTECTED_MARKER_RE: LazyLock<Regex> =
 pub enum HyMtModelSize {
     Small,
     Large,
+    TranslateGemma4B,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct HyMtModel {
     pub key: &'static str,
+    pub family: &'static str,
     pub label: &'static str,
     pub repository: &'static str,
     pub filename: &'static str,
@@ -74,11 +78,81 @@ pub struct HyMtModel {
     pub expected_sha256: &'static str,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelPreparationProgress {
+    pub model: String,
+    pub phase: String,
+    pub downloaded: u64,
+    pub total: u64,
+}
+
+pub type ModelProgressObserver = Arc<dyn Fn(ModelPreparationProgress) + Send + Sync>;
+
+#[derive(Default)]
+struct SharedModelRuntime {
+    process: Option<Child>,
+    #[cfg(windows)]
+    process_job: Option<ProcessJob>,
+    port: u16,
+    clients: usize,
+}
+
+static SHARED_MODEL_RUNTIMES: LazyLock<Mutex<HashMap<String, Weak<Mutex<SharedModelRuntime>>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn shared_model_runtime(
+    model_path: &Path,
+    server_path: Option<&Path>,
+    device: &str,
+) -> Arc<Mutex<SharedModelRuntime>> {
+    let key = format!(
+        "{}|{}|{device}",
+        model_path.to_string_lossy(),
+        server_path
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    );
+    let mut runtimes = SHARED_MODEL_RUNTIMES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    runtimes.retain(|_, runtime| runtime.strong_count() > 0);
+    if let Some(runtime) = runtimes.get(&key).and_then(Weak::upgrade) {
+        return runtime;
+    }
+    let runtime = Arc::new(Mutex::new(SharedModelRuntime::default()));
+    runtimes.insert(key, Arc::downgrade(&runtime));
+    runtime
+}
+
+fn runtime_process_is_running(runtime: &mut SharedModelRuntime) -> bool {
+    runtime
+        .process
+        .as_mut()
+        .is_some_and(|process| process.try_wait().ok().flatten().is_none())
+}
+
+fn stop_shared_runtime(runtime: &mut SharedModelRuntime) {
+    if let Some(mut process) = runtime.process.take() {
+        if process.try_wait().ok().flatten().is_none() {
+            let _ = process.kill();
+            let _ = process.wait();
+        }
+    }
+    #[cfg(windows)]
+    {
+        runtime.process_job.take();
+    }
+    runtime.port = 0;
+    runtime.clients = 0;
+}
+
 impl HyMtModelSize {
     pub fn model(self) -> HyMtModel {
         match self {
             Self::Small => HyMtModel {
                 key: "1.8b",
+                family: "hy-mt2",
                 label: "Hy-MT2 1.8B Q4_K_M",
                 repository: "tencent/Hy-MT2-1.8B-GGUF",
                 filename: "Hy-MT2-1.8B-Q4_K_M.gguf",
@@ -87,17 +161,28 @@ impl HyMtModelSize {
             },
             Self::Large => HyMtModel {
                 key: "7b",
+                family: "hy-mt2",
                 label: "Hy-MT2 7B Q4_K_M",
                 repository: "tencent/Hy-MT2-7B-GGUF",
                 filename: "Hy-MT2-7B-Q4_K_M.gguf",
                 expected_bytes: 4_624_648_896,
                 expected_sha256: "9f96256500f3fc1ab4d64336b58f52a949a95ad7516b0c229476eef782f9f77b",
             },
+            Self::TranslateGemma4B => HyMtModel {
+                key: "4b",
+                family: "translategemma",
+                label: "TranslateGemma 4B Q4_K_M",
+                repository: "SandLogicTechnologies/translategemma-4b-it-GGUF",
+                filename: "translategemma-4b_Q4_K_M.gguf",
+                expected_bytes: 2_489_909_312,
+                expected_sha256: "526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd",
+            },
         }
     }
 }
 
 pub struct HyMtTranslator {
+    model_size: HyMtModelSize,
     model: HyMtModel,
     device: String,
     speech_style: String,
@@ -107,9 +192,9 @@ pub struct HyMtTranslator {
     request_timeout: Duration,
     display_name: String,
     cache_namespace: String,
-    process: Option<Child>,
-    #[cfg(windows)]
-    process_job: Option<ProcessJob>,
+    runtime: Arc<Mutex<SharedModelRuntime>>,
+    runtime_attached: bool,
+    progress_observer: Option<ModelProgressObserver>,
     port: u16,
     client: Client,
 }
@@ -133,30 +218,49 @@ impl HyMtTranslator {
             .timeout(Duration::from_secs(90))
             .build()
             .map_err(|error| format!("Hy-MT2 HTTP 클라이언트를 만들지 못했습니다: {error}"))?;
+        let model_path = default_model_path(model);
+        let server_path = None;
+        let runtime = shared_model_runtime(&model_path, server_path.as_deref(), &device);
         Ok(Self {
+            model_size,
             model,
             device,
             speech_style: speech_style.clone(),
-            model_path: default_model_path(model),
-            server_path: None,
+            model_path,
+            server_path,
             startup_timeout: Duration::from_secs(240),
             request_timeout: Duration::from_secs(90),
             display_name: format!("{} (로컬)", model.label),
-            cache_namespace: format!(
-                "hy-mt2:{}:q4_k_m:{PROMPT_VERSION}:{speech_style}",
-                model.key
-            ),
-            process: None,
-            #[cfg(windows)]
-            process_job: None,
+            cache_namespace: if model_size == HyMtModelSize::TranslateGemma4B {
+                format!(
+                    "translategemma:{}:q4_k_m:register-aware-v2:{speech_style}",
+                    model.key
+                )
+            } else {
+                format!(
+                    "hy-mt2:{}:q4_k_m:{PROMPT_VERSION}:{speech_style}",
+                    model.key
+                )
+            },
+            runtime,
+            runtime_attached: false,
+            progress_observer: None,
             port: 0,
             client,
         })
     }
 
     pub fn with_paths(mut self, model_path: PathBuf, server_path: Option<PathBuf>) -> Self {
+        self.release_runtime();
         self.model_path = model_path;
         self.server_path = server_path;
+        self.runtime =
+            shared_model_runtime(&self.model_path, self.server_path.as_deref(), &self.device);
+        self
+    }
+
+    pub fn with_progress_observer(mut self, observer: ModelProgressObserver) -> Self {
+        self.progress_observer = Some(observer);
         self
     }
 
@@ -164,15 +268,64 @@ impl HyMtTranslator {
         &self.model_path
     }
 
+    fn report_progress(&self, phase: &str, downloaded: u64) {
+        if let Some(observer) = self.progress_observer.as_ref() {
+            observer(ModelPreparationProgress {
+                model: self.model.label.to_string(),
+                phase: phase.to_string(),
+                downloaded,
+                total: self.model.expected_bytes,
+            });
+        }
+    }
+
+    fn release_runtime(&mut self) {
+        if !self.runtime_attached {
+            self.port = 0;
+            return;
+        }
+        let mut runtime = self
+            .runtime
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        runtime.clients = runtime.clients.saturating_sub(1);
+        if runtime.clients == 0 {
+            stop_shared_runtime(&mut runtime);
+        }
+        self.runtime_attached = false;
+        self.port = 0;
+    }
+
     fn ensure_server(&mut self) -> Result<(), String> {
-        if self
-            .process
-            .as_mut()
-            .is_some_and(|process| process.try_wait().ok().flatten().is_none())
-        {
+        if self.runtime_attached {
+            let mut runtime = self
+                .runtime
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if runtime_process_is_running(&mut runtime) {
+                self.port = runtime.port;
+                return Ok(());
+            }
+            stop_shared_runtime(&mut runtime);
+            self.runtime_attached = false;
+            self.port = 0;
+        }
+
+        self.report_progress("waiting", 0);
+        let runtime_handle = Arc::clone(&self.runtime);
+        let mut runtime = runtime_handle
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if runtime_process_is_running(&mut runtime) {
+            runtime.clients += 1;
+            self.runtime_attached = true;
+            self.port = runtime.port;
+            self.report_progress("ready", self.model.expected_bytes);
             return Ok(());
         }
+
         self.ensure_model()?;
+        self.report_progress("loading", self.model.expected_bytes);
         let executable = self
             .server_path
             .clone()
@@ -181,26 +334,39 @@ impl HyMtTranslator {
                 "llama.cpp 실행 파일이 없습니다. PowerShell에서 `scripts\\setup_hymt_runtime.ps1`을 한 번 실행하십시오."
                     .to_string()
             })?;
-        self.port = free_tcp_port()?;
+        runtime.port = free_tcp_port()?;
+        self.port = runtime.port;
         let log_path = crate::diagnostics::log_path();
         let attempts = startup_device_attempts(&self.device);
+        let diagnostics_scope = self.model.family;
+        let context_size = if self.model_size == HyMtModelSize::TranslateGemma4B {
+            "2048"
+        } else {
+            "8192"
+        };
         for (index, attempt) in attempts.iter().enumerate() {
-            crate::diagnostics::info("hy-mt2", &format!("server start; mode={attempt}"));
+            crate::diagnostics::info(diagnostics_scope, &format!("server start; mode={attempt}"));
             let mut command = Command::new(&executable);
             command.args([
                 "--model",
                 self.model_path
                     .to_str()
-                    .ok_or_else(|| "Hy-MT2 모델 경로를 UTF-8로 표현하지 못했습니다.".to_string())?,
+                    .ok_or_else(|| "로컬 모델 경로를 UTF-8로 표현하지 못했습니다.".to_string())?,
                 "--host",
                 "127.0.0.1",
                 "--port",
-                &self.port.to_string(),
+                &runtime.port.to_string(),
                 "--ctx-size",
-                "8192",
+                context_size,
                 "--parallel",
                 "1",
             ]);
+            if self.model_size == HyMtModelSize::TranslateGemma4B {
+                // The current llama.cpp build cannot initialize its generic parser from
+                // TranslateGemma's structured template. The request path renders the
+                // model's official text-translation template directly instead.
+                command.args(["--no-jinja", "--skip-chat-parsing"]);
+            }
             if *attempt == "cpu" {
                 command.args(["--device", "none", "--gpu-layers", "0", "--no-op-offload"]);
             } else {
@@ -216,66 +382,80 @@ impl HyMtTranslator {
                 use std::os::windows::process::CommandExt;
                 command.creation_flags(CREATE_NO_WINDOW);
             }
-            let mut child = command
-                .spawn()
-                .map_err(|error| format!("Hy-MT2 로컬 서버를 시작하지 못했습니다: {error}"))?;
+            let mut child = command.spawn().map_err(|error| {
+                format!(
+                    "{} 로컬 서버를 시작하지 못했습니다: {error}",
+                    self.model.label
+                )
+            })?;
             #[cfg(windows)]
             match ProcessJob::attach(&child) {
-                Ok(job) => self.process_job = Some(job),
+                Ok(job) => runtime.process_job = Some(job),
                 Err(error) => crate::diagnostics::warn(
-                    "hy-mt2",
+                    diagnostics_scope,
                     &format!("server process job unavailable: {error}"),
                 ),
             }
             if let Some(stdout) = child.stdout.take() {
-                crate::diagnostics::pipe_external_output(stdout, "hy-mt2-server");
+                crate::diagnostics::pipe_external_output(stdout, diagnostics_scope);
             }
             if let Some(stderr) = child.stderr.take() {
-                crate::diagnostics::pipe_external_output(stderr, "hy-mt2-server");
+                crate::diagnostics::pipe_external_output(stderr, diagnostics_scope);
             }
-            self.process = Some(child);
+            runtime.process = Some(child);
             let deadline = Instant::now() + self.startup_timeout;
             while Instant::now() < deadline {
-                if let Some(status) = self
+                if let Some(status) = runtime
                     .process
                     .as_mut()
                     .and_then(|process| process.try_wait().ok().flatten())
                 {
-                    self.process = None;
+                    runtime.process = None;
+                    #[cfg(windows)]
+                    {
+                        runtime.process_job.take();
+                    }
                     if index + 1 < attempts.len() {
                         crate::diagnostics::warn(
-                            "hy-mt2",
+                            diagnostics_scope,
                             &format!("GPU server exited; retrying with CPU; status={status}"),
                         );
                         break;
                     }
                     return Err(format!(
-                        "Hy-MT2 로컬 서버가 시작 중 종료되었습니다. 종료 상태: {status}. 로그: {}",
+                        "{} 로컬 서버가 시작 중 종료되었습니다. 종료 상태: {status}. 로그: {}",
+                        self.model.label,
                         log_path.display()
                     ));
                 }
                 if self
                     .client
-                    .get(format!("http://127.0.0.1:{}/health", self.port))
+                    .get(format!("http://127.0.0.1:{}/health", runtime.port))
                     .timeout(Duration::from_secs(1))
                     .send()
                     .is_ok_and(|response| response.status().is_success())
                 {
+                    runtime.clients += 1;
+                    self.runtime_attached = true;
+                    self.port = runtime.port;
+                    self.report_progress("ready", self.model.expected_bytes);
                     return Ok(());
                 }
                 thread::sleep(Duration::from_millis(250));
             }
-            if self.process.is_some() {
-                self.close();
+            if runtime.process.is_some() {
+                stop_shared_runtime(&mut runtime);
                 return Err(format!(
-                    "Hy-MT2 모델을 {}초 안에 불러오지 못했습니다. 로그: {}",
+                    "{} 모델을 {}초 안에 불러오지 못했습니다. 로그: {}",
+                    self.model.label,
                     self.startup_timeout.as_secs(),
                     log_path.display()
                 ));
             }
         }
         Err(format!(
-            "Hy-MT2 로컬 서버를 시작하지 못했습니다. 로그: {}",
+            "{} 로컬 서버를 시작하지 못했습니다. 로그: {}",
+            self.model.label,
             log_path.display()
         ))
     }
@@ -292,14 +472,14 @@ impl HyMtTranslator {
         }
         if self.model_path.exists() {
             fs::remove_file(&self.model_path)
-                .map_err(|error| format!("손상된 Hy-MT2 모델을 삭제하지 못했습니다: {error}"))?;
+                .map_err(|error| format!("손상된 로컬 모델을 삭제하지 못했습니다: {error}"))?;
         }
         let parent = self
             .model_path
             .parent()
-            .ok_or_else(|| "Hy-MT2 모델 폴더를 찾지 못했습니다.".to_string())?;
+            .ok_or_else(|| "로컬 모델 폴더를 찾지 못했습니다.".to_string())?;
         fs::create_dir_all(parent)
-            .map_err(|error| format!("Hy-MT2 모델 폴더를 만들지 못했습니다: {error}"))?;
+            .map_err(|error| format!("로컬 모델 폴더를 만들지 못했습니다: {error}"))?;
         let required = self.model.expected_bytes + 512 * 1024 * 1024;
         if available_space(parent).is_ok_and(|free| free < required) {
             return Err(format!(
@@ -315,6 +495,7 @@ impl HyMtTranslator {
                 .map_err(|error| format!("잘못된 모델 임시 파일을 삭제하지 못했습니다: {error}"))?;
             downloaded = 0;
         }
+        self.report_progress("downloading", downloaded);
         let url = format!(
             "https://huggingface.co/{}/resolve/main/{}?download=true",
             self.model.repository, self.model.filename
@@ -331,7 +512,9 @@ impl HyMtTranslator {
         let mut response = request
             .send()
             .and_then(|response| response.error_for_status())
-            .map_err(|error| format!("Hy-MT2 모델 다운로드에 실패했습니다: {error}"))?;
+            .map_err(|error| {
+                format!("{} 모델 다운로드에 실패했습니다: {error}", self.model.label)
+            })?;
         let append = downloaded > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
         if !append {
             downloaded = 0;
@@ -342,41 +525,49 @@ impl HyMtTranslator {
             .append(append)
             .truncate(!append)
             .open(&partial)
-            .map_err(|error| format!("Hy-MT2 모델 임시 파일을 열지 못했습니다: {error}"))?;
+            .map_err(|error| format!("로컬 모델 임시 파일을 열지 못했습니다: {error}"))?;
         let mut buffer = vec![0_u8; 1024 * 1024];
+        let mut last_reported = downloaded;
         loop {
             let count = response
                 .read(&mut buffer)
-                .map_err(|error| format!("Hy-MT2 모델을 내려받지 못했습니다: {error}"))?;
+                .map_err(|error| format!("로컬 모델을 내려받지 못했습니다: {error}"))?;
             if count == 0 {
                 break;
             }
             output
                 .write_all(&buffer[..count])
-                .map_err(|error| format!("Hy-MT2 모델을 저장하지 못했습니다: {error}"))?;
+                .map_err(|error| format!("로컬 모델을 저장하지 못했습니다: {error}"))?;
             downloaded += count as u64;
+            if downloaded.saturating_sub(last_reported) >= 8 * 1024 * 1024
+                || downloaded == self.model.expected_bytes
+            {
+                self.report_progress("downloading", downloaded);
+                last_reported = downloaded;
+            }
         }
         output
             .flush()
-            .map_err(|error| format!("Hy-MT2 모델 파일을 마무리하지 못했습니다: {error}"))?;
+            .map_err(|error| format!("로컬 모델 파일을 마무리하지 못했습니다: {error}"))?;
         if downloaded != self.model.expected_bytes {
             return Err(format!(
-                "Hy-MT2 모델 다운로드 크기가 일치하지 않습니다({downloaded}/{} bytes).",
+                "로컬 모델 다운로드 크기가 일치하지 않습니다({downloaded}/{} bytes).",
                 self.model.expected_bytes
             ));
         }
+        self.report_progress("verifying", downloaded);
         let actual_hash = file_sha256(&partial)?;
         if actual_hash != self.model.expected_sha256 {
             let _ = fs::remove_file(&partial);
             return Err(
-                "Hy-MT2 모델 무결성 검증에 실패했습니다. 손상된 다운로드 파일을 삭제했습니다."
+                "로컬 모델 무결성 검증에 실패했습니다. 손상된 다운로드 파일을 삭제했습니다."
                     .to_string(),
             );
         }
         fs::rename(&partial, &self.model_path)
-            .map_err(|error| format!("Hy-MT2 모델 파일을 적용하지 못했습니다: {error}"))?;
+            .map_err(|error| format!("로컬 모델 파일을 적용하지 못했습니다: {error}"))?;
         fs::write(hash_marker(&self.model_path), actual_hash)
-            .map_err(|error| format!("Hy-MT2 검증 표식을 저장하지 못했습니다: {error}"))
+            .map_err(|error| format!("로컬 모델 검증 표식을 저장하지 못했습니다: {error}"))
     }
 
     fn complete(&self, prompt: &str, text: &str) -> Result<String, String> {
@@ -416,6 +607,34 @@ impl HyMtTranslator {
         }
         result
     }
+
+    fn complete_translate_gemma(
+        &self,
+        text: &str,
+        source: Language,
+        target: Language,
+        speech_style: &str,
+    ) -> Result<String, String> {
+        let output_limit = max_output_tokens(text);
+        let response = self
+            .client
+            .post(format!("http://127.0.0.1:{}/completion", self.port))
+            .timeout(self.request_timeout)
+            .json(&translate_gemma_completion_payload(
+                text,
+                source,
+                target,
+                speech_style,
+                output_limit,
+            ))
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|error| format!("TranslateGemma 번역 요청이 실패했습니다: {error}"))?;
+        let payload: Value = response
+            .json()
+            .map_err(|error| format!("TranslateGemma 번역 응답을 읽지 못했습니다: {error}"))?;
+        translate_gemma_completion_result(&payload)
+    }
 }
 
 fn completion_payload(prompt: &str, output_limit: usize) -> Value {
@@ -429,6 +648,118 @@ fn completion_payload(prompt: &str, output_limit: usize) -> Value {
     })
 }
 
+fn translate_gemma_completion_payload(
+    text: &str,
+    source: Language,
+    target: Language,
+    speech_style: &str,
+    output_limit: usize,
+) -> Value {
+    json!({
+        "prompt": translate_gemma_prompt(text, source, target, speech_style),
+        "n_predict": output_limit,
+        "temperature": INFERENCE_TEMPERATURE,
+        "stop": ["<end_of_turn>"],
+        "cache_prompt": true,
+    })
+}
+
+fn translate_gemma_prompt(
+    text: &str,
+    source: Language,
+    target: Language,
+    speech_style: &str,
+) -> String {
+    let source_code = translate_gemma_language_code(source);
+    let target_code = translate_gemma_language_code(target);
+    let source_name = translate_gemma_language_name(source);
+    let target_name = translate_gemma_language_name(target);
+    let resolved_style = if speech_style == "auto" {
+        detect_speech_style(text, source)
+    } else {
+        speech_style
+    };
+    let register_instruction = translate_gemma_register_instruction(target, resolved_style);
+    format!(
+        "<bos><start_of_turn>user\nYou are a professional {source_name} ({source_code}) to {target_name} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_name} text while adhering to {target_name} grammar, vocabulary, and cultural sensitivities.\nPreserve the source text's exact level of politeness and social register. {register_instruction}\nProduce only the {target_name} translation, without any additional explanations or commentary. Please translate the following {source_name} text into {target_name}:\n\n\n{}<end_of_turn>\n<start_of_turn>model\n",
+        text.trim()
+    )
+}
+
+fn translate_gemma_register_instruction(target: Language, style: &str) -> &'static str {
+    match (style, target) {
+        ("polite", Language::Korean) => {
+            "Use natural Korean honorific speech (존댓말) with 요/습니다 endings."
+        }
+        ("polite", Language::Japanese) => {
+            "Use natural polite Japanese speech (丁寧語) with です/ます forms."
+        }
+        ("polite", Language::English) => "Use natural polite and formal English.",
+        ("polite", Language::ChineseSimplified) => {
+            "Use polite Simplified Chinese with 您 and 请 where natural."
+        }
+        ("polite", Language::ChineseTraditional) => {
+            "Use polite Traditional Chinese with 您 and 請 where natural."
+        }
+        ("casual", Language::Korean) => {
+            "Use natural Korean casual banmal (반말). Do not use 요/습니다 endings."
+        }
+        ("casual", Language::Japanese) => {
+            "Use natural Japanese casual plain form (常体・タメ口). Do not use です, ます, ください, or other polite endings."
+        }
+        ("casual", Language::English) => "Use natural casual and informal English.",
+        ("casual", Language::ChineseSimplified) => {
+            "Use casual Simplified Chinese with 你 rather than 您."
+        }
+        ("casual", Language::ChineseTraditional) => {
+            "Use casual Traditional Chinese with 你 rather than 您."
+        }
+        _ => "Do not make the translation more polite or more casual than the source text.",
+    }
+}
+
+fn translate_gemma_language_code(language: Language) -> &'static str {
+    match language {
+        Language::ChineseTraditional => "zh-TW",
+        Language::Unknown => "auto",
+        other => other.code(),
+    }
+}
+
+fn translate_gemma_language_name(language: Language) -> &'static str {
+    match language {
+        Language::Korean => "Korean",
+        Language::English => "English",
+        Language::Japanese => "Japanese",
+        Language::ChineseSimplified | Language::ChineseTraditional => "Chinese",
+        Language::Unknown => "source language",
+    }
+}
+
+fn translate_gemma_completion_result(payload: &Value) -> Result<String, String> {
+    if payload
+        .get("stop_type")
+        .and_then(Value::as_str)
+        .is_some_and(|reason| reason == "limit")
+    {
+        return Err(
+            "TranslateGemma 번역 결과가 길이 제한에 도달했습니다. 텍스트를 나누어 다시 시도하십시오."
+                .to_string(),
+        );
+    }
+    let result = clean_translation(
+        payload
+            .get("content")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
+    );
+    if result.is_empty() {
+        Err("TranslateGemma가 빈 번역 결과를 반환했습니다.".to_string())
+    } else {
+        Ok(result)
+    }
+}
+
 fn completion_result(payload: &Value) -> Result<String, String> {
     let choice = payload
         .get("choices")
@@ -440,7 +771,7 @@ fn completion_result(payload: &Value) -> Result<String, String> {
         .is_some_and(|reason| matches!(reason, "length" | "max_tokens"))
     {
         return Err(
-            "Hy-MT2 번역 결과가 길이 제한에 도달했습니다. 텍스트를 나누어 다시 시도하십시오."
+            "로컬 번역 결과가 길이 제한에 도달했습니다. 텍스트를 나누어 다시 시도하십시오."
                 .to_string(),
         );
     }
@@ -452,7 +783,7 @@ fn completion_result(payload: &Value) -> Result<String, String> {
         .unwrap_or_default();
     let result = clean_translation(content);
     if result.is_empty() {
-        Err("Hy-MT2가 번역문 대신 지시문 또는 빈 결과를 반환했습니다.".to_string())
+        Err("로컬 모델이 번역문 대신 지시문 또는 빈 결과를 반환했습니다.".to_string())
     } else {
         Ok(result)
     }
@@ -497,14 +828,21 @@ impl Translator for HyMtTranslator {
             return Ok(text.to_string());
         }
         self.ensure_server()?;
+        if self.model_size == HyMtModelSize::TranslateGemma4B {
+            let style = self.speech_style.clone();
+            return translate_with_translate_gemma(
+                text,
+                source,
+                target,
+                &style,
+                |fragment, resolved_style| {
+                    self.complete_translate_gemma(fragment, source, target, resolved_style)
+                },
+            );
+        }
         let style = self.speech_style.clone();
-        let model_size = if self.model.key == HyMtModelSize::Small.model().key {
-            HyMtModelSize::Small
-        } else {
-            HyMtModelSize::Large
-        };
         translate_with_completion_for_model(
-            model_size,
+            self.model_size,
             text,
             source,
             target,
@@ -514,17 +852,13 @@ impl Translator for HyMtTranslator {
     }
 
     fn close(&mut self) {
-        if let Some(mut process) = self.process.take() {
-            if process.try_wait().ok().flatten().is_none() {
-                let _ = process.kill();
-                let _ = process.wait();
-            }
-        }
-        #[cfg(windows)]
-        {
-            self.process_job.take();
-        }
-        self.port = 0;
+        self.release_runtime();
+    }
+}
+
+impl Drop for HyMtTranslator {
+    fn drop(&mut self) {
+        self.release_runtime();
     }
 }
 
@@ -574,12 +908,6 @@ impl Drop for ProcessJob {
     }
 }
 
-impl Drop for HyMtTranslator {
-    fn drop(&mut self) {
-        self.close();
-    }
-}
-
 #[cfg(test)]
 fn translate_with_completion<F>(
     text: &str,
@@ -620,6 +948,52 @@ where
         model_size,
         &mut complete,
     )
+}
+
+fn translate_with_translate_gemma<F>(
+    text: &str,
+    source: Language,
+    target: Language,
+    speech_style: &str,
+    mut complete: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str, &str) -> Result<String, String>,
+{
+    let resolved_style = if speech_style == "auto" {
+        detect_speech_style(text, source)
+    } else {
+        speech_style
+    };
+    let mut output = String::new();
+    let mut cursor = 0;
+    let mut segments = Vec::new();
+    for marker in PROTECTED_MARKER_RE.find_iter(text) {
+        segments.push((&text[cursor..marker.start()], false));
+        segments.push((marker.as_str(), true));
+        cursor = marker.end();
+    }
+    segments.push((&text[cursor..], false));
+
+    for (part, protected) in segments {
+        if part.is_empty() {
+            continue;
+        }
+        if protected || !part.chars().any(|character| character.is_alphanumeric()) {
+            output.push_str(part);
+            continue;
+        }
+        let leading_len = part.len() - part.trim_start().len();
+        let trailing_start = part.trim_end().len();
+        let core = part.trim();
+        let translated = complete(core, resolved_style)?;
+        output.push_str(&part[..leading_len]);
+        output.push_str(&translated);
+        output.push_str(&part[trailing_start..]);
+    }
+
+    let _ = (source, target);
+    Ok(output)
 }
 
 fn translate_with_completion_using_prompt<F>(
@@ -706,7 +1080,7 @@ pub fn detect_speech_style(text: &str, source: Language) -> &'static str {
             }
         }
         Language::Japanese => {
-            if Regex::new(r"(?:です|ます|ました|ません|でしょう|ください|ございます|お願い(?:し)?ます)(?:[,，。！？!?、…]|$)")
+            if Regex::new(r"(?:です(?:か)?|ます(?:か)?|ました(?:か)?|ません(?:か)?|でしょう(?:か)?|ください|ございます|お願い(?:し)?ます)(?:[,，。！？!?、…]|$)")
                 .unwrap()
                 .is_match(normalized)
             {
@@ -776,6 +1150,7 @@ fn translation_prompt_for_model(
     match model_size {
         HyMtModelSize::Small => compact_translation_prompt(text, source, target, style),
         HyMtModelSize::Large => translation_prompt(text, source, target, style),
+        HyMtModelSize::TranslateGemma4B => compact_translation_prompt(text, source, target, style),
     }
 }
 
@@ -1023,7 +1398,7 @@ fn default_model_path(model: HyMtModel) -> PathBuf {
     }
     default_cache_root()
         .join("models")
-        .join("hy-mt2")
+        .join(model.family)
         .join(model.key)
         .join(model.filename)
 }
@@ -1034,7 +1409,7 @@ fn bundled_model_path(model: HyMtModel) -> Option<PathBuf> {
     let adjacent = parent
         .join("runtime")
         .join("models")
-        .join("hy-mt2")
+        .join(model.family)
         .join(model.key)
         .join(model.filename);
     if adjacent.is_file() {
@@ -1046,7 +1421,7 @@ fn bundled_model_path(model: HyMtModel) -> Option<PathBuf> {
             .join("Resources")
             .join("runtime")
             .join("models")
-            .join("hy-mt2")
+            .join(model.family)
             .join(model.key)
             .join(model.filename);
         if resource.is_file() {
@@ -1129,13 +1504,13 @@ fn model_is_verified(path: &Path, model: HyMtModel) -> Result<bool, String> {
 
 fn file_sha256(path: &Path) -> Result<String, String> {
     let mut file =
-        File::open(path).map_err(|error| format!("Hy-MT2 모델을 검증하지 못했습니다: {error}"))?;
+        File::open(path).map_err(|error| format!("로컬 모델을 검증하지 못했습니다: {error}"))?;
     let mut digest = Sha256::new();
     let mut buffer = vec![0_u8; 4 * 1024 * 1024];
     loop {
         let count = file
             .read(&mut buffer)
-            .map_err(|error| format!("Hy-MT2 모델을 검증하지 못했습니다: {error}"))?;
+            .map_err(|error| format!("로컬 모델을 검증하지 못했습니다: {error}"))?;
         if count == 0 {
             break;
         }
@@ -1168,11 +1543,31 @@ mod tests {
     use super::{
         clean_translation, complete_translation_with_retry, completion_payload, completion_result,
         detect_speech_style, find_llama_server, max_output_tokens, rewrite_style_prompt,
-        startup_device_attempts, translate_with_completion, translation_prompt_for_model,
-        HyMtModelSize, HyMtTranslator,
+        startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
+        translate_with_translate_gemma, translation_prompt_for_model, HyMtModelSize,
+        HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
+    use std::sync::Arc;
+
+    #[test]
+    fn translators_for_the_same_local_model_share_one_runtime() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-shared-model-runtime-{}",
+            std::process::id()
+        ));
+        let model = directory.join("model.gguf");
+        let server = directory.join("llama-server.exe");
+        let first = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto")
+            .unwrap()
+            .with_paths(model.clone(), Some(server.clone()));
+        let second = HyMtTranslator::new(HyMtModelSize::Small, "auto", "casual")
+            .unwrap()
+            .with_paths(model, Some(server));
+
+        assert!(Arc::ptr_eq(&first.runtime, &second.runtime));
+    }
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1265,6 +1660,102 @@ mod tests {
     }
 
     #[test]
+    fn translate_gemma_uses_the_official_translation_prompt() {
+        let payload = translate_gemma_completion_payload(
+            "오늘 같이 게임할래?",
+            Language::Korean,
+            Language::Japanese,
+            "auto",
+            256,
+        );
+        let prompt = payload["prompt"].as_str().unwrap();
+        assert!(prompt.starts_with("<bos><start_of_turn>user\n"));
+        assert!(prompt.contains("professional Korean (ko) to Japanese (ja) translator"));
+        assert!(prompt.contains("오늘 같이 게임할래?"));
+        assert!(prompt.ends_with("<end_of_turn>\n<start_of_turn>model\n"));
+        assert_eq!(payload["n_predict"], 256);
+        assert_eq!(payload["temperature"].as_f64(), Some(0.0));
+    }
+
+    #[test]
+    fn translate_gemma_prompt_preserves_the_detected_social_register() {
+        let casual = translate_gemma_completion_payload(
+            "오늘 같이 게임할래?",
+            Language::Korean,
+            Language::Japanese,
+            "auto",
+            128,
+        );
+        let polite = translate_gemma_completion_payload(
+            "오늘 같이 게임하시겠어요?",
+            Language::Korean,
+            Language::Japanese,
+            "auto",
+            128,
+        );
+        let forced_casual = translate_gemma_completion_payload(
+            "오늘 같이 게임하시겠어요?",
+            Language::Korean,
+            Language::Japanese,
+            "casual",
+            128,
+        );
+
+        assert!(casual["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("casual plain form"));
+        assert!(polite["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("polite Japanese"));
+        assert!(forced_casual["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("casual plain form"));
+    }
+
+    #[test]
+    fn translate_gemma_preserves_protected_markers_without_sending_them_to_the_model() {
+        let mut fragments = Vec::new();
+        let translated = translate_with_translate_gemma(
+            "Hello ZXQKEEP000QXZ friend",
+            Language::English,
+            Language::Korean,
+            "casual",
+            |fragment, style| {
+                assert_eq!(style, "casual");
+                fragments.push(fragment.to_string());
+                Ok(if fragment == "Hello" {
+                    "안녕"
+                } else {
+                    "친구"
+                }
+                .to_string())
+            },
+        )
+        .unwrap();
+        assert_eq!(translated, "안녕 ZXQKEEP000QXZ 친구");
+        assert_eq!(fragments, ["Hello", "friend"]);
+    }
+
+    #[test]
+    fn translate_gemma_model_metadata_is_pinned() {
+        let model = HyMtModelSize::TranslateGemma4B.model();
+        assert_eq!(model.family, "translategemma");
+        assert_eq!(
+            model.repository,
+            "SandLogicTechnologies/translategemma-4b-it-GGUF"
+        );
+        assert_eq!(model.filename, "translategemma-4b_Q4_K_M.gguf");
+        assert_eq!(model.expected_bytes, 2_489_909_312);
+        assert_eq!(
+            model.expected_sha256,
+            "526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd"
+        );
+    }
+
+    #[test]
     fn automatic_style_is_included_in_the_initial_prompt() {
         let mut captured = String::new();
         let result = translate_with_completion(
@@ -1347,6 +1838,10 @@ mod tests {
             "polite"
         );
         assert_eq!(
+            detect_speech_style("今日、一緒にゲームをしませんか？", Language::Japanese),
+            "polite"
+        );
+        assert_eq!(
             detect_speech_style("ありがとう。またね。", Language::Japanese),
             "casual"
         );
@@ -1403,6 +1898,16 @@ mod tests {
             rewrite_style_prompt("고마워요.", Language::Korean, "casual")
                 .contains("Korean casual banmal")
         );
+
+        let gemma_polite =
+            HyMtTranslator::new(HyMtModelSize::TranslateGemma4B, "auto", "polite").unwrap();
+        let gemma_casual =
+            HyMtTranslator::new(HyMtModelSize::TranslateGemma4B, "auto", "casual").unwrap();
+        assert_ne!(
+            gemma_polite.cache_namespace(),
+            gemma_casual.cache_namespace()
+        );
+        assert!(gemma_polite.cache_namespace().contains("register-aware-v2"));
         assert!(rewrite_style_prompt("Thanks", Language::English, "polite")
             .contains("polite/formal English"));
     }
@@ -1540,6 +2045,51 @@ mod tests {
             .translate("너구리", Language::Korean, Language::Japanese)
             .expect("translate the reported Korean noun into Japanese");
         assert_eq!(translated, "タヌキ");
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "TranslateGemma 4B 모델 다운로드와 llama-server가 필요합니다"]
+    fn live_translate_gemma_4b_translates_korean_to_japanese() {
+        let mut translator =
+            HyMtTranslator::new(HyMtModelSize::TranslateGemma4B, "auto", "auto").unwrap();
+        translator
+            .prepare()
+            .expect("start TranslateGemma 4B server");
+        let translated = translator
+            .translate(
+                "너구리가 다람쥐를 만났어",
+                Language::Korean,
+                Language::Japanese,
+            )
+            .expect("translate distinct animal nouns with TranslateGemma 4B");
+        assert_eq!(
+            detect_explicit_language(&translated),
+            Language::Japanese,
+            "unexpected translation: {translated}"
+        );
+        assert_ne!(translated, "너구리가 다람쥐를 만났어");
+
+        let casual = translator
+            .translate("오늘 같이 게임할래?", Language::Korean, Language::Japanese)
+            .expect("preserve Korean banmal as casual Japanese");
+        let polite = translator
+            .translate(
+                "오늘 같이 게임하시겠어요?",
+                Language::Korean,
+                Language::Japanese,
+            )
+            .expect("preserve Korean honorific speech as polite Japanese");
+        assert_eq!(
+            detect_speech_style(&casual, Language::Japanese),
+            "casual",
+            "casual source became polite: {casual}"
+        );
+        assert_eq!(
+            detect_speech_style(&polite, Language::Japanese),
+            "polite",
+            "polite source became casual: {polite}"
+        );
         translator.close();
     }
 }

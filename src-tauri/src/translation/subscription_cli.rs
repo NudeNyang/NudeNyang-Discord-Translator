@@ -1769,7 +1769,7 @@ impl Translator for SubscriptionCliTranslator {
                 let payload = self
                     .claude_server
                     .as_mut()
-                    .ok_or_else(|| "Claude 지속 연결 예열 상태를 만들지 못했습니다.".to_string())?
+                    .ok_or_else(|| "Claude 번역 준비 상태를 만들지 못했습니다.".to_string())?
                     .invoke(
                         &subscription_warmup_prompt(&self.speech_style)?,
                         &translation_schema(),
@@ -1930,9 +1930,7 @@ impl ClaudeStreamServer {
                     .get("result")
                     .and_then(Value::as_str)
                     .unwrap_or("Claude Code가 번역을 완료하지 못했습니다.");
-                return Err(format!(
-                    "Claude Code 지속 연결 번역에 실패했습니다: {detail}"
-                ));
+                return Err(format!("Claude Code 번역에 실패했습니다: {detail}"));
             }
             self.turns += 1;
             if self.turns >= PERSISTENT_SESSION_TURN_LIMIT {
@@ -1963,19 +1961,19 @@ impl ClaudeStreamServer {
         configure_hidden(&mut command);
         let mut child = command
             .spawn()
-            .map_err(|error| format!("Claude Code 지속 연결을 시작하지 못했습니다: {error}"))?;
+            .map_err(|error| format!("Claude Code 번역 연결을 시작하지 못했습니다: {error}"))?;
         let stdin = child
             .stdin
             .take()
-            .ok_or_else(|| "Claude Code 지속 연결 입력을 열지 못했습니다.".to_string())?;
+            .ok_or_else(|| "Claude Code 번역 입력을 열지 못했습니다.".to_string())?;
         let stdout = child
             .stdout
             .take()
-            .ok_or_else(|| "Claude Code 지속 연결 출력을 열지 못했습니다.".to_string())?;
+            .ok_or_else(|| "Claude Code 번역 출력을 열지 못했습니다.".to_string())?;
         let stderr = child
             .stderr
             .take()
-            .ok_or_else(|| "Claude Code 지속 연결 오류 출력을 열지 못했습니다.".to_string())?;
+            .ok_or_else(|| "Claude Code 오류 출력을 열지 못했습니다.".to_string())?;
         let (sender, receiver) = mpsc::channel();
         thread::spawn(move || {
             for line in BufReader::new(stdout).lines() {
@@ -2012,22 +2010,22 @@ impl ClaudeStreamServer {
         let stdin = self
             .stdin
             .as_mut()
-            .ok_or_else(|| "Claude Code 지속 연결 입력이 닫혀 있습니다.".to_string())?;
+            .ok_or_else(|| "Claude Code 번역 입력이 닫혀 있습니다.".to_string())?;
         writeln!(stdin, "{message}")
             .and_then(|()| stdin.flush())
-            .map_err(|error| format!("Claude Code 지속 연결이 끊어졌습니다: {error}"))
+            .map_err(|error| format!("Claude Code 번역 연결이 끊어졌습니다: {error}"))
     }
 
     fn next_message(&mut self, deadline: Instant) -> Result<Value, String> {
         let remaining = deadline
             .checked_duration_since(Instant::now())
-            .ok_or_else(|| "Claude Code 지속 연결 번역 시간이 초과되었습니다.".to_string())?;
+            .ok_or_else(|| "Claude Code 번역 시간이 초과되었습니다.".to_string())?;
         let event = self
             .messages
             .as_ref()
-            .ok_or_else(|| "Claude Code 지속 연결 출력이 닫혀 있습니다.".to_string())?
+            .ok_or_else(|| "Claude Code 번역 출력이 닫혀 있습니다.".to_string())?
             .recv_timeout(remaining)
-            .map_err(|_| "Claude Code 지속 연결 번역 시간이 초과되었습니다.".to_string())?;
+            .map_err(|_| "Claude Code 번역 시간이 초과되었습니다.".to_string())?;
         match event {
             ServerEvent::Message(message) => Ok(message),
             ServerEvent::Closed => {
@@ -2038,10 +2036,10 @@ impl ClaudeStreamServer {
                     .unwrap_or_default();
                 let detail = tail_chars(&detail, 500);
                 if detail.trim().is_empty() {
-                    Err("Claude Code 지속 연결이 예기치 않게 종료되었습니다.".to_string())
+                    Err("Claude Code 번역 연결이 예기치 않게 종료되었습니다.".to_string())
                 } else {
                     Err(format!(
-                        "Claude Code 지속 연결이 예기치 않게 종료되었습니다 ({})",
+                        "Claude Code 번역 연결이 예기치 않게 종료되었습니다 ({})",
                         detail.trim()
                     ))
                 }

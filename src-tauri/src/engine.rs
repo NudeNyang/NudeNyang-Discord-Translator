@@ -35,8 +35,9 @@ use crate::outgoing::{
 };
 use crate::text_split::split_for_discord;
 use crate::translation::{
-    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, OriginalTranslator,
-    SubscriptionCliTranslator, TranslationService, Translator,
+    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationProgress,
+    ModelProgressObserver, OriginalTranslator, SubscriptionCliTranslator, TranslationService,
+    Translator,
 };
 
 const CDP_PORT: u16 = 9222;
@@ -64,6 +65,7 @@ pub struct RuntimeStatus {
     pub active_outgoing_translator: String,
     pub translator_state: String,
     pub translator_error: String,
+    pub model_progress: Option<ModelPreparationProgress>,
     pub notice: String,
 }
 
@@ -83,6 +85,7 @@ impl RuntimeStatus {
             active_outgoing_translator: "original".to_string(),
             translator_state: "queued".to_string(),
             translator_error: String::new(),
+            model_progress: None,
             notice: String::new(),
         }
     }
@@ -222,6 +225,10 @@ enum WorkerResult {
         name: String,
         error: String,
     },
+    ModelProgress {
+        generation: u64,
+        progress: ModelPreparationProgress,
+    },
     WarmFailed(String),
 }
 
@@ -307,6 +314,7 @@ fn run_controller(
     let (outgoing_worker_tx, outgoing_worker_rx) = mpsc::channel();
     let (worker_result_tx, worker_result_rx) = mpsc::channel();
     let outgoing_result_tx = worker_result_tx.clone();
+    let progress_result_tx = worker_result_tx.clone();
     let worker = thread::Builder::new()
         .name("rust-translation-worker".to_string())
         .spawn(move || run_translation_worker(worker_rx, worker_result_tx))
@@ -339,6 +347,7 @@ fn run_controller(
     request_translator_preparation(
         &config,
         &preparation_tx,
+        &progress_result_tx,
         &status,
         &mut preparation_generation,
     );
@@ -387,6 +396,7 @@ fn run_controller(
                         request_translator_preparation(
                             &config,
                             &preparation_tx,
+                            &progress_result_tx,
                             &status,
                             &mut preparation_generation,
                         );
@@ -511,6 +521,7 @@ fn run_controller(
                         update_status(&status, |runtime| {
                             runtime.translator_state = "error".to_string();
                             runtime.translator_error = format!("번역 모델 준비 실패: {error}");
+                            runtime.model_progress = None;
                             runtime.notice = runtime.translator_error.clone();
                         });
                     }
@@ -1477,8 +1488,19 @@ fn drain_worker_results(
                 update_status(status, |runtime| {
                     runtime.translator_state = "error".to_string();
                     runtime.translator_error = format!("번역 모델 준비 실패: {error}");
+                    runtime.model_progress = None;
                     runtime.notice = runtime.translator_error.clone();
                 });
+            }
+            WorkerResult::ModelProgress {
+                generation: progress_generation,
+                progress,
+            } => {
+                if progress_generation == preparation_generation {
+                    update_status(status, |runtime| {
+                        runtime.model_progress = Some(progress);
+                    });
+                }
             }
             WorkerResult::WarmFailed(error) => {
                 crate::diagnostics::error("translator", &format!("model warmup failed: {error}"));
@@ -1512,7 +1534,8 @@ fn finish_activation_status(
         }
         runtime.translator_state = "ready".to_string();
         runtime.translator_error.clear();
-        let model_is_prepared = !runtime.active_translator.starts_with("hymt_")
+        runtime.model_progress = None;
+        let model_is_prepared = !is_local_model_name(&runtime.active_translator)
             || config.enabled
             || config.outgoing_translation_enabled
             || config.keep_local_model_warm;
@@ -1525,8 +1548,8 @@ fn finish_activation_status(
                 translator_label(&runtime.active_outgoing_translator)
             )
         };
-        release = (runtime.active_translator.starts_with("hymt_")
-            || runtime.active_outgoing_translator.starts_with("hymt_"))
+        release = (is_local_model_name(&runtime.active_translator)
+            || is_local_model_name(&runtime.active_outgoing_translator))
             && !config.enabled
             && !config.outgoing_translation_enabled
             && !config.keep_local_model_warm;
@@ -1696,6 +1719,7 @@ fn log_worker_queue(lane: &str, queued_at: Instant, items: usize, chars: usize) 
 fn request_translator_preparation(
     config: &AppConfig,
     sender: &mpsc::Sender<PreparationResult>,
+    progress_sender: &mpsc::Sender<WorkerResult>,
     status: &Arc<Mutex<RuntimeStatus>>,
     generation: &mut u64,
 ) {
@@ -1709,17 +1733,27 @@ fn request_translator_preparation(
         runtime.configured_outgoing_translator = outgoing_name.clone();
         runtime.translator_state = "preparing".to_string();
         runtime.translator_error.clear();
+        runtime.model_progress = None;
         runtime.notice = format!(
             "{} 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
             translator_label(&display_name)
         );
     });
     let sender = sender.clone();
+    let progress_sender = progress_sender.clone();
     thread::spawn(move || {
-        let result = make_translator(&config, &display_name).and_then(|display_translator| {
-            let outgoing_translator = make_translator(&config, &outgoing_name)?;
-            Ok((display_translator, outgoing_translator))
+        let observer: ModelProgressObserver = Arc::new(move |progress| {
+            let _ = progress_sender.send(WorkerResult::ModelProgress {
+                generation: current_generation,
+                progress,
+            });
         });
+        let result = make_translator(&config, &display_name, Some(observer.clone())).and_then(
+            |display_translator| {
+                let outgoing_translator = make_translator(&config, &outgoing_name, Some(observer))?;
+                Ok((display_translator, outgoing_translator))
+            },
+        );
         let message = match result {
             Ok((display_translator, outgoing_translator)) => PreparationResult::Ready {
                 generation: current_generation,
@@ -1739,18 +1773,17 @@ fn request_translator_preparation(
     });
 }
 
-fn make_translator(config: &AppConfig, name: &str) -> Result<Box<dyn Translator>, String> {
+fn make_translator(
+    config: &AppConfig,
+    name: &str,
+    progress_observer: Option<ModelProgressObserver>,
+) -> Result<Box<dyn Translator>, String> {
     match name {
-        "hymt_1_8b" => Ok(Box::new(HyMtTranslator::new(
-            HyMtModelSize::Small,
-            config.hymt_device.clone(),
-            config.speech_style.clone(),
-        )?)),
-        "hymt_7b" => Ok(Box::new(HyMtTranslator::new(
-            HyMtModelSize::Large,
-            config.hymt_device.clone(),
-            config.speech_style.clone(),
-        )?)),
+        "hymt_1_8b" => make_local_translator(config, HyMtModelSize::Small, progress_observer),
+        "hymt_7b" => make_local_translator(config, HyMtModelSize::Large, progress_observer),
+        "translategemma_4b" => {
+            make_local_translator(config, HyMtModelSize::TranslateGemma4B, progress_observer)
+        }
         "chatgpt" | "claude" | "gemini" => Ok(Box::new(SubscriptionCliTranslator::new(
             name,
             &config.speech_style,
@@ -1765,6 +1798,24 @@ fn make_translator(config: &AppConfig, name: &str) -> Result<Box<dyn Translator>
         "original" => Ok(Box::new(OriginalTranslator)),
         other => Err(format!("지원하지 않는 번역 모델입니다: {other}")),
     }
+}
+
+fn make_local_translator(
+    config: &AppConfig,
+    model_size: HyMtModelSize,
+    progress_observer: Option<ModelProgressObserver>,
+) -> Result<Box<dyn Translator>, String> {
+    let translator = HyMtTranslator::new(
+        model_size,
+        config.hymt_device.clone(),
+        config.speech_style.clone(),
+    )?;
+    let translator = if let Some(observer) = progress_observer {
+        translator.with_progress_observer(observer)
+    } else {
+        translator
+    };
+    Ok(Box::new(translator))
 }
 
 fn cache_root() -> PathBuf {
@@ -1824,17 +1875,22 @@ fn translator_label(name: &str) -> &str {
     match name {
         "hymt_1_8b" => "Hy-MT2 1.8B Q4 (경량·기본)",
         "hymt_7b" => "Hy-MT2 7B Q4 (품질·약 4.6GB)",
-        "chatgpt" => "GPT-5.6 Luna · low · 지속 연결 (Codex CLI)",
-        "claude" => "Claude Haiku 4.5 · 지속 연결 (Claude Code)",
-        "gemini" => "Gemini 3.6 Flash · low · 지속 세션 (Antigravity CLI)",
+        "translategemma_4b" => "TranslateGemma 4B Q4 (실험·약 2.5GB)",
+        "chatgpt" => "GPT-5.6 Luna · 품질 최우선 (Codex CLI)",
+        "claude" => "Claude Haiku 4.5 · 품질 최우선 (Claude Code)",
+        "gemini" => "Gemini 3.6 Flash · 품질 최우선 (Antigravity CLI)",
         "deepl" => "DeepL API",
         "mock" => "Mock 테스트",
         _ => "원문 표시",
     }
 }
 
+fn is_local_model_name(name: &str) -> bool {
+    matches!(name, "hymt_1_8b" | "hymt_7b" | "translategemma_4b")
+}
+
 fn translator_activation_notice(name: &str, model_is_prepared: bool) -> String {
-    if name.starts_with("hymt_") && !model_is_prepared {
+    if is_local_model_name(name) && !model_is_prepared {
         format!(
             "선택한 번역 모델: {}. 번역을 켜면 모델을 준비합니다.",
             translator_label(name)
@@ -1885,6 +1941,11 @@ mod tests {
         assert_eq!(poll_interval(0), Duration::from_millis(500));
         assert_eq!(poll_interval(100), Duration::from_millis(50));
         assert!(translator_label("chatgpt").contains("Codex"));
+        assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
+        for provider in ["chatgpt", "claude", "gemini"] {
+            assert!(translator_label(provider).contains("품질 최우선"));
+            assert!(!translator_label(provider).contains("지속"));
+        }
     }
 
     #[test]

@@ -9,7 +9,7 @@ mod subscription_cli;
 use crate::language::Language;
 
 pub use deepl::DeepLTranslator;
-pub use hymt::{HyMtModelSize, HyMtTranslator};
+pub use hymt::{HyMtModelSize, HyMtTranslator, ModelPreparationProgress, ModelProgressObserver};
 pub use mock::{MockTranslator, OriginalTranslator};
 pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::TranslationService;

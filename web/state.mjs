@@ -125,9 +125,10 @@ export function discordConnectionLabel(status = {}) {
 const TRANSLATOR_RUNTIME_NAMES = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
-  chatgpt: "GPT-5.6 Luna · low",
+  translategemma_4b: "TranslateGemma 4B",
+  chatgpt: "GPT-5.6 Luna",
   claude: "Claude Haiku 4.5",
-  gemini: "Gemini 3.6 Flash · low",
+  gemini: "Gemini 3.6 Flash",
   deepl: "DeepL",
   mock: "Mock 테스트",
   original: "원문",
@@ -146,6 +147,49 @@ export function translatorRuntimeLabel(status) {
     return `${configured} 준비 중`;
   }
   return `${active} 사용 중`;
+}
+
+function formatGigabytes(bytes) {
+  return `${(Math.max(0, Number(bytes) || 0) / 1024 ** 3).toFixed(1)}GB`;
+}
+
+export function modelPreparationBanner(progress) {
+  if (!progress || progress.phase === "ready") return null;
+  const model = progress.model || "로컬 번역";
+  const downloaded = Math.max(0, Number(progress.downloaded) || 0);
+  const total = Math.max(0, Number(progress.total) || 0);
+  const ratio = total > 0 ? Math.min(1, downloaded / total) : 0;
+
+  if (progress.phase === "downloading") {
+    return {
+      title: `${model} 모델 다운로드 중`,
+      detail: `${formatGigabytes(downloaded)} / ${formatGigabytes(total)} 다운로드됨`,
+      progress: ratio,
+      indeterminate: false,
+    };
+  }
+  if (progress.phase === "verifying") {
+    return {
+      title: `${model} 모델 파일 확인 중`,
+      detail: `${formatGigabytes(total)} 다운로드 완료 · 파일 무결성을 확인하고 있습니다.`,
+      progress: 1,
+      indeterminate: true,
+    };
+  }
+  if (progress.phase === "loading") {
+    return {
+      title: `${model} 모델 불러오는 중`,
+      detail: `${formatGigabytes(total)} 다운로드 완료 · 번역 엔진을 준비하고 있습니다.`,
+      progress: 1,
+      indeterminate: true,
+    };
+  }
+  return {
+    title: `${model} 모델 준비 대기 중`,
+    detail: "같은 로컬 모델 준비 작업이 끝나기를 기다리고 있습니다.",
+    progress: 0,
+    indeterminate: true,
+  };
 }
 
 export function scrollThumbMetrics(trackHeight, scrollHeight, scrollTop) {

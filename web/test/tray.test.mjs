@@ -64,6 +64,7 @@ test("translation model can be changed inside the tray menu", () => {
   for (const translator of [
     "hymt_1_8b",
     "hymt_7b",
+    "translategemma_4b",
     "chatgpt",
     "gemini",
     "deepl",
@@ -92,7 +93,7 @@ test("tray window height hugs each menu view without clipping option lists", () 
   assert.match(trayStyles, /\.bottom-group \{[^}]*padding-bottom: 0;/s);
   assert.match(trayScript, /main: 318/);
   assert.match(trayScript, /language: 274/);
-  assert.match(trayScript, /model: 353/);
+  assert.match(trayScript, /model: 390/);
   assert.match(trayScript, /VIEW_HEIGHTS\.main \+ \(availableUpdateVersion \? UPDATE_ROW_HEIGHT : 0\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.language\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.model\)/);

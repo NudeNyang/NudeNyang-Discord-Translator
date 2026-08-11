@@ -4,6 +4,7 @@
 
 - 기본: `tencent/Hy-MT2-1.8B-GGUF`, `Q4_K_M`
 - 품질 우선: `tencent/Hy-MT2-7B-GGUF`, `Q4_K_M`
+- 실험: `SandLogicTechnologies/translategemma-4b-it-GGUF`, `Q4_K_M`
 - 실행기: `llama.cpp`의 로컬 `llama-server`
 - 클라우드 선택형: 사용자가 키를 제공하는 DeepL
 - 지원 우선순위: 한국어 → 일본어 → 영어 → 중국어
@@ -25,6 +26,11 @@ Windows 배포 ZIP에는 1.8B 모델을 내장하고, 7B는 패키징 옵션으�
 
 번역 캐시 이름에는 모델 크기, 양자화, 프롬프트 버전을 포함한다. 모델이나 프롬프트를 바꾸면
 이전 결과를 재사용하지 않으며 다른 번역 엔진의 캐시와도 섞이지 않는다.
+
+TranslateGemma 4B 실험 모델은 2,489,909,312바이트이며 SHA-256
+`526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd`로 고정한다.
+기본 배포와 Git 저장소에는 넣지 않고 사용자가 선택한 경우에만 별도 폴더로 내려받는다.
+Hy-MT2 캐시와 섞이지 않도록 독립된 `translategemma` 이름 공간을 사용한다.
 
 ## 프롬프트와 보호 대상
 
@@ -55,10 +61,29 @@ Hy-MT2 1.8B Q4를 실제 `llama.cpp` 서버로 실행했다.
 1.8B를 최종 품질 기준으로 확정한 것은 아니다. UI Automation으로 정확히 추출한 실제 Discord
 문장 100~200개를 사용해 1.8B, 7B, DeepL을 사람 평가로 비교한 뒤 자동 선택 기준을 정한다.
 
+## 실험 모델
+
+TranslateGemma 4B는 기존 Hy-MT2를 대체하지 않는 비교용 선택지다. 현재 llama.cpp 서버의
+자동 템플릿 파서가 구조화 메시지 템플릿을 초기화하지 못하므로, GGUF에 저장된 공식 텍스트
+번역 템플릿을 동일하게 렌더링해 completion 엔드포인트에 전달한다. Hy-MT2용 지시 프롬프트나
+말투 재작성 단계는 적용하지 않지만, 원문에서 판별한 존댓말·반말과 사용자가 고정한 말투 설정은
+공식 템플릿 안의 사회적 말투 지시로 전달한다. 말투 지시가 없던 이전 결과를 재사용하지 않도록
+TranslateGemma 캐시를 `register-aware-v2` 이름 공간으로 분리한다. 모델에는 Apache-2.0이 아닌
+별도의 Gemma Terms of Use가 적용되므로 설정과 제3자 고지에서 이를 명확히 표시한다. 실제
+Discord 문장으로 품질과 응답 시간을 측정한 뒤 기본 모델 변경 여부를 결정한다.
+
+2026-08-11 Q4_K_M 실측에서 한국어 `너구리가 다람쥐를 만났어`를 일본어
+`キツネとリスが出会った`로 번역했다. 번역 경로와 대상 언어 제어는 정상 작동했지만 `너구리`를
+`여우`로 오역했으므로 현재 품질 기준에서는 기본 모델로 승격하지 않는다.
+
+2026-08-11 말투 보강 후 한국어 반말 `오늘 같이 게임할래?`는 일본어 반말
+`今日、一緒にゲームしない？`로, 한국어 존댓말 `오늘 같이 게임하시겠어요?`는 일본어 존댓말
+`今日、一緒にゲームをしませんか？`로 구분했다. 일본어 자동 판별은 `ですか`, `ますか`,
+`ませんか`, `でしょうか` 의문형도 존댓말로 처리한다.
+
 ## 보류
 
 - Papago 웹 자동화: 공식 제품 연동 방식이 아니고 페이지 변경·차단에 취약해 보류
-- TranslateGemma 4B: 비교 후보지만 Gemma 배포 약관과 추가 메모리 부담 때문에 후순위
 - Hy-MT2 1.25-bit: Windows 배포 경로가 충분히 안정화될 때 다시 검토
 
 ## 출처
@@ -66,6 +91,8 @@ Hy-MT2 1.8B Q4를 실제 `llama.cpp` 서버로 실행했다.
 - <https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF>
 - <https://huggingface.co/tencent/Hy-MT2-7B-GGUF>
 - <https://github.com/Tencent-Hunyuan/Hy-MT2>
+- <https://huggingface.co/SandLogicTechnologies/translategemma-4b-it-GGUF>
+- <https://ai.google.dev/gemma/terms>
 - <https://github.com/ggml-org/llama.cpp>
 
 내장 배포 시 각 GGUF 저장소의 Apache-2.0 원문과 Tencent 저작권 고지를 변경 없이 함께

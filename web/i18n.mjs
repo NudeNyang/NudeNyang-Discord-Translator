@@ -32,12 +32,10 @@ const COPY = Object.freeze({
   "받은 메시지와 이미지에 사용할 모델입니다.": ["Used for received messages and images.", "受信メッセージと画像に使用するモデルです。", "用于收到的消息和图片。"],
   "실시간 통역 모델": ["Real-time interpretation model", "リアルタイム通訳モデル", "实时翻译模型"],
   "내가 입력한 메시지를 번역할 모델입니다.": ["Used to translate messages you type.", "入力したメッセージを翻訳するモデルです。", "用于翻译你输入的消息。"],
-  "GPT-5.6 Luna · low · 지속 연결": ["GPT-5.6 Luna · low · persistent connection", "GPT-5.6 Luna · low · 常時接続", "GPT-5.6 Luna · low · 持久连接"],
-  "Claude Haiku 4.5 · 지속 연결": ["Claude Haiku 4.5 · persistent connection", "Claude Haiku 4.5 · 常時接続", "Claude Haiku 4.5 · 持久连接"],
-  "Gemini 3.6 Flash · low · 지속 세션": ["Gemini 3.6 Flash · low · persistent session", "Gemini 3.6 Flash · low · セッション継続", "Gemini 3.6 Flash · low · 持久会话"],
-  "GPT-5.6 Luna · low · 지속 연결": ["GPT-5.6 Luna · low · persistent connection", "GPT-5.6 Luna · low · 常時接続", "GPT-5.6 Luna · low · 持久连接"],
-  "Claude Haiku 4.5 · 지속 연결": ["Claude Haiku 4.5 · persistent connection", "Claude Haiku 4.5 · 常時接続", "Claude Haiku 4.5 · 持久连接"],
-  "Gemini 3.6 Flash · low · 지속 세션": ["Gemini 3.6 Flash · low · persistent session", "Gemini 3.6 Flash · low · セッション継続", "Gemini 3.6 Flash · low · 持久会话"],
+  "TranslateGemma 4B Q4 (실험·약 2.5GB)": ["TranslateGemma 4B Q4 (experimental · about 2.5GB)", "TranslateGemma 4B Q4（実験・約2.5GB）", "TranslateGemma 4B Q4（实验 · 约2.5GB）"],
+  "GPT-5.6 Luna · 품질 최우선": ["GPT-5.6 Luna · quality first", "GPT-5.6 Luna・品質最優先", "GPT-5.6 Luna · 质量优先"],
+  "Claude Haiku 4.5 · 품질 최우선": ["Claude Haiku 4.5 · quality first", "Claude Haiku 4.5・品質最優先", "Claude Haiku 4.5 · 质量优先"],
+  "Gemini 3.6 Flash · 품질 최우선": ["Gemini 3.6 Flash · quality first", "Gemini 3.6 Flash・品質最優先", "Gemini 3.6 Flash · 质量优先"],
   "VRAM 보호": ["VRAM protection", "VRAM保護", "显存保护"],
   "1.8B와 7B 중 하나의 로컬 모델만 사용합니다. 한쪽에서 로컬 모델을 바꾸면 다른 쪽의 로컬 선택도 함께 바뀝니다.": ["Only one local model, either 1.8B or 7B, is used. Changing a local model for one role updates the other local selection too.", "ローカルモデルは1.8Bか7Bのどちらか一つだけを使用します。一方で変更すると、もう一方のローカル選択も更新されます。", "本地仅使用 1.8B 或 7B 中的一个模型。一侧更改本地模型时，另一侧的本地选择也会同步更改。"],
   "로컬 엔진": ["Local engine", "ローカルエンジン", "本地引擎"],
@@ -169,6 +167,70 @@ export function translateCopy(language, korean) {
 }
 
 const DYNAMIC_COPY = Object.freeze([
+  {
+    pattern: /^(.+) 모델 다운로드 중$/,
+    render: {
+      en: model => `Downloading ${model} model`,
+      ja: model => `${model} モデルをダウンロード中`,
+      zh: model => `正在下载 ${model} 模型`,
+    },
+  },
+  {
+    pattern: /^(.+) 모델 파일 확인 중$/,
+    render: {
+      en: model => `Verifying ${model} model file`,
+      ja: model => `${model} モデルファイルを確認中`,
+      zh: model => `正在验证 ${model} 模型文件`,
+    },
+  },
+  {
+    pattern: /^(.+) 모델 불러오는 중$/,
+    render: {
+      en: model => `Loading ${model} model`,
+      ja: model => `${model} モデルを読み込み中`,
+      zh: model => `正在加载 ${model} 模型`,
+    },
+  },
+  {
+    pattern: /^(.+) 모델 준비 대기 중$/,
+    render: {
+      en: model => `Waiting to prepare ${model} model`,
+      ja: model => `${model} モデルの準備を待機中`,
+      zh: model => `正在等待准备 ${model} 模型`,
+    },
+  },
+  {
+    pattern: /^([0-9.]+GB) \/ ([0-9.]+GB) 다운로드됨$/,
+    render: {
+      en: (downloaded, total) => `${downloaded} / ${total} downloaded`,
+      ja: (downloaded, total) => `${downloaded} / ${total} ダウンロード済み`,
+      zh: (downloaded, total) => `已下载 ${downloaded} / ${total}`,
+    },
+  },
+  {
+    pattern: /^([0-9.]+GB) 다운로드 완료 · 파일 무결성을 확인하고 있습니다\.$/,
+    render: {
+      en: total => `${total} downloaded · Verifying file integrity.`,
+      ja: total => `${total} ダウンロード完了・ファイルの整合性を確認しています。`,
+      zh: total => `已下载 ${total} · 正在验证文件完整性。`,
+    },
+  },
+  {
+    pattern: /^([0-9.]+GB) 다운로드 완료 · 번역 엔진을 준비하고 있습니다\.$/,
+    render: {
+      en: total => `${total} downloaded · Preparing the translation engine.`,
+      ja: total => `${total} ダウンロード完了・翻訳エンジンを準備しています。`,
+      zh: total => `已下载 ${total} · 正在准备翻译引擎。`,
+    },
+  },
+  {
+    pattern: /^같은 로컬 모델 준비 작업이 끝나기를 기다리고 있습니다\.$/,
+    render: {
+      en: () => "Waiting for the shared local model preparation to finish.",
+      ja: () => "共有ローカルモデルの準備が完了するまで待機しています。",
+      zh: () => "正在等待共享本地模型准备完成。",
+    },
+  },
   {
     pattern: /^선택한 번역 모델: (.+)\. 번역 준비가 완료되었습니다\.$/,
     render: {

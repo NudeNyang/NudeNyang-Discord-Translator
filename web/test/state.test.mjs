@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   discordConnectionLabel,
+  modelPreparationBanner,
   normalizeConfig,
   resolveEnabledState,
   restartCountdownMessage,
@@ -137,4 +138,38 @@ test("translator runtime label distinguishes preparation from the active model",
     }),
     "Hy-MT2 7B 사용 중",
   );
+});
+
+test("local model preparation reports downloaded gigabytes and progress", () => {
+  assert.deepEqual(
+    modelPreparationBanner({
+      model: "Hy-MT2 1.8B Q4_K_M",
+      phase: "downloading",
+      downloaded: 536_870_912,
+      total: 1_133_080_448,
+    }),
+    {
+      title: "Hy-MT2 1.8B Q4_K_M 모델 다운로드 중",
+      detail: "0.5GB / 1.1GB 다운로드됨",
+      progress: 536_870_912 / 1_133_080_448,
+      indeterminate: false,
+    },
+  );
+
+  assert.deepEqual(
+    modelPreparationBanner({
+      model: "Hy-MT2 1.8B Q4_K_M",
+      phase: "loading",
+      downloaded: 1_133_080_448,
+      total: 1_133_080_448,
+    }),
+    {
+      title: "Hy-MT2 1.8B Q4_K_M 모델 불러오는 중",
+      detail: "1.1GB 다운로드 완료 · 번역 엔진을 준비하고 있습니다.",
+      progress: 1,
+      indeterminate: true,
+    },
+  );
+  assert.equal(modelPreparationBanner(null), null);
+  assert.equal(modelPreparationBanner({ phase: "ready" }), null);
 });

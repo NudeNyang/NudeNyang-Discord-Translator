@@ -25,7 +25,7 @@ NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 �
 엔진 작업은 UI 스레드를 막지 않는 전용 Rust 작업 스레드에서 실행한다. 표시 언어 번역과
 실시간 통역은 모델을 따로 선택할 수 있고, 같은 모델을 선택하면 하나의 번역 서비스를 공유한다.
 모델을 변경하면 세대를 교체하며, 이전 세대의 늦은 결과는 DOM에 적용하지 않는다.
-로컬 Hy-MT2는 1.8B와 7B 중 한 종류만 선택할 수 있다. 로컬 모델 교체는 기존 서비스를 닫은
+로컬 번역 모델은 Hy-MT2 1.8B·7B와 실험용 TranslateGemma 4B 중 한 종류만 선택할 수 있다. 로컬 모델 교체는 기존 서비스를 닫은
 뒤 새 모델을 준비해 두 모델이 동시에 VRAM을 점유하지 않게 한다.
 번역 끄기는 원문을 복원하고, 예열 유지가 꺼져 있으면 llama-server도 종료한다.
 
@@ -58,7 +58,7 @@ NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 �
 
 ## 번역과 데이터 경계
 
-로컬 Hy-MT2는 Rust가 llama-server 프로세스와 HTTP 세션을 직접 관리한다. 기본 1.8B 모델은
+로컬 Hy-MT2와 TranslateGemma는 Rust가 llama-server 프로세스와 HTTP 세션을 직접 관리한다. 기본 1.8B 모델은
 배포 ZIP에 포함하고, 7B는 패키징 옵션 또는 첫 선택 시 검증 다운로드로 제공한다. 구독 CLI와
 DeepL은 추출된 번역 대상 문자열만 전달한다. Discord 화면 이미지, 인증 토큰, 캐시 DB는 외부
 번역 서비스로 전송하지 않는다.

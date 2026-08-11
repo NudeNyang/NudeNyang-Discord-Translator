@@ -12,6 +12,7 @@ const LANGUAGE_LABELS = Object.freeze({
 const TRANSLATOR_LABELS = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
+  translategemma_4b: "TranslateGemma 4B",
   chatgpt: "ChatGPT",
   claude: "Claude",
   gemini: "Gemini",
@@ -22,7 +23,7 @@ const TRANSLATOR_LABELS = Object.freeze({
 const VIEW_HEIGHTS = Object.freeze({
   main: 318,
   language: 274,
-  model: 353,
+  model: 390,
 });
 const UPDATE_ROW_HEIGHT = 58;
 
