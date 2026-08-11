@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,22 @@ pub struct OutgoingOriginalRecord {
     pub part_number: usize,
     pub total_parts: usize,
     pub created_at: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheStorageStatus {
+    pub database_bytes: u64,
+    pub translation_records: u64,
+    pub outgoing_original_records: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheCleanupResult {
+    pub removed_records: u64,
+    pub bytes_before: u64,
+    pub bytes_after: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -99,6 +115,7 @@ impl MemoryCache {
 }
 
 pub struct TranslationCache {
+    path: PathBuf,
     connection: Mutex<Connection>,
     memory: Mutex<MemoryCache>,
     memory_capacity: usize,
@@ -121,8 +138,12 @@ impl TranslationCache {
         let mut connection = Connection::open(&path).map_err(|error| {
             format!("번역 캐시를 열지 못했습니다 ({}): {error}", path.display())
         })?;
+        connection
+            .busy_timeout(Duration::from_secs(5))
+            .map_err(|error| format!("SQLite 대기 시간을 설정하지 못했습니다: {error}"))?;
         initialize_schema(&mut connection)?;
         Ok(Self {
+            path,
             connection: Mutex::new(connection),
             memory: Mutex::new(MemoryCache::default()),
             memory_capacity,
@@ -346,6 +367,68 @@ impl TranslationCache {
             .map(|memory| memory.entries.contains_key(&key))
     }
 
+    pub fn storage_status(&self) -> Result<CacheStorageStatus, String> {
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했습니다.".to_string())?;
+        let translation_records = table_row_count(&connection, "translations")?;
+        let outgoing_original_records = table_row_count(&connection, "outgoing_originals")?;
+        drop(connection);
+        Ok(CacheStorageStatus {
+            database_bytes: std::fs::metadata(&self.path)
+                .map(|metadata| metadata.len())
+                .unwrap_or(0),
+            translation_records,
+            outgoing_original_records,
+        })
+    }
+
+    pub fn clear_user_data(&self) -> Result<CacheCleanupResult, String> {
+        let before = self.storage_status()?;
+        {
+            let mut connection = self
+                .connection
+                .lock()
+                .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했습니다.".to_string())?;
+            let transaction = connection
+                .transaction()
+                .map_err(|error| format!("번역 기록 정리를 시작하지 못했습니다: {error}"))?;
+            transaction
+                .execute("DELETE FROM translations", [])
+                .map_err(|error| format!("번역 결과를 정리하지 못했습니다: {error}"))?;
+            transaction
+                .execute("DELETE FROM outgoing_originals", [])
+                .map_err(|error| format!("보낸 메시지 원문을 정리하지 못했습니다: {error}"))?;
+            transaction
+                .commit()
+                .map_err(|error| format!("번역 기록 정리를 완료하지 못했습니다: {error}"))?;
+            if let Err(error) = connection.execute_batch("VACUUM") {
+                crate::diagnostics::warn(
+                    "translation-cache",
+                    &format!("SQLite records cleared but compaction was deferred: {error}"),
+                );
+            }
+        }
+        self.clear_memory()?;
+        Ok(CacheCleanupResult {
+            removed_records: before.translation_records + before.outgoing_original_records,
+            bytes_before: before.database_bytes,
+            bytes_after: std::fs::metadata(&self.path)
+                .map(|metadata| metadata.len())
+                .unwrap_or(0),
+        })
+    }
+
+    pub fn clear_memory(&self) -> Result<(), String> {
+        *self
+            .memory
+            .lock()
+            .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했습니다.".to_string())? =
+            MemoryCache::default();
+        Ok(())
+    }
+
     pub fn put_outgoing_original(&self, record: &OutgoingOriginalRecord) -> Result<(), String> {
         let connection = self
             .connection
@@ -482,6 +565,17 @@ impl TranslationCache {
             .put(entry, self.memory_capacity);
         Ok(())
     }
+}
+
+fn table_row_count(connection: &Connection, table: &str) -> Result<u64, String> {
+    let query = match table {
+        "translations" => "SELECT COUNT(*) FROM translations",
+        "outgoing_originals" => "SELECT COUNT(*) FROM outgoing_originals",
+        _ => return Err("지원하지 않는 SQLite 테이블입니다.".to_string()),
+    };
+    connection
+        .query_row(query, [], |row| row.get(0))
+        .map_err(|error| format!("SQLite 저장 정보를 확인하지 못했습니다: {error}"))
 }
 
 fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
@@ -802,6 +896,48 @@ mod tests {
         assert_eq!(
             reopened.outgoing_channel_languages().unwrap(),
             HashMap::from([("/channels/1/2".to_string(), "auto".to_string())])
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn cleanup_removes_translation_history_but_preserves_channel_preferences() {
+        let path = temporary_cache_path("cleanup");
+        let cache = TranslationCache::open(path.clone(), 8).unwrap();
+        cache
+            .put("hash", "hello", "en", "ko", "안녕하세요", "test:v1")
+            .unwrap();
+        cache
+            .put_outgoing_original(&OutgoingOriginalRecord {
+                message_id: "123".to_string(),
+                channel_key: "/channels/1/2".to_string(),
+                original_text: "안녕".to_string(),
+                sent_text: "hello".to_string(),
+                part_number: 1,
+                total_parts: 1,
+                created_at: super::now_seconds(),
+            })
+            .unwrap();
+        cache
+            .set_outgoing_channel_language("/channels/1/2", "ja")
+            .unwrap();
+
+        let before = cache.storage_status().unwrap();
+        assert_eq!(before.translation_records, 1);
+        assert_eq!(before.outgoing_original_records, 1);
+        assert_eq!(cache.memory_size().unwrap(), 1);
+
+        let result = cache.clear_user_data().unwrap();
+        assert_eq!(result.removed_records, 2);
+        assert_eq!(cache.memory_size().unwrap(), 0);
+        assert_eq!(cache.get("hash", "ko", "test:v1").unwrap(), None);
+        assert!(cache
+            .outgoing_originals_for_channel("/channels/1/2", 20)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            cache.outgoing_channel_languages().unwrap(),
+            HashMap::from([("/channels/1/2".to_string(), "ja".to_string())])
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }

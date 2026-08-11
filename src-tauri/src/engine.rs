@@ -10,7 +10,7 @@ use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::cache::TranslationCache;
+use crate::cache::{CacheCleanupResult, TranslationCache};
 use crate::cdp::{discord_target, CdpClient};
 use crate::config::{default_config_path, AppConfig, ConfigStore};
 use crate::dom::{
@@ -101,6 +101,7 @@ pub struct RustEngine {
 enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
+    ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
     Stop,
 }
@@ -145,6 +146,7 @@ enum WorkerCommand {
     },
     Warm,
     Release,
+    ClearCacheMemory,
     Stop,
 }
 
@@ -157,6 +159,7 @@ enum OutgoingWorkerCommand {
     },
     Warm,
     Release,
+    ClearCacheMemory,
     Stop,
 }
 
@@ -165,6 +168,7 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
         WorkerCommand::Activate { .. }
         | WorkerCommand::Warm
         | WorkerCommand::Release
+        | WorkerCommand::ClearCacheMemory
         | WorkerCommand::Stop => 0,
         WorkerCommand::Translate(_) | WorkerCommand::TranslateImage(_) => 1,
     }
@@ -315,6 +319,18 @@ impl RustEngine {
         self.controls
             .send(Control::AttachApp(app))
             .map_err(|_| "Rust 번역 엔진에 앱 설정 연결을 전달하지 못했습니다.".to_string())
+    }
+
+    pub fn clear_cache(&self) -> Result<CacheCleanupResult, String> {
+        let (result_tx, result_rx) = mpsc::channel();
+        self.controls
+            .send(Control::ClearCache(result_tx))
+            .map_err(|_| {
+                "Rust 번역 엔진이 종료되어 번역 기록을 정리하지 못했습니다.".to_string()
+            })?;
+        result_rx
+            .recv_timeout(Duration::from_secs(30))
+            .map_err(|_| "번역 기록 정리 결과를 기다리지 못했습니다.".to_string())?
     }
 
     pub fn status(&self) -> Result<RuntimeStatus, String> {
@@ -503,6 +519,17 @@ fn run_controller(
                             let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
                         }
                     }
+                }
+                Control::ClearCache(result_tx) => {
+                    let result = outgoing_original_store
+                        .as_ref()
+                        .ok_or_else(|| "SQLite 번역 저장소를 열지 못했습니다.".to_string())
+                        .and_then(TranslationCache::clear_user_data);
+                    if result.is_ok() {
+                        let _ = worker_tx.send(WorkerCommand::ClearCacheMemory);
+                        let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::ClearCacheMemory);
+                    }
+                    let _ = result_tx.send(result);
                 }
                 Control::AttachApp(app) => app_handle = Some(app),
                 Control::Stop => {
@@ -1681,6 +1708,9 @@ fn run_translation_worker(
             WorkerCommand::Release => {
                 service.translator_mut().close();
             }
+            WorkerCommand::ClearCacheMemory => {
+                let _ = service.clear_cache_memory();
+            }
             WorkerCommand::Stop => break,
         }
     }
@@ -1745,6 +1775,9 @@ fn run_outgoing_translation_worker(
                 }
             }
             OutgoingWorkerCommand::Release => service.translator_mut().close(),
+            OutgoingWorkerCommand::ClearCacheMemory => {
+                let _ = service.clear_cache_memory();
+            }
             OutgoingWorkerCommand::Stop => break,
         }
     }

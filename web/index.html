@@ -148,6 +148,18 @@
                   <div class="privacy-note"><strong>로컬 우선</strong><span>Hy-MT2와 이미지 OCR은 PC에서 실행됩니다. 외부 모델에는 추출된 텍스트만 전송됩니다.</span></div>
                 </article>
 
+                <section id="storage-management" aria-labelledby="storage-heading">
+                  <div class="panel-subheading"><h3 id="storage-heading">저장 공간 관리</h3><p>다운로드한 로컬 모델과 번역 기록을 관리합니다.</p></div>
+                  <div class="settings-card storage-card">
+                    <div class="storage-group-heading"><div><h3>로컬 번역 모델</h3><p>사용하지 않는 다운로드 모델을 삭제하여 저장 공간을 확보합니다.</p></div></div>
+                    <div id="local-model-storage-list" class="local-model-storage-list" aria-live="polite"></div>
+                    <div class="storage-cache-row">
+                      <div><h3>SQLite 번역 기록</h3><p>저장된 번역 결과와 보낸 메시지 원문을 정리합니다. 설정, 채널별 언어 및 인증 정보는 유지됩니다.</p><small id="translation-cache-summary">저장 공간을 확인하고 있습니다.</small></div>
+                      <button class="button secondary storage-action" id="clear-translation-cache" type="button">기록 정리</button>
+                    </div>
+                  </div>
+                </section>
+
                 <section id="provider-connections" aria-labelledby="connections-heading">
                   <div class="panel-subheading"><h3 id="connections-heading">번역 서비스 연결</h3><p>구독 계정과 API 연결 상태를 관리합니다.</p></div>
                   <div class="settings-card provider-list">

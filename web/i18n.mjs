@@ -48,6 +48,26 @@ const COPY = Object.freeze({
   "값이 높을수록 반응이 빨라지며 CPU 사용량이 증가할 수 있습니다.": ["Higher values respond faster but may increase CPU use.", "値を高くすると応答が速くなりますが、CPU使用率が増える場合があります。", "数值越高响应越快，但可能增加 CPU 使用率。"],
   "로컬 우선": ["Local first", "ローカル優先", "本地优先"],
   "Hy-MT2와 이미지 OCR은 PC에서 실행됩니다. 외부 모델에는 추출된 텍스트만 전송됩니다.": ["Hy-MT2 and image OCR run on this PC. Only extracted text is sent to external models.", "Hy-MT2と画像OCRはPC上で実行されます。外部モデルには抽出したテキストのみ送信されます。", "Hy-MT2 和图片 OCR 在本机运行。仅将提取的文本发送给外部模型。"],
+  "저장 공간 관리": ["Storage management", "ストレージ管理", "存储空间管理"],
+  "다운로드한 로컬 모델과 번역 기록을 관리합니다.": ["Manage downloaded local models and translation history.", "ダウンロードしたローカルモデルと翻訳履歴を管理します。", "管理已下载的本地模型和翻译记录。"],
+  "로컬 번역 모델": ["Local translation models", "ローカル翻訳モデル", "本地翻译模型"],
+  "사용하지 않는 다운로드 모델을 삭제하여 저장 공간을 확보합니다.": ["Remove downloaded models you no longer use to free storage space.", "使用しないダウンロード済みモデルを削除して、ストレージ容量を確保します。", "删除不再使用的已下载模型以释放存储空间。"],
+  "SQLite 번역 기록": ["SQLite translation history", "SQLite翻訳履歴", "SQLite 翻译记录"],
+  "저장된 번역 결과와 보낸 메시지 원문을 정리합니다. 설정, 채널별 언어 및 인증 정보는 유지됩니다.": ["Remove saved translations and original outgoing messages. Settings, channel language choices, and credentials are retained.", "保存された翻訳結果と送信メッセージの原文を削除します。設定、チャンネル別の言語、認証情報は保持されます。", "清理已保存的翻译结果和已发送消息原文。设置、频道语言和身份验证信息将保留。"],
+  "저장 공간을 확인하고 있습니다.": ["Checking storage usage.", "ストレージ使用量を確認しています。", "正在检查存储空间。"],
+  "기록 정리": ["Clear history", "履歴を消去", "清理记录"],
+  "앱에 포함됨": ["Included with the app", "アプリに同梱", "应用内置"],
+  "다운로드됨": ["Downloaded", "ダウンロード済み", "已下载"],
+  "설치되지 않음 · 필요할 때 자동으로 다운로드됩니다.": ["Not installed · Downloads automatically when selected.", "未インストール・選択時に自動でダウンロードします。", "未安装 · 选择后将自动下载。"],
+  "삭제": ["Delete", "削除", "删除"],
+  "앱 포함": ["Included", "同梱", "内置"],
+  "미설치": ["Not installed", "未インストール", "未安装"],
+  "정리 가능한 기록": ["Stored records", "保存済み履歴", "已存记录"],
+  "건": [" records", "件", "条"],
+  "로컬 모델 삭제": ["Delete local model", "ローカルモデルを削除", "删除本地模型"],
+  "다운로드 파일을 삭제합니다. 이 모델을 다시 선택하면 파일을 다시 다운로드합니다.": ["The downloaded files will be removed. Selecting this model again will download them again.", "ダウンロードファイルを削除します。このモデルを再度選択すると、ファイルを再ダウンロードします。", "将删除已下载文件。再次选择此模型时将重新下载。"],
+  "번역 기록 정리": ["Clear translation history", "翻訳履歴を消去", "清理翻译记录"],
+  "저장된 번역 결과와 보낸 메시지 원문을 삭제합니다. 설정, 채널별 언어 및 번역 서비스 인증 정보는 유지됩니다.": ["Delete saved translations and original outgoing messages. Settings, channel language choices, and translation service credentials are retained.", "保存された翻訳結果と送信メッセージの原文を削除します。設定、チャンネル別の言語、翻訳サービスの認証情報は保持されます。", "删除已保存的翻译结果和已发送消息原文。设置、频道语言和翻译服务身份验证信息将保留。"],
   "번역 서비스 연결": ["Translation service connections", "翻訳サービス接続", "翻译服务连接"],
   "구독 계정과 API 연결 상태를 관리합니다.": ["Manage subscription accounts and API connections.", "サブスクリプションアカウントとAPI接続を管理します。", "管理订阅账户和 API 连接。"],
   "연결": ["Connect", "接続", "连接"],
@@ -167,6 +187,22 @@ export function translateCopy(language, korean) {
 }
 
 const DYNAMIC_COPY = Object.freeze([
+  {
+    pattern: /^로컬 모델 파일 ([0-9.]+(?:GB|MB|KB|B))를 삭제했습니다\.$/,
+    render: {
+      en: size => `Deleted ${size} of local model files.`,
+      ja: size => `ローカルモデルファイル ${size} を削除しました。`,
+      zh: size => `已删除 ${size} 的本地模型文件。`,
+    },
+  },
+  {
+    pattern: /^번역 기록 ([0-9]+)건을 정리했습니다\.$/,
+    render: {
+      en: count => `Cleared ${count} translation history records.`,
+      ja: count => `翻訳履歴を ${count} 件削除しました。`,
+      zh: count => `已清理 ${count} 条翻译记录。`,
+    },
+  },
   {
     pattern: /^(.+) 모델 다운로드 중$/,
     render: {

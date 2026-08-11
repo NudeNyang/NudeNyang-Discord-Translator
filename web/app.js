@@ -103,6 +103,7 @@ const state = {
   outgoingToggleActive: false,
   providerConnections: new Map(),
   providerLoading: false,
+  storageStatus: null,
 };
 const localizedText = new Map();
 
@@ -147,6 +148,9 @@ const elements = {
   updateBannerInstall: document.querySelector("#update-banner-install"),
   openDiagnosticLog: document.querySelector("#open-diagnostic-log"),
   viewLicense: document.querySelector("#view-license"),
+  localModelStorageList: document.querySelector("#local-model-storage-list"),
+  translationCacheSummary: document.querySelector("#translation-cache-summary"),
+  clearTranslationCache: document.querySelector("#clear-translation-cache"),
   providerRows: [...document.querySelectorAll(".provider-row")],
 };
 
@@ -642,6 +646,94 @@ function formatMegabytes(bytes) {
   return `${(Number(bytes || 0) / 1024 / 1024).toFixed(1)}MB`;
 }
 
+function formatStorageSize(bytes) {
+  const value = Number(bytes || 0);
+  if (value >= 1024 ** 3) return `${(value / 1024 ** 3).toFixed(1)}GB`;
+  if (value >= 1024 ** 2) return `${(value / 1024 ** 2).toFixed(1)}MB`;
+  if (value >= 1024) return `${(value / 1024).toFixed(1)}KB`;
+  return `${value}B`;
+}
+
+function renderStorageStatus() {
+  if (!state.storageStatus || !elements.localModelStorageList) return;
+  const language = currentUiLanguage();
+  const selected = new Set([state.config.translator, state.config.outgoing_translator]);
+  elements.localModelStorageList.replaceChildren();
+  for (const model of state.storageStatus.models || []) {
+    const row = document.createElement("article");
+    row.className = "storage-model-row";
+    row.dataset.modelId = model.id;
+    const copy = document.createElement("div");
+    const title = document.createElement("h3");
+    const detail = document.createElement("p");
+    const action = document.createElement("button");
+    title.textContent = model.label;
+    if (model.bundled) {
+      detail.textContent = `${translateCopy(language, "앱에 포함됨")} · ${formatStorageSize(model.expectedBytes)}`;
+    } else if (model.deletable) {
+      detail.textContent = `${translateCopy(language, "다운로드됨")} · ${formatStorageSize(model.storedBytes)}`;
+    } else {
+      detail.textContent = translateCopy(language, "설치되지 않음 · 필요할 때 자동으로 다운로드됩니다.");
+    }
+    copy.append(title, detail);
+    action.type = "button";
+    action.className = "button secondary storage-action";
+    const inUse = selected.has(model.id);
+    action.disabled = !model.deletable || inUse;
+    action.textContent = translateCopy(
+      language,
+      inUse ? "사용 중" : model.deletable ? "삭제" : model.bundled ? "앱 포함" : "미설치",
+    );
+    if (model.deletable && !inUse) {
+      action.addEventListener("click", () => {
+        deleteLocalModel(model).catch(error => showError("로컬 모델을 삭제하지 못했습니다", String(error)));
+      });
+    }
+    row.append(copy, action);
+    elements.localModelStorageList.append(row);
+  }
+  const cache = state.storageStatus.cache || {};
+  const recordCount = Number(cache.translationRecords || 0) + Number(cache.outgoingOriginalRecords || 0);
+  elements.translationCacheSummary.textContent = `${translateCopy(language, "정리 가능한 기록")} ${recordCount}${translateCopy(language, "건")} · ${formatStorageSize(cache.databaseBytes)}`;
+  elements.clearTranslationCache.disabled = recordCount === 0;
+}
+
+async function loadStorageStatus() {
+  state.storageStatus = await invoke("storage_status_get");
+  renderStorageStatus();
+}
+
+async function deleteLocalModel(model) {
+  const confirmed = await showModal({
+    title: "로컬 모델 삭제",
+    message: `${model.label}\n${translateCopy(currentUiLanguage(), "다운로드 파일을 삭제합니다. 이 모델을 다시 선택하면 파일을 다시 다운로드합니다.")}`,
+    acceptText: "삭제",
+    cancelText: "취소",
+  });
+  if (!confirmed) return;
+  const result = await invoke("local_model_delete", { modelId: model.id });
+  await loadStorageStatus();
+  setLocalizedText(elements.saveStatus, `로컬 모델 파일 ${formatStorageSize(result.removedBytes)}를 삭제했습니다.`);
+}
+
+async function clearTranslationCache() {
+  const confirmed = await showModal({
+    title: "번역 기록 정리",
+    message: "저장된 번역 결과와 보낸 메시지 원문을 삭제합니다. 설정, 채널별 언어 및 번역 서비스 인증 정보는 유지됩니다.",
+    acceptText: "기록 정리",
+    cancelText: "취소",
+  });
+  if (!confirmed) return;
+  elements.clearTranslationCache.disabled = true;
+  try {
+    const result = await invoke("translation_cache_clear");
+    await loadStorageStatus();
+    setLocalizedText(elements.saveStatus, `번역 기록 ${result.removedRecords}건을 정리했습니다.`);
+  } finally {
+    renderStorageStatus();
+  }
+}
+
 async function loadAppInformation() {
   if (tauriGetVersion) {
     try {
@@ -674,6 +766,7 @@ function applyUiLanguage(language) {
   for (const [element, korean] of localizedText) {
     element.textContent = translateDynamicCopy(language, korean);
   }
+  renderStorageStatus();
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -1273,6 +1366,9 @@ elements.updateBannerInstall.addEventListener("click", () => {
 elements.openDiagnosticLog.addEventListener("click", () => {
   invoke("diagnostic_log_reveal").catch(error => showError("로그 파일을 열지 못했습니다", String(error)));
 });
+elements.clearTranslationCache.addEventListener("click", () => {
+  clearTranslationCache().catch(error => showError("번역 기록을 정리하지 못했습니다", String(error)));
+});
 elements.settingsScroll.addEventListener("scroll", () => {
   updateScrollIndicator();
   elements.settingsScrollRegion.classList.add("scrolling");
@@ -1343,5 +1439,6 @@ new ResizeObserver(updateScrollIndicator).observe(elements.settingsScroll);
 window.requestAnimationFrame(updateScrollIndicator);
 loadSettings();
 loadProviderConnections();
+loadStorageStatus().catch(error => showError("저장 공간 정보를 확인하지 못했습니다", String(error)));
 loadAppInformation();
 window.setInterval(pollRuntime, 700);

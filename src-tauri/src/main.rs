@@ -619,6 +619,45 @@ fn diagnostic_log_write(level: String, component: String, message: String) {
 }
 
 #[tauri::command]
+async fn storage_status_get() -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let cache = cache::TranslationCache::open_default()?;
+        Ok::<_, String>(json!({
+            "models": translation::local_model_storage_status(),
+            "cache": cache.storage_status()?,
+        }))
+    })
+    .await
+    .map_err(|error| format!("저장 공간 정보를 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn local_model_delete(
+    config: State<'_, ConfigStore>,
+    model_id: String,
+) -> Result<translation::LocalModelDeleteResult, String> {
+    let current = config.get()?;
+    if current.translator == model_id || current.outgoing_translator == model_id {
+        return Err(
+            "현재 사용 중인 모델입니다. 다른 번역 모델을 선택한 후 삭제하십시오.".to_string(),
+        );
+    }
+    tauri::async_runtime::spawn_blocking(move || translation::delete_cached_local_model(&model_id))
+        .await
+        .map_err(|error| format!("로컬 모델 삭제 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn translation_cache_clear(
+    engine: State<'_, RustEngine>,
+) -> Result<cache::CacheCleanupResult, String> {
+    let engine = engine.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || engine.clear_cache())
+        .await
+        .map_err(|error| format!("번역 기록 정리 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
 async fn provider_connections_get(
     config: State<'_, ConfigStore>,
 ) -> Result<Vec<providers::ProviderConnection>, String> {
@@ -1156,6 +1195,9 @@ fn main() {
             update_install,
             diagnostic_log_reveal,
             diagnostic_log_write,
+            storage_status_get,
+            local_model_delete,
+            translation_cache_clear,
             provider_connections_get,
             provider_install,
             provider_connect,

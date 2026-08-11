@@ -87,6 +87,25 @@ pub struct ModelPreparationProgress {
     pub total: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalModelStorageStatus {
+    pub id: String,
+    pub label: String,
+    pub installed: bool,
+    pub bundled: bool,
+    pub deletable: bool,
+    pub stored_bytes: u64,
+    pub expected_bytes: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalModelDeleteResult {
+    pub id: String,
+    pub removed_bytes: u64,
+}
+
 pub type ModelProgressObserver = Arc<dyn Fn(ModelPreparationProgress) + Send + Sync>;
 
 #[derive(Default)]
@@ -179,6 +198,96 @@ impl HyMtModelSize {
             },
         }
     }
+}
+
+const LOCAL_MODEL_SIZES: [HyMtModelSize; 3] = [
+    HyMtModelSize::Small,
+    HyMtModelSize::Large,
+    HyMtModelSize::TranslateGemma4B,
+];
+
+fn model_size_from_config_id(id: &str) -> Option<HyMtModelSize> {
+    match id {
+        "hymt_1_8b" => Some(HyMtModelSize::Small),
+        "hymt_7b" => Some(HyMtModelSize::Large),
+        "translategemma_4b" => Some(HyMtModelSize::TranslateGemma4B),
+        _ => None,
+    }
+}
+
+fn config_id_for_model_size(size: HyMtModelSize) -> &'static str {
+    match size {
+        HyMtModelSize::Small => "hymt_1_8b",
+        HyMtModelSize::Large => "hymt_7b",
+        HyMtModelSize::TranslateGemma4B => "translategemma_4b",
+    }
+}
+
+pub fn local_model_storage_status() -> Vec<LocalModelStorageStatus> {
+    LOCAL_MODEL_SIZES
+        .into_iter()
+        .map(|size| {
+            let model = size.model();
+            let cached = cached_model_path(model);
+            let partial = partial_path(&cached);
+            let cached_bytes = cached
+                .metadata()
+                .map(|metadata| metadata.len())
+                .unwrap_or(0);
+            let partial_bytes = partial
+                .metadata()
+                .map(|metadata| metadata.len())
+                .unwrap_or(0);
+            let bundled = bundled_model_path(model).is_some();
+            LocalModelStorageStatus {
+                id: config_id_for_model_size(size).to_string(),
+                label: model.label.to_string(),
+                installed: bundled || cached_bytes > 0,
+                bundled,
+                deletable: cached_bytes > 0 || partial_bytes > 0,
+                stored_bytes: cached_bytes + partial_bytes,
+                expected_bytes: model.expected_bytes,
+            }
+        })
+        .collect()
+}
+
+pub fn delete_cached_local_model(id: &str) -> Result<LocalModelDeleteResult, String> {
+    let size = model_size_from_config_id(id)
+        .ok_or_else(|| "삭제할 로컬 번역 모델을 찾지 못했습니다.".to_string())?;
+    let model = size.model();
+    let path = cached_model_path(model);
+    let removed_bytes = remove_cached_model_files(&path)?;
+    if removed_bytes == 0 {
+        return Err("삭제할 다운로드 모델 파일이 없습니다.".to_string());
+    }
+    Ok(LocalModelDeleteResult {
+        id: id.to_string(),
+        removed_bytes,
+    })
+}
+
+fn remove_cached_model_files(path: &Path) -> Result<u64, String> {
+    let mut removed_bytes = 0_u64;
+    for candidate in [path.to_path_buf(), partial_path(path), hash_marker(path)] {
+        let Ok(metadata) = candidate.metadata() else {
+            continue;
+        };
+        removed_bytes = removed_bytes.saturating_add(metadata.len());
+        fs::remove_file(&candidate).map_err(|error| {
+            format!(
+                "로컬 모델 파일을 삭제하지 못했습니다 ({}): {error}",
+                candidate.display()
+            )
+        })?;
+    }
+    if let Some(parent) = path.parent() {
+        let _ = fs::remove_dir(parent);
+        if let Some(family) = parent.parent() {
+            let _ = fs::remove_dir(family);
+        }
+    }
+    Ok(removed_bytes)
 }
 
 pub struct HyMtTranslator {
@@ -1396,6 +1505,10 @@ fn default_model_path(model: HyMtModel) -> PathBuf {
     if let Some(path) = bundled_model_path(model) {
         return path;
     }
+    cached_model_path(model)
+}
+
+fn cached_model_path(model: HyMtModel) -> PathBuf {
     default_cache_root()
         .join("models")
         .join(model.family)
@@ -1542,14 +1655,40 @@ fn free_tcp_port() -> Result<u16, String> {
 mod tests {
     use super::{
         clean_translation, complete_translation_with_retry, completion_payload, completion_result,
-        detect_speech_style, find_llama_server, max_output_tokens, rewrite_style_prompt,
-        startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
-        translate_with_translate_gemma, translation_prompt_for_model, HyMtModelSize,
-        HyMtTranslator,
+        detect_speech_style, find_llama_server, max_output_tokens, remove_cached_model_files,
+        rewrite_style_prompt, startup_device_attempts, translate_gemma_completion_payload,
+        translate_with_completion, translate_with_translate_gemma, translation_prompt_for_model,
+        HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
     use std::sync::Arc;
+
+    #[test]
+    fn cached_model_cleanup_removes_model_partial_and_hash_files_only() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-model-cleanup-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let model = directory.join("model.gguf");
+        std::fs::write(&model, [1_u8; 4]).unwrap();
+        std::fs::write(super::partial_path(&model), [2_u8; 3]).unwrap();
+        std::fs::write(super::hash_marker(&model), b"hash").unwrap();
+        let unrelated = directory.join("keep.txt");
+        std::fs::write(&unrelated, b"keep").unwrap();
+
+        assert_eq!(remove_cached_model_files(&model).unwrap(), 11);
+        assert!(!model.exists());
+        assert!(!super::partial_path(&model).exists());
+        assert!(!super::hash_marker(&model).exists());
+        assert!(unrelated.exists());
+        let _ = std::fs::remove_dir_all(directory);
+    }
 
     #[test]
     fn translators_for_the_same_local_model_share_one_runtime() {

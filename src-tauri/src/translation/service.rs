@@ -52,6 +52,10 @@ impl TranslationService {
         self.translator = replacement;
     }
 
+    pub fn clear_cache_memory(&self) -> Result<(), String> {
+        self.cache.clear_memory()
+    }
+
     pub fn translate(&mut self, text: &str, target: Language) -> Result<String, String> {
         self.translate_many(&[text.to_string()], target)?
             .into_iter()

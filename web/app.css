@@ -888,6 +888,64 @@ input:focus-visible,
   overflow: hidden;
 }
 
+.storage-card {
+  overflow: hidden;
+}
+
+.storage-group-heading,
+.storage-model-row,
+.storage-cache-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 13px 18px;
+}
+
+.storage-group-heading {
+  min-height: 64px;
+  background: color-mix(in srgb, var(--accent-soft) 34%, var(--surface));
+}
+
+.storage-model-row,
+.storage-cache-row {
+  min-height: 74px;
+  border-top: 1px solid var(--border);
+}
+
+.storage-group-heading h3,
+.storage-group-heading p,
+.storage-model-row h3,
+.storage-model-row p,
+.storage-cache-row h3,
+.storage-cache-row p {
+  margin: 0;
+}
+
+.storage-group-heading h3,
+.storage-model-row h3,
+.storage-cache-row h3 {
+  font-size: 13px;
+}
+
+.storage-group-heading p,
+.storage-model-row p,
+.storage-cache-row p,
+.storage-cache-row small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.storage-cache-row small {
+  display: block;
+  margin-top: 5px;
+}
+
+.storage-action {
+  min-width: 92px;
+  white-space: nowrap;
+}
+
 .provider-row {
   display: grid;
   grid-template-columns: minmax(190px, 0.72fr) minmax(360px, 1.28fr);
@@ -1298,6 +1356,11 @@ input:focus-visible,
   .provider-row {
     gap: 12px;
   }
+
+  .storage-model-row,
+  .storage-cache-row {
+    grid-template-columns: minmax(0, 1fr) 104px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1307,6 +1370,17 @@ input:focus-visible,
 
   .app-header {
     grid-template-columns: auto 1fr;
+  }
+
+  .storage-group-heading,
+  .storage-model-row,
+  .storage-cache-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .storage-action {
+    width: 100%;
   }
 
   .engine-state {
