@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'MiLMMT 4B 실험 모델, 저장 공간 관리, Discord 종료 복원과 설정 화면을 개선한 0.4.2 비공개 베타',
+    [string]$ReleaseNotes = '이미지 번역 화면 지역화와 자동 언어 영어 폴백을 보완한 0.4.3 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
