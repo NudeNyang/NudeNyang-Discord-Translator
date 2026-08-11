@@ -1,5 +1,6 @@
 import {
   discordConnectionLabel,
+  localModelResourceGuidance,
   localModelStorageDisplay,
   modelPreparationBanner,
   normalizeConfig,
@@ -79,7 +80,7 @@ const OPTIONS = {
   ],
   hymt_device: [
     ["auto", "자동 (GPU 우선, CPU 대체)"],
-    ["cpu", "CPU"],
+    ["cpu", "CPU/RAM 전용"],
   ],
   ui_theme: [
     ["system", "시스템 설정 따르기"],
@@ -128,6 +129,7 @@ const state = {
   providerConnections: new Map(),
   providerLoading: false,
   storageStatus: null,
+  systemMemory: null,
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
@@ -178,6 +180,10 @@ const elements = {
   openDiagnosticLog: document.querySelector("#open-diagnostic-log"),
   viewLicense: document.querySelector("#view-license"),
   localModelStorageList: document.querySelector("#local-model-storage-list"),
+  localResourceGuidance: document.querySelector("#local-resource-guidance"),
+  localResourceTitle: document.querySelector("#local-resource-title"),
+  localResourceDetail: document.querySelector("#local-resource-detail"),
+  applyLowMemoryPreset: document.querySelector("#apply-low-memory-preset"),
   openLocalModelFolder: document.querySelector("#open-local-model-folder"),
   translationCacheSummary: document.querySelector("#translation-cache-summary"),
   clearTranslationCache: document.querySelector("#clear-translation-cache"),
@@ -768,6 +774,83 @@ function formatStorageSize(bytes) {
   return `${value}B`;
 }
 
+function renderLocalResourceGuidance() {
+  if (!elements.localResourceGuidance) return;
+  const language = currentUiLanguage();
+  const guidance = localModelResourceGuidance(state.config, state.systemMemory || {});
+  elements.applyLowMemoryPreset.hidden = !guidance?.recommendLowMemoryPreset;
+
+  if (!guidance) {
+    elements.localResourceGuidance.dataset.state = "ready";
+    elements.localResourceTitle.textContent = translateCopy(
+      language,
+      "로컬 모델을 선택하면 메모리 사용량을 안내합니다.",
+    );
+    elements.localResourceDetail.textContent = translateCopy(
+      language,
+      "외부 번역 서비스는 로컬 모델 메모리를 사용하지 않습니다.",
+    );
+    return;
+  }
+
+  if (guidance.state === "unknown") {
+    elements.localResourceGuidance.dataset.state = "loading";
+    elements.localResourceTitle.textContent = translateCopy(
+      language,
+      "시스템 메모리를 확인하고 있습니다.",
+    );
+  } else {
+    elements.localResourceGuidance.dataset.state = guidance.state;
+    elements.localResourceTitle.textContent = translateCopy(
+      language,
+      guidance.state === "warning"
+        ? "현재 여유 RAM으로는 실행이 불안정할 수 있습니다."
+        : "현재 메모리에서 실행할 수 있습니다.",
+    );
+  }
+
+  const resourceParts = [
+    guidance.model,
+    `${translateCopy(language, "모델 파일")} ${formatStorageSize(guidance.modelBytes)}`,
+    `${translateCopy(language, "권장 여유 RAM")} ${formatStorageSize(guidance.recommendedAvailableBytes)}`,
+  ];
+  if (guidance.availableBytes > 0) {
+    resourceParts.push(
+      `${translateCopy(language, "현재 사용 가능")} ${formatStorageSize(guidance.availableBytes)}`,
+    );
+  }
+  if (guidance.totalBytes > 0) {
+    resourceParts.push(
+      `${translateCopy(language, "전체 RAM")} ${formatStorageSize(guidance.totalBytes)}`,
+    );
+  }
+  elements.localResourceDetail.textContent = resourceParts.join(" · ");
+}
+
+async function loadSystemMemoryStatus() {
+  state.systemMemory = await invoke("system_memory_status_get");
+  renderLocalResourceGuidance();
+}
+
+async function applyLowMemoryPreset() {
+  elements.applyLowMemoryPreset.disabled = true;
+  try {
+    const patch = {
+      translator: "hymt_1_8b",
+      hymt_device: "cpu",
+      keep_local_model_warm: false,
+    };
+    if (LOCAL_TRANSLATORS.has(state.config.outgoing_translator)) {
+      patch.outgoing_translator = "hymt_1_8b";
+    }
+    await applySettingsPatch(patch);
+    setLocalizedText(elements.saveStatus, "저사양 권장 설정을 적용했습니다.");
+  } finally {
+    elements.applyLowMemoryPreset.disabled = false;
+    renderLocalResourceGuidance();
+  }
+}
+
 function renderStorageStatus() {
   if (!state.storageStatus || !elements.localModelStorageList) return;
   const language = currentUiLanguage();
@@ -989,6 +1072,7 @@ function applyUiLanguage(language) {
   }
   renderAutostart();
   renderStorageStatus();
+  renderLocalResourceGuidance();
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -1672,6 +1756,9 @@ elements.clearTranslationCache.addEventListener("click", () => {
 elements.openLocalModelFolder.addEventListener("click", () => {
   openLocalModelFolder().catch(error => showError("모델 폴더를 열지 못했습니다", String(error)));
 });
+elements.applyLowMemoryPreset.addEventListener("click", () => {
+  applyLowMemoryPreset().catch(error => showError("저사양 권장 설정을 적용하지 못했습니다", String(error)));
+});
 elements.resetSettings.addEventListener("click", () => {
   resetSettings().catch(error => showError("설정을 초기화하지 못했습니다", String(error)));
 });
@@ -1737,5 +1824,9 @@ initializeSettingsUi().catch(error => {
 });
 loadProviderConnections();
 loadStorageStatus().catch(error => showError("저장 공간 정보를 확인하지 못했습니다", String(error)));
+loadSystemMemoryStatus().catch(error => {
+  writeDiagnostic("warn", `system-memory-status: ${String(error)}`);
+  renderLocalResourceGuidance();
+});
 loadAppInformation();
 window.setInterval(pollRuntime, 700);

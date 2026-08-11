@@ -458,13 +458,9 @@ impl HyMtTranslator {
         let log_path = crate::diagnostics::log_path();
         let attempts = startup_device_attempts(&self.device);
         let diagnostics_scope = self.model.family;
-        let context_size = if matches!(self.model_size, HyMtModelSize::TranslateGemma4B) {
-            "2048"
-        } else {
-            "8192"
-        };
         for (index, attempt) in attempts.iter().enumerate() {
             crate::diagnostics::info(diagnostics_scope, &format!("server start; mode={attempt}"));
+            let context_size = context_size_for_attempt(attempt, self.model_size);
             let mut command = Command::new(&executable);
             command.args([
                 "--model",
@@ -539,6 +535,7 @@ impl HyMtTranslator {
                             diagnostics_scope,
                             &format!("GPU server exited; retrying with CPU; status={status}"),
                         );
+                        self.report_progress("cpu-fallback", self.model.expected_bytes);
                         break;
                     }
                     return Err(format!(
@@ -918,6 +915,14 @@ fn startup_device_attempts(device: &str) -> Vec<&'static str> {
         vec!["auto", "cpu"]
     } else {
         vec!["cpu"]
+    }
+}
+
+fn context_size_for_attempt(attempt: &str, model_size: HyMtModelSize) -> &'static str {
+    match (attempt, model_size) {
+        ("cpu", _) => "2048",
+        (_, HyMtModelSize::TranslateGemma4B) => "2048",
+        _ => "8192",
     }
 }
 
@@ -1675,11 +1680,11 @@ fn free_tcp_port() -> Result<u16, String> {
 mod tests {
     use super::{
         clean_translation, complete_translation_with_retry, completion_payload, completion_result,
-        detect_speech_style, find_llama_server, max_output_tokens, remove_cached_model_files,
-        rewrite_style_prompt, startup_device_attempts, translate_gemma_completion_payload,
-        translate_with_completion, translate_with_completion_for_model,
-        translate_with_translate_gemma, translation_prompt_for_model, HyMtModel, HyMtModelSize,
-        HyMtTranslator,
+        context_size_for_attempt, detect_speech_style, find_llama_server, max_output_tokens,
+        remove_cached_model_files, rewrite_style_prompt, startup_device_attempts,
+        translate_gemma_completion_payload, translate_with_completion,
+        translate_with_completion_for_model, translate_with_translate_gemma,
+        translation_prompt_for_model, HyMtModel, HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
@@ -2199,6 +2204,26 @@ mod tests {
     fn automatic_device_retries_with_cpu_only_after_gpu_failure() {
         assert_eq!(startup_device_attempts("auto"), vec!["auto", "cpu"]);
         assert_eq!(startup_device_attempts("cpu"), vec!["cpu"]);
+    }
+
+    #[test]
+    fn cpu_mode_uses_a_reduced_context_to_limit_system_ram_usage() {
+        assert_eq!(
+            context_size_for_attempt("cpu", HyMtModelSize::Small),
+            "2048"
+        );
+        assert_eq!(
+            context_size_for_attempt("cpu", HyMtModelSize::Large),
+            "2048"
+        );
+        assert_eq!(
+            context_size_for_attempt("auto", HyMtModelSize::Large),
+            "8192"
+        );
+        assert_eq!(
+            context_size_for_attempt("auto", HyMtModelSize::TranslateGemma4B),
+            "2048"
+        );
     }
 
     #[cfg(windows)]

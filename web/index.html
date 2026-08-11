@@ -154,6 +154,10 @@
                 <section id="local-engine-settings" aria-labelledby="local-engine-heading">
                   <div class="panel-subheading"><h3 id="local-engine-heading">로컬 엔진</h3><p>로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다.</p></div>
                   <article class="settings-card local-engine-card">
+                    <div class="local-resource-guidance" id="local-resource-guidance" data-state="loading" aria-live="polite">
+                      <div><strong id="local-resource-title">시스템 메모리를 확인하고 있습니다.</strong><span id="local-resource-detail">선택한 로컬 모델의 메모리 요구량을 계산합니다.</span></div>
+                      <button class="button secondary" id="apply-low-memory-preset" type="button" hidden>저사양 권장 설정 적용</button>
+                    </div>
                     <div class="setting-row compact-row">
                       <div class="setting-copy"><h3>로컬 모델 실행 장치</h3><p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p></div>
                       <div class="custom-select" data-field="hymt_device"></div>

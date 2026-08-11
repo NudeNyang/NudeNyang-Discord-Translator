@@ -140,6 +140,55 @@ const TRANSLATOR_RUNTIME_NAMES = Object.freeze({
   original: "원문",
 });
 
+const LOCAL_MODEL_RESOURCE_PROFILES = Object.freeze({
+  hymt_1_8b: Object.freeze({
+    model: "Hy-MT2 1.8B",
+    modelBytes: 1_133_080_448,
+    recommendedAvailableBytes: 3 * 1024 ** 3,
+  }),
+  hymt_7b: Object.freeze({
+    model: "Hy-MT2 7B",
+    modelBytes: 4_624_648_896,
+    recommendedAvailableBytes: 8 * 1024 ** 3,
+  }),
+  translategemma_4b: Object.freeze({
+    model: "TranslateGemma 4B",
+    modelBytes: 2_489_909_312,
+    recommendedAvailableBytes: 5 * 1024 ** 3,
+  }),
+});
+
+export function localModelResourceGuidance(config = {}, memory = {}) {
+  const modelId = LOCAL_MODEL_RESOURCE_PROFILES[config.translator]
+    ? config.translator
+    : LOCAL_MODEL_RESOURCE_PROFILES[config.outgoing_translator]
+      ? config.outgoing_translator
+      : "";
+  const profile = LOCAL_MODEL_RESOURCE_PROFILES[modelId];
+  if (!profile) return null;
+
+  const totalBytes = Math.max(0, Number(memory.totalBytes) || 0);
+  const availableBytes = Math.max(0, Number(memory.availableBytes) || 0);
+  const state = availableBytes > 0 && availableBytes < profile.recommendedAvailableBytes
+    ? "warning"
+    : availableBytes > 0
+      ? "ready"
+      : "unknown";
+  const lowMemorySystem = totalBytes > 0 && totalBytes < 12 * 1024 ** 3;
+  const lowMemoryPresetActive = modelId === "hymt_1_8b"
+    && config.hymt_device === "cpu"
+    && config.keep_local_model_warm === false;
+
+  return {
+    ...profile,
+    totalBytes,
+    availableBytes,
+    state,
+    recommendLowMemoryPreset: (state === "warning" || lowMemorySystem)
+      && !lowMemoryPresetActive,
+  };
+}
+
 export function translatorRuntimeLabel(status) {
   if (!status) return "";
   const configured = TRANSLATOR_RUNTIME_NAMES[status.configuredTranslator]
@@ -186,6 +235,14 @@ export function modelPreparationBanner(progress) {
     return {
       title: `${model} 모델 불러오는 중`,
       detail: `${formatGigabytes(total)} 다운로드 완료 · 번역 엔진을 준비하고 있습니다.`,
+      progress: 1,
+      indeterminate: true,
+    };
+  }
+  if (progress.phase === "cpu-fallback") {
+    return {
+      title: `${model} CPU/RAM 전용 모드로 전환 중`,
+      detail: "GPU 실행에 실패해 시스템 RAM을 사용하는 CPU 모드로 다시 준비하고 있습니다.",
       progress: 1,
       indeterminate: true,
     };

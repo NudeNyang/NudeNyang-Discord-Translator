@@ -66,6 +66,7 @@ pub struct RuntimeStatus {
     pub active_outgoing_translator: String,
     pub translator_state: String,
     pub translator_error: String,
+    pub local_model_device: String,
     pub model_progress: Option<ModelPreparationProgress>,
     pub notice: String,
 }
@@ -86,6 +87,7 @@ impl RuntimeStatus {
             active_outgoing_translator: "original".to_string(),
             translator_state: "queued".to_string(),
             translator_error: String::new(),
+            local_model_device: config.hymt_device.clone(),
             model_progress: None,
             notice: String::new(),
         }
@@ -1733,6 +1735,10 @@ fn drain_worker_results(
             } => {
                 if progress_generation == preparation_generation {
                     update_status(status, |runtime| {
+                        if progress.phase == "cpu-fallback" {
+                            runtime.local_model_device = "cpu-fallback".to_string();
+                            runtime.notice = "VRAM이 부족하거나 GPU를 사용할 수 없어 CPU/RAM 전용 모드로 전환했습니다.".to_string();
+                        }
                         runtime.model_progress = Some(progress);
                     });
                 }
@@ -1778,7 +1784,9 @@ fn finish_activation_status(
             || config.enabled
             || config.outgoing_translation_enabled
             || config.keep_local_model_warm;
-        runtime.notice = if runtime.active_translator == runtime.active_outgoing_translator {
+        runtime.notice = if runtime.local_model_device == "cpu-fallback" {
+            "VRAM이 부족하거나 GPU를 사용할 수 없어 CPU/RAM 전용 모드로 전환했습니다.".to_string()
+        } else if runtime.active_translator == runtime.active_outgoing_translator {
             translator_activation_notice(&runtime.active_translator, model_is_prepared)
         } else {
             format!(
@@ -1973,6 +1981,7 @@ fn request_translator_preparation(
             runtime.translator_state = "preparing".to_string();
             runtime.translator_error.clear();
         }
+        runtime.local_model_device = config.hymt_device.clone();
         runtime.model_progress = None;
         let preparing_name = if plan.display {
             &display_name

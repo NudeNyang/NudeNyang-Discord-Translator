@@ -657,6 +657,15 @@ async fn storage_status_get() -> Result<Value, String> {
 }
 
 #[tauri::command]
+fn system_memory_status_get() -> Value {
+    let system = System::new_all();
+    json!({
+        "totalBytes": system.total_memory(),
+        "availableBytes": system.available_memory(),
+    })
+}
+
+#[tauri::command]
 fn autostart_get(app: AppHandle) -> Result<bool, String> {
     let enabled = app
         .autolaunch()
@@ -1325,6 +1334,7 @@ fn main() {
             diagnostic_log_reveal,
             diagnostic_log_write,
             storage_status_get,
+            system_memory_status_get,
             autostart_get,
             autostart_set,
             local_model_storage_folder_open,

@@ -204,6 +204,20 @@ test("local model preparation reports downloaded gigabytes and progress", () => 
       indeterminate: true,
     },
   );
+  assert.deepEqual(
+    modelPreparationBanner({
+      model: "Hy-MT2 1.8B Q4_K_M",
+      phase: "cpu-fallback",
+      downloaded: 1_133_080_448,
+      total: 1_133_080_448,
+    }),
+    {
+      title: "Hy-MT2 1.8B Q4_K_M CPU/RAM 전용 모드로 전환 중",
+      detail: "GPU 실행에 실패해 시스템 RAM을 사용하는 CPU 모드로 다시 준비하고 있습니다.",
+      progress: 1,
+      indeterminate: true,
+    },
+  );
   assert.equal(modelPreparationBanner(null), null);
   assert.equal(modelPreparationBanner({ phase: "ready" }), null);
 });
