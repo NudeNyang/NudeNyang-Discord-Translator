@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = '번역 기록 자동 정리와 Discord Markdown 메시지의 원문·전송문 보기를 지원하는 0.4.10 비공개 베타',
+    [string]$ReleaseNotes = 'Discord 자동 연결, 설정 초기화, 로컬 모델 폴더 관리와 제거 시 데이터 정리를 개선한 0.4.11 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
