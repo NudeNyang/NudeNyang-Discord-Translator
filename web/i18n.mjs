@@ -64,6 +64,8 @@ const COPY = Object.freeze({
   "기록 정리": ["Clear history", "履歴を消去", "清理记录"],
   "앱에 포함됨": ["Included with the app", "アプリに同梱", "应用内置"],
   "다운로드됨": ["Downloaded", "ダウンロード済み", "已下载"],
+  "다운로드 중": ["Downloading", "ダウンロード中", "下载中"],
+  "일부 다운로드됨": ["Partially downloaded", "一部ダウンロード済み", "已部分下载"],
   "설치되지 않음 · 필요할 때 자동으로 다운로드됩니다.": ["Not installed · Downloads automatically when selected.", "未インストール・選択時に自動でダウンロードします。", "未安装 · 选择后将自动下载。"],
   "삭제": ["Delete", "削除", "删除"],
   "앱 포함": ["Included", "同梱", "内置"],

@@ -193,6 +193,44 @@ export function modelPreparationBanner(progress) {
   };
 }
 
+export function localModelStorageDisplay(model, progress) {
+  const expectedBytes = Math.max(0, Number(model?.expectedBytes) || 0);
+  const storedBytes = Math.max(0, Number(model?.storedBytes) || 0);
+  if (model?.bundled) {
+    return { state: "bundled", currentBytes: expectedBytes, totalBytes: expectedBytes };
+  }
+
+  const matchesActiveModel = Boolean(
+    progress?.model
+      && model?.label
+      && progress.model === model.label,
+  );
+  if (matchesActiveModel && progress.phase === "downloading") {
+    return {
+      state: "downloading",
+      currentBytes: Math.max(0, Number(progress.downloaded) || 0),
+      totalBytes: Math.max(0, Number(progress.total) || expectedBytes),
+    };
+  }
+  if (matchesActiveModel && ["verifying", "loading"].includes(progress.phase)) {
+    return {
+      state: progress.phase,
+      currentBytes: Math.max(0, Number(progress.total) || expectedBytes),
+      totalBytes: Math.max(0, Number(progress.total) || expectedBytes),
+    };
+  }
+  if (matchesActiveModel && progress.phase === "ready") {
+    return { state: "downloaded", currentBytes: expectedBytes, totalBytes: expectedBytes };
+  }
+  if (model?.installed) {
+    return { state: "downloaded", currentBytes: storedBytes, totalBytes: expectedBytes };
+  }
+  if (model?.deletable) {
+    return { state: "partial", currentBytes: storedBytes, totalBytes: expectedBytes };
+  }
+  return { state: "missing", currentBytes: 0, totalBytes: expectedBytes };
+}
+
 export function scrollThumbMetrics(trackHeight, scrollHeight, scrollTop) {
   const viewport = Math.max(0, Number(trackHeight) || 0);
   const content = Math.max(0, Number(scrollHeight) || 0);

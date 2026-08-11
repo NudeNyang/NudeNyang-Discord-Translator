@@ -1,5 +1,6 @@
 import {
   discordConnectionLabel,
+  localModelStorageDisplay,
   modelPreparationBanner,
   normalizeConfig,
   resolveEnabledState,
@@ -671,10 +672,19 @@ function renderStorageStatus() {
     const detail = document.createElement("p");
     const action = document.createElement("button");
     title.textContent = model.label;
-    if (model.bundled) {
+    const display = localModelStorageDisplay(model, state.runtime?.modelProgress);
+    if (display.state === "bundled") {
       detail.textContent = `${translateCopy(language, "앱에 포함됨")} · ${formatStorageSize(model.expectedBytes)}`;
-    } else if (model.deletable) {
-      detail.textContent = `${translateCopy(language, "다운로드됨")} · ${formatStorageSize(model.storedBytes)}`;
+    } else if (display.state === "downloading") {
+      detail.textContent = `${translateCopy(language, "다운로드 중")} · ${formatStorageSize(display.currentBytes)} / ${formatStorageSize(display.totalBytes)}`;
+    } else if (display.state === "verifying") {
+      detail.textContent = `${translateCopy(language, "확인 중")} · ${formatStorageSize(display.totalBytes)}`;
+    } else if (display.state === "loading") {
+      detail.textContent = `${translateCopy(language, "준비 중")} · ${formatStorageSize(display.totalBytes)}`;
+    } else if (display.state === "partial") {
+      detail.textContent = `${translateCopy(language, "일부 다운로드됨")} · ${formatStorageSize(display.currentBytes)} / ${formatStorageSize(display.totalBytes)}`;
+    } else if (display.state === "downloaded") {
+      detail.textContent = `${translateCopy(language, "다운로드됨")} · ${formatStorageSize(display.currentBytes)}`;
     } else {
       detail.textContent = translateCopy(language, "설치되지 않음 · 필요할 때 자동으로 다운로드됩니다.");
     }
@@ -1069,6 +1079,7 @@ async function disableTranslationFeaturesForConnectionFailure() {
 function updateEngineState(status) {
   if (!status) return;
   renderModelPreparation(status.modelProgress);
+  renderStorageStatus();
   const ready = status.cdpConnected;
   const enabledState = resolveEnabledState(status.enabled, state.pendingEnabled);
   state.pendingEnabled = enabledState.pending;
