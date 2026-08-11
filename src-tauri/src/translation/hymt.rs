@@ -359,7 +359,7 @@ impl HyMtTranslator {
                     model.key
                 ),
                 HyMtModelSize::MiLmMt4B => format!(
-                    "milmmt:{}:q4_k_m:register-aware-v2:{speech_style}",
+                    "milmmt:{}:q4_k_m:source-faithful-v9:{speech_style}",
                     model.key
                 ),
                 _ => format!(
@@ -830,8 +830,9 @@ fn milmmt_prompt(text: &str, source: Language, target: Language, style: &str) ->
     } else {
         guarded_text
     };
+    let style_instruction = milmmt_style_instruction(target, style);
     format!(
-        "Translate this from {source_name} to {target_name}:\n{source_name}: {}\n{target_name}:",
+        "Translate this from {source_name} to {target_name}:{style_instruction}\n{source_name}: {}\n{target_name}:",
         guarded_text
     )
 }
@@ -843,22 +844,73 @@ fn milmmt_needs_casual_cue(text: &str, source: Language, target: Language, style
         && !Regex::new(r"^\s*야\s*[,，]").unwrap().is_match(text)
 }
 
-fn remove_milmmt_casual_cue(
-    text: &str,
+fn milmmt_style_instruction(target: Language, style: &str) -> &'static str {
+    match (target, style) {
+        (Language::Japanese, "casual") => {
+            "\nPreserve the source meaning and tone exactly. Use casual Japanese plain form, not desu/masu form. Do not add interjections, discourse markers, or other content that is absent from the source."
+        }
+        (Language::Japanese, "polite") => {
+            "\nPreserve the source meaning and tone exactly. Use polite Japanese desu/masu form. Do not add interjections, discourse markers, or other content that is absent from the source."
+        }
+        _ => "",
+    }
+}
+
+fn remove_unwritten_milmmt_fillers(
+    source_text: &str,
+    translated: &str,
     source: Language,
     target: Language,
-    cue_was_added: bool,
 ) -> String {
-    if !cue_was_added || source != Language::Korean || target != Language::Japanese {
-        return text.to_string();
+    if source != Language::Korean || target != Language::Japanese {
+        return translated.to_string();
     }
-    Regex::new(r"^(?:ね[えぇ]|おい)\s*[、,，]\s*")
-        .unwrap()
-        .replace(text, "")
-        .into_owned()
+
+    let source_lines = source_text.split('\n').collect::<Vec<_>>();
+    let translated_lines = translated.split('\n').collect::<Vec<_>>();
+    let lines_align = source_lines.len() == translated_lines.len();
+
+    let source_filler =
+        Regex::new(r"^\s*(?:음+|으+음|어+|아+|야|저기)(?:\s|[,，.!?。！？、…~]|$)").unwrap();
+    let source_hesitation = Regex::new(r"^\s*(?:음+|으+음)\s*$").unwrap();
+    let translated_hesitation =
+        Regex::new(r"^(\s*)(?:え[ーぇえ]*|ヤ)(?:\s*[、,，]\s*(?:うん[。.]?)?)?\s*$").unwrap();
+    let added_target_filler =
+        Regex::new(r"^(\s*)(?:(?:ヤ|え[ーぇえ]*|ね[えぇ]|おい)\s*[、,，]\s*)").unwrap();
+
+    translated_lines
+        .into_iter()
+        .enumerate()
+        .map(|(index, translated_line)| {
+            let source_line = if lines_align {
+                source_lines[index]
+            } else if index == 0 {
+                source_lines.first().copied().unwrap_or_default()
+            } else {
+                ""
+            };
+            if source_hesitation.is_match(source_line)
+                && translated_hesitation.is_match(translated_line)
+            {
+                translated_hesitation
+                    .replace(translated_line, "$1うーん")
+                    .into_owned()
+            } else if source_filler.is_match(source_line) {
+                translated_line.to_string()
+            } else {
+                added_target_filler
+                    .replace(translated_line, "$1")
+                    .into_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn milmmt_lexical_guard(text: &str, source: Language, target: Language) -> String {
+    if text.is_empty() {
+        return text.to_string();
+    }
     match (source, target) {
         // MiLMMT-46 4B consistently maps 너구리 to ネズミ/ネコ and normalizes the
         // coined repetition 너굴너굴. Supplying the known Japanese terms in the
@@ -1277,10 +1329,9 @@ where
         let leading_len = part.len() - part.trim_start().len();
         let trailing_start = part.trim_end().len();
         let core = part.trim();
-        let cue_was_added = milmmt_needs_casual_cue(core, source, target, resolved_style);
         let prompt = milmmt_prompt(core, source, target, resolved_style);
         let mut translated = complete(&prompt, core)?;
-        translated = remove_milmmt_casual_cue(&translated, source, target, cue_was_added);
+        translated = remove_unwritten_milmmt_fillers(core, &translated, source, target);
         translated = fallback_register_cleanup(&translated, target, resolved_style);
         translated = clean_register_artifacts(&translated, target);
         output.push_str(&part[..leading_len]);
@@ -2101,7 +2152,7 @@ mod tests {
     }
 
     #[test]
-    fn milmmt_prompt_preserves_reported_wordplay_terms_and_marks_casual_speech() {
+    fn milmmt_prompt_keeps_the_casual_cue_outside_the_translation_result() {
         let prompt = milmmt_prompt(
             "너구리는 너굴너굴",
             Language::Korean,
@@ -2109,6 +2160,30 @@ mod tests {
             "casual",
         );
         assert!(prompt.contains("Korean: 야, タヌキ는 ヌグルヌグル"));
+        assert!(prompt.contains("Use casual Japanese plain form"));
+        assert!(prompt.contains("Do not add interjections"));
+    }
+
+    #[test]
+    fn milmmt_removes_temporary_style_fillers_from_every_output_line() {
+        let source = "음\n말할 때 모델은 무조건 CLI로 고정하는 게 좋으려나\n빠르긴한데 뭔가 좀 많이 별론데 번역 퀄리티가";
+        let prompt = milmmt_prompt(source, Language::Korean, Language::Japanese, "casual");
+        assert!(prompt.contains(&format!("Korean: 야, {source}")));
+
+        let translated = translate_with_milmmt(
+            source,
+            Language::Korean,
+            Language::Japanese,
+            "casual",
+            |_prompt, _text| {
+                Ok("うーん\nヤ、話すときはモデルをCLIに固定するのがいいんじゃないか\nえー、速いけどなんか、翻訳のクオリティがちょっと物足りない".to_string())
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            translated,
+            "うーん\n話すときはモデルをCLIに固定するのがいいんじゃないか\n速いけどなんか、翻訳のクオリティがちょっと物足りない"
+        );
     }
 
     #[test]
@@ -2135,23 +2210,23 @@ mod tests {
     }
 
     #[test]
-    fn milmmt_removes_only_the_temporary_casual_speech_cue() {
+    fn milmmt_preserves_a_filler_that_exists_in_the_source() {
         let mut prompts = Vec::new();
         let translated = translate_with_milmmt(
-            "오늘 같이 게임할래?",
+            "음",
             Language::Korean,
             Language::Japanese,
             "auto",
             |prompt, text| {
                 prompts.push(prompt.to_string());
-                assert_eq!(text, "오늘 같이 게임할래?");
-                Ok("ねえ、今日は一緒にゲームしようよ？".to_string())
+                assert_eq!(text, "음");
+                Ok("えー、うん。".to_string())
             },
         )
         .unwrap();
-        assert_eq!(translated, "今日は一緒にゲームしようよ？");
+        assert_eq!(translated, "うーん");
         assert_eq!(prompts.len(), 1);
-        assert!(prompts[0].contains("Korean: 야, 오늘 같이 게임할래?"));
+        assert!(prompts[0].contains("Korean: 야, 음"));
     }
 
     #[test]
@@ -2532,6 +2607,26 @@ mod tests {
             wordplay.contains("ヌグルヌグル"),
             "wordplay changed: {wordplay}"
         );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "MiLMMT 4B 모델 다운로드와 llama-server가 필요합니다"]
+    fn live_milmmt_4b_does_not_add_unwritten_fillers() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::MiLmMt4B, "auto", "auto").unwrap();
+        translator.prepare().expect("start MiLMMT 4B server");
+        let translated = translator
+            .translate(
+                "음\n말할 때 모델은 무조건 CLI로 고정하는 게 좋으려나\n빠르긴한데 뭔가 좀 많이 별론데 번역 퀄리티가",
+                Language::Korean,
+                Language::Japanese,
+            )
+            .expect("translate the reported MiLMMT regression case");
+        eprintln!("MiLMMT regression output: {translated}");
+        assert!(!regex::Regex::new(r"(?m)^(?:ヤ|えー)[、,，]")
+            .unwrap()
+            .is_match(&translated));
+        assert!(translated.contains("CLI"), "content was lost: {translated}");
         translator.close();
     }
 }
