@@ -1325,9 +1325,11 @@ function bindShortcutEditor(element, configKey, helpId, fallback) {
     await applyShortcutImmediately(element, configKey, shortcut, help, fallback);
   });
   element.addEventListener("focus", () => {
+    invoke("shortcut_capture_set_active", { active: true }).catch(() => {});
     help.textContent = "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.";
   });
   element.addEventListener("blur", () => {
+    invoke("shortcut_capture_set_active", { active: false }).catch(() => {});
     help.textContent = "입력란을 선택한 뒤 원하는 단축키를 누르십시오.";
   });
 }

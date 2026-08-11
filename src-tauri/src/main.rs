@@ -60,6 +60,7 @@ impl ShortcutBinding {
 struct ShortcutConfig {
     toggle_translation: ShortcutBinding,
     toggle_outgoing_translation: ShortcutBinding,
+    capture_active: AtomicBool,
 }
 
 impl Default for ShortcutConfig {
@@ -67,6 +68,7 @@ impl Default for ShortcutConfig {
         Self {
             toggle_translation: ShortcutBinding::new("F12"),
             toggle_outgoing_translation: ShortcutBinding::new("F8"),
+            capture_active: AtomicBool::new(false),
         }
     }
 }
@@ -397,6 +399,11 @@ fn engine_health() -> Value {
 #[tauri::command]
 fn engine_ui_ready(engine: State<'_, RustEngine>) -> Result<(), String> {
     engine.ui_ready()
+}
+
+#[tauri::command]
+fn shortcut_capture_set_active(shortcut: State<'_, ShortcutConfig>, active: bool) {
+    shortcut.capture_active.store(active, Ordering::Release);
 }
 
 #[tauri::command]
@@ -1026,6 +1033,15 @@ fn fallback_function_key(shortcut: &str) -> Option<u32> {
     (1..=24).contains(&number).then_some(0x6f + number)
 }
 
+fn fallback_press_should_dispatch(
+    pressed: bool,
+    was_pressed: bool,
+    modifier_pressed: bool,
+    capture_active: bool,
+) -> bool {
+    pressed && !was_pressed && !modifier_pressed && !capture_active
+}
+
 #[cfg(windows)]
 fn start_fallback_shortcut_poller(app: AppHandle) {
     let _ = std::thread::Builder::new()
@@ -1042,6 +1058,10 @@ fn start_fallback_shortcut_poller(app: AppHandle) {
                     break;
                 }
                 let shortcut_state = app.state::<ShortcutConfig>();
+                let capture_active = shortcut_state.capture_active.load(Ordering::Acquire);
+                let modifier_pressed = [0x10, 0x11, 0x12, 0x5b, 0x5c]
+                    .into_iter()
+                    .any(|virtual_key| unsafe { GetAsyncKeyState(virtual_key) } < 0);
                 for (index, action) in [
                     ShortcutAction::Translation,
                     ShortcutAction::OutgoingTranslation,
@@ -1062,7 +1082,12 @@ fn start_fallback_shortcut_poller(app: AppHandle) {
                     }
                     // GetAsyncKeyState의 최상위 비트는 현재 키가 눌린 상태임을 뜻해.
                     let pressed = unsafe { GetAsyncKeyState(virtual_key as i32) } < 0;
-                    if pressed && !was_pressed[index] {
+                    if fallback_press_should_dispatch(
+                        pressed,
+                        was_pressed[index],
+                        modifier_pressed,
+                        capture_active,
+                    ) {
                         if let Err(error) = dispatch_shortcut_action(&app, action) {
                             diagnostics::error("shortcut", &error);
                         }
@@ -1180,6 +1205,13 @@ fn main() {
                 }
                 return;
             }
+            if matches!(event, WindowEvent::Focused(false)) {
+                window
+                    .app_handle()
+                    .state::<ShortcutConfig>()
+                    .capture_active
+                    .store(false, Ordering::Release);
+            }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let lifecycle = window.app_handle().state::<LifecycleState>();
                 if !lifecycle.exiting.load(Ordering::Acquire) {
@@ -1191,6 +1223,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             engine_health,
             engine_ui_ready,
+            shortcut_capture_set_active,
             settings_get,
             settings_update,
             main_window_set_theme,
@@ -1235,8 +1268,9 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        fallback_function_key, shortcut_action_for, shortcut_changed, shortcuts_are_unique,
-        tray_menu_position, ProviderLoginState, ShortcutAction, ShortcutConfig,
+        fallback_function_key, fallback_press_should_dispatch, shortcut_action_for,
+        shortcut_changed, shortcuts_are_unique, tray_menu_position, ProviderLoginState,
+        ShortcutAction, ShortcutConfig,
     };
 
     #[test]
@@ -1286,6 +1320,15 @@ mod tests {
         assert_eq!(fallback_function_key("Ctrl+F12"), None);
         assert_eq!(fallback_function_key("F25"), None);
         assert_eq!(fallback_function_key("T"), None);
+    }
+
+    #[test]
+    fn fallback_function_key_requires_a_fresh_unmodified_press_outside_capture() {
+        assert!(fallback_press_should_dispatch(true, false, false, false));
+        assert!(!fallback_press_should_dispatch(true, true, false, false));
+        assert!(!fallback_press_should_dispatch(true, false, true, false));
+        assert!(!fallback_press_should_dispatch(true, false, false, true));
+        assert!(!fallback_press_should_dispatch(false, false, false, false));
     }
 
     #[test]
