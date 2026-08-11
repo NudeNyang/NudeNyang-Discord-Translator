@@ -15,7 +15,7 @@ use crate::cdp::{discord_target, CdpClient};
 use crate::config::{default_config_path, AppConfig, ConfigStore};
 use crate::dom::{
     apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
-    RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
+    INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
 };
 use crate::image_translation::{
     apply_image_error_script, apply_image_result_script, fetch_image_data_script,
@@ -624,6 +624,7 @@ fn run_controller(
                 let target = discord_target(CDP_PORT)?;
                 let mut connected = CdpClient::new(target.websocket_url);
                 connected.connect()?;
+                connected.evaluate(INSTALL_TEXT_RESTORE_SCRIPT, false)?;
                 client = Some(connected);
                 image_ui_needs_cleanup = true;
             }

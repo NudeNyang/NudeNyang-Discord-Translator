@@ -23,7 +23,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 28;
+  const CONTROLLER_VERSION = 29;
+  const HEARTBEAT_TIMEOUT_MS = 5000;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
   const copies = {
@@ -269,6 +270,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (controller.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
     if (controller.inputListener) document.removeEventListener('input', controller.inputListener, true);
     clearTimeout(controller.statusTimer);
+    clearInterval(controller.watchdogTimer);
     document.getElementById(ROOT_ID)?.remove();
     document.getElementById(`${ROOT_ID}-style`)?.remove();
     window.__nudeTranslatorOutgoingOriginalsReady = '';
@@ -290,6 +292,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       oneShotOriginal: false,
       manualRequest: '',
       statusTimer: 0,
+      watchdogTimer: 0,
+      lastHeartbeat: Date.now(),
+      released: false,
       root: null,
       defaultLanguage: 'auto',
       displayEnabled: false,
@@ -298,6 +303,72 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       confirmSend: true,
       sendImmediatelyShortcut: 'Ctrl+Enter',
       reviewBeforeSendShortcut: 'Alt+Enter',
+      failsafe() {
+        if (this.released) return;
+        this.released = true;
+        this.enabled = false;
+        this.displayEnabled = false;
+        clearTimeout(this.statusTimer);
+        clearInterval(this.watchdogTimer);
+        document.removeEventListener('keydown', this.listener, true);
+        document.removeEventListener('beforeinput', this.beforeInputListener, true);
+        document.removeEventListener('input', this.inputListener, true);
+
+        for (const [id, item] of this.pending) {
+          const editor = item.editor;
+          const original = item.original_text || item.text || '';
+          const translationWasInserted = item.review_ready || item.installing_review || this.activeRequest === id;
+          if (!translationWasInserted || !original || !editor?.isConnected || !composerText(editor)) continue;
+          if (composerText(editor) === original) continue;
+          editor.focus();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          const selection = getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          document.execCommand('insertText', false, original);
+        }
+        this.pending.clear();
+        this.queue.length = 0;
+        this.activeRequest = '';
+        this.bypass = 0;
+
+        window.__nudeTranslatorRestoreTranslatedText?.();
+        window.__ntImageEnabled = false;
+        clearTimeout(window.__ntImageButtonTimer);
+        if (window.__ntImageFrame) cancelAnimationFrame(window.__ntImageFrame);
+        window.__ntImageFrame = 0;
+        window.__ntImageUiAbort?.abort();
+        document.getElementById('nt-image-translate-button')?.remove();
+        document.getElementById('nt-image-translate-style')?.remove();
+        for (const img of document.querySelectorAll('img[data-nt-image-id]')) {
+          if (!img.dataset.ntOriginalSrc) continue;
+          img.src = img.dataset.ntOriginalSrc;
+          if (img.dataset.ntOriginalSrcset) img.srcset = img.dataset.ntOriginalSrcset;
+          else img.removeAttribute('srcset');
+          img.dataset.ntImageStatus = img.dataset.ntTranslatedSrc ? 'paused' : 'original';
+        }
+
+        const originalsManager = window.__nudeTranslatorOutgoingOriginalDisplay;
+        originalsManager?.observer?.disconnect();
+        document.querySelectorAll('.nt-outgoing-original-view').forEach(view => view.remove());
+        document.querySelectorAll('[data-nt-outgoing-original="true"]').forEach(root => {
+          root.style.display = '';
+          root.removeAttribute('data-nt-outgoing-original');
+        });
+        document.querySelectorAll('[data-nt-outgoing-message-row="true"]').forEach(row => {
+          row.removeAttribute('data-nt-outgoing-message-row');
+        });
+        document.getElementById('nt-outgoing-original-style')?.remove();
+        delete window.__nudeTranslatorOutgoingOriginalDisplay;
+        delete window.__nudeTranslatorRegisterOutgoingOriginal;
+        delete window.__nudeTranslatorApplyOutgoingOriginals;
+        window.__nudeTranslatorOutgoingOriginalsReady = '';
+
+        document.getElementById(ROOT_ID)?.remove();
+        document.getElementById(`${ROOT_ID}-style`)?.remove();
+        if (window[GLOBAL] === this) delete window[GLOBAL];
+      },
       setStatus(message, error = false) {
         if (!this.root) return;
         const status = this.root.querySelector('.nt-outgoing-status');
@@ -532,6 +603,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         this.cancelReview(editor);
       },
       keydown(event) {
+        if (Date.now() - this.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
+          this.failsafe();
+          return;
+        }
         if (!this.enabled) return;
         const pressedShortcut = shortcutFromEvent(event);
         const sendImmediately = sameShortcut(pressedShortcut, this.sendImmediatelyShortcut);
@@ -754,7 +829,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     document.addEventListener('beforeinput', controller.beforeInputListener, true);
     document.addEventListener('input', controller.inputListener, true);
     window[GLOBAL] = controller;
+    controller.watchdogTimer = setInterval(() => {
+      if (Date.now() - controller.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) controller.failsafe();
+    }, 1000);
   }
+  controller.lastHeartbeat = Date.now();
   controller.defaultLanguage = defaultLanguage;
   const optimisticLanguages = controller.queue
     .filter(item => item.action === 'remember-language' && item.channel_key)
@@ -785,6 +864,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
 pub const OUTGOING_CLEANUP_SCRIPT: &str = r#"
 (() => {
   const controller = window.__nudeTranslatorOutgoing;
+  if (controller?.watchdogTimer) clearInterval(controller.watchdogTimer);
   if (controller?.listener) document.removeEventListener('keydown', controller.listener, true);
   if (controller?.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
   if (controller?.inputListener) document.removeEventListener('input', controller.inputListener, true);
@@ -1277,6 +1357,7 @@ mod tests {
     use crate::cache::OutgoingOriginalRecord;
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::ConfigStore;
+    use crate::dom::INSTALL_TEXT_RESTORE_SCRIPT;
     use crate::language::Language;
 
     static LIVE_OUTGOING_LOCK: Mutex<()> = Mutex::new(());
@@ -1305,6 +1386,28 @@ mod tests {
             suggest_recent_language(&["안녕하세요".into(), "hello".into()]),
             None
         );
+    }
+
+    #[test]
+    fn outgoing_controller_releases_discord_when_the_app_heartbeat_stops() {
+        let script = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "auto",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+
+        assert!(script.contains("lastHeartbeat"));
+        assert!(script.contains("watchdogTimer"));
+        assert!(script.contains("Date.now() - this.lastHeartbeat"));
+        assert!(script.contains("__nudeTranslatorRestoreTranslatedText?.()"));
+        assert!(script.contains("document.removeEventListener('keydown', this.listener, true)"));
+        assert!(OUTGOING_CLEANUP_SCRIPT.contains("clearInterval(controller.watchdogTimer)"));
     }
 
     #[test]
@@ -2458,6 +2561,114 @@ mod tests {
         client
             .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
             .expect("cleanup script");
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_stale_heartbeat_restores_dom_and_releases_enter() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        client.connect().expect("connect Discord renderer");
+        client
+            .evaluate(OUTGOING_CLEANUP_SCRIPT, false)
+            .expect("remove existing outgoing controller");
+        client
+            .evaluate(INSTALL_TEXT_RESTORE_SCRIPT, false)
+            .expect("install translated DOM restorer");
+        client
+            .evaluate(
+                &outgoing_ui_script(
+                    true,
+                    true,
+                    "ko",
+                    "auto",
+                    "ko",
+                    &HashMap::new(),
+                    true,
+                    "Ctrl+Enter",
+                    "Alt+Enter",
+                ),
+                false,
+            )
+            .expect("install watchdog controller");
+        let state = client
+            .evaluate(
+                r#"(() => {
+                  const translated = document.createElement('div');
+                  translated.id = 'nt-watchdog-translated-test';
+                  translated.textContent = '번역문';
+                  document.body.append(translated);
+                  window.__nudeTranslatorOriginals = new Map([[translated.firstChild, 'original']]);
+                  const editor = document.createElement('div');
+                  editor.id = 'nt-watchdog-editor-test';
+                  editor.setAttribute('role', 'textbox');
+                  editor.setAttribute('contenteditable', 'true');
+                  editor.textContent = 'send without translator';
+                  document.body.append(editor);
+                  window.__nudeTranslatorOutgoing.lastHeartbeat = Date.now() - 6000;
+                  const event = new KeyboardEvent('keydown', {key:'Enter', bubbles:true, cancelable:true});
+                  editor.dispatchEvent(event);
+                  const result = {
+                    defaultPrevented: event.defaultPrevented,
+                    controllerPresent: Boolean(window.__nudeTranslatorOutgoing),
+                    controlsPresent: Boolean(document.getElementById('nt-outgoing-translation')),
+                    restoredText: translated.textContent,
+                  };
+                  editor.remove();
+                  translated.remove();
+                  return result;
+                })()"#,
+                true,
+            )
+            .expect("trigger stale heartbeat failsafe");
+        client
+            .evaluate(
+                &outgoing_ui_script(
+                    true,
+                    true,
+                    "ko",
+                    "auto",
+                    "ko",
+                    &HashMap::new(),
+                    true,
+                    "Ctrl+Enter",
+                    "Alt+Enter",
+                ),
+                false,
+            )
+            .expect("reinstall watchdog controller");
+        let automatic = client
+            .evaluate(
+                r#"(async () => {
+                  const translated = document.createElement('div');
+                  translated.id = 'nt-watchdog-automatic-test';
+                  translated.textContent = '자동 번역문';
+                  document.body.append(translated);
+                  window.__nudeTranslatorOriginals = new Map([[translated.firstChild, 'automatic original']]);
+                  window.__nudeTranslatorOutgoing.lastHeartbeat = Date.now() - 6000;
+                  await new Promise(resolve => setTimeout(resolve, 1100));
+                  const result = {
+                    controllerPresent: Boolean(window.__nudeTranslatorOutgoing),
+                    restoredText: translated.textContent,
+                  };
+                  translated.remove();
+                  return result;
+                })()"#,
+                true,
+            )
+            .expect("wait for automatic watchdog cleanup");
+        client.close();
+
+        assert_eq!(state["defaultPrevented"].as_bool(), Some(false));
+        assert_eq!(state["controllerPresent"].as_bool(), Some(false));
+        assert_eq!(state["controlsPresent"].as_bool(), Some(false));
+        assert_eq!(state["restoredText"].as_str(), Some("original"));
+        assert_eq!(automatic["controllerPresent"].as_bool(), Some(false));
+        assert_eq!(
+            automatic["restoredText"].as_str(),
+            Some("automatic original")
+        );
     }
 
     #[test]

@@ -141,7 +141,8 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 24/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 28/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 29/);
+  assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.addEventListener\('input', controller\.inputListener, true\)/);

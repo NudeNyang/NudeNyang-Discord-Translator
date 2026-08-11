@@ -235,6 +235,71 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
 })()
 "#;
 
+pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
+(() => {
+  window.__nudeTranslatorRestoreTranslatedText = () => {
+    const originals = window.__nudeTranslatorOriginals;
+    let restored = 0;
+    if (originals instanceof Map) {
+      for (const [node, text] of originals) {
+        if (!node?.isConnected) continue;
+        if (node.nodeType === Node.TEXT_NODE) node.nodeValue = text;
+        else node.textContent = text;
+        restored++;
+      }
+      originals.clear();
+    }
+    const locators = window.__nudeTranslatorOriginalsByLocator;
+    if (!(locators instanceof Map)) return {restored, remaining: 0};
+    function eligibleTextNodes(root) {
+      const nodes = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!node.nodeValue || !node.nodeValue.trim()) continue;
+        const parent = node.parentElement;
+        if (!parent) continue;
+        const protectedParent = parent.closest(
+          'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        );
+        if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
+        const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
+        if (hiddenParent && hiddenParent !== root) continue;
+        nodes.push(node);
+      }
+      return nodes;
+    }
+    function target(change) {
+      let root = null;
+      if (change.kind === 'message') root = document.querySelector(`[data-dto-message-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'reply') root = document.querySelector(`[data-dto-reply-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'embed') root = document.querySelector(`[data-dto-root-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'forum-title') root = document.querySelector(`[data-dto-forum-title-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'heading') root = document.querySelector(`[data-dto-heading-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'channel') {
+        const channel = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"]`);
+        return channel?.querySelector('div[aria-hidden="true"] > span,[class*="name__"][aria-hidden="true"] > div') || null;
+      } else if (change.kind === 'category') {
+        const category = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"][role="button"]`);
+        return category?.querySelector('h3 > div') || null;
+      }
+      return root ? eligibleTextNodes(root)[change.index] || null : null;
+    }
+    for (const [key, change] of [...locators]) {
+      const node = target(change);
+      if (!node) continue;
+      if (node.nodeType === Node.TEXT_NODE) node.nodeValue = change.text;
+      else node.textContent = change.text;
+      locators.delete(key);
+      restored++;
+    }
+    return {restored, remaining: locators.size};
+  };
+  return true;
+})()
+"#;
+
 pub const CLEAR_TEXT_REGISTRY_SCRIPT: &str = r#"
 (() => {
   const originals = window.__nudeTranslatorOriginals;
@@ -413,7 +478,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
 mod tests {
     use super::{
         apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
-        RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
+        INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
     use crate::cdp::{discord_target, CdpClient};
     use serde_json::json;
@@ -589,5 +654,9 @@ mod tests {
         assert!(RESTORE_TEXT_SCRIPT.contains("locators.delete"));
         assert!(CLEAR_TEXT_REGISTRY_SCRIPT.contains("originals.clear"));
         assert!(CLEAR_TEXT_REGISTRY_SCRIPT.contains("locators.clear"));
+        assert!(
+            INSTALL_TEXT_RESTORE_SCRIPT.contains("window.__nudeTranslatorRestoreTranslatedText")
+        );
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("locators.delete"));
     }
 }
