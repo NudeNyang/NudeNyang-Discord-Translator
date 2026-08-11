@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = '빠르게 스크롤할 때 현재 보고 있는 화면의 메시지를 먼저 번역하도록 대기열 우선순위를 개선한 0.4.9 비공개 베타',
+    [string]$ReleaseNotes = '번역 기록 자동 정리와 Discord Markdown 메시지의 원문·전송문 보기를 지원하는 0.4.10 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
