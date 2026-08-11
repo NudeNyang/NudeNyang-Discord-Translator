@@ -987,6 +987,23 @@ window.addEventListener("languagechange", () => {
   if (selectedLanguage === "auto") applyUiLanguage("auto");
 });
 
+function openSelect(element) {
+  const trigger = element.querySelector(".select-trigger");
+  const menu = element.querySelector(".select-menu");
+  element.classList.remove("drop-up");
+  element.classList.add("open");
+  trigger.setAttribute("aria-expanded", "true");
+
+  const viewportBounds = elements.settingsScroll.getBoundingClientRect();
+  const triggerBounds = trigger.getBoundingClientRect();
+  const menuHeight = menu.getBoundingClientRect().height;
+  const spaceBelow = viewportBounds.bottom - triggerBounds.bottom - 8;
+  const spaceAbove = triggerBounds.top - viewportBounds.top - 8;
+  if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+    element.classList.add("drop-up");
+  }
+}
+
 function renderSelect(element) {
   const field = element.dataset.field;
   const trigger = document.createElement("button");
@@ -1053,8 +1070,7 @@ function renderSelect(element) {
     const opening = !element.classList.contains("open");
     closeAllSelects();
     if (opening) {
-      element.classList.add("open");
-      trigger.setAttribute("aria-expanded", "true");
+      openSelect(element);
     }
   });
   trigger.addEventListener("keydown", event => {
@@ -1064,8 +1080,7 @@ function renderSelect(element) {
       closeSelect(element);
       return;
     }
-    element.classList.add("open");
-    trigger.setAttribute("aria-expanded", "true");
+    openSelect(element);
     const options = [...menu.querySelectorAll(".select-option")];
     const current = options.findIndex(option => option.dataset.value === String(state.selectValues[field]));
     const next = event.key === "ArrowDown"
@@ -1087,7 +1102,7 @@ function setSelectValue(field, value) {
 }
 
 function closeSelect(element) {
-  element.classList.remove("open");
+  element.classList.remove("open", "drop-up");
   element.querySelector(".select-trigger").setAttribute("aria-expanded", "false");
 }
 

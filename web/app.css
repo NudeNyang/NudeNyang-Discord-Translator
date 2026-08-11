@@ -764,6 +764,11 @@ input:focus-visible,
   display: block;
 }
 
+.custom-select.drop-up .select-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
 .select-option {
   display: block;
   width: 100%;
@@ -975,6 +980,12 @@ input:focus-visible,
 
 .storage-history-card {
   overflow: hidden;
+}
+
+.storage-history-card:has(.custom-select.open) {
+  position: relative;
+  z-index: 30;
+  overflow: visible;
 }
 
 .storage-group-heading,

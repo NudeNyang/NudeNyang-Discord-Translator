@@ -6,6 +6,7 @@ import { translateCopy, translateDynamicCopy } from "../i18n.mjs";
 
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 const rustMain = readFileSync(new URL("../../src-tauri/src/main.rs", import.meta.url), "utf8");
 const cache = readFileSync(new URL("../../src-tauri/src/cache.rs", import.meta.url), "utf8");
 const model = readFileSync(new URL("../../src-tauri/src/translation/hymt.rs", import.meta.url), "utf8");
@@ -38,6 +39,14 @@ test("storage navigation sits immediately above app information", () => {
 
   assert.ok(conveniencePosition < storagePosition);
   assert.ok(storagePosition < aboutPosition);
+});
+
+test("automatic cleanup options stay reachable at the bottom of the settings viewport", () => {
+  assert.match(styles, /\.storage-history-card:has\(\.custom-select\.open\)[^{]*\{[^}]*overflow:\s*visible/);
+  assert.match(styles, /\.custom-select\.drop-up \.select-menu\s*\{[^}]*top:\s*auto[^}]*bottom:\s*calc\(100% \+ 4px\)/);
+  assert.match(script, /function openSelect\(element\)/);
+  assert.match(script, /element\.classList\.add\("drop-up"\)/);
+  assert.match(script, /elements\.settingsScroll\.getBoundingClientRect\(\)/);
 });
 
 test("SQLite cleanup preserves channel language preferences", () => {
