@@ -54,7 +54,8 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "installerHooks": "./windows/hooks.nsh"
+        "installerHooks": "./windows/hooks.nsh",
+        "uninstallerIcon": "../assets/nude-translator.ico"
       }
     }
   },

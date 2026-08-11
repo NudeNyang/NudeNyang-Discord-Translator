@@ -30,4 +30,13 @@
   Delete "$DESKTOP\Nude Translator (Tauri).lnk"
   Delete "$SMPROGRAMS\Nude Translator.lnk"
   Delete "$SMPROGRAMS\Nude Translator (Tauri).lnk"
+
+  ${If} $DeleteAppDataCheckboxState = 1
+  ${AndIf} $UpdateMode <> 1
+    RMDir /r "$LOCALAPPDATA\LocalTools\DiscordTranslateOverlay"
+    RMDir "$LOCALAPPDATA\LocalTools"
+    RMDir /r "$LOCALAPPDATA\NudeNyang Translator"
+    nsExec::ExecToLog '"$SYSDIR\cmdkey.exe" /delete:"deepl.NudeNyang Translator"'
+    nsExec::ExecToLog '"$SYSDIR\cmdkey.exe" /delete:"deepl.Nude Translator"'
+  ${EndIf}
 !macroend
