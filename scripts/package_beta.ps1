@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = '로컬 모델의 원문 없는 이모지 추가를 방지하고 시스템 시작 시 자동 실행 옵션을 추가한 0.4.5 비공개 베타',
+    [string]$ReleaseNotes = 'MiLMMT를 제거하고 기존 다운로드 파일을 정리하며, 보내는 메시지 통역에 CLI 모델을 권장하도록 개선한 0.4.6 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
