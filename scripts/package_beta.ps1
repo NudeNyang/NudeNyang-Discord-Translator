@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'Discord 메시지의 줄바꿈과 서식을 보존하고 설정 화면의 안내 문구, 여백 및 번역 서비스 모델 표기를 정리한 0.4.7 비공개 베타',
+    [string]$ReleaseNotes = '번역 말투 설정을 제거하고 받는 메시지와 보내는 메시지의 방향 아이콘 및 로컬 모델의 속도 우선 표기를 적용한 0.4.8 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
