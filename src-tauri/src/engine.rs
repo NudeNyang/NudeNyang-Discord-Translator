@@ -237,8 +237,8 @@ enum PreparationResult {
         generation: u64,
         display_name: String,
         outgoing_name: String,
-        display_translator: Box<dyn Translator>,
-        outgoing_translator: Box<dyn Translator>,
+        display_translator: Option<Box<dyn Translator>>,
+        outgoing_translator: Option<Box<dyn Translator>>,
     },
     Failed {
         generation: u64,
@@ -246,6 +246,38 @@ enum PreparationResult {
         outgoing_name: String,
         error: String,
     },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct TranslatorPreparationPlan {
+    display: bool,
+    outgoing: bool,
+}
+
+impl TranslatorPreparationPlan {
+    fn all() -> Self {
+        Self {
+            display: true,
+            outgoing: true,
+        }
+    }
+
+    fn any(self) -> bool {
+        self.display || self.outgoing
+    }
+}
+
+fn translator_preparation_plan(
+    current: &AppConfig,
+    updated: &AppConfig,
+) -> TranslatorPreparationPlan {
+    let shared_settings_changed =
+        updated.hymt_device != current.hymt_device || updated.speech_style != current.speech_style;
+    TranslatorPreparationPlan {
+        display: updated.translator != current.translator || shared_settings_changed,
+        outgoing: updated.outgoing_translator != current.outgoing_translator
+            || shared_settings_changed,
+    }
 }
 
 impl RustEngine {
@@ -346,6 +378,7 @@ fn run_controller(
 
     request_translator_preparation(
         &config,
+        TranslatorPreparationPlan::all(),
         &preparation_tx,
         &progress_result_tx,
         &status,
@@ -363,10 +396,16 @@ fn run_controller(
                 Control::ApplyConfig(updated) => {
                     let updated = *updated;
                     let target_changed = updated.target_language != config.target_language;
-                    let runtime_changed = updated.translator != config.translator
-                        || updated.outgoing_translator != config.outgoing_translator
-                        || updated.hymt_device != config.hymt_device
-                        || updated.speech_style != config.speech_style;
+                    let mut preparation_plan = translator_preparation_plan(&config, &updated);
+                    if preparation_plan.any() {
+                        if let Ok(runtime) = status.lock() {
+                            preparation_plan.display |=
+                                runtime.active_translator != updated.translator;
+                            preparation_plan.outgoing |=
+                                runtime.active_outgoing_translator != updated.outgoing_translator;
+                        }
+                    }
+                    let runtime_changed = preparation_plan.any();
                     let enabled_changed = updated.enabled != config.enabled;
                     let outgoing_changed =
                         updated.outgoing_translation_enabled != config.outgoing_translation_enabled;
@@ -395,6 +434,7 @@ fn run_controller(
                     if runtime_changed {
                         request_translator_preparation(
                             &config,
+                            preparation_plan,
                             &preparation_tx,
                             &progress_result_tx,
                             &status,
@@ -488,16 +528,20 @@ fn run_controller(
                         && display_name == config.translator
                         && outgoing_name == config.outgoing_translator
                     {
-                        let _ = worker_tx.send(WorkerCommand::Activate {
-                            generation: prepared_generation,
-                            name: display_name,
-                            translator: display_translator,
-                        });
-                        let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Activate {
-                            generation: prepared_generation,
-                            name: outgoing_name,
-                            translator: outgoing_translator,
-                        });
+                        if let Some(translator) = display_translator {
+                            let _ = worker_tx.send(WorkerCommand::Activate {
+                                generation: prepared_generation,
+                                name: display_name,
+                                translator,
+                            });
+                        }
+                        if let Some(translator) = outgoing_translator {
+                            let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Activate {
+                                generation: prepared_generation,
+                                name: outgoing_name,
+                                translator,
+                            });
+                        }
                     }
                 }
                 PreparationResult::Failed {
@@ -1718,6 +1762,7 @@ fn log_worker_queue(lane: &str, queued_at: Instant, items: usize, chars: usize) 
 
 fn request_translator_preparation(
     config: &AppConfig,
+    plan: TranslatorPreparationPlan,
     sender: &mpsc::Sender<PreparationResult>,
     progress_sender: &mpsc::Sender<WorkerResult>,
     status: &Arc<Mutex<RuntimeStatus>>,
@@ -1731,12 +1776,19 @@ fn request_translator_preparation(
     update_status(status, |runtime| {
         runtime.configured_translator = display_name.clone();
         runtime.configured_outgoing_translator = outgoing_name.clone();
-        runtime.translator_state = "preparing".to_string();
-        runtime.translator_error.clear();
+        if plan.display {
+            runtime.translator_state = "preparing".to_string();
+            runtime.translator_error.clear();
+        }
         runtime.model_progress = None;
+        let preparing_name = if plan.display {
+            &display_name
+        } else {
+            &outgoing_name
+        };
         runtime.notice = format!(
             "{} 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
-            translator_label(&display_name)
+            translator_label(preparing_name)
         );
     });
     let sender = sender.clone();
@@ -1748,12 +1800,23 @@ fn request_translator_preparation(
                 progress,
             });
         });
-        let result = make_translator(&config, &display_name, Some(observer.clone())).and_then(
-            |display_translator| {
-                let outgoing_translator = make_translator(&config, &outgoing_name, Some(observer))?;
-                Ok((display_translator, outgoing_translator))
-            },
-        );
+        let result = (|| {
+            let display_translator = if plan.display {
+                Some(make_translator(
+                    &config,
+                    &display_name,
+                    Some(observer.clone()),
+                )?)
+            } else {
+                None
+            };
+            let outgoing_translator = if plan.outgoing {
+                Some(make_translator(&config, &outgoing_name, Some(observer))?)
+            } else {
+                None
+            };
+            Ok((display_translator, outgoing_translator))
+        })();
         let message = match result {
             Ok((display_translator, outgoing_translator)) => PreparationResult::Ready {
                 generation: current_generation,
@@ -1913,8 +1976,9 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 mod tests {
     use super::{
         plan_dom_updates, poll_interval, run_outgoing_translation_worker,
-        translator_activation_notice, translator_label, OutgoingTranslationBatch,
-        OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine, WorkerResult,
+        translator_activation_notice, translator_label, translator_preparation_plan,
+        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
+        TranslatorPreparationPlan, WorkerResult,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -1957,6 +2021,27 @@ mod tests {
         assert!(!prepared.contains("지금부터"));
         assert!(deferred.contains("번역을 켜면 모델을 준비합니다"));
         assert!(!deferred.contains("준비가 완료되었습니다"));
+    }
+
+    #[test]
+    fn changing_only_the_outgoing_model_keeps_the_display_model_active() {
+        let current = AppConfig {
+            translator: "translategemma_4b".to_string(),
+            outgoing_translator: "translategemma_4b".to_string(),
+            ..Default::default()
+        };
+        let updated = AppConfig {
+            outgoing_translator: "chatgpt".to_string(),
+            ..current.clone()
+        };
+
+        assert_eq!(
+            translator_preparation_plan(&current, &updated),
+            TranslatorPreparationPlan {
+                display: false,
+                outgoing: true,
+            }
+        );
     }
 
     #[test]
