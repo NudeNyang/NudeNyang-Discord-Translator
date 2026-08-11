@@ -17,7 +17,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::language::{detect_explicit_language, Language};
+use crate::language::Language;
 
 use super::protected_text::remove_unwritten_decorations;
 use super::Translator;
@@ -67,7 +67,6 @@ pub enum HyMtModelSize {
     Small,
     Large,
     TranslateGemma4B,
-    MiLmMt4B,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -199,24 +198,14 @@ impl HyMtModelSize {
                 expected_bytes: 2_489_909_312,
                 expected_sha256: "526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd",
             },
-            Self::MiLmMt4B => HyMtModel {
-                key: "46-4b-v0.1",
-                family: "milmmt",
-                label: "MiLMMT-46 4B Q4_K_M",
-                repository: "mradermacher/MiLMMT-46-4B-v0.1-i1-GGUF",
-                filename: "MiLMMT-46-4B-v0.1.i1-Q4_K_M.gguf",
-                expected_bytes: 2_867_472_896,
-                expected_sha256: "f1c4e2356931393f3971c0694532dda07e40ba538611e2a7c02b72d63efa50f9",
-            },
         }
     }
 }
 
-const LOCAL_MODEL_SIZES: [HyMtModelSize; 4] = [
+const LOCAL_MODEL_SIZES: [HyMtModelSize; 3] = [
     HyMtModelSize::Small,
     HyMtModelSize::Large,
     HyMtModelSize::TranslateGemma4B,
-    HyMtModelSize::MiLmMt4B,
 ];
 
 fn model_size_from_config_id(id: &str) -> Option<HyMtModelSize> {
@@ -224,7 +213,6 @@ fn model_size_from_config_id(id: &str) -> Option<HyMtModelSize> {
         "hymt_1_8b" => Some(HyMtModelSize::Small),
         "hymt_7b" => Some(HyMtModelSize::Large),
         "translategemma_4b" => Some(HyMtModelSize::TranslateGemma4B),
-        "milmmt_4b" => Some(HyMtModelSize::MiLmMt4B),
         _ => None,
     }
 }
@@ -234,7 +222,6 @@ fn config_id_for_model_size(size: HyMtModelSize) -> &'static str {
         HyMtModelSize::Small => "hymt_1_8b",
         HyMtModelSize::Large => "hymt_7b",
         HyMtModelSize::TranslateGemma4B => "translategemma_4b",
-        HyMtModelSize::MiLmMt4B => "milmmt_4b",
     }
 }
 
@@ -280,6 +267,15 @@ pub fn delete_cached_local_model(id: &str) -> Result<LocalModelDeleteResult, Str
         id: id.to_string(),
         removed_bytes,
     })
+}
+
+pub fn remove_retired_milmmt_files() -> Result<u64, String> {
+    let retired_model_path = default_cache_root()
+        .join("models")
+        .join("milmmt")
+        .join("46-4b-v0.1")
+        .join("MiLMMT-46-4B-v0.1.i1-Q4_K_M.gguf");
+    remove_cached_model_files(&retired_model_path)
 }
 
 fn remove_cached_model_files(path: &Path) -> Result<u64, String> {
@@ -358,10 +354,6 @@ impl HyMtTranslator {
             cache_namespace: match model_size {
                 HyMtModelSize::TranslateGemma4B => format!(
                     "translategemma:{}:q4_k_m:source-faithful-v3:{speech_style}",
-                    model.key
-                ),
-                HyMtModelSize::MiLmMt4B => format!(
-                    "milmmt:{}:q4_k_m:source-faithful-v11:{speech_style}",
                     model.key
                 ),
                 _ => format!(
@@ -466,10 +458,7 @@ impl HyMtTranslator {
         let log_path = crate::diagnostics::log_path();
         let attempts = startup_device_attempts(&self.device);
         let diagnostics_scope = self.model.family;
-        let context_size = if matches!(
-            self.model_size,
-            HyMtModelSize::TranslateGemma4B | HyMtModelSize::MiLmMt4B
-        ) {
+        let context_size = if matches!(self.model_size, HyMtModelSize::TranslateGemma4B) {
             "2048"
         } else {
             "8192"
@@ -491,10 +480,7 @@ impl HyMtTranslator {
                 "--parallel",
                 "1",
             ]);
-            if matches!(
-                self.model_size,
-                HyMtModelSize::TranslateGemma4B | HyMtModelSize::MiLmMt4B
-            ) {
+            if matches!(self.model_size, HyMtModelSize::TranslateGemma4B) {
                 // The current llama.cpp build cannot initialize its generic parser from
                 // these translation models' templates. Their request paths render the
                 // official text-translation prompts directly instead.
@@ -768,22 +754,6 @@ impl HyMtTranslator {
             .map_err(|error| format!("TranslateGemma 번역 응답을 읽지 못했습니다: {error}"))?;
         translate_gemma_completion_result(&payload)
     }
-
-    fn complete_milmmt(&self, prompt: &str, text: &str) -> Result<String, String> {
-        let output_limit = max_output_tokens(text);
-        let response = self
-            .client
-            .post(format!("http://127.0.0.1:{}/completion", self.port))
-            .timeout(self.request_timeout)
-            .json(&milmmt_completion_payload(prompt, output_limit))
-            .send()
-            .and_then(|response| response.error_for_status())
-            .map_err(|error| format!("MiLMMT 번역 요청이 실패했습니다: {error}"))?;
-        let payload: Value = response
-            .json()
-            .map_err(|error| format!("MiLMMT 번역 응답을 읽지 못했습니다: {error}"))?;
-        milmmt_completion_result(&payload)
-    }
 }
 
 fn completion_payload(prompt: &str, output_limit: usize) -> Value {
@@ -811,122 +781,6 @@ fn translate_gemma_completion_payload(
         "stop": ["<end_of_turn>"],
         "cache_prompt": true,
     })
-}
-
-fn milmmt_completion_payload(prompt: &str, output_limit: usize) -> Value {
-    json!({
-        "prompt": prompt,
-        "n_predict": output_limit,
-        "temperature": INFERENCE_TEMPERATURE,
-        "top_k": 1,
-        "cache_prompt": true,
-    })
-}
-
-fn milmmt_prompt(text: &str, source: Language, target: Language, style: &str) -> String {
-    let source_name = milmmt_language_name(source);
-    let target_name = milmmt_language_name(target);
-    let guarded_text = milmmt_lexical_guard(text.trim(), source, target);
-    let target_prefix = match (source, target, style) {
-        (Language::Korean, Language::Japanese, "casual") => " ねえ、",
-        _ => "",
-    };
-    format!(
-        "Translate this from {source_name} to {target_name}:\n{source_name}: {}\n{target_name}:{target_prefix}",
-        guarded_text,
-    )
-}
-
-fn milmmt_retry_prompt(text: &str, source: Language, target: Language) -> String {
-    let source_name = milmmt_language_name(source);
-    let target_name = milmmt_language_name(target);
-    let guarded_text = milmmt_lexical_guard(text.trim(), source, target);
-    format!(
-        "Translate the following {source_name} text to {target_name}. Return only the {target_name} translation.\n{guarded_text}\n{target_name}:",
-    )
-}
-
-fn milmmt_stayed_in_source_language(translated: &str, source: Language, target: Language) -> bool {
-    source != Language::Unknown
-        && source != target
-        && matches!(source, Language::Korean | Language::Japanese)
-        && detect_explicit_language(translated) == source
-}
-
-fn remove_unwritten_milmmt_fillers(
-    source_text: &str,
-    translated: &str,
-    source: Language,
-    target: Language,
-) -> String {
-    if source != Language::Korean || target != Language::Japanese {
-        return translated.to_string();
-    }
-
-    let source_lines = source_text.split('\n').collect::<Vec<_>>();
-    let translated_lines = translated.split('\n').collect::<Vec<_>>();
-    let lines_align = source_lines.len() == translated_lines.len();
-
-    let source_filler =
-        Regex::new(r"^\s*(?:음+|으+음|어+|아+|야|저기)(?:\s|[,，.!?。！？、…~]|$)").unwrap();
-    let source_hesitation = Regex::new(r"^\s*(?:음+|으+음)\s*$").unwrap();
-    let translated_hesitation =
-        Regex::new(r"^(\s*)(?:え[ーぇえ]*|ヤ)(?:\s*[、,，]\s*(?:うん[。.]?)?)?\s*$").unwrap();
-    let added_target_filler =
-        Regex::new(r"^(\s*)(?:(?:ヤ|え[ーぇえ]*|ね[えぇ]|おい)\s*[、,，]\s*)").unwrap();
-
-    translated_lines
-        .into_iter()
-        .enumerate()
-        .map(|(index, translated_line)| {
-            let source_line = if lines_align {
-                source_lines[index]
-            } else if index == 0 {
-                source_lines.first().copied().unwrap_or_default()
-            } else {
-                ""
-            };
-            if source_hesitation.is_match(source_line)
-                && translated_hesitation.is_match(translated_line)
-            {
-                translated_hesitation
-                    .replace(translated_line, "$1うーん")
-                    .into_owned()
-            } else if source_filler.is_match(source_line) {
-                translated_line.to_string()
-            } else {
-                added_target_filler
-                    .replace(translated_line, "$1")
-                    .into_owned()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn milmmt_lexical_guard(text: &str, source: Language, target: Language) -> String {
-    if text.is_empty() {
-        return text.to_string();
-    }
-    match (source, target) {
-        // MiLMMT-46 4B consistently maps 너구리 to ネズミ/ネコ and normalizes the
-        // coined repetition 너굴너굴. Supplying the known Japanese terms in the
-        // source slot keeps the official prompt shape while preserving the meaning.
-        (Language::Korean, Language::Japanese) => text
-            .replace("너구리는 너굴너굴", "タヌキはヌグルヌグル")
-            .replace("너굴너굴", "ヌグルヌグル")
-            .replace("너구리", "タヌキ"),
-        _ => text.to_string(),
-    }
-}
-
-fn milmmt_language_name(language: Language) -> &'static str {
-    match language {
-        Language::ChineseSimplified => "Chinese (Simplified)",
-        Language::ChineseTraditional => "Chinese (Traditional)",
-        Language::Unknown => "the source language",
-        other => other.english_name(),
-    }
 }
 
 fn translate_gemma_prompt(
@@ -1025,30 +879,6 @@ fn translate_gemma_completion_result(payload: &Value) -> Result<String, String> 
     }
 }
 
-fn milmmt_completion_result(payload: &Value) -> Result<String, String> {
-    if payload
-        .get("stop_type")
-        .and_then(Value::as_str)
-        .is_some_and(|reason| reason == "limit")
-    {
-        return Err(
-            "MiLMMT 번역 결과가 길이 제한에 도달했습니다. 텍스트를 나누어 다시 시도하십시오."
-                .to_string(),
-        );
-    }
-    let result = clean_translation(
-        payload
-            .get("content")
-            .and_then(Value::as_str)
-            .unwrap_or_default(),
-    );
-    if result.is_empty() {
-        Err("MiLMMT가 빈 번역 결과를 반환했습니다.".to_string())
-    } else {
-        Ok(result)
-    }
-}
-
 fn completion_result(payload: &Value) -> Result<String, String> {
     let choice = payload
         .get("choices")
@@ -1128,12 +958,6 @@ impl Translator for HyMtTranslator {
                     self.complete_translate_gemma(fragment, source, target, resolved_style)
                 },
             );
-        }
-        if self.model_size == HyMtModelSize::MiLmMt4B {
-            let style = self.speech_style.clone();
-            return translate_with_milmmt(text, source, target, &style, |prompt, fragment| {
-                self.complete_milmmt(prompt, fragment)
-            });
         }
         let style = self.speech_style.clone();
         translate_with_completion_for_model(
@@ -1289,77 +1113,6 @@ where
     }
 
     let _ = (source, target);
-    Ok(output)
-}
-
-fn translate_with_milmmt<F>(
-    text: &str,
-    source: Language,
-    target: Language,
-    speech_style: &str,
-    mut complete: F,
-) -> Result<String, String>
-where
-    F: FnMut(&str, &str) -> Result<String, String>,
-{
-    let resolved_style = if speech_style == "auto" {
-        detect_speech_style(text, source)
-    } else {
-        speech_style
-    };
-    let mut output = String::new();
-    let mut cursor = 0;
-    let mut segments = Vec::new();
-    for marker in PROTECTED_MARKER_RE.find_iter(text) {
-        segments.push((&text[cursor..marker.start()], false));
-        segments.push((marker.as_str(), true));
-        cursor = marker.end();
-    }
-    segments.push((&text[cursor..], false));
-
-    for (part, protected) in segments {
-        if part.is_empty() {
-            continue;
-        }
-        if protected || !part.chars().any(|character| character.is_alphanumeric()) {
-            output.push_str(part);
-            continue;
-        }
-        let leading_len = part.len() - part.trim_start().len();
-        let trailing_start = part.trim_end().len();
-        let core = part.trim();
-        let prompt = milmmt_prompt(core, source, target, resolved_style);
-        let mut translated = complete(&prompt, core)?;
-        if milmmt_stayed_in_source_language(&translated, source, target) {
-            crate::diagnostics::warn(
-                "milmmt",
-                &format!(
-                    "retry after source-language output; source={}; target={}; chars={}; hash={}",
-                    source.code(),
-                    target.code(),
-                    core.chars().count(),
-                    diagnostic_text_hash(core)
-                ),
-            );
-            let retry_prompt = milmmt_retry_prompt(core, source, target);
-            translated = complete(&retry_prompt, core)?;
-            if milmmt_stayed_in_source_language(&translated, source, target) {
-                return Err(format!(
-                    "MiLMMT가 {} 번역 대신 {} 결과를 반환했습니다. 다시 시도하십시오.",
-                    target.english_name(),
-                    source.english_name()
-                ));
-            }
-        }
-        translated = remove_unwritten_milmmt_fillers(core, &translated, source, target);
-        translated = fallback_register_cleanup(&translated, target, resolved_style);
-        translated = clean_register_artifacts(&translated, target);
-        translated = remove_unwritten_decorations(core, &translated);
-        output.push_str(&part[..leading_len]);
-        output.push_str(&translated);
-        output.push_str(&part[trailing_start..]);
-    }
-
     Ok(output)
 }
 
@@ -1519,7 +1272,6 @@ fn translation_prompt_for_model(
         HyMtModelSize::Small => compact_translation_prompt(text, source, target, style),
         HyMtModelSize::Large => translation_prompt(text, source, target, style),
         HyMtModelSize::TranslateGemma4B => compact_translation_prompt(text, source, target, style),
-        HyMtModelSize::MiLmMt4B => compact_translation_prompt(text, source, target, style),
     }
 }
 
@@ -1915,11 +1667,11 @@ fn free_tcp_port() -> Result<u16, String> {
 mod tests {
     use super::{
         clean_translation, complete_translation_with_retry, completion_payload, completion_result,
-        detect_speech_style, find_llama_server, local_model_storage_status, max_output_tokens,
-        milmmt_completion_payload, milmmt_prompt, remove_cached_model_files, rewrite_style_prompt,
-        startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
-        translate_with_completion_for_model, translate_with_milmmt, translate_with_translate_gemma,
-        translation_prompt_for_model, HyMtModelSize, HyMtTranslator,
+        detect_speech_style, find_llama_server, max_output_tokens, remove_cached_model_files,
+        rewrite_style_prompt, startup_device_attempts, translate_gemma_completion_payload,
+        translate_with_completion, translate_with_completion_for_model,
+        translate_with_translate_gemma, translation_prompt_for_model, HyMtModelSize,
+        HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::Translator;
@@ -2078,16 +1830,6 @@ mod tests {
         )
         .unwrap();
         assert_eq!(translated, "알겠습니다!", "TranslateGemma 4B");
-
-        let translated = translate_with_milmmt(
-            source,
-            Language::Japanese,
-            Language::Korean,
-            "auto",
-            |_prompt, _text| Ok("알겠습니다! 🤖".to_string()),
-        )
-        .unwrap();
-        assert_eq!(translated, "알겠습니다!", "MiLMMT 4B");
     }
 
     #[test]
@@ -2128,9 +1870,6 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("Never add emojis"));
-
-        let milmmt = milmmt_prompt("なるほど！", Language::Japanese, Language::Korean, "casual");
-        assert!(!milmmt.contains("Never add emojis"));
     }
 
     #[test]
@@ -2233,166 +1972,6 @@ mod tests {
             model.expected_sha256,
             "526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd"
         );
-    }
-
-    #[test]
-    fn milmmt_uses_the_translation_prompt_with_source_and_target_labels() {
-        let prompt = milmmt_prompt(
-            "오늘 같이 게임할래?",
-            Language::Korean,
-            Language::Japanese,
-            "neutral",
-        );
-        let payload = milmmt_completion_payload(&prompt, 256);
-        let prompt = payload["prompt"].as_str().unwrap();
-        assert_eq!(
-            prompt,
-            "Translate this from Korean to Japanese:\nKorean: 오늘 같이 게임할래?\nJapanese:"
-        );
-        assert_eq!(payload["n_predict"], 256);
-        assert_eq!(payload["top_k"], 1);
-        assert_eq!(payload["temperature"].as_f64(), Some(0.0));
-    }
-
-    #[test]
-    fn milmmt_prompt_preserves_casual_style_without_mutating_the_source() {
-        let prompt = milmmt_prompt(
-            "너구리는 너굴너굴",
-            Language::Korean,
-            Language::Japanese,
-            "casual",
-        );
-        assert!(prompt.contains("Korean: タヌキはヌグルヌグル"));
-        assert!(!prompt.contains("Korean: 야,"));
-        assert!(prompt.ends_with("Japanese: ねえ、"));
-    }
-
-    #[test]
-    fn milmmt_removes_temporary_style_fillers_from_every_output_line() {
-        let source = "음\n말할 때 모델은 무조건 CLI로 고정하는 게 좋으려나\n빠르긴한데 뭔가 좀 많이 별론데 번역 퀄리티가";
-        let prompt = milmmt_prompt(source, Language::Korean, Language::Japanese, "casual");
-        assert!(prompt.contains(&format!("Korean: {source}")));
-
-        let translated = translate_with_milmmt(
-            source,
-            Language::Korean,
-            Language::Japanese,
-            "casual",
-            |_prompt, _text| {
-                Ok("うーん\nヤ、話すときはモデルをCLIに固定するのがいいんじゃないか\nえー、速いけどなんか、翻訳のクオリティがちょっと物足りない".to_string())
-            },
-        )
-        .unwrap();
-        assert_eq!(
-            translated,
-            "うーん\n話すときはモデルをCLIに固定するのがいいんじゃないか\n速いけどなんか、翻訳のクオリティがちょっと物足りない"
-        );
-    }
-
-    #[test]
-    fn milmmt_preserves_protected_markers_without_sending_them_to_the_model() {
-        let mut fragments = Vec::new();
-        let translated = translate_with_milmmt(
-            "Hello ZXQKEEP000QXZ friend",
-            Language::English,
-            Language::Korean,
-            "casual",
-            |_prompt, fragment| {
-                fragments.push(fragment.to_string());
-                Ok(if fragment == "Hello" {
-                    "안녕"
-                } else {
-                    "친구"
-                }
-                .to_string())
-            },
-        )
-        .unwrap();
-        assert_eq!(translated, "안녕 ZXQKEEP000QXZ 친구");
-        assert_eq!(fragments, ["Hello", "friend"]);
-    }
-
-    #[test]
-    fn milmmt_preserves_a_filler_that_exists_in_the_source() {
-        let mut prompts = Vec::new();
-        let translated = translate_with_milmmt(
-            "음",
-            Language::Korean,
-            Language::Japanese,
-            "auto",
-            |prompt, text| {
-                prompts.push(prompt.to_string());
-                assert_eq!(text, "음");
-                Ok("えー、うん。".to_string())
-            },
-        )
-        .unwrap();
-        assert_eq!(translated, "うーん");
-        assert_eq!(prompts.len(), 1);
-        assert!(prompts[0].contains("Korean: 음"));
-    }
-
-    #[test]
-    fn milmmt_retries_when_translation_stays_in_the_source_language() {
-        let mut prompts = Vec::new();
-        let translated = translate_with_milmmt(
-            "이제 제대로 되는 건가",
-            Language::Korean,
-            Language::Japanese,
-            "auto",
-            |prompt, _text| {
-                prompts.push(prompt.to_string());
-                Ok(if prompts.len() == 1 {
-                    "이제 제대로 되는 건가"
-                } else {
-                    "今度こそちゃんと動くのかな"
-                }
-                .to_string())
-            },
-        )
-        .unwrap();
-
-        assert_eq!(translated, "今度こそちゃんと動くのかな");
-        assert_eq!(prompts.len(), 2);
-        assert_eq!(
-            prompts[1],
-            "Translate the following Korean text to Japanese. Return only the Japanese translation.\n이제 제대로 되는 건가\nJapanese:"
-        );
-    }
-
-    #[test]
-    fn milmmt_rejects_a_second_source_language_result() {
-        let mut calls = 0;
-        let error = translate_with_milmmt(
-            "웅냥냥",
-            Language::Korean,
-            Language::Japanese,
-            "auto",
-            |_prompt, _text| {
-                calls += 1;
-                Ok("웅냥냥".to_string())
-            },
-        )
-        .unwrap_err();
-
-        assert_eq!(calls, 2);
-        assert!(error.contains("Japanese 번역 대신 Korean 결과"));
-    }
-
-    #[test]
-    fn milmmt_model_metadata_is_pinned_and_exposed_to_storage_management() {
-        let model = HyMtModelSize::MiLmMt4B.model();
-        assert_eq!(model.family, "milmmt");
-        assert_eq!(model.repository, "mradermacher/MiLMMT-46-4B-v0.1-i1-GGUF");
-        assert_eq!(model.filename, "MiLMMT-46-4B-v0.1.i1-Q4_K_M.gguf");
-        assert_eq!(model.expected_bytes, 2_867_472_896);
-        assert_eq!(
-            model.expected_sha256,
-            "f1c4e2356931393f3971c0694532dda07e40ba538611e2a7c02b72d63efa50f9"
-        );
-        assert!(local_model_storage_status()
-            .iter()
-            .any(|entry| entry.id == "milmmt_4b" && entry.deletable == (entry.stored_bytes > 0)));
     }
 
     #[test]
@@ -2732,78 +2311,6 @@ mod tests {
             "polite",
             "polite source became casual: {polite}"
         );
-        translator.close();
-    }
-
-    #[test]
-    #[ignore = "MiLMMT 4B 모델 다운로드와 llama-server가 필요합니다"]
-    fn live_milmmt_4b_preserves_casual_register_and_reported_wordplay() {
-        let mut translator = HyMtTranslator::new(HyMtModelSize::MiLmMt4B, "auto", "auto").unwrap();
-        translator.prepare().expect("start MiLMMT 4B server");
-
-        let casual = translator
-            .translate("오늘 같이 게임할래?", Language::Korean, Language::Japanese)
-            .expect("preserve Korean banmal as casual Japanese");
-        assert_eq!(
-            detect_speech_style(&casual, Language::Japanese),
-            "casual",
-            "casual source became polite: {casual}"
-        );
-        assert!(casual.contains("ゲーム"), "content was lost: {casual}");
-
-        let wordplay = translator
-            .translate("너구리는 너굴너굴", Language::Korean, Language::Japanese)
-            .expect("preserve the reported noun and playful repetition");
-        assert!(wordplay.contains("タヌキ"), "noun changed: {wordplay}");
-        assert!(
-            wordplay.contains("ヌグルヌグル"),
-            "wordplay changed: {wordplay}"
-        );
-        translator.close();
-    }
-
-    #[test]
-    #[ignore = "MiLMMT 4B 모델 다운로드와 llama-server가 필요합니다"]
-    fn live_milmmt_4b_does_not_add_unwritten_fillers() {
-        let mut translator = HyMtTranslator::new(HyMtModelSize::MiLmMt4B, "auto", "auto").unwrap();
-        translator.prepare().expect("start MiLMMT 4B server");
-        let translated = translator
-            .translate(
-                "음\n말할 때 모델은 무조건 CLI로 고정하는 게 좋으려나\n빠르긴한데 뭔가 좀 많이 별론데 번역 퀄리티가",
-                Language::Korean,
-                Language::Japanese,
-            )
-            .expect("translate the reported MiLMMT regression case");
-        eprintln!("MiLMMT regression output: {translated}");
-        assert!(!regex::Regex::new(r"(?m)^(?:ヤ|えー)[、,，]")
-            .unwrap()
-            .is_match(&translated));
-        assert!(translated.contains("CLI"), "content was lost: {translated}");
-        translator.close();
-    }
-
-    #[test]
-    #[ignore = "MiLMMT 4B 모델 다운로드와 llama-server가 필요합니다"]
-    fn live_milmmt_4b_does_not_return_korean_for_a_japanese_target() {
-        let mut translator = HyMtTranslator::new(HyMtModelSize::MiLmMt4B, "auto", "auto").unwrap();
-        translator.prepare().expect("start MiLMMT 4B server");
-
-        for source in [
-            "이제 제대로 되는 건가",
-            "뭔데 한국어로 번역하냐 한국어를",
-            "웅냥냥",
-        ] {
-            let translated = translator
-                .translate(source, Language::Korean, Language::Japanese)
-                .unwrap_or_else(|error| {
-                    panic!("translate the reported source-language regression case: source={source}; error={error}")
-                });
-            assert_ne!(
-                detect_explicit_language(&translated),
-                Language::Korean,
-                "Japanese target stayed in Korean: source={source}; translated={translated}"
-            );
-        }
         translator.close();
     }
 }

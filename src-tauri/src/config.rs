@@ -134,7 +134,7 @@ impl AppConfig {
         if object
             .get("translator")
             .and_then(Value::as_str)
-            .is_some_and(|value| matches!(value, "kanana" | "original"))
+            .is_some_and(|value| matches!(value, "kanana" | "original" | "milmmt_4b"))
         {
             object.insert(
                 "translator".to_string(),
@@ -152,7 +152,7 @@ impl AppConfig {
         if object
             .get("outgoing_translator")
             .and_then(Value::as_str)
-            .is_some_and(|value| matches!(value, "kanana" | "original"))
+            .is_some_and(|value| matches!(value, "kanana" | "original" | "milmmt_4b"))
         {
             object.insert(
                 "outgoing_translator".to_string(),
@@ -273,10 +273,7 @@ impl AppConfig {
 }
 
 fn is_local_translator(value: &str) -> bool {
-    matches!(
-        value,
-        "hymt_1_8b" | "hymt_7b" | "translategemma_4b" | "milmmt_4b"
-    )
+    matches!(value, "hymt_1_8b" | "hymt_7b" | "translategemma_4b")
 }
 
 pub struct ConfigStore {
@@ -528,11 +525,16 @@ mod tests {
             .expect("select TranslateGemma local model");
         assert_eq!(experiment.translator, "translategemma_4b");
         assert_eq!(experiment.outgoing_translator, "translategemma_4b");
+    }
 
-        let xiaomi_experiment = experiment
-            .patched(json!({"translator": "milmmt_4b"}))
-            .expect("select MiLMMT local model");
-        assert_eq!(xiaomi_experiment.translator, "milmmt_4b");
-        assert_eq!(xiaomi_experiment.outgoing_translator, "milmmt_4b");
+    #[test]
+    fn removed_milmmt_selection_migrates_to_the_default_local_model() {
+        let migrated = AppConfig::from_value(json!({
+            "translator": "milmmt_4b",
+            "outgoing_translator": "milmmt_4b"
+        }))
+        .expect("migrate removed MiLMMT model");
+        assert_eq!(migrated.translator, "hymt_1_8b");
+        assert_eq!(migrated.outgoing_translator, "hymt_1_8b");
     }
 }

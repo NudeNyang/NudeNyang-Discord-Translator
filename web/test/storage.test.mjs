@@ -24,7 +24,8 @@ test("storage management exposes downloaded models and SQLite history cleanup", 
   assert.match(rustMain, /storage_status_get/);
   assert.match(rustMain, /local_model_delete/);
   assert.match(rustMain, /translation_cache_clear/);
-  assert.match(script, /\["milmmt_4b", "MiLMMT 4B Q4 \(실험·약 2\.9GB\)"\]/);
+  assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
+  assert.match(model, /remove_retired_milmmt_files/);
 });
 
 test("storage navigation sits immediately above app information", () => {

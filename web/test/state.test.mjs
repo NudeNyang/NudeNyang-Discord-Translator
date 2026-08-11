@@ -19,14 +19,14 @@ test("an active partial model download is labelled as downloading in storage", (
   assert.deepEqual(
     localModelStorageDisplay(
       {
-        label: "MiLMMT-46 4B Q4_K_M",
+        label: "TranslateGemma 4B Q4_K_M",
         bundled: false,
         deletable: true,
         storedBytes: 1_147_489_151,
         expectedBytes: 2_867_472_896,
       },
       {
-        model: "MiLMMT-46 4B Q4_K_M",
+        model: "TranslateGemma 4B Q4_K_M",
         phase: "downloading",
         downloaded: 1_512_148_426,
         total: 2_867_472_896,

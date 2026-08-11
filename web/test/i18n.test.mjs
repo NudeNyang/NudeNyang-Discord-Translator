@@ -65,13 +65,6 @@ test("quality-first Codex model labels are translated", () => {
   );
 });
 
-test("experimental MiLMMT model labels are translated", () => {
-  assert.equal(
-    translateCopy("en", "MiLMMT 4B Q4 (실험·약 2.9GB)"),
-    "MiLMMT 4B Q4 (experimental · about 2.9GB)",
-  );
-});
-
 test("local engine notices describe every selectable local model", () => {
   assert.equal(translateCopy("en", "VRAM 보호"), "VRAM protection");
   assert.equal(
@@ -172,7 +165,6 @@ test("backend runtime notices and provider details do not leak Korean into other
     "번역할 이미지 텍스트를 찾지 못했습니다.",
     "이미지에서 3개 글자 영역을 번역했습니다.",
     "표시 번역은 Hy-MT2 1.8B Q4 (경량·기본), 실시간 통역은 Claude (품질 최우선)을 사용합니다.",
-    "MiLMMT 4B Q4 (실험·약 2.9GB) 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
     "ChatGPT 계정으로 연결되어 있습니다.",
     "Codex CLI는 설치되어 있지만 ChatGPT 로그인이 필요합니다.",
     "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다.",

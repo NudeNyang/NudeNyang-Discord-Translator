@@ -118,7 +118,7 @@ test("display translation and real-time interpretation choose models independent
   assert.match(markup, /번역을 꺼도 모델을 메모리에 유지합니다/);
   assert.doesNotMatch(markup, /Hy-MT2 실행 장치/);
   assert.match(script, /outgoing_translator: TRANSLATOR_OPTIONS/);
-  assert.match(script, /\["milmmt_4b", "MiLMMT 4B Q4 \(실험·약 2\.9GB\)"\]/);
+  assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
 });
 
 test("convenience panel exposes global toggles and editable composer shortcuts", () => {

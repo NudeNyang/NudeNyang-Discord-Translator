@@ -1131,6 +1131,14 @@ fn create_tray(app: &tauri::App) -> tauri::Result<()> {
 
 fn main() {
     let _ = diagnostics::initialize(env!("CARGO_PKG_VERSION"));
+    match translation::hymt::remove_retired_milmmt_files() {
+        Ok(removed_bytes) if removed_bytes > 0 => diagnostics::info(
+            "migration",
+            &format!("removed retired local model files; bytes={removed_bytes}"),
+        ),
+        Ok(_) => {}
+        Err(error) => diagnostics::warn("migration", &error),
+    }
     let config = ConfigStore::load_default().expect("NudeNyang Translator 설정을 읽지 못했습니다");
     let initial_config = config
         .get()

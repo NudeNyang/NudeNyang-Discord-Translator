@@ -34,7 +34,6 @@ const COPY = Object.freeze({
   "실시간 통역 모델": ["Real-time interpretation model", "リアルタイム通訳モデル", "实时翻译模型"],
   "내가 입력한 메시지를 번역할 모델입니다.": ["Used to translate messages you type.", "入力したメッセージを翻訳するモデルです。", "用于翻译你输入的消息。"],
   "TranslateGemma 4B Q4 (실험·약 2.5GB)": ["TranslateGemma 4B Q4 (experimental · about 2.5GB)", "TranslateGemma 4B Q4（実験・約2.5GB）", "TranslateGemma 4B Q4（实验 · 约2.5GB）"],
-  "MiLMMT 4B Q4 (실험·약 2.9GB)": ["MiLMMT 4B Q4 (experimental · about 2.9GB)", "MiLMMT 4B Q4（実験・約2.9GB）", "MiLMMT 4B Q4（实验 · 约2.9GB）"],
   "GPT-5.6 (품질 최우선)": ["GPT-5.6 (quality first)", "GPT-5.6（品質最優先）", "GPT-5.6（质量优先）"],
   "Claude (품질 최우선)": ["Claude (quality first)", "Claude（品質最優先）", "Claude（质量优先）"],
   "Gemini (품질 최우선)": ["Gemini (quality first)", "Gemini（品質最優先）", "Gemini（质量优先）"],

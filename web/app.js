@@ -36,7 +36,6 @@ const TRANSLATOR_OPTIONS = [
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)"],
   ["translategemma_4b", "TranslateGemma 4B Q4 (실험·약 2.5GB)"],
-  ["milmmt_4b", "MiLMMT 4B Q4 (실험·약 2.9GB)"],
   ["chatgpt", "GPT-5.6 (품질 최우선)"],
   ["claude", "Claude (품질 최우선)"],
   ["gemini", "Gemini (품질 최우선)"],
