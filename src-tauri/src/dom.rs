@@ -142,10 +142,23 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       });
     }
   }
-  for (const root of document.querySelectorAll('[class*="postTitleText"]')) {
+  const forumTitleSelector = [
+    '[class*="postTitleText"]',
+    'li[class*="container_"][class*="card_"] h3[class*="title__"]'
+  ].join(',');
+  for (const root of document.querySelectorAll(forumTitleSelector)) {
     if (!isVisible(root)) continue;
     const id = ensureRootId(root, 'data-dto-forum-title-id', 'forum-title');
     out.push(...parts('forum-title', id, root));
+  }
+  const forumTagSelector = [
+    '[data-list-item-id*="-tags-navigator___forum-tag-"]',
+    '[class*="tagPill__"]'
+  ].join(',');
+  for (const root of document.querySelectorAll(forumTagSelector)) {
+    if (!isVisible(root)) continue;
+    const id = ensureRootId(root, 'data-dto-forum-tag-id', 'forum-tag');
+    out.push(...parts('forum-tag', id, root));
   }
   const headingSelector = [
     'h1[class*="title__"]',
@@ -212,6 +225,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
     else if (change.kind === 'reply') root = document.querySelector(`[data-dto-reply-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'embed') root = document.querySelector(`[data-dto-root-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'forum-title') root = document.querySelector(`[data-dto-forum-title-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'forum-tag') root = document.querySelector(`[data-dto-forum-tag-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'heading') root = document.querySelector(`[data-dto-heading-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'channel') {
@@ -275,6 +289,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
       else if (change.kind === 'reply') root = document.querySelector(`[data-dto-reply-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'embed') root = document.querySelector(`[data-dto-root-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'forum-title') root = document.querySelector(`[data-dto-forum-title-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'forum-tag') root = document.querySelector(`[data-dto-forum-tag-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'heading') root = document.querySelector(`[data-dto-heading-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'channel') {
@@ -427,6 +442,9 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     else if (change.kind === 'forum-title') root = document.querySelector(
       `[data-dto-forum-title-id="${{CSS.escape(change.id)}}"]`
     );
+    else if (change.kind === 'forum-tag') root = document.querySelector(
+      `[data-dto-forum-tag-id="${{CSS.escape(change.id)}}"]`
+    );
     else if (change.kind === 'heading') root = document.querySelector(
       `[data-dto-heading-id="${{CSS.escape(change.id)}}"]`
     );
@@ -514,6 +532,64 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("[id^=\"chat-messages-\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id^=\"chat-messages___\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"messageContent_\"]"));
+    }
+
+    #[test]
+    fn snapshot_supports_current_forum_cards_and_tags() {
+        assert!(SNAPSHOT_SCRIPT
+            .contains("li[class*=\"container_\"][class*=\"card_\"] h3[class*=\"title__\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id*=\"-tags-navigator___forum-tag-\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"tagPill__\"]"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("data-dto-forum-tag-id"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("data-dto-forum-tag-id"));
+
+        let part = DomPart {
+            kind: "forum-tag".to_string(),
+            item_id: "dto-forum-tag-1".to_string(),
+            index: 0,
+            text: "動画編集".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "동영상 편집")]).unwrap();
+        assert!(script.contains("data-dto-forum-tag-id"));
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러와 포럼 채널 화면이 필요해"]
+    fn live_forum_titles_and_tags_are_snapshotted() {
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        client.connect().unwrap();
+
+        let snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();
+        let title = snapshot
+            .parts
+            .iter()
+            .find(|part| {
+                part.kind == "forum-title" && part.text == "自己紹介用フォーラムの投稿方法について"
+            })
+            .cloned()
+            .expect("포럼 게시글 제목이 스냅샷에 포함되어야 해");
+        let tag = snapshot
+            .parts
+            .iter()
+            .find(|part| part.kind == "forum-tag" && part.text == "動画編集")
+            .cloned()
+            .expect("포럼 태그가 스냅샷에 포함되어야 해");
+        assert!(snapshot
+            .parts
+            .iter()
+            .any(|part| part.kind == "forum-tag" && part.text == "録画"));
+
+        let script = apply_script(&[
+            DomChange::new(&title, "포럼 제목 번역 검증"),
+            DomChange::new(&tag, "포럼 태그 번역 검증"),
+        ])
+        .unwrap();
+        let applied = client.evaluate(&script, false).unwrap();
+        assert_eq!(applied["applied"], 2);
+        client.evaluate(RESTORE_TEXT_SCRIPT, false).unwrap();
+        client.close();
     }
 
     #[test]
