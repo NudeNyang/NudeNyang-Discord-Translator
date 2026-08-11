@@ -96,6 +96,13 @@ const OPTIONS = {
     ["ja", "日本語"],
     ["zh", "简体中文"],
   ],
+  translation_history_retention_days: [
+    [0, "사용 안 함"],
+    [7, "7일 보관"],
+    [30, "30일 보관"],
+    [90, "90일 보관"],
+    [180, "180일 보관"],
+  ],
 };
 
 const state = {
@@ -1029,6 +1036,9 @@ function renderSelect(element) {
           }
         }
         await applySettingsPatch({ [field]: value });
+        if (field === "translation_history_retention_days") {
+          window.setTimeout(() => loadStorageStatus().catch(() => {}), 250);
+        }
       } catch (error) {
         setSelectValue(field, previous);
         if (field === "ui_theme") applyTheme(previous);
@@ -1057,7 +1067,7 @@ function renderSelect(element) {
     element.classList.add("open");
     trigger.setAttribute("aria-expanded", "true");
     const options = [...menu.querySelectorAll(".select-option")];
-    const current = options.findIndex(option => option.dataset.value === state.selectValues[field]);
+    const current = options.findIndex(option => option.dataset.value === String(state.selectValues[field]));
     const next = event.key === "ArrowDown"
       ? (current + 1) % options.length
       : (current - 1 + options.length) % options.length;
@@ -1071,7 +1081,7 @@ function setSelectValue(field, value) {
   const label = OPTIONS[field].find(item => item[0] === value)?.[1] || value;
   element.querySelector(".select-trigger").textContent = translateCopy(currentUiLanguage(), label);
   for (const option of element.querySelectorAll(".select-option")) {
-    option.setAttribute("aria-selected", String(option.dataset.value === value));
+    option.setAttribute("aria-selected", String(option.dataset.value === String(value)));
   }
   if (field === "outgoing_translator") renderOutgoingModelGuidance();
 }

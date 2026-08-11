@@ -85,6 +85,7 @@ pub struct AppConfig {
     pub auto_update: bool,
     pub update_repository: String,
     pub discord_auto_restart_consent_granted: bool,
+    pub translation_history_retention_days: u32,
     pub chat_region: RegionConfig,
     pub hotkeys: HotkeyConfig,
 }
@@ -117,6 +118,7 @@ impl Default for AppConfig {
             auto_update: true,
             update_repository: DEFAULT_UPDATE_REPOSITORY.to_string(),
             discord_auto_restart_consent_granted: false,
+            translation_history_retention_days: 0,
             chat_region: RegionConfig::default(),
             hotkeys: HotkeyConfig::default(),
         }
@@ -223,6 +225,19 @@ impl AppConfig {
             object.insert(
                 "outgoing_target_language".to_string(),
                 Value::String("auto".to_string()),
+            );
+        }
+        if object
+            .get("translation_history_retention_days")
+            .is_some_and(|value| {
+                !value
+                    .as_u64()
+                    .is_some_and(|value| matches!(value, 0 | 7 | 30 | 90 | 180))
+            })
+        {
+            object.insert(
+                "translation_history_retention_days".to_string(),
+                Value::from(0),
             );
         }
 
@@ -442,10 +457,28 @@ mod tests {
         assert_eq!(restored.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
         assert_eq!(restored.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert!(restored.disabled_providers.is_empty());
+        assert_eq!(restored.translation_history_retention_days, 0);
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
         assert_eq!(claude.translator, "claude");
+    }
+
+    #[test]
+    fn translation_history_retention_accepts_supported_periods_and_resets_invalid_values() {
+        for days in [0, 7, 30, 90, 180] {
+            let config = AppConfig::from_value(json!({
+                "translation_history_retention_days": days
+            }))
+            .expect("supported retention period");
+            assert_eq!(config.translation_history_retention_days, days);
+        }
+
+        let invalid = AppConfig::from_value(json!({
+            "translation_history_retention_days": "14"
+        }))
+        .expect("invalid retention period should reset");
+        assert_eq!(invalid.translation_history_retention_days, 0);
     }
 
     #[test]

@@ -177,11 +177,15 @@
                   <div id="local-model-storage-list" class="local-model-storage-list" aria-live="polite"></div>
                 </div>
                 <section class="storage-history-section" aria-labelledby="storage-history-heading">
-                  <div class="panel-subheading"><h3 id="storage-history-heading">번역 기록</h3><p>로컬에 저장된 번역 데이터의 사용량을 관리합니다.</p></div>
+                  <div class="panel-subheading"><h3 id="storage-history-heading">번역 기록</h3><p>로컬에 저장된 번역 데이터의 용량을 관리합니다.</p></div>
                   <div class="settings-card storage-history-card">
                     <div class="storage-cache-row">
                       <div><h3>SQLite 번역 기록</h3><p>저장된 번역 결과와 보낸 메시지 원문을 정리합니다. 설정, 채널별 언어 및 인증 정보는 유지됩니다.</p><small id="translation-cache-summary">저장 공간을 확인하고 있습니다.</small></div>
                       <button class="button secondary storage-action" id="clear-translation-cache" type="button">기록 정리</button>
+                    </div>
+                    <div class="storage-cache-row storage-retention-row">
+                      <div><h3>자동 정리</h3><p>보관 기간이 지난 번역 결과와 보낸 메시지 원문을 자동으로 정리합니다.</p></div>
+                      <div class="custom-select storage-retention-select" data-field="translation_history_retention_days"></div>
                     </div>
                   </div>
                 </section>

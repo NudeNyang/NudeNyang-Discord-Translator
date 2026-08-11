@@ -43,6 +43,7 @@ use crate::translation::{
 const CDP_PORT: u16 = 9222;
 const MAX_BATCH_ITEMS: usize = 32;
 const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
+const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 
 type Locator = (String, String, usize);
 type PendingKey = (u64, String, String, usize, String);
@@ -421,6 +422,7 @@ fn run_controller(
     let mut ui_ready = false;
     let mut stopped = false;
     let mut pending_control = None;
+    let mut last_history_cleanup_at = None;
 
     while !stopped {
         let started = Instant::now();
@@ -432,6 +434,8 @@ fn run_controller(
             match control {
                 Control::ApplyConfig(updated) => {
                     let updated = *updated;
+                    let history_retention_changed = updated.translation_history_retention_days
+                        != config.translation_history_retention_days;
                     let target_changed = updated.target_language != config.target_language;
                     let mut requested_preparation = translator_preparation_plan(&config, &updated);
                     if ui_ready && requested_preparation.any() {
@@ -460,6 +464,9 @@ fn run_controller(
                         image_ui_needs_cleanup = client.is_none();
                     }
                     config = updated;
+                    if history_retention_changed {
+                        last_history_cleanup_at = None;
+                    }
                     update_status(&status, |runtime| {
                         runtime.enabled = config.enabled;
                         runtime.controller_enabled =
@@ -647,6 +654,14 @@ fn run_controller(
         if stopped {
             break;
         }
+
+        maybe_cleanup_translation_history(
+            &config,
+            outgoing_original_store.as_ref(),
+            &worker_tx,
+            &outgoing_worker_tx,
+            &mut last_history_cleanup_at,
+        );
 
         while let Ok(prepared) = preparation_rx.try_recv() {
             match prepared {
@@ -893,6 +908,48 @@ fn run_controller(
     }
     if let Some(mut client) = client {
         client.close();
+    }
+}
+
+fn maybe_cleanup_translation_history(
+    config: &AppConfig,
+    store: Option<&TranslationCache>,
+    worker_tx: &mpsc::Sender<WorkerCommand>,
+    outgoing_worker_tx: &mpsc::Sender<OutgoingWorkerCommand>,
+    last_cleanup_at: &mut Option<Instant>,
+) {
+    let retention_days = config.translation_history_retention_days;
+    if retention_days == 0 {
+        *last_cleanup_at = None;
+        return;
+    }
+    if last_cleanup_at
+        .as_ref()
+        .is_some_and(|last| last.elapsed() < HISTORY_CLEANUP_INTERVAL)
+    {
+        return;
+    }
+    *last_cleanup_at = Some(Instant::now());
+    let result = store
+        .ok_or_else(|| "SQLite translation history store is unavailable".to_string())
+        .and_then(|store| store.cleanup_expired_records(retention_days));
+    match result {
+        Ok(result) if result.removed_records > 0 => {
+            let _ = worker_tx.send(WorkerCommand::ClearCacheMemory);
+            let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::ClearCacheMemory);
+            crate::diagnostics::info(
+                "translation-cache",
+                &format!(
+                    "Automatically removed {} records older than {} days",
+                    result.removed_records, retention_days
+                ),
+            );
+        }
+        Ok(_) => {}
+        Err(error) => crate::diagnostics::warn(
+            "translation-cache",
+            &format!("Automatic history cleanup failed: {error}"),
+        ),
     }
 }
 

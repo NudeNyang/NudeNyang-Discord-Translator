@@ -385,7 +385,28 @@ impl TranslationCache {
     }
 
     pub fn clear_user_data(&self) -> Result<CacheCleanupResult, String> {
+        self.cleanup_user_data_before(None)
+    }
+
+    pub fn cleanup_expired_records(
+        &self,
+        retention_days: u32,
+    ) -> Result<CacheCleanupResult, String> {
+        if retention_days == 0 {
+            let status = self.storage_status()?;
+            return Ok(CacheCleanupResult {
+                removed_records: 0,
+                bytes_before: status.database_bytes,
+                bytes_after: status.database_bytes,
+            });
+        }
+        let cutoff = now_seconds() - f64::from(retention_days) * 24.0 * 60.0 * 60.0;
+        self.cleanup_user_data_before(Some(cutoff))
+    }
+
+    fn cleanup_user_data_before(&self, cutoff: Option<f64>) -> Result<CacheCleanupResult, String> {
         let before = self.storage_status()?;
+        let removed_records;
         {
             let mut connection = self
                 .connection
@@ -394,25 +415,42 @@ impl TranslationCache {
             let transaction = connection
                 .transaction()
                 .map_err(|error| format!("번역 기록 정리를 시작하지 못했습니다: {error}"))?;
-            transaction
-                .execute("DELETE FROM translations", [])
-                .map_err(|error| format!("번역 결과를 정리하지 못했습니다: {error}"))?;
-            transaction
-                .execute("DELETE FROM outgoing_originals", [])
-                .map_err(|error| format!("보낸 메시지 원문을 정리하지 못했습니다: {error}"))?;
+            let removed_translations = if let Some(cutoff) = cutoff {
+                transaction.execute(
+                    "DELETE FROM translations WHERE updated_at < ?1",
+                    params![cutoff],
+                )
+            } else {
+                transaction.execute("DELETE FROM translations", [])
+            }
+            .map_err(|error| format!("번역 결과를 정리하지 못했습니다: {error}"))?;
+            let removed_outgoing_originals = if let Some(cutoff) = cutoff {
+                transaction.execute(
+                    "DELETE FROM outgoing_originals WHERE created_at < ?1",
+                    params![cutoff],
+                )
+            } else {
+                transaction.execute("DELETE FROM outgoing_originals", [])
+            }
+            .map_err(|error| format!("보낸 메시지 원문을 정리하지 못했습니다: {error}"))?;
+            removed_records = (removed_translations + removed_outgoing_originals) as u64;
             transaction
                 .commit()
                 .map_err(|error| format!("번역 기록 정리를 완료하지 못했습니다: {error}"))?;
-            if let Err(error) = connection.execute_batch("VACUUM") {
-                crate::diagnostics::warn(
-                    "translation-cache",
-                    &format!("SQLite records cleared but compaction was deferred: {error}"),
-                );
+            if removed_records > 0 {
+                if let Err(error) = connection.execute_batch("VACUUM") {
+                    crate::diagnostics::warn(
+                        "translation-cache",
+                        &format!("SQLite records cleared but compaction was deferred: {error}"),
+                    );
+                }
             }
         }
-        self.clear_memory()?;
+        if removed_records > 0 {
+            self.clear_memory()?;
+        }
         Ok(CacheCleanupResult {
-            removed_records: before.translation_records + before.outgoing_original_records,
+            removed_records,
             bytes_before: before.database_bytes,
             bytes_after: std::fs::metadata(&self.path)
                 .map(|metadata| metadata.len())
@@ -456,22 +494,6 @@ impl TranslationCache {
                 ],
             )
             .map_err(|error| format!("보낸 메시지 원문을 저장하지 못했습니다: {error}"))?;
-        connection
-            .execute(
-                "DELETE FROM outgoing_originals WHERE created_at < ?1",
-                params![now_seconds() - 30.0 * 24.0 * 60.0 * 60.0],
-            )
-            .map_err(|error| format!("오래된 보낸 메시지 원문을 정리하지 못했습니다: {error}"))?;
-        connection
-            .execute(
-                "DELETE FROM outgoing_originals WHERE rowid NOT IN (\
-                   SELECT rowid FROM outgoing_originals ORDER BY created_at DESC LIMIT 2000\
-                 )",
-                [],
-            )
-            .map_err(|error| {
-                format!("보낸 메시지 원문 저장 한도를 적용하지 못했습니다: {error}")
-            })?;
         Ok(())
     }
 
@@ -935,6 +957,75 @@ mod tests {
             .outgoing_originals_for_channel("/channels/1/2", 20)
             .unwrap()
             .is_empty());
+        assert_eq!(
+            cache.outgoing_channel_languages().unwrap(),
+            HashMap::from([("/channels/1/2".to_string(), "ja".to_string())])
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn expired_cleanup_respects_retention_and_preserves_channel_preferences() {
+        let path = temporary_cache_path("expired-cleanup");
+        let cache = TranslationCache::open(path.clone(), 8).unwrap();
+        cache
+            .put("old", "old", "en", "ko", "오래됨", "test:v1")
+            .unwrap();
+        cache
+            .put("fresh", "fresh", "en", "ko", "최신", "test:v1")
+            .unwrap();
+        cache
+            .put_outgoing_original(&OutgoingOriginalRecord {
+                message_id: "old-message".to_string(),
+                channel_key: "/channels/1/2".to_string(),
+                original_text: "오래된 원문".to_string(),
+                sent_text: "old message".to_string(),
+                part_number: 1,
+                total_parts: 1,
+                created_at: super::now_seconds() - 8.0 * 24.0 * 60.0 * 60.0,
+            })
+            .unwrap();
+        cache
+            .put_outgoing_original(&OutgoingOriginalRecord {
+                message_id: "fresh-message".to_string(),
+                channel_key: "/channels/1/2".to_string(),
+                original_text: "최신 원문".to_string(),
+                sent_text: "fresh message".to_string(),
+                part_number: 1,
+                total_parts: 1,
+                created_at: super::now_seconds(),
+            })
+            .unwrap();
+        cache
+            .set_outgoing_channel_language("/channels/1/2", "ja")
+            .unwrap();
+        cache
+            .connection
+            .lock()
+            .unwrap()
+            .execute(
+                "UPDATE translations SET updated_at=?1 WHERE source_hash='old'",
+                rusqlite::params![super::now_seconds() - 8.0 * 24.0 * 60.0 * 60.0],
+            )
+            .unwrap();
+
+        let result = cache.cleanup_expired_records(7).unwrap();
+        assert_eq!(result.removed_records, 2);
+        assert_eq!(cache.memory_size().unwrap(), 0);
+        assert_eq!(cache.get("old", "ko", "test:v1").unwrap(), None);
+        assert_eq!(
+            cache.get("fresh", "ko", "test:v1").unwrap().as_deref(),
+            Some("최신")
+        );
+        assert_eq!(
+            cache
+                .outgoing_originals_for_channel("/channels/1/2", 20)
+                .unwrap()
+                .iter()
+                .map(|record| record.message_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["fresh-message"]
+        );
         assert_eq!(
             cache.outgoing_channel_languages().unwrap(),
             HashMap::from([("/channels/1/2".to_string(), "ja".to_string())])

@@ -8,6 +8,12 @@ const dom = readFileSync(new URL("../../src-tauri/src/dom.rs", import.meta.url),
 const cache = readFileSync(new URL("../../src-tauri/src/cache.rs", import.meta.url), "utf8");
 const imageTranslation = readFileSync(new URL("../../src-tauri/src/image_translation.rs", import.meta.url), "utf8");
 
+function outgoingComparableMessageText() {
+  const match = outgoing.match(/function comparableMessageText\(value\) \{([\s\S]*?)\n  \}/);
+  assert.ok(match, "Discord message comparison normalizer must exist");
+  return Function("value", match[1]);
+}
+
 test("outgoing translation gives Enter and configurable action shortcuts stable meanings", () => {
   assert.match(outgoing, /__SEND_IMMEDIATELY_SHORTCUT__/);
   assert.match(outgoing, /__REVIEW_BEFORE_SEND_SHORTCUT__/);
@@ -134,6 +140,19 @@ test("outgoing translation preserves Discord Slate mention entities", () => {
   assert.match(outgoing, /if \(mentionPlan && !mentionPlan\.supported\) return/);
   assert.match(outgoing, /function hasActiveAutocomplete\(editor\)/);
   assert.match(outgoing, /if \(hasActiveAutocomplete\(editor\)\) return/);
+});
+
+test("outgoing original matching treats rendered Discord markdown as the same message", () => {
+  const comparableMessageText = outgoingComparableMessageText();
+
+  assert.equal(
+    comparableMessageText("# 안내\n- 첫 번째 항목\n- 두 번째 항목"),
+    comparableMessageText("안내\n첫 번째 항목\n두 번째 항목"),
+  );
+  assert.equal(
+    comparableMessageText("> **중요**\n1. [문서](https://example.com) 확인"),
+    comparableMessageText("중요\n문서 확인"),
+  );
 });
 
 test("outgoing translation retains exact composer line breaks and Discord formatting", () => {

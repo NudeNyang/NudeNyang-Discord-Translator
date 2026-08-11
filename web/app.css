@@ -1000,7 +1000,7 @@ input:focus-visible,
   border-top: 1px solid var(--border);
 }
 
-.storage-history-card .storage-cache-row {
+.storage-history-card .storage-cache-row:first-child {
   border-top: 0;
 }
 
@@ -1035,6 +1035,10 @@ input:focus-visible,
 .storage-action {
   min-width: 92px;
   white-space: nowrap;
+}
+
+.storage-retention-select {
+  width: 180px;
 }
 
 .provider-row {
@@ -1499,6 +1503,10 @@ input:focus-visible,
   }
 
   .storage-action {
+    width: 100%;
+  }
+
+  .storage-retention-select {
     width: 100%;
   }
 

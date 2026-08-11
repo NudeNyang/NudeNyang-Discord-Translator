@@ -12,6 +12,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   ui_theme: "system",
   ui_language: "auto",
   discord_auto_restart_consent_granted: false,
+  translation_history_retention_days: 0,
   hotkeys: {
     toggle_translation: "F12",
     toggle_outgoing_translation: "F8",
@@ -73,12 +74,18 @@ export function normalizeConfig(value = {}) {
   const uiLanguage = ["auto", "ko", "en", "ja", "zh"].includes(value.ui_language)
     ? value.ui_language
     : DEFAULT_CONFIG.ui_language;
+  const retentionDays = [0, 7, 30, 90, 180].includes(
+    Number(value.translation_history_retention_days),
+  )
+    ? Number(value.translation_history_retention_days)
+    : DEFAULT_CONFIG.translation_history_retention_days;
   return {
     ...DEFAULT_CONFIG,
     ...value,
     target_language: targetLanguage,
     outgoing_target_language: outgoingTargetLanguage,
     ui_language: uiLanguage,
+    translation_history_retention_days: retentionDays,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),

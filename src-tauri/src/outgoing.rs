@@ -110,6 +110,21 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     }
     return values.join('');
   }
+  function comparableMessageText(value) {
+    const text = String(value || '')
+      .replace(/\r\n?/g, '\n')
+      .replace(/[\u00a0\u200b]/g, ' ')
+      .replace(/```[^\n]*\n([\s\S]*?)```/g, '$1')
+      .replace(/^\s{0,3}-#\s+/gm, '')
+      .replace(/^\s{0,3}#{1,3}\s+/gm, '')
+      .replace(/^\s{0,3}>{1,3}\s?/gm, '')
+      .replace(/^\s{0,3}(?:[-+*]|\d+[.)])\s+/gm, '')
+      .replace(/^[•◦▪‣]\s*/gm, '')
+      .replace(/\[([^\]]+)\]\((?:https?:\/\/|mailto:)[^)]+\)/g, '$1')
+      .replace(/\\([\\`*_{}\[\]()#+\-.!|>])/g, '$1')
+      .replace(/[*_~|`]/g, '');
+    return text.split('\n').map(line => line.trim()).filter(Boolean).join('\n');
+  }
   function recentMessages() {
     return [...document.querySelectorAll('[id^="message-content-"]')]
       .filter(node => !node.closest('[id^="message-reply-context-"]'))
@@ -557,7 +572,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const root = roots.slice().reverse().find(candidate => {
             const messageId = discordMessageId(candidate);
             if (!messageId || item.existing_message_ids.includes(messageId)) return false;
-            return originalText(candidate).trim() === item.sent_text;
+            return comparableMessageText(originalText(candidate)) === comparableMessageText(item.sent_text);
           });
           if (!root) {
             remaining.push(item);
@@ -975,6 +990,21 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
     }
     return (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
   }
+  function comparableMessageText(value) {
+    const text = String(value || '')
+      .replace(/\r\n?/g, '\n')
+      .replace(/[\u00a0\u200b]/g, ' ')
+      .replace(/```[^\n]*\n([\s\S]*?)```/g, '$1')
+      .replace(/^\s{0,3}-#\s+/gm, '')
+      .replace(/^\s{0,3}#{1,3}\s+/gm, '')
+      .replace(/^\s{0,3}>{1,3}\s?/gm, '')
+      .replace(/^\s{0,3}(?:[-+*]|\d+[.)])\s+/gm, '')
+      .replace(/^[•◦▪‣]\s*/gm, '')
+      .replace(/\[([^\]]+)\]\((?:https?:\/\/|mailto:)[^)]+\)/g, '$1')
+      .replace(/\\([\\`*_{}\[\]()#+\-.!|>])/g, '$1')
+      .replace(/[*_~|`]/g, '');
+    return text.split('\n').map(line => line.trim()).filter(Boolean).join('\n');
+  }
   function ensureView(root, record, defaultMode) {
     let view = root.nextElementSibling;
     if (view?.getAttribute('data-nt-outgoing-original-view') !== record.message_id) {
@@ -1038,8 +1068,8 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
           if (rootsById.has(record.message_id)) continue;
           const confirmed = roots.slice().reverse().find(root => {
             if (used.has(root)) return false;
-            const text = (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
-            return text === record.sent_text;
+            const text = comparableMessageText(root.innerText || root.textContent || '');
+            return text === comparableMessageText(record.sent_text);
           });
           if (!confirmed) continue;
           const confirmedId = messageId(confirmed);
@@ -1078,8 +1108,8 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
             detachView(root);
             continue;
           }
-          const currentText = restoreSentText(root);
-          if (currentText !== record.sent_text) {
+          const currentText = comparableMessageText(restoreSentText(root));
+          if (currentText !== comparableMessageText(record.sent_text)) {
             detachView(root);
             continue;
           }
@@ -1233,7 +1263,7 @@ pub fn outgoing_originals_ui_script(
         ))
 }
 
-pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 17;
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 18;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();
@@ -1558,6 +1588,32 @@ mod tests {
         assert!(!script.contains("nt-outgoing-original-label"));
         assert!(script.contains("data-nt-outgoing-original"));
         assert!(OUTGOING_BINDINGS_SCRIPT.contains("bindings"));
+    }
+
+    #[test]
+    fn outgoing_original_matching_uses_discord_markdown_equivalence() {
+        let controller = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        let originals = outgoing_originals_ui_script("/channels/1/2", &[], "ko", true).unwrap();
+
+        assert!(controller.contains("function comparableMessageText(value)"));
+        assert!(controller.contains(
+            "comparableMessageText(originalText(candidate)) === comparableMessageText(item.sent_text)"
+        ));
+        assert!(originals.contains("function comparableMessageText(value)"));
+        assert!(
+            originals.contains("const currentText = comparableMessageText(restoreSentText(root))")
+        );
+        assert!(originals.contains("comparableMessageText(record.sent_text)"));
     }
 
     #[test]
