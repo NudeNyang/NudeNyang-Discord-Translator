@@ -174,10 +174,12 @@ $Manifest = [ordered]@{
         }
     }
 }
-$Manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $ReleaseDirectory 'latest.json') -Encoding utf8NoBOM
+$ManifestPath = Join-Path $ReleaseDirectory 'latest.json'
+$ManifestJson = $Manifest | ConvertTo-Json -Depth 6
+[IO.File]::WriteAllText($ManifestPath, $ManifestJson, [Text.UTF8Encoding]::new($false))
 
 $SizeMb = [math]::Round((Get-Item -LiteralPath $ReleaseInstaller).Length / 1MB, 1)
 Write-Host "베타 설치 파일: $ReleaseInstaller"
-Write-Host "업데이트 매니페스트: $(Join-Path $ReleaseDirectory 'latest.json')"
+Write-Host "업데이트 매니페스트: $ManifestPath"
 Write-Host "설치 파일 크기: $SizeMb MB"
 Write-Host "Hy-MT2 모델 포함: $($IncludeDefaultModel.IsPresent)"
