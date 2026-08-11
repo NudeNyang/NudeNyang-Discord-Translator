@@ -276,8 +276,7 @@ fn translator_preparation_plan(
     current: &AppConfig,
     updated: &AppConfig,
 ) -> TranslatorPreparationPlan {
-    let shared_settings_changed =
-        updated.hymt_device != current.hymt_device || updated.speech_style != current.speech_style;
+    let shared_settings_changed = updated.hymt_device != current.hymt_device;
     TranslatorPreparationPlan {
         display: updated.translator != current.translator || shared_settings_changed,
         outgoing: updated.outgoing_translator != current.outgoing_translator
@@ -1975,7 +1974,7 @@ fn make_translator(
         }
         "chatgpt" | "claude" | "gemini" => Ok(Box::new(SubscriptionCliTranslator::new(
             name,
-            &config.speech_style,
+            "auto",
             120,
             cache_root(),
         )?)),
@@ -1994,11 +1993,7 @@ fn make_local_translator(
     model_size: HyMtModelSize,
     progress_observer: Option<ModelProgressObserver>,
 ) -> Result<Box<dyn Translator>, String> {
-    let translator = HyMtTranslator::new(
-        model_size,
-        config.hymt_device.clone(),
-        config.speech_style.clone(),
-    )?;
+    let translator = HyMtTranslator::new(model_size, config.hymt_device.clone(), "auto")?;
     let translator = if let Some(observer) = progress_observer {
         translator.with_progress_observer(observer)
     } else {

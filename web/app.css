@@ -476,10 +476,6 @@ input:focus-visible,
   justify-self: start;
 }
 
-.common-card {
-  margin-top: 14px;
-}
-
 .image-feature-card {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);

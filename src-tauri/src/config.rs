@@ -82,7 +82,6 @@ pub struct AppConfig {
     pub disabled_providers: Vec<String>,
     pub hymt_device: String,
     pub keep_local_model_warm: bool,
-    pub speech_style: String,
     pub auto_update: bool,
     pub update_repository: String,
     pub discord_auto_restart_consent_granted: bool,
@@ -115,7 +114,6 @@ impl Default for AppConfig {
             disabled_providers: Vec::new(),
             hymt_device: "auto".to_string(),
             keep_local_model_warm: true,
-            speech_style: "auto".to_string(),
             auto_update: true,
             update_repository: DEFAULT_UPDATE_REPOSITORY.to_string(),
             discord_auto_restart_consent_granted: false,
@@ -202,16 +200,7 @@ impl AppConfig {
                 Value::String(DEFAULT_UPDATE_REPOSITORY.to_string()),
             );
         }
-        if object
-            .get("speech_style")
-            .and_then(Value::as_str)
-            .is_some_and(|value| !matches!(value, "auto" | "polite" | "casual"))
-        {
-            object.insert(
-                "speech_style".to_string(),
-                Value::String("auto".to_string()),
-            );
-        }
+        object.remove("speech_style");
         if object
             .get("ui_theme")
             .and_then(Value::as_str)
@@ -429,7 +418,7 @@ mod tests {
             "translator": "kanana",
             "kanana_device": "cuda",
             "update_repository": "NudeNyang/DiscordTranslateOverlay",
-            "speech_style": "invalid",
+            "speech_style": "casual",
             "ui_theme": "invalid"
         }))
         .expect("legacy config should migrate");
@@ -438,7 +427,10 @@ mod tests {
         assert_eq!(restored.translator, "hymt_1_8b");
         assert_eq!(restored.outgoing_translator, "hymt_1_8b");
         assert_eq!(restored.update_repository, "NudeNyang/NudeNyang-Translator");
-        assert_eq!(restored.speech_style, "auto");
+        assert!(serde_json::to_value(&restored)
+            .expect("serialize migrated config")
+            .get("speech_style")
+            .is_none());
         assert_eq!(restored.ui_theme, "system");
         assert_eq!(restored.ui_language, "auto");
         assert!(restored.keep_local_model_warm);

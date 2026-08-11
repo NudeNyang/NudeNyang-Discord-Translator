@@ -6,7 +6,6 @@ export const DEFAULT_CONFIG = Object.freeze({
   target_language: "ko",
   translator: "hymt_1_8b",
   outgoing_translator: "hymt_1_8b",
-  speech_style: "auto",
   hymt_device: "auto",
   keep_local_model_warm: true,
   capture_fps: 8,

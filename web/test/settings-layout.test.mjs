@@ -100,6 +100,8 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.match(markup, /id="outgoing-shortcut-hint">F8<\/kbd>/);
   assert.match(script, /elements\.translationShortcutHint\.textContent = state\.config\.hotkeys\.toggle_translation/);
   assert.match(script, /elements\.outgoingShortcutHint\.textContent = state\.config\.hotkeys\.toggle_outgoing_translation/);
+  assert.doesNotMatch(markup, /공통 번역 규칙|번역 말투|data-field="speech_style"/);
+  assert.doesNotMatch(script, /speech_style/);
 });
 
 test("display translation and outgoing interpretation present role-appropriate model choices", () => {

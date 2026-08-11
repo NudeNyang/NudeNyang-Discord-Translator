@@ -72,11 +72,6 @@ const OPTIONS = {
   ],
   translator: DISPLAY_TRANSLATOR_OPTIONS,
   outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
-  speech_style: [
-    ["auto", "원문 말투 유지 (자동)"],
-    ["polite", "항상 존댓말·격식체"],
-    ["casual", "항상 반말·비격식체"],
-  ],
   outgoing_target_language: [
     ["auto", "최근 대화에서 자동 감지"],
     ["ko", "한국어"],
