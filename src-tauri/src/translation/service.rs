@@ -8,6 +8,7 @@ use crate::cache::TranslationCache;
 use crate::language::{Language, LanguageDetector};
 use crate::text_split::split_for_translation;
 
+use super::discord_format::DiscordFormatTemplate;
 use super::protected_text::{protect_text, ProtectedText};
 use super::Translator;
 
@@ -61,6 +62,20 @@ impl TranslationService {
             .into_iter()
             .next()
             .ok_or_else(|| "번역 엔진이 결과를 반환하지 않았습니다.".to_string())
+    }
+
+    pub fn translate_for_discord(
+        &mut self,
+        text: &str,
+        target: Language,
+    ) -> Result<String, String> {
+        let template = DiscordFormatTemplate::parse(text);
+        let segments = template.translatable_texts();
+        if segments.is_empty() {
+            return Ok(text.to_string());
+        }
+        let translated = self.translate_many(&segments, target)?;
+        template.render(&translated)
     }
 
     pub fn translate_many(
@@ -411,6 +426,10 @@ mod tests {
 
     struct FailOnTextTranslator;
 
+    struct FormattingHostileTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -485,6 +504,52 @@ mod tests {
             } else {
                 Ok(format!("번역:{text}"))
             }
+        }
+    }
+
+    impl Translator for FormattingHostileTranslator {
+        fn display_name(&self) -> &str {
+            "formatting-hostile"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "formatting-hostile:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            self.inputs.lock().unwrap().push(text.to_string());
+            let translated = text
+                .replace("제목", "タイトル")
+                .replace("첫 항목", "最初の項目")
+                .replace("둘째", "二番目")
+                .replace("취소", "取り消し")
+                .replace("인용문", "引用文")
+                .replace("비밀", "秘密")
+                .replace("문서", "文書")
+                .replace(['\r', '\n'], " ")
+                .replace("# ", "")
+                .replace("- ", "")
+                .replace("> ", "")
+                .replace("**", "")
+                .replace("__", "")
+                .replace("~~", "")
+                .replace("||", "");
+            Ok(translated)
+        }
+
+        fn should_cache(
+            &self,
+            _source_text: &str,
+            _translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            false
         }
     }
 
@@ -616,6 +681,57 @@ mod tests {
         assert!(recorded.len() >= 2, "recorded inputs: {}", recorded.len());
         assert!(recorded.iter().all(|text| text.chars().count() <= 700));
         assert_eq!(translated, source);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn outgoing_translation_preserves_discord_markdown_and_line_layout() {
+        let path = cache_path("discord-formatting");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(FormattingHostileTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = concat!(
+            "# 제목\r\n",
+            "- **첫 항목**\r\n",
+            "  - __둘째__와 ~~취소~~\r\n",
+            "> ||비밀|| 인용문\r\n",
+            "[문서](https://example.com)\r\n",
+            "`코드는 그대로`\r\n",
+            "```rust\r\n",
+            "let untranslated = true;\r\n",
+            "```"
+        );
+
+        let translated = service
+            .translate_for_discord(source, Language::Japanese)
+            .expect("translate formatted Discord message");
+
+        assert_eq!(
+            translated,
+            concat!(
+                "# タイトル\r\n",
+                "- **最初の項目**\r\n",
+                "  - __二番目__와 ~~取り消し~~\r\n",
+                "> ||秘密|| 引用文\r\n",
+                "[文書](https://example.com)\r\n",
+                "`코드는 그대로`\r\n",
+                "```rust\r\n",
+                "let untranslated = true;\r\n",
+                "```"
+            )
+        );
+        assert!(inputs
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|input| !input.contains(['\r', '\n'])
+                && !input.contains("**")
+                && !input.contains("```")));
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

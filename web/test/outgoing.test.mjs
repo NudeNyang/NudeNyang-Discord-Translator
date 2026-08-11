@@ -23,7 +23,7 @@ test("outgoing translation gives Enter and configurable action shortcuts stable 
   assert.match(outgoing, /reviewHint:'번역문을 수정하거나 Enter로 전송하십시오\.'/);
   assert.doesNotMatch(outgoing, /reviewHint:[^\n]*\{shortcut\}/);
   assert.match(outgoing, /startsWith\('\/'\)/);
-  assert.match(outgoing, /includes\('```'\)/);
+  assert.doesNotMatch(outgoing, /text\.includes\('```'\)/);
 });
 
 test("language suggestions use recent message contents and never channel names", () => {
@@ -136,6 +136,14 @@ test("outgoing translation preserves Discord Slate mention entities", () => {
   assert.match(outgoing, /if \(hasActiveAutocomplete\(editor\)\) return/);
 });
 
+test("outgoing translation retains exact composer line breaks and Discord formatting", () => {
+  assert.match(outgoing, /function composerText\(editor\)\s*\{\s*return visibleComposerText\(editor\);/);
+  assert.match(outgoing, /function composerHasText\(editor\)/);
+  assert.match(outgoing, /blocks\.map\(visibleSlateNodeText\)\.join\('\\n'\)/);
+  assert.match(engine, /translate_for_discord\(&batch\.text, batch\.target\)/);
+  assert.doesNotMatch(outgoing, /visibleComposerText\(editor\)\.trim\(\)/);
+});
+
 test("Discord chat controls stay aligned to the composer and expose display translation settings", () => {
   assert.match(outgoing, /__DISPLAY_ENABLED__/);
   assert.match(outgoing, /__DISPLAY_LANGUAGE__/);
@@ -148,7 +156,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 24/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 29/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 30/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);

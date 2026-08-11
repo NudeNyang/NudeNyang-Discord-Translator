@@ -23,7 +23,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 29;
+  const CONTROLLER_VERSION = 30;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
@@ -142,7 +142,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     return text.replace(/\u00a0/g, ' ').replace(/\uFEFF/g, '');
   }
   function composerText(editor) {
-    return visibleComposerText(editor).trim();
+    return visibleComposerText(editor);
+  }
+  function composerHasText(editor) {
+    return Boolean(composerText(editor).trim());
   }
   function selectionCoversComposer(editor) {
     const selection = getSelection();
@@ -188,7 +191,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     const range = translatedTailRange(editor, lastMention);
     return {
       supported: true,
-      text: range ? visibleComposerText(range.cloneContents()).trim() : '',
+      text: range ? visibleComposerText(range.cloneContents()) : '',
       range,
     };
   }
@@ -318,7 +321,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const editor = item.editor;
           const original = item.original_text || item.text || '';
           const translationWasInserted = item.review_ready || item.installing_review || this.activeRequest === id;
-          if (!translationWasInserted || !original || !editor?.isConnected || !composerText(editor)) continue;
+          if (!translationWasInserted || !original || !editor?.isConnected || !composerHasText(editor)) continue;
           if (composerText(editor) === original) continue;
           editor.focus();
           const range = document.createRange();
@@ -597,7 +600,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       onInput(event) {
         const editor = event.target.closest?.(composerSelector);
-        if (!editor || composerText(editor)) return;
+        if (!editor || composerHasText(editor)) return;
         const inputType = String(event.inputType || '');
         if (inputType && !inputType.startsWith('delete')) return;
         this.cancelReview(editor);
@@ -653,7 +656,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           }
           const [id, item] = review;
           const text = composerText(editor);
-          if (!text) return;
+          if (!text.trim()) return;
           this.queue.push({...item, id, text, action:'send-reviewed', send_immediately:true});
           this.setStatus(copy('sendingOriginal'));
           return;
@@ -661,7 +664,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const mentionPlan = prefixMentionPlan(editor);
         if (mentionPlan && !mentionPlan.supported) return;
         const text = mentionPlan ? mentionPlan.text : composerText(editor);
-        if (!text || text.startsWith('/') || text.includes('```')) return;
+        if (!text.trim() || text.startsWith('/')) return;
         const originalText = composerText(editor);
         const key = currentChannelKey();
         if (!key) return;
@@ -708,11 +711,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!item) return false;
         let editor = item.editor;
         if (continuation) {
-          if (!editor?.isConnected || composerText(editor)) {
+          if (!editor?.isConnected || composerHasText(editor)) {
             const editors = [...document.querySelectorAll(composerSelector)];
-            editor = editors.reverse().find(candidate => candidate.isConnected && !composerText(candidate));
+            editor = editors.reverse().find(candidate => candidate.isConnected && !composerHasText(candidate));
           }
-          if (!editor?.isConnected || composerText(editor)) return false;
+          if (!editor?.isConnected || composerHasText(editor)) return false;
           item.editor = editor;
         } else {
           if (!editor?.isConnected || composerText(editor) !== (item.original_text || item.text)) return false;
@@ -741,7 +744,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       finishReview(id) {
         const item = this.pending.get(id);
-        if (!item?.installing_review || !item.editor?.isConnected || !composerText(item.editor)) return false;
+        if (!item?.installing_review || !item.editor?.isConnected || !composerHasText(item.editor)) return false;
         item.installing_review = false;
         item.review_ready = true;
         return true;
@@ -750,7 +753,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const item = this.pending.get(id);
         const editor = item?.editor;
         const text = editor?.isConnected ? composerText(editor) : '';
-        if (!item || !text) return false;
+        if (!item || !text.trim()) return false;
         item.prepared_sent_text = text;
         item.prepared_existing_message_ids = [...document.querySelectorAll('[id^="message-content-"]')]
           .map(discordMessageId)
@@ -759,7 +762,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       prepareReviewed(id) {
         const item = this.pending.get(id);
-        if (!item?.review_ready || item.installing_review || !item.editor?.isConnected || !composerText(item.editor)) return false;
+        if (!item?.review_ready || item.installing_review || !item.editor?.isConnected || !composerHasText(item.editor)) return false;
         item.editor.focus();
         item.keep_after_send = false;
         this.activeRequest = id;
@@ -796,7 +799,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           if (item && editor?.isConnected && !sourceTextForItem(editor, item)) {
             editor.focus();
             document.execCommand('insertText', false, item.text);
-            if (!item.preserve_prefix_mentions && !composerText(editor)) editor.textContent = item.text;
+            if (!item.preserve_prefix_mentions && !composerHasText(editor)) editor.textContent = item.text;
           }
           return false;
         }
@@ -816,7 +819,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         } catch (error) {
           editor.focus();
           document.execCommand('insertText', false, item.text);
-          if (!item.preserve_prefix_mentions && !composerText(editor)) editor.textContent = item.text;
+          if (!item.preserve_prefix_mentions && !composerHasText(editor)) editor.textContent = item.text;
           item.attachment_input = null;
           return false;
         }

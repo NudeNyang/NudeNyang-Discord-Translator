@@ -1,4 +1,5 @@
 mod deepl;
+mod discord_format;
 pub mod hymt;
 mod mock;
 pub mod protected_text;

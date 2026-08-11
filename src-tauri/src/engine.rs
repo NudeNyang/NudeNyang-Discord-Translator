@@ -1834,15 +1834,7 @@ fn run_outgoing_translation_worker(
             OutgoingWorkerCommand::Translate(batch) => {
                 log_worker_queue("outgoing", batch.queued_at, 1, batch.text.chars().count());
                 let send_immediately = batch.send_immediately;
-                let value = service
-                    .translate_many(&[batch.text], batch.target)
-                    .and_then(|mut values| {
-                        if values.len() == 1 {
-                            Ok(values.remove(0))
-                        } else {
-                            Err("번역 서비스가 전송 메시지 결과를 반환하지 않았습니다.".to_string())
-                        }
-                    });
+                let value = service.translate_for_discord(&batch.text, batch.target);
                 let _ = results.send(WorkerResult::OutgoingTranslated {
                     generation: batch.generation,
                     request_id: batch.request_id,
