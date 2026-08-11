@@ -5,7 +5,7 @@ const COPY = Object.freeze({
   "이미지 번역": ["Image translation", "画像翻訳", "图片翻译"],
   "편의 기능": ["Preferences", "便利機能", "便捷功能"],
   "앱 정보": ["About", "アプリ情報", "应用信息"],
-  "Discord 번역, 번역 엔진 및 이미지 OCR을 관리합니다.": ["Manage Discord translation, translation engines, and image OCR.", "Discord翻訳、翻訳エンジン、画像OCRを管理します。", "管理 Discord 翻译、翻译引擎和图片 OCR。"],
+  "Discord 메시지·이미지 번역과 앱 동작을 설정합니다.": ["Configure Discord message and image translation, and app behavior.", "Discordのメッセージ・画像翻訳とアプリの動作を設定します。", "设置 Discord 消息与图片翻译以及应用行为。"],
   "받는 메시지와 보내는 메시지의 번역 방식을 설정합니다.": ["Configure translation for received and outgoing messages.", "受信メッセージと送信メッセージの翻訳方法を設定します。", "设置接收消息和发送消息的翻译方式。"],
   "받는 메시지": ["Received messages", "受信メッセージ", "接收消息"],
   "Discord에서 표시할 번역을 설정합니다.": ["Configure translations displayed in Discord.", "Discordに表示する翻訳を設定します。", "设置在 Discord 中显示的翻译。"],

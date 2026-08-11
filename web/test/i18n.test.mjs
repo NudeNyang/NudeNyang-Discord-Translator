@@ -26,6 +26,17 @@ test("automatic settings language falls back to English", () => {
   assert.equal(resolveUiLanguage("auto", ""), "en");
 });
 
+test("settings header describes message, image, and app behavior configuration", () => {
+  assert.equal(
+    translateCopy("en", "Discord 메시지·이미지 번역과 앱 동작을 설정합니다."),
+    "Configure Discord message and image translation, and app behavior.",
+  );
+  assert.equal(
+    translateCopy("ja", "Discord 메시지·이미지 번역과 앱 동작을 설정합니다."),
+    "Discordのメッセージ・画像翻訳とアプリの動作を設定します。",
+  );
+});
+
 test("automatic language option uses one universal label", () => {
   for (const language of ["ko", "en", "ja", "zh"]) {
     assert.equal(translateCopy(language, "Auto(System)"), "Auto(System)");
