@@ -123,6 +123,7 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(script, /const OUTGOING_TRANSLATOR_OPTIONS = \[\s*\["chatgpt", "ChatGPT CLI \(권장·품질 우선\)"/);
   assert.match(markup, /id="outgoing-model-guidance"/);
   assert.match(markup, /보내는 메시지에는 CLI 모델을 권장합니다/);
+  assert.match(styles, /\.outgoing-model-guidance\s*\{[\s\S]*?margin:\s*16px 18px 18px/);
   assert.match(script, /connectedRecommendedProvider/);
   assert.match(script, /applySettingsPatch\(\{ outgoing_translator: provider \}\)/);
   assert.ok(markup.indexOf('id="provider-connections"') < markup.indexOf('id="local-engine-settings"'));

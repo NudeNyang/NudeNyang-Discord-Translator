@@ -930,7 +930,7 @@ input:focus-visible,
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  margin: 12px 18px 0;
+  margin: 16px 18px 18px;
   padding: 13px 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--border));
   border-radius: var(--radius-control);
