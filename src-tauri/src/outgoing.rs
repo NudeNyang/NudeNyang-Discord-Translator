@@ -908,6 +908,28 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       'li[id^="chat-messages-"], [data-list-item-id^="chat-messages___"], [class*="messageListItem"]'
     ) || root?.closest('[role="listitem"]') || root?.parentElement || null;
   }
+  function isEditingMessage(root) {
+    const row = messageRow(root);
+    if (!row) return false;
+    const editorSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"], textarea';
+    return root.matches?.(editorSelector) || Boolean(row.querySelector(editorSelector));
+  }
+  function detachView(root) {
+    const view = root?.nextElementSibling;
+    if (view?.classList?.contains('nt-outgoing-original-view')) view.remove();
+    if (!root) return;
+    root.style.display = '';
+    root.removeAttribute('data-nt-outgoing-original');
+    messageRow(root)?.removeAttribute('data-nt-outgoing-message-row');
+  }
+  function cleanupDetachedViews() {
+    document.querySelectorAll('.nt-outgoing-original-view').forEach(view => {
+      const root = view.previousElementSibling;
+      if (root?.matches?.('[id^="message-content-"]') && !isEditingMessage(root)) return;
+      if (root?.matches?.('[id^="message-content-"]')) detachView(root);
+      else view.remove();
+    });
+  }
   const recordKey = record => `${record.channel_key}|${record.message_id}`;
   function ensureStyle() {
     let style = document.getElementById(STYLE_ID);
@@ -922,9 +944,11 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       [data-nt-outgoing-original="true"]{display:inline}
       .nt-outgoing-original-view{display:inline-flex;flex-direction:row;align-items:baseline;gap:8px;max-width:100%;white-space:pre-wrap;vertical-align:baseline;color:var(--text-normal,#dbdee1)}
       .nt-outgoing-original-copy{display:inline;min-width:0;overflow-wrap:anywhere}
+      .nt-outgoing-original-copy::before{content:attr(data-text);white-space:pre-wrap}
       .nt-outgoing-original-copy[hidden]{display:none}
       .nt-outgoing-original-copy[hidden]+.nt-outgoing-original-toggle{margin-inline-start:8px}
       .nt-outgoing-original-toggle{align-self:baseline;flex:none;margin:0;padding:1px 0;border:0;border-radius:4px;background:transparent;color:var(--text-link,#00a8fc);font:inherit;font-size:11px;line-height:1.25;cursor:pointer;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease,background-color .12s ease}
+      .nt-outgoing-original-toggle::before{content:attr(data-label)}
       li[id^="chat-messages-"]:hover .nt-outgoing-original-toggle,
       [id^="chat-messages___chat-messages-"]:hover .nt-outgoing-original-toggle,
       [data-list-item-id^="chat-messages___"]:hover .nt-outgoing-original-toggle,
@@ -935,7 +959,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       .nt-outgoing-original-toggle:hover{background:var(--background-modifier-hover,#ffffff0f)}
     `;
   }
-  function restoreSentText(root, record) {
+  function restoreSentText(root) {
     const originals = window.__nudeTranslatorOriginals;
     if (originals instanceof Map) {
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -946,8 +970,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
         originals.delete(node);
       }
     }
-    const current = (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
-    if (current !== record.sent_text) root.textContent = record.sent_text;
+    return (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
   }
   function ensureView(root, record, defaultMode) {
     let view = root.nextElementSibling;
@@ -956,19 +979,19 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       view.className = 'nt-outgoing-original-view';
       view.setAttribute('data-nt-outgoing-original-view', record.message_id);
       view.dataset.mode = defaultMode;
-      view.innerHTML = '<div class="nt-outgoing-original-copy"><span class="nt-outgoing-original-text"></span></div><button type="button" class="nt-outgoing-original-toggle"></button>';
+      view.innerHTML = '<div class="nt-outgoing-original-copy"></div><button type="button" class="nt-outgoing-original-toggle"></button>';
       root.insertAdjacentElement('afterend', view);
     }
     messageRow(root)?.setAttribute('data-nt-outgoing-message-row', 'true');
-    const text = view.querySelector('.nt-outgoing-original-text');
-    if (text.textContent !== record.original_text) text.textContent = record.original_text;
     const button = view.querySelector('.nt-outgoing-original-toggle');
     const originalText = view.querySelector('.nt-outgoing-original-copy');
+    if (originalText.dataset.text !== record.original_text) originalText.dataset.text = record.original_text;
     const showSent = view.dataset.mode !== 'original';
     root.style.display = showSent ? '' : 'none';
     originalText.hidden = showSent;
     const label = showSent ? copy('showSent') : copy('showOriginal');
-    if (button.textContent !== label) button.textContent = label;
+    if (button.dataset.label !== label) button.dataset.label = label;
+    if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
     if (button.dataset.bound !== 'true') {
       button.dataset.bound = 'true';
       button.addEventListener('click', () => {
@@ -976,7 +999,9 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
         const sent = view.dataset.mode === 'sent';
         root.style.display = sent ? '' : 'none';
         originalText.hidden = sent;
-        button.textContent = sent ? copy('showSent') : copy('showOriginal');
+        const nextLabel = sent ? copy('showSent') : copy('showOriginal');
+        button.dataset.label = nextLabel;
+        button.setAttribute('aria-label', nextLabel);
       });
     }
   }
@@ -1038,6 +1063,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       },
       apply() {
         ensureStyle();
+        cleanupDetachedViews();
         const currentChannel = location.pathname.startsWith('/channels/') ? location.pathname : '';
         const roots = [...document.querySelectorAll('[id^="message-content-"]')]
           .filter(root => !root.closest('[id^="message-reply-context-"]'));
@@ -1045,8 +1071,16 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
         for (const root of roots) {
           const record = this.records.get(`${currentChannel}|${messageId(root)}`);
           if (!record) continue;
+          if (isEditingMessage(root)) {
+            detachView(root);
+            continue;
+          }
+          const currentText = restoreSentText(root);
+          if (currentText !== record.sent_text) {
+            detachView(root);
+            continue;
+          }
           root.setAttribute('data-nt-outgoing-original', 'true');
-          restoreSentText(root, record);
           ensureView(root, record, this.translationEnabled ? 'original' : 'sent');
         }
       },
@@ -1196,7 +1230,7 @@ pub fn outgoing_originals_ui_script(
         ))
 }
 
-pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 16;
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 17;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();
@@ -1544,9 +1578,128 @@ mod tests {
         assert!(script.contains(".nt-outgoing-original-toggle:focus-visible"));
         assert!(script.contains("button?.blur()"));
         assert!(script.contains("const label = showSent ? copy('showSent') : copy('showOriginal')"));
-        assert!(
-            script.contains("button.textContent = sent ? copy('showSent') : copy('showOriginal')")
+        assert!(script.contains("button.dataset.label = nextLabel"));
+        assert!(script.contains("button.setAttribute('aria-label', nextLabel)"));
+        assert!(script.contains(".nt-outgoing-original-toggle::before{content:attr(data-label)}"));
+        assert!(script.contains(".nt-outgoing-original-copy::before{content:attr(data-text)"));
+    }
+
+    #[test]
+    fn outgoing_original_display_detaches_while_a_message_is_being_edited() {
+        let script = outgoing_originals_ui_script("/channels/1/2", &[], "ko", true).unwrap();
+
+        assert!(script.contains("function isEditingMessage(root)"));
+        assert!(script.contains("[role=\"textbox\"][contenteditable=\"true\"]"));
+        assert!(script.contains("function detachView(root)"));
+        assert!(script.contains("if (isEditingMessage(root))"));
+        assert!(script.contains("cleanupDetachedViews()"));
+        assert!(script.contains("if (currentText !== record.sent_text)"));
+        let destructive_replacement = ["root.textContent", " = record.sent_text"].concat();
+        assert!(!script.contains(&destructive_replacement));
+    }
+
+    #[test]
+    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    fn live_discord_outgoing_original_survives_edit_cancel_without_entering_message_text() {
+        let _guard = lock_live_outgoing();
+        let target = discord_target(9222).expect("Discord channel target");
+        let mut client = CdpClient::new(target.websocket_url);
+        let channel = client
+            .evaluate(
+                "location.pathname.startsWith('/channels/') ? location.pathname : ''",
+                false,
+            )
+            .expect("current Discord channel")
+            .as_str()
+            .expect("channel path")
+            .to_string();
+        let records = vec![OutgoingOriginalRecord {
+            message_id: "nt-edit-cancel-message".to_string(),
+            channel_key: channel.clone(),
+            original_text: "편집 취소 원문".to_string(),
+            sent_text: "編集キャンセル送信文".to_string(),
+            part_number: 1,
+            total_parts: 1,
+            created_at: 0.0,
+        }];
+        client
+            .evaluate(
+                "document.getElementById('nt-outgoing-edit-cancel-test')?.remove(); window.__nudeTranslatorOutgoingOriginalDisplay?.observer?.disconnect(); delete window.__nudeTranslatorOutgoingOriginalDisplay; delete window.__nudeTranslatorOutgoingOriginalsReady",
+                false,
+            )
+            .expect("reset outgoing edit probe");
+        client
+            .evaluate(
+                "(() => { const row=document.createElement('div'); row.id='nt-outgoing-edit-cancel-test'; row.setAttribute('role','listitem'); const root=document.createElement('div'); root.id='message-content-nt-edit-cancel-message'; root.textContent='編集キャンセル送信文'; row.append(root); document.body.append(row); return true; })()",
+                false,
+            )
+            .expect("mount outgoing edit probe");
+        client
+            .evaluate(
+                &outgoing_originals_ui_script(&channel, &records, "ko", true).unwrap(),
+                false,
+            )
+            .expect("mount outgoing original view");
+        let result = client
+            .evaluate(
+                r#"(() => {
+                  const row = document.getElementById('nt-outgoing-edit-cancel-test');
+                  const root = document.getElementById('message-content-nt-edit-cancel-message');
+                  const mounted = Boolean(root.nextElementSibling?.classList.contains('nt-outgoing-original-view'));
+                  const uncontaminated = row.textContent.trim() === '編集キャンセル送信文';
+                  const editor = document.createElement('div');
+                  editor.setAttribute('role', 'textbox');
+                  editor.setAttribute('contenteditable', 'true');
+                  editor.textContent = '編集キャンセル送信文';
+                  row.append(editor);
+                  window.__nudeTranslatorApplyOutgoingOriginals?.();
+                  const detachedWhileEditing = !row.querySelector('.nt-outgoing-original-view');
+                  editor.remove();
+                  window.__nudeTranslatorApplyOutgoingOriginals?.();
+                  const restoredAfterCancel = Boolean(root.nextElementSibling?.classList.contains('nt-outgoing-original-view'));
+                  const cleanAfterCancel = row.textContent.trim() === '編集キャンセル送信文';
+                  root.textContent = '編集後の送信文';
+                  window.__nudeTranslatorApplyOutgoingOriginals?.();
+                  const detachedAfterSave = !row.querySelector('.nt-outgoing-original-view');
+                  return {mounted,uncontaminated,detachedWhileEditing,restoredAfterCancel,cleanAfterCancel,detachedAfterSave,text:row.textContent.trim()};
+                })()"#,
+                true,
+            )
+            .expect("exercise outgoing edit lifecycle");
+        client
+            .evaluate(
+                "document.getElementById('nt-outgoing-edit-cancel-test')?.remove(); window.__nudeTranslatorOutgoingOriginalDisplay?.observer?.disconnect(); delete window.__nudeTranslatorOutgoingOriginalDisplay; delete window.__nudeTranslatorOutgoingOriginalsReady",
+                false,
+            )
+            .expect("remove outgoing edit probe");
+
+        assert_eq!(result["mounted"].as_bool(), Some(true), "state: {result}");
+        assert_eq!(
+            result["uncontaminated"].as_bool(),
+            Some(true),
+            "state: {result}"
         );
+        assert_eq!(
+            result["detachedWhileEditing"].as_bool(),
+            Some(true),
+            "state: {result}"
+        );
+        assert_eq!(
+            result["restoredAfterCancel"].as_bool(),
+            Some(true),
+            "state: {result}"
+        );
+        assert_eq!(
+            result["cleanAfterCancel"].as_bool(),
+            Some(true),
+            "state: {result}"
+        );
+        assert_eq!(
+            result["detachedAfterSave"].as_bool(),
+            Some(true),
+            "state: {result}"
+        );
+        assert_eq!(result["text"].as_str(), Some("編集後の送信文"));
     }
 
     #[test]
