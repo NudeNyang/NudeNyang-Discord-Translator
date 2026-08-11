@@ -827,6 +827,9 @@ pub fn connect_subscription_interactively_with_observer(
         std::env::temp_dir().join("nude-translator-connection-login"),
     )?;
     let (executable, implementation) = translator.resolve_command()?;
+    if implementation == Implementation::Codex {
+        ensure_node_backed_command_runtime(&executable)?;
+    }
     match implementation {
         Implementation::Codex => authenticate_browser_login_cli(
             &executable,
@@ -1341,26 +1344,51 @@ fn install_antigravity_cli() -> Result<CliConnectionProbe, String> {
 }
 
 fn ensure_npm_available() -> Result<PathBuf, String> {
-    if let (Some(npm), Some(major)) = (find_npm_executable(), installed_node_major()) {
-        if major >= 20 {
-            return Ok(npm);
-        }
-    }
-    install_node_runtime()?;
+    ensure_node_runtime_available()?;
     let npm = find_npm_executable().ok_or_else(|| {
         "Node.js 설치는 완료되었지만 npm 실행 파일을 찾지 못했습니다. 앱을 다시 실행한 후 설치를 시도하십시오."
             .to_string()
     })?;
+    Ok(npm)
+}
+
+fn ensure_node_runtime_available() -> Result<PathBuf, String> {
+    if let (Some(node), Some(major)) = (find_node_executable(), installed_node_major()) {
+        if major >= 20 {
+            return Ok(node);
+        }
+    }
+    install_node_runtime()?;
+    let node = find_node_executable().ok_or_else(|| {
+        "Node.js 자동 설치는 완료되었지만 실행 파일을 찾지 못했습니다. 앱을 다시 실행한 후 연결을 시도하십시오."
+            .to_string()
+    })?;
     match installed_node_major() {
-        Some(major) if major >= 20 => Ok(npm),
+        Some(major) if major >= 20 => Ok(node),
         Some(major) => Err(format!(
-            "CLI 실행에는 Node.js 20 이상이 필요하지만 현재 버전은 {major}입니다. Windows를 다시 시작한 후 설치를 다시 시도하십시오."
+            "구독 번역 실행에는 Node.js 20 이상이 필요하지만 자동 설치 후 확인된 버전은 {major}입니다."
         )),
         None => Err(
-            "Node.js 설치는 완료되었지만 버전을 확인하지 못했습니다. 앱을 다시 실행한 후 설치를 시도하십시오."
+            "Node.js 자동 설치는 완료되었지만 버전을 확인하지 못했습니다. 앱을 다시 실행한 후 연결을 시도하십시오."
                 .to_string(),
         ),
     }
+}
+
+fn is_node_backed_command(executable: &Path) -> bool {
+    executable
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|extension| {
+            extension.eq_ignore_ascii_case("cmd") || extension.eq_ignore_ascii_case("bat")
+        })
+}
+
+fn ensure_node_backed_command_runtime(executable: &Path) -> Result<(), String> {
+    if is_node_backed_command(executable) {
+        ensure_node_runtime_available()?;
+    }
+    Ok(())
 }
 
 fn find_npm_executable() -> Option<PathBuf> {
@@ -1626,6 +1654,9 @@ impl Translator for SubscriptionCliTranslator {
             return Ok(());
         }
         let (executable, implementation) = self.resolve_command()?;
+        if implementation == Implementation::Codex {
+            ensure_node_backed_command_runtime(&executable)?;
+        }
         let workspace = self.workspace_dir()?;
         let environment = subscription_environment();
         if implementation == Implementation::Codex {
@@ -2701,6 +2732,12 @@ fn subscription_environment() -> HashMap<String, String> {
     environment.insert("NO_COLOR".to_string(), "1".to_string());
     environment.insert("CLICOLOR".to_string(), "0".to_string());
     #[cfg(windows)]
+    if let Some(node_directory) =
+        find_node_executable().and_then(|path| path.parent().map(Path::to_path_buf))
+    {
+        prepend_directory_to_environment_path(&mut environment, &node_directory);
+    }
+    #[cfg(windows)]
     if !environment.contains_key("CLAUDE_CODE_GIT_BASH_PATH") {
         if let Some(path) = find_git_bash() {
             environment.insert(
@@ -2710,6 +2747,37 @@ fn subscription_environment() -> HashMap<String, String> {
         }
     }
     environment
+}
+
+fn prepend_directory_to_environment_path(
+    environment: &mut HashMap<String, String>,
+    directory: &Path,
+) {
+    let key = environment
+        .keys()
+        .find(|key| key.eq_ignore_ascii_case("PATH"))
+        .cloned()
+        .unwrap_or_else(|| "PATH".to_string());
+    let mut paths = vec![directory.to_path_buf()];
+    if let Some(existing) = environment.get(&key) {
+        for path in env::split_paths(existing) {
+            let duplicate = paths.iter().any(|candidate| {
+                if cfg!(windows) {
+                    candidate
+                        .to_string_lossy()
+                        .eq_ignore_ascii_case(&path.to_string_lossy())
+                } else {
+                    candidate == &path
+                }
+            });
+            if !duplicate {
+                paths.push(path);
+            }
+        }
+    }
+    if let Ok(joined) = env::join_paths(paths) {
+        environment.insert(key, joined.to_string_lossy().into_owned());
+    }
 }
 
 fn remove_stale_codex_home(environment: &mut HashMap<String, String>) {
@@ -2913,8 +2981,9 @@ mod tests {
         acp_error_message, agy_invocation_arguments, claude_plan_connected,
         configure_gemini_plan_auth_at, decode_payload, decode_process_output,
         find_winget_package_executable, gemini_invocation_arguments,
-        gemini_plan_auth_configured_at, parse_node_major, repair_incomplete_gemini_plan_auth_at,
-        run_process, subscription_environment, translation_prompt, validated_translations,
+        gemini_plan_auth_configured_at, is_node_backed_command, parse_node_major,
+        prepend_directory_to_environment_path, repair_incomplete_gemini_plan_auth_at, run_process,
+        subscription_environment, translation_prompt, validated_translations,
         wait_for_antigravity_connection, write_acp_request, SubscriptionCliTranslator,
         SubscriptionProvider,
     };
@@ -2966,6 +3035,35 @@ mod tests {
         assert_eq!(parse_node_major("v22.18.0\r\n"), Some(22));
         assert_eq!(parse_node_major("20.12.2"), Some(20));
         assert_eq!(parse_node_major("unknown"), None);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn recognizes_node_backed_windows_command_wrappers() {
+        assert!(is_node_backed_command(std::path::Path::new("codex.cmd")));
+        assert!(is_node_backed_command(std::path::Path::new("codex.bat")));
+        assert!(!is_node_backed_command(std::path::Path::new("codex.exe")));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn adds_an_installed_node_directory_to_the_existing_process_path() {
+        let node_directory = std::path::Path::new(r"C:\Program Files\nodejs");
+        let mut environment = HashMap::from([(
+            "Path".to_string(),
+            r"C:\Windows\System32;C:\Windows".to_string(),
+        )]);
+
+        prepend_directory_to_environment_path(&mut environment, node_directory);
+
+        let paths =
+            std::env::split_paths(std::ffi::OsStr::new(&environment["Path"])).collect::<Vec<_>>();
+        assert_eq!(
+            paths.first().map(std::path::PathBuf::as_path),
+            Some(node_directory)
+        );
+        assert!(paths.contains(&std::path::PathBuf::from(r"C:\Windows\System32")));
+        assert!(!environment.contains_key("PATH"));
     }
 
     #[test]
