@@ -124,7 +124,10 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(markup, /보내는 메시지에는 CLI 모델을 권장합니다/);
   assert.match(script, /connectedRecommendedProvider/);
   assert.match(script, /applySettingsPatch\(\{ outgoing_translator: provider \}\)/);
-  assert.ok(markup.indexOf('id="provider-connections"') < markup.indexOf('class="settings-card local-engine-card"'));
+  assert.ok(markup.indexOf('id="provider-connections"') < markup.indexOf('id="local-engine-settings"'));
+  assert.match(markup, /id="local-engine-settings" aria-labelledby="local-engine-heading"/);
+  assert.match(markup, /<div class="panel-subheading"><h3 id="local-engine-heading">로컬 엔진<\/h3>/);
+  assert.doesNotMatch(markup, /<div class="card-heading">\s*<span class="card-index" aria-hidden="true">L<\/span>\s*<div><h3>로컬 엔진<\/h3>/);
   assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
 });
 

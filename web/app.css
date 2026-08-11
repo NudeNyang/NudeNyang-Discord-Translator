@@ -1184,8 +1184,17 @@ input:focus-visible,
 }
 
 .section-note {
-  padding: 7px 4px 0;
-  line-height: 1.5;
+  padding: 9px 4px 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+#local-engine-settings {
+  margin-top: 22px;
+}
+
+#local-engine-settings .panel-subheading {
+  margin-top: 0;
 }
 
 .app-information {

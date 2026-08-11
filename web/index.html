@@ -161,25 +161,24 @@
                   <p class="section-note">구독 서비스 인증은 각 공식 CLI에서 관리하며 API 키는 운영체제 보안 저장소에 보관합니다.</p>
                 </section>
 
-                <article class="settings-card local-engine-card">
-                  <div class="card-heading">
-                    <span class="card-index" aria-hidden="true">L</span>
-                    <div><h3>로컬 엔진</h3><p>로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다.</p></div>
-                  </div>
-                  <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>로컬 모델 실행 장치</h3><p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p></div>
-                    <div class="custom-select" data-field="hymt_device"></div>
-                  </div>
-                  <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>로컬 모델 예열 유지</h3><p>번역을 꺼도 모델을 메모리에 유지합니다.</p></div>
-                    <button class="switch" id="keep-warm" type="button" role="switch" aria-checked="true"><span></span><b>유지</b></button>
-                  </div>
-                  <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>화면 확인 빈도</h3><p>값이 높을수록 반응이 빨라지며 CPU 사용량이 증가할 수 있습니다.</p></div>
-                    <label class="number-field"><input id="capture-fps" type="number" min="2" max="20" inputmode="numeric" /><span>회/초</span></label>
-                  </div>
-                  <div class="privacy-note"><strong>처리 위치 안내</strong><span>로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다. 외부 서비스를 선택하면 번역할 텍스트만 해당 서비스로 전송됩니다.</span></div>
-                </article>
+                <section id="local-engine-settings" aria-labelledby="local-engine-heading">
+                  <div class="panel-subheading"><h3 id="local-engine-heading">로컬 엔진</h3><p>로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다.</p></div>
+                  <article class="settings-card local-engine-card">
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>로컬 모델 실행 장치</h3><p>자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.</p></div>
+                      <div class="custom-select" data-field="hymt_device"></div>
+                    </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>로컬 모델 예열 유지</h3><p>번역을 꺼도 모델을 메모리에 유지합니다.</p></div>
+                      <button class="switch" id="keep-warm" type="button" role="switch" aria-checked="true"><span></span><b>유지</b></button>
+                    </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>화면 확인 빈도</h3><p>값이 높을수록 반응이 빨라지며 CPU 사용량이 증가할 수 있습니다.</p></div>
+                      <label class="number-field"><input id="capture-fps" type="number" min="2" max="20" inputmode="numeric" /><span>회/초</span></label>
+                    </div>
+                    <div class="privacy-note"><strong>처리 위치 안내</strong><span>로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다. 외부 서비스를 선택하면 번역할 텍스트만 해당 서비스로 전송됩니다.</span></div>
+                  </article>
+                </section>
               </section>
 
               <section id="storage-management" class="settings-view" data-settings-view="storage" aria-labelledby="storage-heading" hidden>
