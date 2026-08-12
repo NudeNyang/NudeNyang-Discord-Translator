@@ -1292,13 +1292,14 @@ input:focus-visible,
 
 .provider-credential-connection {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.95fr);
+  grid-template-columns: minmax(0, 1fr) 230px;
 }
 
 .provider-credential {
   gap: 7px;
   justify-content: flex-end;
   min-width: 0;
+  width: min(100%, 230px);
 }
 
 .provider-secret {

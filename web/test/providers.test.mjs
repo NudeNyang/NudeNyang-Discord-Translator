@@ -153,6 +153,14 @@ test("DeepL API keys are applied when editing finishes and before confirmation",
   assert.match(confirmHandler, /savePendingProviderCredentials/);
   assert.match(confirmHandler, /main_window_hide/);
   assert.match(providers, /API 키가 운영체제 보안 저장소에 저장되어 있습니다/);
+  assert.match(
+    styles,
+    /\.provider-credential-connection\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) 230px/,
+  );
+  assert.match(
+    styles,
+    /\.provider-credential\s*\{[\s\S]*?width:\s*min\(100%, 230px\)/,
+  );
 });
 
 test("subscription CLI disconnect only disables the provider inside NudeNyang Translator", () => {
