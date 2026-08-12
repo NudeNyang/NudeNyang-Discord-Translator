@@ -17,6 +17,8 @@ test("the user-facing product name is NudeNyang Translator", () => {
   assert.match(markup, /NudeNyang Translator/);
   assert.match(tauriConfig, /"productName": "NudeNyang Translator"/);
   assert.match(script, /https:\/\/github\.com\/NudeNyang\/NudeNyang-Translator/);
+  assert.match(markup, /class="app-info-product-brand"><img class="app-info-product-icon" src="\.\/app-icon\.png" alt="" width="34" height="34" \/><div><h3>NudeNyang Translator<\/h3>/);
+  assert.match(styles, /\.app-info-product-brand\s*\{[\s\S]*?display:\s*flex;[\s\S]*?gap:\s*10px;/);
   assert.doesNotMatch(markup, /Nude Translator/);
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });
@@ -46,6 +48,11 @@ test("settings use six uniform navigation categories", () => {
   assert.match(markup, /<span>이미지 번역<\/span>/);
   assert.match(markup, /<span>편의 기능<\/span>/);
   assert.match(markup, /<span>앱 정보<\/span>/);
+  for (const icon of ["language", "cpu", "photo", "adjustments-horizontal", "database", "info-circle"]) {
+    assert.match(markup, new RegExp(`class="settings-nav-icon" data-icon="${icon}" aria-hidden="true"`));
+  }
+  assert.match(styles, /\.settings-nav-item\.active \.settings-nav-icon\s*\{[\s\S]*?background:\s*var\(--accent\)/);
+  assert.doesNotMatch(markup, /<i aria-hidden="true"><\/i>/);
   assert.ok(
     markup.indexOf('data-settings-panel="storage"') < markup.indexOf('data-settings-panel="about"'),
   );
@@ -54,6 +61,7 @@ test("settings use six uniform navigation categories", () => {
 test("settings reset is separated from the confirmation footer and native window chrome follows the selected theme", () => {
   assert.doesNotMatch(markup, /id="cancel"/);
   assert.match(markup, /id="reset-settings"[^>]*>초기화<\/button>/);
+  assert.doesNotMatch(styles, /\.button\.danger\s*\{[^}]*font-size:/);
   assert.match(script, /invoke\("settings_reset"\)/);
   assert.match(rustMain, /fn settings_reset\(/);
   assert.match(script, /invoke\("main_window_set_theme", \{ theme, resolvedTheme \}\)/);
@@ -163,6 +171,10 @@ test("convenience panel exposes global toggles and editable composer shortcuts",
   assert.match(markup, /<h3>전송 메시지 통역 켜기·끄기<\/h3>/);
   assert.match(markup, /<h3>즉시 전송<\/h3>/);
   assert.match(markup, /<h3>항상 첨삭<\/h3>/);
+  assert.match(markup, /data-icon="keyboard" aria-hidden="true"><svg[^>]*>[\s\S]*?<\/svg><\/span><div><h3>전역 단축키<\/h3>/);
+  assert.match(markup, /data-icon="send" aria-hidden="true"><svg[^>]*>[\s\S]*?<\/svg><\/span><div><h3>메시지 입력 단축키<\/h3>/);
+  assert.doesNotMatch(markup, /<span class="card-index" aria-hidden="true">(?:K|↵)<\/span>/);
+  assert.match(styles, /\.card-index-icon svg\s*\{[\s\S]*?stroke-width:\s*2/);
   assert.match(script, /toggle_outgoing_translation/);
   assert.match(script, /send_outgoing_immediately/);
   assert.match(script, /review_outgoing_before_send/);

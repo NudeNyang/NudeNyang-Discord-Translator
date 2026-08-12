@@ -175,7 +175,7 @@ const COPY = Object.freeze({
   "항상 첨삭": ["Always review", "常に推敲", "始终修改"],
   "자동 전송 상태에서도 번역문을 입력창에 남겨 수정합니다.": ["Keep the translation in the message box for editing even when automatic sending is enabled.", "自動送信時でも翻訳文を入力欄に残して修正できます。", "即使启用自动发送，也会将译文保留在输入框中以便修改。"],
   "입력란을 선택한 뒤 원하는 단축키를 누르십시오.": ["Select the field, then press the desired shortcut.", "入力欄を選択し、使用するショートカットを押してください。", "请选择输入框，然后按下所需快捷键。"],
-  "버전, 업데이트, 프로젝트 및 라이선스 정보를 확인합니다.": ["View version, update, project, and license information.", "バージョン、更新、プロジェクト、ライセンス情報を確認します。", "查看版本、更新、项目和许可证信息。"],
+  "앱 버전과 업데이트를 확인하고, 진단 로그·초기화·라이선스를 관리합니다.": ["Check the app version and updates, and manage diagnostic logs, reset options, and licenses.", "アプリのバージョンと更新を確認し、診断ログ・初期化・ライセンスを管理します。", "查看应用版本和更新，并管理诊断日志、重置和许可证。"],
   "버전": ["Version", "バージョン", "版本"],
   "자동 업데이트": ["Automatic updates", "自動更新", "自动更新"],
   "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": ["Automatically check for new versions and notify you when one is available.", "新しいバージョンを自動的に確認し、利用可能になったらお知らせします。", "自动检查新版本，并在可用时通知你。"],

@@ -37,22 +37,22 @@
           <nav class="settings-navigation" aria-label="설정 분류">
             <p>설정</p>
             <button class="settings-nav-item active" type="button" data-settings-panel="translation" aria-current="page">
-              <i aria-hidden="true"></i><span>번역</span>
+              <span class="settings-nav-icon" data-icon="language" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M9 6.371c0 4.418 -2.239 6.629 -5 6.629"/><path d="M4 6.371h7"/><path d="M5 9c0 2.144 2.252 3.908 6 4"/><path d="M12 20l4 -9l4 9"/><path d="M19.1 18h-6.2"/><path d="M6.694 3l.793 .582"/></svg></span><span>번역</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="engine">
-              <i aria-hidden="true"></i><span>번역 엔진</span>
+              <span class="settings-nav-icon" data-icon="cpu" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M5 6a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -12"/><path d="M9 9h6v6h-6l0 -6"/><path d="M3 10h2M3 14h2M10 3v2M14 3v2M21 10h-2M21 14h-2M14 21v-2M10 21v-2"/></svg></span><span>번역 엔진</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="image">
-              <i aria-hidden="true"></i><span>이미지 번역</span>
+              <span class="settings-nav-icon" data-icon="photo" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg></span><span>이미지 번역</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="convenience">
-              <i aria-hidden="true"></i><span>편의 기능</span>
+              <span class="settings-nav-icon" data-icon="adjustments-horizontal" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 6l8 0M16 6l4 0M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 12l2 0M10 12l10 0M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 18l11 0M19 18l1 0"/></svg></span><span>편의 기능</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="storage">
-              <i aria-hidden="true"></i><span>저장 공간</span>
+              <span class="settings-nav-icon" data-icon="database" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M4 6a8 3 0 1 0 16 0a8 3 0 1 0 -16 0"/><path d="M4 6v6a8 3 0 0 0 16 0v-6"/><path d="M4 12v6a8 3 0 0 0 16 0v-6"/></svg></span><span>저장 공간</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="about">
-              <i aria-hidden="true"></i><span>앱 정보</span>
+              <span class="settings-nav-icon" data-icon="info-circle" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></span><span>앱 정보</span>
             </button>
           </nav>
 
@@ -177,7 +177,7 @@
               <section id="storage-management" class="settings-view" data-settings-view="storage" aria-labelledby="storage-heading" hidden>
                 <div class="panel-heading"><h2 id="storage-heading">저장 공간 관리</h2><p>다운로드한 로컬 모델과 번역 기록을 관리합니다.</p></div>
                 <div class="settings-card storage-card">
-                  <div class="storage-group-heading"><span class="card-index" aria-hidden="true">L</span><div><h3>로컬 번역 모델</h3><p>사용하지 않는 다운로드 모델을 삭제하여 저장 공간을 확보합니다.</p></div><button class="button secondary storage-heading-action" id="open-local-model-folder" type="button">폴더 열기</button></div>
+                  <div class="storage-group-heading"><span class="card-index card-index-icon" data-icon="device-desktop-down" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M13.5 16h-9.5a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v7.5"/><path d="M7 20h5"/><path d="M9 16v4"/><path d="M19 16v6"/><path d="M22 19l-3 3l-3 -3"/></svg></span><div><h3>로컬 번역 모델</h3><p>사용하지 않는 다운로드 모델을 삭제하여 저장 공간을 확보합니다.</p></div><button class="button secondary storage-heading-action" id="open-local-model-folder" type="button">폴더 열기</button></div>
                   <div id="local-model-storage-list" class="local-model-storage-list" aria-live="polite"></div>
                 </div>
                 <section class="storage-history-section" aria-labelledby="storage-history-heading">
@@ -229,7 +229,7 @@
                   </div>
                 </article>
                 <article class="settings-card shortcut-card">
-                  <div class="card-heading"><span class="card-index" aria-hidden="true">K</span><div><h3>전역 단축키</h3><p>다른 프로그램을 사용 중일 때도 번역 상태를 전환합니다.</p></div></div>
+                  <div class="card-heading"><span class="card-index card-index-icon" data-icon="keyboard" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M2 8a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2l0 -8"/><path d="M6 10l0 .01M10 10l0 .01M14 10l0 .01M18 10l0 .01M6 14l0 .01M18 14l0 .01"/><path d="M10 14l4 .01"/></svg></span><div><h3>전역 단축키</h3><p>다른 프로그램을 사용 중일 때도 번역 상태를 전환합니다.</p></div></div>
                   <div class="setting-row compact-row">
                     <div class="setting-copy"><h3>실시간 번역 켜기·끄기</h3><p>받는 메시지의 실시간 번역 상태를 전환합니다.</p></div>
                     <div class="shortcut-editor"><input class="text-field" id="toggle-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="shortcut-help" readonly /><small id="shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
@@ -240,7 +240,7 @@
                   </div>
                 </article>
                 <article class="settings-card shortcut-card">
-                  <div class="card-heading"><span class="card-index" aria-hidden="true">↵</span><div><h3>메시지 입력 단축키</h3><p>Discord 메시지 입력창에서 통역 결과의 전송 방식을 선택합니다.</p></div></div>
+                  <div class="card-heading"><span class="card-index card-index-icon" data-icon="send" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg></span><div><h3>메시지 입력 단축키</h3><p>Discord 메시지 입력창에서 통역 결과의 전송 방식을 선택합니다.</p></div></div>
                   <div class="setting-row compact-row">
                     <div class="setting-copy"><h3>즉시 전송</h3><p>전송 전 확인 설정과 관계없이 번역 후 바로 전송합니다.</p></div>
                     <div class="shortcut-editor"><input class="text-field" id="send-immediately-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="send-immediately-shortcut-help" readonly /><small id="send-immediately-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
@@ -253,9 +253,9 @@
               </section>
 
               <section class="settings-view" data-settings-view="about" aria-labelledby="app-heading" hidden>
-                <div class="panel-heading"><h2 id="app-heading">앱 정보</h2><p>버전, 업데이트, 프로젝트 및 라이선스 정보를 확인합니다.</p></div>
+                <div class="panel-heading"><h2 id="app-heading">앱 정보</h2><p>앱 버전과 업데이트를 확인하고, 진단 로그·초기화·라이선스를 관리합니다.</p></div>
                 <div class="settings-card app-information">
-                  <div class="app-info-row app-info-product"><div><h3>NudeNyang Translator</h3><p><span data-i18n-key="버전">버전</span> <span id="app-version">0.4.11 Beta</span></p></div><div class="app-info-links" aria-label="프로젝트 링크"><span>© 2026</span><span aria-hidden="true">·</span><button class="app-link" id="author-link" type="button">NudeNyang</button><span aria-hidden="true">·</span><button class="app-link" id="github-link" type="button">GitHub</button></div></div>
+                  <div class="app-info-row app-info-product"><div class="app-info-product-brand"><img class="app-info-product-icon" src="./app-icon.png" alt="" width="34" height="34" /><div><h3>NudeNyang Translator</h3><p><span data-i18n-key="버전">버전</span> <span id="app-version">0.4.11 Beta</span></p></div></div><div class="app-info-links" aria-label="프로젝트 링크"><span>© 2026</span><span aria-hidden="true">·</span><button class="app-link" id="author-link" type="button">NudeNyang</button><span aria-hidden="true">·</span><button class="app-link" id="github-link" type="button">GitHub</button></div></div>
                   <div class="app-info-row"><div><h3>자동 업데이트</h3><p id="update-status">새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.</p></div><button class="button secondary app-info-button" id="check-update" type="button">지금 확인</button></div>
                   <div class="app-info-row"><div><h3>진단 로그</h3><p>오류 확인에 필요한 기록을 개인정보와 인증 정보를 가린 하나의 파일에 저장합니다.</p></div><button class="button secondary app-info-button" id="open-diagnostic-log" type="button">로그 파일 찾기</button></div>
                   <div class="app-info-row"><div><h3>설정 초기화</h3><p>앱 설정과 단축키를 기본값으로 초기화합니다. 번역 기록, 다운로드한 모델 및 번역 서비스 인증 정보는 유지됩니다.</p></div><button class="button danger app-info-button" id="reset-settings" type="button">초기화</button></div>

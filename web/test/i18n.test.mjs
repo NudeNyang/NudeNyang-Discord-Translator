@@ -46,6 +46,10 @@ test("automatic language option uses one universal label", () => {
 test("app information copy is translated completely", () => {
   assert.equal(translateCopy("ja", "버전"), "バージョン");
   assert.equal(
+    translateCopy("en", "앱 버전과 업데이트를 확인하고, 진단 로그·초기화·라이선스를 관리합니다."),
+    "Check the app version and updates, and manage diagnostic logs, reset options, and licenses.",
+  );
+  assert.equal(
     translateCopy("ja", "GNU GPL v3에 따라 이용 가능하며 별도 보증은 제공되지 않습니다."),
     "GNU GPL v3に基づいて利用でき、保証はありません。",
   );

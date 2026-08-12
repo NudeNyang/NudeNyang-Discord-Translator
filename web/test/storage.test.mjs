@@ -20,7 +20,8 @@ test("storage management exposes downloaded models and SQLite history cleanup", 
   assert.match(markup, /id="clear-translation-cache"/);
   assert.match(markup, /data-field="translation_history_retention_days"/);
   assert.match(markup, /로컬에 저장된 번역 데이터의 용량을 관리합니다\./);
-  assert.match(markup, /class="storage-group-heading"><span class="card-index" aria-hidden="true">L<\/span>/);
+  assert.match(markup, /class="storage-group-heading"><span class="card-index card-index-icon" data-icon="device-desktop-down" aria-hidden="true"><svg/);
+  assert.doesNotMatch(markup, /class="storage-group-heading"><span class="card-index" aria-hidden="true">L<\/span>/);
   assert.match(markup, /class="storage-history-section"[\s\S]*id="storage-history-heading">번역 기록<\/h3>[\s\S]*class="settings-card storage-history-card"/);
   assert.match(script, /invoke\("storage_status_get"\)/);
   assert.match(script, /invoke\("local_model_storage_folder_open"\)/);

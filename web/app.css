@@ -144,9 +144,9 @@ input:focus-visible,
 
 .settings-nav-item {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   min-height: 40px;
   padding: 0 11px;
@@ -158,11 +158,23 @@ input:focus-visible,
   font-weight: 650;
 }
 
-.settings-nav-item i {
-  width: 6px;
-  height: 6px;
+.settings-nav-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--muted) 46%, transparent);
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+
+.settings-nav-glyph {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .settings-nav-item:hover {
@@ -176,7 +188,8 @@ input:focus-visible,
   background: var(--accent-soft);
 }
 
-.settings-nav-item.active i {
+.settings-nav-item.active .settings-nav-icon {
+  color: var(--surface-raised);
   background: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
@@ -454,6 +467,16 @@ input:focus-visible,
   background: var(--accent-soft);
   font-size: 10px;
   font-weight: 750;
+}
+
+.card-index-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .message-direction-icon {
@@ -1238,7 +1261,6 @@ input:focus-visible,
   border-color: color-mix(in srgb, var(--danger) 62%, var(--border));
   color: var(--danger);
   background: var(--danger-soft);
-  font-size: 12px;
 }
 
 .button.danger:hover {
@@ -1279,6 +1301,20 @@ input:focus-visible,
 
 .app-info-product {
   min-height: 82px;
+}
+
+.app-info-product-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-info-product-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
 }
 
 .app-info-product h3 {
@@ -1384,6 +1420,8 @@ input:focus-visible,
 }
 
 .button.provider-disconnect {
+  padding-inline: 8px;
+  text-align: center;
   border-color: color-mix(in srgb, var(--muted) 34%, var(--border));
   color: var(--muted);
   background: color-mix(in srgb, var(--control) 88%, var(--surface));
@@ -1501,7 +1539,7 @@ input:focus-visible,
   }
 
   .settings-navigation > p,
-  .settings-nav-item i {
+  .settings-nav-icon {
     display: none;
   }
 

@@ -181,7 +181,7 @@ test("provider action buttons share dimensions and use calm semantic colors", ()
   );
   assert.match(
     styles,
-    /\.button\.provider-disconnect\s*\{[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
+    /\.button\.provider-disconnect\s*\{[\s\S]*?padding-inline:\s*8px[\s\S]*?text-align:\s*center[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
   );
   assert.doesNotMatch(
     styles,
