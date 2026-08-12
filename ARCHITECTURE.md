@@ -32,7 +32,9 @@ NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 �
 
 ## Discord DOM 경계
 
-앱은 Discord를 `--remote-debugging-port`와 함께 실행하고 로컬 CDP 엔드포인트에만 연결한다.
+Windows 앱은 Discord를 `--remote-debugging-pipe`와 함께 실행하고, 앱과 해당 Discord 프로세스가
+상속한 전용 익명 파이프로만 CDP를 주고받는다. TCP 디버깅 포트는 열지 않으며 파이프 핸들은
+명시적인 상속 목록으로 제한한다.
 다음 경계를 지킨다.
 
 - Discord API, 사용자 토큰, self-bot을 사용하지 않는다.
@@ -53,6 +55,9 @@ NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 �
 - 실시간 번역은 최초 위험 고지 동의 전에는 켜지지 않는다.
 - CDP 연결 실패가 반복될 때만 15초 안내를 시작하고 한 활성화 주기당 자동 재시작은 한 번으로 제한한다.
 - 카운트다운 중 Discord PID가 바뀌면 오래된 재시작 요청을 폐기한다.
+- 연결할 실행 파일 경로·PID와 `https://discord.com` 페이지 대상을 모두 검증한다.
+- 앱이 정상 종료되면 파이프 Discord를 닫은 뒤 일반 Discord로 다시 열고, 비정상 종료 시에도
+  파이프가 닫혀 디버깅 세션이 남지 않는다.
 
 이 방식은 공식 플러그인 API가 아니므로 Discord 업데이트로 선택자가 바뀌거나 정책상 위험이
 발생할 수 있다. 안전성을 보증하지 않으며 필요하면 배포를 중단할 수 있다.

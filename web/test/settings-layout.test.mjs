@@ -11,6 +11,7 @@ const cargoManifest = readFileSync(new URL("../../src-tauri/Cargo.toml", import.
 const capabilities = readFileSync(new URL("../../src-tauri/capabilities/default.json", import.meta.url), "utf8");
 const installerHooks = readFileSync(new URL("../../src-tauri/windows/hooks.nsh", import.meta.url), "utf8");
 const discordStartup = readFileSync(new URL("../../src-tauri/src/discord_startup.rs", import.meta.url), "utf8");
+const discord = readFileSync(new URL("../../src-tauri/src/discord.rs", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
 test("the user-facing product name is NudeNyang Translator", () => {
@@ -203,19 +204,19 @@ test("system autostart is a cross-platform convenience setting that defaults to 
   assert.match(script, /autostartEnabled:\s*false/);
   assert.match(rustMain, /fn autostart_get\(/);
   assert.match(rustMain, /fn autostart_set\(/);
-  assert.match(rustMain, /autolaunch\(\)\.is_enabled\(\)/);
+  assert.match(rustMain, /autolaunch\(\)\s*\.is_enabled\(\)/);
   assert.match(cargoManifest, /tauri-plugin-autostart = "2"/);
   assert.match(rustMain, /tauri_plugin_autostart::init/);
   assert.doesNotMatch(capabilities, /autostart:allow-/);
 });
 
-test("Windows autostart prepares Discord for translation without taking over external compatible registrations", () => {
-  assert.match(discordStartup, /--force-renderer-accessibility/);
-  assert.match(discordStartup, /--remote-debugging-port=9222/);
+test("Windows uses a private Discord pipe and only restores legacy startup registrations", () => {
+  assert.doesNotMatch(discordStartup, /--remote-debugging-port=9222/);
+  assert.match(discord, /--force-renderer-accessibility/);
+  assert.match(discord, /--remote-debugging-pipe/);
   assert.match(discordStartup, /DiscordStartupBackup/);
-  assert.match(discordStartup, /command_is_compatible/);
   assert.match(discordStartup, /read_run_command\(\)\?\.as_ref\(\) == Some\(&backup\.managed\)/);
-  assert.match(rustMain, /discord_startup::synchronize\(enabled\)/);
+  assert.match(rustMain, /discord_startup::restore\(\)/);
   assert.match(rustMain, /--restore-discord-startup/);
   assert.match(installerHooks, /NSIS_HOOK_PREUNINSTALL/);
   assert.match(installerHooks, /--restore-discord-startup/);

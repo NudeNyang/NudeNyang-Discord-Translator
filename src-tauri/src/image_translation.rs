@@ -422,7 +422,7 @@ pub fn parse_image_capture_info(value: serde_json::Value) -> Result<ImageCapture
         .map_err(|error| format!("Discord 이미지 위치 정보를 읽지 못했습니다: {error}"))
 }
 
-pub fn fetch_image_data_script(image_id: &str) -> Result<String, String> {
+pub fn fetch_image_data_script(image_id: &str, max_bytes: usize) -> Result<String, String> {
     let id = serde_json::to_string(image_id).map_err(|error| error.to_string())?;
     Ok(format!(
         r##"(async () => {{
@@ -431,9 +431,22 @@ pub fn fetch_image_data_script(image_id: &str) -> Result<String, String> {
           if (!img) return null;
           const source = img.dataset.ntOriginalSrc || img.currentSrc || img.src || '';
           if (!source || source.startsWith('data:') || source.startsWith('blob:')) return null;
+          const maxBytes = {max_bytes};
           const response = await fetch(source, {{cache:'force-cache', credentials:'omit'}});
           if (!response.ok) throw new Error(`이미지 읽기 실패: HTTP ${{response.status}}`);
-          const blob = await response.blob();
+          const contentLength = Number(response.headers.get('content-length') || 0);
+          if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error('이미지가 허용 크기를 초과했습니다.');
+          if (!response.body) throw new Error('이미지 응답 스트림을 읽을 수 없습니다.');
+          const reader = response.body.getReader(), chunks = [];
+          let received = 0;
+          while (true) {{
+            const {{done, value}} = await reader.read();
+            if (done) break;
+            received += value.byteLength;
+            if (received > maxBytes) {{ await reader.cancel(); throw new Error('이미지가 허용 크기를 초과했습니다.'); }}
+            chunks.push(value);
+          }}
+          const blob = new Blob(chunks, {{type: response.headers.get('content-type') || ''}});
           const dataUrl = await new Promise((resolve, reject) => {{
             const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || ''));
             reader.onerror = () => reject(reader.error || new Error('이미지 읽기 실패'));
@@ -1029,8 +1042,10 @@ mod tests {
 
     #[test]
     fn generated_scripts_json_escape_untrusted_values() {
-        let fetch = fetch_image_data_script("x\";throw new Error('bad')//").unwrap();
+        let fetch = fetch_image_data_script("x\";throw new Error('bad')//", 1024).unwrap();
         assert!(fetch.contains("\\\""));
+        assert!(fetch.contains("const maxBytes = 1024"));
+        assert!(fetch.contains("received > maxBytes"));
         let error = apply_image_error_script("one", "줄1\n'줄2").unwrap();
         assert!(error.contains("\\n"));
     }

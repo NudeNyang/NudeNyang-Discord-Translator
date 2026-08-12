@@ -25,6 +25,8 @@ const CLAUDE_TRANSLATION_MODEL: &str = "claude-haiku-4-5-20251001";
 const AGY_TRANSLATION_MODEL: &str = "flash";
 const AGY_TRANSLATION_EFFORT: &str = "low";
 const PERSISTENT_SESSION_TURN_LIMIT: u32 = 32;
+const MAX_CLI_STDOUT_BYTES: usize = 8 * 1024 * 1024;
+const MAX_CLI_STDERR_BYTES: usize = 2 * 1024 * 1024;
 const API_ENVIRONMENT_VARIABLES: [&str; 5] = [
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
@@ -32,6 +34,22 @@ const API_ENVIRONMENT_VARIABLES: [&str; 5] = [
     "GOOGLE_API_KEY",
     "GOOGLE_GENAI_USE_VERTEXAI",
 ];
+
+fn read_capped_output<R: Read>(mut reader: R, limit: usize) -> Vec<u8> {
+    let mut output = Vec::with_capacity(limit.min(64 * 1024));
+    let mut buffer = [0_u8; 16 * 1024];
+    loop {
+        let Ok(read) = reader.read(&mut buffer) else {
+            break;
+        };
+        if read == 0 {
+            break;
+        }
+        let remaining = limit.saturating_sub(output.len());
+        output.extend_from_slice(&buffer[..read.min(remaining)]);
+    }
+    output
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SubscriptionProvider {
@@ -1075,11 +1093,8 @@ fn authenticate_gemini_acp_process_with_cache(
             }
         }
     });
-    let stderr_thread = thread::spawn(move || {
-        let mut bytes = Vec::new();
-        let _ = stderr.read_to_end(&mut bytes);
-        bytes
-    });
+    let stderr_thread =
+        thread::spawn(move || read_capped_output(&mut stderr, MAX_CLI_STDERR_BYTES));
 
     let result = (|| -> Result<(), String> {
         write_acp_request(
@@ -2777,16 +2792,10 @@ fn run_process_with_observer(
         }
     }
     let _observation_guard = ObservationGuard(process_observer);
-    let stdout_thread = thread::spawn(move || {
-        let mut bytes = Vec::new();
-        let _ = stdout.read_to_end(&mut bytes);
-        bytes
-    });
-    let stderr_thread = thread::spawn(move || {
-        let mut bytes = Vec::new();
-        let _ = stderr.read_to_end(&mut bytes);
-        bytes
-    });
+    let stdout_thread =
+        thread::spawn(move || read_capped_output(&mut stdout, MAX_CLI_STDOUT_BYTES));
+    let stderr_thread =
+        thread::spawn(move || read_capped_output(&mut stderr, MAX_CLI_STDERR_BYTES));
     let deadline = Instant::now() + timeout;
     let status = loop {
         if let Some(status) = child
@@ -3075,10 +3084,10 @@ mod tests {
         configure_gemini_plan_auth_at, decode_payload, decode_process_output,
         find_winget_package_executable, gemini_invocation_arguments,
         gemini_plan_auth_configured_at, is_node_backed_command, parse_node_major,
-        prepend_directory_to_environment_path, repair_incomplete_gemini_plan_auth_at, run_process,
-        subscription_environment, translation_prompt, validated_translations,
-        wait_for_antigravity_connection, write_acp_request, SubscriptionCliTranslator,
-        SubscriptionProvider,
+        prepend_directory_to_environment_path, read_capped_output,
+        repair_incomplete_gemini_plan_auth_at, run_process, subscription_environment,
+        translation_prompt, validated_translations, wait_for_antigravity_connection,
+        write_acp_request, SubscriptionCliTranslator, SubscriptionProvider,
     };
 
     #[cfg(windows)]
@@ -3122,6 +3131,12 @@ mod tests {
     }
     use crate::language::Language;
     use crate::translation::Translator;
+
+    #[test]
+    fn external_process_output_is_drained_but_capped() {
+        let input = vec![b'x'; 4096];
+        assert_eq!(read_capped_output(input.as_slice(), 1024).len(), 1024);
+    }
 
     #[test]
     fn parses_node_version_for_automatic_cli_installation() {

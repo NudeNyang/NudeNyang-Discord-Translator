@@ -14,7 +14,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   ui_theme: "system",
   ui_language: "auto",
   discord_auto_restart_consent_granted: false,
-  translation_history_retention_days: 0,
+  translation_history_retention_days: 30,
   hotkeys: {
     toggle_translation: "F12",
     toggle_outgoing_translation: "F8",

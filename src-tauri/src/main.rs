@@ -672,7 +672,7 @@ fn autostart_get(app: AppHandle) -> Result<bool, String> {
         .autolaunch()
         .is_enabled()
         .map_err(|error| format!("자동 시작 상태를 확인하지 못했습니다: {error}"))?;
-    discord_startup::synchronize(enabled)?;
+    discord_startup::restore()?;
     Ok(enabled)
 }
 
@@ -683,18 +683,12 @@ fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
         autolaunch
             .enable()
             .map_err(|error| format!("자동 시작을 켜지 못했습니다: {error}"))?;
-        if let Err(error) = discord_startup::synchronize(true) {
-            let _ = autolaunch.disable();
-            let _ = discord_startup::restore();
-            return Err(error);
-        }
     } else {
-        discord_startup::restore()?;
-        if let Err(error) = autolaunch.disable() {
-            let _ = discord_startup::synchronize(true);
-            return Err(format!("자동 시작을 끄지 못했습니다: {error}"));
-        }
+        autolaunch
+            .disable()
+            .map_err(|error| format!("자동 시작을 끄지 못했습니다: {error}"))?;
     }
+    discord_startup::restore()?;
     autolaunch
         .is_enabled()
         .map_err(|error| format!("변경된 자동 시작 상태를 확인하지 못했습니다: {error}"))
@@ -866,15 +860,20 @@ async fn discord_restart(
 ) -> Result<Value, String> {
     let client = engine.inner().clone();
     let _ = client.set_enabled(false);
-    tauri::async_runtime::spawn_blocking(move || {
-        discord::restart(expected_process_id, 9222)?;
-        discord::wait_for_debug_port(9222, Duration::from_secs(30))?;
-        Ok::<_, String>(())
-    })
-    .await
-    .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))??;
+    let restart_result =
+        tauri::async_runtime::spawn_blocking(move || discord::restart_pipe(expected_process_id))
+            .await
+            .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
+    let (process, cdp) = match restart_result {
+        Ok(result) => result,
+        Err(error) => {
+            let _ = client.set_enabled(true);
+            return Err(error);
+        }
+    };
+    client.replace_cdp(cdp)?;
     let _ = client.set_enabled(true);
-    Ok(json!({"connected": true}))
+    Ok(json!({"connected": true, "process": process}))
 }
 
 #[tauri::command]
@@ -967,11 +966,17 @@ fn shutdown_translation(app: &AppHandle) {
         return;
     }
     let engine = app.state::<RustEngine>();
+    let pipe_discord = discord::current_pipe_process();
     let _ = app.state::<ProviderLoginState>().cancel();
     let _ = engine.set_enabled(false);
     let config = app.state::<ConfigStore>();
     let _ = config.update(json!({"enabled": false}));
     engine.stop();
+    if let Some(process) = pipe_discord {
+        if let Err(error) = discord::restart_normally_after_pipe(process) {
+            diagnostics::error("discord_restart", &error);
+        }
+    }
 }
 
 fn hide_tray_menu(app: &AppHandle) {
@@ -1199,6 +1204,55 @@ fn create_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 fn main() {
+    let process_arguments = std::env::args_os().collect::<Vec<_>>();
+    if process_arguments
+        .get(1)
+        .is_some_and(|argument| argument == "--discord-cdp-pipe-helper")
+    {
+        let result = process_arguments
+            .get(2)
+            .map(std::path::Path::new)
+            .ok_or_else(|| "Discord 실행 경로가 없습니다.".to_string())
+            .and_then(discord::run_pipe_helper);
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    if process_arguments
+        .get(1)
+        .is_some_and(|argument| argument == "--verify-discord-cdp-pipe")
+    {
+        let expected_process_id = discord::current_process().map(|process| process.process_id);
+        match discord::restart_pipe(expected_process_id).and_then(|(process, mut client)| {
+            let marker = client.evaluate(
+                "(() => { const root = document.documentElement; const name = 'data-nudenyang-pipe-verify'; root.setAttribute(name, 'ok'); const value = root.getAttribute(name); root.removeAttribute(name); return value; })()",
+                false,
+            )?;
+            if marker != serde_json::Value::String("ok".to_string()) {
+                return Err(format!("Discord DOM 변조 검증 결과가 올바르지 않습니다: {marker}"));
+            }
+            drop(client);
+            discord::restart_normally_after_pipe(process.clone())?;
+            Ok(process)
+        }) {
+            Ok(process) => {
+                println!(
+                    "SECURE_PID={} DOM_MUTATION=OK NORMAL_RESTART=OK",
+                    process.process_id
+                );
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if std::env::args().any(|argument| argument == "--restore-discord-startup") {
         if let Err(error) = discord_startup::restore() {
             eprintln!("{error}");
@@ -1255,16 +1309,8 @@ fn main() {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
             create_tray(app)?;
             let handle = app.handle().clone();
-            match handle.autolaunch().is_enabled() {
-                Ok(enabled) => {
-                    if let Err(error) = discord_startup::synchronize(enabled) {
-                        diagnostics::warn("discord-startup", &error);
-                    }
-                }
-                Err(error) => diagnostics::warn(
-                    "discord-startup",
-                    &format!("자동 시작 상태를 확인하지 못했습니다: {error}"),
-                ),
+            if let Err(error) = discord_startup::restore() {
+                diagnostics::warn("discord-startup", &error);
             }
             // Windows가 F12를 디버거 용도로 선점한 경우에도 기존 앱과 동일하게
             // 키 상태 폴링으로 동작시켜 설정 저장과 모델 변경이 막히지 않게 해.

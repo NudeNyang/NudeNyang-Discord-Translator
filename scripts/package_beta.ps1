@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verify_llama_runtime.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $SecretDirectory = Join-Path $env:LOCALAPPDATA 'NudeTranslator\secrets'
 $EndpointFile = Join-Path $SecretDirectory 'update-endpoint.txt'
@@ -45,14 +46,13 @@ if (-not $PrivateKeyPassword) {
 }
 
 function Resolve-LlamaSource {
-    $command = Get-Command llama-server -ErrorAction SilentlyContinue
-    if ($command) { return (Split-Path -Parent $command.Source) }
     $wingetPackages = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
     $path = Get-ChildItem $wingetPackages -Filter llama-server.exe -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -like '*ggml.llamacpp*' } |
+        Where-Object { $_.FullName -like '*\ggml.llamacpp_Microsoft.Winget.Source_*\llama-server.exe' } |
+        Sort-Object FullName -Descending |
         Select-Object -First 1 -ExpandProperty FullName
     if ($path) { return (Split-Path -Parent $path) }
-    throw 'llama.cpp가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
+    throw '검증된 WinGet ggml.llamacpp 패키지가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
 }
 
 function Assert-DeveloperBuildStopped {
@@ -109,6 +109,7 @@ if (-not $SkipBuild) {
     $llamaDestination = Join-Path $resolvedStaging 'llama'
     New-Item -ItemType Directory -Path $llamaDestination -Force | Out-Null
     $llamaSource = Resolve-LlamaSource
+    Assert-LlamaRuntimeVerified -SourceDirectory $llamaSource
     Copy-Item -LiteralPath (Join-Path $llamaSource 'llama-server.exe') -Destination $llamaDestination -Force
     Get-ChildItem -LiteralPath $llamaSource -Filter '*.dll' | Copy-Item -Destination $llamaDestination -Force
 

@@ -503,10 +503,19 @@ fn ensure_asset(root: &Path, asset: ModelAsset) -> Result<(), String> {
         if count == 0 {
             break;
         }
+        let next_size = downloaded.saturating_add(count as u64);
+        if next_size > asset.expected_bytes {
+            drop(output);
+            let _ = fs::remove_file(&partial);
+            return Err(format!(
+                "{} 다운로드가 허용 크기({} bytes)를 초과해 중단했습니다.",
+                asset.filename, asset.expected_bytes
+            ));
+        }
         output
             .write_all(&buffer[..count])
             .map_err(|error| format!("OCR 모델을 저장하지 못했습니다: {error}"))?;
-        downloaded += count as u64;
+        downloaded = next_size;
     }
     output
         .flush()

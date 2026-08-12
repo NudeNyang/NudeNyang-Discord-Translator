@@ -5,6 +5,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verify_llama_runtime.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $DistDirectory = Join-Path $ProjectRoot 'dist\NudeNyangTranslator'
 $ReleaseDirectory = Join-Path $ProjectRoot 'release'
@@ -38,19 +39,17 @@ Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE') -Destination (Join-Pat
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'THIRD_PARTY_NOTICES.md') -Destination $DistDirectory -Force
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'licenses') -Destination $DistDirectory -Recurse -Force
 
-$LlamaCommand = Get-Command llama-server -ErrorAction SilentlyContinue
-$LlamaPath = if ($LlamaCommand) { $LlamaCommand.Source } else { $null }
+$WingetPackages = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+$LlamaPath = Get-ChildItem $WingetPackages -Filter llama-server.exe -Recurse -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -like '*\ggml.llamacpp_Microsoft.Winget.Source_*\llama-server.exe' } |
+    Sort-Object FullName -Descending |
+    Select-Object -First 1 -ExpandProperty FullName
 if (-not $LlamaPath) {
-    $WingetPackages = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
-    $LlamaPath = Get-ChildItem $WingetPackages -Filter llama-server.exe -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -like '*ggml.llamacpp*' } |
-        Select-Object -First 1 -ExpandProperty FullName
-}
-if (-not $LlamaPath) {
-    throw 'llama.cpp가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
+    throw '검증된 WinGet ggml.llamacpp 패키지가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
 }
 
 $LlamaSource = Split-Path -Parent $LlamaPath
+Assert-LlamaRuntimeVerified -SourceDirectory $LlamaSource
 $LlamaDestination = Join-Path $DistDirectory 'runtime\llama'
 New-Item -ItemType Directory -Force $LlamaDestination | Out-Null
 Copy-Item -LiteralPath (Join-Path $LlamaSource 'llama-server.exe') -Destination $LlamaDestination -Force
