@@ -25,6 +25,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "20개 언어 지원과 언어 검색을 추가하고, 번역 안정성과 다국어 설정 화면을 개선한 0.5.0 비공개 베타",
+    "Discord를 보안 파이프로 실행하고 Sentory와 함께 쓸 때의 자동 시작 충돌을 정리한 0.5.1 패치",
   );
 });

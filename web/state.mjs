@@ -14,7 +14,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   ui_theme: "system",
   ui_language: "auto",
   discord_auto_restart_consent_granted: false,
-  translation_history_retention_days: 0,
+  translation_history_retention_days: 30,
   hotkeys: {
     toggle_translation: "F12",
     toggle_outgoing_translation: "F8",
@@ -128,7 +128,7 @@ const TRANSLATOR_RUNTIME_NAMES = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
   translategemma_4b: "TranslateGemma 4B",
-  chatgpt: "GPT-5.6",
+  chatgpt: "GPT-5.6 Luna/Terra",
   claude: "Claude",
   gemini: "Gemini",
   deepl: "DeepL",

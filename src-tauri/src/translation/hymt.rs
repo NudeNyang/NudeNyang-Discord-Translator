@@ -656,10 +656,19 @@ impl HyMtTranslator {
                 if count == 0 {
                     break;
                 }
+                let next_size = downloaded.saturating_add(count as u64);
+                if next_size > self.model.expected_bytes {
+                    drop(output);
+                    let _ = fs::remove_file(&partial);
+                    return Err(format!(
+                        "{} 모델 다운로드가 허용 크기({} bytes)를 초과해 중단했습니다.",
+                        self.model.label, self.model.expected_bytes
+                    ));
+                }
                 output
                     .write_all(&buffer[..count])
                     .map_err(|error| format!("로컬 모델을 저장하지 못했습니다: {error}"))?;
-                downloaded += count as u64;
+                downloaded = next_size;
                 if downloaded.saturating_sub(last_reported) >= 8 * 1024 * 1024
                     || downloaded == self.model.expected_bytes
                 {

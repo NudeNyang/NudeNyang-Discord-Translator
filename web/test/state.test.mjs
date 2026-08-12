@@ -69,7 +69,7 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.outgoing_translator, "hymt_1_8b");
   assert.equal(config.outgoing_confirm_send, true);
   assert.equal(config.discord_auto_restart_consent_granted, false);
-  assert.equal(config.translation_history_retention_days, 0);
+  assert.equal(config.translation_history_retention_days, 30);
   assert.equal(config.hotkeys.toggle_translation, "F12");
   assert.equal(config.hotkeys.toggle_outgoing_translation, "F8");
   assert.equal(config.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
@@ -81,7 +81,7 @@ test("translation history retention accepts supported periods and rejects other 
   for (const days of [0, 7, 30, 90, 180]) {
     assert.equal(normalizeConfig({ translation_history_retention_days: days }).translation_history_retention_days, days);
   }
-  assert.equal(normalizeConfig({ translation_history_retention_days: 14 }).translation_history_retention_days, 0);
+  assert.equal(normalizeConfig({ translation_history_retention_days: 14 }).translation_history_retention_days, 30);
 });
 
 test("settings language defaults to automatic and accepts every explicit language", () => {

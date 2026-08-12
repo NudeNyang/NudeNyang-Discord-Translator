@@ -11,7 +11,7 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::cache::{CacheCleanupResult, TranslationCache};
-use crate::cdp::{discord_target, CdpClient};
+use crate::cdp::CdpClient;
 use crate::config::{default_config_path, AppConfig, ConfigStore};
 use crate::dom::{
     apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
@@ -40,10 +40,11 @@ use crate::translation::{
     TranslationService, Translator,
 };
 
-const CDP_PORT: u16 = 9222;
 const MAX_BATCH_ITEMS: usize = 32;
 const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
+const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
+const MAX_IMAGE_BASE64_BYTES: usize = (MAX_IMAGE_BYTES * 4 / 3) + 8;
 
 type Locator = (String, String, usize);
 type PendingKey = (u64, String, String, usize, String);
@@ -104,6 +105,7 @@ pub struct RustEngine {
 enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
+    ReplaceCdp(CdpClient),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
     UiReady,
@@ -339,6 +341,12 @@ impl RustEngine {
         self.controls
             .send(Control::SetEnabled(enabled))
             .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
+    }
+
+    pub fn replace_cdp(&self, client: CdpClient) -> Result<(), String> {
+        self.controls
+            .send(Control::ReplaceCdp(client))
+            .map_err(|_| "Rust 번역 엔진에 보안 CDP 연결을 전달하지 못했습니다.".to_string())
     }
 
     pub fn attach_app(&self, app: AppHandle) -> Result<(), String> {
@@ -610,6 +618,25 @@ fn run_controller(
                         }
                     }
                 }
+                Control::ReplaceCdp(mut replacement) => {
+                    restore(&mut client, &states, false);
+                    if let Err(error) = replacement
+                        .connect()
+                        .and_then(|_| replacement.evaluate(INSTALL_TEXT_RESTORE_SCRIPT, false))
+                    {
+                        crate::diagnostics::error("cdp", &error);
+                    }
+                    client = Some(replacement);
+                    states.clear();
+                    pending.clear();
+                    image_pending.clear();
+                    outgoing_pending.clear();
+                    generation += 1;
+                    image_ui_needs_cleanup = true;
+                    outgoing_ui_needs_cleanup = true;
+                    consecutive_connection_failures = 0;
+                    connection_issue_reported = false;
+                }
                 Control::ClearCache(result_tx) => {
                     let result = outgoing_original_store
                         .as_ref()
@@ -744,13 +771,11 @@ fn run_controller(
         let had_client = client.is_some();
         let result = (|| -> Result<(), String> {
             if client.is_none() {
-                let target = discord_target(CDP_PORT)?;
-                let mut connected = CdpClient::new(target.websocket_url);
-                connected.connect()?;
-                connected.evaluate(INSTALL_TEXT_RESTORE_SCRIPT, false)?;
-                client = Some(connected);
-                image_ui_needs_cleanup = true;
+                return Err(
+                    "Discord가 보안 연결로 열리지 않았어. Discord 재시작을 진행해줘.".to_string(),
+                );
             }
+            client.as_mut().expect("connected CDP client").connect()?;
             consecutive_connection_failures = 0;
             connection_issue_reported = false;
             update_status(&status, |runtime| {
@@ -1008,14 +1033,21 @@ fn scan_images(
 }
 
 fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, String> {
-    let script = fetch_image_data_script(image_id)?;
+    let script = fetch_image_data_script(image_id, MAX_IMAGE_BYTES)?;
     if let Ok(value) = client.evaluate(&script, true) {
         if !value.is_null() {
             let data = parse_image_data(value)?;
             if !data.base64.is_empty() {
-                return BASE64.decode(data.base64.as_bytes()).map_err(|error| {
+                if data.base64.len() > MAX_IMAGE_BASE64_BYTES {
+                    return Err("Discord 이미지가 허용 크기(20MB)를 초과했습니다.".to_string());
+                }
+                let decoded = BASE64.decode(data.base64.as_bytes()).map_err(|error| {
                     format!("Discord 이미지 Base64를 해석하지 못했습니다: {error}")
-                });
+                })?;
+                if decoded.len() > MAX_IMAGE_BYTES {
+                    return Err("Discord 이미지가 허용 크기(20MB)를 초과했습니다.".to_string());
+                }
+                return Ok(decoded);
             }
         }
     }
@@ -1065,9 +1097,16 @@ fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, 
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| "Discord 화면 캡처 결과가 비어 있습니다.".to_string())?
         .to_string();
-    BASE64
+    if encoded.len() > MAX_IMAGE_BASE64_BYTES {
+        return Err("Discord 화면 캡처가 허용 크기(20MB)를 초과했습니다.".to_string());
+    }
+    let decoded = BASE64
         .decode(encoded.as_bytes())
-        .map_err(|error| format!("Discord 화면 캡처 Base64를 해석하지 못했습니다: {error}"))
+        .map_err(|error| format!("Discord 화면 캡처 Base64를 해석하지 못했습니다: {error}"))?;
+    if decoded.len() > MAX_IMAGE_BYTES {
+        return Err("Discord 화면 캡처가 허용 크기(20MB)를 초과했습니다.".to_string());
+    }
+    Ok(decoded)
 }
 
 fn scan_dom(
@@ -2140,7 +2179,7 @@ fn translator_label(name: &str) -> &str {
         "hymt_1_8b" => "Hy-MT2 1.8B Q4 (경량·기본)",
         "hymt_7b" => "Hy-MT2 7B Q4 (품질·약 4.6GB)",
         "translategemma_4b" => "TranslateGemma 4B Q4 (실험·약 2.5GB)",
-        "chatgpt" => "GPT-5.6 · 품질 최우선 (Codex CLI)",
+        "chatgpt" => "GPT-5.6 Luna/Terra · 품질 최우선 (Codex CLI)",
         "claude" => "Claude · 품질 최우선 (Claude Code)",
         "gemini" => "Gemini · 품질 최우선 (Antigravity CLI)",
         "deepl" => "DeepL API",
@@ -2207,6 +2246,7 @@ mod tests {
         assert_eq!(poll_interval(0), Duration::from_millis(500));
         assert_eq!(poll_interval(100), Duration::from_millis(50));
         assert!(translator_label("chatgpt").contains("Codex"));
+        assert!(translator_label("chatgpt").contains("Luna/Terra"));
         assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
         for provider in ["chatgpt", "claude", "gemini"] {
             assert!(translator_label(provider).contains("품질 최우선"));

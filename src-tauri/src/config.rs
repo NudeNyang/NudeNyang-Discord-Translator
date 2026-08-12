@@ -120,7 +120,7 @@ impl Default for AppConfig {
             auto_update: true,
             update_repository: DEFAULT_UPDATE_REPOSITORY.to_string(),
             discord_auto_restart_consent_granted: false,
-            translation_history_retention_days: 0,
+            translation_history_retention_days: 30,
             chat_region: RegionConfig::default(),
             hotkeys: HotkeyConfig::default(),
         }
@@ -249,7 +249,7 @@ impl AppConfig {
         {
             object.insert(
                 "translation_history_retention_days".to_string(),
-                Value::from(0),
+                Value::from(30),
             );
         }
 
@@ -469,7 +469,7 @@ mod tests {
         assert_eq!(restored.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
         assert_eq!(restored.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert!(restored.disabled_providers.is_empty());
-        assert_eq!(restored.translation_history_retention_days, 0);
+        assert_eq!(restored.translation_history_retention_days, 30);
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
@@ -490,7 +490,7 @@ mod tests {
             "translation_history_retention_days": "14"
         }))
         .expect("invalid retention period should reset");
-        assert_eq!(invalid.translation_history_retention_days, 0);
+        assert_eq!(invalid.translation_history_retention_days, 30);
     }
 
     #[test]

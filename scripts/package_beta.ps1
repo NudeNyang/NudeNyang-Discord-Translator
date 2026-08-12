@@ -1,12 +1,13 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('MjDqsJwg7Ja47Ja0IOyngOybkOqzvCDslrjslrQg6rKA7IOJ7J2EIOy2lOqwgO2VmOqzoCwg67KI7JetIOyViOygleyEseqzvCDri6Tqta3slrQg7ISk7KCVIO2ZlOuptOydhCDqsJzshKDtlZwgMC41LjAg67mE6rO16rCcIOuyoO2DgA==')),
+    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('RGlzY29yZOulvCDrs7TslYgg7YyM7J207ZSE66GcIOyLpO2Wie2VmOqzoCBTZW50b3J57JmAIO2VqOq7mCDsk7gg65WM7J2YIOyekOuPmSDsi5zsnpEg7Lap64+M7J2EIOygleumrO2VnCAwLjUuMSDtjKjsuZg=')),
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'verify_llama_runtime.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $SecretDirectory = Join-Path $env:LOCALAPPDATA 'NudeTranslator\secrets'
 $EndpointFile = Join-Path $SecretDirectory 'update-endpoint.txt'
@@ -45,14 +46,13 @@ if (-not $PrivateKeyPassword) {
 }
 
 function Resolve-LlamaSource {
-    $command = Get-Command llama-server -ErrorAction SilentlyContinue
-    if ($command) { return (Split-Path -Parent $command.Source) }
     $wingetPackages = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
     $path = Get-ChildItem $wingetPackages -Filter llama-server.exe -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -like '*ggml.llamacpp*' } |
+        Where-Object { $_.FullName -like '*\ggml.llamacpp_Microsoft.Winget.Source_*\llama-server.exe' } |
+        Sort-Object FullName -Descending |
         Select-Object -First 1 -ExpandProperty FullName
     if ($path) { return (Split-Path -Parent $path) }
-    throw 'llama.cpp가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
+    throw '검증된 WinGet ggml.llamacpp 패키지가 없습니다. scripts/setup_hymt_runtime.ps1을 먼저 실행하십시오.'
 }
 
 function Assert-DeveloperBuildStopped {
@@ -109,6 +109,7 @@ if (-not $SkipBuild) {
     $llamaDestination = Join-Path $resolvedStaging 'llama'
     New-Item -ItemType Directory -Path $llamaDestination -Force | Out-Null
     $llamaSource = Resolve-LlamaSource
+    Assert-LlamaRuntimeVerified -SourceDirectory $llamaSource
     Copy-Item -LiteralPath (Join-Path $llamaSource 'llama-server.exe') -Destination $llamaDestination -Force
     Get-ChildItem -LiteralPath $llamaSource -Filter '*.dll' | Copy-Item -Destination $llamaDestination -Force
 

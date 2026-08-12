@@ -25,7 +25,8 @@ macOS는 아직 지원 운영체제가 아니다. 현재 Windows 기능을 유�
 ### 2. Discord 실행과 CDP
 
 - Stable/PTB/Canary의 `.app` 위치를 탐색한다.
-- `--remote-debugging-port=9222`를 전달해 안전하게 재시작한다.
+- Windows와 같은 전용 CDP 파이프를 구현하거나, Electron에서 동등한 비공개 전송을 제공하는지
+  검증한 뒤 안전하게 재시작한다. 고정 TCP 디버깅 포트는 사용하지 않는다.
 - PID 변경 확인, 15초 카운트다운, 한 번만 재시작 정책을 macOS 구현에 연결한다.
 - Discord 설치 파일을 영구 수정하지 않는다.
 
