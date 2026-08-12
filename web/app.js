@@ -1110,7 +1110,7 @@ function renderSelect(element) {
 
   let previousGroup = "";
   for (const [value, label, group] of OPTIONS[field]) {
-    if (group && group !== previousGroup) {
+    if (!languageField && group && group !== previousGroup) {
       const groupLabel = document.createElement("span");
       groupLabel.className = "select-group-label";
       groupLabel.textContent = translateCopy(currentUiLanguage(), SELECT_GROUP_LABELS[group]);

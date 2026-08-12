@@ -87,6 +87,31 @@ pub const SUPPORTED_LANGUAGES: [Language; 20] = [
     Language::Malay,
 ];
 
+// Keep detection candidates stable while presenting the product languages in a
+// user-facing priority order based on Discord reach and language-market size.
+pub const LANGUAGE_MENU_ORDER: [Language; 20] = [
+    Language::Korean,
+    Language::English,
+    Language::Japanese,
+    Language::ChineseSimplified,
+    Language::ChineseTraditional,
+    Language::BrazilianPortuguese,
+    Language::Hindi,
+    Language::LatinAmericanSpanish,
+    Language::German,
+    Language::Russian,
+    Language::Indonesian,
+    Language::French,
+    Language::Turkish,
+    Language::Arabic,
+    Language::Vietnamese,
+    Language::Italian,
+    Language::Polish,
+    Language::Ukrainian,
+    Language::Malay,
+    Language::Dutch,
+];
+
 pub fn is_supported_language_code(value: &str) -> bool {
     Language::try_from(value).is_ok_and(|language| language != Language::Unknown)
 }
@@ -684,7 +709,7 @@ mod tests {
     use super::{
         detect_explicit_language, detect_language, provider_language_codes, CandidateSelector,
         Language, LanguageDetector, ProviderLanguageCodes, RecognitionCandidate,
-        TranslationProvider, SUPPORTED_LANGUAGES,
+        TranslationProvider, LANGUAGE_MENU_ORDER, SUPPORTED_LANGUAGES,
     };
     use std::collections::BTreeMap;
     use std::fmt::Write as _;
@@ -701,6 +726,22 @@ mod tests {
             Language::try_from("zh-Hans").unwrap(),
             Language::ChineseSimplified
         );
+    }
+
+    #[test]
+    fn language_menu_keeps_core_languages_first_and_prioritizes_large_markets() {
+        assert_eq!(
+            LANGUAGE_MENU_ORDER.map(Language::code),
+            [
+                "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "hi", "es-419", "de", "ru", "id", "fr",
+                "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl",
+            ]
+        );
+        let mut supported = SUPPORTED_LANGUAGES.map(Language::code);
+        let mut menu = LANGUAGE_MENU_ORDER.map(Language::code);
+        supported.sort_unstable();
+        menu.sort_unstable();
+        assert_eq!(menu, supported);
     }
 
     #[test]

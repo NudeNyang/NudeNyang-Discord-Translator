@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 
 use crate::cache::OutgoingOriginalRecord;
 use crate::language::{
-    detect_explicit_language, is_supported_language_code, Language, SUPPORTED_LANGUAGES,
+    detect_explicit_language, is_supported_language_code, Language, LANGUAGE_MENU_ORDER,
 };
 
 const OUTGOING_UI_SCRIPT: &str = r####"
@@ -1209,12 +1209,12 @@ pub fn outgoing_ui_script(
     } else {
         "en"
     };
-    let language_labels = SUPPORTED_LANGUAGES
+    let language_labels = LANGUAGE_MENU_ORDER
         .into_iter()
         .map(|language| (language.code(), language.native_name()))
         .chain(std::iter::once(("auto", "Auto")))
         .collect::<std::collections::BTreeMap<_, _>>();
-    let compact_labels = SUPPORTED_LANGUAGES
+    let compact_labels = LANGUAGE_MENU_ORDER
         .into_iter()
         .map(|language| {
             let compact = match language {
@@ -1229,7 +1229,7 @@ pub fn outgoing_ui_script(
         })
         .chain(std::iter::once(("auto", "AU".to_string())))
         .collect::<std::collections::BTreeMap<_, _>>();
-    let language_codes = SUPPORTED_LANGUAGES
+    let language_codes = LANGUAGE_MENU_ORDER
         .into_iter()
         .map(Language::code)
         .collect::<Vec<_>>();

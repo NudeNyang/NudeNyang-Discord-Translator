@@ -28,6 +28,10 @@ test("translation language options honor right-to-left labels", () => {
   assert.match(styles, /\.select-option:dir\(rtl\)\s*\{[^}]*text-align:\s*right;/s);
 });
 
+test("language compact codes are not rendered as select group headings", () => {
+  assert.match(script, /if \(!languageField && group && group !== previousGroup\)/);
+});
+
 test("the beta version is consistent across the application manifests", () => {
   assert.equal(packageManifest.version, "0.4.11-beta");
   assert.match(tauriConfig, /"version": "0\.4\.11-beta"/);
