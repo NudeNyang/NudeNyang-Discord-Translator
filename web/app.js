@@ -330,9 +330,10 @@ function setProviderActionLabel(action, korean) {
   const key = String(korean ?? "");
   const translated = translateDynamicCopy(currentUiLanguage(), key);
   action.dataset.i18nAriaLabel = key;
-  action.dataset.i18nTitle = key;
+  action.dataset.i18nTooltip = key;
+  action.dataset.tooltip = translated;
   action.setAttribute("aria-label", translated);
-  action.title = translated;
+  action.removeAttribute("title");
 }
 
 function connectedRecommendedProvider() {

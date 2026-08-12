@@ -173,14 +173,16 @@ test("provider actions use fixed icon buttons with localized accessible labels",
   assert.match(markup, /button secondary provider-action provider-icon-button/);
   assert.match(markup, /button secondary provider-disconnect provider-icon-button/);
   assert.match(markup, /class="provider-action-icon"/);
-  assert.match(markup, /aria-label="연결" title="연결"/);
-  assert.match(markup, /aria-label="연결 해제" title="연결 해제"/);
+  assert.match(markup, /aria-label="연결" data-tooltip="연결"/);
+  assert.match(markup, /aria-label="연결 해제" data-tooltip="연결 해제"/);
+  assert.doesNotMatch(markup, /provider-icon-button[^>]*\stitle=/);
   assert.match(script, /function setProviderActionLabel/);
   assert.match(script, /action\.dataset\.i18nAriaLabel = key/);
-  assert.match(script, /action\.dataset\.i18nTitle = key/);
+  assert.match(script, /action\.dataset\.i18nTooltip = key/);
+  assert.match(script, /action\.dataset\.tooltip = translated/);
   assert.match(
     styles,
-    /\.provider-icon-button\s*\{[\s\S]*?width:\s*42px[\s\S]*?height:\s*42px[\s\S]*?place-items:\s*center/,
+    /\.button\.provider-icon-button\s*\{[\s\S]*?flex:\s*0 0 36px[\s\S]*?width:\s*36px[\s\S]*?min-width:\s*36px[\s\S]*?height:\s*36px[\s\S]*?min-height:\s*36px[\s\S]*?place-items:\s*center/,
   );
   assert.match(
     styles,
@@ -188,7 +190,14 @@ test("provider actions use fixed icon buttons with localized accessible labels",
   );
   assert.match(
     styles,
-    /\.provider-action-icon\s*\{[\s\S]*?width:\s*19px[\s\S]*?stroke:\s*currentColor[\s\S]*?stroke-width:\s*2/,
+    /\.provider-action-icon\s*\{[\s\S]*?width:\s*18px[\s\S]*?stroke:\s*currentColor[\s\S]*?stroke-width:\s*2/,
+  );
+  const tooltipRule = styles.match(/\.provider-icon-button::after\s*\{[\s\S]*?\}/)?.[0] || "";
+  assert.match(tooltipRule, /content:\s*attr\(data-tooltip\)/);
+  assert.match(tooltipRule, /right:\s*calc\(100% \+ 8px\)/);
+  assert.match(
+    styles,
+    /\.provider-icon-button:is\(:hover, :focus-visible\)::after\s*\{[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/,
   );
   assert.match(
     styles,

@@ -200,7 +200,7 @@ test("every static Korean settings label and accessibility attribute has transla
   const leafText = [...settingsMarkup.matchAll(/<(?:h1|h2|h3|p|span|strong|b|button|small)[^>]*>([^<>]*[가-힣][^<>]*)<\//g)]
     .map(match => match[1].trim())
     .filter(Boolean);
-  const attributes = [...settingsMarkup.matchAll(/(?:aria-label|placeholder|title)="([^"]*[가-힣][^"]*)"/g)]
+  const attributes = [...settingsMarkup.matchAll(/(?:aria-label|placeholder|title|data-tooltip)="([^"]*[가-힣][^"]*)"/g)]
     .map(match => match[1].trim());
   for (const value of [...new Set([...leafText, ...attributes])]) {
     for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {

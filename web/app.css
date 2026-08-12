@@ -1280,24 +1280,9 @@ input:focus-visible,
   white-space: normal;
 }
 
-.provider-icon-button {
-  display: inline-grid;
-  flex: 0 0 42px;
-  width: 42px;
-  min-width: 42px;
-  height: 42px;
-  min-height: 42px;
-  padding: 0;
-  place-items: center;
-}
-
-.provider-icon-button[hidden] {
-  display: none;
-}
-
 .provider-action-icon {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -1461,6 +1446,51 @@ input:focus-visible,
   border: 1px solid var(--border);
   border-radius: 8px;
   font-weight: 650;
+}
+
+.button.provider-icon-button {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 36px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  place-items: center;
+}
+
+.button.provider-icon-button[hidden] {
+  display: none;
+}
+
+.provider-icon-button::after {
+  position: absolute;
+  z-index: 30;
+  top: 50%;
+  right: calc(100% + 8px);
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(2 12 16 / 0.28);
+  content: attr(data-tooltip);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(4px, -50%);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.provider-icon-button:is(:hover, :focus-visible)::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+  visibility: visible;
 }
 
 .button:active {

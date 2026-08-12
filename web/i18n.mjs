@@ -770,4 +770,14 @@ export function applyStaticTranslations(root, language) {
       if (key) element.setAttribute(attribute, translateCopy(language, key));
     }
   }
+  for (const element of root.querySelectorAll("[data-tooltip]")) {
+    const value = element.dataset.tooltip?.trim();
+    if (!value) continue;
+    let key = element.dataset.i18nTooltip;
+    if (!key || !matchesKnownTranslation(value, key)) {
+      key = COPY[value] ? value : "";
+      if (key) element.dataset.i18nTooltip = key;
+    }
+    if (key) element.dataset.tooltip = translateCopy(language, key);
+  }
 }
