@@ -92,7 +92,10 @@ test("settings language defaults to automatic and accepts four explicit language
 });
 
 test("all supported display languages survive settings normalization", () => {
-  assert.deepEqual(SUPPORTED_TARGET_LANGUAGES, ["ko", "ja", "en", "zh", "zh-Hant"]);
+  assert.deepEqual(SUPPORTED_TARGET_LANGUAGES, [
+    "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "es-419", "de", "fr", "id",
+    "hi", "vi", "pl", "ru", "uk", "tr", "ar", "it", "nl", "ms",
+  ]);
   for (const targetLanguage of SUPPORTED_TARGET_LANGUAGES) {
     assert.equal(normalizeConfig({ target_language: targetLanguage }).target_language, targetLanguage);
   }

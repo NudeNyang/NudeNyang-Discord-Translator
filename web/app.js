@@ -12,6 +12,7 @@ import {
   translatorRuntimeLabel,
 } from "./state.mjs";
 import { LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
+import { LANGUAGE_OPTIONS } from "./languages.mjs";
 import {
   applyStaticTranslations,
   translateCopy,
@@ -61,23 +62,10 @@ const SELECT_GROUP_LABELS = Object.freeze({
 });
 
 const OPTIONS = {
-  target_language: [
-    ["ko", "한국어"],
-    ["ja", "日本語"],
-    ["en", "English"],
-    ["zh", "简体中文"],
-    ["zh-Hant", "繁體中文"],
-  ],
+  target_language: LANGUAGE_OPTIONS,
   translator: DISPLAY_TRANSLATOR_OPTIONS,
   outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
-  outgoing_target_language: [
-    ["auto", "최근 대화에서 자동 감지"],
-    ["ko", "한국어"],
-    ["ja", "日本語"],
-    ["en", "English"],
-    ["zh", "简体中文"],
-    ["zh-Hant", "繁體中文"],
-  ],
+  outgoing_target_language: [["auto", "최근 대화에서 자동 감지"], ...LANGUAGE_OPTIONS],
   hymt_device: [
     ["auto", "자동 (GPU 우선, CPU 대체)"],
     ["cpu", "CPU/RAM 전용"],
@@ -1109,6 +1097,7 @@ function openSelect(element) {
 
 function renderSelect(element) {
   const field = element.dataset.field;
+  const languageField = ["target_language", "outgoing_target_language"].includes(field);
   const trigger = document.createElement("button");
   const menu = document.createElement("div");
   trigger.type = "button";
@@ -1133,6 +1122,7 @@ function renderSelect(element) {
     option.className = "select-option";
     option.dataset.value = value;
     option.textContent = translateCopy(currentUiLanguage(), label);
+    if (languageField) option.dir = "auto";
     option.setAttribute("role", "option");
     option.addEventListener("click", async () => {
       const previous = state.selectValues[field];
@@ -1197,7 +1187,9 @@ function setSelectValue(field, value) {
   state.selectValues[field] = value;
   const element = document.querySelector(`.custom-select[data-field="${field}"]`);
   const label = OPTIONS[field].find(item => item[0] === value)?.[1] || value;
-  element.querySelector(".select-trigger").textContent = translateCopy(currentUiLanguage(), label);
+  const trigger = element.querySelector(".select-trigger");
+  trigger.textContent = translateCopy(currentUiLanguage(), label);
+  trigger.dir = ["target_language", "outgoing_target_language"].includes(field) ? "auto" : "ltr";
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === String(value)));
   }

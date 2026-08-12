@@ -190,7 +190,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 24/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 31/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 32/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
@@ -203,7 +203,11 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /\.nt-outgoing-status\{[^}]*order:-1/);
   assert.match(outgoing, /outgoingLanguage:'전송'/);
   assert.match(outgoing, /displayLanguage:'표시'/);
-  assert.match(outgoing, /const compactLanguageLabels = \{auto:'AU',ko:'KO',ja:'JP',en:'EN',zh:'CN','zh-Hant':'TW'\}/);
+  assert.match(outgoing, /const languageLabels = __LANGUAGE_LABELS__/);
+  assert.match(outgoing, /const languageCodes = __LANGUAGE_CODES__/);
+  assert.match(outgoing, /const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__/);
+  assert.match(outgoing, /button\.dir = 'auto'/);
+  assert.match(outgoing, /text-align:start/);
   assert.match(outgoing, /class="nt-role-icon nt-outgoing-icon" aria-hidden="true">↑/);
   assert.match(outgoing, /class="nt-role-icon nt-display-icon" aria-hidden="true">↓/);
   assert.match(outgoing, /\.nt-outgoing-control\{--nt-role-bg:#0f202c/);

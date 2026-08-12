@@ -4,7 +4,9 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::cache::OutgoingOriginalRecord;
-use crate::language::{detect_explicit_language, Language};
+use crate::language::{
+    detect_explicit_language, is_supported_language_code, Language, SUPPORTED_LANGUAGES,
+};
 
 const OUTGOING_UI_SCRIPT: &str = r####"
 (() => {
@@ -23,7 +25,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 31;
+  const CONTROLLER_VERSION = 32;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
@@ -70,13 +72,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言'
     }
   };
-  const languageLabelsByUi = {
-    ko:{auto:'자동 감지',ko:'한국어',ja:'일본어',en:'영어',zh:'중국어 간체','zh-Hant':'중국어 번체'},
-    en:{auto:'Auto detect',ko:'Korean',ja:'Japanese',en:'English',zh:'Simplified Chinese','zh-Hant':'Traditional Chinese'},
-    ja:{auto:'自動検出',ko:'韓国語',ja:'日本語',en:'英語',zh:'簡体字中国語','zh-Hant':'繁体字中国語'},
-    zh:{auto:'自动检测',ko:'韩语',ja:'日语',en:'英语',zh:'简体中文','zh-Hant':'繁体中文'}
-  };
-  const compactLanguageLabels = {auto:'AU',ko:'KO',ja:'JP',en:'EN',zh:'CN','zh-Hant':'TW'};
+  const languageLabels = __LANGUAGE_LABELS__;
+  const languageCodes = __LANGUAGE_CODES__;
+  const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__;
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const formatCopy = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), copy(key));
   const shortcutFromEvent = event => {
@@ -93,7 +91,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     return [...modifiers,key].join('+');
   };
   const sameShortcut = (left, right) => Boolean(left && right && left.toLowerCase() === right.toLowerCase());
-  const languageLabels = languageLabelsByUi[uiLanguage] || languageLabelsByUi.en;
   function currentChannelKey() {
     return location.pathname.startsWith('/channels/') ? location.pathname : '';
   }
@@ -254,6 +251,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     button.type = 'button';
     button.textContent = text;
     button.dataset.action = action;
+    if (action === 'language' || action === 'display-language') button.dir = 'auto';
     if (value) button.dataset.value = value;
     return button;
   }
@@ -279,8 +277,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-role-accent) 58%,transparent);outline-offset:2px}
       #${ROOT_ID} .nt-role-icon{display:inline-flex;width:20px;height:20px;flex:none;align-items:center;justify-content:center;border:1px solid color-mix(in srgb,var(--nt-role-accent) 50%,var(--nt-role-border));border-radius:50%;background:var(--nt-icon-bg);color:var(--nt-icon-text);font-size:13px;font-weight:750;line-height:1}
       #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:11px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
-      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;padding:6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
-      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;max-height:min(65vh,560px);overflow-y:auto;overscroll-behavior:contain;padding:6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:start}
       #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
       #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
       #${ROOT_ID} .nt-outgoing-menu .nt-divider{height:1px;margin:5px;background:var(--background-modifier-accent,#ffffff14)}
@@ -461,7 +459,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         title.className = 'nt-heading';
         title.textContent = heading;
         menu.append(title);
-        const choices = requestId ? ['ko','ja','en','zh','zh-Hant'] : ['auto','ko','ja','en','zh','zh-Hant'];
+        const choices = requestId ? languageCodes : ['auto', ...languageCodes];
         for (const code of choices) menu.append(makeButton(languageLabels[code], 'language', code));
         const divider = document.createElement('div');
         divider.className = 'nt-divider';
@@ -483,7 +481,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         title.className = 'nt-heading';
         title.textContent = copy('selectDisplayLanguage');
         menu.append(title);
-        for (const code of ['ko','ja','en','zh','zh-Hant']) {
+        for (const code of languageCodes) {
           menu.append(makeButton(languageLabels[code], 'display-language', code));
         }
         menu.hidden = false;
@@ -1195,24 +1193,46 @@ pub fn outgoing_ui_script(
     send_immediately_shortcut: &str,
     review_before_send_shortcut: &str,
 ) -> String {
-    let display_language = if matches!(display_language, "ko" | "ja" | "en" | "zh" | "zh-Hant") {
+    let display_language = if is_supported_language_code(display_language) {
         display_language
     } else {
         "ko"
     };
-    let default_language = if matches!(
-        default_language,
-        "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant"
-    ) {
-        default_language
-    } else {
-        "auto"
-    };
+    let default_language =
+        if default_language == "auto" || is_supported_language_code(default_language) {
+            default_language
+        } else {
+            "auto"
+        };
     let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
         ui_language
     } else {
         "en"
     };
+    let language_labels = SUPPORTED_LANGUAGES
+        .into_iter()
+        .map(|language| (language.code(), language.native_name()))
+        .chain(std::iter::once(("auto", "Auto")))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let compact_labels = SUPPORTED_LANGUAGES
+        .into_iter()
+        .map(|language| {
+            let compact = match language {
+                Language::Japanese => "JP",
+                Language::ChineseSimplified => "CN",
+                Language::ChineseTraditional => "TW",
+                Language::BrazilianPortuguese => "BR",
+                Language::LatinAmericanSpanish => "ES",
+                _ => language.code(),
+            };
+            (language.code(), compact.to_ascii_uppercase())
+        })
+        .chain(std::iter::once(("auto", "AU".to_string())))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let language_codes = SUPPORTED_LANGUAGES
+        .into_iter()
+        .map(Language::code)
+        .collect::<Vec<_>>();
     OUTGOING_UI_SCRIPT
         .replace("__ENABLED__", if enabled { "true" } else { "false" })
         .replace(
@@ -1234,6 +1254,18 @@ pub fn outgoing_ui_script(
         .replace(
             "__CHANNEL_LANGUAGES__",
             &serde_json::to_string(channel_languages).expect("remembered channel languages"),
+        )
+        .replace(
+            "__LANGUAGE_LABELS__",
+            &serde_json::to_string(&language_labels).expect("static language labels"),
+        )
+        .replace(
+            "__LANGUAGE_CODES__",
+            &serde_json::to_string(&language_codes).expect("static language codes"),
+        )
+        .replace(
+            "__COMPACT_LANGUAGE_LABELS__",
+            &serde_json::to_string(&compact_labels).expect("static compact language labels"),
         )
         .replace(
             "__CONFIRM_SEND__",

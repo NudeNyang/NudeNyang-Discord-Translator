@@ -5,7 +5,7 @@ use std::time::Duration;
 use serde::Deserialize;
 
 use crate::credentials;
-use crate::language::Language;
+use crate::language::{provider_language_codes, Language, TranslationProvider};
 
 use super::Translator;
 
@@ -82,11 +82,17 @@ impl DeepLTranslator {
     ) -> Result<HashMap<&'static str, String>, String> {
         let mut data = HashMap::from([
             ("text", text.to_string()),
-            ("target_lang", deepl_target(target)?.to_string()),
+            (
+                "target_lang",
+                provider_language_codes(TranslationProvider::DeepL, target)
+                    .ok_or_else(|| "DeepL 대상 언어를 확인하지 못했습니다.".to_string())?
+                    .target
+                    .to_string(),
+            ),
             ("preserve_formatting", "1".to_string()),
         ]);
-        if let Some(source) = deepl_source(source) {
-            data.insert("source_lang", source.to_string());
+        if let Some(codes) = provider_language_codes(TranslationProvider::DeepL, source) {
+            data.insert("source_lang", codes.source.to_string());
         }
         Ok(data)
     }
@@ -134,27 +140,6 @@ impl Translator for DeepLTranslator {
     }
 }
 
-fn deepl_target(language: Language) -> Result<&'static str, String> {
-    match language {
-        Language::Korean => Ok("KO"),
-        Language::English => Ok("EN"),
-        Language::Japanese => Ok("JA"),
-        Language::ChineseSimplified => Ok("ZH-HANS"),
-        Language::ChineseTraditional => Ok("ZH-HANT"),
-        Language::Unknown => Err("DeepL 대상 언어를 확인하지 못했습니다.".to_string()),
-    }
-}
-
-fn deepl_source(language: Language) -> Option<&'static str> {
-    match language {
-        Language::Korean => Some("KO"),
-        Language::English => Some("EN"),
-        Language::Japanese => Some("JA"),
-        Language::ChineseSimplified | Language::ChineseTraditional => Some("ZH"),
-        Language::Unknown => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::DeepLTranslator;
@@ -181,5 +166,23 @@ mod tests {
         assert_eq!(simplified["target_lang"], "ZH-HANS");
         assert_eq!(traditional["target_lang"], "ZH-HANT");
         assert_eq!(simplified["text"], "Hello");
+    }
+
+    #[test]
+    fn request_maps_every_product_language_without_falling_back() {
+        for target in crate::language::SUPPORTED_LANGUAGES {
+            let request = DeepLTranslator::request_data("Hello", Language::English, target)
+                .unwrap_or_else(|error| panic!("{}: {error}", target.code()));
+            assert!(!request["target_lang"].is_empty(), "{}", target.code());
+        }
+        assert_eq!(
+            DeepLTranslator::request_data(
+                "Olá",
+                Language::BrazilianPortuguese,
+                Language::LatinAmericanSpanish,
+            )
+            .unwrap()["source_lang"],
+            "PT"
+        );
     }
 }

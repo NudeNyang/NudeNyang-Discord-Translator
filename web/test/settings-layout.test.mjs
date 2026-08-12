@@ -23,6 +23,11 @@ test("the user-facing product name is NudeNyang Translator", () => {
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });
 
+test("translation language options honor right-to-left labels", () => {
+  assert.match(styles, /\.select-option\s*\{[^}]*text-align:\s*start;/s);
+  assert.match(styles, /\.select-option:dir\(rtl\)\s*\{[^}]*text-align:\s*right;/s);
+});
+
 test("the beta version is consistent across the application manifests", () => {
   assert.equal(packageManifest.version, "0.4.11-beta");
   assert.match(tauriConfig, /"version": "0\.4\.11-beta"/);

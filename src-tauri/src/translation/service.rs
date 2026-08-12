@@ -407,11 +407,14 @@ fn is_terminal_closer(character: char) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Write as _;
+    use std::time::Instant;
+
     use super::{has_terminal_punctuation, preserve_terminal_punctuation, TranslationService};
     use crate::cache::TranslationCache;
-    use crate::language::Language;
+    use crate::language::{detect_language, Language};
     use crate::translation::hymt::{detect_speech_style, HyMtModelSize, HyMtTranslator};
-    use crate::translation::{MockTranslator, Translator};
+    use crate::translation::{translation_needs_repair, MockTranslator, Translator};
     use std::fs;
     use std::sync::{Arc, Mutex};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -733,6 +736,173 @@ mod tests {
                 && !input.contains("**")
                 && !input.contains("```")));
         let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    #[ignore = "verified Hy-MT2 model and llama-server are required"]
+    fn multilingual_translation_benchmark() {
+        let path = cache_path("multilingual-live-benchmark");
+        let cache = TranslationCache::open(path.clone(), 128).unwrap();
+        let translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto")
+            .expect("create Hy-MT2 translator");
+        assert!(
+            translator.model_is_ready(),
+            "Hy-MT2 1.8B model is not verified"
+        );
+        let mut service = TranslationService::new(Box::new(translator), cache);
+        service
+            .translator_mut()
+            .prepare()
+            .expect("start llama-server");
+
+        let fixture = include_str!("../../../tests/fixtures/multilingual-detection.tsv");
+        let samples = fixture
+            .lines()
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .filter_map(|line| {
+                let mut columns = line.splitn(3, '\t');
+                let code = columns.next()?;
+                let scenario = columns.next()?;
+                let text = columns.next()?;
+                (scenario == "normal" && code != "und")
+                    .then(|| (Language::try_from(code).unwrap(), text.to_string()))
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(samples.len(), 20);
+
+        let mut report = String::from(
+            "# Hy-MT2 1.8B multilingual smoke benchmark\n\n\
+             This is a structural and script-level smoke test, not a human semantic score.\n\n\
+             | Direction | Time (ms) | Detected output | Gate | Translation |\n\
+             |---|---:|---|---|---|\n",
+        );
+        let mut failures = Vec::new();
+        for (source, text) in &samples {
+            if *source == Language::Korean {
+                continue;
+            }
+            let started = Instant::now();
+            match service.translate(text, Language::Korean) {
+                Ok(translated) => {
+                    let elapsed = started.elapsed().as_millis();
+                    let detected = detect_language(&translated).language;
+                    let needs_repair =
+                        translation_needs_repair(text, &translated, *source, Language::Korean);
+                    if needs_repair || detected != Language::Korean {
+                        failures.push(format!(
+                            "{}->ko detected={} repair={needs_repair}: {translated}",
+                            source.code(),
+                            detected.code(),
+                        ));
+                    }
+                    let safe = translated.replace('|', "\\|").replace('\n', "<br>");
+                    let _ = writeln!(
+                        report,
+                        "| `{}` → `ko` | {elapsed} | `{}` | {} | {safe} |",
+                        source.code(),
+                        detected.code(),
+                        if needs_repair { "repair" } else { "pass" },
+                    );
+                }
+                Err(error) => failures.push(format!("{}->ko error: {error}", source.code())),
+            }
+        }
+
+        let korean = samples
+            .iter()
+            .find(|(language, _)| *language == Language::Korean)
+            .unwrap()
+            .1
+            .clone();
+        for (target, _) in &samples {
+            if *target == Language::Korean {
+                continue;
+            }
+            let started = Instant::now();
+            match service.translate(&korean, *target) {
+                Ok(translated) => {
+                    let elapsed = started.elapsed().as_millis();
+                    let detection = detect_language(&translated);
+                    let needs_repair =
+                        translation_needs_repair(&korean, &translated, Language::Korean, *target);
+                    let confidently_wrong =
+                        detection.language != Language::Unknown && detection.language != *target;
+                    let person_or_register_drift = match target {
+                        Language::English => {
+                            translated.to_ascii_lowercase().contains("dear sir")
+                                || translated.to_ascii_lowercase().contains("dear madam")
+                        }
+                        Language::BrazilianPortuguese => {
+                            translated.to_lowercase().contains("queremos")
+                        }
+                        Language::German => translated.to_lowercase().contains("möchten wir"),
+                        Language::Russian => translated.to_lowercase().contains("хотите ли мы"),
+                        Language::Ukrainian => translated.to_lowercase().contains("хочете ми"),
+                        Language::Dutch => translated.to_lowercase().contains("willen we"),
+                        _ => false,
+                    };
+                    if needs_repair || confidently_wrong || person_or_register_drift {
+                        failures.push(format!(
+                            "ko->{} detected={} repair={needs_repair} semantic_drift={person_or_register_drift}: {translated}",
+                            target.code(),
+                            detection.language.code(),
+                        ));
+                    }
+                    let safe = translated.replace('|', "\\|").replace('\n', "<br>");
+                    let _ = writeln!(
+                        report,
+                        "| `ko` → `{}` | {elapsed} | `{}` | {} | {safe} |",
+                        target.code(),
+                        detection.language.code(),
+                        if needs_repair || confidently_wrong || person_or_register_drift {
+                            "repair"
+                        } else {
+                            "pass"
+                        },
+                    );
+                }
+                Err(error) => failures.push(format!("ko->{} error: {error}", target.code())),
+            }
+        }
+
+        let formatted_source = "# **Hello friends**\n- <@123456> please read the rules at https://example.com\n```js\nconst x = 1;\n```";
+        match service.translate_for_discord(formatted_source, Language::Arabic) {
+            Ok(translated) => {
+                for token in [
+                    "# **",
+                    "<@123456>",
+                    "https://example.com",
+                    "```js",
+                    "const x = 1;",
+                ] {
+                    if !translated.contains(token) {
+                        failures.push(format!("format token missing: {token}"));
+                    }
+                }
+                report.push_str("\n## Discord formatting smoke test\n\n```text\n");
+                report.push_str(&translated);
+                report.push_str("\n```\n");
+            }
+            Err(error) => failures.push(format!("format translation error: {error}")),
+        }
+
+        if !failures.is_empty() {
+            report.push_str("\n## Failures\n\n");
+            for failure in &failures {
+                let _ = writeln!(report, "- {failure}");
+            }
+        }
+        if let Ok(path) = std::env::var("NUDE_TRANSLATOR_TRANSLATION_REPORT") {
+            let path = std::path::PathBuf::from(path);
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent).unwrap();
+            }
+            std::fs::write(&path, &report).unwrap();
+            println!("{}", path.display());
+        }
+        service.translator_mut().close();
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+        assert!(failures.is_empty(), "\n{report}");
     }
 
     #[test]

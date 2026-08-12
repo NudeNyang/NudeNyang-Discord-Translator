@@ -58,9 +58,11 @@ impl Translator for ResilientTranslator {
     }
 
     fn sends_text_externally(&self) -> bool {
-        self.fallback
-            .as_ref()
-            .is_some_and(|translator| translator.sends_text_externally())
+        self.primary.sends_text_externally()
+            || self
+                .fallback
+                .as_ref()
+                .is_some_and(|translator| translator.sends_text_externally())
     }
 
     fn translate(
@@ -299,7 +301,10 @@ pub fn translation_needs_repair(
 
     if target == Language::Korean {
         let hangul = count_hangul(translated_text);
-        if source == Language::Japanese {
+        if matches!(
+            source,
+            Language::Japanese | Language::ChineseSimplified | Language::ChineseTraditional
+        ) {
             let source_kana = count_kana(source_text);
             let source_han = count_han(source_text);
             let remaining_kana = count_kana(translated_text);
@@ -309,6 +314,12 @@ pub fn translation_needs_repair(
             }
             if hangul >= 2 && remaining_han > 0 && remaining_kana == 0 {
                 return true;
+            }
+            if matches!(
+                source,
+                Language::ChineseSimplified | Language::ChineseTraditional
+            ) {
+                return remaining_han >= 2;
             }
             return remaining_kana >= 5.max((hangul as f64 * 0.55).round() as usize);
         }
@@ -331,6 +342,34 @@ pub fn translation_needs_repair(
             .filter(|character| character.is_alphabetic())
             .count();
         return japanese == 0 && source_letters >= 6 && source_text.contains(' ');
+    }
+    if target != source && source_alnum >= 6 {
+        let required_script = match target {
+            Language::Korean => count_hangul(translated_text),
+            Language::Japanese => count_kana(translated_text) + count_han(translated_text),
+            Language::ChineseSimplified | Language::ChineseTraditional => {
+                count_han(translated_text)
+            }
+            Language::Hindi => count_devanagari(translated_text),
+            Language::Arabic => count_arabic(translated_text),
+            Language::Russian | Language::Ukrainian => count_cyrillic(translated_text),
+            _ => 1,
+        };
+        if required_script == 0
+            && matches!(
+                target,
+                Language::Korean
+                    | Language::Japanese
+                    | Language::ChineseSimplified
+                    | Language::ChineseTraditional
+                    | Language::Hindi
+                    | Language::Arabic
+                    | Language::Russian
+                    | Language::Ukrainian
+            )
+        {
+            return true;
+        }
     }
     false
 }
@@ -375,6 +414,21 @@ fn count_han(text: &str) -> usize {
 
 fn count_latin(text: &str) -> usize {
     text.chars().filter(char::is_ascii_alphabetic).count()
+}
+
+fn count_devanagari(text: &str) -> usize {
+    count_in_ranges(text, &[(0x0900, 0x097f)])
+}
+
+fn count_arabic(text: &str) -> usize {
+    count_in_ranges(
+        text,
+        &[(0x0600, 0x06ff), (0x0750, 0x077f), (0x08a0, 0x08ff)],
+    )
+}
+
+fn count_cyrillic(text: &str) -> usize {
+    count_in_ranges(text, &[(0x0400, 0x052f)])
 }
 
 #[cfg(test)]
@@ -480,6 +534,49 @@ mod tests {
             "제4회 すてらダンス部 컬래버레이션 수업입니다!",
             Language::Japanese,
             Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn rejects_outputs_missing_an_unambiguous_target_script() {
+        for (target, valid) in [
+            (Language::Korean, "서버에서 곧 만나요"),
+            (Language::Japanese, "サーバーでまた会いましょう"),
+            (Language::ChineseSimplified, "我们很快在服务器见面"),
+            (Language::ChineseTraditional, "我們很快在伺服器見面"),
+            (Language::Hindi, "सर्वर पर जल्द मिलते हैं"),
+            (Language::Arabic, "نلتقي قريبًا على الخادم"),
+            (Language::Russian, "Скоро увидимся на сервере"),
+            (Language::Ukrainian, "Скоро побачимося на сервері"),
+        ] {
+            assert!(translation_needs_repair(
+                "See you soon on the server",
+                "See you soon on the server",
+                Language::English,
+                target,
+            ));
+            assert!(!translation_needs_repair(
+                "See you soon on the server",
+                valid,
+                Language::English,
+                target,
+            ));
+        }
+    }
+
+    #[test]
+    fn does_not_guess_between_latin_script_target_languages() {
+        assert!(!translation_needs_repair(
+            "See you soon on the server",
+            "Nos vemos pronto en el servidor",
+            Language::English,
+            Language::LatinAmericanSpanish,
+        ));
+        assert!(!translation_needs_repair(
+            "See you soon on the server",
+            "Até logo no servidor",
+            Language::English,
+            Language::BrazilianPortuguese,
         ));
     }
 }

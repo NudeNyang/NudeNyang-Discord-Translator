@@ -17,9 +17,10 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::language::Language;
+use crate::language::{provider_language_codes, Language, TranslationProvider};
 
 use super::protected_text::remove_unwritten_decorations;
+use super::resilient::translation_needs_repair;
 use super::Translator;
 
 #[cfg(windows)]
@@ -35,7 +36,7 @@ use windows::Win32::System::JobObjects::{
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 
-const PROMPT_VERSION: &str = "meaning-preserving-v8";
+const PROMPT_VERSION: &str = "meaning-preserving-v10";
 const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -840,20 +841,15 @@ fn translate_gemma_register_instruction(target: Language, style: &str) -> &'stat
 }
 
 fn translate_gemma_language_code(language: Language) -> &'static str {
-    match language {
-        Language::ChineseTraditional => "zh-TW",
-        Language::Unknown => "auto",
-        other => other.code(),
-    }
+    provider_language_codes(TranslationProvider::TranslateGemma, language)
+        .map_or("auto", |codes| codes.target)
 }
 
 fn translate_gemma_language_name(language: Language) -> &'static str {
     match language {
-        Language::Korean => "Korean",
-        Language::English => "English",
-        Language::Japanese => "Japanese",
         Language::ChineseSimplified | Language::ChineseTraditional => "Chinese",
         Language::Unknown => "source language",
+        other => other.english_name(),
     }
 }
 
@@ -1186,7 +1182,26 @@ where
         }
         result = fallback_register_cleanup(&result, target, resolved_style);
         result = clean_register_artifacts(&result, target);
+        result = clean_cross_script_language_terms(&result, source, target);
+        result = clean_korean_listener_question_person(&result, core, source, target);
         result = remove_unwritten_decorations(core, &result);
+        if translation_needs_repair(core, &result, source, target) {
+            let repair_prompt = format!(
+                "Rewrite the following translation completely in {}. Translate every remaining {} word or script into {}; keep only proper names and ZXQKEEP placeholders unchanged. Preserve the exact meaning, tone, and punctuation. Output only the corrected translation:\n\n{}",
+                target.english_name(),
+                source.english_name(),
+                target.english_name(),
+                result,
+            );
+            if let Ok(rewritten) = complete(&repair_prompt, &result) {
+                let rewritten = remove_unwritten_decorations(core, rewritten.trim());
+                if !rewritten.is_empty()
+                    && !translation_needs_repair(core, &rewritten, source, target)
+                {
+                    result = rewritten;
+                }
+            }
+        }
         output.push_str(&part[..leading_len]);
         output.push_str(&result);
         output.push_str(&part[trailing_start..]);
@@ -1251,8 +1266,62 @@ pub fn detect_speech_style(text: &str, source: Language) -> &'static str {
                 "neutral"
             }
         }
-        Language::Unknown => "neutral",
+        _ => "neutral",
     }
+}
+
+fn clean_korean_listener_question_person(
+    text: &str,
+    source_text: &str,
+    source: Language,
+    target: Language,
+) -> String {
+    if source != Language::Korean
+        || !(source_text.contains("ㄹ래")
+            || source_text.contains("을래")
+            || source_text.contains("할래"))
+    {
+        return text.to_string();
+    }
+    match target {
+        Language::BrazilianPortuguese => text
+            .replace("Queremos ", "Você quer ")
+            .replace("queremos ", "você quer "),
+        Language::German => text
+            .replace("Möchten wir", "Möchten Sie")
+            .replace("möchten wir", "möchten Sie"),
+        Language::Russian => text
+            .replace("Хотите ли мы", "Хотите ли вы")
+            .replace("хотите ли мы", "хотите ли вы"),
+        Language::Ukrainian => text
+            .replace("Чи хочете ми", "Чи хочете ви")
+            .replace("чи хочете ми", "чи хочете ви"),
+        Language::Dutch => text
+            .replace("Willen we", "Wil je")
+            .replace("willen we", "wil je"),
+        _ => text.to_string(),
+    }
+}
+
+fn clean_cross_script_language_terms(text: &str, source: Language, target: Language) -> String {
+    if target == Language::Korean
+        && matches!(
+            source,
+            Language::ChineseSimplified | Language::ChineseTraditional
+        )
+    {
+        return text
+            .replace("중국어繁體", "중국어 번체")
+            .replace("중국어繁体", "중국어 번체")
+            .replace("중국어簡體", "중국어 간체")
+            .replace("중국어简体", "중국어 간체")
+            .replace("繁體", "번체")
+            .replace("繁体", "번체")
+            .replace("簡體", "간체")
+            .replace("简体", "간체")
+            .replace("中文", "중국어");
+    }
+    text.to_string()
 }
 
 fn translation_prompt(text: &str, source: Language, target: Language, style: &str) -> String {
@@ -1298,7 +1367,7 @@ fn compact_translation_prompt(
         format!(" {style}")
     };
     format!(
-        "Translate the following {} segment into {}. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
+        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names or ZXQKEEP placeholders. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
         source.english_name(),
         target.english_name(),
         style,
@@ -1386,7 +1455,7 @@ fn compact_style_requirement(target: Language, style: &str) -> &'static str {
     match (style, target) {
         ("polite", Language::Korean) => "Use polite Korean honorific speech.",
         ("polite", Language::Japanese) => "Use polite Japanese です/ます forms.",
-        ("polite", Language::English) => "Use polite formal English.",
+        ("polite", Language::English) => "Use natural conversational English with polite wording. Never add titles, honorific greetings, or 'Dear Sir/Madam'.",
         ("polite", Language::ChineseSimplified) => "Use polite Simplified Chinese.",
         ("polite", Language::ChineseTraditional) => "Use polite Traditional Chinese.",
         ("casual", Language::Korean) => "Use natural Korean banmal, never 존댓말.",
@@ -1404,7 +1473,7 @@ fn style_requirement(target: Language, style: &str) -> &'static str {
     match (style, target) {
         ("polite", Language::Korean) => "Use polite Korean honorific speech (존댓말) with natural 요/습니다 endings; never use casual banmal.",
         ("polite", Language::Japanese) => "Use polite Japanese 丁寧語. The output must use です/ます/ました forms and convert casual expressions into polite expressions. Never combine endings as ましたです or でしたです; use ました or でした.",
-        ("polite", Language::English) => "Use polite/formal English appropriate for respectfully addressing someone.",
+        ("polite", Language::English) => "Use natural conversational English with polite wording. Do not make it ceremonial or businesslike, and never add titles, honorific greetings, or 'Dear Sir/Madam'.",
         ("polite", Language::ChineseSimplified) => "Use polite/respectful Simplified Chinese; use 您 and 请 where natural.",
         ("polite", Language::ChineseTraditional) => "Use polite/respectful Traditional Chinese; use 您 and 請 where natural.",
         ("casual", Language::Korean) => "Use Korean casual banmal (반말). Never use polite endings such as 요, 습니다, 합니다, 입니다, 주세요; use endings like 해, 했어, 고마워. Say 고마워, not 고마워해; convert 보세요 to 봐.",
@@ -1679,6 +1748,7 @@ fn free_tcp_port() -> Result<u16, String> {
 #[cfg(test)]
 mod tests {
     use super::{
+        clean_cross_script_language_terms, clean_korean_listener_question_person,
         clean_translation, complete_translation_with_retry, completion_payload, completion_result,
         context_size_for_attempt, detect_speech_style, find_llama_server, max_output_tokens,
         remove_cached_model_files, rewrite_style_prompt, startup_device_attempts,
@@ -2160,7 +2230,7 @@ mod tests {
         let polite = HyMtTranslator::new(HyMtModelSize::Small, "auto", "polite").unwrap();
         let casual = HyMtTranslator::new(HyMtModelSize::Small, "auto", "casual").unwrap();
         assert_ne!(polite.cache_namespace(), casual.cache_namespace());
-        assert!(polite.cache_namespace().contains("meaning-preserving-v8"));
+        assert!(polite.cache_namespace().contains("meaning-preserving-v10"));
         assert!(
             rewrite_style_prompt("고마워요.", Language::Korean, "casual")
                 .contains("Korean casual banmal")
@@ -2178,7 +2248,46 @@ mod tests {
             .cache_namespace()
             .contains("source-faithful-v3"));
         assert!(rewrite_style_prompt("Thanks", Language::English, "polite")
-            .contains("polite/formal English"));
+            .contains("natural conversational English"));
+    }
+
+    #[test]
+    fn conservative_cleanup_repairs_only_known_cross_language_failures() {
+        assert_eq!(
+            clean_cross_script_language_terms(
+                "중국어繁體와 简体",
+                Language::ChineseTraditional,
+                Language::Korean,
+            ),
+            "중국어 번체와 간체"
+        );
+        assert_eq!(
+            clean_cross_script_language_terms(
+                "繁體中文",
+                Language::ChineseTraditional,
+                Language::English,
+            ),
+            "繁體中文"
+        );
+
+        assert_eq!(
+            clean_korean_listener_question_person(
+                "Queremos jogar?",
+                "같이 게임 할래요?",
+                Language::Korean,
+                Language::BrazilianPortuguese,
+            ),
+            "Você quer jogar?"
+        );
+        assert_eq!(
+            clean_korean_listener_question_person(
+                "We want to play?",
+                "같이 게임 할래요?",
+                Language::Korean,
+                Language::English,
+            ),
+            "We want to play?"
+        );
     }
 
     #[test]

@@ -1,3 +1,5 @@
+import { SUPPORTED_TARGET_LANGUAGES } from "./languages.mjs";
+
 export const DEFAULT_CONFIG = Object.freeze({
   enabled: false,
   outgoing_translation_enabled: false,
@@ -21,13 +23,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   },
 });
 
-export const SUPPORTED_TARGET_LANGUAGES = Object.freeze([
-  "ko",
-  "ja",
-  "en",
-  "zh",
-  "zh-Hant",
-]);
+export { SUPPORTED_TARGET_LANGUAGES } from "./languages.mjs";
 
 const SHORTCUT_KEY_NAMES = Object.freeze({
   " ": "Space",

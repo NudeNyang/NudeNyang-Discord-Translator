@@ -700,6 +700,7 @@ Apache License 2.0이 별도로 적용된다. 각 모델의 공식 라이선스 
 | ocr-rs | Rust OCR 전·후처리와 MNN 바인딩 | Apache-2.0, <https://github.com/zibo-chen/rust-paddle-ocr> |
 | MNN | 네이티브 OCR 추론 런타임 | Apache-2.0, <https://github.com/alibaba/MNN> |
 | PaddleOCR 모델 | PP-OCRv6 감지·인식 및 한국어 PP-OCRv5 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
+| Lingua 1.8.0 및 선택 언어 모델 | 오프라인 채팅 언어 감지 | Apache-2.0, Copyright © 2020-present Peter M. Stahl, <https://github.com/pemistahl/lingua-rs> |
 | Tabler Icons | 설정 메뉴 아이콘 | MIT, Copyright (c) 2020-2026 Paweł Kuna, <https://github.com/tabler/tabler-icons> |
 
 DeepL은 모델이나 SDK를 번들하지 않고 사용자가 제공한 API 키로 공식 HTTP API를 호출한다.

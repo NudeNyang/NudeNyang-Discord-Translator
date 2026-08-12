@@ -8,6 +8,8 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
+use crate::language::is_supported_language_code;
+
 type CacheKey = (String, String, String);
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -156,6 +158,17 @@ impl TranslationCache {
         target_language: &str,
         translator: &str,
     ) -> Result<Option<String>, String> {
+        Ok(self
+            .get_entry(source_hash, target_language, translator)?
+            .map(|entry| entry.translated_text))
+    }
+
+    fn get_entry(
+        &self,
+        source_hash: &str,
+        target_language: &str,
+        translator: &str,
+    ) -> Result<Option<CacheEntry>, String> {
         let key = (
             source_hash.to_string(),
             target_language.to_string(),
@@ -167,7 +180,7 @@ impl TranslationCache {
             .map_err(|_| "메모리 번역 캐시 잠금을 열지 못했습니다.".to_string())?
             .get(&key)
         {
-            return Ok(Some(entry.translated_text));
+            return Ok(Some(entry));
         }
 
         let entry = {
@@ -199,9 +212,8 @@ impl TranslationCache {
         let Some(entry) = entry else {
             return Ok(None);
         };
-        let translated = entry.translated_text.clone();
-        self.remember(entry)?;
-        Ok(Some(translated))
+        self.remember(entry.clone())?;
+        Ok(Some(entry))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -214,8 +226,10 @@ impl TranslationCache {
         translator: &str,
         allow_fuzzy: bool,
     ) -> Result<Option<String>, String> {
-        if let Some(exact) = self.get(source_hash, target_language, translator)? {
-            return Ok(Some(exact));
+        if let Some(exact) = self.get_entry(source_hash, target_language, translator)? {
+            if exact.source_language == source_language {
+                return Ok(Some(exact.translated_text));
+            }
         }
         if !allow_fuzzy {
             return Ok(None);
@@ -542,7 +556,7 @@ impl TranslationCache {
         if !channel_key.starts_with("/channels/") {
             return Err("채널별 전송 언어를 저장할 Discord 채널을 찾지 못했습니다.".to_string());
         }
-        if !matches!(language, "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant") {
+        if language != "auto" && !is_supported_language_code(language) {
             return Err("채널별 전송 언어 값이 올바르지 않습니다.".to_string());
         }
         let connection = self
@@ -849,6 +863,30 @@ mod tests {
                 .get_message("face", "(•ω•)つス.....", "ja", "ko", "hy:test", false)
                 .unwrap(),
             None
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn exact_message_lookup_does_not_cross_source_language_boundaries() {
+        let path = temporary_cache_path("source-language-isolation");
+        let cache = TranslationCache::open(path.clone(), 4096).unwrap();
+        cache
+            .put("same-hash", "chat", "en", "ko", "대화", "hy:test")
+            .unwrap();
+
+        assert_eq!(
+            cache
+                .get_message("same-hash", "chat", "fr", "ko", "hy:test", false)
+                .unwrap(),
+            None
+        );
+        assert_eq!(
+            cache
+                .get_message("same-hash", "chat", "en", "ko", "hy:test", false)
+                .unwrap()
+                .as_deref(),
+            Some("대화")
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }

@@ -3,17 +3,10 @@ import {
   translateCopy,
   translateDynamicCopy,
 } from "./i18n.mjs";
+import { LANGUAGE_LABELS, LANGUAGE_OPTIONS } from "./languages.mjs";
 
 const invoke = window.__TAURI__?.core?.invoke;
 const listen = window.__TAURI__?.event?.listen;
-
-const LANGUAGE_LABELS = Object.freeze({
-  ko: "한국어",
-  ja: "日本語",
-  en: "English",
-  zh: "简体中文",
-  "zh-Hant": "繁體中文",
-});
 
 const TRANSLATOR_LABELS = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
@@ -28,10 +21,16 @@ const TRANSLATOR_LABELS = Object.freeze({
 
 const VIEW_HEIGHTS = Object.freeze({
   main: 318,
-  language: 274,
+  language: 520,
   model: 427,
 });
 const UPDATE_ROW_HEIGHT = 58;
+
+document.querySelector("#language-view").innerHTML = LANGUAGE_OPTIONS.map(([code, label]) => `
+  <button class="menu-row compact language-option" data-language="${code}" type="button">
+    <span class="menu-copy"><strong dir="auto">${label}</strong></span><span class="language-check" aria-hidden="true">✓</span>
+  </button>
+`).join("");
 
 const elements = {
   engineSummary: document.querySelector("#engine-summary"),
