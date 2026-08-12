@@ -144,17 +144,20 @@ const LOCAL_MODEL_RESOURCE_PROFILES = Object.freeze({
   hymt_1_8b: Object.freeze({
     model: "Hy-MT2 1.8B",
     modelBytes: 1_133_080_448,
-    recommendedAvailableBytes: 3 * 1024 ** 3,
+    estimatedVramBytes: Math.round(1.7 * 1024 ** 3),
+    estimatedRamBytes: 2 * 1024 ** 3,
   }),
   hymt_7b: Object.freeze({
     model: "Hy-MT2 7B",
     modelBytes: 4_624_648_896,
-    recommendedAvailableBytes: 8 * 1024 ** 3,
+    estimatedVramBytes: Math.round(5.3 * 1024 ** 3),
+    estimatedRamBytes: Math.round(5.6 * 1024 ** 3),
   }),
   translategemma_4b: Object.freeze({
     model: "TranslateGemma 4B",
     modelBytes: 2_489_909_312,
-    recommendedAvailableBytes: 5 * 1024 ** 3,
+    estimatedVramBytes: 3 * 1024 ** 3,
+    estimatedRamBytes: Math.round(3.2 * 1024 ** 3),
   }),
 });
 
@@ -169,18 +172,25 @@ export function localModelResourceGuidance(config = {}, memory = {}) {
 
   const totalBytes = Math.max(0, Number(memory.totalBytes) || 0);
   const availableBytes = Math.max(0, Number(memory.availableBytes) || 0);
-  const state = availableBytes > 0 && availableBytes < profile.recommendedAvailableBytes
+  const usageKind = config.hymt_device === "cpu" ? "ram" : "vram";
+  const estimatedUsageBytes = usageKind === "ram"
+    ? profile.estimatedRamBytes
+    : profile.estimatedVramBytes;
+  const state = usageKind === "ram"
+    && availableBytes > 0
+    && availableBytes < estimatedUsageBytes
     ? "warning"
-    : availableBytes > 0
-      ? "ready"
-      : "unknown";
+    : "ready";
   const lowMemorySystem = totalBytes > 0 && totalBytes < 12 * 1024 ** 3;
   const lowMemoryPresetActive = modelId === "hymt_1_8b"
     && config.hymt_device === "cpu"
     && config.keep_local_model_warm === false;
 
   return {
-    ...profile,
+    model: profile.model,
+    modelBytes: profile.modelBytes,
+    estimatedUsageBytes,
+    usageKind,
     totalBytes,
     availableBytes,
     state,

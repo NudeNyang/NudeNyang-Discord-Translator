@@ -793,36 +793,29 @@ function renderLocalResourceGuidance() {
     return;
   }
 
-  if (guidance.state === "unknown") {
-    elements.localResourceGuidance.dataset.state = "loading";
-    elements.localResourceTitle.textContent = translateCopy(
-      language,
-      "시스템 메모리를 확인하고 있습니다.",
-    );
-  } else {
-    elements.localResourceGuidance.dataset.state = guidance.state;
-    elements.localResourceTitle.textContent = translateCopy(
-      language,
-      guidance.state === "warning"
-        ? "현재 여유 RAM으로는 실행이 불안정할 수 있습니다."
-        : "현재 메모리에서 실행할 수 있습니다.",
-    );
-  }
+  elements.localResourceGuidance.dataset.state = guidance.state;
+  const usageLabel = guidance.usageKind === "ram"
+    ? "예상 RAM 사용량"
+    : "예상 VRAM 사용량";
+  elements.localResourceTitle.textContent = `${translateCopy(language, usageLabel)} ${translateCopy(language, "약")} ${formatStorageSize(guidance.estimatedUsageBytes)}`;
 
   const resourceParts = [
     guidance.model,
     `${translateCopy(language, "모델 파일")} ${formatStorageSize(guidance.modelBytes)}`,
-    `${translateCopy(language, "권장 여유 RAM")} ${formatStorageSize(guidance.recommendedAvailableBytes)}`,
+    translateCopy(
+      language,
+      guidance.usageKind === "ram"
+        ? "CPU 실행 기준이며 환경에 따라 달라질 수 있습니다."
+        : "GPU 실행 기준이며 환경에 따라 달라질 수 있습니다.",
+    ),
   ];
-  if (guidance.availableBytes > 0) {
+  if (guidance.usageKind === "ram" && guidance.availableBytes > 0) {
     resourceParts.push(
       `${translateCopy(language, "현재 사용 가능")} ${formatStorageSize(guidance.availableBytes)}`,
     );
   }
-  if (guidance.totalBytes > 0) {
-    resourceParts.push(
-      `${translateCopy(language, "전체 RAM")} ${formatStorageSize(guidance.totalBytes)}`,
-    );
+  if (guidance.state === "warning") {
+    resourceParts.push(translateCopy(language, "현재 여유 RAM이 예상 사용량보다 적습니다."));
   }
   elements.localResourceDetail.textContent = resourceParts.join(" · ");
 }
