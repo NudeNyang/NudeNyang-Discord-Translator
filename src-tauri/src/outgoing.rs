@@ -25,7 +25,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 32;
+  const CONTROLLER_VERSION = 34;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
@@ -277,7 +277,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-role-accent) 58%,transparent);outline-offset:2px}
       #${ROOT_ID} .nt-role-icon{display:inline-flex;width:20px;height:20px;flex:none;align-items:center;justify-content:center;border:1px solid color-mix(in srgb,var(--nt-role-accent) 50%,var(--nt-role-border));border-radius:50%;background:var(--nt-icon-bg);color:var(--nt-icon-text);font-size:13px;font-weight:750;line-height:1}
       #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:11px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
-      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;max-height:min(65vh,560px);overflow-y:auto;overscroll-behavior:contain;padding:6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--nt-role-muted) 72%,transparent) transparent;padding:6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar{width:6px}
+      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-track,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-track{background:transparent}
+      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-thumb,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-thumb{border:1px solid transparent;border-radius:999px;background:color-mix(in srgb,var(--nt-role-muted) 72%,transparent);background-clip:padding-box}
+      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-thumb:hover,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--nt-role-accent) 72%,var(--nt-role-muted));background-clip:padding-box}
+      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-button,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-button{display:none;width:0;height:0}
       #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:start}
       #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
       #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
@@ -299,6 +304,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (controller.listener) document.removeEventListener('keydown', controller.listener, true);
     if (controller.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
     if (controller.inputListener) document.removeEventListener('input', controller.inputListener, true);
+    if (controller.pointerDownListener) document.removeEventListener('pointerdown', controller.pointerDownListener, true);
     clearTimeout(controller.statusTimer);
     clearInterval(controller.watchdogTimer);
     document.getElementById(ROOT_ID)?.remove();
@@ -333,6 +339,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       confirmSend: true,
       sendImmediatelyShortcut: 'Ctrl+Enter',
       reviewBeforeSendShortcut: 'Alt+Enter',
+      pointerDownListener: null,
       failsafe() {
         if (this.released) return;
         this.released = true;
@@ -343,6 +350,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         document.removeEventListener('keydown', this.listener, true);
         document.removeEventListener('beforeinput', this.beforeInputListener, true);
         document.removeEventListener('input', this.inputListener, true);
+        document.removeEventListener('pointerdown', this.pointerDownListener, true);
 
         for (const [id, item] of this.pending) {
           const editor = item.editor;
@@ -450,6 +458,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           recent_messages:[],
           send_immediately:false,
         });
+      },
+      closeMenus() {
+        if (!this.root) return;
+        this.root.querySelector('.nt-outgoing-menu').hidden = true;
+        this.root.querySelector('.nt-display-menu').hidden = true;
+        this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
+        this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
       },
       showLanguageMenu(heading = copy('selectLanguage'), requestId = '') {
         this.manualRequest = requestId;
@@ -870,9 +885,14 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     controller.listener = event => controller.keydown(event);
     controller.beforeInputListener = event => controller.onBeforeInput(event);
     controller.inputListener = event => controller.onInput(event);
+    controller.pointerDownListener = event => {
+      if (!controller.root || event.composedPath().includes(controller.root)) return;
+      controller.closeMenus();
+    };
     document.addEventListener('keydown', controller.listener, true);
     document.addEventListener('beforeinput', controller.beforeInputListener, true);
     document.addEventListener('input', controller.inputListener, true);
+    document.addEventListener('pointerdown', controller.pointerDownListener, true);
     window[GLOBAL] = controller;
     controller.watchdogTimer = setInterval(() => {
       if (Date.now() - controller.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) controller.failsafe();
@@ -913,6 +933,7 @@ pub const OUTGOING_CLEANUP_SCRIPT: &str = r#"
   if (controller?.listener) document.removeEventListener('keydown', controller.listener, true);
   if (controller?.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
   if (controller?.inputListener) document.removeEventListener('input', controller.inputListener, true);
+  if (controller?.pointerDownListener) document.removeEventListener('pointerdown', controller.pointerDownListener, true);
   document.getElementById('nt-outgoing-translation')?.remove();
   document.getElementById('nt-outgoing-translation-style')?.remove();
   delete window.__nudeTranslatorOutgoing;
