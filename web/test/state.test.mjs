@@ -84,8 +84,8 @@ test("translation history retention accepts supported periods and rejects other 
   assert.equal(normalizeConfig({ translation_history_retention_days: 14 }).translation_history_retention_days, 0);
 });
 
-test("settings language defaults to automatic and accepts four explicit languages", () => {
-  for (const language of ["auto", "ko", "en", "ja", "zh"]) {
+test("settings language defaults to automatic and accepts every explicit language", () => {
+  for (const language of ["auto", ...SUPPORTED_TARGET_LANGUAGES]) {
     assert.equal(normalizeConfig({ ui_language: language }).ui_language, language);
   }
   assert.equal(normalizeConfig({ ui_language: "unsupported" }).ui_language, "auto");

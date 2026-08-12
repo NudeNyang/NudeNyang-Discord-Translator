@@ -23,9 +23,9 @@ test("the user-facing product name is NudeNyang Translator", () => {
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });
 
-test("translation language options honor right-to-left labels", () => {
+test("translation language options preserve RTL glyphs on the shared left edge", () => {
   assert.match(styles, /\.select-option\s*\{[^}]*text-align:\s*start;/s);
-  assert.match(styles, /\.select-option:dir\(rtl\)\s*\{[^}]*text-align:\s*right;/s);
+  assert.match(styles, /\.select-option:dir\(rtl\)\s*\{[^}]*text-align:\s*left;/s);
 });
 
 test("language compact codes are not rendered as select group headings", () => {
@@ -170,7 +170,7 @@ test("display translation and outgoing interpretation present role-appropriate m
 
 test("convenience panel exposes global toggles and editable composer shortcuts", () => {
   assert.match(markup, /<h3>Language<\/h3>/);
-  assert.match(script, /\["auto", "Auto\(System\)"\]/);
+  assert.match(script, /\["auto", "Auto\(System\)", "", "System language"\]/);
   assert.match(markup, /data-field="ui_language"/);
   assert.match(markup, /id="toggle-shortcut"/);
   assert.match(markup, /id="toggle-outgoing-shortcut"/);

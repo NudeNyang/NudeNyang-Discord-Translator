@@ -215,7 +215,7 @@ impl AppConfig {
         if object
             .get("ui_language")
             .and_then(Value::as_str)
-            .is_some_and(|value| !matches!(value, "auto" | "ko" | "en" | "ja" | "zh"))
+            .is_some_and(|value| value != "auto" && !is_supported_language_code(value))
         {
             object.insert("ui_language".to_string(), Value::String("auto".to_string()));
         }

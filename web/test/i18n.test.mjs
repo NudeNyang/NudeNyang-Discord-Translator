@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  COPY,
   resolveUiLanguage,
   translateCopy,
   translateDynamicCopy,
   translateUserFacingError,
 } from "../i18n.mjs";
+import { UI_LOCALE_COPY } from "../ui-locales.mjs";
+import { SUPPORTED_TARGET_LANGUAGES } from "../languages.mjs";
 import { readFile } from "node:fs/promises";
 
 const appScript = await readFile(new URL("../app.js", import.meta.url), "utf8");
@@ -16,14 +19,33 @@ test("automatic settings language follows supported system locales", () => {
   assert.equal(resolveUiLanguage("auto", "ko-KR"), "ko");
   assert.equal(resolveUiLanguage("auto", "en-US"), "en");
   assert.equal(resolveUiLanguage("auto", "ja-JP"), "ja");
-  assert.equal(resolveUiLanguage("auto", "zh-TW"), "zh");
+  assert.equal(resolveUiLanguage("auto", "zh-TW"), "zh-Hant");
+  assert.equal(resolveUiLanguage("auto", "zh-CN"), "zh");
+  assert.equal(resolveUiLanguage("auto", "pt-PT"), "pt-BR");
+  assert.equal(resolveUiLanguage("auto", "es-MX"), "es-419");
 });
 
 test("automatic settings language falls back to English", () => {
-  assert.equal(resolveUiLanguage("auto", "fr-FR"), "en");
-  assert.equal(resolveUiLanguage("auto", "de-DE"), "en");
-  assert.equal(resolveUiLanguage("auto", "es-MX"), "en");
+  assert.equal(resolveUiLanguage("auto", "fr-FR"), "fr");
+  assert.equal(resolveUiLanguage("auto", "de-DE"), "de");
   assert.equal(resolveUiLanguage("auto", ""), "en");
+});
+
+test("all twenty interface languages have complete static dictionaries", () => {
+  const generatedLanguages = SUPPORTED_TARGET_LANGUAGES.filter(language => !["ko", "en", "ja", "zh"].includes(language));
+  const expectedKeys = Object.keys(COPY).sort();
+  assert.deepEqual(Object.keys(UI_LOCALE_COPY).sort(), generatedLanguages.sort());
+  for (const language of generatedLanguages) {
+    const dictionary = UI_LOCALE_COPY[language];
+    assert.deepEqual(Object.keys(dictionary).sort(), expectedKeys, language);
+    for (const [key, value] of Object.entries(dictionary)) {
+      assert.ok(value.trim(), `${language}: ${key}`);
+      assert.doesNotMatch(value, /[가-힣]/, `${language}: ${key}`);
+      const sourcePlaceholders = [...COPY[key][0].matchAll(/\{[^}]+\}/g)].map(match => match[0]).sort();
+      const targetPlaceholders = [...value.matchAll(/\{[^}]+\}/g)].map(match => match[0]).sort();
+      assert.deepEqual(targetPlaceholders, sourcePlaceholders, `${language}: ${key}`);
+    }
+  }
 });
 
 test("settings header describes message, image, and app behavior configuration", () => {
@@ -38,7 +60,7 @@ test("settings header describes message, image, and app behavior configuration",
 });
 
 test("automatic language option uses one universal label", () => {
-  for (const language of ["ko", "en", "ja", "zh"]) {
+  for (const language of SUPPORTED_TARGET_LANGUAGES) {
     assert.equal(translateCopy(language, "Auto(System)"), "Auto(System)");
   }
 });
@@ -143,14 +165,14 @@ test("every literal settings error title has translations", () => {
   const titles = [...appScript.matchAll(/showError\(\s*"([^"]+)"/g)].map(match => match[1]);
   assert.ok(titles.length >= 15);
   for (const title of titles) {
-    assert.notEqual(translateDynamicCopy("ja", title), title, title);
-    assert.notEqual(translateDynamicCopy("en", title), title, title);
-    assert.notEqual(translateDynamicCopy("zh", title), title, title);
+    for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
+      assert.notEqual(translateDynamicCopy(language, title), title, `${language}: ${title}`);
+    }
   }
 });
 
 test("unknown backend errors use a localized safe fallback instead of leaking another UI language", () => {
-  for (const language of ["en", "ja", "zh"]) {
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
     const translated = translateUserFacingError(language, "내부 저장소의 알 수 없는 오류입니다: opaque detail");
     assert.doesNotMatch(translated, /[가-힣]/);
     assert.match(translated, /opaque detail/);
@@ -175,9 +197,9 @@ test("every static Korean settings label and accessibility attribute has transla
   const attributes = [...settingsMarkup.matchAll(/(?:aria-label|placeholder)="([^"]*[가-힣][^"]*)"/g)]
     .map(match => match[1].trim());
   for (const value of [...new Set([...leafText, ...attributes])]) {
-    assert.notEqual(translateCopy("ja", value), value, value);
-    assert.notEqual(translateCopy("en", value), value, value);
-    assert.notEqual(translateCopy("zh", value), value, value);
+    for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
+      assert.notEqual(translateCopy(language, value), value, `${language}: ${value}`);
+    }
   }
 });
 
@@ -200,7 +222,7 @@ test("backend runtime notices and provider details do not leak Korean into other
     "API 키가 운영체제 보안 저장소에 저장되어 있습니다.",
     "DeepL API Free 또는 Pro 키를 입력하여 연결하십시오.",
   ];
-  for (const language of ["en", "ja", "zh"]) {
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
     for (const sample of samples) {
       assert.doesNotMatch(translateDynamicCopy(language, sample), /[가-힣]/, sample);
     }
@@ -211,8 +233,8 @@ test("every literal localized status assignment has translations", () => {
   const values = [...appScript.matchAll(/setLocalizedText\([^,\n]+,\s*"([^"]*[가-힣][^"]*)"/g)]
     .map(match => match[1]);
   for (const value of [...new Set(values)]) {
-    assert.notEqual(translateDynamicCopy("ja", value), value, value);
-    assert.notEqual(translateDynamicCopy("en", value), value, value);
-    assert.notEqual(translateDynamicCopy("zh", value), value, value);
+    for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
+      assert.notEqual(translateDynamicCopy(language, value), value, `${language}: ${value}`);
+    }
   }
 });

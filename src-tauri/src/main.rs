@@ -16,6 +16,7 @@ pub mod outgoing;
 mod providers;
 pub mod text_split;
 pub mod translation;
+mod ui_locale;
 mod updater;
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};

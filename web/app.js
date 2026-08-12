@@ -13,6 +13,7 @@ import {
 } from "./state.mjs";
 import { LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
 import { LANGUAGE_OPTIONS } from "./languages.mjs";
+import { filterLanguageOptions } from "./language-search.mjs";
 import {
   applyStaticTranslations,
   translateCopy,
@@ -75,13 +76,7 @@ const OPTIONS = {
     ["light", "라이트"],
     ["dark", "다크"],
   ],
-  ui_language: [
-    ["auto", "Auto(System)"],
-    ["ko", "한국어"],
-    ["en", "English"],
-    ["ja", "日本語"],
-    ["zh", "简体中文"],
-  ],
+  ui_language: [["auto", "Auto(System)", "", "System language"], ...LANGUAGE_OPTIONS],
   translation_history_retention_days: [
     [0, "사용 안 함"],
     [7, "7일 보관"],
@@ -1093,11 +1088,17 @@ function openSelect(element) {
   if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
     element.classList.add("drop-up");
   }
+  const searchInput = element.querySelector(".select-search-input");
+  if (searchInput) {
+    searchInput.value = "";
+    searchInput.dispatchEvent(new Event("input"));
+    searchInput.focus();
+  }
 }
 
 function renderSelect(element) {
   const field = element.dataset.field;
-  const languageField = ["target_language", "outgoing_target_language"].includes(field);
+  const languageField = ["target_language", "outgoing_target_language", "ui_language"].includes(field);
   const trigger = document.createElement("button");
   const menu = document.createElement("div");
   trigger.type = "button";
@@ -1105,8 +1106,57 @@ function renderSelect(element) {
   trigger.setAttribute("aria-haspopup", "listbox");
   trigger.setAttribute("aria-expanded", "false");
   menu.className = "select-menu";
-  menu.setAttribute("role", "listbox");
   element.append(trigger, menu);
+
+  let optionContainer = menu;
+  let searchEmpty = null;
+  if (languageField) {
+    const search = document.createElement("div");
+    const searchInput = document.createElement("input");
+    optionContainer = document.createElement("div");
+    searchEmpty = document.createElement("div");
+    search.className = "select-search";
+    searchInput.className = "select-search-input";
+    searchInput.type = "search";
+    searchInput.autocomplete = "off";
+    searchInput.spellcheck = false;
+    searchInput.placeholder = translateCopy(currentUiLanguage(), "언어 검색");
+    searchInput.setAttribute("aria-label", translateCopy(currentUiLanguage(), "언어 검색"));
+    searchInput.dataset.i18nPlaceholder = "언어 검색";
+    searchInput.dataset.i18nAriaLabel = "언어 검색";
+    optionContainer.className = "select-options";
+    optionContainer.setAttribute("role", "listbox");
+    searchEmpty.className = "select-search-empty";
+    searchEmpty.textContent = translateCopy(currentUiLanguage(), "검색 결과 없음");
+    searchEmpty.dataset.i18nKey = "검색 결과 없음";
+    searchEmpty.hidden = true;
+    search.append(searchInput);
+    menu.append(search, optionContainer, searchEmpty);
+
+    searchInput.addEventListener("input", () => {
+      const matches = new Set(filterLanguageOptions(OPTIONS[field], searchInput.value).map(([value]) => String(value)));
+      for (const option of optionContainer.querySelectorAll(".select-option")) {
+        option.hidden = !matches.has(option.dataset.value);
+      }
+      searchEmpty.hidden = matches.size > 0;
+    });
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(element);
+        trigger.focus();
+        return;
+      }
+      if (event.key !== "ArrowDown") return;
+      const first = optionContainer.querySelector(".select-option:not([hidden])");
+      if (first) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+  } else {
+    menu.setAttribute("role", "listbox");
+  }
 
   let previousGroup = "";
   for (const [value, label, group] of OPTIONS[field]) {
@@ -1114,7 +1164,7 @@ function renderSelect(element) {
       const groupLabel = document.createElement("span");
       groupLabel.className = "select-group-label";
       groupLabel.textContent = translateCopy(currentUiLanguage(), SELECT_GROUP_LABELS[group]);
-      menu.append(groupLabel);
+      optionContainer.append(groupLabel);
       previousGroup = group;
     }
     const option = document.createElement("button");
@@ -1156,7 +1206,7 @@ function renderSelect(element) {
         await showError("설정을 적용하지 못했습니다", String(error));
       }
     });
-    menu.append(option);
+    optionContainer.append(option);
   }
 
   trigger.addEventListener("click", () => {
@@ -1189,7 +1239,7 @@ function setSelectValue(field, value) {
   const label = OPTIONS[field].find(item => item[0] === value)?.[1] || value;
   const trigger = element.querySelector(".select-trigger");
   trigger.textContent = translateCopy(currentUiLanguage(), label);
-  trigger.dir = ["target_language", "outgoing_target_language"].includes(field) ? "auto" : "ltr";
+  trigger.dir = ["target_language", "outgoing_target_language", "ui_language"].includes(field) ? "auto" : "ltr";
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === String(value)));
   }

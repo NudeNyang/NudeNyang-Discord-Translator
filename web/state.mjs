@@ -67,7 +67,7 @@ export function normalizeConfig(value = {}) {
   )
     ? value.outgoing_target_language
     : DEFAULT_CONFIG.outgoing_target_language;
-  const uiLanguage = ["auto", "ko", "en", "ja", "zh"].includes(value.ui_language)
+  const uiLanguage = ["auto", ...SUPPORTED_TARGET_LANGUAGES].includes(value.ui_language)
     ? value.ui_language
     : DEFAULT_CONFIG.ui_language;
   const retentionDays = [0, 7, 30, 90, 180].includes(

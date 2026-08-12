@@ -213,7 +213,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /const languageCodes = __LANGUAGE_CODES__/);
   assert.match(outgoing, /const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__/);
   assert.match(outgoing, /button\.dir = 'auto'/);
-  assert.match(outgoing, /text-align:start/);
+  assert.match(outgoing, /text-align:left/);
   assert.match(outgoing, /class="nt-role-icon nt-outgoing-icon" aria-hidden="true">↑/);
   assert.match(outgoing, /class="nt-role-icon nt-display-icon" aria-hidden="true">↓/);
   assert.match(outgoing, /\.nt-outgoing-control\{--nt-role-bg:#0f202c/);

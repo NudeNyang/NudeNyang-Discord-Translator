@@ -7,6 +7,7 @@ use crate::cache::OutgoingOriginalRecord;
 use crate::language::{
     detect_explicit_language, is_supported_language_code, Language, LANGUAGE_MENU_ORDER,
 };
+use crate::ui_locale::generated_copies;
 
 const OUTGOING_UI_SCRIPT: &str = r####"
 (() => {
@@ -20,9 +21,16 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const sendImmediatelyShortcut = __SEND_IMMEDIATELY_SHORTCUT__;
   const reviewBeforeSendShortcut = __REVIEW_BEFORE_SEND_SHORTCUT__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const uiLanguage = requestedUiLanguage === 'auto'
-    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
-    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  function resolveUiLanguage(value) {
+    const normalized = String(value || '').replaceAll('_','-').toLowerCase();
+    if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
+    if (normalized.startsWith('pt')) return 'pt-BR';
+    if (normalized.startsWith('es')) return 'es-419';
+    if (normalized === 'in' || normalized.startsWith('in-')) return 'id';
+    return supportedUiLanguages.find(code => normalized === code.toLowerCase() || normalized.startsWith(`${code.toLowerCase()}-`)) || 'en';
+  }
+  const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
   const CONTROLLER_VERSION = 34;
@@ -30,7 +38,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
-  const copies = {
+  const copies = Object.assign({
     ko: {
       auto:'자동 감지', outgoingLanguage:'전송', selectLanguage:'전송 언어 선택', originalOnce:'이번 메시지만 원문으로 전송',
       nextOriginal:'다음 메시지는 번역하지 않고 전송합니다.', selectLanguageFormal:'전송 언어를 선택하십시오.', sendingOriginal:'원문을 전송합니다.',
@@ -39,7 +47,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'원문 전송', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
       pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', sendingParts:'번역문을 분할 전송하고 있습니다. ({part}/{total})',
       longAttachment:'번역문이 길어 텍스트 파일로 전송합니다.', reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.', reviewHint:'번역문을 수정하거나 Enter로 전송하십시오.',
-      realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택'
+      realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택', searchLanguages:'언어 검색', noMatchingLanguages:'검색 결과 없음'
     },
     en: {
       auto:'Auto detect', outgoingLanguage:'Send', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
@@ -49,7 +57,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'Send original', translationFailed:'The message could not be translated. The original message has been preserved.',
       pending:'The previous message is still being processed. Try again shortly.', sendingParts:'Sending the translated message in parts. ({part}/{total})',
       longAttachment:'The translation is long and will be sent as a text file.', reviewReady:'Review or edit the translation, then press Enter to send.', reviewHint:'Edit the translation or press Enter to send it.',
-      realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language'
+      realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language', searchLanguages:'Search languages', noMatchingLanguages:'No matching languages'
     },
     ja: {
       auto:'自動検出', outgoingLanguage:'送信', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
@@ -59,7 +67,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'原文を送信', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
       pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', sendingParts:'翻訳文を分割して送信しています。({part}/{total})',
       longAttachment:'翻訳文が長いため、テキストファイルとして送信します。', reviewReady:'翻訳文を確認・修正し、Enterで送信してください。', reviewHint:'翻訳文を修正するか、Enterで送信してください。',
-      realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択'
+      realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択', searchLanguages:'言語を検索', noMatchingLanguages:'一致する言語がありません'
     },
     zh: {
       auto:'自动检测', outgoingLanguage:'发送', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
@@ -69,10 +77,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'发送原文', translationFailed:'无法翻译消息。原文已保持不变。',
       pending:'上一条消息仍在处理中。请稍后重试。', sendingParts:'正在分段发送译文。({part}/{total})',
       longAttachment:'译文较长，将以文本文件形式发送。', reviewReady:'请检查或修改译文，然后按 Enter 发送。', reviewHint:'请修改译文或按 Enter 发送。',
-      realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言'
+      realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言', searchLanguages:'搜索语言', noMatchingLanguages:'没有匹配的语言'
     }
-  };
+  }, __GENERATED_OUTGOING_COPIES__);
   const languageLabels = __LANGUAGE_LABELS__;
+  const languageEnglishNames = __LANGUAGE_ENGLISH_NAMES__;
   const languageCodes = __LANGUAGE_CODES__;
   const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__;
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
@@ -255,6 +264,44 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (value) button.dataset.value = value;
     return button;
   }
+  function normalizeLanguageSearch(value) {
+    return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
+  }
+  function appendLanguageChoices(menu, choices, action) {
+    const search = document.createElement('div');
+    const input = document.createElement('input');
+    const empty = document.createElement('div');
+    search.className = 'nt-language-search';
+    input.type = 'search';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.placeholder = copy('searchLanguages');
+    input.setAttribute('aria-label', copy('searchLanguages'));
+    empty.className = 'nt-language-search-empty';
+    empty.textContent = copy('noMatchingLanguages');
+    empty.hidden = true;
+    search.append(input);
+    menu.append(search);
+    const buttons = choices.map(code => makeButton(languageLabels[code], action, code));
+    menu.append(...buttons, empty);
+    input.addEventListener('input', () => {
+      const query = normalizeLanguageSearch(input.value);
+      let visible = 0;
+      buttons.forEach((button, index) => {
+        const code = choices[index];
+        const searchable = normalizeLanguageSearch(`${languageLabels[code]} ${code} ${languageEnglishNames[code] || ''}`);
+        button.hidden = Boolean(query) && !searchable.includes(query);
+        if (!button.hidden) visible += 1;
+      });
+      empty.hidden = visible > 0;
+    });
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown') return;
+      const first = buttons.find(button => !button.hidden);
+      if (first) { event.preventDefault(); first.focus(); }
+    });
+    return input;
+  }
   function ensureRoot(controller) {
     let root = document.getElementById(ROOT_ID);
     if (root) return root;
@@ -283,9 +330,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-thumb,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-thumb{border:1px solid transparent;border-radius:999px;background:color-mix(in srgb,var(--nt-role-muted) 72%,transparent);background-clip:padding-box}
       #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-thumb:hover,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--nt-role-accent) 72%,var(--nt-role-muted));background-clip:padding-box}
       #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-button,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-button{display:none;width:0;height:0}
-      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:start}
+      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
       #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
       #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
+      #${ROOT_ID} .nt-language-search{position:sticky;z-index:1;top:-6px;padding:5px 3px 6px;background:var(--background-floating,#111214)}
+      #${ROOT_ID} .nt-language-search input{box-sizing:border-box;width:100%;min-height:32px;padding:6px 8px;border:1px solid var(--background-modifier-accent,#ffffff24);border-radius:7px;outline:none;background:var(--input-background,#1e1f22);color:var(--text-normal,#dbdee1);font:inherit}
+      #${ROOT_ID} .nt-language-search input:focus{border-color:var(--nt-role-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--nt-role-accent) 22%,transparent)}
+      #${ROOT_ID} .nt-language-search-empty{padding:16px 9px;color:var(--text-muted,#949ba4);text-align:center}
       #${ROOT_ID} .nt-outgoing-menu .nt-divider{height:1px;margin:5px;background:var(--background-modifier-accent,#ffffff14)}
       #${ROOT_ID} .nt-outgoing-status{order:-1;max-width:270px;margin:0 0 6px;padding:7px 9px;border-radius:7px;background:var(--background-floating,#111214);box-shadow:0 4px 16px #0008;white-space:pre-line}
       #${ROOT_ID} .nt-outgoing-status[data-error="true"]{color:#ff9ca3}
@@ -475,11 +526,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         title.textContent = heading;
         menu.append(title);
         const choices = requestId ? languageCodes : ['auto', ...languageCodes];
-        for (const code of choices) menu.append(makeButton(languageLabels[code], 'language', code));
+        const searchInput = appendLanguageChoices(menu, choices, 'language');
         const divider = document.createElement('div');
         divider.className = 'nt-divider';
         menu.append(divider, makeButton(copy('originalOnce'), 'original-once'));
         menu.hidden = false;
+        searchInput.focus();
         this.root.querySelector('.nt-display-menu').hidden = true;
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
@@ -496,10 +548,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         title.className = 'nt-heading';
         title.textContent = copy('selectDisplayLanguage');
         menu.append(title);
-        for (const code of languageCodes) {
-          menu.append(makeButton(languageLabels[code], 'display-language', code));
-        }
+        const searchInput = appendLanguageChoices(menu, languageCodes, 'display-language');
         menu.hidden = false;
+        searchInput.focus();
         this.root.querySelector('.nt-outgoing-menu').hidden = true;
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'true');
@@ -954,15 +1005,22 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
   const requestedUiLanguage = __UI_LANGUAGE__;
   const displayTranslationEnabled = __DISPLAY_TRANSLATION_ENABLED__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const uiLanguage = requestedUiLanguage === 'auto'
-    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
-    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
-  const copies = {
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  function resolveUiLanguage(value) {
+    const normalized = String(value || '').replaceAll('_','-').toLowerCase();
+    if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
+    if (normalized.startsWith('pt')) return 'pt-BR';
+    if (normalized.startsWith('es')) return 'es-419';
+    if (normalized === 'in' || normalized.startsWith('in-')) return 'id';
+    return supportedUiLanguages.find(code => normalized === code.toLowerCase() || normalized.startsWith(`${code.toLowerCase()}-`)) || 'en';
+  }
+  const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
+  const copies = Object.assign({
     ko:{showOriginal:'원문 보기',showSent:'전송문 보기'},
     en:{showOriginal:'Show original',showSent:'Show sent message'},
     ja:{showOriginal:'原文を表示',showSent:'送信文を表示'},
     zh:{showOriginal:'查看原文',showSent:'查看发送内容'}
-  };
+  }, __GENERATED_ORIGINAL_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const GLOBAL = '__nudeTranslatorOutgoingOriginalDisplay';
   const STYLE_ID = 'nt-outgoing-original-style';
@@ -1225,7 +1283,7 @@ pub fn outgoing_ui_script(
         } else {
             "auto"
         };
-    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+    let ui_language = if ui_language == "auto" || is_supported_language_code(ui_language) {
         ui_language
     } else {
         "en"
@@ -1234,6 +1292,11 @@ pub fn outgoing_ui_script(
         .into_iter()
         .map(|language| (language.code(), language.native_name()))
         .chain(std::iter::once(("auto", "Auto")))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let language_english_names = LANGUAGE_MENU_ORDER
+        .into_iter()
+        .map(|language| (language.code(), language.english_name()))
+        .chain(std::iter::once(("auto", "Automatic language detection")))
         .collect::<std::collections::BTreeMap<_, _>>();
     let compact_labels = LANGUAGE_MENU_ORDER
         .into_iter()
@@ -1254,6 +1317,48 @@ pub fn outgoing_ui_script(
         .into_iter()
         .map(Language::code)
         .collect::<Vec<_>>();
+    let localized_copies = generated_copies(&[
+        ("auto", "자동 감지"),
+        ("outgoingLanguage", "전송"),
+        ("selectLanguage", "전송 언어 선택"),
+        ("originalOnce", "이번 메시지만 원문으로 전송"),
+        ("nextOriginal", "다음 메시지는 번역하지 않고 전송합니다."),
+        ("selectLanguageFormal", "전송 언어를 선택하십시오."),
+        ("sendingOriginal", "원문을 전송합니다."),
+        ("translating", "메시지를 번역하고 있습니다."),
+        (
+            "detectionFailed",
+            "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.",
+        ),
+        (
+            "detectedLanguage",
+            "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.",
+        ),
+        ("sendOriginal", "원문 전송"),
+        (
+            "translationFailed",
+            "메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.",
+        ),
+        (
+            "pending",
+            "이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.",
+        ),
+        (
+            "sendingParts",
+            "번역문을 분할 전송하고 있습니다. ({part}/{total})",
+        ),
+        ("longAttachment", "번역문이 길어 텍스트 파일로 전송합니다."),
+        (
+            "reviewReady",
+            "번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.",
+        ),
+        ("reviewHint", "번역문을 수정하거나 Enter로 전송하십시오."),
+        ("realTimeOn", "번역 켜짐"),
+        ("displayLanguage", "표시"),
+        ("selectDisplayLanguage", "표시 언어 선택"),
+        ("searchLanguages", "언어 검색"),
+        ("noMatchingLanguages", "검색 결과 없음"),
+    ]);
     OUTGOING_UI_SCRIPT
         .replace("__ENABLED__", if enabled { "true" } else { "false" })
         .replace(
@@ -1285,8 +1390,16 @@ pub fn outgoing_ui_script(
             &serde_json::to_string(&language_codes).expect("static language codes"),
         )
         .replace(
+            "__LANGUAGE_ENGLISH_NAMES__",
+            &serde_json::to_string(&language_english_names).expect("static English language names"),
+        )
+        .replace(
             "__COMPACT_LANGUAGE_LABELS__",
             &serde_json::to_string(&compact_labels).expect("static compact language labels"),
+        )
+        .replace(
+            "__GENERATED_OUTGOING_COPIES__",
+            &serde_json::to_string(&localized_copies).expect("generated outgoing interface copies"),
         )
         .replace(
             "__CONFIRM_SEND__",
@@ -1322,11 +1435,13 @@ pub fn outgoing_originals_ui_script(
         .map_err(|error| format!("Discord 채널 식별자를 인코딩하지 못했습니다: {error}"))?;
     let records = serde_json::to_string(records)
         .map_err(|error| format!("보낸 메시지 원문 목록을 인코딩하지 못했습니다: {error}"))?;
-    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+    let ui_language = if ui_language == "auto" || is_supported_language_code(ui_language) {
         ui_language
     } else {
         "en"
     };
+    let localized_copies =
+        generated_copies(&[("showOriginal", "원문 보기"), ("showSent", "전송문 보기")]);
     Ok(OUTGOING_ORIGINALS_UI_SCRIPT
         .replace("__VERSION__", &OUTGOING_ORIGINALS_UI_VERSION.to_string())
         .replace("__CHANNEL_KEY__", &channel_key)
@@ -1342,10 +1457,14 @@ pub fn outgoing_originals_ui_script(
         .replace(
             "__UI_LANGUAGE__",
             &serde_json::to_string(ui_language).expect("static interface language code"),
+        )
+        .replace(
+            "__GENERATED_ORIGINAL_COPIES__",
+            &serde_json::to_string(&localized_copies).expect("generated original-view copies"),
         ))
 }
 
-pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 19;
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 20;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();
@@ -1619,8 +1738,33 @@ mod tests {
         assert!(!script.contains("__DISPLAY_ENABLED__"));
         assert!(!script.contains("__DISPLAY_LANGUAGE__"));
 
+        let arabic = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "auto",
+            "ar",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        assert!(arabic.contains("const requestedUiLanguage = \"ar\""));
+        assert!(arabic.contains("\"ar\":{"));
+        assert!(arabic.contains("nt-language-search"));
+        assert!(arabic.contains("text-align:left"));
+        assert!(arabic.contains("max-height:min(58vh,500px)"));
+        assert!(arabic.contains("scrollbar-width:thin"));
+        assert!(arabic.contains("controller.pointerDownListener"));
+        assert!(arabic.contains(
+            "document.addEventListener('pointerdown', controller.pointerDownListener, true)"
+        ));
+        assert!(!arabic.contains("__GENERATED_OUTGOING_COPIES__"));
+        assert!(!arabic.contains("__LANGUAGE_ENGLISH_NAMES__"));
+
         let originals = outgoing_originals_ui_script("/channels/1/2", &[], "en", true).unwrap();
         assert!(originals.contains("const requestedUiLanguage = \"en\""));
+        assert!(!originals.contains("__GENERATED_ORIGINAL_COPIES__"));
         assert!(originals.contains("Show original"));
     }
 
