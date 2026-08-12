@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'Discord 자동 연결, 설정 초기화, 로컬 모델 폴더 관리와 제거 시 데이터 정리를 개선한 0.4.11 비공개 베타',
+    [string]$ReleaseNotes = '20개 언어 지원과 언어 검색을 추가하고, 번역 안정성과 다국어 설정 화면을 개선한 0.5.0 비공개 베타',
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )

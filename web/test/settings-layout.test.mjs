@@ -36,10 +36,10 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the beta version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.4.11-beta");
-  assert.match(tauriConfig, /"version": "0\.4\.11-beta"/);
-  assert.match(cargoManifest, /^version = "0\.4\.11-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.4\.11 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.0-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.0-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.0-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.0 Beta<\/span>/);
 });
 
 test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
