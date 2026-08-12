@@ -36,7 +36,7 @@ use windows::Win32::System::JobObjects::{
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 
-const PROMPT_VERSION: &str = "meaning-preserving-v10";
+const PROMPT_VERSION: &str = "meaning-preserving-v11";
 const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -1187,7 +1187,7 @@ where
         result = remove_unwritten_decorations(core, &result);
         if translation_needs_repair(core, &result, source, target) {
             let repair_prompt = format!(
-                "Rewrite the following translation completely in {}. Translate every remaining {} word or script into {}; keep only proper names and ZXQKEEP placeholders unchanged. Preserve the exact meaning, tone, and punctuation. Output only the corrected translation:\n\n{}",
+                "Rewrite the following translation completely in {}. Translate every remaining {} word or script into {}; keep only proper names unchanged. Preserve the exact meaning, tone, and punctuation. Output only the corrected translation:\n\n{}",
                 target.english_name(),
                 source.english_name(),
                 target.english_name(),
@@ -1367,7 +1367,7 @@ fn compact_translation_prompt(
         format!(" {style}")
     };
     format!(
-        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names or ZXQKEEP placeholders. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar. Preserve its tone, line breaks, emojis, punctuation, and ZXQKEEP placeholders. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
+        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar. Preserve its tone, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
         source.english_name(),
         target.english_name(),
         style,
@@ -1444,7 +1444,7 @@ fn rewrite_style_prompt_for_model(
         return rewrite_style_prompt(text, target, style);
     }
     format!(
-        "Rewrite this {} text. {} Preserve its meaning, line breaks, emojis, punctuation, and ZXQKEEP placeholders. {NO_UNWRITTEN_DECORATIONS} Output only the rewritten text:\n\n{}",
+        "Rewrite this {} text. {} Preserve its meaning, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS} Output only the rewritten text:\n\n{}",
         target.english_name(),
         compact_style_requirement(target, style),
         text
@@ -1888,7 +1888,7 @@ mod tests {
             Language::Korean,
             "neutral",
         );
-        assert!(prompt.contains("ZXQKEEP placeholders"));
+        assert!(!prompt.contains("ZXQKEEP"));
         assert!(prompt.contains("Output only the translation"));
         assert!(!prompt.contains("Translate every clause"));
         assert!(!prompt.contains("exact social register"));
@@ -2230,7 +2230,7 @@ mod tests {
         let polite = HyMtTranslator::new(HyMtModelSize::Small, "auto", "polite").unwrap();
         let casual = HyMtTranslator::new(HyMtModelSize::Small, "auto", "casual").unwrap();
         assert_ne!(polite.cache_namespace(), casual.cache_namespace());
-        assert!(polite.cache_namespace().contains("meaning-preserving-v10"));
+        assert!(polite.cache_namespace().contains("meaning-preserving-v11"));
         assert!(
             rewrite_style_prompt("고마워요.", Language::Korean, "casual")
                 .contains("Korean casual banmal")

@@ -738,7 +738,7 @@ function matchesKnownTranslation(value, key) {
 export function applyStaticTranslations(root, language) {
   language = resolveUiLanguage(language);
   document.documentElement.lang = language === "zh" ? "zh-CN" : language === "zh-Hant" ? "zh-TW" : language;
-  document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+  document.documentElement.dir = "ltr";
   document.title = language === "ko"
     ? "NudeNyang Translator 설정"
     : `NudeNyang Translator · ${translateCopy(language, "설정")}`;
@@ -753,11 +753,15 @@ export function applyStaticTranslations(root, language) {
     }
     if (key) element.textContent = translateCopy(language, key);
   }
-  for (const element of root.querySelectorAll("[aria-label], [placeholder]")) {
-    for (const attribute of ["aria-label", "placeholder"]) {
+  for (const element of root.querySelectorAll("[aria-label], [placeholder], [title]")) {
+    for (const attribute of ["aria-label", "placeholder", "title"]) {
       const value = element.getAttribute(attribute)?.trim();
       if (!value) continue;
-      const datasetKey = attribute === "aria-label" ? "i18nAriaLabel" : "i18nPlaceholder";
+      const datasetKey = attribute === "aria-label"
+        ? "i18nAriaLabel"
+        : attribute === "placeholder"
+          ? "i18nPlaceholder"
+          : "i18nTitle";
       let key = element.dataset[datasetKey];
       if (!key || !matchesKnownTranslation(value, key)) {
         key = COPY[value] ? value : "";

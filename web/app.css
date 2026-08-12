@@ -729,9 +729,14 @@ input:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  direction: ltr;
   gap: 10px;
   padding: 0 14px;
-  text-align: start;
+  text-align: left;
+}
+
+.select-trigger-label {
+  min-width: 0;
 }
 
 .select-trigger::after {
@@ -1275,13 +1280,29 @@ input:focus-visible,
   white-space: normal;
 }
 
-.provider-action,
-.provider-disconnect {
-  flex: 0 0 86px;
-  width: 86px;
-  min-width: 86px;
-  min-height: 40px;
-  white-space: nowrap;
+.provider-icon-button {
+  display: inline-grid;
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  place-items: center;
+}
+
+.provider-icon-button[hidden] {
+  display: none;
+}
+
+.provider-action-icon {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .provider-credential-connection {
@@ -1463,12 +1484,9 @@ input:focus-visible,
 }
 
 .button.provider-disconnect {
-  padding-inline: 8px;
-  text-align: center;
   border-color: color-mix(in srgb, var(--muted) 34%, var(--border));
   color: var(--muted);
   background: color-mix(in srgb, var(--control) 88%, var(--surface));
-  font-size: 12px;
 }
 
 .button.provider-disconnect:hover {

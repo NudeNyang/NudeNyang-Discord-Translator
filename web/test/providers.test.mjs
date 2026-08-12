@@ -52,7 +52,7 @@ test("an unconnected external model is routed to provider setup", () => {
 
 test("missing subscription CLIs use the in-app automatic installer", () => {
   assert.match(script, /invoke\("provider_install", \{ provider \}\)/);
-  assert.match(script, /setLocalizedText\(action, "설치 중"\)/);
+  assert.match(script, /setProviderActionLabel\(action, "설치 중"\)/);
   assert.doesNotMatch(script, /npm install -g/);
   assert.match(rustMain, /provider_install/);
   assert.match(subscriptionCli, /\["\/d", "\/s", "\/c", "call"\]/);
@@ -144,7 +144,8 @@ test("DeepL API keys are applied when editing finishes and before confirmation",
   const deeplRow = markup.match(/<article class="provider-row" data-provider="deepl">[\s\S]*?<\/article>/)?.[0] || "";
   assert.match(deeplRow, /provider-secret/);
   assert.match(deeplRow, /provider-disconnect/);
-  assert.doesNotMatch(deeplRow, /provider-action/);
+  assert.doesNotMatch(deeplRow, /provider-key-action/);
+  assert.doesNotMatch(deeplRow, /class="[^"]*\bprovider-action(?:\s|")/);
   assert.match(script, /async function savePendingProviderCredentials/);
 
   assert.match(script, /for \(const secret of document\.querySelectorAll\("\.provider-secret"\)\) \{[\s\S]*secret\.addEventListener\("change"/);
@@ -168,12 +169,26 @@ test("subscription CLI disconnect only disables the provider inside NudeNyang Tr
   assert.match(rustMain, /patch\["translator"\]\s*=\s*json!\("hymt_1_8b"\)/);
 });
 
-test("provider action buttons share dimensions and use calm semantic colors", () => {
-  assert.match(markup, /button secondary provider-disconnect/);
-  assert.match(script, /연결 해제/);
+test("provider actions use fixed icon buttons with localized accessible labels", () => {
+  assert.match(markup, /button secondary provider-action provider-icon-button/);
+  assert.match(markup, /button secondary provider-disconnect provider-icon-button/);
+  assert.match(markup, /class="provider-action-icon"/);
+  assert.match(markup, /aria-label="연결" title="연결"/);
+  assert.match(markup, /aria-label="연결 해제" title="연결 해제"/);
+  assert.match(script, /function setProviderActionLabel/);
+  assert.match(script, /action\.dataset\.i18nAriaLabel = key/);
+  assert.match(script, /action\.dataset\.i18nTitle = key/);
   assert.match(
     styles,
-    /\.provider-action,\s*\.provider-disconnect\s*\{[\s\S]*?width:\s*86px[\s\S]*?min-height:\s*40px[\s\S]*?white-space:\s*nowrap/,
+    /\.provider-icon-button\s*\{[\s\S]*?width:\s*42px[\s\S]*?height:\s*42px[\s\S]*?place-items:\s*center/,
+  );
+  assert.match(
+    styles,
+    /\.provider-icon-button\[hidden\]\s*\{[\s\S]*?display:\s*none/,
+  );
+  assert.match(
+    styles,
+    /\.provider-action-icon\s*\{[\s\S]*?width:\s*19px[\s\S]*?stroke:\s*currentColor[\s\S]*?stroke-width:\s*2/,
   );
   assert.match(
     styles,
@@ -181,7 +196,7 @@ test("provider action buttons share dimensions and use calm semantic colors", ()
   );
   assert.match(
     styles,
-    /\.button\.provider-disconnect\s*\{[\s\S]*?padding-inline:\s*8px[\s\S]*?text-align:\s*center[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
+    /\.button\.provider-disconnect\s*\{[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
   );
   assert.doesNotMatch(
     styles,

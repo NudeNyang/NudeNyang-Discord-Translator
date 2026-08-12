@@ -14,6 +14,7 @@ import { readFile } from "node:fs/promises";
 
 const appScript = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const settingsMarkup = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const i18nSource = await readFile(new URL("../i18n.mjs", import.meta.url), "utf8");
 
 test("automatic settings language follows supported system locales", () => {
   assert.equal(resolveUiLanguage("auto", "ko-KR"), "ko");
@@ -29,6 +30,11 @@ test("automatic settings language falls back to English", () => {
   assert.equal(resolveUiLanguage("auto", "fr-FR"), "fr");
   assert.equal(resolveUiLanguage("auto", "de-DE"), "de");
   assert.equal(resolveUiLanguage("auto", ""), "en");
+});
+
+test("Arabic interface copy keeps the shared left-to-right settings layout", () => {
+  assert.match(i18nSource, /document\.documentElement\.dir = "ltr"/);
+  assert.doesNotMatch(i18nSource, /document\.documentElement\.dir = language === "ar" \? "rtl" : "ltr"/);
 });
 
 test("all twenty interface languages have complete static dictionaries", () => {
@@ -194,7 +200,7 @@ test("every static Korean settings label and accessibility attribute has transla
   const leafText = [...settingsMarkup.matchAll(/<(?:h1|h2|h3|p|span|strong|b|button|small)[^>]*>([^<>]*[가-힣][^<>]*)<\//g)]
     .map(match => match[1].trim())
     .filter(Boolean);
-  const attributes = [...settingsMarkup.matchAll(/(?:aria-label|placeholder)="([^"]*[가-힣][^"]*)"/g)]
+  const attributes = [...settingsMarkup.matchAll(/(?:aria-label|placeholder|title)="([^"]*[가-힣][^"]*)"/g)]
     .map(match => match[1].trim());
   for (const value of [...new Set([...leafText, ...attributes])]) {
     for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {

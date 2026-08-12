@@ -37,6 +37,11 @@ static EMOJI_RE: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+static MARKER_ARTIFACT_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\bZ\s*X\s*Q\s*KEEP(?:\s*0*\d{1,3})?(?:\s*Q(?:\s*X(?:\s*Z)?)?)?\b").unwrap()
+});
+static REPEATED_HORIZONTAL_SPACE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[ \t]{2,}").unwrap());
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProtectedText {
@@ -85,7 +90,33 @@ impl ProtectedText {
             }
             restored.push_str(&missing.join(" "));
         }
-        restored
+        sanitize_unexpected_marker_artifacts(&self.original, &restored)
+    }
+}
+
+pub fn contains_unexpected_marker_artifact(source: &str, translated: &str) -> bool {
+    !MARKER_ARTIFACT_RE.is_match(source) && MARKER_ARTIFACT_RE.is_match(translated)
+}
+
+pub fn sanitize_unexpected_marker_artifacts(source: &str, translated: &str) -> String {
+    if !contains_unexpected_marker_artifact(source, translated) {
+        return translated.to_string();
+    }
+    let stripped = MARKER_ARTIFACT_RE.replace_all(translated, "");
+    let cleaned = stripped
+        .split('\n')
+        .map(|line| {
+            REPEATED_HORIZONTAL_SPACE_RE
+                .replace_all(line, " ")
+                .trim_matches([' ', '\t'])
+                .to_string()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    if cleaned.trim().is_empty() && !source.trim().is_empty() {
+        source.to_string()
+    } else {
+        cleaned
     }
 }
 
@@ -300,6 +331,28 @@ mod tests {
     fn missing_markers_are_readded_without_losing_tags() {
         let protected = protect_text("Hello @here");
         assert_eq!(protected.restore("안녕하세요"), "안녕하세요 @here");
+    }
+
+    #[test]
+    fn stray_marker_fragments_never_reach_the_user() {
+        let protected = protect_text("Hello 👋");
+        assert_eq!(
+            protected.restore("Hallo ZXQKEEP ZXQKEEP000 ZXQKEEP000QXZ"),
+            "Hallo 👋"
+        );
+        assert_eq!(
+            protected.restore("Hallo Z X Q KEEP ZXQKEEP000QX ZXQKEEP000QXZ"),
+            "Hallo 👋"
+        );
+    }
+
+    #[test]
+    fn user_authored_marker_words_are_not_silently_removed() {
+        let protected = protect_text("ZXQKEEP is an internal marker");
+        assert_eq!(
+            protected.restore("ZXQKEEP ist eine interne Markierung"),
+            "ZXQKEEP ist eine interne Markierung"
+        );
     }
 
     #[test]

@@ -325,6 +325,16 @@ function providerStateLabel(connection) {
   return "확인 필요";
 }
 
+function setProviderActionLabel(action, korean) {
+  if (!action) return;
+  const key = String(korean ?? "");
+  const translated = translateDynamicCopy(currentUiLanguage(), key);
+  action.dataset.i18nAriaLabel = key;
+  action.dataset.i18nTitle = key;
+  action.setAttribute("aria-label", translated);
+  action.title = translated;
+}
+
 function connectedRecommendedProvider() {
   return RECOMMENDED_PROVIDER_ORDER.find(providerIsConnected) || "";
 }
@@ -382,9 +392,12 @@ function renderProviderConnections(connections) {
     if (action) {
       action.hidden = connection.canDisconnect;
       action.disabled = connection.connected;
-      setLocalizedText(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
+      setProviderActionLabel(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
     }
-    if (disconnect) disconnect.hidden = !connection.canDisconnect;
+    if (disconnect) {
+      disconnect.hidden = !connection.canDisconnect;
+      setProviderActionLabel(disconnect, "연결 해제");
+    }
     const secret = row.querySelector(".provider-secret");
     if (secret) secret.placeholder = translateCopy(
       currentUiLanguage(),
@@ -456,7 +469,7 @@ async function connectProvider(row) {
   try {
     let current = providerConnection(provider);
     if (current && !current.installed) {
-      setLocalizedText(action, "설치 중");
+      setProviderActionLabel(action, "설치 중");
       status.dataset.state = "loading";
       setLocalizedText(status.querySelector("strong"), "설치 중");
       setLocalizedText(
@@ -469,7 +482,7 @@ async function connectProvider(row) {
     }
 
     action.disabled = true;
-    setLocalizedText(action, provider === "deepl" ? "확인 중" : "로그인 중");
+    setProviderActionLabel(action, provider === "deepl" ? "확인 중" : "로그인 중");
     status.dataset.state = "loading";
     setLocalizedText(
       status.querySelector("strong"),
@@ -1100,11 +1113,16 @@ function renderSelect(element) {
   const field = element.dataset.field;
   const languageField = ["target_language", "outgoing_target_language", "ui_language"].includes(field);
   const trigger = document.createElement("button");
+  const triggerLabel = document.createElement("span");
   const menu = document.createElement("div");
   trigger.type = "button";
   trigger.className = "select-trigger";
+  trigger.dir = "ltr";
   trigger.setAttribute("aria-haspopup", "listbox");
   trigger.setAttribute("aria-expanded", "false");
+  triggerLabel.className = "select-trigger-label";
+  triggerLabel.dir = languageField ? "auto" : "ltr";
+  trigger.append(triggerLabel);
   menu.className = "select-menu";
   element.append(trigger, menu);
 
@@ -1238,8 +1256,7 @@ function setSelectValue(field, value) {
   const element = document.querySelector(`.custom-select[data-field="${field}"]`);
   const label = OPTIONS[field].find(item => item[0] === value)?.[1] || value;
   const trigger = element.querySelector(".select-trigger");
-  trigger.textContent = translateCopy(currentUiLanguage(), label);
-  trigger.dir = ["target_language", "outgoing_target_language", "ui_language"].includes(field) ? "auto" : "ltr";
+  trigger.querySelector(".select-trigger-label").textContent = translateCopy(currentUiLanguage(), label);
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === String(value)));
   }

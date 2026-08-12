@@ -33,9 +33,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 34;
+  const CONTROLLER_VERSION = 35;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
+  const MENU_SCROLL_REVEAL_DISTANCE = 18;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
   const copies = Object.assign({
@@ -258,9 +259,16 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   function makeButton(text, action, value = '') {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = text;
     button.dataset.action = action;
-    if (action === 'language' || action === 'display-language') button.dir = 'auto';
+    if (action === 'language' || action === 'display-language') {
+      const label = document.createElement('span');
+      button.dir = 'ltr';
+      label.dir = 'auto';
+      label.textContent = text;
+      button.append(label);
+    } else {
+      button.textContent = text;
+    }
     if (value) button.dataset.value = value;
     return button;
   }
@@ -294,6 +302,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!button.hidden) visible += 1;
       });
       empty.hidden = visible > 0;
+      menu.__ntScrollIndicator?.update();
     });
     input.addEventListener('keydown', event => {
       if (event.key !== 'ArrowDown') return;
@@ -302,12 +311,105 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     });
     return input;
   }
+  function bindMenuScrollIndicator(menu) {
+    const indicator = menu.nextElementSibling;
+    const thumb = indicator?.querySelector('.nt-menu-scroll-thumb');
+    if (!indicator || !thumb) return;
+    let draggingPointer = null;
+    let hideTimer = 0;
+
+    const update = () => {
+      indicator.style.height = `${Math.max(0, menu.clientHeight - 8)}px`;
+      const trackHeight = indicator.clientHeight;
+      const maxScroll = Math.max(0, menu.scrollHeight - menu.clientHeight);
+      const scrollable = !menu.hidden && maxScroll > 1 && trackHeight > 0;
+      indicator.classList.toggle('scrollable', scrollable);
+      if (!scrollable) {
+        indicator.classList.remove('nt-scroll-near', 'nt-scrolling', 'nt-scroll-dragging');
+        thumb.style.height = '0px';
+        thumb.style.transform = 'translateY(0)';
+        return;
+      }
+      const thumbHeight = Math.max(32, Math.round((menu.clientHeight / menu.scrollHeight) * trackHeight));
+      const thumbTravel = Math.max(0, trackHeight - thumbHeight);
+      const thumbTop = maxScroll > 0 ? Math.round((menu.scrollTop / maxScroll) * thumbTravel) : 0;
+      thumb.style.height = `${thumbHeight}px`;
+      thumb.style.transform = `translateY(${thumbTop}px)`;
+    };
+
+    const scheduleUpdate = () => requestAnimationFrame(update);
+    const revealWhileScrolling = () => {
+      update();
+      indicator.classList.add('nt-scrolling');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => indicator.classList.remove('nt-scrolling'), 550);
+    };
+    const updateProximity = event => {
+      if (draggingPointer !== null) return;
+      if (menu.hidden || !indicator.classList.contains('scrollable')) {
+        indicator.classList.remove('nt-scroll-near');
+        return;
+      }
+      const bounds = indicator.getBoundingClientRect();
+      const distanceX = Math.max(bounds.left - event.clientX, 0, event.clientX - bounds.right);
+      const distanceY = Math.max(bounds.top - event.clientY, 0, event.clientY - bounds.bottom);
+      indicator.classList.toggle('nt-scroll-near', Math.hypot(distanceX, distanceY) <= MENU_SCROLL_REVEAL_DISTANCE);
+    };
+    const scrollToPointer = clientY => {
+      const track = indicator.getBoundingClientRect();
+      const thumbHeight = thumb.getBoundingClientRect().height;
+      const thumbTravel = Math.max(0, track.height - thumbHeight);
+      const maxScroll = Math.max(0, menu.scrollHeight - menu.clientHeight);
+      if (thumbTravel <= 0 || maxScroll <= 0) return;
+      const thumbTop = Math.min(thumbTravel, Math.max(0, clientY - track.top - thumbHeight / 2));
+      menu.scrollTop = (thumbTop / thumbTravel) * maxScroll;
+    };
+    const finishDrag = event => {
+      if (draggingPointer !== event.pointerId) return;
+      draggingPointer = null;
+      indicator.classList.remove('nt-scroll-dragging');
+      if (indicator.hasPointerCapture(event.pointerId)) indicator.releasePointerCapture(event.pointerId);
+      updateProximity(event);
+    };
+    const reset = () => {
+      clearTimeout(hideTimer);
+      indicator.classList.remove('nt-scroll-near', 'nt-scrolling', 'nt-scroll-dragging');
+      draggingPointer = null;
+    };
+
+    menu.addEventListener('scroll', revealWhileScrolling, {passive:true});
+    menu.parentElement.addEventListener('pointermove', updateProximity);
+    menu.parentElement.addEventListener('pointerleave', () => {
+      if (draggingPointer === null) indicator.classList.remove('nt-scroll-near');
+    });
+    indicator.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || !indicator.classList.contains('scrollable')) return;
+      draggingPointer = event.pointerId;
+      indicator.classList.add('nt-scroll-near', 'nt-scroll-dragging');
+      indicator.setPointerCapture(event.pointerId);
+      scrollToPointer(event.clientY);
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    indicator.addEventListener('pointermove', event => {
+      if (draggingPointer === event.pointerId) scrollToPointer(event.clientY);
+    });
+    indicator.addEventListener('pointerup', finishDrag);
+    indicator.addEventListener('pointercancel', finishDrag);
+    indicator.addEventListener('wheel', event => {
+      if (!indicator.classList.contains('scrollable')) return;
+      menu.scrollTop += event.deltaY;
+      event.preventDefault();
+      event.stopPropagation();
+    }, {passive:false});
+    menu.__ntScrollIndicator = {update:scheduleUpdate, reset};
+  }
   function ensureRoot(controller) {
     let root = document.getElementById(ROOT_ID);
     if (root) return root;
     root = document.createElement('div');
     root.id = ROOT_ID;
-    root.innerHTML = `<div class="nt-controls-row"><div class="nt-control-wrap nt-role-control nt-outgoing-control"><button type="button" class="nt-outgoing-trigger" aria-label="${copy('selectLanguage')}" title="${copy('selectLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-outgoing-icon" aria-hidden="true">↑</span><b>${compactLanguageLabels.auto}</b></button><div class="nt-outgoing-menu" hidden></div></div><div class="nt-control-wrap nt-role-control nt-display-control"><button type="button" class="nt-display-trigger" aria-label="${copy('selectDisplayLanguage')}" title="${copy('selectDisplayLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-display-icon" aria-hidden="true">↓</span><b></b></button><div class="nt-display-menu" hidden></div></div></div><p class="nt-outgoing-status" hidden></p>`;
+    root.innerHTML = `<div class="nt-controls-row"><div class="nt-control-wrap nt-role-control nt-outgoing-control"><button type="button" class="nt-outgoing-trigger" aria-label="${copy('selectLanguage')}" title="${copy('selectLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-outgoing-icon" aria-hidden="true">↑</span><b>${compactLanguageLabels.auto}</b></button><div class="nt-outgoing-menu" hidden></div><div class="nt-menu-scroll-indicator" aria-hidden="true"><span class="nt-menu-scroll-thumb"></span></div></div><div class="nt-control-wrap nt-role-control nt-display-control"><button type="button" class="nt-display-trigger" aria-label="${copy('selectDisplayLanguage')}" title="${copy('selectDisplayLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-display-icon" aria-hidden="true">↓</span><b></b></button><div class="nt-display-menu" hidden></div><div class="nt-menu-scroll-indicator" aria-hidden="true"><span class="nt-menu-scroll-thumb"></span></div></div></div><p class="nt-outgoing-status" hidden></p>`;
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
@@ -324,13 +426,15 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-role-accent) 58%,transparent);outline-offset:2px}
       #${ROOT_ID} .nt-role-icon{display:inline-flex;width:20px;height:20px;flex:none;align-items:center;justify-content:center;border:1px solid color-mix(in srgb,var(--nt-role-accent) 50%,var(--nt-role-border));border-radius:50%;background:var(--nt-icon-bg);color:var(--nt-icon-text);font-size:13px;font-weight:750;line-height:1}
       #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:11px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
-      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--nt-role-muted) 72%,transparent) transparent;padding:6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
-      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar{width:6px}
-      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-track,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-track{background:transparent}
-      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-thumb,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-thumb{border:1px solid transparent;border-radius:999px;background:color-mix(in srgb,var(--nt-role-muted) 72%,transparent);background-clip:padding-box}
-      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-thumb:hover,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--nt-role-accent) 72%,var(--nt-role-muted));background-clip:padding-box}
-      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar-button,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar-button{display:none;width:0;height:0}
-      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:6px 12px 6px 6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar{width:0;height:0}
+      #${ROOT_ID} .nt-menu-scroll-indicator{position:absolute;z-index:2;right:1px;bottom:44px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
+      #${ROOT_ID} .nt-outgoing-menu[hidden]+.nt-menu-scroll-indicator,#${ROOT_ID} .nt-display-menu[hidden]+.nt-menu-scroll-indicator{display:none}
+      #${ROOT_ID} .nt-menu-scroll-indicator:not(.scrollable){pointer-events:none}
+      #${ROOT_ID} .nt-menu-scroll-indicator.nt-scrolling,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-near,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-dragging,#${ROOT_ID} .nt-menu-scroll-indicator:hover{opacity:1}
+      #${ROOT_ID} .nt-menu-scroll-thumb{position:absolute;top:0;right:3px;width:3px;min-height:32px;border-radius:3px;background:var(--nt-role-accent);opacity:.46;transition:width 140ms ease,right 140ms ease,opacity 140ms ease}
+      #${ROOT_ID} .nt-menu-scroll-indicator:hover .nt-menu-scroll-thumb,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-dragging .nt-menu-scroll-thumb{right:2px;width:6px;opacity:.95}
+      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;justify-content:flex-start;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
       #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
       #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
       #${ROOT_ID} .nt-language-search{position:sticky;z-index:1;top:-6px;padding:5px 3px 6px;background:var(--background-floating,#111214)}
@@ -343,6 +447,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     `;
     document.head.append(style);
     document.body.append(root);
+    bindMenuScrollIndicator(root.querySelector('.nt-outgoing-menu'));
+    bindMenuScrollIndicator(root.querySelector('.nt-display-menu'));
     root.querySelector('.nt-outgoing-trigger').addEventListener('click', () => controller.toggleMenu());
     root.querySelector('.nt-outgoing-menu').addEventListener('click', event => controller.onMenu(event));
     root.querySelector('.nt-display-trigger').addEventListener('click', () => controller.toggleDisplayMenu());
@@ -512,8 +618,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       closeMenus() {
         if (!this.root) return;
-        this.root.querySelector('.nt-outgoing-menu').hidden = true;
-        this.root.querySelector('.nt-display-menu').hidden = true;
+        const outgoingMenu = this.root.querySelector('.nt-outgoing-menu');
+        const displayMenu = this.root.querySelector('.nt-display-menu');
+        outgoingMenu.hidden = true;
+        displayMenu.hidden = true;
+        outgoingMenu.__ntScrollIndicator?.reset();
+        displayMenu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
       },
@@ -531,15 +641,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         divider.className = 'nt-divider';
         menu.append(divider, makeButton(copy('originalOnce'), 'original-once'));
         menu.hidden = false;
+        menu.__ntScrollIndicator?.update();
         searchInput.focus();
-        this.root.querySelector('.nt-display-menu').hidden = true;
+        const displayMenu = this.root.querySelector('.nt-display-menu');
+        displayMenu.hidden = true;
+        displayMenu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
       },
       toggleMenu() {
         const menu = this.root.querySelector('.nt-outgoing-menu');
         if (menu.hidden) this.showLanguageMenu();
-        else { menu.hidden = true; this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false'); }
+        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false'); }
       },
       showDisplayLanguageMenu() {
         const menu = this.root.querySelector('.nt-display-menu');
@@ -550,15 +663,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         menu.append(title);
         const searchInput = appendLanguageChoices(menu, languageCodes, 'display-language');
         menu.hidden = false;
+        menu.__ntScrollIndicator?.update();
         searchInput.focus();
-        this.root.querySelector('.nt-outgoing-menu').hidden = true;
+        const outgoingMenu = this.root.querySelector('.nt-outgoing-menu');
+        outgoingMenu.hidden = true;
+        outgoingMenu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'true');
       },
       toggleDisplayMenu() {
         const menu = this.root.querySelector('.nt-display-menu');
         if (menu.hidden) this.showDisplayLanguageMenu();
-        else { menu.hidden = true; this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false'); }
+        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false'); }
       },
       onDisplayMenu(event) {
         const button = event.target.closest('button[data-action="display-language"]');
@@ -575,6 +691,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         });
         const menu = this.root.querySelector('.nt-display-menu');
         menu.hidden = true;
+        menu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
         this.updateLabel();
       },
@@ -599,6 +716,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.retry(button.dataset.value, 'original');
         }
         this.root.querySelector('.nt-outgoing-menu').hidden = true;
+        this.root.querySelector('.nt-outgoing-menu').__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
       },
       retry(id, language) {
@@ -1753,8 +1871,13 @@ mod tests {
         assert!(arabic.contains("\"ar\":{"));
         assert!(arabic.contains("nt-language-search"));
         assert!(arabic.contains("text-align:left"));
+        assert!(arabic.contains("button.dir = 'ltr'"));
+        assert!(arabic.contains("label.dir = 'auto'"));
         assert!(arabic.contains("max-height:min(58vh,500px)"));
-        assert!(arabic.contains("scrollbar-width:thin"));
+        assert!(arabic.contains("scrollbar-width:none"));
+        assert!(arabic.contains("nt-menu-scroll-indicator"));
+        assert!(arabic.contains("MENU_SCROLL_REVEAL_DISTANCE"));
+        assert!(!arabic.contains("::-webkit-scrollbar-thumb"));
         assert!(arabic.contains("controller.pointerDownListener"));
         assert!(arabic.contains(
             "document.addEventListener('pointerdown', controller.pointerDownListener, true)"

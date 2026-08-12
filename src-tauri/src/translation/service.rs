@@ -9,7 +9,7 @@ use crate::language::{Language, LanguageDetector};
 use crate::text_split::split_for_translation;
 
 use super::discord_format::DiscordFormatTemplate;
-use super::protected_text::{protect_text, ProtectedText};
+use super::protected_text::{protect_text, sanitize_unexpected_marker_artifacts, ProtectedText};
 use super::Translator;
 
 static JAPANESE_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -184,6 +184,7 @@ impl TranslationService {
                 self.translator.cache_namespace(),
                 false,
             )? {
+                let cached = sanitize_unexpected_marker_artifacts(text, &cached);
                 results[index] = Some(preserve_terminal_punctuation(text, &cached));
                 cache_hits += 1;
                 continue;
@@ -295,6 +296,7 @@ impl TranslationService {
             self.translator.cache_namespace(),
             false,
         )? {
+            let cached = sanitize_unexpected_marker_artifacts(text, &cached);
             return Ok(preserve_terminal_punctuation(text, &cached));
         }
         let translated = self
@@ -662,6 +664,37 @@ mod tests {
         assert!(first.contains("@everyone 👋"));
         assert_eq!(first, second);
         assert_eq!(*calls.lock().unwrap(), 1);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn contaminated_cached_marker_fragments_are_sanitized() {
+        let path = cache_path("marker-cache");
+        let calls = Arc::new(Mutex::new(0));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let source = "Hello 👋";
+        cache
+            .put(
+                &super::source_hash(source),
+                source,
+                "en",
+                "de",
+                "Hallo ZXQKEEP 👋",
+                "counting:v1",
+            )
+            .unwrap();
+        let mut service = TranslationService::new(
+            Box::new(CountingTranslator {
+                calls: calls.clone(),
+            }),
+            cache,
+        );
+
+        assert_eq!(
+            service.translate(source, Language::German).unwrap(),
+            "Hallo 👋"
+        );
+        assert_eq!(*calls.lock().unwrap(), 0);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

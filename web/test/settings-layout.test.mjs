@@ -26,6 +26,9 @@ test("the user-facing product name is NudeNyang Translator", () => {
 test("translation language options preserve RTL glyphs on the shared left edge", () => {
   assert.match(styles, /\.select-option\s*\{[^}]*text-align:\s*start;/s);
   assert.match(styles, /\.select-option:dir\(rtl\)\s*\{[^}]*text-align:\s*left;/s);
+  assert.match(script, /trigger\.dir = "ltr"/);
+  assert.match(script, /triggerLabel\.dir = languageField \? "auto" : "ltr"/);
+  assert.match(styles, /\.select-trigger\s*\{[^}]*direction:\s*ltr;/s);
 });
 
 test("language compact codes are not rendered as select group headings", () => {

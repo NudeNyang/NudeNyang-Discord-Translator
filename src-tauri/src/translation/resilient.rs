@@ -2,6 +2,7 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::language::Language;
 
+use super::protected_text::contains_unexpected_marker_artifact;
 use super::Translator;
 
 const HALLUCINATION_PHRASES: [&str; 6] = [
@@ -239,6 +240,9 @@ pub fn translation_needs_repair(
     source: Language,
     target: Language,
 ) -> bool {
+    if contains_unexpected_marker_artifact(source_text, translated_text) {
+        return true;
+    }
     let source_normalized = normalize(source_text);
     let translated_normalized = normalize(translated_text);
     if source_normalized.is_empty() {
@@ -534,6 +538,12 @@ mod tests {
             "제4회 すてらダンス部 컬래버레이션 수업입니다!",
             Language::Japanese,
             Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            "좋은 재능이야",
+            "Das Talent ist wirklich gut ZXQKEEP",
+            Language::Korean,
+            Language::German,
         ));
     }
 
