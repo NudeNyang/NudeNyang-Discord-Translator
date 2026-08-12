@@ -1,3 +1,5 @@
+import { SUPPORTED_TARGET_LANGUAGES } from "./languages.mjs";
+
 export const DEFAULT_CONFIG = Object.freeze({
   enabled: false,
   outgoing_translation_enabled: false,
@@ -21,13 +23,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   },
 });
 
-export const SUPPORTED_TARGET_LANGUAGES = Object.freeze([
-  "ko",
-  "ja",
-  "en",
-  "zh",
-  "zh-Hant",
-]);
+export { SUPPORTED_TARGET_LANGUAGES } from "./languages.mjs";
 
 const SHORTCUT_KEY_NAMES = Object.freeze({
   " ": "Space",
@@ -71,7 +67,7 @@ export function normalizeConfig(value = {}) {
   )
     ? value.outgoing_target_language
     : DEFAULT_CONFIG.outgoing_target_language;
-  const uiLanguage = ["auto", "ko", "en", "ja", "zh"].includes(value.ui_language)
+  const uiLanguage = ["auto", ...SUPPORTED_TARGET_LANGUAGES].includes(value.ui_language)
     ? value.ui_language
     : DEFAULT_CONFIG.ui_language;
   const retentionDays = [0, 7, 30, 90, 180].includes(

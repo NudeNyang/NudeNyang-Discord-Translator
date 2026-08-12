@@ -65,7 +65,7 @@ button {
   border: 0;
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -199,10 +199,56 @@ button:focus-visible {
   padding-bottom: 5px;
 }
 
+.language-view {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tray-language-search {
+  position: sticky;
+  z-index: 2;
+  top: -5px;
+  padding: 5px 4px 7px;
+  background: var(--panel);
+}
+
+.tray-language-search input {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+}
+
+.tray-language-search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.tray-language-search-empty {
+  padding: 22px 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.tray-language-search-empty[hidden],
+.language-option[hidden] {
+  display: none;
+}
+
 .language-option[aria-pressed="true"],
 .model-option[aria-pressed="true"] {
   background: color-mix(in srgb, var(--accent) 17%, transparent);
   color: var(--accent-strong);
+}
+
+.language-option {
+  direction: ltr;
+  text-align: left;
 }
 
 .language-check,

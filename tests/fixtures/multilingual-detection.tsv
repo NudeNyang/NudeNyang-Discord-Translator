@@ -1,0 +1,51 @@
+# expected<TAB>scenario<TAB>text
+en	normal	Hello from the Discord server, everyone is welcome here.
+en	noise	<@123456> Please check the other servers before joining https://example.com
+ko	normal	안녕하세요, 오늘 저녁에 같이 게임할래요?
+ko	noise	<@123456> 공지사항을 확인하고 음성 채널로 와 주세요.
+ja	normal	こんにちは、今夜いっしょにゲームをしませんか。
+ja	noise	<@123456> お知らせを確認してボイスチャンネルに来てください。
+zh	normal	这是一个简体中文消息，请查看服务器公告。
+zh	noise	<@123456> 请确认频道规则，然后加入语音聊天。
+zh-Hant	normal	這是一則繁體中文訊息，請查看伺服器公告。
+zh-Hant	noise	<@123456> 請確認頻道規則，然後加入語音聊天。
+pt-BR	normal	Você quer jogar comigo hoje à noite no servidor?
+pt-BR	noise	<@123456> Por favor, confira as regras antes de entrar no canal.
+es-419	normal	¿Quieres jugar conmigo esta noche en el servidor?
+es-419	noise	<@123456> Revisa las reglas antes de entrar al canal de voz.
+de	normal	Möchtest du heute Abend mit uns auf dem Server spielen?
+de	noise	<@123456> Bitte lies die Regeln, bevor du dem Sprachkanal beitrittst.
+fr	normal	Tu veux jouer avec nous ce soir sur le serveur ?
+fr	noise	<@123456> Merci de lire les règles avant de rejoindre le salon vocal.
+id	normal	Kamu mau bermain bersama kami malam ini di server?
+id	noise	<@123456> Tolong baca aturan sebelum masuk ke kanal suara.
+hi	normal	क्या तुम आज रात सर्वर पर हमारे साथ खेलना चाहते हो?
+hi	noise	<@123456> कृपया वॉइस चैनल में आने से पहले नियम पढ़ें।
+vi	normal	Bạn có muốn chơi cùng chúng tôi trên máy chủ tối nay không?
+vi	noise	<@123456> Vui lòng đọc nội quy trước khi vào kênh thoại.
+pl	normal	Chcesz dziś wieczorem zagrać z nami na serwerze?
+pl	noise	<@123456> Przeczytaj zasady przed dołączeniem do kanału głosowego.
+ru	normal	Хочешь сегодня вечером поиграть с нами на сервере?
+ru	noise	<@123456> Прочитай правила перед входом в голосовой канал.
+uk	normal	Хочеш сьогодні ввечері пограти з нами на сервері?
+uk	noise	<@123456> Прочитай правила перед входом до голосового каналу.
+tr	normal	Bu akşam sunucuda bizimle oynamak ister misin?
+tr	noise	<@123456> Ses kanalına katılmadan önce lütfen kuralları oku.
+ar	normal	هل تريد أن تلعب معنا على الخادم الليلة؟
+ar	noise	<@123456> يرجى قراءة القواعد قبل الانضمام إلى القناة الصوتية.
+it	normal	Vuoi giocare con noi sul server questa sera?
+it	noise	<@123456> Leggi le regole prima di entrare nel canale vocale.
+nl	normal	Wil je vanavond met ons op de server spelen?
+nl	noise	<@123456> Lees de regels voordat je bij het spraakkanaal komt.
+ms	normal	Awak mahu bermain bersama kami di pelayan malam ini?
+ms	noise	<@123456> Sila baca peraturan sebelum menyertai saluran suara.
+und	ambiguous	gg
+und	ambiguous	lol
+und	ambiguous	nice
+und	ambiguous	no
+und	ambiguous	si
+und	ambiguous	ok
+und	ambiguous	1234
+und	ambiguous	https://example.com
+und	ambiguous	<@123456> 🔥🔥
+und	ambiguous	```js const x = 1; ```

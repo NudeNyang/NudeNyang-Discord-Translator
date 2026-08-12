@@ -12,9 +12,10 @@ use imageproc::point::Point as ImagePoint;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
-use crate::language::Language;
+use crate::language::{is_supported_language_code, Language};
 use crate::ocr::{PaddleDualOcr, Point, Rect, TextLine};
 use crate::translation::TranslationService;
+use crate::ui_locale::generated_copies;
 
 const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v1";
 
@@ -22,17 +23,24 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
 (() => {
   const requestedUiLanguage = __UI_LANGUAGE__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const uiLanguage = requestedUiLanguage === 'auto'
-    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
-    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
-  const copies = {
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  function resolveUiLanguage(value) {
+    const normalized = String(value || '').replaceAll('_','-').toLowerCase();
+    if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
+    if (normalized.startsWith('pt')) return 'pt-BR';
+    if (normalized.startsWith('es')) return 'es-419';
+    if (normalized === 'in' || normalized.startsWith('in-')) return 'id';
+    return supportedUiLanguages.find(code => normalized === code.toLowerCase() || normalized.startsWith(`${code.toLowerCase()}-`)) || 'en';
+  }
+  const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
+  const copies = Object.assign({
     ko:{translate:'이미지 번역',showOriginal:'원문 보기',showTranslation:'번역 보기',translating:'번역 중…',retry:'다시 시도',failed:'이미지를 번역하지 못했습니다.'},
     en:{translate:'Image translation',showOriginal:'Show original',showTranslation:'Show translation',translating:'Translating…',retry:'Try again',failed:'The image could not be translated.'},
     ja:{translate:'画像を翻訳',showOriginal:'原文を表示',showTranslation:'翻訳を表示',translating:'翻訳中…',retry:'再試行',failed:'画像を翻訳できませんでした。'},
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
-  };
+  }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v2';
+  const version = 'rust-image-ui-v3';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -202,15 +210,28 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
 "##;
 
 pub fn image_ui_script(ui_language: &str) -> String {
-    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+    let ui_language = if ui_language == "auto" || is_supported_language_code(ui_language) {
         ui_language
     } else {
         "en"
     };
-    IMAGE_UI_SCRIPT.replace(
-        "__UI_LANGUAGE__",
-        &serde_json::to_string(ui_language).expect("static interface language code"),
-    )
+    let localized_copies = generated_copies(&[
+        ("translate", "이미지 번역"),
+        ("showOriginal", "원문 보기"),
+        ("showTranslation", "번역 보기"),
+        ("translating", "번역 중…"),
+        ("retry", "다시 시도"),
+        ("failed", "이미지를 번역하지 못했습니다."),
+    ]);
+    IMAGE_UI_SCRIPT
+        .replace(
+            "__UI_LANGUAGE__",
+            &serde_json::to_string(ui_language).expect("static interface language code"),
+        )
+        .replace(
+            "__GENERATED_IMAGE_COPIES__",
+            &serde_json::to_string(&localized_copies).expect("generated image interface copies"),
+        )
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -999,6 +1020,11 @@ mod tests {
 
         let fallback = image_ui_script("unsupported");
         assert!(fallback.contains("const requestedUiLanguage = \"en\""));
+
+        let arabic = image_ui_script("ar");
+        assert!(arabic.contains("const requestedUiLanguage = \"ar\""));
+        assert!(arabic.contains("\"ar\":{"));
+        assert!(!arabic.contains("__GENERATED_IMAGE_COPIES__"));
     }
 
     #[test]

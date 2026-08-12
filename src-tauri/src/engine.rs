@@ -36,8 +36,8 @@ use crate::outgoing::{
 use crate::text_split::split_for_discord;
 use crate::translation::{
     DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationProgress,
-    ModelProgressObserver, OriginalTranslator, SubscriptionCliTranslator, TranslationService,
-    Translator,
+    ModelProgressObserver, OriginalTranslator, ResilientTranslator, SubscriptionCliTranslator,
+    TranslationService, Translator,
 };
 
 const CDP_PORT: u16 = 9222;
@@ -1213,10 +1213,7 @@ fn scan_outgoing(
     let mut requested_display_language = None;
     for request in requests {
         if request.action == "display-language" {
-            if matches!(
-                request.selected_language.as_str(),
-                "ko" | "ja" | "en" | "zh" | "zh-Hant"
-            ) {
+            if crate::language::is_supported_language_code(&request.selected_language) {
                 requested_display_language = Some(request.selected_language);
             }
             continue;
@@ -2049,16 +2046,19 @@ fn make_translator(
         "translategemma_4b" => {
             make_local_translator(config, HyMtModelSize::TranslateGemma4B, progress_observer)
         }
-        "chatgpt" | "claude" | "gemini" => Ok(Box::new(SubscriptionCliTranslator::new(
-            name,
-            "auto",
-            120,
-            cache_root(),
-        )?)),
-        "deepl" => Ok(Box::new(DeepLTranslator::new(
+        "chatgpt" | "claude" | "gemini" => Ok(Box::new(ResilientTranslator::new(
+            Box::new(SubscriptionCliTranslator::new(
+                name,
+                "auto",
+                120,
+                cache_root(),
+            )?),
             None,
-            Duration::from_secs(30),
-        )?)),
+        ))),
+        "deepl" => Ok(Box::new(ResilientTranslator::new(
+            Box::new(DeepLTranslator::new(None, Duration::from_secs(30))?),
+            None,
+        ))),
         "mock" => Ok(Box::new(MockTranslator)),
         "original" => Ok(Box::new(OriginalTranslator)),
         other => Err(format!("지원하지 않는 번역 모델입니다: {other}")),
@@ -2076,7 +2076,10 @@ fn make_local_translator(
     } else {
         translator
     };
-    Ok(Box::new(translator))
+    Ok(Box::new(ResilientTranslator::new(
+        Box::new(translator),
+        None,
+    )))
 }
 
 fn cache_root() -> PathBuf {

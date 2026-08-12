@@ -17,6 +17,7 @@ const tauriConfig = JSON.parse(
   await readFile(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
 );
 const { translateCopy } = await import("../i18n.mjs");
+const { LANGUAGE_OPTIONS } = await import("../languages.mjs");
 
 test("confirming waits for real-time settings work before hiding the window", () => {
   const confirmHandler = appScript.match(/elements\.form\.addEventListener\("submit"[\s\S]*?\n\}\);/)?.[0] || "";
@@ -64,9 +65,14 @@ test("translation state changes are broadcast to the open tray menu", () => {
 });
 
 test("display language can be changed inside the tray menu", () => {
-  for (const language of ["ko", "ja", "en", "zh", "zh-Hant"]) {
-    assert.match(trayMarkup, new RegExp(`data-language="${language}"`));
+  assert.equal(LANGUAGE_OPTIONS.length, 20);
+  for (const [language] of LANGUAGE_OPTIONS) {
+    assert.match(trayScript, new RegExp(`LANGUAGE_OPTIONS`));
+    assert.ok(language.length >= 2);
   }
+  assert.match(trayScript, /data-language="\$\{code\}"/);
+  assert.match(trayScript, /dir="auto"/);
+  assert.match(trayStyles, /button\s*\{[^}]*text-align:\s*start;/s);
   assert.match(trayScript, /invoke\("settings_update", \{ patch: \{ target_language: language \} \}\)/);
   assert.doesNotMatch(
     trayScript,
@@ -108,7 +114,8 @@ test("tray window height hugs each menu view without clipping option lists", () 
   assert.match(trayStyles, /\.model-view \.menu-row\.compact \{\s*min-height: 37px;/);
   assert.match(trayStyles, /\.bottom-group \{[^}]*padding-bottom: 0;/s);
   assert.match(trayScript, /main: 318/);
-  assert.match(trayScript, /language: 274/);
+  assert.match(trayScript, /language: 520/);
+  assert.match(trayStyles, /\.language-view \{[^}]*overflow-y: auto;/s);
   assert.match(trayScript, /model: 427/);
   assert.match(trayScript, /VIEW_HEIGHTS\.main \+ \(availableUpdateVersion \? UPDATE_ROW_HEIGHT : 0\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.language\)/);

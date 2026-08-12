@@ -1,6 +1,6 @@
 [package]
 name = "nude-translator-tauri"
-version = "0.4.11-beta"
+version = "0.5.0-beta"
 description = "NudeNyang Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
@@ -20,6 +20,7 @@ fs2 = "0.4"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 imageproc = "0.25"
 keyring = "4.1"
+lingua = { version = "1.8.0", default-features = false, features = ["arabic", "chinese", "dutch", "english", "french", "german", "hindi", "indonesian", "italian", "japanese", "korean", "malay", "polish", "portuguese", "russian", "spanish", "turkish", "ukrainian", "vietnamese"] }
 ocr-rs = { path = "../vendor/ocr-rs" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

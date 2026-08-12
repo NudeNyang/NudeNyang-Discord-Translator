@@ -3,17 +3,11 @@ import {
   translateCopy,
   translateDynamicCopy,
 } from "./i18n.mjs";
+import { LANGUAGE_LABELS, LANGUAGE_OPTIONS } from "./languages.mjs";
+import { filterLanguageOptions } from "./language-search.mjs";
 
 const invoke = window.__TAURI__?.core?.invoke;
 const listen = window.__TAURI__?.event?.listen;
-
-const LANGUAGE_LABELS = Object.freeze({
-  ko: "한국어",
-  ja: "日本語",
-  en: "English",
-  zh: "简体中文",
-  "zh-Hant": "繁體中文",
-});
 
 const TRANSLATOR_LABELS = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
@@ -28,10 +22,24 @@ const TRANSLATOR_LABELS = Object.freeze({
 
 const VIEW_HEIGHTS = Object.freeze({
   main: 318,
-  language: 274,
+  language: 520,
   model: 427,
 });
 const UPDATE_ROW_HEIGHT = 58;
+
+document.querySelector("#language-view").innerHTML = `
+  <div class="tray-language-search">
+    <input id="tray-language-search" type="search" autocomplete="off" spellcheck="false" />
+  </div>
+  <div id="tray-language-options">
+    ${LANGUAGE_OPTIONS.map(([code, label]) => `
+      <button class="menu-row compact language-option" data-language="${code}" type="button">
+        <span class="menu-copy"><strong dir="auto">${label}</strong></span><span class="language-check" aria-hidden="true">✓</span>
+      </button>
+    `).join("")}
+  </div>
+  <div class="tray-language-search-empty" id="tray-language-search-empty" hidden></div>
+`;
 
 const elements = {
   engineSummary: document.querySelector("#engine-summary"),
@@ -46,6 +54,8 @@ const elements = {
   updateGroup: document.querySelector("#tray-update-group"),
   installUpdate: document.querySelector("#install-update"),
   updateVersion: document.querySelector("#tray-update-version"),
+  languageSearch: document.querySelector("#tray-language-search"),
+  languageSearchEmpty: document.querySelector("#tray-language-search-empty"),
   languageOptions: [...document.querySelectorAll("[data-language]")],
   translatorOptions: [...document.querySelectorAll("[data-translator]")],
 };
@@ -68,6 +78,7 @@ function applyTrayLanguage(language) {
   selectedUiLanguage = language || "auto";
   const resolved = resolveUiLanguage(selectedUiLanguage);
   document.documentElement.lang = resolved === "zh" ? "zh-CN" : resolved;
+  document.documentElement.dir = resolved === "ar" ? "rtl" : "ltr";
   for (const element of document.querySelectorAll("[data-i18n-key]")) {
     element.textContent = translateCopy(selectedUiLanguage, element.dataset.i18nKey);
   }
@@ -77,6 +88,10 @@ function applyTrayLanguage(language) {
       translateCopy(selectedUiLanguage, element.dataset.i18nAriaLabel),
     );
   }
+  const searchLabel = translateCopy(selectedUiLanguage, "언어 검색");
+  elements.languageSearch.placeholder = searchLabel;
+  elements.languageSearch.setAttribute("aria-label", searchLabel);
+  elements.languageSearchEmpty.textContent = translateCopy(selectedUiLanguage, "검색 결과 없음");
 }
 
 function showMainView() {
@@ -113,7 +128,17 @@ function showLanguageView() {
   elements.modelView.hidden = true;
   setTrayText(elements.openLabel, "뒤로");
   resizeTray(VIEW_HEIGHTS.language);
-  elements.languageOptions.find(option => option.getAttribute("aria-pressed") === "true")?.focus();
+  elements.languageSearch.value = "";
+  filterTrayLanguages("");
+  elements.languageSearch.focus();
+}
+
+function filterTrayLanguages(query) {
+  const matches = new Set(filterLanguageOptions(LANGUAGE_OPTIONS, query).map(([code]) => code));
+  elements.languageOptions.forEach(option => {
+    option.hidden = !matches.has(option.dataset.language);
+  });
+  elements.languageSearchEmpty.hidden = matches.size > 0;
 }
 
 function showModelView() {
@@ -264,6 +289,15 @@ document.querySelector("#open-settings-secondary").addEventListener("click", () 
 document.querySelector("#toggle-translation").addEventListener("click", () => run("tray_request_translation_toggle"));
 document.querySelector("#quit-app").addEventListener("click", () => run("application_exit"));
 elements.installUpdate.addEventListener("click", () => run("tray_request_update_install"));
+elements.languageSearch.addEventListener("input", event => filterTrayLanguages(event.currentTarget.value));
+elements.languageSearch.addEventListener("keydown", event => {
+  if (event.key !== "ArrowDown") return;
+  const first = elements.languageOptions.find(option => !option.hidden);
+  if (first) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 elements.languageOptions.forEach(option => {
   option.addEventListener("click", () => selectLanguage(option.dataset.language));
 });

@@ -6,6 +6,8 @@ use std::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::language::is_supported_language_code;
+
 const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Translator";
 const LEGACY_UPDATE_REPOSITORY: &str = "NudeNyang/DiscordTranslateOverlay";
 
@@ -213,14 +215,24 @@ impl AppConfig {
         if object
             .get("ui_language")
             .and_then(Value::as_str)
-            .is_some_and(|value| !matches!(value, "auto" | "ko" | "en" | "ja" | "zh"))
+            .is_some_and(|value| value != "auto" && !is_supported_language_code(value))
         {
             object.insert("ui_language".to_string(), Value::String("auto".to_string()));
         }
         if object
+            .get("target_language")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !is_supported_language_code(value))
+        {
+            object.insert(
+                "target_language".to_string(),
+                Value::String("ko".to_string()),
+            );
+        }
+        if object
             .get("outgoing_target_language")
             .and_then(Value::as_str)
-            .is_some_and(|value| !matches!(value, "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant"))
+            .is_some_and(|value| value != "auto" && !is_supported_language_code(value))
         {
             object.insert(
                 "outgoing_target_language".to_string(),

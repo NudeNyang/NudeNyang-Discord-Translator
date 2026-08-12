@@ -29,7 +29,7 @@ Python 인터프리터, `.venv`, PyInstaller, PaddleOCR 사이드카는 실행·
 ## 주요 기능
 
 - Discord 메시지와 채널명을 언어별로 판별해 선택한 표시 언어로 번역
-- 한국어·일본어·영어·중국어 간 번역 및 같은 언어 원문 유지
+- 한국어·영어·일본어·간체/번체 중국어를 포함한 20개 채팅 언어 번역 및 같은 언어 원문 유지
 - 최근 대화 언어를 기준으로 보내는 메시지를 번역하고, 장문은 텍스트 파일 하나로 전송
 - Hy-MT2 1.8B/7B 로컬 번역, ChatGPT·Claude·Gemini 구독 CLI, DeepL, Mock 엔진
 - 번역을 꺼도 로컬 모델을 VRAM에 유지하거나 즉시 반환하는 예열 옵션
@@ -40,6 +40,10 @@ Python 인터프리터, `.venv`, PyInstaller, PaddleOCR 사이드카는 실행·
 - 서명된 비공개 R2 베타 업데이트 확인·다운로드·자동 설치
 
 ## 지원 범위
+
+채팅 텍스트는 `ko`, `en`, `ja`, `zh`, `zh-Hant`, `pt-BR`, `es-419`, `de`, `fr`, `id`,
+`hi`, `vi`, `pl`, `ru`, `uk`, `tr`, `ar`, `it`, `nl`, `ms`를 지원한다. 보수적 자동 감지,
+공급자 코드와 OCR의 차이는 [MULTILINGUAL.md](MULTILINGUAL.md)에 기록한다.
 
 | 운영체제 | 상태 |
 |---|---|

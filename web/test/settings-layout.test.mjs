@@ -23,11 +23,23 @@ test("the user-facing product name is NudeNyang Translator", () => {
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });
 
+test("translation language options preserve RTL glyphs on the shared left edge", () => {
+  assert.match(styles, /\.select-option\s*\{[^}]*text-align:\s*start;/s);
+  assert.match(styles, /\.select-option:dir\(rtl\)\s*\{[^}]*text-align:\s*left;/s);
+  assert.match(script, /trigger\.dir = "ltr"/);
+  assert.match(script, /triggerLabel\.dir = languageField \? "auto" : "ltr"/);
+  assert.match(styles, /\.select-trigger\s*\{[^}]*direction:\s*ltr;/s);
+});
+
+test("language compact codes are not rendered as select group headings", () => {
+  assert.match(script, /if \(!languageField && group && group !== previousGroup\)/);
+});
+
 test("the beta version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.4.11-beta");
-  assert.match(tauriConfig, /"version": "0\.4\.11-beta"/);
-  assert.match(cargoManifest, /^version = "0\.4\.11-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.4\.11 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.0-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.0-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.0-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.0 Beta<\/span>/);
 });
 
 test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
@@ -161,7 +173,7 @@ test("display translation and outgoing interpretation present role-appropriate m
 
 test("convenience panel exposes global toggles and editable composer shortcuts", () => {
   assert.match(markup, /<h3>Language<\/h3>/);
-  assert.match(script, /\["auto", "Auto\(System\)"\]/);
+  assert.match(script, /\["auto", "Auto\(System\)", "", "System language"\]/);
   assert.match(markup, /data-field="ui_language"/);
   assert.match(markup, /id="toggle-shortcut"/);
   assert.match(markup, /id="toggle-outgoing-shortcut"/);

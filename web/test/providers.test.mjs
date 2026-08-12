@@ -52,7 +52,7 @@ test("an unconnected external model is routed to provider setup", () => {
 
 test("missing subscription CLIs use the in-app automatic installer", () => {
   assert.match(script, /invoke\("provider_install", \{ provider \}\)/);
-  assert.match(script, /setLocalizedText\(action, "설치 중"\)/);
+  assert.match(script, /setProviderActionLabel\(action, "설치 중"\)/);
   assert.doesNotMatch(script, /npm install -g/);
   assert.match(rustMain, /provider_install/);
   assert.match(subscriptionCli, /\["\/d", "\/s", "\/c", "call"\]/);
@@ -144,7 +144,8 @@ test("DeepL API keys are applied when editing finishes and before confirmation",
   const deeplRow = markup.match(/<article class="provider-row" data-provider="deepl">[\s\S]*?<\/article>/)?.[0] || "";
   assert.match(deeplRow, /provider-secret/);
   assert.match(deeplRow, /provider-disconnect/);
-  assert.doesNotMatch(deeplRow, /provider-action/);
+  assert.doesNotMatch(deeplRow, /provider-key-action/);
+  assert.doesNotMatch(deeplRow, /class="[^"]*\bprovider-action(?:\s|")/);
   assert.match(script, /async function savePendingProviderCredentials/);
 
   assert.match(script, /for \(const secret of document\.querySelectorAll\("\.provider-secret"\)\) \{[\s\S]*secret\.addEventListener\("change"/);
@@ -152,6 +153,14 @@ test("DeepL API keys are applied when editing finishes and before confirmation",
   assert.match(confirmHandler, /savePendingProviderCredentials/);
   assert.match(confirmHandler, /main_window_hide/);
   assert.match(providers, /API 키가 운영체제 보안 저장소에 저장되어 있습니다/);
+  assert.match(
+    styles,
+    /\.provider-credential-connection\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) 230px/,
+  );
+  assert.match(
+    styles,
+    /\.provider-credential\s*\{[\s\S]*?width:\s*min\(100%, 230px\)/,
+  );
 });
 
 test("subscription CLI disconnect only disables the provider inside NudeNyang Translator", () => {
@@ -168,12 +177,35 @@ test("subscription CLI disconnect only disables the provider inside NudeNyang Tr
   assert.match(rustMain, /patch\["translator"\]\s*=\s*json!\("hymt_1_8b"\)/);
 });
 
-test("provider action buttons share dimensions and use calm semantic colors", () => {
-  assert.match(markup, /button secondary provider-disconnect/);
-  assert.match(script, /연결 해제/);
+test("provider actions use fixed icon buttons with localized accessible labels", () => {
+  assert.match(markup, /button secondary provider-action provider-icon-button/);
+  assert.match(markup, /button secondary provider-disconnect provider-icon-button/);
+  assert.match(markup, /class="provider-action-icon"/);
+  assert.match(markup, /aria-label="연결" data-tooltip="연결"/);
+  assert.match(markup, /aria-label="연결 해제" data-tooltip="연결 해제"/);
+  assert.doesNotMatch(markup, /provider-icon-button[^>]*\stitle=/);
+  assert.match(script, /function setProviderActionLabel/);
+  assert.match(script, /action\.dataset\.i18nAriaLabel = key/);
+  assert.match(script, /action\.dataset\.i18nTooltip = key/);
+  assert.match(script, /action\.dataset\.tooltip = translated/);
   assert.match(
     styles,
-    /\.provider-action,\s*\.provider-disconnect\s*\{[\s\S]*?width:\s*86px[\s\S]*?min-height:\s*40px[\s\S]*?white-space:\s*nowrap/,
+    /\.button\.provider-icon-button\s*\{[\s\S]*?flex:\s*0 0 36px[\s\S]*?width:\s*36px[\s\S]*?min-width:\s*36px[\s\S]*?height:\s*36px[\s\S]*?min-height:\s*36px[\s\S]*?place-items:\s*center/,
+  );
+  assert.match(
+    styles,
+    /\.provider-icon-button\[hidden\]\s*\{[\s\S]*?display:\s*none/,
+  );
+  assert.match(
+    styles,
+    /\.provider-action-icon\s*\{[\s\S]*?width:\s*18px[\s\S]*?stroke:\s*currentColor[\s\S]*?stroke-width:\s*2/,
+  );
+  const tooltipRule = styles.match(/\.provider-icon-button::after\s*\{[\s\S]*?\}/)?.[0] || "";
+  assert.match(tooltipRule, /content:\s*attr\(data-tooltip\)/);
+  assert.match(tooltipRule, /right:\s*calc\(100% \+ 8px\)/);
+  assert.match(
+    styles,
+    /\.provider-icon-button:is\(:hover, :focus-visible\)::after\s*\{[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/,
   );
   assert.match(
     styles,
@@ -181,7 +213,7 @@ test("provider action buttons share dimensions and use calm semantic colors", ()
   );
   assert.match(
     styles,
-    /\.button\.provider-disconnect\s*\{[\s\S]*?padding-inline:\s*8px[\s\S]*?text-align:\s*center[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
+    /\.button\.provider-disconnect\s*\{[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
   );
   assert.doesNotMatch(
     styles,

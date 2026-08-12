@@ -4,7 +4,10 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::cache::OutgoingOriginalRecord;
-use crate::language::{detect_explicit_language, Language};
+use crate::language::{
+    detect_explicit_language, is_supported_language_code, Language, LANGUAGE_MENU_ORDER,
+};
+use crate::ui_locale::generated_copies;
 
 const OUTGOING_UI_SCRIPT: &str = r####"
 (() => {
@@ -18,17 +21,25 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const sendImmediatelyShortcut = __SEND_IMMEDIATELY_SHORTCUT__;
   const reviewBeforeSendShortcut = __REVIEW_BEFORE_SEND_SHORTCUT__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const uiLanguage = requestedUiLanguage === 'auto'
-    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
-    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  function resolveUiLanguage(value) {
+    const normalized = String(value || '').replaceAll('_','-').toLowerCase();
+    if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
+    if (normalized.startsWith('pt')) return 'pt-BR';
+    if (normalized.startsWith('es')) return 'es-419';
+    if (normalized === 'in' || normalized.startsWith('in-')) return 'id';
+    return supportedUiLanguages.find(code => normalized === code.toLowerCase() || normalized.startsWith(`${code.toLowerCase()}-`)) || 'en';
+  }
+  const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 31;
+  const CONTROLLER_VERSION = 35;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
+  const MENU_SCROLL_REVEAL_DISTANCE = 18;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
-  const copies = {
+  const copies = Object.assign({
     ko: {
       auto:'자동 감지', outgoingLanguage:'전송', selectLanguage:'전송 언어 선택', originalOnce:'이번 메시지만 원문으로 전송',
       nextOriginal:'다음 메시지는 번역하지 않고 전송합니다.', selectLanguageFormal:'전송 언어를 선택하십시오.', sendingOriginal:'원문을 전송합니다.',
@@ -37,7 +48,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'원문 전송', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
       pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', sendingParts:'번역문을 분할 전송하고 있습니다. ({part}/{total})',
       longAttachment:'번역문이 길어 텍스트 파일로 전송합니다.', reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.', reviewHint:'번역문을 수정하거나 Enter로 전송하십시오.',
-      realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택'
+      realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택', searchLanguages:'언어 검색', noMatchingLanguages:'검색 결과 없음'
     },
     en: {
       auto:'Auto detect', outgoingLanguage:'Send', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
@@ -47,7 +58,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'Send original', translationFailed:'The message could not be translated. The original message has been preserved.',
       pending:'The previous message is still being processed. Try again shortly.', sendingParts:'Sending the translated message in parts. ({part}/{total})',
       longAttachment:'The translation is long and will be sent as a text file.', reviewReady:'Review or edit the translation, then press Enter to send.', reviewHint:'Edit the translation or press Enter to send it.',
-      realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language'
+      realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language', searchLanguages:'Search languages', noMatchingLanguages:'No matching languages'
     },
     ja: {
       auto:'自動検出', outgoingLanguage:'送信', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
@@ -57,7 +68,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'原文を送信', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
       pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', sendingParts:'翻訳文を分割して送信しています。({part}/{total})',
       longAttachment:'翻訳文が長いため、テキストファイルとして送信します。', reviewReady:'翻訳文を確認・修正し、Enterで送信してください。', reviewHint:'翻訳文を修正するか、Enterで送信してください。',
-      realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択'
+      realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択', searchLanguages:'言語を検索', noMatchingLanguages:'一致する言語がありません'
     },
     zh: {
       auto:'自动检测', outgoingLanguage:'发送', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
@@ -67,16 +78,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'发送原文', translationFailed:'无法翻译消息。原文已保持不变。',
       pending:'上一条消息仍在处理中。请稍后重试。', sendingParts:'正在分段发送译文。({part}/{total})',
       longAttachment:'译文较长，将以文本文件形式发送。', reviewReady:'请检查或修改译文，然后按 Enter 发送。', reviewHint:'请修改译文或按 Enter 发送。',
-      realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言'
+      realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言', searchLanguages:'搜索语言', noMatchingLanguages:'没有匹配的语言'
     }
-  };
-  const languageLabelsByUi = {
-    ko:{auto:'자동 감지',ko:'한국어',ja:'일본어',en:'영어',zh:'중국어 간체','zh-Hant':'중국어 번체'},
-    en:{auto:'Auto detect',ko:'Korean',ja:'Japanese',en:'English',zh:'Simplified Chinese','zh-Hant':'Traditional Chinese'},
-    ja:{auto:'自動検出',ko:'韓国語',ja:'日本語',en:'英語',zh:'簡体字中国語','zh-Hant':'繁体字中国語'},
-    zh:{auto:'自动检测',ko:'韩语',ja:'日语',en:'英语',zh:'简体中文','zh-Hant':'繁体中文'}
-  };
-  const compactLanguageLabels = {auto:'AU',ko:'KO',ja:'JP',en:'EN',zh:'CN','zh-Hant':'TW'};
+  }, __GENERATED_OUTGOING_COPIES__);
+  const languageLabels = __LANGUAGE_LABELS__;
+  const languageEnglishNames = __LANGUAGE_ENGLISH_NAMES__;
+  const languageCodes = __LANGUAGE_CODES__;
+  const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__;
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const formatCopy = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), copy(key));
   const shortcutFromEvent = event => {
@@ -93,7 +101,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     return [...modifiers,key].join('+');
   };
   const sameShortcut = (left, right) => Boolean(left && right && left.toLowerCase() === right.toLowerCase());
-  const languageLabels = languageLabelsByUi[uiLanguage] || languageLabelsByUi.en;
   function currentChannelKey() {
     return location.pathname.startsWith('/channels/') ? location.pathname : '';
   }
@@ -252,17 +259,157 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   function makeButton(text, action, value = '') {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = text;
     button.dataset.action = action;
+    if (action === 'language' || action === 'display-language') {
+      const label = document.createElement('span');
+      button.dir = 'ltr';
+      label.dir = 'auto';
+      label.textContent = text;
+      button.append(label);
+    } else {
+      button.textContent = text;
+    }
     if (value) button.dataset.value = value;
     return button;
+  }
+  function normalizeLanguageSearch(value) {
+    return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
+  }
+  function appendLanguageChoices(menu, choices, action) {
+    const search = document.createElement('div');
+    const input = document.createElement('input');
+    const empty = document.createElement('div');
+    search.className = 'nt-language-search';
+    input.type = 'search';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.placeholder = copy('searchLanguages');
+    input.setAttribute('aria-label', copy('searchLanguages'));
+    empty.className = 'nt-language-search-empty';
+    empty.textContent = copy('noMatchingLanguages');
+    empty.hidden = true;
+    search.append(input);
+    menu.append(search);
+    const buttons = choices.map(code => makeButton(languageLabels[code], action, code));
+    menu.append(...buttons, empty);
+    input.addEventListener('input', () => {
+      const query = normalizeLanguageSearch(input.value);
+      let visible = 0;
+      buttons.forEach((button, index) => {
+        const code = choices[index];
+        const searchable = normalizeLanguageSearch(`${languageLabels[code]} ${code} ${languageEnglishNames[code] || ''}`);
+        button.hidden = Boolean(query) && !searchable.includes(query);
+        if (!button.hidden) visible += 1;
+      });
+      empty.hidden = visible > 0;
+      menu.__ntScrollIndicator?.update();
+    });
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown') return;
+      const first = buttons.find(button => !button.hidden);
+      if (first) { event.preventDefault(); first.focus(); }
+    });
+    return input;
+  }
+  function bindMenuScrollIndicator(menu) {
+    const indicator = menu.nextElementSibling;
+    const thumb = indicator?.querySelector('.nt-menu-scroll-thumb');
+    if (!indicator || !thumb) return;
+    let draggingPointer = null;
+    let hideTimer = 0;
+
+    const update = () => {
+      indicator.style.height = `${Math.max(0, menu.clientHeight - 8)}px`;
+      const trackHeight = indicator.clientHeight;
+      const maxScroll = Math.max(0, menu.scrollHeight - menu.clientHeight);
+      const scrollable = !menu.hidden && maxScroll > 1 && trackHeight > 0;
+      indicator.classList.toggle('scrollable', scrollable);
+      if (!scrollable) {
+        indicator.classList.remove('nt-scroll-near', 'nt-scrolling', 'nt-scroll-dragging');
+        thumb.style.height = '0px';
+        thumb.style.transform = 'translateY(0)';
+        return;
+      }
+      const thumbHeight = Math.max(32, Math.round((menu.clientHeight / menu.scrollHeight) * trackHeight));
+      const thumbTravel = Math.max(0, trackHeight - thumbHeight);
+      const thumbTop = maxScroll > 0 ? Math.round((menu.scrollTop / maxScroll) * thumbTravel) : 0;
+      thumb.style.height = `${thumbHeight}px`;
+      thumb.style.transform = `translateY(${thumbTop}px)`;
+    };
+
+    const scheduleUpdate = () => requestAnimationFrame(update);
+    const revealWhileScrolling = () => {
+      update();
+      indicator.classList.add('nt-scrolling');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => indicator.classList.remove('nt-scrolling'), 550);
+    };
+    const updateProximity = event => {
+      if (draggingPointer !== null) return;
+      if (menu.hidden || !indicator.classList.contains('scrollable')) {
+        indicator.classList.remove('nt-scroll-near');
+        return;
+      }
+      const bounds = indicator.getBoundingClientRect();
+      const distanceX = Math.max(bounds.left - event.clientX, 0, event.clientX - bounds.right);
+      const distanceY = Math.max(bounds.top - event.clientY, 0, event.clientY - bounds.bottom);
+      indicator.classList.toggle('nt-scroll-near', Math.hypot(distanceX, distanceY) <= MENU_SCROLL_REVEAL_DISTANCE);
+    };
+    const scrollToPointer = clientY => {
+      const track = indicator.getBoundingClientRect();
+      const thumbHeight = thumb.getBoundingClientRect().height;
+      const thumbTravel = Math.max(0, track.height - thumbHeight);
+      const maxScroll = Math.max(0, menu.scrollHeight - menu.clientHeight);
+      if (thumbTravel <= 0 || maxScroll <= 0) return;
+      const thumbTop = Math.min(thumbTravel, Math.max(0, clientY - track.top - thumbHeight / 2));
+      menu.scrollTop = (thumbTop / thumbTravel) * maxScroll;
+    };
+    const finishDrag = event => {
+      if (draggingPointer !== event.pointerId) return;
+      draggingPointer = null;
+      indicator.classList.remove('nt-scroll-dragging');
+      if (indicator.hasPointerCapture(event.pointerId)) indicator.releasePointerCapture(event.pointerId);
+      updateProximity(event);
+    };
+    const reset = () => {
+      clearTimeout(hideTimer);
+      indicator.classList.remove('nt-scroll-near', 'nt-scrolling', 'nt-scroll-dragging');
+      draggingPointer = null;
+    };
+
+    menu.addEventListener('scroll', revealWhileScrolling, {passive:true});
+    menu.parentElement.addEventListener('pointermove', updateProximity);
+    menu.parentElement.addEventListener('pointerleave', () => {
+      if (draggingPointer === null) indicator.classList.remove('nt-scroll-near');
+    });
+    indicator.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || !indicator.classList.contains('scrollable')) return;
+      draggingPointer = event.pointerId;
+      indicator.classList.add('nt-scroll-near', 'nt-scroll-dragging');
+      indicator.setPointerCapture(event.pointerId);
+      scrollToPointer(event.clientY);
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    indicator.addEventListener('pointermove', event => {
+      if (draggingPointer === event.pointerId) scrollToPointer(event.clientY);
+    });
+    indicator.addEventListener('pointerup', finishDrag);
+    indicator.addEventListener('pointercancel', finishDrag);
+    indicator.addEventListener('wheel', event => {
+      if (!indicator.classList.contains('scrollable')) return;
+      menu.scrollTop += event.deltaY;
+      event.preventDefault();
+      event.stopPropagation();
+    }, {passive:false});
+    menu.__ntScrollIndicator = {update:scheduleUpdate, reset};
   }
   function ensureRoot(controller) {
     let root = document.getElementById(ROOT_ID);
     if (root) return root;
     root = document.createElement('div');
     root.id = ROOT_ID;
-    root.innerHTML = `<div class="nt-controls-row"><div class="nt-control-wrap nt-role-control nt-outgoing-control"><button type="button" class="nt-outgoing-trigger" aria-label="${copy('selectLanguage')}" title="${copy('selectLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-outgoing-icon" aria-hidden="true">↑</span><b>${compactLanguageLabels.auto}</b></button><div class="nt-outgoing-menu" hidden></div></div><div class="nt-control-wrap nt-role-control nt-display-control"><button type="button" class="nt-display-trigger" aria-label="${copy('selectDisplayLanguage')}" title="${copy('selectDisplayLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-display-icon" aria-hidden="true">↓</span><b></b></button><div class="nt-display-menu" hidden></div></div></div><p class="nt-outgoing-status" hidden></p>`;
+    root.innerHTML = `<div class="nt-controls-row"><div class="nt-control-wrap nt-role-control nt-outgoing-control"><button type="button" class="nt-outgoing-trigger" aria-label="${copy('selectLanguage')}" title="${copy('selectLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-outgoing-icon" aria-hidden="true">↑</span><b>${compactLanguageLabels.auto}</b></button><div class="nt-outgoing-menu" hidden></div><div class="nt-menu-scroll-indicator" aria-hidden="true"><span class="nt-menu-scroll-thumb"></span></div></div><div class="nt-control-wrap nt-role-control nt-display-control"><button type="button" class="nt-display-trigger" aria-label="${copy('selectDisplayLanguage')}" title="${copy('selectDisplayLanguage')}" aria-expanded="false"><span class="nt-role-icon nt-display-icon" aria-hidden="true">↓</span><b></b></button><div class="nt-display-menu" hidden></div><div class="nt-menu-scroll-indicator" aria-hidden="true"><span class="nt-menu-scroll-thumb"></span></div></div></div><p class="nt-outgoing-status" hidden></p>`;
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
@@ -279,16 +426,29 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-role-accent) 58%,transparent);outline-offset:2px}
       #${ROOT_ID} .nt-role-icon{display:inline-flex;width:20px;height:20px;flex:none;align-items:center;justify-content:center;border:1px solid color-mix(in srgb,var(--nt-role-accent) 50%,var(--nt-role-border));border-radius:50%;background:var(--nt-icon-bg);color:var(--nt-icon-text);font-size:13px;font-weight:750;line-height:1}
       #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:11px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
-      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;padding:6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
-      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:6px 12px 6px 6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar{width:0;height:0}
+      #${ROOT_ID} .nt-menu-scroll-indicator{position:absolute;z-index:2;right:1px;bottom:44px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
+      #${ROOT_ID} .nt-outgoing-menu[hidden]+.nt-menu-scroll-indicator,#${ROOT_ID} .nt-display-menu[hidden]+.nt-menu-scroll-indicator{display:none}
+      #${ROOT_ID} .nt-menu-scroll-indicator:not(.scrollable){pointer-events:none}
+      #${ROOT_ID} .nt-menu-scroll-indicator.nt-scrolling,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-near,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-dragging,#${ROOT_ID} .nt-menu-scroll-indicator:hover{opacity:1}
+      #${ROOT_ID} .nt-menu-scroll-thumb{position:absolute;top:0;right:3px;width:3px;min-height:32px;border-radius:3px;background:var(--nt-role-accent);opacity:.46;transition:width 140ms ease,right 140ms ease,opacity 140ms ease}
+      #${ROOT_ID} .nt-menu-scroll-indicator:hover .nt-menu-scroll-thumb,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-dragging .nt-menu-scroll-thumb{right:2px;width:6px;opacity:.95}
+      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;justify-content:flex-start;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
       #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
       #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
+      #${ROOT_ID} .nt-language-search{position:sticky;z-index:1;top:-6px;padding:5px 3px 6px;background:var(--background-floating,#111214)}
+      #${ROOT_ID} .nt-language-search input{box-sizing:border-box;width:100%;min-height:32px;padding:6px 8px;border:1px solid var(--background-modifier-accent,#ffffff24);border-radius:7px;outline:none;background:var(--input-background,#1e1f22);color:var(--text-normal,#dbdee1);font:inherit}
+      #${ROOT_ID} .nt-language-search input:focus{border-color:var(--nt-role-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--nt-role-accent) 22%,transparent)}
+      #${ROOT_ID} .nt-language-search-empty{padding:16px 9px;color:var(--text-muted,#949ba4);text-align:center}
       #${ROOT_ID} .nt-outgoing-menu .nt-divider{height:1px;margin:5px;background:var(--background-modifier-accent,#ffffff14)}
       #${ROOT_ID} .nt-outgoing-status{order:-1;max-width:270px;margin:0 0 6px;padding:7px 9px;border-radius:7px;background:var(--background-floating,#111214);box-shadow:0 4px 16px #0008;white-space:pre-line}
       #${ROOT_ID} .nt-outgoing-status[data-error="true"]{color:#ff9ca3}
     `;
     document.head.append(style);
     document.body.append(root);
+    bindMenuScrollIndicator(root.querySelector('.nt-outgoing-menu'));
+    bindMenuScrollIndicator(root.querySelector('.nt-display-menu'));
     root.querySelector('.nt-outgoing-trigger').addEventListener('click', () => controller.toggleMenu());
     root.querySelector('.nt-outgoing-menu').addEventListener('click', event => controller.onMenu(event));
     root.querySelector('.nt-display-trigger').addEventListener('click', () => controller.toggleDisplayMenu());
@@ -301,6 +461,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (controller.listener) document.removeEventListener('keydown', controller.listener, true);
     if (controller.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
     if (controller.inputListener) document.removeEventListener('input', controller.inputListener, true);
+    if (controller.pointerDownListener) document.removeEventListener('pointerdown', controller.pointerDownListener, true);
     clearTimeout(controller.statusTimer);
     clearInterval(controller.watchdogTimer);
     document.getElementById(ROOT_ID)?.remove();
@@ -335,6 +496,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       confirmSend: true,
       sendImmediatelyShortcut: 'Ctrl+Enter',
       reviewBeforeSendShortcut: 'Alt+Enter',
+      pointerDownListener: null,
       failsafe() {
         if (this.released) return;
         this.released = true;
@@ -345,6 +507,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         document.removeEventListener('keydown', this.listener, true);
         document.removeEventListener('beforeinput', this.beforeInputListener, true);
         document.removeEventListener('input', this.inputListener, true);
+        document.removeEventListener('pointerdown', this.pointerDownListener, true);
 
         for (const [id, item] of this.pending) {
           const editor = item.editor;
@@ -453,6 +616,17 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           send_immediately:false,
         });
       },
+      closeMenus() {
+        if (!this.root) return;
+        const outgoingMenu = this.root.querySelector('.nt-outgoing-menu');
+        const displayMenu = this.root.querySelector('.nt-display-menu');
+        outgoingMenu.hidden = true;
+        displayMenu.hidden = true;
+        outgoingMenu.__ntScrollIndicator?.reset();
+        displayMenu.__ntScrollIndicator?.reset();
+        this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
+        this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
+      },
       showLanguageMenu(heading = copy('selectLanguage'), requestId = '') {
         this.manualRequest = requestId;
         const menu = this.root.querySelector('.nt-outgoing-menu');
@@ -461,20 +635,24 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         title.className = 'nt-heading';
         title.textContent = heading;
         menu.append(title);
-        const choices = requestId ? ['ko','ja','en','zh','zh-Hant'] : ['auto','ko','ja','en','zh','zh-Hant'];
-        for (const code of choices) menu.append(makeButton(languageLabels[code], 'language', code));
+        const choices = requestId ? languageCodes : ['auto', ...languageCodes];
+        const searchInput = appendLanguageChoices(menu, choices, 'language');
         const divider = document.createElement('div');
         divider.className = 'nt-divider';
         menu.append(divider, makeButton(copy('originalOnce'), 'original-once'));
         menu.hidden = false;
-        this.root.querySelector('.nt-display-menu').hidden = true;
+        menu.__ntScrollIndicator?.update();
+        searchInput.focus();
+        const displayMenu = this.root.querySelector('.nt-display-menu');
+        displayMenu.hidden = true;
+        displayMenu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'true');
       },
       toggleMenu() {
         const menu = this.root.querySelector('.nt-outgoing-menu');
         if (menu.hidden) this.showLanguageMenu();
-        else { menu.hidden = true; this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false'); }
+        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false'); }
       },
       showDisplayLanguageMenu() {
         const menu = this.root.querySelector('.nt-display-menu');
@@ -483,18 +661,20 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         title.className = 'nt-heading';
         title.textContent = copy('selectDisplayLanguage');
         menu.append(title);
-        for (const code of ['ko','ja','en','zh','zh-Hant']) {
-          menu.append(makeButton(languageLabels[code], 'display-language', code));
-        }
+        const searchInput = appendLanguageChoices(menu, languageCodes, 'display-language');
         menu.hidden = false;
-        this.root.querySelector('.nt-outgoing-menu').hidden = true;
+        menu.__ntScrollIndicator?.update();
+        searchInput.focus();
+        const outgoingMenu = this.root.querySelector('.nt-outgoing-menu');
+        outgoingMenu.hidden = true;
+        outgoingMenu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'true');
       },
       toggleDisplayMenu() {
         const menu = this.root.querySelector('.nt-display-menu');
         if (menu.hidden) this.showDisplayLanguageMenu();
-        else { menu.hidden = true; this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false'); }
+        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false'); }
       },
       onDisplayMenu(event) {
         const button = event.target.closest('button[data-action="display-language"]');
@@ -511,6 +691,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         });
         const menu = this.root.querySelector('.nt-display-menu');
         menu.hidden = true;
+        menu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
         this.updateLabel();
       },
@@ -535,6 +716,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.retry(button.dataset.value, 'original');
         }
         this.root.querySelector('.nt-outgoing-menu').hidden = true;
+        this.root.querySelector('.nt-outgoing-menu').__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
       },
       retry(id, language) {
@@ -872,9 +1054,14 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     controller.listener = event => controller.keydown(event);
     controller.beforeInputListener = event => controller.onBeforeInput(event);
     controller.inputListener = event => controller.onInput(event);
+    controller.pointerDownListener = event => {
+      if (!controller.root || event.composedPath().includes(controller.root)) return;
+      controller.closeMenus();
+    };
     document.addEventListener('keydown', controller.listener, true);
     document.addEventListener('beforeinput', controller.beforeInputListener, true);
     document.addEventListener('input', controller.inputListener, true);
+    document.addEventListener('pointerdown', controller.pointerDownListener, true);
     window[GLOBAL] = controller;
     controller.watchdogTimer = setInterval(() => {
       if (Date.now() - controller.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) controller.failsafe();
@@ -915,6 +1102,7 @@ pub const OUTGOING_CLEANUP_SCRIPT: &str = r#"
   if (controller?.listener) document.removeEventListener('keydown', controller.listener, true);
   if (controller?.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
   if (controller?.inputListener) document.removeEventListener('input', controller.inputListener, true);
+  if (controller?.pointerDownListener) document.removeEventListener('pointerdown', controller.pointerDownListener, true);
   document.getElementById('nt-outgoing-translation')?.remove();
   document.getElementById('nt-outgoing-translation-style')?.remove();
   delete window.__nudeTranslatorOutgoing;
@@ -935,15 +1123,22 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
   const requestedUiLanguage = __UI_LANGUAGE__;
   const displayTranslationEnabled = __DISPLAY_TRANSLATION_ENABLED__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const uiLanguage = requestedUiLanguage === 'auto'
-    ? (systemUiLanguage.startsWith('ko') ? 'ko' : systemUiLanguage.startsWith('ja') ? 'ja' : systemUiLanguage.startsWith('zh') ? 'zh' : 'en')
-    : (['ko','en','ja','zh'].includes(requestedUiLanguage) ? requestedUiLanguage : 'en');
-  const copies = {
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  function resolveUiLanguage(value) {
+    const normalized = String(value || '').replaceAll('_','-').toLowerCase();
+    if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
+    if (normalized.startsWith('pt')) return 'pt-BR';
+    if (normalized.startsWith('es')) return 'es-419';
+    if (normalized === 'in' || normalized.startsWith('in-')) return 'id';
+    return supportedUiLanguages.find(code => normalized === code.toLowerCase() || normalized.startsWith(`${code.toLowerCase()}-`)) || 'en';
+  }
+  const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
+  const copies = Object.assign({
     ko:{showOriginal:'원문 보기',showSent:'전송문 보기'},
     en:{showOriginal:'Show original',showSent:'Show sent message'},
     ja:{showOriginal:'原文を表示',showSent:'送信文を表示'},
     zh:{showOriginal:'查看原文',showSent:'查看发送内容'}
-  };
+  }, __GENERATED_ORIGINAL_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const GLOBAL = '__nudeTranslatorOutgoingOriginalDisplay';
   const STYLE_ID = 'nt-outgoing-original-style';
@@ -1195,24 +1390,93 @@ pub fn outgoing_ui_script(
     send_immediately_shortcut: &str,
     review_before_send_shortcut: &str,
 ) -> String {
-    let display_language = if matches!(display_language, "ko" | "ja" | "en" | "zh" | "zh-Hant") {
+    let display_language = if is_supported_language_code(display_language) {
         display_language
     } else {
         "ko"
     };
-    let default_language = if matches!(
-        default_language,
-        "auto" | "ko" | "ja" | "en" | "zh" | "zh-Hant"
-    ) {
-        default_language
-    } else {
-        "auto"
-    };
-    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+    let default_language =
+        if default_language == "auto" || is_supported_language_code(default_language) {
+            default_language
+        } else {
+            "auto"
+        };
+    let ui_language = if ui_language == "auto" || is_supported_language_code(ui_language) {
         ui_language
     } else {
         "en"
     };
+    let language_labels = LANGUAGE_MENU_ORDER
+        .into_iter()
+        .map(|language| (language.code(), language.native_name()))
+        .chain(std::iter::once(("auto", "Auto")))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let language_english_names = LANGUAGE_MENU_ORDER
+        .into_iter()
+        .map(|language| (language.code(), language.english_name()))
+        .chain(std::iter::once(("auto", "Automatic language detection")))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let compact_labels = LANGUAGE_MENU_ORDER
+        .into_iter()
+        .map(|language| {
+            let compact = match language {
+                Language::Japanese => "JP",
+                Language::ChineseSimplified => "CN",
+                Language::ChineseTraditional => "TW",
+                Language::BrazilianPortuguese => "BR",
+                Language::LatinAmericanSpanish => "ES",
+                _ => language.code(),
+            };
+            (language.code(), compact.to_ascii_uppercase())
+        })
+        .chain(std::iter::once(("auto", "AU".to_string())))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let language_codes = LANGUAGE_MENU_ORDER
+        .into_iter()
+        .map(Language::code)
+        .collect::<Vec<_>>();
+    let localized_copies = generated_copies(&[
+        ("auto", "자동 감지"),
+        ("outgoingLanguage", "전송"),
+        ("selectLanguage", "전송 언어 선택"),
+        ("originalOnce", "이번 메시지만 원문으로 전송"),
+        ("nextOriginal", "다음 메시지는 번역하지 않고 전송합니다."),
+        ("selectLanguageFormal", "전송 언어를 선택하십시오."),
+        ("sendingOriginal", "원문을 전송합니다."),
+        ("translating", "메시지를 번역하고 있습니다."),
+        (
+            "detectionFailed",
+            "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.",
+        ),
+        (
+            "detectedLanguage",
+            "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.",
+        ),
+        ("sendOriginal", "원문 전송"),
+        (
+            "translationFailed",
+            "메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.",
+        ),
+        (
+            "pending",
+            "이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.",
+        ),
+        (
+            "sendingParts",
+            "번역문을 분할 전송하고 있습니다. ({part}/{total})",
+        ),
+        ("longAttachment", "번역문이 길어 텍스트 파일로 전송합니다."),
+        (
+            "reviewReady",
+            "번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.",
+        ),
+        ("reviewHint", "번역문을 수정하거나 Enter로 전송하십시오."),
+        ("realTimeOn", "번역 켜짐"),
+        ("displayLanguage", "표시"),
+        ("selectDisplayLanguage", "표시 언어 선택"),
+        ("searchLanguages", "언어 검색"),
+        ("noMatchingLanguages", "검색 결과 없음"),
+    ]);
     OUTGOING_UI_SCRIPT
         .replace("__ENABLED__", if enabled { "true" } else { "false" })
         .replace(
@@ -1234,6 +1498,26 @@ pub fn outgoing_ui_script(
         .replace(
             "__CHANNEL_LANGUAGES__",
             &serde_json::to_string(channel_languages).expect("remembered channel languages"),
+        )
+        .replace(
+            "__LANGUAGE_LABELS__",
+            &serde_json::to_string(&language_labels).expect("static language labels"),
+        )
+        .replace(
+            "__LANGUAGE_CODES__",
+            &serde_json::to_string(&language_codes).expect("static language codes"),
+        )
+        .replace(
+            "__LANGUAGE_ENGLISH_NAMES__",
+            &serde_json::to_string(&language_english_names).expect("static English language names"),
+        )
+        .replace(
+            "__COMPACT_LANGUAGE_LABELS__",
+            &serde_json::to_string(&compact_labels).expect("static compact language labels"),
+        )
+        .replace(
+            "__GENERATED_OUTGOING_COPIES__",
+            &serde_json::to_string(&localized_copies).expect("generated outgoing interface copies"),
         )
         .replace(
             "__CONFIRM_SEND__",
@@ -1269,11 +1553,13 @@ pub fn outgoing_originals_ui_script(
         .map_err(|error| format!("Discord 채널 식별자를 인코딩하지 못했습니다: {error}"))?;
     let records = serde_json::to_string(records)
         .map_err(|error| format!("보낸 메시지 원문 목록을 인코딩하지 못했습니다: {error}"))?;
-    let ui_language = if matches!(ui_language, "auto" | "ko" | "en" | "ja" | "zh") {
+    let ui_language = if ui_language == "auto" || is_supported_language_code(ui_language) {
         ui_language
     } else {
         "en"
     };
+    let localized_copies =
+        generated_copies(&[("showOriginal", "원문 보기"), ("showSent", "전송문 보기")]);
     Ok(OUTGOING_ORIGINALS_UI_SCRIPT
         .replace("__VERSION__", &OUTGOING_ORIGINALS_UI_VERSION.to_string())
         .replace("__CHANNEL_KEY__", &channel_key)
@@ -1289,10 +1575,14 @@ pub fn outgoing_originals_ui_script(
         .replace(
             "__UI_LANGUAGE__",
             &serde_json::to_string(ui_language).expect("static interface language code"),
+        )
+        .replace(
+            "__GENERATED_ORIGINAL_COPIES__",
+            &serde_json::to_string(&localized_copies).expect("generated original-view copies"),
         ))
 }
 
-pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 19;
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 20;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();
@@ -1566,8 +1856,38 @@ mod tests {
         assert!(!script.contains("__DISPLAY_ENABLED__"));
         assert!(!script.contains("__DISPLAY_LANGUAGE__"));
 
+        let arabic = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "auto",
+            "ar",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+        assert!(arabic.contains("const requestedUiLanguage = \"ar\""));
+        assert!(arabic.contains("\"ar\":{"));
+        assert!(arabic.contains("nt-language-search"));
+        assert!(arabic.contains("text-align:left"));
+        assert!(arabic.contains("button.dir = 'ltr'"));
+        assert!(arabic.contains("label.dir = 'auto'"));
+        assert!(arabic.contains("max-height:min(58vh,500px)"));
+        assert!(arabic.contains("scrollbar-width:none"));
+        assert!(arabic.contains("nt-menu-scroll-indicator"));
+        assert!(arabic.contains("MENU_SCROLL_REVEAL_DISTANCE"));
+        assert!(!arabic.contains("::-webkit-scrollbar-thumb"));
+        assert!(arabic.contains("controller.pointerDownListener"));
+        assert!(arabic.contains(
+            "document.addEventListener('pointerdown', controller.pointerDownListener, true)"
+        ));
+        assert!(!arabic.contains("__GENERATED_OUTGOING_COPIES__"));
+        assert!(!arabic.contains("__LANGUAGE_ENGLISH_NAMES__"));
+
         let originals = outgoing_originals_ui_script("/channels/1/2", &[], "en", true).unwrap();
         assert!(originals.contains("const requestedUiLanguage = \"en\""));
+        assert!(!originals.contains("__GENERATED_ORIGINAL_COPIES__"));
         assert!(originals.contains("Show original"));
     }
 

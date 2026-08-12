@@ -608,6 +608,8 @@ mod tests {
         merge_text_lines, polygon_overlap_ratio, Language, Point, Rect, TextLine, MODEL_ASSETS,
         MODEL_REVISION,
     };
+    use std::collections::BTreeMap;
+    use std::fmt::Write as _;
 
     fn line(left: f32, top: f32, right: f32, bottom: f32, text: &str) -> TextLine {
         TextLine {
@@ -661,6 +663,96 @@ mod tests {
         let extra = line(0.0, 50.0, 100.0, 80.0, "안녕하세요");
         let merged = merge_text_lines(vec![primary], vec![duplicate, extra]);
         assert_eq!(merged.len(), 2);
+    }
+
+    #[test]
+    #[ignore = "downloads pinned OCR models and audits their recognition character sets"]
+    fn ocr_language_coverage_report() {
+        let root = super::ensure_models().expect("download or verify OCR models");
+        let charset = std::fs::read_to_string(root.join(super::V6_CHARSET.filename)).unwrap()
+            + &std::fs::read_to_string(root.join(super::KO_CHARSET.filename)).unwrap();
+        let fixture = include_str!("../../tests/fixtures/multilingual-detection.tsv");
+        let mut coverage = BTreeMap::new();
+        for line in fixture
+            .lines()
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        {
+            let mut columns = line.splitn(3, '\t');
+            let code = columns.next().unwrap();
+            let scenario = columns.next().unwrap();
+            let text = columns.next().unwrap();
+            if scenario != "normal" || coverage.contains_key(code) {
+                continue;
+            }
+            let mut letters = text
+                .chars()
+                .filter(|character| character.is_alphabetic())
+                .collect::<Vec<_>>();
+            letters.sort_unstable();
+            letters.dedup();
+            let present = letters
+                .iter()
+                .filter(|character| {
+                    charset.contains(**character)
+                        || character
+                            .to_lowercase()
+                            .any(|variant| charset.contains(variant))
+                        || character
+                            .to_uppercase()
+                            .any(|variant| charset.contains(variant))
+                })
+                .count();
+            coverage.insert(code.to_string(), (present, letters.len()));
+        }
+        assert_eq!(coverage.len(), 20);
+
+        let mut report = String::from(
+            "# OCR language coverage audit\n\n\
+             The shared PP-OCRv6 detector can find text regions independently of language. Recognition is limited by the bundled PP-OCRv6-small and Korean PP-OCRv5 character sets. Coverage below is character-set coverage of the pinned chat sample; it is not an end-to-end accuracy claim.\n\n\
+             | Language | Sample charset | Recognition status |\n\
+             |---|---:|---|\n",
+        );
+        for (code, (present, total)) in &coverage {
+            let ratio = if *total == 0 {
+                0.0
+            } else {
+                *present as f64 / *total as f64
+            };
+            let status = if ratio >= 0.95 {
+                "candidate (charset covered; image accuracy still experimental)"
+            } else if ratio < 0.20 {
+                "not supported by current recognizers"
+            } else {
+                "partial; not advertised"
+            };
+            let _ = writeln!(
+                report,
+                "| `{code}` | {present}/{total} ({:.0}%) | {status} |",
+                ratio * 100.0,
+            );
+        }
+        for unsupported in ["ar", "hi", "ru", "uk"] {
+            let (present, total) = coverage[unsupported];
+            assert!(
+                present * 5 < total,
+                "{unsupported} unexpectedly looks covered"
+            );
+        }
+        for covered in ["ko", "en", "ja", "zh", "zh-Hant"] {
+            let (present, total) = coverage[covered];
+            assert!(
+                present * 100 >= total * 95,
+                "{covered} charset coverage regressed"
+            );
+        }
+        if let Ok(path) = std::env::var("NUDE_TRANSLATOR_OCR_REPORT") {
+            let path = std::path::PathBuf::from(path);
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent).unwrap();
+            }
+            std::fs::write(&path, &report).unwrap();
+            println!("{}", path.display());
+        }
     }
 
     #[test]

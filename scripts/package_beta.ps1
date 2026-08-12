@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = 'Discord 자동 연결, 설정 초기화, 로컬 모델 폴더 관리와 제거 시 데이터 정리를 개선한 0.4.11 비공개 베타',
+    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('MjDqsJwg7Ja47Ja0IOyngOybkOqzvCDslrjslrQg6rKA7IOJ7J2EIOy2lOqwgO2VmOqzoCwg67KI7JetIOyViOygleyEseqzvCDri6Tqta3slrQg7ISk7KCVIO2ZlOuptOydhCDqsJzshKDtlZwgMC41LjAg67mE6rO16rCcIOuyoO2DgA==')),
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )

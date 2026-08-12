@@ -12,6 +12,8 @@ import {
   translatorRuntimeLabel,
 } from "./state.mjs";
 import { LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
+import { LANGUAGE_OPTIONS } from "./languages.mjs";
+import { filterLanguageOptions } from "./language-search.mjs";
 import {
   applyStaticTranslations,
   translateCopy,
@@ -61,23 +63,10 @@ const SELECT_GROUP_LABELS = Object.freeze({
 });
 
 const OPTIONS = {
-  target_language: [
-    ["ko", "한국어"],
-    ["ja", "日本語"],
-    ["en", "English"],
-    ["zh", "简体中文"],
-    ["zh-Hant", "繁體中文"],
-  ],
+  target_language: LANGUAGE_OPTIONS,
   translator: DISPLAY_TRANSLATOR_OPTIONS,
   outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
-  outgoing_target_language: [
-    ["auto", "최근 대화에서 자동 감지"],
-    ["ko", "한국어"],
-    ["ja", "日本語"],
-    ["en", "English"],
-    ["zh", "简体中文"],
-    ["zh-Hant", "繁體中文"],
-  ],
+  outgoing_target_language: [["auto", "최근 대화에서 자동 감지"], ...LANGUAGE_OPTIONS],
   hymt_device: [
     ["auto", "자동 (GPU 우선, CPU 대체)"],
     ["cpu", "CPU/RAM 전용"],
@@ -87,13 +76,7 @@ const OPTIONS = {
     ["light", "라이트"],
     ["dark", "다크"],
   ],
-  ui_language: [
-    ["auto", "Auto(System)"],
-    ["ko", "한국어"],
-    ["en", "English"],
-    ["ja", "日本語"],
-    ["zh", "简体中文"],
-  ],
+  ui_language: [["auto", "Auto(System)", "", "System language"], ...LANGUAGE_OPTIONS],
   translation_history_retention_days: [
     [0, "사용 안 함"],
     [7, "7일 보관"],
@@ -342,6 +325,17 @@ function providerStateLabel(connection) {
   return "확인 필요";
 }
 
+function setProviderActionLabel(action, korean) {
+  if (!action) return;
+  const key = String(korean ?? "");
+  const translated = translateDynamicCopy(currentUiLanguage(), key);
+  action.dataset.i18nAriaLabel = key;
+  action.dataset.i18nTooltip = key;
+  action.dataset.tooltip = translated;
+  action.setAttribute("aria-label", translated);
+  action.removeAttribute("title");
+}
+
 function connectedRecommendedProvider() {
   return RECOMMENDED_PROVIDER_ORDER.find(providerIsConnected) || "";
 }
@@ -399,9 +393,12 @@ function renderProviderConnections(connections) {
     if (action) {
       action.hidden = connection.canDisconnect;
       action.disabled = connection.connected;
-      setLocalizedText(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
+      setProviderActionLabel(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
     }
-    if (disconnect) disconnect.hidden = !connection.canDisconnect;
+    if (disconnect) {
+      disconnect.hidden = !connection.canDisconnect;
+      setProviderActionLabel(disconnect, "연결 해제");
+    }
     const secret = row.querySelector(".provider-secret");
     if (secret) secret.placeholder = translateCopy(
       currentUiLanguage(),
@@ -473,7 +470,7 @@ async function connectProvider(row) {
   try {
     let current = providerConnection(provider);
     if (current && !current.installed) {
-      setLocalizedText(action, "설치 중");
+      setProviderActionLabel(action, "설치 중");
       status.dataset.state = "loading";
       setLocalizedText(status.querySelector("strong"), "설치 중");
       setLocalizedText(
@@ -486,7 +483,7 @@ async function connectProvider(row) {
     }
 
     action.disabled = true;
-    setLocalizedText(action, provider === "deepl" ? "확인 중" : "로그인 중");
+    setProviderActionLabel(action, provider === "deepl" ? "확인 중" : "로그인 중");
     status.dataset.state = "loading";
     setLocalizedText(
       status.querySelector("strong"),
@@ -1105,27 +1102,88 @@ function openSelect(element) {
   if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
     element.classList.add("drop-up");
   }
+  const searchInput = element.querySelector(".select-search-input");
+  if (searchInput) {
+    searchInput.value = "";
+    searchInput.dispatchEvent(new Event("input"));
+    searchInput.focus();
+  }
 }
 
 function renderSelect(element) {
   const field = element.dataset.field;
+  const languageField = ["target_language", "outgoing_target_language", "ui_language"].includes(field);
   const trigger = document.createElement("button");
+  const triggerLabel = document.createElement("span");
   const menu = document.createElement("div");
   trigger.type = "button";
   trigger.className = "select-trigger";
+  trigger.dir = "ltr";
   trigger.setAttribute("aria-haspopup", "listbox");
   trigger.setAttribute("aria-expanded", "false");
+  triggerLabel.className = "select-trigger-label";
+  triggerLabel.dir = languageField ? "auto" : "ltr";
+  trigger.append(triggerLabel);
   menu.className = "select-menu";
-  menu.setAttribute("role", "listbox");
   element.append(trigger, menu);
+
+  let optionContainer = menu;
+  let searchEmpty = null;
+  if (languageField) {
+    const search = document.createElement("div");
+    const searchInput = document.createElement("input");
+    optionContainer = document.createElement("div");
+    searchEmpty = document.createElement("div");
+    search.className = "select-search";
+    searchInput.className = "select-search-input";
+    searchInput.type = "search";
+    searchInput.autocomplete = "off";
+    searchInput.spellcheck = false;
+    searchInput.placeholder = translateCopy(currentUiLanguage(), "언어 검색");
+    searchInput.setAttribute("aria-label", translateCopy(currentUiLanguage(), "언어 검색"));
+    searchInput.dataset.i18nPlaceholder = "언어 검색";
+    searchInput.dataset.i18nAriaLabel = "언어 검색";
+    optionContainer.className = "select-options";
+    optionContainer.setAttribute("role", "listbox");
+    searchEmpty.className = "select-search-empty";
+    searchEmpty.textContent = translateCopy(currentUiLanguage(), "검색 결과 없음");
+    searchEmpty.dataset.i18nKey = "검색 결과 없음";
+    searchEmpty.hidden = true;
+    search.append(searchInput);
+    menu.append(search, optionContainer, searchEmpty);
+
+    searchInput.addEventListener("input", () => {
+      const matches = new Set(filterLanguageOptions(OPTIONS[field], searchInput.value).map(([value]) => String(value)));
+      for (const option of optionContainer.querySelectorAll(".select-option")) {
+        option.hidden = !matches.has(option.dataset.value);
+      }
+      searchEmpty.hidden = matches.size > 0;
+    });
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(element);
+        trigger.focus();
+        return;
+      }
+      if (event.key !== "ArrowDown") return;
+      const first = optionContainer.querySelector(".select-option:not([hidden])");
+      if (first) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+  } else {
+    menu.setAttribute("role", "listbox");
+  }
 
   let previousGroup = "";
   for (const [value, label, group] of OPTIONS[field]) {
-    if (group && group !== previousGroup) {
+    if (!languageField && group && group !== previousGroup) {
       const groupLabel = document.createElement("span");
       groupLabel.className = "select-group-label";
       groupLabel.textContent = translateCopy(currentUiLanguage(), SELECT_GROUP_LABELS[group]);
-      menu.append(groupLabel);
+      optionContainer.append(groupLabel);
       previousGroup = group;
     }
     const option = document.createElement("button");
@@ -1133,6 +1191,7 @@ function renderSelect(element) {
     option.className = "select-option";
     option.dataset.value = value;
     option.textContent = translateCopy(currentUiLanguage(), label);
+    if (languageField) option.dir = "auto";
     option.setAttribute("role", "option");
     option.addEventListener("click", async () => {
       const previous = state.selectValues[field];
@@ -1166,7 +1225,7 @@ function renderSelect(element) {
         await showError("설정을 적용하지 못했습니다", String(error));
       }
     });
-    menu.append(option);
+    optionContainer.append(option);
   }
 
   trigger.addEventListener("click", () => {
@@ -1197,7 +1256,8 @@ function setSelectValue(field, value) {
   state.selectValues[field] = value;
   const element = document.querySelector(`.custom-select[data-field="${field}"]`);
   const label = OPTIONS[field].find(item => item[0] === value)?.[1] || value;
-  element.querySelector(".select-trigger").textContent = translateCopy(currentUiLanguage(), label);
+  const trigger = element.querySelector(".select-trigger");
+  trigger.querySelector(".select-trigger-label").textContent = translateCopy(currentUiLanguage(), label);
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === String(value)));
   }

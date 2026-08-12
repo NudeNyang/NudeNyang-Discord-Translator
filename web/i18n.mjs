@@ -1,5 +1,34 @@
-const COPY = Object.freeze({
+import { UI_LOCALE_COPY } from "./ui-locales.mjs";
+
+export const COPY = Object.freeze({
   "설정": ["Settings", "設定", "设置"],
+  "언어 검색": ["Search languages", "言語を検索", "搜索语言"],
+  "검색 결과 없음": ["No matching languages", "一致する言語がありません", "没有匹配的语言"],
+  "자동 감지": ["Auto detect", "自動検出", "自动检测"],
+  "전송": ["Send", "送信", "发送"],
+  "전송 언어 선택": ["Select outgoing language", "送信言語を選択", "选择发送语言"],
+  "이번 메시지만 원문으로 전송": ["Send only this message without translation", "このメッセージのみ原文で送信", "仅本条消息发送原文"],
+  "다음 메시지는 번역하지 않고 전송합니다.": ["The next message will be sent without translation.", "次のメッセージは翻訳せずに送信します。", "下一条消息将不翻译并直接发送。"],
+  "전송 언어를 선택하십시오.": ["Select an outgoing language.", "送信言語を選択してください。", "请选择发送语言。"],
+  "원문을 전송합니다.": ["Sending the original message.", "原文を送信します。", "正在发送原文。"],
+  "메시지를 번역하고 있습니다.": ["Translating the message.", "メッセージを翻訳しています。", "正在翻译消息。"],
+  "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": ["The conversation language could not be determined. Select an outgoing language.", "会話の言語を判定できませんでした。送信言語を選択してください。", "无法判断对话语言。请选择发送语言。"],
+  "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": ["Detected {language}. You can change it from the outgoing language menu.", "{language}と判定しました。送信言語メニューから変更できます。", "已检测为{language}。可在发送语言菜单中更改。"],
+  "원문 전송": ["Send original", "原文を送信", "发送原文"],
+  "메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.": ["The message could not be translated. The original message has been preserved.", "メッセージを翻訳できませんでした。原文は変更されていません。", "无法翻译消息。原文已保持不变。"],
+  "이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.": ["The previous message is still being processed. Try again shortly.", "前のメッセージを処理しています。しばらくしてからもう一度お試しください。", "上一条消息仍在处理中。请稍后重试。"],
+  "번역문을 분할 전송하고 있습니다. ({part}/{total})": ["Sending the translated message in parts. ({part}/{total})", "翻訳文を分割して送信しています。({part}/{total})", "正在分段发送译文。({part}/{total})"],
+  "번역문이 길어 텍스트 파일로 전송합니다.": ["The translation is long and will be sent as a text file.", "翻訳文が長いため、テキストファイルとして送信します。", "译文较长，将以文本文件形式发送。"],
+  "번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.": ["Review or edit the translation, then press Enter to send.", "翻訳文を確認・修正し、Enterで送信してください。", "请检查或修改译文，然后按 Enter 发送。"],
+  "번역문을 수정하거나 Enter로 전송하십시오.": ["Edit the translation or press Enter to send it.", "翻訳文を修正するか、Enterで送信してください。", "请修改译文或按 Enter 发送。"],
+  "번역 켜짐": ["Translation on", "翻訳オン", "翻译开启"],
+  "표시": ["View", "表示", "显示"],
+  "원문 보기": ["Show original", "原文を表示", "查看原文"],
+  "전송문 보기": ["Show sent message", "送信文を表示", "查看发送内容"],
+  "번역 보기": ["Show translation", "翻訳を表示", "查看译图"],
+  "번역 중…": ["Translating…", "翻訳中…", "正在翻译…"],
+  "다시 시도": ["Try again", "再試行", "重试"],
+  "이미지를 번역하지 못했습니다.": ["The image could not be translated.", "画像を翻訳できませんでした。", "无法翻译图片。"],
   "번역": ["Translation", "翻訳", "翻译"],
   "번역 엔진": ["Translation engine", "翻訳エンジン", "翻译引擎"],
   "이미지 번역": ["Image translation", "画像翻訳", "图片翻译"],
@@ -332,24 +361,40 @@ const COPY = Object.freeze({
 });
 
 const LANGUAGE_INDEX = Object.freeze({ en: 0, ja: 1, zh: 2 });
+const SUPPORTED_UI_LANGUAGES = Object.freeze([
+  "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "hi", "es-419", "de", "ru",
+  "id", "fr", "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl",
+]);
+
+function canonicalUiLanguage(language) {
+  const normalized = String(language || "").trim().replaceAll("_", "-").toLowerCase();
+  if (normalized.startsWith("zh")) {
+    return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized)
+      ? "zh-Hant"
+      : "zh";
+  }
+  if (normalized.startsWith("pt")) return "pt-BR";
+  if (normalized.startsWith("es")) return "es-419";
+  if (normalized === "in" || normalized.startsWith("in-")) return "id";
+  return SUPPORTED_UI_LANGUAGES.find(code => (
+    normalized === code.toLowerCase() || normalized.startsWith(`${code.toLowerCase()}-`)
+  )) || "en";
+}
 
 export function resolveUiLanguage(language, systemLanguage = globalThis.navigator?.language) {
-  if (language !== "auto") return ["ko", "en", "ja", "zh"].includes(language) ? language : "en";
-  const normalized = String(systemLanguage || "").trim().toLowerCase();
-  if (normalized.startsWith("ko")) return "ko";
-  if (normalized.startsWith("ja")) return "ja";
-  if (normalized.startsWith("zh")) return "zh";
-  return "en";
+  return canonicalUiLanguage(language === "auto" ? systemLanguage : language);
 }
 
 export function translateCopy(language, korean) {
   language = resolveUiLanguage(language);
+  if (korean === "Auto(System)") return korean;
   if (language === "ko") return korean;
   const index = LANGUAGE_INDEX[language];
-  return index === undefined ? korean : (COPY[korean]?.[index] || korean);
+  if (index !== undefined) return COPY[korean]?.[index] || COPY[korean]?.[0] || korean;
+  return UI_LOCALE_COPY[language]?.[korean] || COPY[korean]?.[0] || korean;
 }
 
-const DYNAMIC_COPY = Object.freeze([
+export const DYNAMIC_COPY = Object.freeze([
   {
     pattern: /^(\d+)초 후 Discord를 자동으로 다시 시작합니다\.$/,
     render: {
@@ -647,7 +692,7 @@ export function translateDynamicCopy(language, korean) {
   if (exact !== value) return exact;
   for (const entry of DYNAMIC_COPY) {
     const match = value.match(entry.pattern);
-    if (match) return entry.render[language](...match.slice(1));
+    if (match) return (entry.render[language] || entry.render.en)(...match.slice(1));
   }
   return value;
 }
@@ -661,11 +706,11 @@ export function translateUserFacingError(language, error) {
   if (shortcut) {
     const [, binding, detail] = shortcut;
     if (/already registered/i.test(detail)) {
-      return {
+      return ({
         en: `Could not register the ${binding} global shortcut. Another app is already using this shortcut. Choose a different combination.`,
         ja: `${binding} グローバルショートカットを登録できませんでした。このショートカットは別のアプリですでに使用されています。別の組み合わせを選択してください。`,
         zh: `无法注册 ${binding} 全局快捷键。其他应用已在使用此快捷键，请选择其他组合。`,
-      }[language];
+      }[language] || `Could not register the ${binding} global shortcut. Another app is already using this shortcut. Choose a different combination.`);
     }
   }
 
@@ -677,21 +722,23 @@ export function translateUserFacingError(language, error) {
   const safeDetail = detail && !/[가-힣]/.test(detail) && !/HotKey\s*\{/i.test(detail)
     ? detail
     : "";
-  const fallback = {
+  const fallback = ({
     en: "An unexpected error occurred. Check the diagnostic log for details.",
     ja: "予期しないエラーが発生しました。詳細は診断ログを確認してください。",
     zh: "发生意外错误。请查看诊断日志了解详情。",
-  }[language];
+  }[language] || "An unexpected error occurred. Check the diagnostic log for details.");
   return safeDetail ? `${fallback} ${safeDetail}` : fallback;
 }
 
 function matchesKnownTranslation(value, key) {
-  return value === key || COPY[key]?.includes(value);
+  return value === key || COPY[key]?.includes(value)
+    || Object.values(UI_LOCALE_COPY).some(dictionary => dictionary[key] === value);
 }
 
 export function applyStaticTranslations(root, language) {
   language = resolveUiLanguage(language);
-  document.documentElement.lang = language === "zh" ? "zh-CN" : language;
+  document.documentElement.lang = language === "zh" ? "zh-CN" : language === "zh-Hant" ? "zh-TW" : language;
+  document.documentElement.dir = "ltr";
   document.title = language === "ko"
     ? "NudeNyang Translator 설정"
     : `NudeNyang Translator · ${translateCopy(language, "설정")}`;
@@ -706,11 +753,15 @@ export function applyStaticTranslations(root, language) {
     }
     if (key) element.textContent = translateCopy(language, key);
   }
-  for (const element of root.querySelectorAll("[aria-label], [placeholder]")) {
-    for (const attribute of ["aria-label", "placeholder"]) {
+  for (const element of root.querySelectorAll("[aria-label], [placeholder], [title]")) {
+    for (const attribute of ["aria-label", "placeholder", "title"]) {
       const value = element.getAttribute(attribute)?.trim();
       if (!value) continue;
-      const datasetKey = attribute === "aria-label" ? "i18nAriaLabel" : "i18nPlaceholder";
+      const datasetKey = attribute === "aria-label"
+        ? "i18nAriaLabel"
+        : attribute === "placeholder"
+          ? "i18nPlaceholder"
+          : "i18nTitle";
       let key = element.dataset[datasetKey];
       if (!key || !matchesKnownTranslation(value, key)) {
         key = COPY[value] ? value : "";
@@ -718,5 +769,15 @@ export function applyStaticTranslations(root, language) {
       }
       if (key) element.setAttribute(attribute, translateCopy(language, key));
     }
+  }
+  for (const element of root.querySelectorAll("[data-tooltip]")) {
+    const value = element.dataset.tooltip?.trim();
+    if (!value) continue;
+    let key = element.dataset.i18nTooltip;
+    if (!key || !matchesKnownTranslation(value, key)) {
+      key = COPY[value] ? value : "";
+      if (key) element.dataset.i18nTooltip = key;
+    }
+    if (key) element.dataset.tooltip = translateCopy(language, key);
   }
 }
