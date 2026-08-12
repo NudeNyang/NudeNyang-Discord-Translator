@@ -672,7 +672,7 @@ fn autostart_get(app: AppHandle) -> Result<bool, String> {
         .autolaunch()
         .is_enabled()
         .map_err(|error| format!("자동 시작 상태를 확인하지 못했습니다: {error}"))?;
-    discord_startup::restore()?;
+    synchronize_discord_startup(enabled)?;
     Ok(enabled)
 }
 
@@ -683,15 +683,49 @@ fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
         autolaunch
             .enable()
             .map_err(|error| format!("자동 시작을 켜지 못했습니다: {error}"))?;
+        if let Err(error) = discord_startup::suppress() {
+            let _ = autolaunch.disable();
+            return Err(error);
+        }
     } else {
         autolaunch
             .disable()
             .map_err(|error| format!("자동 시작을 끄지 못했습니다: {error}"))?;
+        discord_startup::restore()?;
     }
-    discord_startup::restore()?;
     autolaunch
         .is_enabled()
         .map_err(|error| format!("변경된 자동 시작 상태를 확인하지 못했습니다: {error}"))
+}
+
+fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
+    if enabled {
+        discord_startup::suppress()
+    } else {
+        discord_startup::restore()
+    }
+}
+
+fn start_pipe_discord_for_autostart(app: AppHandle) {
+    if discord::current_process().is_some() {
+        return;
+    }
+    let engine = app.state::<RustEngine>().inner().clone();
+    tauri::async_runtime::spawn(async move {
+        let result = tauri::async_runtime::spawn_blocking(|| discord::restart_pipe(None)).await;
+        match result {
+            Ok(Ok((_process, cdp))) => {
+                if let Err(error) = engine.replace_cdp(cdp) {
+                    diagnostics::error("discord-startup", &error);
+                }
+            }
+            Ok(Err(error)) => diagnostics::warn("discord-startup", &error),
+            Err(error) => diagnostics::warn(
+                "discord-startup",
+                &format!("Discord 자동 실행 작업을 기다리지 못했습니다: {error}"),
+            ),
+        }
+    });
 }
 
 #[tauri::command]
@@ -973,7 +1007,7 @@ fn shutdown_translation(app: &AppHandle) {
     let _ = config.update(json!({"enabled": false}));
     engine.stop();
     if let Some(process) = pipe_discord {
-        if let Err(error) = discord::restart_normally_after_pipe(process) {
+        if let Err(error) = discord::restart_accessibly_after_pipe(process) {
             diagnostics::error("discord_restart", &error);
         }
     }
@@ -1237,12 +1271,12 @@ fn main() {
                 return Err(format!("Discord DOM 변조 검증 결과가 올바르지 않습니다: {marker}"));
             }
             drop(client);
-            discord::restart_normally_after_pipe(process.clone())?;
+            discord::restart_accessibly_after_pipe(process.clone())?;
             Ok(process)
         }) {
             Ok(process) => {
                 println!(
-                    "SECURE_PID={} DOM_MUTATION=OK NORMAL_RESTART=OK",
+                    "SECURE_PID={} DOM_MUTATION=OK ACCESSIBILITY_RESTART=OK",
                     process.process_id
                 );
             }
@@ -1309,8 +1343,19 @@ fn main() {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
             create_tray(app)?;
             let handle = app.handle().clone();
-            if let Err(error) = discord_startup::restore() {
-                diagnostics::warn("discord-startup", &error);
+            match app.autolaunch().is_enabled() {
+                Ok(enabled) => {
+                    if let Err(error) = synchronize_discord_startup(enabled) {
+                        diagnostics::warn("discord-startup", &error);
+                    }
+                    if enabled {
+                        start_pipe_discord_for_autostart(app.handle().clone());
+                    }
+                }
+                Err(error) => diagnostics::warn(
+                    "discord-startup",
+                    &format!("자동 시작 상태를 확인하지 못했습니다: {error}"),
+                ),
             }
             // Windows가 F12를 디버거 용도로 선점한 경우에도 기존 앱과 동일하게
             // 키 상태 폴링으로 동작시켜 설정 저장과 모델 변경이 막히지 않게 해.

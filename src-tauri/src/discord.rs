@@ -1,5 +1,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -78,7 +79,7 @@ pub fn current_pipe_process() -> Option<DiscordProcess> {
         .map(|(_, process)| process)
 }
 
-pub fn restart_normally_after_pipe(process: DiscordProcess) -> Result<(), String> {
+pub fn restart_accessibly_after_pipe(process: DiscordProcess) -> Result<(), String> {
     let executable = process
         .executable
         .canonicalize()
@@ -96,7 +97,7 @@ pub fn restart_normally_after_pipe(process: DiscordProcess) -> Result<(), String
     }
     if system.process(old_pid).is_some() {
         return Err(
-            "보안 파이프 Discord가 종료되지 않아 일반 재실행을 건너뛰었습니다.".to_string(),
+            "보안 파이프 Discord가 종료되지 않아 접근성 모드 재실행을 건너뛰었습니다.".to_string(),
         );
     }
     if current_process().is_some() {
@@ -105,13 +106,14 @@ pub fn restart_normally_after_pipe(process: DiscordProcess) -> Result<(), String
     let launch_executable = launchable_windows_path(&executable);
     let mut command = std::process::Command::new(&launch_executable);
     command
+        .arg("--force-renderer-accessibility")
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());
     configure_background(&mut command);
     let child = command
         .spawn()
-        .map_err(|error| format!("Discord를 일반 모드로 다시 열지 못했습니다: {error}"))?;
+        .map_err(|error| format!("Discord를 접근성 모드로 다시 열지 못했습니다: {error}"))?;
     wait_for_restarted_process(&executable, child.id(), Duration::from_secs(15)).map(|_| ())
 }
 
@@ -142,6 +144,9 @@ fn current_process_from_system(system: &System) -> Option<DiscordProcess> {
 pub fn restart_pipe(
     expected_process_id: Option<u32>,
 ) -> Result<(DiscordProcess, CdpClient), String> {
+    let _restart_guard = pipe_restart_lock()
+        .lock()
+        .map_err(|_| "Discord 보안 파이프 재시작 잠금이 손상되었습니다.".to_string())?;
     let current = current_process();
     let current_id = current.as_ref().map(|process| process.process_id);
     if expected_process_id != current_id {
@@ -194,6 +199,11 @@ pub fn restart_pipe(
         let _ = executable;
         Err("Discord 보안 CDP 파이프는 Windows에서만 지원됩니다.".to_string())
     }
+}
+
+fn pipe_restart_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
 }
 
 fn validate_discord_executable(executable: &Path) -> Result<(), String> {

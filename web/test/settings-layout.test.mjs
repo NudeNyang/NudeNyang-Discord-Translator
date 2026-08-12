@@ -36,11 +36,11 @@ test("language compact codes are not rendered as select group headings", () => {
   assert.match(script, /if \(!languageField && group && group !== previousGroup\)/);
 });
 
-test("the beta version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.0-beta");
-  assert.match(tauriConfig, /"version": "0\.5\.0-beta"/);
-  assert.match(cargoManifest, /^version = "0\.5\.0-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.0 Beta<\/span>/);
+test("the application version is consistent across the application manifests", () => {
+  assert.equal(packageManifest.version, "0.5.1");
+  assert.match(tauriConfig, /"version": "0\.5\.1"/);
+  assert.match(cargoManifest, /^version = "0\.5\.1"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.1<\/span>/);
 });
 
 test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
@@ -210,12 +210,16 @@ test("system autostart is a cross-platform convenience setting that defaults to 
   assert.doesNotMatch(capabilities, /autostart:allow-/);
 });
 
-test("Windows uses a private Discord pipe and only restores legacy startup registrations", () => {
-  assert.doesNotMatch(discordStartup, /--remote-debugging-port=9222/);
+test("Windows autostart owns one private Discord pipe and safely migrates old registrations", () => {
+  const startupRuntime = discordStartup.split("#[cfg(test)]")[0];
+  assert.doesNotMatch(startupRuntime, /--remote-debugging-port=9222/);
   assert.match(discord, /--force-renderer-accessibility/);
   assert.match(discord, /--remote-debugging-pipe/);
   assert.match(discordStartup, /DiscordStartupBackup/);
-  assert.match(discordStartup, /read_run_command\(\)\?\.as_ref\(\) == Some\(&backup\.managed\)/);
+  assert.match(discordStartup, /fn suppress_registration/);
+  assert.match(discordStartup, /managed:\s*None/);
+  assert.match(rustMain, /start_pipe_discord_for_autostart/);
+  assert.match(rustMain, /discord_startup::suppress\(\)/);
   assert.match(rustMain, /discord_startup::restore\(\)/);
   assert.match(rustMain, /--restore-discord-startup/);
   assert.match(installerHooks, /NSIS_HOOK_PREUNINSTALL/);
