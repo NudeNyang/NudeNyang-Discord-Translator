@@ -86,6 +86,8 @@ const COPY = Object.freeze({
   "자동 설정은 GPU를 우선 사용하고 필요한 경우 CPU로 전환합니다.": ["Automatic mode prioritizes the GPU and falls back to the CPU.", "自動設定ではGPUを優先し、必要に応じてCPUへ切り替えます。", "自动模式优先使用 GPU，并在需要时切换到 CPU。"],
   "로컬 모델 예열 유지": ["Keep local model warm", "ローカルモデルの常駐", "保持本地模型预热"],
   "번역을 꺼도 모델을 메모리에 유지합니다.": ["Keep the model in memory while translation is off.", "翻訳をオフにしてもモデルをメモリに保持します。", "翻译关闭时仍将模型保留在内存中。"],
+  "번역 모델 계속 유지": ["Keep translation model loaded", "翻訳モデルを保持", "持续保留翻译模型"],
+  "켜두면 다시 번역할 때 빠르지만 RAM/VRAM을 계속 사용합니다. 게임이 느려지거나 메모리가 부족하다면 꺼주세요.": ["Keeping it on makes the next translation start faster, but continues to use RAM/VRAM. Turn it off if games slow down or memory is low.", "オンにすると次の翻訳をすばやく開始できますが、RAM/VRAMを使い続けます。ゲームが遅くなる、またはメモリが不足する場合はオフにしてください。", "开启后再次翻译会更快，但会持续占用 RAM/VRAM。如果游戏变慢或内存不足，请将其关闭。"],
   "화면 확인 빈도": ["Screen scan rate", "画面確認頻度", "屏幕检查频率"],
   "값이 높을수록 반응이 빨라지며 CPU 사용량이 증가할 수 있습니다.": ["Higher values respond faster but may increase CPU use.", "値を高くすると応答が速くなりますが、CPU使用率が増える場合があります。", "数值越高响应越快，但可能增加 CPU 使用率。"],
   "저장 공간 관리": ["Storage management", "ストレージ管理", "存储空间管理"],

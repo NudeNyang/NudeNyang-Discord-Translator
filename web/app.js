@@ -1230,7 +1230,7 @@ function renderConfig(config) {
     "확인",
     "즉시",
   );
-  setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "유지", "반환");
+  setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "켜짐", "꺼짐");
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
@@ -1596,9 +1596,9 @@ elements.outgoingConfirmSend.addEventListener("click", () => {
 });
 elements.keepWarm.addEventListener("click", () => {
   const enabled = elements.keepWarm.getAttribute("aria-checked") !== "true";
-  setSwitch(elements.keepWarm, enabled, "유지", "반환");
+  setSwitch(elements.keepWarm, enabled, "켜짐", "꺼짐");
   applySettingsPatch({ keep_local_model_warm: enabled }).catch(async error => {
-    setSwitch(elements.keepWarm, !enabled, "유지", "반환");
+    setSwitch(elements.keepWarm, !enabled, "켜짐", "꺼짐");
     await showError("로컬 모델 예열 설정을 적용하지 못했습니다", String(error));
   });
 });

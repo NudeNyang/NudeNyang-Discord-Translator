@@ -125,7 +125,12 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.doesNotMatch(markup, /Hy-MT2와 이미지 OCR은 PC에서 실행됩니다/);
   assert.match(markup, /로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다/);
   assert.match(markup, /로컬 모델 실행 장치/);
-  assert.match(markup, /번역을 꺼도 모델을 메모리에 유지합니다/);
+  assert.match(markup, /번역 모델 계속 유지/);
+  assert.match(
+    markup,
+    /켜두면 다시 번역할 때 빠르지만 RAM\/VRAM을 계속 사용합니다\. 게임이 느려지거나 메모리가 부족하다면 꺼주세요\./,
+  );
+  assert.match(script, /setSwitch\(elements\.keepWarm, state\.config\.keep_local_model_warm, "켜짐", "꺼짐"\)/);
   assert.doesNotMatch(markup, /Hy-MT2 실행 장치/);
   assert.match(script, /translator: DISPLAY_TRANSLATOR_OPTIONS/);
   assert.match(script, /outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS/);
