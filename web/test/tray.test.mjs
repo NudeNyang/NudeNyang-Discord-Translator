@@ -99,8 +99,7 @@ test("translation model can be changed inside the tray menu", () => {
   assert.match(trayScript, /invoke\("provider_connections_get"\)/);
   assert.match(trayScript, /invoke\("tray_open_provider_settings", \{ provider: translator \}\)/);
   assert.match(trayMarkup, /data-translator="claude"/);
-  assert.match(trayMarkup, /<strong>GPT-5\.6<\/strong>/);
-  assert.doesNotMatch(trayMarkup, /GPT-5\.6 Luna/);
+  assert.match(trayMarkup, /<strong>GPT-5\.6 Luna\/Terra<\/strong>/);
   assert.doesNotMatch(
     trayScript,
     /#open-model-settings"\)\.addEventListener\("click", \(\) => run\("tray_open_settings"\)/,

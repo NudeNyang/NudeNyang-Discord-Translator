@@ -2140,7 +2140,7 @@ fn translator_label(name: &str) -> &str {
         "hymt_1_8b" => "Hy-MT2 1.8B Q4 (경량·기본)",
         "hymt_7b" => "Hy-MT2 7B Q4 (품질·약 4.6GB)",
         "translategemma_4b" => "TranslateGemma 4B Q4 (실험·약 2.5GB)",
-        "chatgpt" => "GPT-5.6 · 품질 최우선 (Codex CLI)",
+        "chatgpt" => "GPT-5.6 Luna/Terra · 품질 최우선 (Codex CLI)",
         "claude" => "Claude · 품질 최우선 (Claude Code)",
         "gemini" => "Gemini · 품질 최우선 (Antigravity CLI)",
         "deepl" => "DeepL API",
@@ -2207,6 +2207,7 @@ mod tests {
         assert_eq!(poll_interval(0), Duration::from_millis(500));
         assert_eq!(poll_interval(100), Duration::from_millis(50));
         assert!(translator_label("chatgpt").contains("Codex"));
+        assert!(translator_label("chatgpt").contains("Luna/Terra"));
         assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
         for provider in ["chatgpt", "claude", "gemini"] {
             assert!(translator_label(provider).contains("품질 최우선"));

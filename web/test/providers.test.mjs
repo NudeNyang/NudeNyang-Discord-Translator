@@ -70,7 +70,7 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
 });
 
 test("provider cards show the concrete model or API product without quality badges", () => {
-  assert.match(markup, /<h3>ChatGPT<\/h3><p>GPT-5\.6<\/p>/);
+  assert.match(markup, /<h3>ChatGPT<\/h3><p>GPT-5\.6 Luna\/Terra<\/p>/);
   assert.match(markup, /<h3>Claude<\/h3><p>Claude Haiku 4\.5<\/p>/);
   assert.match(markup, /<h3>Gemini<\/h3><p>Gemini 3\.6 Flash<\/p>/);
   assert.match(markup, /<h3>DeepL<\/h3><p>DeepL API Free \/ Pro<\/p>/);
@@ -213,11 +213,11 @@ test("provider actions use fixed icon buttons with localized accessible labels",
   );
   assert.match(
     styles,
-    /\.button\.provider-disconnect\s*\{[\s\S]*?color:\s*var\(--muted\)[\s\S]*?background:[^;]*var\(--control\)/,
+    /\.button\.provider-disconnect\s*\{[\s\S]*?border-color:[^;]*var\(--danger\)[\s\S]*?color:\s*var\(--danger\)[\s\S]*?background:\s*var\(--danger-soft\)/,
   );
-  assert.doesNotMatch(
+  assert.match(
     styles,
-    /\.button\.provider-disconnect\s*\{[\s\S]*?var\(--danger\)/,
+    /\.button\.provider-disconnect:hover\s*\{[\s\S]*?border-color:\s*var\(--danger\)[\s\S]*?background:[^;]*var\(--danger\)/,
   );
 });
 
