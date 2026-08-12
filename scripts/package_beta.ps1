@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = '20개 언어 지원과 언어 검색을 추가하고, 번역 안정성과 다국어 설정 화면을 개선한 0.5.0 비공개 베타',
+    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('MjDqsJwg7Ja47Ja0IOyngOybkOqzvCDslrjslrQg6rKA7IOJ7J2EIOy2lOqwgO2VmOqzoCwg67KI7JetIOyViOygleyEseqzvCDri6Tqta3slrQg7ISk7KCVIO2ZlOuptOydhCDqsJzshKDtlZwgMC41LjAg67mE6rO16rCcIOuyoO2DgA==')),
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
