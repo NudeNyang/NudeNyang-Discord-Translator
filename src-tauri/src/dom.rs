@@ -7,7 +7,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const rect = node.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
   }
-  function eligibleTextNodes(root) {
+  function eligibleTextNodes(root, allowLinkText = false) {
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
@@ -15,8 +15,11 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const parent = node.parentElement;
       if (!parent) continue;
+      const protectedSelector = allowLinkText
+        ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
       const protectedParent = parent.closest(
-        'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        protectedSelector
       );
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
@@ -53,8 +56,8 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       : null;
     return typeof stored?.text === 'string' ? stored.text : displayed;
   }
-  function parts(kind, id, root) {
-    return eligibleTextNodes(root).map((node, index) => ({
+  function parts(kind, id, root, allowLinkText = false) {
+    return eligibleTextNodes(root, allowLinkText).map((node, index) => ({
       kind,
       id,
       index,
@@ -107,14 +110,34 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const id = ensureRootId(root, 'data-dto-reply-id', 'reply');
     out.push(...parts('reply', id, root));
   }
-  const embedSelector = [
-    '[class*="embedTitle_"]', '[class*="embedDescription_"]',
-    '[class*="embedFieldName_"]', '[class*="embedFieldValue_"]'
+  const embedContainerSelector = [
+    'article[class*="embed_"]',
+    '[class*="embedFull_"]',
+    '[class*="embedWrapper_"]'
   ].join(',');
-  for (const root of document.querySelectorAll(embedSelector)) {
+  const embedPartSelector = [
+    '[class*="embedTitle_"]', '[class*="embedDescription_"]',
+    '[class*="embedFieldName_"]', '[class*="embedFieldValue_"]',
+    '[class*="embedAuthorName_"]', '[class*="embedFooterText_"]'
+  ].join(',');
+  function outerEmbedRoot(element) {
+    let root = element;
+    for (let current = element; current; current = current.parentElement) {
+      if (current.matches?.(embedContainerSelector)) root = current;
+    }
+    return root;
+  }
+  const embedRoots = new Set();
+  for (const root of document.querySelectorAll(embedContainerSelector)) {
+    embedRoots.add(outerEmbedRoot(root));
+  }
+  for (const part of document.querySelectorAll(embedPartSelector)) {
+    embedRoots.add(outerEmbedRoot(part));
+  }
+  for (const root of embedRoots) {
     if (!isVisible(root)) continue;
     const id = ensureRootId(root, 'data-dto-root-id', 'embed');
-    out.push(...parts('embed', id, root));
+    out.push(...parts('embed', id, root, true));
   }
   for (const channel of document.querySelectorAll('[data-list-item-id^="channels___"]')) {
     if (!isVisible(channel)) continue;
@@ -201,7 +224,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
   }
   const locators = window.__nudeTranslatorOriginalsByLocator;
   if (!(locators instanceof Map)) return {restored, remaining: 0};
-  function eligibleTextNodes(root) {
+  function eligibleTextNodes(root, allowLinkText = false) {
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
@@ -209,8 +232,11 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const parent = node.parentElement;
       if (!parent) continue;
+      const protectedSelector = allowLinkText
+        ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
       const protectedParent = parent.closest(
-        'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        protectedSelector
       );
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
@@ -235,7 +261,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       const category = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"][role="button"]`);
       return category?.querySelector('h3 > div') || null;
     }
-    return root ? eligibleTextNodes(root)[change.index] || null : null;
+    return root ? eligibleTextNodes(root, change.kind === 'embed')[change.index] || null : null;
   }
   for (const [key, change] of [...locators]) {
     const node = target(change);
@@ -265,7 +291,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
     }
     const locators = window.__nudeTranslatorOriginalsByLocator;
     if (!(locators instanceof Map)) return {restored, remaining: 0};
-    function eligibleTextNodes(root) {
+    function eligibleTextNodes(root, allowLinkText = false) {
       const nodes = [];
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {
@@ -273,8 +299,11 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
         if (!node.nodeValue || !node.nodeValue.trim()) continue;
         const parent = node.parentElement;
         if (!parent) continue;
+        const protectedSelector = allowLinkText
+          ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+          : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
         const protectedParent = parent.closest(
-          'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+          protectedSelector
         );
         if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
         const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
@@ -299,7 +328,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
         const category = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"][role="button"]`);
         return category?.querySelector('h3 > div') || null;
       }
-      return root ? eligibleTextNodes(root)[change.index] || null : null;
+      return root ? eligibleTextNodes(root, change.kind === 'embed')[change.index] || null : null;
     }
     for (const [key, change] of [...locators]) {
       const node = target(change);
@@ -399,7 +428,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     const key = JSON.stringify([change.kind, change.id, change.index]);
     if (!originalLocators.has(key)) originalLocators.set(key, {{...change, text}});
   }}
-  function eligibleTextNodes(root) {{
+  function eligibleTextNodes(root, allowLinkText = false) {{
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {{
@@ -407,8 +436,11 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const parent = node.parentElement;
       if (!parent) continue;
+      const protectedSelector = allowLinkText
+        ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
       const protectedParent = parent.closest(
-        'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        protectedSelector
       );
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
@@ -479,7 +511,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       }}
     }}
     if (!root || (change.kind === 'message' && isOutgoingMessage(root))) continue;
-    const nodes = eligibleTextNodes(root);
+    const nodes = eligibleTextNodes(root, change.kind === 'embed');
     const node = nodes[change.index];
     if (!node) continue;
     remember(node, node.nodeValue, change);
@@ -614,6 +646,28 @@ mod tests {
         };
         let script = apply_script(&[DomChange::new(&part, "번역된 제목")]).unwrap();
         assert_eq!(script.matches("protectedParent !== root").count(), 1);
+    }
+
+    #[test]
+    fn snapshot_captures_complete_link_preview_cards_and_nested_link_text() {
+        assert!(SNAPSHOT_SCRIPT.contains("embedContainerSelector"));
+        assert!(SNAPSHOT_SCRIPT.contains("article[class*=\"embed_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"embedFull_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("embedRoots.add(outerEmbedRoot(root))"));
+        assert!(SNAPSHOT_SCRIPT.contains("parts('embed', id, root, true)"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("eligibleTextNodes(root, change.kind === 'embed')"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT
+            .contains("eligibleTextNodes(root, change.kind === 'embed')"));
+
+        let part = DomPart {
+            kind: "embed".to_string(),
+            item_id: "dto-embed-card".to_string(),
+            index: 0,
+            text: "#かぷちゃあばたーず".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "#카푸치아바타즈")]).unwrap();
+        assert!(script.contains("eligibleTextNodes(root, change.kind === 'embed')"));
     }
 
     #[test]
