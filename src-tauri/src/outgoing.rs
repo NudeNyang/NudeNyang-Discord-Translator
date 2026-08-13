@@ -33,7 +33,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 35;
+  const CONTROLLER_VERSION = 36;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
@@ -583,14 +583,39 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             && bounds.bottom <= window.innerHeight + 1;
         });
         const editor = editors.sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top).at(-1);
-        if (!editor) {
+        const composer = editor?.closest('form') || editor?.closest('[class*="channelTextArea"]') || editor?.parentElement || null;
+        const visibleAnchors = selector => [...document.querySelectorAll(selector)].filter(anchor => {
+          const bounds = anchor.getBoundingClientRect();
+          return bounds.width > 120
+            && bounds.height > 20
+            && bounds.right > 0
+            && bounds.left < window.innerWidth
+            && bounds.bottom > 0
+            && bounds.top < window.innerHeight;
+        });
+        const readonlyComposer = visibleAnchors('[class*="channelTextArea"]').sort(
+          (left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top
+        ).at(-1) || null;
+        const readonlyAnchor = readonlyComposer || visibleAnchors(
+          '[class*="chatContent"], [data-list-id="chat-messages"]'
+        ).sort((left, right) => {
+          const leftBounds = left.getBoundingClientRect();
+          const rightBounds = right.getBoundingClientRect();
+          return leftBounds.width * leftBounds.height - rightBounds.width * rightBounds.height;
+        }).at(-1) || null;
+        const anchor = composer || readonlyAnchor;
+        this.root.querySelector('.nt-outgoing-control').hidden = !this.enabled || !editor;
+        this.root.querySelector('.nt-display-control').hidden = !this.displayEnabled;
+        this.root.hidden = !this.displayEnabled && (!this.enabled || !editor);
+        if (!anchor || this.root.hidden) {
           this.root.style.visibility = 'hidden';
           return;
         }
-        const composer = editor.closest('form') || editor.closest('[class*="channelTextArea"]') || editor.parentElement;
-        const composerBounds = composer.getBoundingClientRect();
-        this.root.style.right = `${Math.max(12, window.innerWidth - composerBounds.right)}px`;
-        this.root.style.bottom = `${Math.max(78, window.innerHeight - composerBounds.top + 8)}px`;
+        const anchorBounds = anchor.getBoundingClientRect();
+        this.root.style.right = `${Math.max(12, window.innerWidth - anchorBounds.right)}px`;
+        this.root.style.bottom = composer || readonlyComposer
+          ? `${Math.max(78, window.innerHeight - anchorBounds.top + 8)}px`
+          : `${Math.max(24, window.innerHeight - anchorBounds.bottom + 24)}px`;
         this.root.style.visibility = '';
       },
       updateLabel() {
@@ -1775,6 +1800,27 @@ mod tests {
     }
 
     #[test]
+    fn display_control_keeps_a_read_only_channel_position_anchor() {
+        let script = outgoing_ui_script(
+            false,
+            true,
+            "ko",
+            "auto",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+
+        assert!(script.contains("const readonlyAnchor ="));
+        assert!(script.contains("[class*=\"channelTextArea\"]"));
+        assert!(script.contains("[class*=\"chatContent\"]"));
+        assert!(script
+            .contains("this.root.hidden = !this.displayEnabled && (!this.enabled || !editor)"));
+    }
+
+    #[test]
     fn outgoing_controller_releases_discord_when_the_app_heartbeat_stops() {
         let script = outgoing_ui_script(
             true,
@@ -2800,7 +2846,7 @@ mod tests {
             .expect("running app control state");
         eprintln!("running app overlay state: {state}");
         let any_enabled = config.enabled || config.outgoing_translation_enabled;
-        assert_eq!(state["version"].as_u64(), Some(28), "state: {state}");
+        assert_eq!(state["version"].as_u64(), Some(36), "state: {state}");
         assert_eq!(
             state["originalVersion"].as_u64(),
             Some(16),
