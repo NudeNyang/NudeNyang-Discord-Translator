@@ -45,9 +45,16 @@ struct OverlayPayload {
     items: Vec<OverlayItem>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlsPayload {
+    display_language: String,
+}
+
 pub fn show_overlay<F>(
     app: &tauri::AppHandle,
     snapshot: &AccessibilitySnapshot,
+    display_language: &str,
     translated_text: F,
 ) -> Result<(), String>
 where
@@ -59,6 +66,10 @@ where
     let scale = window
         .scale_factor()
         .map_err(|error| format!("번역 오버레이 배율을 확인하지 못했습니다: {error}"))?;
+    if snapshot.window.width <= 0 || snapshot.window.height <= 0 {
+        hide_overlay(app);
+        return Ok(());
+    }
     let items = snapshot
         .parts
         .iter()
@@ -98,7 +109,79 @@ where
     } else {
         let _ = window.hide();
     }
+    if let Some(controls) = app.get_webview_window("accessibility-controls") {
+        controls
+            .emit(
+                "accessibility-controls-updated",
+                ControlsPayload {
+                    display_language: display_language.to_string(),
+                },
+            )
+            .map_err(|error| format!("표시 언어 컨트롤을 갱신하지 못했습니다: {error}"))?;
+        position_controls(&window, &controls)?;
+        let _ = controls.show();
+    }
     Ok(())
+}
+
+fn position_controls(
+    overlay: &tauri::WebviewWindow,
+    controls: &tauri::WebviewWindow,
+) -> Result<(), String> {
+    let overlay_position = overlay
+        .outer_position()
+        .map_err(|error| format!("Discord 오버레이 위치를 확인하지 못했습니다: {error}"))?;
+    let overlay_size = overlay
+        .outer_size()
+        .map_err(|error| format!("Discord 오버레이 크기를 확인하지 못했습니다: {error}"))?;
+    let controls_size = controls
+        .outer_size()
+        .map_err(|error| format!("표시 언어 컨트롤 크기를 확인하지 못했습니다: {error}"))?;
+    let (x, y) = anchored_control_position(
+        (overlay_position.x, overlay_position.y),
+        (overlay_size.width, overlay_size.height),
+        (controls_size.width, controls_size.height),
+        18,
+    );
+    controls
+        .set_position(Position::Physical(PhysicalPosition::new(x, y)))
+        .map_err(|error| format!("표시 언어 컨트롤 위치를 맞추지 못했습니다: {error}"))
+}
+
+fn anchored_control_position(
+    overlay_position: (i32, i32),
+    overlay_size: (u32, u32),
+    controls_size: (u32, u32),
+    margin: i32,
+) -> (i32, i32) {
+    (
+        overlay_position.0 + overlay_size.0 as i32 - controls_size.0 as i32 - margin,
+        overlay_position.1 + overlay_size.1 as i32 - controls_size.1 as i32 - margin,
+    )
+}
+
+pub fn resize_controls(app: &tauri::AppHandle, expanded: bool) -> Result<(), String> {
+    let overlay = app
+        .get_webview_window("translation-overlay")
+        .ok_or_else(|| "번역 오버레이 창을 찾지 못했습니다.".to_string())?;
+    let controls = app
+        .get_webview_window("accessibility-controls")
+        .ok_or_else(|| "표시 언어 컨트롤 창을 찾지 못했습니다.".to_string())?;
+    let scale = controls
+        .scale_factor()
+        .map_err(|error| format!("표시 언어 컨트롤 배율을 확인하지 못했습니다: {error}"))?;
+    let (width, height) = if expanded {
+        (286_u32, 590_u32)
+    } else {
+        (72, 50)
+    };
+    controls
+        .set_size(Size::Physical(PhysicalSize::new(
+            (f64::from(width) * scale).round() as u32,
+            (f64::from(height) * scale).round() as u32,
+        )))
+        .map_err(|error| format!("표시 언어 컨트롤 크기를 바꾸지 못했습니다: {error}"))?;
+    position_controls(&overlay, &controls)
 }
 
 pub fn hide_overlay(app: &tauri::AppHandle) {
@@ -107,6 +190,9 @@ pub fn hide_overlay(app: &tauri::AppHandle) {
             "accessibility-overlay-updated",
             OverlayPayload { items: Vec::new() },
         );
+        let _ = window.hide();
+    }
+    if let Some(window) = app.get_webview_window("accessibility-controls") {
         let _ = window.hide();
     }
 }
@@ -127,12 +213,22 @@ fn message_kind(automation_id: &str, class_name: &str) -> Option<&'static str> {
 
 #[cfg(windows)]
 pub fn snapshot() -> Result<AccessibilitySnapshot, String> {
-    windows_impl::snapshot()
+    windows_impl::snapshot(true)
+}
+
+#[cfg(windows)]
+pub fn probe() -> Result<AccessibilitySnapshot, String> {
+    windows_impl::snapshot(false)
 }
 
 #[cfg(not(windows))]
 pub fn snapshot() -> Result<AccessibilitySnapshot, String> {
     Err("Discord 접근성 번역은 Windows에서만 지원됩니다.".to_string())
+}
+
+#[cfg(not(windows))]
+pub fn probe() -> Result<AccessibilitySnapshot, String> {
+    snapshot()
 }
 
 #[cfg(windows)]
@@ -197,8 +293,23 @@ mod windows_impl {
         enumeration_error.map(|error| format!("Discord 창을 찾지 못했습니다: {error}"))
     }
 
-    fn window_requires_accessibility_scan(is_minimized: bool, is_foreground: bool) -> bool {
-        !is_minimized && is_foreground
+    fn window_requires_accessibility_scan(
+        is_minimized: bool,
+        foreground_process_id: Option<u32>,
+        discord_process_id: u32,
+        translator_process_id: u32,
+    ) -> bool {
+        !is_minimized
+            && foreground_process_id.is_some_and(|process_id| {
+                process_id == discord_process_id || process_id == translator_process_id
+            })
+    }
+
+    fn foreground_process_id() -> Option<u32> {
+        let hwnd = unsafe { GetForegroundWindow() };
+        let mut process_id = 0_u32;
+        unsafe { GetWindowThreadProcessId(hwnd, Some(&mut process_id)) };
+        (process_id != 0).then_some(process_id)
     }
 
     fn native_window_rect(hwnd: HWND) -> Option<ScreenRect> {
@@ -214,7 +325,7 @@ mod windows_impl {
         })
     }
 
-    pub(super) fn snapshot() -> Result<AccessibilitySnapshot, String> {
+    pub(super) fn snapshot(collect_parts: bool) -> Result<AccessibilitySnapshot, String> {
         let process = discord::current_accessibility_process().ok_or_else(|| {
             "Discord가 접근성 호환 모드로 실행되지 않았습니다. 최초 한 번만 Discord를 다시 시작해 주세요."
                 .to_string()
@@ -239,7 +350,9 @@ mod windows_impl {
             .ok_or_else(|| "표시 중인 Discord 창을 찾지 못했습니다.".to_string())?;
         if !window_requires_accessibility_scan(
             unsafe { IsIconic(hwnd) }.as_bool(),
-            unsafe { GetForegroundWindow() } == hwnd,
+            foreground_process_id(),
+            process.process_id,
+            std::process::id(),
         ) {
             return Ok(AccessibilitySnapshot {
                 process_id: process.process_id,
@@ -249,6 +362,13 @@ mod windows_impl {
         }
         let window = native_window_rect(hwnd)
             .ok_or_else(|| "Discord 창 위치를 읽지 못했습니다.".to_string())?;
+        if !collect_parts {
+            return Ok(AccessibilitySnapshot {
+                process_id: process.process_id,
+                window,
+                parts: Vec::new(),
+            });
+        }
         let _apartment = ComApartment::initialize()?;
         let automation: IUIAutomation =
             unsafe { CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER) }
@@ -365,17 +485,47 @@ mod windows_impl {
         }
 
         #[test]
-        fn minimized_or_background_discord_skips_the_accessibility_scan() {
-            assert!(!super::window_requires_accessibility_scan(true, true));
-            assert!(!super::window_requires_accessibility_scan(false, false));
-            assert!(super::window_requires_accessibility_scan(false, true));
+        fn discord_and_translator_foreground_windows_allow_accessibility_scan() {
+            let discord_process_id = 10;
+            let translator_process_id = 20;
+
+            assert!(!super::window_requires_accessibility_scan(
+                true,
+                Some(discord_process_id),
+                discord_process_id,
+                translator_process_id,
+            ));
+            assert!(super::window_requires_accessibility_scan(
+                false,
+                Some(discord_process_id),
+                discord_process_id,
+                translator_process_id,
+            ));
+            assert!(super::window_requires_accessibility_scan(
+                false,
+                Some(translator_process_id),
+                discord_process_id,
+                translator_process_id,
+            ));
+            assert!(!super::window_requires_accessibility_scan(
+                false,
+                Some(30),
+                discord_process_id,
+                translator_process_id,
+            ));
+            assert!(!super::window_requires_accessibility_scan(
+                false,
+                None,
+                discord_process_id,
+                translator_process_id,
+            ));
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::message_kind;
+    use super::{anchored_control_position, message_kind};
 
     #[test]
     fn accepts_only_discord_message_and_reply_accessibility_ids() {
@@ -389,5 +539,17 @@ mod tests {
         );
         assert_eq!(message_kind("channels", "content__abc"), None);
         assert_eq!(message_kind("", "markup__abc"), None);
+    }
+
+    #[test]
+    fn display_language_control_stays_anchored_to_discord_bottom_right() {
+        assert_eq!(
+            anchored_control_position((100, 50), (1200, 800), (72, 50), 18),
+            (1210, 782)
+        );
+        assert_eq!(
+            anchored_control_position((100, 50), (1200, 800), (286, 590), 18),
+            (996, 242)
+        );
     }
 }

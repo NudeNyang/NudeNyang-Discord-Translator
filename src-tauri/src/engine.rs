@@ -748,12 +748,17 @@ fn run_controller(
             accessibility_snapshot.as_ref(),
             &states,
             config.enabled,
+            &config.target_language,
         );
 
         let had_client = client.is_some();
         let result = (|| -> Result<(), String> {
             if client.is_none() {
-                let snapshot = accessibility::snapshot()?;
+                let snapshot = if config.enabled {
+                    accessibility::snapshot()?
+                } else {
+                    accessibility::probe()?
+                };
                 consecutive_connection_failures = 0;
                 connection_issue_reported = false;
                 update_status(&status, |runtime| {
@@ -777,6 +782,7 @@ fn run_controller(
                     accessibility_snapshot.as_ref(),
                     &states,
                     config.enabled,
+                    &config.target_language,
                 );
                 return Ok(());
             }
@@ -915,7 +921,13 @@ fn run_controller(
             });
             if client.is_none() {
                 accessibility_snapshot = None;
-                refresh_accessibility_overlay(app_handle.as_ref(), None, &states, false);
+                refresh_accessibility_overlay(
+                    app_handle.as_ref(),
+                    None,
+                    &states,
+                    false,
+                    &config.target_language,
+                );
             }
         }
 
@@ -935,7 +947,13 @@ fn run_controller(
     }
 
     restore(&mut client, &states, false);
-    refresh_accessibility_overlay(app_handle.as_ref(), None, &states, false);
+    refresh_accessibility_overlay(
+        app_handle.as_ref(),
+        None,
+        &states,
+        false,
+        &config.target_language,
+    );
     if let Some(client) = client.as_mut() {
         let _ = client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
     }
@@ -984,6 +1002,7 @@ fn refresh_accessibility_overlay(
     snapshot: Option<&AccessibilitySnapshot>,
     states: &HashMap<Locator, PartState>,
     enabled: bool,
+    display_language: &str,
 ) {
     let Some(app) = app else {
         return;
@@ -992,7 +1011,7 @@ fn refresh_accessibility_overlay(
         accessibility::hide_overlay(app);
         return;
     };
-    if let Err(error) = accessibility::show_overlay(app, snapshot, |part| {
+    if let Err(error) = accessibility::show_overlay(app, snapshot, display_language, |part| {
         states
             .get(&part.locator())
             .map(|state| state.translated.clone())

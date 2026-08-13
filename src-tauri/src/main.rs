@@ -923,6 +923,11 @@ async fn discord_restart(
 }
 
 #[tauri::command]
+fn accessibility_controls_resize(app: AppHandle, expanded: bool) -> Result<(), String> {
+    accessibility::resize_controls(&app, expanded)
+}
+
+#[tauri::command]
 fn main_window_show(app: AppHandle) {
     hide_tray_menu(&app);
     if let Some(window) = app.get_webview_window("main") {
@@ -1405,6 +1410,7 @@ fn main() {
             provider_login_open,
             provider_disconnect,
             discord_restart,
+            accessibility_controls_resize,
             main_window_show,
             main_window_hide,
             tray_menu_hide,

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NudeNyang Translator 표시 언어</title>
+    <link rel="stylesheet" href="./accessibility-controls.css" />
+    <script type="module" src="./accessibility-controls.js"></script>
+  </head>
+  <body>
+    <main id="controls">
+      <button id="language-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="direction" aria-hidden="true">↓</span>
+        <strong id="language-code">KO</strong>
+      </button>
+      <section id="language-menu" hidden>
+        <label class="search">
+          <span>표시 언어 검색</span>
+          <input id="language-search" type="search" autocomplete="off" placeholder="언어 검색" />
+        </label>
+        <div id="language-options" role="listbox" aria-label="표시 언어"></div>
+      </section>
+    </main>
+  </body>
+</html>
