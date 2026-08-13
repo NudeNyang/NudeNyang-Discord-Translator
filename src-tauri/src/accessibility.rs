@@ -144,7 +144,7 @@ mod windows_impl {
     use crate::discord;
     use crate::dom::DomPart;
     use windows::core::BOOL;
-    use windows::Win32::Foundation::{HWND, LPARAM};
+    use windows::Win32::Foundation::{HWND, LPARAM, RECT};
     use windows::Win32::System::Com::{
         CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
         COINIT_MULTITHREADED,
@@ -153,7 +153,8 @@ mod windows_impl {
         CUIAutomation, IUIAutomation, IUIAutomationElement, IUIAutomationTreeWalker,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
-        EnumWindows, GetForegroundWindow, GetWindowThreadProcessId, IsWindowVisible,
+        EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, IsIconic,
+        IsWindowVisible,
     };
 
     struct ComApartment;
@@ -196,6 +197,23 @@ mod windows_impl {
         enumeration_error.map(|error| format!("Discord 창을 찾지 못했습니다: {error}"))
     }
 
+    fn window_requires_accessibility_scan(is_minimized: bool, is_foreground: bool) -> bool {
+        !is_minimized && is_foreground
+    }
+
+    fn native_window_rect(hwnd: HWND) -> Option<ScreenRect> {
+        let mut rect = RECT::default();
+        unsafe { GetWindowRect(hwnd, &mut rect) }.ok()?;
+        let width = rect.right - rect.left;
+        let height = rect.bottom - rect.top;
+        (width > 0 && height > 0).then_some(ScreenRect {
+            left: rect.left,
+            top: rect.top,
+            width,
+            height,
+        })
+    }
+
     pub(super) fn snapshot() -> Result<AccessibilitySnapshot, String> {
         let process = discord::current_accessibility_process().ok_or_else(|| {
             "Discord가 접근성 호환 모드로 실행되지 않았습니다. 최초 한 번만 Discord를 다시 시작해 주세요."
@@ -219,21 +237,24 @@ mod windows_impl {
         let hwnd = search
             .found
             .ok_or_else(|| "표시 중인 Discord 창을 찾지 못했습니다.".to_string())?;
+        if !window_requires_accessibility_scan(
+            unsafe { IsIconic(hwnd) }.as_bool(),
+            unsafe { GetForegroundWindow() } == hwnd,
+        ) {
+            return Ok(AccessibilitySnapshot {
+                process_id: process.process_id,
+                window: ScreenRect::default(),
+                parts: Vec::new(),
+            });
+        }
+        let window = native_window_rect(hwnd)
+            .ok_or_else(|| "Discord 창 위치를 읽지 못했습니다.".to_string())?;
         let _apartment = ComApartment::initialize()?;
         let automation: IUIAutomation =
             unsafe { CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER) }
                 .map_err(|error| format!("Windows 접근성 서비스를 열지 못했습니다: {error}"))?;
         let root = unsafe { automation.ElementFromHandle(hwnd) }
             .map_err(|error| format!("Discord 접근성 루트를 읽지 못했습니다: {error}"))?;
-        let window =
-            element_rect(&root).ok_or_else(|| "Discord 창 위치를 읽지 못했습니다.".to_string())?;
-        if unsafe { GetForegroundWindow() } != hwnd {
-            return Ok(AccessibilitySnapshot {
-                process_id: process.process_id,
-                window,
-                parts: Vec::new(),
-            });
-        }
         let walker = unsafe { automation.RawViewWalker() }
             .map_err(|error| format!("Discord 접근성 탐색기를 만들지 못했습니다: {error}"))?;
         let mut parts = Vec::new();
@@ -341,6 +362,13 @@ mod windows_impl {
                 window_search_failure(false, Some("0x800705B4".to_string())),
                 Some("Discord 창을 찾지 못했습니다: 0x800705B4".to_string())
             );
+        }
+
+        #[test]
+        fn minimized_or_background_discord_skips_the_accessibility_scan() {
+            assert!(!super::window_requires_accessibility_scan(true, true));
+            assert!(!super::window_requires_accessibility_scan(false, false));
+            assert!(super::window_requires_accessibility_scan(false, true));
         }
     }
 }
