@@ -157,9 +157,11 @@ fn acquire_accessibility_restart_lease() -> Result<File, String> {
         match FileExt::try_lock_exclusive(&file) {
             Ok(()) => return Ok(file),
             Err(_) if Instant::now() < deadline => thread::sleep(Duration::from_millis(100)),
-            Err(error) => return Err(format!(
+            Err(error) => {
+                return Err(format!(
                 "다른 앱이 Discord 접근성 모드를 준비 중이라 작업을 계속하지 못했습니다: {error}"
-            )),
+            ))
+            }
         }
     }
 }

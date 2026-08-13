@@ -189,6 +189,13 @@ mod windows_impl {
         BOOL(1)
     }
 
+    fn window_search_failure(found: bool, enumeration_error: Option<String>) -> Option<String> {
+        if found {
+            return None;
+        }
+        enumeration_error.map(|error| format!("Discord 창을 찾지 못했습니다: {error}"))
+    }
+
     pub(super) fn snapshot() -> Result<AccessibilitySnapshot, String> {
         let process = discord::current_accessibility_process().ok_or_else(|| {
             "Discord가 접근성 호환 모드로 실행되지 않았습니다. 최초 한 번만 Discord를 다시 시작해 주세요."
@@ -198,13 +205,17 @@ mod windows_impl {
             process_id: process.process_id,
             found: None,
         };
-        unsafe {
+        let enumeration_error = unsafe {
             EnumWindows(
                 Some(find_window),
                 LPARAM((&mut search as *mut WindowSearch) as isize),
             )
         }
-        .map_err(|error| format!("Discord 창을 찾지 못했습니다: {error}"))?;
+        .err()
+        .map(|error| error.to_string());
+        if let Some(error) = window_search_failure(search.found.is_some(), enumeration_error) {
+            return Err(error);
+        }
         let hwnd = search
             .found
             .ok_or_else(|| "표시 중인 Discord 창을 찾지 못했습니다.".to_string())?;
@@ -310,6 +321,27 @@ mod windows_impl {
             width,
             height,
         })
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::window_search_failure;
+
+        #[test]
+        fn stopped_enumeration_after_match_is_not_a_failure() {
+            assert_eq!(
+                window_search_failure(true, Some("0x800705B4".to_string())),
+                None
+            );
+        }
+
+        #[test]
+        fn enumeration_error_without_a_match_is_preserved() {
+            assert_eq!(
+                window_search_failure(false, Some("0x800705B4".to_string())),
+                Some("Discord 창을 찾지 못했습니다: 0x800705B4".to_string())
+            );
+        }
     }
 }
 
