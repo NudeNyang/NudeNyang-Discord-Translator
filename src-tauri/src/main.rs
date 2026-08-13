@@ -546,6 +546,12 @@ fn runtime_status(
             Value::String(current_config.target_language),
         );
         object.insert(
+            "discordProcessId".to_string(),
+            discord::current_process()
+                .map(|process| Value::from(process.process_id))
+                .unwrap_or(Value::Null),
+        );
+        object.insert(
             "configuredTranslator".to_string(),
             Value::String(current_config.translator),
         );
@@ -719,12 +725,21 @@ fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
 }
 
 fn start_pipe_discord_for_autostart(app: AppHandle) {
-    if discord::current_process().is_some() {
-        return;
-    }
     let engine = app.state::<RustEngine>().inner().clone();
     tauri::async_runtime::spawn(async move {
-        let result = tauri::async_runtime::spawn_blocking(|| discord::restart_pipe(None)).await;
+        let result = tauri::async_runtime::spawn_blocking(|| {
+            if let Some(process) = discord::current_pipe_process() {
+                return discord::connect_guarded_pipe(&process).map(|cdp| (process, cdp));
+            }
+            if discord::current_process().is_some() {
+                return Err(
+                    "Discord가 일반 모드로 실행 중이어서 사용자 재시작 동의를 기다립니다."
+                        .to_string(),
+                );
+            }
+            discord::restart_pipe(None)
+        })
+        .await;
         match result {
             Ok(Ok((_process, cdp))) => {
                 if let Err(error) = engine.replace_cdp(cdp) {
@@ -741,6 +756,10 @@ fn start_pipe_discord_for_autostart(app: AppHandle) {
 }
 
 fn initialize_autostart(app: AppHandle) {
+    if discord::current_pipe_process().is_some() {
+        start_pipe_discord_for_autostart(app);
+        return;
+    }
     match autostart_get_blocking(app.clone()) {
         Ok(true) => start_pipe_discord_for_autostart(app),
         Ok(false) => {}
@@ -918,10 +937,11 @@ async fn discord_restart(
 ) -> Result<Value, String> {
     let client = engine.inner().clone();
     let _ = client.set_enabled(false);
-    let restart_result =
-        tauri::async_runtime::spawn_blocking(move || discord::restart_pipe(expected_process_id))
-            .await
-            .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
+    let restart_result = tauri::async_runtime::spawn_blocking(move || {
+        discord::connect_or_restart_pipe(expected_process_id)
+    })
+    .await
+    .map_err(|error| format!("Discord 연결 작업을 기다리지 못했습니다: {error}"))?;
     let (process, cdp) = match restart_result {
         Ok(result) => result,
         Err(error) => {
@@ -1024,17 +1044,9 @@ fn shutdown_translation(app: &AppHandle) {
         return;
     }
     let engine = app.state::<RustEngine>();
-    let pipe_discord = discord::current_pipe_process();
     let _ = app.state::<ProviderLoginState>().cancel();
     let _ = engine.set_enabled(false);
-    let config = app.state::<ConfigStore>();
-    let _ = config.update(json!({"enabled": false}));
     engine.stop();
-    if let Some(process) = pipe_discord {
-        if let Err(error) = discord::restart_accessibly_after_pipe(process) {
-            diagnostics::error("discord_restart", &error);
-        }
-    }
 }
 
 fn hide_tray_menu(app: &AppHandle) {
@@ -1265,6 +1277,37 @@ fn main() {
     let process_arguments = std::env::args_os().collect::<Vec<_>>();
     if process_arguments
         .get(1)
+        .is_some_and(|argument| argument == "--discord-cdp-pipe-guardian")
+    {
+        let parsed = (|| -> Result<(u32, usize, usize), String> {
+            let parse = |index: usize, label: &str| {
+                process_arguments
+                    .get(index)
+                    .and_then(|value| value.to_str())
+                    .ok_or_else(|| format!("{label} 값이 없습니다."))
+            };
+            let discord_process_id = parse(2, "Discord 프로세스 ID")?
+                .parse::<u32>()
+                .map_err(|error| format!("Discord 프로세스 ID가 올바르지 않습니다: {error}"))?;
+            let reader_handle = parse(3, "CDP 읽기 핸들")?
+                .parse::<usize>()
+                .map_err(|error| format!("CDP 읽기 핸들이 올바르지 않습니다: {error}"))?;
+            let writer_handle = parse(4, "CDP 쓰기 핸들")?
+                .parse::<usize>()
+                .map_err(|error| format!("CDP 쓰기 핸들이 올바르지 않습니다: {error}"))?;
+            Ok((discord_process_id, reader_handle, writer_handle))
+        })();
+        let result = parsed.and_then(|(discord_process_id, reader_handle, writer_handle)| {
+            discord::run_pipe_guardian(discord_process_id, reader_handle, writer_handle)
+        });
+        if let Err(error) = result {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
+    if process_arguments
+        .get(1)
         .is_some_and(|argument| argument == "--discord-cdp-pipe-helper")
     {
         let result = process_arguments
@@ -1286,7 +1329,8 @@ fn main() {
         .is_some_and(|argument| argument == "--verify-discord-cdp-pipe")
     {
         let expected_process_id = discord::current_process().map(|process| process.process_id);
-        match discord::restart_pipe(expected_process_id).and_then(|(process, mut client)| {
+        match discord::connect_or_restart_pipe(expected_process_id).and_then(
+            |(process, mut client)| {
             let marker = client.evaluate(
                 "(() => { const root = document.documentElement; const name = 'data-nudenyang-pipe-verify'; root.setAttribute(name, 'ok'); const value = root.getAttribute(name); root.removeAttribute(name); return value; })()",
                 false,
@@ -1295,12 +1339,20 @@ fn main() {
                 return Err(format!("Discord DOM 변조 검증 결과가 올바르지 않습니다: {marker}"));
             }
             drop(client);
-            discord::restart_accessibly_after_pipe(process.clone())?;
+            std::thread::sleep(Duration::from_millis(300));
+            let mut reconnected = discord::connect_guarded_pipe(&process)?;
+            let marker = reconnected.evaluate(
+                "(() => { const root = document.documentElement; const name = 'data-nudenyang-guardian-verify'; root.setAttribute(name, 'ok'); const value = root.getAttribute(name); root.removeAttribute(name); return value; })()",
+                false,
+            )?;
+            if marker != serde_json::Value::String("ok".to_string()) {
+                return Err(format!("Discord DOM 재연결 검증 결과가 올바르지 않습니다: {marker}"));
+            }
             Ok(process)
         }) {
             Ok(process) => {
                 println!(
-                    "SECURE_PID={} DOM_MUTATION=OK ACCESSIBILITY_RESTART=OK",
+                    "SECURE_PID={} DOM_MUTATION=OK GUARDIAN_RECONNECT=OK DISCORD_SURVIVED=OK",
                     process.process_id
                 );
             }

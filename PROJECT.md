@@ -20,7 +20,7 @@ Tauri/Rust를 기준으로 유지하며, 장기적으로 macOS를 지원할 수 
 
 - 앱 셸 및 시스템 통합: Tauri 2, Rust
 - 설정 UI 및 트레이 UI: HTML, CSS, JavaScript
-- Discord 연동: Electron 원격 디버깅 포트를 통한 CDP/DOM 제어
+- Discord 연동: Electron 전용 익명 파이프를 통한 CDP/DOM 제어
 - 로컬 번역: Rust가 관리하는 `llama.cpp`와 GGUF 모델
 - 기본 로컬 모델: Hy-MT2 1.8B
 - 품질 우선 로컬 모델: Hy-MT2 7B

@@ -286,6 +286,15 @@ impl CdpClient {
     }
 
     pub fn close(&mut self) {
+        if self.pipe.is_some() {
+            if let Some(session_id) = self.session_id.take() {
+                let _ = self.raw_call(
+                    "Target.detachFromTarget",
+                    json!({"sessionId": session_id}),
+                    None,
+                );
+            }
+        }
         if let Some(mut socket) = self.socket.take() {
             let _ = socket.close(None);
         }

@@ -148,6 +148,14 @@ test("the private Discord pipe inherits only its two anonymous pipe handles", ()
   assert.match(discord, /spawn_discord_with_handles/);
 });
 
+test("the private Discord pipe is retained by a reconnectable local guardian", () => {
+  assert.match(discord, /--discord-cdp-pipe-guardian/);
+  assert.match(discord, /connect_guarded_pipe/);
+  assert.match(discord, /PROCESS_DUP_HANDLE/);
+  assert.match(discord, /accessibility-restart\.lock/);
+  assert.doesNotMatch(discord, /remote-debugging-port/);
+});
+
 test("DeepL API keys are applied when editing finishes and before confirmation", () => {
   const deeplRow = markup.match(/<article class="provider-row" data-provider="deepl">[\s\S]*?<\/article>/)?.[0] || "";
   assert.match(deeplRow, /provider-secret/);
