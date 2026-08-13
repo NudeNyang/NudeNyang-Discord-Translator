@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 use std::time::Instant;
 
@@ -5,7 +6,10 @@ use regex::Regex;
 use sha2::{Digest, Sha256};
 
 use crate::cache::TranslationCache;
-use crate::language::{Language, LanguageDetector};
+use crate::language::{
+    detect_explicit_language, detect_language, detection_script_family, language_script_family,
+    Language, LanguageDetector, ScriptFamily,
+};
 use crate::text_split::split_for_translation;
 
 use super::discord_format::DiscordFormatTemplate;
@@ -20,12 +24,18 @@ static JAPANESE_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+static ENGLISH_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"[A-Za-z][A-Za-z0-9'’.,!?-]*(?:[ \t]+[A-Za-z0-9][A-Za-z0-9'’.,!?-]*)+").unwrap()
+});
+
 const MAX_TRANSLATION_CHARS: usize = 700;
 
 pub struct TranslationService {
     translator: Box<dyn Translator>,
     cache: TranslationCache,
     detector: LanguageDetector,
+    incoming_detector: LanguageDetector,
+    incoming_context_scope: String,
 }
 
 impl TranslationService {
@@ -34,6 +44,8 @@ impl TranslationService {
             translator,
             cache,
             detector: LanguageDetector::default(),
+            incoming_detector: LanguageDetector::default(),
+            incoming_context_scope: String::new(),
         }
     }
 
@@ -84,8 +96,21 @@ impl TranslationService {
         texts: &[String],
         target: Language,
     ) -> Result<Vec<String>, String> {
+        let source_hints = vec![None; texts.len()];
+        self.translate_many_with_source_hints(texts, &source_hints, target)
+    }
+
+    fn translate_many_with_source_hints(
+        &mut self,
+        texts: &[String],
+        source_hints: &[Option<Language>],
+        target: Language,
+    ) -> Result<Vec<String>, String> {
         if texts.is_empty() {
             return Ok(Vec::new());
+        }
+        if texts.len() != source_hints.len() {
+            return Err("번역 문맥 정보의 개수가 원문 개수와 다릅니다.".to_string());
         }
 
         let groups = texts
@@ -93,7 +118,12 @@ impl TranslationService {
             .map(|text| split_for_translation(text, MAX_TRANSLATION_CHARS))
             .collect::<Vec<_>>();
         let flattened = groups.iter().flatten().cloned().collect::<Vec<_>>();
-        let translated = self.translate_many_unchunked(&flattened, target)?;
+        let flattened_hints = groups
+            .iter()
+            .zip(source_hints)
+            .flat_map(|(chunks, hint)| std::iter::repeat_n(*hint, chunks.len()))
+            .collect::<Vec<_>>();
+        let translated = self.translate_many_unchunked(&flattened, &flattened_hints, target)?;
         let mut translated = translated.into_iter();
         groups
             .into_iter()
@@ -114,10 +144,24 @@ impl TranslationService {
         texts: &[String],
         target: Language,
     ) -> Vec<String> {
+        let source_hints = vec![None; texts.len()];
+        self.translate_many_best_effort_with_hints(texts, &source_hints, target)
+    }
+
+    fn translate_many_best_effort_with_hints(
+        &mut self,
+        texts: &[String],
+        source_hints: &[Option<Language>],
+        target: Language,
+    ) -> Vec<String> {
         let mut output = Vec::with_capacity(texts.len());
-        for text in texts {
-            match self.translate(text, target) {
-                Ok(translated) => output.push(translated),
+        for (text, hint) in texts.iter().zip(source_hints) {
+            match self.translate_many_with_source_hints(
+                std::slice::from_ref(text),
+                std::slice::from_ref(hint),
+                target,
+            ) {
+                Ok(mut translated) => output.push(translated.remove(0)),
                 Err(failure) => {
                     crate::diagnostics::warn(
                         "incoming-translation",
@@ -146,9 +190,99 @@ impl TranslationService {
         }
     }
 
+    pub fn translate_many_for_incoming_contextual(
+        &mut self,
+        texts: &[String],
+        message_keys: &[Option<String>],
+        context_scope: &str,
+        target: Language,
+    ) -> Result<Vec<String>, String> {
+        let source_hints = self.incoming_source_hints(texts, message_keys, context_scope)?;
+        if self.translator.isolate_incoming_failures() {
+            Ok(self.translate_many_best_effort_with_hints(texts, &source_hints, target))
+        } else {
+            self.translate_many_with_source_hints(texts, &source_hints, target)
+        }
+    }
+
+    fn incoming_source_hints(
+        &mut self,
+        texts: &[String],
+        message_keys: &[Option<String>],
+        context_scope: &str,
+    ) -> Result<Vec<Option<Language>>, String> {
+        if texts.len() != message_keys.len() {
+            return Err("메시지 문맥 정보의 개수가 원문 개수와 다릅니다.".to_string());
+        }
+        if self.incoming_context_scope != context_scope {
+            self.incoming_context_scope = context_scope.to_string();
+            self.incoming_detector = LanguageDetector::default();
+        }
+
+        let mut grouped_text = HashMap::<(String, ScriptFamily), String>::new();
+        for (text, message_key) in texts.iter().zip(message_keys) {
+            let (Some(message_key), Some(family)) =
+                (message_key.as_ref(), detection_script_family(text))
+            else {
+                continue;
+            };
+            let aggregate = grouped_text
+                .entry((message_key.clone(), family))
+                .or_default();
+            if !aggregate.is_empty() {
+                aggregate.push('\n');
+            }
+            aggregate.push_str(text);
+        }
+        let grouped_languages = grouped_text
+            .into_iter()
+            .filter_map(|(key, text)| {
+                let language = detect_explicit_language(&text);
+                (language_script_family(language) == Some(key.1)).then_some((key, language))
+            })
+            .collect::<HashMap<_, _>>();
+
+        let mut remembered_groups = HashSet::new();
+        let mut hints = Vec::with_capacity(texts.len());
+        for (text, message_key) in texts.iter().zip(message_keys) {
+            let direct = detect_explicit_language(text);
+            if direct != Language::Unknown {
+                if let (Some(message_key), Some(family)) =
+                    (message_key.as_ref(), detection_script_family(text))
+                {
+                    let group_key = (message_key.clone(), family);
+                    if remembered_groups.insert(group_key) {
+                        self.incoming_detector.remember(direct);
+                    }
+                }
+                hints.push(None);
+                continue;
+            }
+            let Some(message_key) = message_key.as_ref() else {
+                hints.push(None);
+                continue;
+            };
+            let Some(family) = detection_script_family(text) else {
+                hints.push(None);
+                continue;
+            };
+            let group_key = (message_key.clone(), family);
+            if let Some(language) = grouped_languages.get(&group_key).copied() {
+                if remembered_groups.insert(group_key) {
+                    self.incoming_detector.remember(language);
+                }
+                hints.push(Some(language));
+                continue;
+            }
+            hints.push(self.incoming_detector.recent_language_for(text));
+        }
+        Ok(hints)
+    }
+
     fn translate_many_unchunked(
         &mut self,
         texts: &[String],
+        source_hints: &[Option<Language>],
         target: Language,
     ) -> Result<Vec<String>, String> {
         if texts.is_empty() {
@@ -166,9 +300,17 @@ impl TranslationService {
                 passthrough += 1;
                 continue;
             }
-            let source = self.detector.detect(text, true);
+            let detected = self.detector.detect(text, true);
+            let source = if detected == Language::Unknown {
+                source_hints[index].unwrap_or(Language::Unknown)
+            } else {
+                detected
+            };
+            if detected == Language::Unknown {
+                self.detector.remember(source);
+            }
             if source == target {
-                results[index] = Some(self.translate_japanese_fragments(text, target)?);
+                results[index] = Some(self.translate_foreign_fragments(text, target)?);
                 continue;
             }
             if source == Language::Unknown {
@@ -250,6 +392,15 @@ impl TranslationService {
             .collect()
     }
 
+    fn translate_foreign_fragments(
+        &mut self,
+        text: &str,
+        target: Language,
+    ) -> Result<String, String> {
+        let translated = self.translate_japanese_fragments(text, target)?;
+        self.translate_english_fragments(&translated, target)
+    }
+
     fn translate_japanese_fragments(
         &mut self,
         text: &str,
@@ -271,6 +422,41 @@ impl TranslationService {
                 fragment,
                 &protect_text(fragment),
                 Language::Japanese,
+                target,
+            )?;
+            changed |= result != fragment;
+            translated.push_str(&result);
+            cursor = found.end();
+        }
+        if !changed {
+            return Ok(text.to_string());
+        }
+        translated.push_str(&text[cursor..]);
+        Ok(translated)
+    }
+
+    fn translate_english_fragments(
+        &mut self,
+        text: &str,
+        target: Language,
+    ) -> Result<String, String> {
+        if target != Language::Korean {
+            return Ok(text.to_string());
+        }
+        let mut translated = String::new();
+        let mut cursor = 0;
+        let mut changed = false;
+        for found in ENGLISH_FRAGMENT_RE.find_iter(text) {
+            let fragment = found.as_str();
+            let detection = detect_language(fragment);
+            if detection.language != Language::English || detection.confidence < 0.99 {
+                continue;
+            }
+            translated.push_str(&text[cursor..found.start()]);
+            let result = self.translate_known_source(
+                fragment,
+                &protect_text(fragment),
+                Language::English,
                 target,
             )?;
             changed |= result != fragment;
@@ -619,6 +805,127 @@ mod tests {
         assert_eq!(
             inputs.lock().unwrap().as_slice(),
             &["Hello there".to_string(), "こんにちは".to_string()]
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_message_context_translates_short_english_dom_parts() {
+        let path = cache_path("short-english-context");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = vec![
+            "this".to_string(),
+            "is so fkn funny".to_string(),
+            "LMAO".to_string(),
+        ];
+        let message_keys = vec![
+            Some("message-1".to_string()),
+            Some("message-1".to_string()),
+            Some("message-1".to_string()),
+        ];
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &source,
+                    &message_keys,
+                    "/channels/guild/english",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec![
+                "[ko] this".to_string(),
+                "[ko] is so fkn funny".to_string(),
+                "[ko] LMAO".to_string(),
+            ]
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_channel_context_recovers_short_english_without_leaking_to_another_channel() {
+        let path = cache_path("recent-english-channel");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let known = vec![
+            "Hello and welcome to the server".to_string(),
+            "Please read the rules and have fun".to_string(),
+        ];
+        let known_keys = vec![Some("message-1".to_string()), Some("message-2".to_string())];
+        service
+            .translate_many_for_incoming_contextual(
+                &known,
+                &known_keys,
+                "/channels/guild/english",
+                Language::Korean,
+            )
+            .unwrap();
+
+        let short = vec![
+            "it was a soft bonk".to_string(),
+            "Uh huh".to_string(),
+            "CHOCOLATE MILK!!!!".to_string(),
+            "Why did it melt".to_string(),
+            "thx".to_string(),
+            "LMAO".to_string(),
+        ];
+        let short_keys = vec![
+            Some("message-3".to_string()),
+            Some("message-4".to_string()),
+            Some("message-5".to_string()),
+            Some("message-6".to_string()),
+            Some("message-7".to_string()),
+            Some("message-8".to_string()),
+        ];
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &short,
+                    &short_keys,
+                    "/channels/guild/english",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec![
+                "[ko] it was a soft bonk".to_string(),
+                "[ko] Uh huh".to_string(),
+                "[ko] CHOCOLATE MILK!!!!".to_string(),
+                "[ko] Why did it melt".to_string(),
+                "[ko] thx".to_string(),
+                "[ko] LMAO".to_string(),
+            ]
+        );
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &["thx".to_string()],
+                    &[Some("message-1".to_string())],
+                    "/channels/guild/other",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec!["thx".to_string()]
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_korean_message_translates_its_clear_english_fragment() {
+        let path = cache_path("mixed-korean-english");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = "Yeah, it's fine Solon-sama 언젠가 만날 때 음료를 제공하면 기쁠 거예요";
+
+        assert_eq!(
+            service.translate(source, Language::Korean).unwrap(),
+            "[ko] Yeah, it's fine Solon-sama 언젠가 만날 때 음료를 제공하면 기쁠 거예요"
+        );
+        assert_eq!(
+            service
+                .translate("Silver Moon에게 음료를 건넸어요", Language::Korean)
+                .unwrap(),
+            "Silver Moon에게 음료를 건넸어요"
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }

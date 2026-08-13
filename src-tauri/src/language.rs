@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::LazyLock;
 
 use lingua::{
@@ -445,6 +445,20 @@ struct ScriptCounts {
     letters: usize,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum ScriptFamily {
+    Hangul,
+    EastAsian,
+    Devanagari,
+    Arabic,
+    Latin,
+    Cyrillic,
+    Thai,
+    Bengali,
+    Tamil,
+    Hebrew,
+}
+
 static STATISTICAL_DETECTOR: LazyLock<LinguaDetector> = LazyLock::new(|| {
     use LinguaLanguage::*;
     LanguageDetectorBuilder::from_languages(&[
@@ -617,10 +631,11 @@ fn has_clear_english_signal(text: &str) -> bool {
     const STRONG: [&str; 7] = [
         "hello", "please", "welcome", "thanks", "thank", "sorry", "hey",
     ];
-    const COMMON: [&str; 24] = [
+    const COMMON: [&str; 36] = [
         "the", "this", "that", "these", "those", "from", "with", "without", "into", "for", "and",
         "but", "are", "is", "was", "were", "have", "has", "your", "you", "our", "other", "server",
-        "servers",
+        "servers", "it", "it's", "i'm", "we're", "they're", "did", "does", "why", "what", "how",
+        "fine", "yeah",
     ];
     let words = text
         .split(|character: char| !character.is_ascii_alphabetic() && character != '\'')
@@ -663,13 +678,35 @@ impl LanguageDetector {
         if result == Language::Unknown && counts.han > 0 && counts.kana == 0 {
             result = self.context_language().unwrap_or(Language::Unknown);
         }
-        if remember && result != Language::Unknown {
-            if self.context.len() == self.context_size {
-                self.context.pop_front();
-            }
-            self.context.push_back(result);
+        if remember {
+            self.remember(result);
         }
         result
+    }
+
+    pub(crate) fn remember(&mut self, language: Language) {
+        if language == Language::Unknown {
+            return;
+        }
+        if self.context.len() == self.context_size {
+            self.context.pop_front();
+        }
+        self.context.push_back(language);
+    }
+
+    pub(crate) fn recent_language_for(&self, text: &str) -> Option<Language> {
+        let family = detection_script_family(text)?;
+        let mut counts = HashMap::<Language, usize>::new();
+        let mut relevant = 0_usize;
+        for language in self.context.iter().copied() {
+            if language_script_family(language) != Some(family) {
+                continue;
+            }
+            relevant += 1;
+            *counts.entry(language).or_default() += 1;
+        }
+        let (language, count) = counts.into_iter().max_by_key(|(_, count)| *count)?;
+        (count >= 2 && count * 3 >= relevant * 2).then_some(language)
     }
 
     fn context_language(&self) -> Option<Language> {
@@ -680,6 +717,58 @@ impl LanguageDetector {
             )
         })
     }
+}
+
+pub(crate) fn detection_script_family(text: &str) -> Option<ScriptFamily> {
+    let counts = script_counts(&prepare_for_detection(text));
+    if counts.letters == 0 {
+        return None;
+    }
+    let families = [
+        (ScriptFamily::Hangul, counts.hangul),
+        (ScriptFamily::EastAsian, counts.kana + counts.han),
+        (ScriptFamily::Devanagari, counts.devanagari),
+        (ScriptFamily::Arabic, counts.arabic),
+        (ScriptFamily::Latin, counts.latin),
+        (ScriptFamily::Cyrillic, counts.cyrillic),
+        (ScriptFamily::Thai, counts.thai),
+        (ScriptFamily::Bengali, counts.bengali),
+        (ScriptFamily::Tamil, counts.tamil),
+        (ScriptFamily::Hebrew, counts.hebrew),
+    ];
+    let (family, count) = families.into_iter().max_by_key(|(_, count)| *count)?;
+    (count > 0 && count * 2 >= counts.letters).then_some(family)
+}
+
+pub(crate) fn language_script_family(language: Language) -> Option<ScriptFamily> {
+    Some(match language {
+        Language::Korean => ScriptFamily::Hangul,
+        Language::Japanese | Language::ChineseSimplified | Language::ChineseTraditional => {
+            ScriptFamily::EastAsian
+        }
+        Language::Hindi => ScriptFamily::Devanagari,
+        Language::Arabic | Language::Persian | Language::Urdu => ScriptFamily::Arabic,
+        Language::Russian | Language::Ukrainian => ScriptFamily::Cyrillic,
+        Language::Thai => ScriptFamily::Thai,
+        Language::Bengali => ScriptFamily::Bengali,
+        Language::Tamil => ScriptFamily::Tamil,
+        Language::Hebrew => ScriptFamily::Hebrew,
+        Language::English
+        | Language::BrazilianPortuguese
+        | Language::LatinAmericanSpanish
+        | Language::German
+        | Language::French
+        | Language::Indonesian
+        | Language::Vietnamese
+        | Language::Polish
+        | Language::Turkish
+        | Language::Italian
+        | Language::Dutch
+        | Language::Malay
+        | Language::Filipino
+        | Language::Czech => ScriptFamily::Latin,
+        Language::Unknown => return None,
+    })
 }
 
 #[derive(Default)]

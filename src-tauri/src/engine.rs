@@ -121,6 +121,7 @@ struct TranslationBatch {
     generation: u64,
     target: Language,
     parts: Vec<DomPart>,
+    context_scope: String,
     queued_at: Instant,
 }
 
@@ -1118,6 +1119,7 @@ fn scan_dom(
     worker: &mpsc::Sender<WorkerCommand>,
 ) -> Result<(), String> {
     let snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
+    let context_scope = snapshot.url.clone();
     let (changes, parts) = plan_dom_updates(snapshot.parts, states, pending, generation);
     if !changes.is_empty() {
         client.evaluate(&apply_script(&changes)?, false)?;
@@ -1128,6 +1130,7 @@ fn scan_dom(
                 generation,
                 target,
                 parts,
+                context_scope,
                 queued_at: Instant::now(),
             }))
             .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
@@ -1871,7 +1874,20 @@ fn run_translation_worker(
                         .sum(),
                 );
                 let texts: Vec<String> = batch.parts.iter().map(|part| part.text.clone()).collect();
-                let values = service.translate_many_for_incoming(&texts, batch.target);
+                let message_keys = batch
+                    .parts
+                    .iter()
+                    .map(|part| {
+                        matches!(part.kind.as_str(), "message" | "reply" | "embed")
+                            .then(|| format!("{}:{}", part.kind, part.item_id))
+                    })
+                    .collect::<Vec<_>>();
+                let values = service.translate_many_for_incoming_contextual(
+                    &texts,
+                    &message_keys,
+                    &batch.context_scope,
+                    batch.target,
+                );
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,
                     target: batch.target,
@@ -2405,6 +2421,7 @@ mod tests {
                         text: item_id.to_string(),
                         displayed_text: None,
                     }],
+                    context_scope: "/channels/test/current".to_string(),
                     queued_at: Instant::now(),
                 }))
                 .unwrap();
@@ -2432,6 +2449,7 @@ mod tests {
                         text: item_id.to_string(),
                         displayed_text: None,
                     }],
+                    context_scope: "/channels/test/current".to_string(),
                     queued_at: Instant::now(),
                 }))
                 .unwrap();
