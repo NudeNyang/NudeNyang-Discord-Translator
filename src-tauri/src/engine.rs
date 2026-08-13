@@ -1877,10 +1877,7 @@ fn run_translation_worker(
                 let message_keys = batch
                     .parts
                     .iter()
-                    .map(|part| {
-                        matches!(part.kind.as_str(), "message" | "reply" | "embed")
-                            .then(|| format!("{}:{}", part.kind, part.item_id))
-                    })
+                    .map(incoming_context_key)
                     .collect::<Vec<_>>();
                 let values = service.translate_many_for_incoming_contextual(
                     &texts,
@@ -1941,6 +1938,14 @@ fn run_translation_worker(
             }
             WorkerCommand::Stop => break,
         }
+    }
+}
+
+fn incoming_context_key(part: &DomPart) -> Option<String> {
+    match part.kind.as_str() {
+        "message" | "reply" | "embed" => Some(format!("{}:{}", part.kind, part.item_id)),
+        "channel" | "category" => Some("navigation".to_string()),
+        _ => None,
     }
 }
 
@@ -2231,11 +2236,11 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
-        run_outgoing_translation_worker, translator_activation_notice, translator_label,
-        translator_preparation_plan, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
-        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
-        WorkerResult,
+        incoming_context_key, next_worker_command, plan_dom_updates, poll_interval,
+        preparation_plan_for_active_lanes, run_outgoing_translation_worker,
+        translator_activation_notice, translator_label, translator_preparation_plan,
+        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
+        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -2255,6 +2260,33 @@ mod tests {
         assert_eq!(status.engine, "rust-native");
         assert_eq!(status.configured_translator, "hymt_1_8b");
         assert_eq!(status.active_translator, "original");
+    }
+
+    #[test]
+    fn navigation_labels_share_their_own_language_context() {
+        let channel = DomPart {
+            kind: "channel".to_string(),
+            item_id: "channels___rules".to_string(),
+            index: 0,
+            text: "rules".to_string(),
+            displayed_text: None,
+        };
+        let category = DomPart {
+            kind: "category".to_string(),
+            item_id: "channels___general".to_string(),
+            index: 0,
+            text: "General".to_string(),
+            displayed_text: None,
+        };
+
+        assert_eq!(
+            incoming_context_key(&channel).as_deref(),
+            Some("navigation")
+        );
+        assert_eq!(
+            incoming_context_key(&category).as_deref(),
+            Some("navigation")
+        );
     }
 
     #[test]

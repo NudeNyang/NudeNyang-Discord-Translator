@@ -152,7 +152,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     }
   }
   for (const category of document.querySelectorAll(
-    '[data-list-item-id^="channels___"][role="button"][aria-label$="(카테고리)"]'
+    '[data-list-item-id^="channels___"][role="button"]'
   )) {
     if (!isVisible(category)) continue;
     const visual = category.querySelector('h3 > div');
@@ -564,6 +564,12 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("[id^=\"chat-messages-\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id^=\"chat-messages___\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"messageContent_\"]"));
+    }
+
+    #[test]
+    fn category_snapshot_does_not_depend_on_discord_ui_language() {
+        assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id^=\"channels___\"][role=\"button\"]"));
+        assert!(!SNAPSHOT_SCRIPT.contains("aria-label$=\"(카테고리)\""));
     }
 
     #[test]

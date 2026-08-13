@@ -36,6 +36,8 @@ pub struct TranslationService {
     detector: LanguageDetector,
     incoming_detector: LanguageDetector,
     incoming_context_scope: String,
+    navigation_context_scope: String,
+    navigation_languages: HashMap<ScriptFamily, Language>,
 }
 
 impl TranslationService {
@@ -46,6 +48,8 @@ impl TranslationService {
             detector: LanguageDetector::default(),
             incoming_detector: LanguageDetector::default(),
             incoming_context_scope: String::new(),
+            navigation_context_scope: String::new(),
+            navigation_languages: HashMap::new(),
         }
     }
 
@@ -218,6 +222,11 @@ impl TranslationService {
             self.incoming_context_scope = context_scope.to_string();
             self.incoming_detector = LanguageDetector::default();
         }
+        let navigation_scope = navigation_context_scope(context_scope);
+        if self.navigation_context_scope != navigation_scope {
+            self.navigation_context_scope = navigation_scope;
+            self.navigation_languages.clear();
+        }
 
         let mut grouped_text = HashMap::<(String, ScriptFamily), String>::new();
         for (text, message_key) in texts.iter().zip(message_keys) {
@@ -241,6 +250,11 @@ impl TranslationService {
                 (language_script_family(language) == Some(key.1)).then_some((key, language))
             })
             .collect::<HashMap<_, _>>();
+        for ((message_key, family), language) in &grouped_languages {
+            if message_key == "navigation" {
+                self.navigation_languages.insert(*family, *language);
+            }
+        }
 
         let mut remembered_groups = HashSet::new();
         let mut hints = Vec::with_capacity(texts.len());
@@ -252,7 +266,11 @@ impl TranslationService {
                 {
                     let group_key = (message_key.clone(), family);
                     if remembered_groups.insert(group_key) {
-                        self.incoming_detector.remember(direct);
+                        if message_key == "navigation" {
+                            self.navigation_languages.entry(family).or_insert(direct);
+                        } else {
+                            self.incoming_detector.remember(direct);
+                        }
                     }
                 }
                 hints.push(None);
@@ -269,12 +287,19 @@ impl TranslationService {
             let group_key = (message_key.clone(), family);
             if let Some(language) = grouped_languages.get(&group_key).copied() {
                 if remembered_groups.insert(group_key) {
-                    self.incoming_detector.remember(language);
+                    if message_key != "navigation" {
+                        self.incoming_detector.remember(language);
+                    }
                 }
                 hints.push(Some(language));
                 continue;
             }
-            hints.push(self.incoming_detector.recent_language_for(text));
+            let recent = if message_key == "navigation" {
+                self.navigation_languages.get(&family).copied()
+            } else {
+                self.incoming_detector.recent_language_for(text)
+            };
+            hints.push(recent);
         }
         Ok(hints)
     }
@@ -510,6 +535,16 @@ impl TranslationService {
             )?;
         }
         Ok(restored)
+    }
+}
+
+fn navigation_context_scope(context_scope: &str) -> String {
+    let mut segments = context_scope
+        .split('/')
+        .filter(|segment| !segment.is_empty());
+    match (segments.next(), segments.next()) {
+        (Some("channels"), Some(server)) => format!("/channels/{server}"),
+        _ => context_scope.to_string(),
     }
 }
 
@@ -839,6 +874,122 @@ mod tests {
                 "[ko] is so fkn funny".to_string(),
                 "[ko] LMAO".to_string(),
             ]
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_navigation_context_translates_short_english_labels() {
+        let path = cache_path("short-english-navigation");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = [
+            "Info",
+            "update-log",
+            "entrance",
+            "rules",
+            "roles",
+            "General",
+            "chat",
+            "voice-chat",
+            "media",
+            "games",
+            "art",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let navigation_keys = vec![Some("navigation".to_string()); source.len()];
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &navigation_keys,
+                "/channels/guild/current",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            source
+                .iter()
+                .map(|label| format!("[ko] {label}"))
+                .collect::<Vec<_>>()
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn navigation_language_context_does_not_leak_into_messages() {
+        let path = cache_path("navigation-message-isolation");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let navigation = ["General", "rules", "voice-chat"]
+            .map(str::to_string)
+            .to_vec();
+        let navigation_keys = vec![Some("navigation".to_string()); navigation.len()];
+        service
+            .translate_many_for_incoming_contextual(
+                &navigation,
+                &navigation_keys,
+                "/channels/guild/first",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &["thx".to_string()],
+                    &[Some("message-1".to_string())],
+                    "/channels/guild/first",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec!["thx".to_string()]
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn navigation_language_context_survives_channel_changes_in_the_same_server() {
+        let path = cache_path("navigation-server-scope");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let navigation = ["General", "rules", "voice-chat"]
+            .map(str::to_string)
+            .to_vec();
+        let navigation_keys = vec![Some("navigation".to_string()); navigation.len()];
+        service
+            .translate_many_for_incoming_contextual(
+                &navigation,
+                &navigation_keys,
+                "/channels/guild/first",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &["pets".to_string()],
+                    &[Some("navigation".to_string())],
+                    "/channels/guild/second",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec!["[ko] pets".to_string()]
+        );
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &["art".to_string()],
+                    &[Some("navigation".to_string())],
+                    "/channels/other-server/first",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec!["art".to_string()]
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
