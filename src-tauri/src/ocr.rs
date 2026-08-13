@@ -713,7 +713,7 @@ mod tests {
                 .count();
             coverage.insert(code.to_string(), (present, letters.len()));
         }
-        assert_eq!(coverage.len(), 20);
+        assert_eq!(coverage.len(), 28);
 
         let mut report = String::from(
             "# OCR language coverage audit\n\n\

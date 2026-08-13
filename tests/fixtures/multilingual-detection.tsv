@@ -39,6 +39,22 @@ nl	normal	Wil je vanavond met ons op de server spelen?
 nl	noise	<@123456> Lees de regels voordat je bij het spraakkanaal komt.
 ms	normal	Awak mahu bermain bersama kami di pelayan malam ini?
 ms	noise	<@123456> Sila baca peraturan sebelum menyertai saluran suara.
+th	normal	คืนนี้คุณอยากเล่นเกมกับพวกเราในเซิร์ฟเวอร์ไหม?
+th	noise	<@123456> โปรดอ่านกฎก่อนเข้าร่วมช่องเสียง
+fil	normal	Gusto mo bang maglaro kasama namin sa server mamayang gabi?
+fil	noise	<@123456> Pakibasa ang mga patakaran bago sumali sa voice channel.
+bn	normal	তুমি কি আজ রাতে সার্ভারে আমাদের সঙ্গে খেলতে চাও?
+bn	noise	<@123456> ভয়েস চ্যানেলে যোগ দেওয়ার আগে নিয়মগুলো পড়ুন।
+ur	normal	کیا آپ آج رات سرور پر ہمارے ساتھ کھیلنا چاہتے ہیں؟
+ur	noise	<@123456> وائس چینل میں شامل ہونے سے پہلے قواعد پڑھیں۔
+ta	normal	இன்றிரவு சேவையகத்தில் எங்களுடன் விளையாட விரும்புகிறீர்களா?
+ta	noise	<@123456> குரல் சேனலில் சேரும் முன் விதிகளைப் படிக்கவும்.
+fa	normal	آیا می‌خواهید امشب در سرور با ما بازی کنید؟
+fa	noise	<@123456> لطفاً پیش از ورود به کانال صوتی قوانین را بخوانید.
+he	normal	רוצה לשחק איתנו הערב בשרת?
+he	noise	<@123456> נא לקרוא את הכללים לפני ההצטרפות לערוץ הקולי.
+cs	normal	Chceš si s námi dnes večer zahrát na serveru?
+cs	noise	<@123456> Před připojením k hlasovému kanálu si přečti pravidla.
 und	ambiguous	gg
 und	ambiguous	lol
 und	ambiguous	nice

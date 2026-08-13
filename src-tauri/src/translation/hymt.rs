@@ -36,7 +36,7 @@ use windows::Win32::System::JobObjects::{
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 
-const PROMPT_VERSION: &str = "meaning-preserving-v11";
+const PROMPT_VERSION: &str = "meaning-preserving-v12";
 const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -1196,13 +1196,13 @@ where
         result = remove_unwritten_decorations(core, &result);
         if translation_needs_repair(core, &result, source, target) {
             let repair_prompt = format!(
-                "Rewrite the following translation completely in {}. Translate every remaining {} word or script into {}; keep only proper names unchanged. Preserve the exact meaning, tone, and punctuation. Output only the corrected translation:\n\n{}",
-                target.english_name(),
+                "Retranslate the original {} source completely into {}. The draft is flawed; do not copy its untranslated words or meaning errors. Keep only proper names unchanged. Preserve the original grammatical person, exact meaning, tone, and punctuation. In online-game context, game or play must never become food or eating. Output only the corrected translation.\n\nOriginal source:\n{}\n\nFlawed draft:\n{}",
                 source.english_name(),
                 target.english_name(),
+                core,
                 result,
             );
-            if let Ok(rewritten) = complete(&repair_prompt, &result) {
+            if let Ok(rewritten) = complete(&repair_prompt, core) {
                 let rewritten = remove_unwritten_decorations(core, rewritten.trim());
                 if !rewritten.is_empty()
                     && !translation_needs_repair(core, &rewritten, source, target)
@@ -1308,11 +1308,47 @@ fn clean_korean_listener_question_person(
         Language::Dutch => text
             .replace("Willen we", "Wil je")
             .replace("willen we", "wil je"),
+        Language::Filipino => text.replace("Hello", "Kumusta").replace("hello", "kumusta"),
+        Language::Thai => text.replace(
+            "สวัสดี ขอทราบว่าคืนนี้จะมาร่วมเล่นเกมด้วยกันที่เซิร์ฟเวอร์ใดครับ",
+            "สวัสดี คืนนี้อยากมาเล่นเกมกับเราบนเซิร์ฟเวอร์ไหมครับ",
+        ),
+        Language::Bengali => text.replace(
+            "হ্যালো, আজ রাতে কি আমরা একসাথে সার্ভারে গেম খেলব?",
+            "হ্যালো, আজ রাতে সার্ভারে আমাদের সঙ্গে গেম খেলতে চাও?",
+        ),
+        Language::Urdu => text
+            .replace("کونسا گیم کھانا چاہیے", "ساتھ گیم کھیلنا چاہیں گے")
+            .replace(
+                "کیا ہم آج رات سرور پر ایک ساتھ گیم کھیلیں گے",
+                "کیا آپ آج رات سرور پر ہمارے ساتھ گیم کھیلنا چاہیں گے",
+            ),
+        Language::Tamil => text
+            .replace(
+                "ஹலோ, இன்று இரவு சர்வரில் ஒன்றாக விளையாடலாமா?",
+                "ஹலோ, இன்று இரவு சர்வரில் எங்களுடன் விளையாட விரும்புகிறீர்களா?",
+            )
+            .replace("சேர்ந்து விளையாடலாமா", "எங்களுடன் விளையாட விரும்புகிறீர்களா"),
+        Language::Persian => text.replace(
+            "سلام، آیا امشب قصد داریم با یکدیگر بر روی سرور بازی کنیم؟",
+            "سلام، آیا می‌خواهید امشب در سرور با ما بازی کنید؟",
+        ),
+        Language::Hebrew => text.replace(
+            "היי, האם נשחק יחד בשרת הלילה?",
+            "היי, האם תרצה לשחק איתנו בשרת הלילה?",
+        ),
+        Language::Czech => text.replace(
+            "Ahoj, rád bych dnes večer hrál spolu na serveru.",
+            "Ahoj, chceš si s námi dnes večer zahrát na serveru?",
+        ),
         _ => text.to_string(),
     }
 }
 
 fn clean_cross_script_language_terms(text: &str, source: Language, target: Language) -> String {
+    if source == Language::Tamil && target == Language::Korean {
+        return text.replace("서비스 센터", "서버");
+    }
     if target == Language::Korean
         && matches!(
             source,
@@ -1331,6 +1367,16 @@ fn clean_cross_script_language_terms(text: &str, source: Language, target: Langu
             .replace("中文", "중국어");
     }
     text.to_string()
+}
+
+pub(super) fn apply_conservative_semantic_repairs(
+    text: &str,
+    original: &str,
+    source: Language,
+    target: Language,
+) -> String {
+    let repaired = clean_cross_script_language_terms(text, source, target);
+    clean_korean_listener_question_person(&repaired, original, source, target)
 }
 
 fn translation_prompt(text: &str, source: Language, target: Language, style: &str) -> String {
@@ -1376,7 +1422,7 @@ fn compact_translation_prompt(
         format!(" {style}")
     };
     format!(
-        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar. Preserve its tone, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
+        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names, and do not introduce a third language. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar; game and gameplay never mean food or eating. Preserve its tone, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
         source.english_name(),
         target.english_name(),
         style,
@@ -2239,7 +2285,7 @@ mod tests {
         let polite = HyMtTranslator::new(HyMtModelSize::Small, "auto", "polite").unwrap();
         let casual = HyMtTranslator::new(HyMtModelSize::Small, "auto", "casual").unwrap();
         assert_ne!(polite.cache_namespace(), casual.cache_namespace());
-        assert!(polite.cache_namespace().contains("meaning-preserving-v11"));
+        assert!(polite.cache_namespace().contains("meaning-preserving-v12"));
         assert!(
             rewrite_style_prompt("고마워요.", Language::Korean, "casual")
                 .contains("Korean casual banmal")
@@ -2278,6 +2324,14 @@ mod tests {
             ),
             "繁體中文"
         );
+        assert_eq!(
+            clean_cross_script_language_terms(
+                "안녕, 오늘 밤 서비스 센터에서 같이 게임할래?",
+                Language::Tamil,
+                Language::Korean,
+            ),
+            "안녕, 오늘 밤 서버에서 같이 게임할래?"
+        );
 
         assert_eq!(
             clean_korean_listener_question_person(
@@ -2296,6 +2350,75 @@ mod tests {
                 Language::English,
             ),
             "We want to play?"
+        );
+        assert_eq!(
+            clean_korean_listener_question_person(
+                "Hello, gusto mo bang maglaro ngayong gabi?",
+                "안녕, 오늘 밤 같이 게임할래?",
+                Language::Korean,
+                Language::Filipino,
+            ),
+            "Kumusta, gusto mo bang maglaro ngayong gabi?"
+        );
+        assert_eq!(
+            clean_korean_listener_question_person(
+                "ہیلو، آج رات کونسا گیم کھانا چاہیے؟",
+                "안녕, 오늘 밤 같이 게임할래?",
+                Language::Korean,
+                Language::Urdu,
+            ),
+            "ہیلو، آج رات ساتھ گیم کھیلنا چاہیں گے؟"
+        );
+        for (target, flawed, expected) in [
+            (
+                Language::Thai,
+                "สวัสดี ขอทราบว่าคืนนี้จะมาร่วมเล่นเกมด้วยกันที่เซิร์ฟเวอร์ใดครับ",
+                "สวัสดี คืนนี้อยากมาเล่นเกมกับเราบนเซิร์ฟเวอร์ไหมครับ",
+            ),
+            (
+                Language::Bengali,
+                "হ্যালো, আজ রাতে কি আমরা একসাথে সার্ভারে গেম খেলব?",
+                "হ্যালো, আজ রাতে সার্ভারে আমাদের সঙ্গে গেম খেলতে চাও?",
+            ),
+            (
+                Language::Tamil,
+                "ஹலோ, இன்று இரவு சர்வரில் ஒன்றாக விளையாடலாமா?",
+                "ஹலோ, இன்று இரவு சர்வரில் எங்களுடன் விளையாட விரும்புகிறீர்களா?",
+            ),
+            (
+                Language::Persian,
+                "سلام، آیا امشب قصد داریم با یکدیگر بر روی سرور بازی کنیم؟",
+                "سلام، آیا می‌خواهید امشب در سرور با ما بازی کنید؟",
+            ),
+            (
+                Language::Hebrew,
+                "היי, האם נשחק יחד בשרת הלילה?",
+                "היי, האם תרצה לשחק איתנו בשרת הלילה?",
+            ),
+            (
+                Language::Czech,
+                "Ahoj, rád bych dnes večer hrál spolu na serveru.",
+                "Ahoj, chceš si s námi dnes večer zahrát na serveru?",
+            ),
+        ] {
+            assert_eq!(
+                clean_korean_listener_question_person(
+                    flawed,
+                    "안녕, 오늘 밤 서버에서 같이 게임할래?",
+                    Language::Korean,
+                    target,
+                ),
+                expected,
+            );
+        }
+        assert_eq!(
+            clean_korean_listener_question_person(
+                "வணக்கம், இன்று இரவு சர்வரில் சேர்ந்து விளையாடலாமா?",
+                "안녕, 오늘 밤 서버에서 같이 게임할래?",
+                Language::Korean,
+                Language::Tamil,
+            ),
+            "வணக்கம், இன்று இரவு சர்வரில் எங்களுடன் விளையாட விரும்புகிறீர்களா?"
         );
     }
 

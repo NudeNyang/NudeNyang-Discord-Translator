@@ -1,6 +1,6 @@
 :root {
   color-scheme: light dark;
-  font-family: "Segoe UI Variable", "Pretendard", "Noto Sans KR", sans-serif;
+  font-family: "Segoe UI Variable", "Nirmala UI", "Leelawadee UI", "Pretendard", "Noto Sans KR", "Noto Sans Thai", "Noto Sans Bengali", "Noto Sans Tamil", "Noto Sans Arabic", "Noto Sans Hebrew", sans-serif;
   --panel: #f7fbfe;
   --surface: #edf4f9;
   --hover: #dceafb;
@@ -250,6 +250,13 @@ button:focus-visible {
   direction: ltr;
   text-align: left;
 }
+
+.language-option[data-language="ar"] .menu-copy,
+.language-option[data-language="ur"] .menu-copy,
+.language-option[data-language="fa"] .menu-copy,
+.language-option[data-language="he"] .menu-copy {
+    text-align: right;
+  }
 
 .language-check,
 .model-check {

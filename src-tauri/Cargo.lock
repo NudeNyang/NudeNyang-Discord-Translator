@@ -2727,23 +2727,31 @@ dependencies = [
  "include_dir",
  "itertools 0.14.0",
  "lingua-arabic-language-model",
+ "lingua-bengali-language-model",
  "lingua-chinese-language-model",
+ "lingua-czech-language-model",
  "lingua-dutch-language-model",
  "lingua-english-language-model",
  "lingua-french-language-model",
  "lingua-german-language-model",
+ "lingua-hebrew-language-model",
  "lingua-hindi-language-model",
  "lingua-indonesian-language-model",
  "lingua-italian-language-model",
  "lingua-japanese-language-model",
  "lingua-korean-language-model",
  "lingua-malay-language-model",
+ "lingua-persian-language-model",
  "lingua-polish-language-model",
  "lingua-portuguese-language-model",
  "lingua-russian-language-model",
  "lingua-spanish-language-model",
+ "lingua-tagalog-language-model",
+ "lingua-tamil-language-model",
+ "lingua-thai-language-model",
  "lingua-turkish-language-model",
  "lingua-ukrainian-language-model",
+ "lingua-urdu-language-model",
  "lingua-vietnamese-language-model",
  "maplit",
  "rayon",
@@ -2765,10 +2773,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "lingua-bengali-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f94131563e0e0c571cebf03f867d0e1b7dd15278f7cab3e4ba8b0f8026072cc"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
 name = "lingua-chinese-language-model"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21ca7fa9f7671d684c82c168725f380fc873f14d6f4e8c82f0da681bcc0048d1"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
+name = "lingua-czech-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "348f06e4f90e1c2bc597ea3caf52abb9d3dd09ba227fa7cf4f2dc723a9810e98"
 dependencies = [
  "include_dir",
 ]
@@ -2805,6 +2831,15 @@ name = "lingua-german-language-model"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f584da803e8c135ea22dd3ed321a6b3e2ff3465559606be0a597924ecd465cb2"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
+name = "lingua-hebrew-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc49d9a174de884bba595c8b575ee37fdb1c1a728eeff608d43e1a7378048545"
 dependencies = [
  "include_dir",
 ]
@@ -2864,6 +2899,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lingua-persian-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ddf084e05d33ed66d64461e6397b571fdf74fe93c13c4ac4c84a633e33d2d07b"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
 name = "lingua-polish-language-model"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2900,6 +2944,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "lingua-tagalog-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe7e48a2d97dc20ebe3618c794d45c363299e4930cc2ff2fd21b174130d75e8d"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
+name = "lingua-tamil-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "212e6ed4c50fc9b06278f5b401ba17eeece43ccc84515e95ece76efd16e55d9b"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
+name = "lingua-thai-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2582eeabf02e39680856c3f88d3b93fcdb351009407d38a4735326c8b0a33bce"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
 name = "lingua-turkish-language-model"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2913,6 +2984,15 @@ name = "lingua-ukrainian-language-model"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b86175a68d53b3b1e3aaf2e2fa61d31e8f03df7e0fcb51d7e1dd62fce86cb393"
+dependencies = [
+ "include_dir",
+]
+
+[[package]]
+name = "lingua-urdu-language-model"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d308fdae7c8caa05ffe455e8a2e568e5f018cb2742f588a810ecf306b890622"
 dependencies = [
  "include_dir",
 ]
@@ -3186,7 +3266,7 @@ dependencies = [
 
 [[package]]
 name = "nude-translator-tauri"
-version = "0.5.1"
+version = "0.5.3-beta"
 dependencies = [
  "ab_glyph",
  "base64 0.22.1",

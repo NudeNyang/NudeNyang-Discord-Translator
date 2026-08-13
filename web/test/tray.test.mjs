@@ -65,7 +65,7 @@ test("translation state changes are broadcast to the open tray menu", () => {
 });
 
 test("display language can be changed inside the tray menu", () => {
-  assert.equal(LANGUAGE_OPTIONS.length, 20);
+  assert.equal(LANGUAGE_OPTIONS.length, 28);
   for (const [language] of LANGUAGE_OPTIONS) {
     assert.match(trayScript, new RegExp(`LANGUAGE_OPTIONS`));
     assert.ok(language.length >= 2);

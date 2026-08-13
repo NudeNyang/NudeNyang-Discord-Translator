@@ -10,12 +10,13 @@ use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::accessibility::{self, AccessibilitySnapshot};
 use crate::cache::{CacheCleanupResult, TranslationCache};
 use crate::cdp::CdpClient;
 use crate::config::{default_config_path, AppConfig, ConfigStore};
 use crate::dom::{
     apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
-    INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
+    RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
 };
 use crate::image_translation::{
     apply_image_error_script, apply_image_result_script, fetch_image_data_script,
@@ -80,7 +81,7 @@ impl RuntimeStatus {
             cdp_connected: false,
             connection_issue: String::new(),
             discord_process_id: None,
-            engine: "rust-native".to_string(),
+            engine: "rust-accessibility".to_string(),
             target_language: config.target_language.clone(),
             configured_translator: config.translator.clone(),
             active_translator: "original".to_string(),
@@ -105,7 +106,6 @@ pub struct RustEngine {
 enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
-    ReplaceCdp(CdpClient),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
     UiReady,
@@ -343,12 +343,6 @@ impl RustEngine {
             .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
     }
 
-    pub fn replace_cdp(&self, client: CdpClient) -> Result<(), String> {
-        self.controls
-            .send(Control::ReplaceCdp(client))
-            .map_err(|_| "Rust 번역 엔진에 보안 CDP 연결을 전달하지 못했습니다.".to_string())
-    }
-
     pub fn attach_app(&self, app: AppHandle) -> Result<(), String> {
         self.controls
             .send(Control::AttachApp(app))
@@ -428,6 +422,7 @@ fn run_controller(
     let mut connection_issue_reported = false;
     let mut image_ui_needs_cleanup = true;
     let mut outgoing_ui_needs_cleanup = true;
+    let mut accessibility_snapshot: Option<AccessibilitySnapshot> = None;
     let mut app_handle: Option<AppHandle> = None;
     let mut ui_ready = false;
     let mut stopped = false;
@@ -618,25 +613,6 @@ fn run_controller(
                         }
                     }
                 }
-                Control::ReplaceCdp(mut replacement) => {
-                    restore(&mut client, &states, false);
-                    if let Err(error) = replacement
-                        .connect()
-                        .and_then(|_| replacement.evaluate(INSTALL_TEXT_RESTORE_SCRIPT, false))
-                    {
-                        crate::diagnostics::error("cdp", &error);
-                    }
-                    client = Some(replacement);
-                    states.clear();
-                    pending.clear();
-                    image_pending.clear();
-                    outgoing_pending.clear();
-                    generation += 1;
-                    image_ui_needs_cleanup = true;
-                    outgoing_ui_needs_cleanup = true;
-                    consecutive_connection_failures = 0;
-                    connection_issue_reported = false;
-                }
                 Control::ClearCache(result_tx) => {
                     let result = outgoing_original_store
                         .as_ref()
@@ -767,13 +743,42 @@ fn run_controller(
             &config,
             &status,
         );
+        refresh_accessibility_overlay(
+            app_handle.as_ref(),
+            accessibility_snapshot.as_ref(),
+            &states,
+            config.enabled,
+        );
 
         let had_client = client.is_some();
         let result = (|| -> Result<(), String> {
             if client.is_none() {
-                return Err(
-                    "Discord가 보안 연결로 열리지 않았어. Discord 재시작을 진행해줘.".to_string(),
+                let snapshot = accessibility::snapshot()?;
+                consecutive_connection_failures = 0;
+                connection_issue_reported = false;
+                update_status(&status, |runtime| {
+                    runtime.cdp_connected = true;
+                    runtime.connection_issue.clear();
+                    runtime.discord_process_id = Some(snapshot.process_id);
+                });
+                if config.enabled {
+                    scan_accessibility(
+                        &snapshot,
+                        &states,
+                        &mut pending,
+                        generation,
+                        target,
+                        &worker_tx,
+                    )?;
+                }
+                accessibility_snapshot = Some(snapshot);
+                refresh_accessibility_overlay(
+                    app_handle.as_ref(),
+                    accessibility_snapshot.as_ref(),
+                    &states,
+                    config.enabled,
                 );
+                return Ok(());
             }
             client.as_mut().expect("connected CDP client").connect()?;
             consecutive_connection_failures = 0;
@@ -903,7 +908,15 @@ fn run_controller(
             }
             image_ui_needs_cleanup = true;
             outgoing_ui_needs_cleanup = true;
-            update_status(&status, |runtime| runtime.cdp_connected = false);
+            update_status(&status, |runtime| {
+                runtime.cdp_connected = false;
+                runtime.discord_process_id =
+                    crate::discord::current_process().map(|process| process.process_id);
+            });
+            if client.is_none() {
+                accessibility_snapshot = None;
+                refresh_accessibility_overlay(app_handle.as_ref(), None, &states, false);
+            }
         }
 
         let interval = if client.is_some() {
@@ -922,6 +935,7 @@ fn run_controller(
     }
 
     restore(&mut client, &states, false);
+    refresh_accessibility_overlay(app_handle.as_ref(), None, &states, false);
     if let Some(client) = client.as_mut() {
         let _ = client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
     }
@@ -935,6 +949,55 @@ fn run_controller(
     }
     if let Some(mut client) = client {
         client.close();
+    }
+}
+
+fn scan_accessibility(
+    snapshot: &AccessibilitySnapshot,
+    states: &HashMap<Locator, PartState>,
+    pending: &mut HashSet<PendingKey>,
+    generation: u64,
+    target: Language,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<(), String> {
+    let snapshot_parts = snapshot
+        .parts
+        .iter()
+        .map(|accessible| accessible.part.clone())
+        .collect();
+    let (_, parts) = plan_dom_updates(snapshot_parts, states, pending, generation);
+    if !parts.is_empty() {
+        worker
+            .send(WorkerCommand::Translate(TranslationBatch {
+                generation,
+                target,
+                parts,
+                queued_at: Instant::now(),
+            }))
+            .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
+    }
+    Ok(())
+}
+
+fn refresh_accessibility_overlay(
+    app: Option<&AppHandle>,
+    snapshot: Option<&AccessibilitySnapshot>,
+    states: &HashMap<Locator, PartState>,
+    enabled: bool,
+) {
+    let Some(app) = app else {
+        return;
+    };
+    let Some(snapshot) = snapshot.filter(|_| enabled) else {
+        accessibility::hide_overlay(app);
+        return;
+    };
+    if let Err(error) = accessibility::show_overlay(app, snapshot, |part| {
+        states
+            .get(&part.locator())
+            .map(|state| state.translated.clone())
+    }) {
+        crate::diagnostics::warn("accessibility-overlay", &error);
     }
 }
 
@@ -2236,7 +2299,7 @@ mod tests {
     fn runtime_status_starts_with_the_configured_contract() {
         let config = AppConfig::default();
         let status = RuntimeStatus::new(&config);
-        assert_eq!(status.engine, "rust-native");
+        assert_eq!(status.engine, "rust-accessibility");
         assert_eq!(status.configured_translator, "hymt_1_8b");
         assert_eq!(status.active_translator, "original");
     }

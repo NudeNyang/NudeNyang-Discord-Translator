@@ -9,6 +9,7 @@ use crate::language::{Language, LanguageDetector};
 use crate::text_split::split_for_translation;
 
 use super::discord_format::DiscordFormatTemplate;
+use super::hymt::apply_conservative_semantic_repairs;
 use super::protected_text::{protect_text, sanitize_unexpected_marker_artifacts, ProtectedText};
 use super::Translator;
 
@@ -185,6 +186,7 @@ impl TranslationService {
                 false,
             )? {
                 let cached = sanitize_unexpected_marker_artifacts(text, &cached);
+                let cached = apply_conservative_semantic_repairs(&cached, text, source, target);
                 results[index] = Some(preserve_terminal_punctuation(text, &cached));
                 cache_hits += 1;
                 continue;
@@ -205,8 +207,10 @@ impl TranslationService {
             for ((index, text, protected, source, hash), translated) in
                 pending.into_iter().zip(translated)
             {
+                let restored = protected.restore(&translated);
                 let restored =
-                    preserve_terminal_punctuation(&text, &protected.restore(&translated));
+                    apply_conservative_semantic_repairs(&restored, &text, source, target);
+                let restored = preserve_terminal_punctuation(&text, &restored);
                 if self
                     .translator
                     .should_cache(&text, &restored, source, target)
@@ -297,12 +301,15 @@ impl TranslationService {
             false,
         )? {
             let cached = sanitize_unexpected_marker_artifacts(text, &cached);
+            let cached = apply_conservative_semantic_repairs(&cached, text, source, target);
             return Ok(preserve_terminal_punctuation(text, &cached));
         }
         let translated = self
             .translator
             .translate(&protected.masked, source, target)?;
-        let restored = preserve_terminal_punctuation(text, &protected.restore(&translated));
+        let restored = protected.restore(&translated);
+        let restored = apply_conservative_semantic_repairs(&restored, text, source, target);
+        let restored = preserve_terminal_punctuation(text, &restored);
         if self
             .translator
             .should_cache(text, &restored, source, target)
@@ -801,7 +808,7 @@ mod tests {
                     .then(|| (Language::try_from(code).unwrap(), text.to_string()))
             })
             .collect::<Vec<_>>();
-        assert_eq!(samples.len(), 20);
+        assert_eq!(samples.len(), 28);
 
         let mut report = String::from(
             "# Hy-MT2 1.8B multilingual smoke benchmark\n\n\
@@ -935,6 +942,138 @@ mod tests {
         }
         service.translator_mut().close();
         let _ = fs::remove_dir_all(path.parent().unwrap());
+        assert!(failures.is_empty(), "\n{report}");
+    }
+
+    #[test]
+    #[ignore = "verified Hy-MT2 7B, TranslateGemma 4B, and llama-server are required"]
+    fn multilingual_translation_benchmark_extended_local_models() {
+        let fixture = include_str!("../../../tests/fixtures/multilingual-detection.tsv");
+        let extended_codes = ["th", "fil", "bn", "ur", "ta", "fa", "he", "cs"];
+        let samples = fixture
+            .lines()
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .filter_map(|line| {
+                let mut columns = line.splitn(3, '\t');
+                let code = columns.next()?;
+                let scenario = columns.next()?;
+                let text = columns.next()?;
+                (scenario == "normal" && extended_codes.contains(&code))
+                    .then(|| (Language::try_from(code).unwrap(), text.to_string()))
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(samples.len(), extended_codes.len());
+        let korean = "안녕, 오늘 밤 서버에서 같이 게임할래?";
+        let mut report = String::from(
+            "# Extended-language local model benchmark\n\n\
+             Hy-MT2 7B and TranslateGemma 4B are checked on the eight first-wave extension languages.\n\n\
+             | Model | Direction | Detected output | Gate | Translation |\n\
+             |---|---|---|---|---|\n",
+        );
+        let mut failures = Vec::new();
+
+        for (model_size, model_key) in [
+            (HyMtModelSize::Large, "hymt-7b"),
+            (HyMtModelSize::TranslateGemma4B, "translategemma-4b"),
+        ] {
+            let path = cache_path(&format!("extended-{model_key}"));
+            let cache = TranslationCache::open(path.clone(), 64).unwrap();
+            let translator = HyMtTranslator::new(model_size, "auto", "auto")
+                .unwrap_or_else(|error| panic!("create {model_key}: {error}"));
+            assert!(
+                translator.model_is_ready(),
+                "{model_key} model is not verified"
+            );
+            let mut service = TranslationService::new(Box::new(translator), cache);
+            service
+                .translator_mut()
+                .prepare()
+                .unwrap_or_else(|error| panic!("start {model_key}: {error}"));
+
+            for (source, text) in &samples {
+                for (source_text, source_language, target) in [
+                    (text.as_str(), *source, Language::Korean),
+                    (korean, Language::Korean, *source),
+                ] {
+                    match service.translate(source_text, target) {
+                        Ok(translated) => {
+                            let detection = detect_language(&translated);
+                            let needs_repair = translation_needs_repair(
+                                source_text,
+                                &translated,
+                                source_language,
+                                target,
+                            );
+                            let confidently_wrong = detection.language != Language::Unknown
+                                && detection.language != target;
+                            let listener_question_drift = source_language == Language::Korean
+                                && match target {
+                                    Language::Thai => translated.contains("เซิร์ฟเวอร์ใด"),
+                                    Language::Bengali => translated.contains("কি আমরা"),
+                                    Language::Urdu => translated.contains("کیا ہم"),
+                                    Language::Tamil => translated.contains("விளையாடலாமா"),
+                                    Language::Persian => translated.contains("قصد داریم"),
+                                    Language::Hebrew => translated.contains("האם נשחק"),
+                                    Language::Czech => translated.contains("rád bych"),
+                                    _ => false,
+                                };
+                            let source_meaning_drift = source_language == Language::Tamil
+                                && target == Language::Korean
+                                && translated.contains("서비스 센터");
+                            if needs_repair
+                                || confidently_wrong
+                                || listener_question_drift
+                                || source_meaning_drift
+                            {
+                                failures.push(format!(
+                                    "{model_key} {}->{} detected={} repair={needs_repair} listener_drift={listener_question_drift} meaning_drift={source_meaning_drift}: {translated}",
+                                    source_language.code(),
+                                    target.code(),
+                                    detection.language.code(),
+                                ));
+                            }
+                            let safe = translated.replace('|', "\\|").replace('\n', "<br>");
+                            let _ = writeln!(
+                                report,
+                                "| `{model_key}` | `{}` → `{}` | `{}` | {} | {safe} |",
+                                source_language.code(),
+                                target.code(),
+                                detection.language.code(),
+                                if needs_repair
+                                    || confidently_wrong
+                                    || listener_question_drift
+                                    || source_meaning_drift
+                                {
+                                    "repair"
+                                } else {
+                                    "pass"
+                                },
+                            );
+                        }
+                        Err(error) => failures.push(format!(
+                            "{model_key} {}->{} error: {error}",
+                            source_language.code(),
+                            target.code(),
+                        )),
+                    }
+                }
+            }
+            service.translator_mut().close();
+            let _ = fs::remove_dir_all(path.parent().unwrap());
+        }
+
+        if !failures.is_empty() {
+            report.push_str("\n## Failures\n\n");
+            for failure in &failures {
+                let _ = writeln!(report, "- {failure}");
+            }
+        }
+        if let Ok(main_report) = std::env::var("NUDE_TRANSLATOR_TRANSLATION_REPORT") {
+            let path = std::path::PathBuf::from(main_report)
+                .with_file_name("extended-local-models-translation.md");
+            std::fs::write(&path, &report).unwrap();
+            println!("{}", path.display());
+        }
         assert!(failures.is_empty(), "\n{report}");
     }
 

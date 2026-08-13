@@ -21,7 +21,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const sendImmediatelyShortcut = __SEND_IMMEDIATELY_SHORTCUT__;
   const reviewBeforeSendShortcut = __REVIEW_BEFORE_SEND_SHORTCUT__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl','th','fil','bn','ur','ta','fa','he','cs'];
   function resolveUiLanguage(value) {
     const normalized = String(value || '').replaceAll('_','-').toLowerCase();
     if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
@@ -33,7 +33,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 35;
+  const CONTROLLER_VERSION = 36;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
@@ -83,6 +83,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   }, __GENERATED_OUTGOING_COPIES__);
   const languageLabels = __LANGUAGE_LABELS__;
   const languageEnglishNames = __LANGUAGE_ENGLISH_NAMES__;
+  const languageSearchAliases = __LANGUAGE_SEARCH_ALIASES__;
   const languageCodes = __LANGUAGE_CODES__;
   const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__;
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
@@ -294,11 +295,14 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     menu.append(...buttons, empty);
     input.addEventListener('input', () => {
       const query = normalizeLanguageSearch(input.value);
+      const exactCodes = new Set(query ? choices.filter(code =>
+        [code, languageSearchAliases[code] || ''].some(value => normalizeLanguageSearch(value) === query)
+      ) : []);
       let visible = 0;
       buttons.forEach((button, index) => {
         const code = choices[index];
-        const searchable = normalizeLanguageSearch(`${languageLabels[code]} ${code} ${languageEnglishNames[code] || ''}`);
-        button.hidden = Boolean(query) && !searchable.includes(query);
+        const searchable = normalizeLanguageSearch(`${languageLabels[code]} ${code} ${languageSearchAliases[code] || ''} ${languageEnglishNames[code] || ''}`);
+        button.hidden = Boolean(query) && (exactCodes.size ? !exactCodes.has(code) : !searchable.includes(query));
         if (!button.hidden) visible += 1;
       });
       empty.hidden = visible > 0;
@@ -435,6 +439,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-menu-scroll-thumb{position:absolute;top:0;right:3px;width:3px;min-height:32px;border-radius:3px;background:var(--nt-role-accent);opacity:.46;transition:width 140ms ease,right 140ms ease,opacity 140ms ease}
       #${ROOT_ID} .nt-menu-scroll-indicator:hover .nt-menu-scroll-thumb,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-dragging .nt-menu-scroll-thumb{right:2px;width:6px;opacity:.95}
       #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;justify-content:flex-start;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
+      #${ROOT_ID} .nt-outgoing-menu button:is([data-value="ar"],[data-value="ur"],[data-value="fa"],[data-value="he"]),#${ROOT_ID} .nt-display-menu button:is([data-value="ar"],[data-value="ur"],[data-value="fa"],[data-value="he"]){justify-content:flex-end;text-align:right}
       #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
       #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
       #${ROOT_ID} .nt-language-search{position:sticky;z-index:1;top:-6px;padding:5px 3px 6px;background:var(--background-floating,#111214)}
@@ -583,14 +588,39 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             && bounds.bottom <= window.innerHeight + 1;
         });
         const editor = editors.sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top).at(-1);
-        if (!editor) {
+        const composer = editor?.closest('form') || editor?.closest('[class*="channelTextArea"]') || editor?.parentElement || null;
+        const visibleAnchors = selector => [...document.querySelectorAll(selector)].filter(anchor => {
+          const bounds = anchor.getBoundingClientRect();
+          return bounds.width > 120
+            && bounds.height > 20
+            && bounds.right > 0
+            && bounds.left < window.innerWidth
+            && bounds.bottom > 0
+            && bounds.top < window.innerHeight;
+        });
+        const readonlyComposer = visibleAnchors('[class*="channelTextArea"]').sort(
+          (left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top
+        ).at(-1) || null;
+        const readonlyAnchor = readonlyComposer || visibleAnchors(
+          '[class*="chatContent"], [data-list-id="chat-messages"]'
+        ).sort((left, right) => {
+          const leftBounds = left.getBoundingClientRect();
+          const rightBounds = right.getBoundingClientRect();
+          return leftBounds.width * leftBounds.height - rightBounds.width * rightBounds.height;
+        }).at(-1) || null;
+        const anchor = composer || readonlyAnchor;
+        this.root.querySelector('.nt-outgoing-control').hidden = !this.enabled || !editor;
+        this.root.querySelector('.nt-display-control').hidden = !this.displayEnabled;
+        this.root.hidden = !this.displayEnabled && (!this.enabled || !editor);
+        if (!anchor || this.root.hidden) {
           this.root.style.visibility = 'hidden';
           return;
         }
-        const composer = editor.closest('form') || editor.closest('[class*="channelTextArea"]') || editor.parentElement;
-        const composerBounds = composer.getBoundingClientRect();
-        this.root.style.right = `${Math.max(12, window.innerWidth - composerBounds.right)}px`;
-        this.root.style.bottom = `${Math.max(78, window.innerHeight - composerBounds.top + 8)}px`;
+        const anchorBounds = anchor.getBoundingClientRect();
+        this.root.style.right = `${Math.max(12, window.innerWidth - anchorBounds.right)}px`;
+        this.root.style.bottom = composer || readonlyComposer
+          ? `${Math.max(78, window.innerHeight - anchorBounds.top + 8)}px`
+          : `${Math.max(24, window.innerHeight - anchorBounds.bottom + 24)}px`;
         this.root.style.visibility = '';
       },
       updateLabel() {
@@ -1123,7 +1153,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
   const requestedUiLanguage = __UI_LANGUAGE__;
   const displayTranslationEnabled = __DISPLAY_TRANSLATION_ENABLED__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl','th','fil','bn','ur','ta','fa','he','cs'];
   function resolveUiLanguage(value) {
     const normalized = String(value || '').replaceAll('_','-').toLowerCase();
     if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
@@ -1420,7 +1450,7 @@ pub fn outgoing_ui_script(
         .into_iter()
         .map(|language| {
             let compact = match language {
-                Language::Japanese => "JP",
+                Language::Japanese => "JA",
                 Language::ChineseSimplified => "CN",
                 Language::ChineseTraditional => "TW",
                 Language::BrazilianPortuguese => "BR",
@@ -1430,6 +1460,44 @@ pub fn outgoing_ui_script(
             (language.code(), compact.to_ascii_uppercase())
         })
         .chain(std::iter::once(("auto", "AU".to_string())))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let language_search_aliases = LANGUAGE_MENU_ORDER
+        .into_iter()
+        .map(|language| {
+            let country_code = match language {
+                Language::Korean => "KR",
+                Language::English => "US",
+                Language::Japanese => "JP",
+                Language::ChineseSimplified => "CN",
+                Language::ChineseTraditional => "TW",
+                Language::BrazilianPortuguese => "BR",
+                Language::Hindi => "IN",
+                Language::LatinAmericanSpanish => "MX",
+                Language::German => "DE",
+                Language::Russian => "RU",
+                Language::Indonesian => "ID",
+                Language::French => "FR",
+                Language::Turkish => "TR",
+                Language::Arabic => "SA",
+                Language::Vietnamese => "VN",
+                Language::Italian => "IT",
+                Language::Polish => "PL",
+                Language::Ukrainian => "UA",
+                Language::Malay => "MY",
+                Language::Dutch => "NL",
+                Language::Thai => "TH",
+                Language::Filipino => "PH",
+                Language::Bengali => "BD",
+                Language::Urdu => "PK",
+                Language::Tamil => "IN",
+                Language::Persian => "IR",
+                Language::Hebrew => "IL",
+                Language::Czech => "CZ",
+                Language::Unknown => unreachable!("unknown languages are not menu options"),
+            };
+            (language.code(), country_code)
+        })
+        .chain(std::iter::once(("auto", "")))
         .collect::<std::collections::BTreeMap<_, _>>();
     let language_codes = LANGUAGE_MENU_ORDER
         .into_iter()
@@ -1510,6 +1578,11 @@ pub fn outgoing_ui_script(
         .replace(
             "__LANGUAGE_ENGLISH_NAMES__",
             &serde_json::to_string(&language_english_names).expect("static English language names"),
+        )
+        .replace(
+            "__LANGUAGE_SEARCH_ALIASES__",
+            &serde_json::to_string(&language_search_aliases)
+                .expect("static language search aliases"),
         )
         .replace(
             "__COMPACT_LANGUAGE_LABELS__",
@@ -1775,6 +1848,27 @@ mod tests {
     }
 
     #[test]
+    fn display_control_keeps_a_read_only_channel_position_anchor() {
+        let script = outgoing_ui_script(
+            false,
+            true,
+            "ko",
+            "auto",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+
+        assert!(script.contains("const readonlyAnchor ="));
+        assert!(script.contains("[class*=\"channelTextArea\"]"));
+        assert!(script.contains("[class*=\"chatContent\"]"));
+        assert!(script
+            .contains("this.root.hidden = !this.displayEnabled && (!this.enabled || !editor)"));
+    }
+
+    #[test]
     fn outgoing_controller_releases_discord_when_the_app_heartbeat_stops() {
         let script = outgoing_ui_script(
             true,
@@ -1889,6 +1983,26 @@ mod tests {
         assert!(originals.contains("const requestedUiLanguage = \"en\""));
         assert!(!originals.contains("__GENERATED_ORIGINAL_COPIES__"));
         assert!(originals.contains("Show original"));
+    }
+
+    #[test]
+    fn outgoing_language_controls_use_language_labels_and_country_search_aliases() {
+        let script = outgoing_ui_script(
+            true,
+            true,
+            "ja",
+            "ja",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+
+        assert!(script.contains("\"ja\":\"JA\""));
+        assert!(script.contains("const languageSearchAliases"));
+        assert!(script.contains("\"ja\":\"JP\""));
+        assert!(script.contains("languageSearchAliases[code]"));
     }
 
     #[test]
@@ -2800,7 +2914,7 @@ mod tests {
             .expect("running app control state");
         eprintln!("running app overlay state: {state}");
         let any_enabled = config.enabled || config.outgoing_translation_enabled;
-        assert_eq!(state["version"].as_u64(), Some(28), "state: {state}");
+        assert_eq!(state["version"].as_u64(), Some(36), "state: {state}");
         assert_eq!(
             state["originalVersion"].as_u64(),
             Some(16),
@@ -2849,7 +2963,7 @@ mod tests {
         }
         let compact_code = |language: &str| match language {
             "ko" => "KO",
-            "ja" => "JP",
+            "ja" => "JA",
             "en" => "EN",
             "zh" => "CN",
             "zh-Hant" => "TW",
@@ -2862,7 +2976,7 @@ mod tests {
         assert!(
             matches!(
                 state["outgoingCode"].as_str(),
-                Some("AU" | "KO" | "JP" | "EN" | "CN" | "TW")
+                Some("AU" | "KO" | "JA" | "EN" | "CN" | "TW")
             ),
             "state: {state}"
         );

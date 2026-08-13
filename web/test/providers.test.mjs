@@ -138,7 +138,8 @@ test("normal child processes stay in the background without console flashes", ()
   assert.match(subscriptionCli, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
   assert.match(discord, /configure_background\(&mut command\)/);
   assert.match(discord, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
-  assert.match(discord, /EXTENDED_STARTUPINFO_PRESENT \| super::CREATE_NO_WINDOW/);
+  assert.doesNotMatch(discord, /EXTENDED_STARTUPINFO_PRESENT/);
+  assert.doesNotMatch(discord, /remote-debugging-io-pipes/);
 });
 
 test("DeepL API keys are applied when editing finishes and before confirmation", () => {

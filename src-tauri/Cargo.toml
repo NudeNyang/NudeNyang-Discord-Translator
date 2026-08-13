@@ -1,6 +1,6 @@
 [package]
 name = "nude-translator-tauri"
-version = "0.5.1"
+version = "0.5.3-beta"
 description = "NudeNyang Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
@@ -20,7 +20,7 @@ fs2 = "0.4"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 imageproc = "0.25"
 keyring = "4.1"
-lingua = { version = "1.8.0", default-features = false, features = ["arabic", "chinese", "dutch", "english", "french", "german", "hindi", "indonesian", "italian", "japanese", "korean", "malay", "polish", "portuguese", "russian", "spanish", "turkish", "ukrainian", "vietnamese"] }
+lingua = { version = "1.8.0", default-features = false, features = ["arabic", "bengali", "chinese", "czech", "dutch", "english", "french", "german", "hebrew", "hindi", "indonesian", "italian", "japanese", "korean", "malay", "persian", "polish", "portuguese", "russian", "spanish", "tagalog", "tamil", "thai", "turkish", "ukrainian", "urdu", "vietnamese"] }
 ocr-rs = { path = "../vendor/ocr-rs" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -38,6 +38,6 @@ tungstenite = "0.26"
 time = { version = "0.3", features = ["formatting"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_System_Com", "Win32_System_JobObjects", "Win32_System_Ole", "Win32_System_Threading", "Win32_System_Variant", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
 windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Console", "Win32_System_Pipes", "Win32_System_Threading"] }
 winreg = "0.55"
