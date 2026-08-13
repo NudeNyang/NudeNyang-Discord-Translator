@@ -1363,10 +1363,10 @@ async function waitForSettingsUpdates() {
 async function ensureRestartConsent() {
   if (state.config.discord_auto_restart_consent_granted) return true;
   const confirmed = await showModal({
-    title: "Discord 접근성 모드를 준비할까요?",
+    title: "Discord 자동 재시작을 허용하시겠습니까?",
     message:
-      "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.",
-    acceptText: "확인하고 준비",
+      "실시간 번역을 켜면 Discord가 디버그 렌더러 모드로 실행되지 않았을 때 15초 안내 후 자동으로 다시 시작합니다.\n\n재시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.",
+    acceptText: "동의하고 켜기",
   });
   if (!confirmed) return false;
   state.config = normalizeConfig(
@@ -1514,7 +1514,7 @@ async function handleRestartRequired(status) {
       return;
     }
     const confirmed = await showModal({
-      title: "Discord 접근성 모드를 준비합니다",
+      title: "Discord 번역 연결을 준비합니다",
       message: restartCountdownMessage(15),
       acceptText: "지금 재시작",
       autoSeconds: 15,

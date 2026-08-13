@@ -1,6 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod accessibility;
 pub mod cache;
 pub mod cdp;
 mod config;
@@ -719,18 +718,31 @@ fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
     }
 }
 
-fn start_accessible_discord_for_autostart() {
+fn start_pipe_discord_for_autostart(app: AppHandle) {
     if discord::current_process().is_some() {
         return;
     }
-    if let Err(error) = discord::start_accessibly() {
-        diagnostics::warn("discord-startup", &error);
-    }
+    let engine = app.state::<RustEngine>().inner().clone();
+    tauri::async_runtime::spawn(async move {
+        let result = tauri::async_runtime::spawn_blocking(|| discord::restart_pipe(None)).await;
+        match result {
+            Ok(Ok((_process, cdp))) => {
+                if let Err(error) = engine.replace_cdp(cdp) {
+                    diagnostics::error("discord-startup", &error);
+                }
+            }
+            Ok(Err(error)) => diagnostics::warn("discord-startup", &error),
+            Err(error) => diagnostics::warn(
+                "discord-startup",
+                &format!("Discord 자동 실행 작업을 기다리지 못했습니다: {error}"),
+            ),
+        }
+    });
 }
 
 fn initialize_autostart(app: AppHandle) {
-    match autostart_get_blocking(app) {
-        Ok(true) => start_accessible_discord_for_autostart(),
+    match autostart_get_blocking(app.clone()) {
+        Ok(true) => start_pipe_discord_for_autostart(app),
         Ok(false) => {}
         Err(error) => diagnostics::warn("discord-startup", &error),
     }
@@ -906,25 +918,20 @@ async fn discord_restart(
 ) -> Result<Value, String> {
     let client = engine.inner().clone();
     let _ = client.set_enabled(false);
-    let restart_result = tauri::async_runtime::spawn_blocking(move || {
-        discord::restart_accessibly(expected_process_id)
-    })
-    .await
-    .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
-    let process = match restart_result {
+    let restart_result =
+        tauri::async_runtime::spawn_blocking(move || discord::restart_pipe(expected_process_id))
+            .await
+            .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
+    let (process, cdp) = match restart_result {
         Ok(result) => result,
         Err(error) => {
             let _ = client.set_enabled(true);
             return Err(error);
         }
     };
+    client.replace_cdp(cdp)?;
     let _ = client.set_enabled(true);
     Ok(json!({"connected": true, "process": process}))
-}
-
-#[tauri::command]
-fn accessibility_controls_resize(app: AppHandle, expanded: bool) -> Result<(), String> {
-    accessibility::resize_controls(&app, expanded)
 }
 
 #[tauri::command]
@@ -1017,12 +1024,17 @@ fn shutdown_translation(app: &AppHandle) {
         return;
     }
     let engine = app.state::<RustEngine>();
+    let pipe_discord = discord::current_pipe_process();
     let _ = app.state::<ProviderLoginState>().cancel();
     let _ = engine.set_enabled(false);
     let config = app.state::<ConfigStore>();
     let _ = config.update(json!({"enabled": false}));
     engine.stop();
-    accessibility::hide_overlay(app);
+    if let Some(process) = pipe_discord {
+        if let Err(error) = discord::restart_accessibly_after_pipe(process) {
+            diagnostics::error("discord_restart", &error);
+        }
+    }
 }
 
 fn hide_tray_menu(app: &AppHandle) {
@@ -1253,14 +1265,45 @@ fn main() {
     let process_arguments = std::env::args_os().collect::<Vec<_>>();
     if process_arguments
         .get(1)
-        .is_some_and(|argument| argument == "--verify-discord-accessibility")
+        .is_some_and(|argument| argument == "--discord-cdp-pipe-helper")
     {
-        match accessibility::snapshot() {
-            Ok(snapshot) => println!(
-                "ACCESSIBILITY_PID={} VISIBLE_MESSAGES={}",
-                snapshot.process_id,
-                snapshot.parts.len()
-            ),
+        let result = process_arguments
+            .get(2)
+            .map(std::path::Path::new)
+            .ok_or_else(|| "Discord 실행 경로가 없습니다.".to_string())
+            .and_then(discord::run_pipe_helper);
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    if process_arguments
+        .get(1)
+        .is_some_and(|argument| argument == "--verify-discord-cdp-pipe")
+    {
+        let expected_process_id = discord::current_process().map(|process| process.process_id);
+        match discord::restart_pipe(expected_process_id).and_then(|(process, mut client)| {
+            let marker = client.evaluate(
+                "(() => { const root = document.documentElement; const name = 'data-nudenyang-pipe-verify'; root.setAttribute(name, 'ok'); const value = root.getAttribute(name); root.removeAttribute(name); return value; })()",
+                false,
+            )?;
+            if marker != serde_json::Value::String("ok".to_string()) {
+                return Err(format!("Discord DOM 변조 검증 결과가 올바르지 않습니다: {marker}"));
+            }
+            drop(client);
+            discord::restart_accessibly_after_pipe(process.clone())?;
+            Ok(process)
+        }) {
+            Ok(process) => {
+                println!(
+                    "SECURE_PID={} DOM_MUTATION=OK ACCESSIBILITY_RESTART=OK",
+                    process.process_id
+                );
+            }
             Err(error) => {
                 eprintln!("{error}");
                 std::process::exit(1);
@@ -1322,9 +1365,6 @@ fn main() {
         .manage(engine)
         .setup(|app| {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
-            if let Some(overlay) = app.get_webview_window("translation-overlay") {
-                overlay.set_ignore_cursor_events(true)?;
-            }
             create_tray(app)?;
             let handle = app.handle().clone();
             initialize_autostart_in_background(app.handle().clone());
@@ -1410,7 +1450,6 @@ fn main() {
             provider_login_open,
             provider_disconnect,
             discord_restart,
-            accessibility_controls_resize,
             main_window_show,
             main_window_hide,
             tray_menu_hide,

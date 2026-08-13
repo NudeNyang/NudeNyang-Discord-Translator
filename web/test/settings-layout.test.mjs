@@ -244,17 +244,15 @@ test("system autostart initialization and registry work stay off the setup threa
   assert.doesNotMatch(setup, /synchronize_discord_startup\(/);
 });
 
-test("Windows autostart uses shared accessibility mode and safely migrates old registrations", () => {
+test("Windows autostart owns one private Discord pipe and safely migrates old registrations", () => {
   const startupRuntime = discordStartup.split("#[cfg(test)]")[0];
   assert.doesNotMatch(startupRuntime, /--remote-debugging-port=9222/);
   assert.match(discord, /--force-renderer-accessibility/);
-  assert.doesNotMatch(discord, /fn restart_pipe/);
-  assert.doesNotMatch(discord, /fn run_pipe_helper/);
-  assert.match(discord, /accessibility-restart\.lock/);
+  assert.match(discord, /--remote-debugging-pipe/);
   assert.match(discordStartup, /DiscordStartupBackup/);
   assert.match(discordStartup, /fn suppress_registration/);
   assert.match(discordStartup, /managed:\s*None/);
-  assert.match(rustMain, /start_accessible_discord_for_autostart/);
+  assert.match(rustMain, /start_pipe_discord_for_autostart/);
   assert.match(rustMain, /discord_startup::suppress\(\)/);
   assert.match(rustMain, /discord_startup::restore\(\)/);
   assert.match(rustMain, /--restore-discord-startup/);

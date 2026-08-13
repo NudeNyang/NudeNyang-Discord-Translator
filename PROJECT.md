@@ -2,8 +2,8 @@
 
 ## 제품 목표
 
-Nude Translator는 Discord 데스크톱 클라이언트의 Windows 접근성 트리에서 화면에 보이는
-받은 메시지를 읽어 별도 오버레이로 번역하는 Windows 우선 데스크톱 애플리케이션이다. 앱 셸과 핵심 엔진은
+Nude Translator는 Discord 데스크톱 클라이언트의 DOM을 이용해 받은 메시지, 보내는 메시지와
+이미지의 텍스트를 번역하는 Windows 우선 데스크톱 애플리케이션이다. 앱 셸과 핵심 엔진은
 Tauri/Rust를 기준으로 유지하며, 장기적으로 macOS를 지원할 수 있는 구조를 지향한다.
 
 ## 핵심 원칙
@@ -20,7 +20,7 @@ Tauri/Rust를 기준으로 유지하며, 장기적으로 macOS를 지원할 수 
 
 - 앱 셸 및 시스템 통합: Tauri 2, Rust
 - 설정 UI 및 트레이 UI: HTML, CSS, JavaScript
-- Discord 연동: Windows UI Automation 접근성 트리와 비상호작용 번역 오버레이
+- Discord 연동: Electron 원격 디버깅 포트를 통한 CDP/DOM 제어
 - 로컬 번역: Rust가 관리하는 `llama.cpp`와 GGUF 모델
 - 기본 로컬 모델: Hy-MT2 1.8B
 - 품질 우선 로컬 모델: Hy-MT2 7B

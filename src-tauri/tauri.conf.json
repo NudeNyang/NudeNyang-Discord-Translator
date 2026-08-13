@@ -31,38 +31,6 @@
         "skipTaskbar": true,
         "resizable": false,
         "shadow": false
-      },
-      {
-        "label": "translation-overlay",
-        "title": "NudeNyang Translator 번역 오버레이",
-        "url": "overlay.html",
-        "width": 1,
-        "height": 1,
-        "visible": false,
-        "focus": false,
-        "focusable": false,
-        "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "resizable": false,
-        "shadow": false
-      },
-      {
-        "label": "accessibility-controls",
-        "title": "NudeNyang Translator 표시 언어",
-        "url": "accessibility-controls.html",
-        "width": 72,
-        "height": 50,
-        "visible": false,
-        "focus": false,
-        "focusable": true,
-        "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "resizable": false,
-        "shadow": false
       }
     ],
     "security": {

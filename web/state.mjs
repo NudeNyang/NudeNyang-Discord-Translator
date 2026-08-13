@@ -91,10 +91,10 @@ export function normalizeConfig(value = {}) {
 
 export function restartCountdownMessage(seconds) {
   return [
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.",
+    "Discord 디버그 렌더러에 연결할 수 없습니다.",
     "작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.",
     "",
-    `${Math.max(1, Number(seconds) || 1)}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.`,
+    `${Math.max(1, Number(seconds) || 1)}초 후 Discord를 자동으로 다시 시작합니다.`,
   ].join("\n");
 }
 

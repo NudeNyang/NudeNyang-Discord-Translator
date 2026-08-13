@@ -138,8 +138,14 @@ test("normal child processes stay in the background without console flashes", ()
   assert.match(subscriptionCli, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
   assert.match(discord, /configure_background\(&mut command\)/);
   assert.match(discord, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
-  assert.doesNotMatch(discord, /EXTENDED_STARTUPINFO_PRESENT/);
-  assert.doesNotMatch(discord, /remote-debugging-io-pipes/);
+});
+
+test("the private Discord pipe inherits only its two anonymous pipe handles", () => {
+  assert.match(discord, /--remote-debugging-pipe/);
+  assert.match(discord, /remote-debugging-io-pipes/);
+  assert.match(discord, /EXTENDED_STARTUPINFO_PRESENT/);
+  assert.match(discord, /PROC_THREAD_ATTRIBUTE_HANDLE_LIST/);
+  assert.match(discord, /spawn_discord_with_handles/);
 });
 
 test("DeepL API keys are applied when editing finishes and before confirmation", () => {
