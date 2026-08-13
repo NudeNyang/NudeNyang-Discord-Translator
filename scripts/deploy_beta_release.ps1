@@ -1,5 +1,5 @@
 param(
-    [string]$Version = '0.5.1',
+    [string]$Version = '0.5.3-beta',
     [string]$BucketName = 'nude-translator-beta-releases'
 )
 

@@ -1,6 +1,6 @@
 :root {
   color-scheme: light dark;
-  font-family: "Segoe UI Variable", "Pretendard", "Noto Sans KR", sans-serif;
+  font-family: "Segoe UI Variable", "Nirmala UI", "Leelawadee UI", "Pretendard", "Noto Sans KR", "Noto Sans Thai", "Noto Sans Bengali", "Noto Sans Tamil", "Noto Sans Arabic", "Noto Sans Hebrew", sans-serif;
   --bg: #f1f6fa;
   --surface: #fbfdff;
   --surface-raised: #ffffff;
@@ -714,6 +714,11 @@ input:focus-visible,
   line-height: 1.35;
 }
 
+.select-help[hidden] {
+  display: block;
+  visibility: hidden;
+}
+
 .select-trigger,
 .text-field,
 .number-field {
@@ -844,9 +849,12 @@ input:focus-visible,
   text-align: start;
 }
 
-.select-option:dir(rtl) {
-  text-align: left;
-}
+.select-option[data-value="ar"],
+.select-option[data-value="ur"],
+.select-option[data-value="fa"],
+.select-option[data-value="he"] {
+    text-align: right;
+  }
 
 .select-option:hover,
 .select-option[aria-selected="true"] {
@@ -1625,8 +1633,7 @@ input:focus-visible,
   }
 
   .settings-navigation {
-    grid-template-columns: repeat(5, minmax(max-content, 1fr));
-    overflow-x: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding: 6px;
   }
 
@@ -1640,7 +1647,9 @@ input:focus-visible,
     justify-content: center;
     min-height: 36px;
     padding: 0 10px;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    text-align: center;
+    white-space: normal;
   }
 
   .settings-grid.two-column {

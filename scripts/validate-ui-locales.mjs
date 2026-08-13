@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { COPY } from "../web/i18n.mjs";
+import { COPY, DYNAMIC_TEMPLATE_COPY } from "../web/i18n.mjs";
 import { SUPPORTED_TARGET_LANGUAGES } from "../web/languages.mjs";
 import { UI_LOCALE_COPY } from "../web/ui-locales.mjs";
 
 const generatedLanguages = SUPPORTED_TARGET_LANGUAGES.filter(
   language => !["ko", "en", "ja", "zh"].includes(language),
 );
-const expectedKeys = Object.keys(COPY).sort();
+const sourceCopy = Object.freeze({ ...COPY, ...DYNAMIC_TEMPLATE_COPY });
+const expectedKeys = Object.keys(sourceCopy).sort();
 const protectedTokens = [
   "NudeNyang Translator", "Discord", "Hy-MT2", "TranslateGemma", "ChatGPT", "Claude",
   "Gemini", "DeepL", "Antigravity", "API", "CLI", "GPU", "CPU", "RAM", "VRAM",
@@ -19,13 +20,13 @@ const jsonCopy = JSON.parse(readFileSync(new URL("../web/ui-locales.json", impor
 assert.deepEqual(jsonCopy, UI_LOCALE_COPY, "web module and Rust JSON locale artifacts differ");
 assert.deepEqual(Object.keys(UI_LOCALE_COPY).sort(), [...generatedLanguages].sort());
 
-console.log(`Static UI source strings: ${expectedKeys.length}`);
+console.log(`Interface source strings: ${expectedKeys.length}`);
 for (const language of generatedLanguages) {
   const dictionary = UI_LOCALE_COPY[language];
   assert.deepEqual(Object.keys(dictionary).sort(), expectedKeys, `${language}: incomplete dictionary`);
   let unchangedEnglish = 0;
   for (const key of expectedKeys) {
-    const english = COPY[key][0];
+    const english = sourceCopy[key][0];
     const translated = String(dictionary[key] || "").trim();
     assert.ok(translated, `${language}: empty translation for ${key}`);
     assert.doesNotMatch(translated, /[가-힣]/, `${language}: Korean leaked into ${key}`);
@@ -41,6 +42,10 @@ for (const language of generatedLanguages) {
     const ratio = [...translated].length / Math.max(1, [...english].length);
     assert.ok(ratio >= 0.12 && ratio <= 6, `${language}: suspicious length ratio ${ratio.toFixed(2)} for ${key}`);
   }
+  assert.ok(
+    unchangedEnglish <= 10,
+    `${language}: too many ordinary English strings were left untranslated (${unchangedEnglish})`,
+  );
   console.log(`${language.padEnd(7)} ${expectedKeys.length}/${expectedKeys.length} complete · ${unchangedEnglish} unchanged English strings`);
 }
 

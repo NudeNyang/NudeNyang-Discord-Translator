@@ -25,6 +25,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "Discord를 보안 파이프로 실행하고 Sentory와 함께 쓸 때의 자동 시작 충돌을 정리한 0.5.1 패치",
+    "UI Language와 Auto (System)을 복구용 영어 표기로 고정하고 베타 버전을 명시한 0.5.3 베타",
   );
 });

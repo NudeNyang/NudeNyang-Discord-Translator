@@ -1,13 +1,13 @@
 use std::env;
+use std::ffi::OsStr;
+use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use fs2::FileExt;
 use serde::Serialize;
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
-
-use crate::cdp::CdpClient;
 
 const DISCORD_EXECUTABLES: [&str; 3] = ["Discord.exe", "DiscordPTB.exe", "DiscordCanary.exe"];
 const DISCORD_INSTALLS: [(&str, &str); 3] = [
@@ -47,7 +47,7 @@ pub fn current_process() -> Option<DiscordProcess> {
     current_process_from_system(&system)
 }
 
-pub fn current_pipe_process() -> Option<DiscordProcess> {
+pub fn current_accessibility_process() -> Option<DiscordProcess> {
     let mut system = System::new();
     system.refresh_processes_specifics(
         ProcessesToUpdate::All,
@@ -61,11 +61,12 @@ pub fn current_pipe_process() -> Option<DiscordProcess> {
         .values()
         .filter(|process| is_discord_name(&process.name().to_string_lossy()))
         .filter(|process| {
-            process
+            !process
                 .cmd()
                 .iter()
-                .any(|argument| argument == "--remote-debugging-pipe")
+                .any(|argument| argument.to_string_lossy().starts_with("--type="))
         })
+        .filter(|process| compatible_accessibility_arguments(&process.cmd()))
         .filter_map(|process| {
             Some((
                 process.start_time(),
@@ -79,42 +80,88 @@ pub fn current_pipe_process() -> Option<DiscordProcess> {
         .map(|(_, process)| process)
 }
 
-pub fn restart_accessibly_after_pipe(process: DiscordProcess) -> Result<(), String> {
-    let executable = process
-        .executable
+pub fn start_accessibly() -> Result<DiscordProcess, String> {
+    let _lease = acquire_accessibility_restart_lease()?;
+    if let Some(process) = current_process() {
+        if current_accessibility_process().is_some() {
+            return Ok(process);
+        }
+        return Err(
+            "실행 중인 Discord를 접근성 호환 모드로 바꾸려면 한 번 재시작해야 합니다.".to_string(),
+        );
+    }
+    let executable =
+        installed_executable().ok_or_else(|| "Discord 설치 경로를 찾지 못했습니다.".to_string())?;
+    launch_accessibly(&executable)
+}
+
+pub fn restart_accessibly(expected_process_id: Option<u32>) -> Result<DiscordProcess, String> {
+    let _lease = acquire_accessibility_restart_lease()?;
+    let current = current_process();
+    if expected_process_id != current.as_ref().map(|process| process.process_id) {
+        return Err("Discord가 대기 중 다시 실행되어 접근성 모드 전환을 취소했습니다.".to_string());
+    }
+    if let Some(compatible) = current_accessibility_process() {
+        return Ok(compatible);
+    }
+    let executable = current
+        .map(|process| process.executable)
+        .or_else(installed_executable)
+        .ok_or_else(|| "Discord 설치 경로를 찾지 못했습니다.".to_string())?;
+    let executable = executable
         .canonicalize()
         .map_err(|error| format!("Discord 설치 경로를 확인하지 못했습니다: {error}"))?;
     validate_discord_executable(&executable)?;
-    let old_pid = Pid::from_u32(process.process_id);
-    let deadline = Instant::now() + Duration::from_secs(8);
-    let mut system = System::new();
-    while Instant::now() < deadline {
-        system.refresh_processes(ProcessesToUpdate::Some(&[old_pid]), true);
-        if system.process(old_pid).is_none() {
-            break;
-        }
-        thread::sleep(Duration::from_millis(100));
-    }
-    if system.process(old_pid).is_some() {
-        return Err(
-            "보안 파이프 Discord가 종료되지 않아 접근성 모드 재실행을 건너뛰었습니다.".to_string(),
-        );
-    }
-    if current_process().is_some() {
-        return Ok(());
-    }
+    stop_matching_processes(&executable)?;
+    launch_accessibly(&executable)
+}
+
+fn launch_accessibly(executable: &Path) -> Result<DiscordProcess, String> {
+    let executable = executable
+        .canonicalize()
+        .map_err(|error| format!("Discord 설치 경로를 확인하지 못했습니다: {error}"))?;
+    validate_discord_executable(&executable)?;
     let launch_executable = launchable_windows_path(&executable);
     let mut command = std::process::Command::new(&launch_executable);
     command
-        .arg("--force-renderer-accessibility")
+        .args(accessibility_arguments())
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());
     configure_background(&mut command);
     let child = command
         .spawn()
-        .map_err(|error| format!("Discord를 접근성 모드로 다시 열지 못했습니다: {error}"))?;
-    wait_for_restarted_process(&executable, child.id(), Duration::from_secs(15)).map(|_| ())
+        .map_err(|error| format!("Discord를 접근성 모드로 열지 못했습니다: {error}"))?;
+    wait_for_restarted_process(&executable, child.id(), Duration::from_secs(15))
+}
+
+fn acquire_accessibility_restart_lease() -> Result<File, String> {
+    let local_app_data = env::var_os("LOCALAPPDATA")
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "현재 사용자 로컬 데이터 폴더를 찾지 못했습니다.".to_string())?;
+    let directory = PathBuf::from(local_app_data)
+        .join("NudeNyang")
+        .join("DiscordIntegration");
+    std::fs::create_dir_all(&directory)
+        .map_err(|error| format!("Discord 실행 조율 폴더를 만들지 못했습니다: {error}"))?;
+    let path = directory.join("accessibility-restart.lock");
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(&path)
+            .map_err(|error| format!("Discord 실행 조율 파일을 열지 못했습니다: {error}"))?;
+        match FileExt::try_lock_exclusive(&file) {
+            Ok(()) => return Ok(file),
+            Err(_) if Instant::now() < deadline => thread::sleep(Duration::from_millis(100)),
+            Err(error) => return Err(format!(
+                "다른 앱이 Discord 접근성 모드를 준비 중이라 작업을 계속하지 못했습니다: {error}"
+            )),
+        }
+    }
 }
 
 fn current_process_from_system(system: &System) -> Option<DiscordProcess> {
@@ -139,71 +186,6 @@ fn current_process_from_system(system: &System) -> Option<DiscordProcess> {
         })
         .max_by_key(|(started_at, _)| *started_at)
         .map(|(_, process)| process)
-}
-
-pub fn restart_pipe(
-    expected_process_id: Option<u32>,
-) -> Result<(DiscordProcess, CdpClient), String> {
-    let _restart_guard = pipe_restart_lock()
-        .lock()
-        .map_err(|_| "Discord 보안 파이프 재시작 잠금이 손상되었습니다.".to_string())?;
-    let current = current_process();
-    let current_id = current.as_ref().map(|process| process.process_id);
-    if expected_process_id != current_id {
-        return Err(
-            "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
-        );
-    }
-    let executable = current
-        .map(|process| process.executable)
-        .or_else(installed_executable)
-        .ok_or_else(|| "Discord 설치 경로를 찾지 못했습니다.".to_string())?;
-    let executable = executable
-        .canonicalize()
-        .map_err(|error| format!("Discord 설치 경로를 확인하지 못했습니다: {error}"))?;
-    validate_discord_executable(&executable)?;
-    stop_matching_processes(&executable)?;
-
-    #[cfg(windows)]
-    {
-        let launched = windows_pipe_launcher::launch(&executable)?;
-        let process =
-            wait_for_restarted_process(&executable, launched.process_id, Duration::from_secs(15))?;
-        let mut client = CdpClient::from_pipe(launched.reader, launched.writer);
-        let deadline = Instant::now() + Duration::from_secs(30);
-        let mut last_error = "Discord 렌더러가 아직 준비되지 않았습니다.".to_string();
-        let mut connected = false;
-        while Instant::now() < deadline {
-            if !connected {
-                match client.connect() {
-                    Ok(()) => connected = true,
-                    Err(error) => last_error = error,
-                }
-            }
-            if connected {
-                match client.evaluate("document.documentElement !== null", false) {
-                    Ok(serde_json::Value::Bool(true)) => return Ok((process, client)),
-                    Ok(_) => last_error = "Discord DOM이 아직 준비되지 않았습니다.".to_string(),
-                    Err(error) => last_error = error,
-                }
-            }
-            thread::sleep(Duration::from_millis(200));
-        }
-        return Err(format!(
-            "Discord를 다시 열었지만 보안 CDP 파이프가 준비되지 않았어. 마지막 오류: {last_error}"
-        ));
-    }
-
-    #[cfg(not(windows))]
-    {
-        let _ = executable;
-        Err("Discord 보안 CDP 파이프는 Windows에서만 지원됩니다.".to_string())
-    }
-}
-
-fn pipe_restart_lock() -> &'static Mutex<()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
 }
 
 fn validate_discord_executable(executable: &Path) -> Result<(), String> {
@@ -344,8 +326,25 @@ fn launchable_windows_path(path: &Path) -> PathBuf {
         .unwrap_or_else(|| path.to_path_buf())
 }
 
-fn discord_debug_arguments() -> [&'static str; 2] {
-    ["--force-renderer-accessibility", "--remote-debugging-pipe"]
+fn accessibility_arguments() -> [&'static str; 1] {
+    ["--force-renderer-accessibility"]
+}
+
+fn compatible_accessibility_arguments<T: AsRef<OsStr>>(arguments: &[T]) -> bool {
+    let mut accessibility = false;
+    for argument in arguments {
+        let value = argument.as_ref().to_string_lossy();
+        if value.eq_ignore_ascii_case("--force-renderer-accessibility") {
+            accessibility = true;
+        }
+        if value
+            .to_ascii_lowercase()
+            .starts_with("--remote-debugging-")
+        {
+            return false;
+        }
+    }
+    accessibility
 }
 
 fn is_discord_name(name: &str) -> bool {
@@ -354,269 +353,40 @@ fn is_discord_name(name: &str) -> bool {
         .any(|candidate| candidate.eq_ignore_ascii_case(name))
 }
 
-#[cfg(windows)]
-mod windows_pipe_launcher {
-    use super::configure_background;
-    use super::{discord_debug_arguments, validate_discord_executable};
-    use std::fs::File;
-    use std::io::{BufRead, BufReader};
-    use std::os::windows::ffi::OsStrExt;
-    use std::os::windows::io::{FromRawHandle, IntoRawHandle};
-    use std::path::Path;
-    use std::process::{Command, Stdio};
-
-    use windows_sys::Win32::Foundation::{
-        CloseHandle, DuplicateHandle, DUPLICATE_SAME_ACCESS, HANDLE,
-    };
-    use windows_sys::Win32::System::Console::{GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE};
-    use windows_sys::Win32::System::Threading::{
-        CreateProcessW, DeleteProcThreadAttributeList, GetCurrentProcess,
-        InitializeProcThreadAttributeList, UpdateProcThreadAttribute, EXTENDED_STARTUPINFO_PRESENT,
-        PROCESS_INFORMATION, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, STARTUPINFOEXW,
-    };
-
-    pub(super) struct PipeLaunch {
-        pub process_id: u32,
-        pub reader: File,
-        pub writer: File,
-    }
-
-    struct OwnedHandle(HANDLE);
-
-    impl Drop for OwnedHandle {
-        fn drop(&mut self) {
-            unsafe {
-                CloseHandle(self.0);
-            }
-        }
-    }
-
-    pub(super) fn launch(executable: &Path) -> Result<PipeLaunch, String> {
-        let helper = std::env::current_exe()
-            .map_err(|error| format!("보안 파이프 헬퍼 경로를 찾지 못했습니다: {error}"))?;
-        let mut command = Command::new(helper);
-        command
-            .arg("--discord-cdp-pipe-helper")
-            .arg(executable)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        configure_background(&mut command);
-        let mut child = command
-            .spawn()
-            .map_err(|error| format!("Discord 보안 파이프 헬퍼를 시작하지 못했습니다: {error}"))?;
-        let parent_write = child
-            .stdin
-            .take()
-            .ok_or_else(|| "Discord CDP 입력 파이프를 받지 못했습니다.".to_string())?;
-        let parent_read = child
-            .stdout
-            .take()
-            .ok_or_else(|| "Discord CDP 출력 파이프를 받지 못했습니다.".to_string())?;
-        let stderr = child
-            .stderr
-            .take()
-            .ok_or_else(|| "Discord 보안 헬퍼 상태 파이프를 받지 못했습니다.".to_string())?;
-        let mut status = String::new();
-        BufReader::new(stderr)
-            .read_line(&mut status)
-            .map_err(|error| format!("Discord 보안 헬퍼 상태를 읽지 못했습니다: {error}"))?;
-        let process_id = status
-            .trim()
-            .strip_prefix("PID=")
-            .and_then(|value| value.parse::<u32>().ok())
-            .ok_or_else(|| {
-                format!(
-                    "Discord 보안 헬퍼 응답이 올바르지 않습니다: {}",
-                    status.trim()
-                )
-            })?;
-        Ok(PipeLaunch {
-            process_id,
-            reader: unsafe { File::from_raw_handle(parent_read.into_raw_handle()) },
-            writer: unsafe { File::from_raw_handle(parent_write.into_raw_handle()) },
-        })
-    }
-
-    pub(super) fn run_helper(executable: &Path) -> Result<u32, String> {
-        let executable = executable
-            .canonicalize()
-            .map_err(|error| format!("Discord 실행 경로를 확인하지 못했습니다: {error}"))?;
-        validate_discord_executable(&executable)?;
-        let launch_executable = super::launchable_windows_path(&executable);
-        let input_handle = duplicate_inheritable_standard_handle(STD_INPUT_HANDLE)?;
-        let output_handle = duplicate_inheritable_standard_handle(STD_OUTPUT_HANDLE)?;
-        let io_pipes = format!(
-            "--remote-debugging-io-pipes={},{}",
-            input_handle.0 as usize, output_handle.0 as usize
-        );
-        spawn_discord_with_handles(
-            &launch_executable,
-            &[
-                launch_executable.as_os_str(),
-                std::ffi::OsStr::new(discord_debug_arguments()[0]),
-                std::ffi::OsStr::new(discord_debug_arguments()[1]),
-                std::ffi::OsStr::new(&io_pipes),
-            ],
-            &[input_handle.0, output_handle.0],
-        )
-    }
-
-    fn spawn_discord_with_handles(
-        executable: &Path,
-        arguments: &[&std::ffi::OsStr],
-        inherited_handles: &[HANDLE],
-    ) -> Result<u32, String> {
-        let executable_wide = wide(executable.as_os_str());
-        let command_line = arguments
-            .iter()
-            .map(|argument| quote_windows_argument(argument))
-            .collect::<Vec<_>>()
-            .join(" ");
-        let mut command_line_wide = wide(std::ffi::OsStr::new(&command_line));
-
-        let mut attribute_size = 0_usize;
-        unsafe {
-            InitializeProcThreadAttributeList(std::ptr::null_mut(), 1, 0, &mut attribute_size);
-        }
-        if attribute_size == 0 {
-            return Err("Discord 프로세스 핸들 목록 크기를 계산하지 못했습니다.".to_string());
-        }
-        let attribute_words = attribute_size.div_ceil(std::mem::size_of::<usize>());
-        let mut attribute_storage = vec![0_usize; attribute_words];
-        let attribute_list = attribute_storage.as_mut_ptr().cast();
-        if unsafe { InitializeProcThreadAttributeList(attribute_list, 1, 0, &mut attribute_size) }
-            == 0
-        {
-            return Err(format!(
-                "Discord 프로세스 핸들 목록을 만들지 못했습니다: {}",
-                std::io::Error::last_os_error()
-            ));
-        }
-        let updated = unsafe {
-            UpdateProcThreadAttribute(
-                attribute_list,
-                0,
-                PROC_THREAD_ATTRIBUTE_HANDLE_LIST as usize,
-                inherited_handles.as_ptr().cast(),
-                std::mem::size_of_val(inherited_handles),
-                std::ptr::null_mut(),
-                std::ptr::null(),
-            )
-        };
-        if updated == 0 {
-            unsafe {
-                DeleteProcThreadAttributeList(attribute_list);
-            }
-            return Err(format!(
-                "Discord 상속 핸들을 제한하지 못했습니다: {}",
-                std::io::Error::last_os_error()
-            ));
-        }
-
-        let mut startup = STARTUPINFOEXW::default();
-        startup.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
-        startup.lpAttributeList = attribute_list;
-        let mut process = PROCESS_INFORMATION::default();
-        let created = unsafe {
-            CreateProcessW(
-                executable_wide.as_ptr(),
-                command_line_wide.as_mut_ptr(),
-                std::ptr::null(),
-                std::ptr::null(),
-                1,
-                EXTENDED_STARTUPINFO_PRESENT | super::CREATE_NO_WINDOW,
-                std::ptr::null(),
-                std::ptr::null(),
-                &startup.StartupInfo,
-                &mut process,
-            )
-        };
-        unsafe {
-            DeleteProcThreadAttributeList(attribute_list);
-        }
-        if created == 0 {
-            return Err(format!(
-                "Discord를 제한된 보안 파이프로 실행하지 못했습니다: {}",
-                std::io::Error::last_os_error()
-            ));
-        }
-        let process_id = process.dwProcessId;
-        unsafe {
-            CloseHandle(process.hThread);
-            CloseHandle(process.hProcess);
-        }
-        if process_id == 0 {
-            return Err("Discord 보안 프로세스 ID를 확인하지 못했습니다.".to_string());
-        }
-        eprintln!("PID={process_id}");
-        Ok(process_id)
-    }
-
-    fn quote_windows_argument(value: &std::ffi::OsStr) -> String {
-        let value = value.to_string_lossy();
-        format!("\"{}\"", value.replace('"', "\\\""))
-    }
-
-    fn wide(value: &std::ffi::OsStr) -> Vec<u16> {
-        value.encode_wide().chain(Some(0)).collect()
-    }
-
-    fn duplicate_inheritable_standard_handle(
-        standard: windows_sys::Win32::System::Console::STD_HANDLE,
-    ) -> Result<OwnedHandle, String> {
-        let source = unsafe { GetStdHandle(standard) };
-        if source.is_null() {
-            return Err("Discord CDP 표준 파이프 핸들이 없습니다.".to_string());
-        }
-        let current_process = unsafe { GetCurrentProcess() };
-        let mut inherited: HANDLE = std::ptr::null_mut();
-        if unsafe {
-            DuplicateHandle(
-                current_process,
-                source,
-                current_process,
-                &mut inherited,
-                0,
-                1,
-                DUPLICATE_SAME_ACCESS,
-            )
-        } == 0
-        {
-            return Err(format!(
-                "Discord CDP 표준 파이프를 상속용으로 복제하지 못했습니다: {}",
-                std::io::Error::last_os_error()
-            ));
-        }
-        Ok(OwnedHandle(inherited))
-    }
-}
-
-#[cfg(windows)]
-pub fn run_pipe_helper(executable: &Path) -> Result<u32, String> {
-    windows_pipe_launcher::run_helper(executable)
-}
-
-#[cfg(not(windows))]
-pub fn run_pipe_helper(_executable: &Path) -> Result<u32, String> {
-    Err("Discord 보안 CDP 파이프는 Windows에서만 지원됩니다.".to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        discord_debug_arguments, installed_executable_in, is_discord_name,
-        validate_discord_executable,
+        accessibility_arguments, compatible_accessibility_arguments, installed_executable_in,
+        is_discord_name, validate_discord_executable,
     };
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
-    fn debug_arguments_use_private_electron_pipe() {
+    fn accessibility_arguments_do_not_open_a_debug_transport() {
         assert_eq!(
-            discord_debug_arguments(),
-            ["--force-renderer-accessibility", "--remote-debugging-pipe"]
+            accessibility_arguments(),
+            ["--force-renderer-accessibility"]
         );
+    }
+
+    #[test]
+    fn compatible_accessibility_mode_rejects_all_remote_debugging_transports() {
+        assert!(compatible_accessibility_arguments(&[
+            "Discord.exe",
+            "--force-renderer-accessibility"
+        ]));
+        assert!(!compatible_accessibility_arguments(&[
+            "Discord.exe",
+            "--force-renderer-accessibility",
+            "--remote-debugging-pipe"
+        ]));
+        assert!(!compatible_accessibility_arguments(&[
+            "Discord.exe",
+            "--force-renderer-accessibility",
+            "--remote-debugging-port=0"
+        ]));
+        assert!(!compatible_accessibility_arguments(&["Discord.exe"]));
     }
 
     #[test]

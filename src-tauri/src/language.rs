@@ -60,11 +60,27 @@ pub enum Language {
     Dutch,
     #[serde(rename = "ms")]
     Malay,
+    #[serde(rename = "th")]
+    Thai,
+    #[serde(rename = "fil")]
+    Filipino,
+    #[serde(rename = "bn")]
+    Bengali,
+    #[serde(rename = "ur")]
+    Urdu,
+    #[serde(rename = "ta")]
+    Tamil,
+    #[serde(rename = "fa")]
+    Persian,
+    #[serde(rename = "he")]
+    Hebrew,
+    #[serde(rename = "cs")]
+    Czech,
     #[serde(rename = "und")]
     Unknown,
 }
 
-pub const SUPPORTED_LANGUAGES: [Language; 20] = [
+pub const SUPPORTED_LANGUAGES: [Language; 28] = [
     Language::Korean,
     Language::English,
     Language::Japanese,
@@ -85,11 +101,19 @@ pub const SUPPORTED_LANGUAGES: [Language; 20] = [
     Language::Italian,
     Language::Dutch,
     Language::Malay,
+    Language::Thai,
+    Language::Filipino,
+    Language::Bengali,
+    Language::Urdu,
+    Language::Tamil,
+    Language::Persian,
+    Language::Hebrew,
+    Language::Czech,
 ];
 
 // Keep detection candidates stable while presenting the product languages in a
 // user-facing priority order based on Discord reach and language-market size.
-pub const LANGUAGE_MENU_ORDER: [Language; 20] = [
+pub const LANGUAGE_MENU_ORDER: [Language; 28] = [
     Language::Korean,
     Language::English,
     Language::Japanese,
@@ -110,6 +134,14 @@ pub const LANGUAGE_MENU_ORDER: [Language; 20] = [
     Language::Ukrainian,
     Language::Malay,
     Language::Dutch,
+    Language::Thai,
+    Language::Filipino,
+    Language::Bengali,
+    Language::Urdu,
+    Language::Tamil,
+    Language::Persian,
+    Language::Hebrew,
+    Language::Czech,
 ];
 
 pub fn is_supported_language_code(value: &str) -> bool {
@@ -139,7 +171,19 @@ pub fn provider_language_codes(
     }
     let canonical = language.code();
     Some(match provider {
-        TranslationProvider::HyMt | TranslationProvider::SubscriptionCli => ProviderLanguageCodes {
+        TranslationProvider::HyMt => ProviderLanguageCodes {
+            source: if language == Language::Filipino {
+                "tl"
+            } else {
+                canonical
+            },
+            target: if language == Language::Filipino {
+                "tl"
+            } else {
+                canonical
+            },
+        },
+        TranslationProvider::SubscriptionCli => ProviderLanguageCodes {
             source: canonical,
             target: canonical,
         },
@@ -191,6 +235,14 @@ fn deepl_base_code(language: Language) -> &'static str {
         Language::Italian => "IT",
         Language::Dutch => "NL",
         Language::Malay => "MS",
+        Language::Thai => "TH",
+        Language::Filipino => "TL",
+        Language::Bengali => "BN",
+        Language::Urdu => "UR",
+        Language::Tamil => "TA",
+        Language::Persian => "FA",
+        Language::Hebrew => "HE",
+        Language::Czech => "CS",
         Language::ChineseSimplified
         | Language::ChineseTraditional
         | Language::BrazilianPortuguese
@@ -222,6 +274,14 @@ impl Language {
             Self::Italian => "it",
             Self::Dutch => "nl",
             Self::Malay => "ms",
+            Self::Thai => "th",
+            Self::Filipino => "fil",
+            Self::Bengali => "bn",
+            Self::Urdu => "ur",
+            Self::Tamil => "ta",
+            Self::Persian => "fa",
+            Self::Hebrew => "he",
+            Self::Czech => "cs",
             Self::Unknown => "und",
         }
     }
@@ -248,6 +308,14 @@ impl Language {
             Self::Italian => "Italian",
             Self::Dutch => "Dutch",
             Self::Malay => "Malay",
+            Self::Thai => "Thai",
+            Self::Filipino => "Filipino",
+            Self::Bengali => "Bengali",
+            Self::Urdu => "Urdu",
+            Self::Tamil => "Tamil",
+            Self::Persian => "Persian",
+            Self::Hebrew => "Hebrew",
+            Self::Czech => "Czech",
             Self::Unknown => "the source language",
         }
     }
@@ -274,6 +342,14 @@ impl Language {
             Self::Italian => "Italiano",
             Self::Dutch => "Nederlands",
             Self::Malay => "Bahasa Melayu",
+            Self::Thai => "ไทย",
+            Self::Filipino => "Filipino",
+            Self::Bengali => "বাংলা",
+            Self::Urdu => "اردو",
+            Self::Tamil => "தமிழ்",
+            Self::Persian => "فارسی",
+            Self::Hebrew => "עברית",
+            Self::Czech => "Čeština",
             Self::Unknown => "자동 감지",
         }
     }
@@ -304,6 +380,14 @@ impl TryFrom<&str> for Language {
             "it" => Ok(Self::Italian),
             "nl" => Ok(Self::Dutch),
             "ms" => Ok(Self::Malay),
+            "th" => Ok(Self::Thai),
+            "fil" | "tl" => Ok(Self::Filipino),
+            "bn" => Ok(Self::Bengali),
+            "ur" => Ok(Self::Urdu),
+            "ta" => Ok(Self::Tamil),
+            "fa" => Ok(Self::Persian),
+            "he" | "iw" => Ok(Self::Hebrew),
+            "cs" => Ok(Self::Czech),
             "und" => Ok(Self::Unknown),
             _ => Err(format!("지원하지 않는 언어 코드입니다: {value}")),
         }
@@ -354,14 +438,19 @@ struct ScriptCounts {
     arabic: usize,
     latin: usize,
     cyrillic: usize,
+    thai: usize,
+    bengali: usize,
+    tamil: usize,
+    hebrew: usize,
     letters: usize,
 }
 
 static STATISTICAL_DETECTOR: LazyLock<LinguaDetector> = LazyLock::new(|| {
     use LinguaLanguage::*;
     LanguageDetectorBuilder::from_languages(&[
-        Arabic, Chinese, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese,
-        Korean, Malay, Polish, Portuguese, Russian, Spanish, Turkish, Ukrainian, Vietnamese,
+        Arabic, Bengali, Chinese, Czech, Dutch, English, French, German, Hebrew, Hindi, Indonesian,
+        Italian, Japanese, Korean, Malay, Persian, Polish, Portuguese, Russian, Spanish, Tagalog,
+        Tamil, Thai, Turkish, Ukrainian, Urdu, Vietnamese,
     ])
     .build()
 });
@@ -382,8 +471,17 @@ pub fn detect_language(text: &str) -> Detection {
     if counts.devanagari >= 2 {
         return Detection::certain(Language::Hindi);
     }
-    if counts.arabic >= 2 {
-        return Detection::certain(Language::Arabic);
+    if counts.thai >= 2 {
+        return Detection::certain(Language::Thai);
+    }
+    if counts.bengali >= 2 {
+        return Detection::certain(Language::Bengali);
+    }
+    if counts.tamil >= 2 {
+        return Detection::certain(Language::Tamil);
+    }
+    if counts.hebrew >= 2 {
+        return Detection::certain(Language::Hebrew);
     }
 
     let simplified = prepared
@@ -479,6 +577,14 @@ fn from_lingua(
         Ukrainian => Language::Ukrainian,
         Turkish => Language::Turkish,
         Arabic => Language::Arabic,
+        Bengali => Language::Bengali,
+        Czech => Language::Czech,
+        Hebrew => Language::Hebrew,
+        Persian => Language::Persian,
+        Tagalog => Language::Filipino,
+        Tamil => Language::Tamil,
+        Thai => Language::Thai,
+        Urdu => Language::Urdu,
         Italian => Language::Italian,
         Dutch => Language::Dutch,
         Malay => Language::Malay,
@@ -659,6 +765,18 @@ fn script_counts(text: &str) -> ScriptCounts {
         if matches!(value, 0x0400..=0x052f) {
             counts.cyrillic += 1;
         }
+        if matches!(value, 0x0e00..=0x0e7f) {
+            counts.thai += 1;
+        }
+        if matches!(value, 0x0980..=0x09ff) {
+            counts.bengali += 1;
+        }
+        if matches!(value, 0x0b80..=0x0bff) {
+            counts.tamil += 1;
+        }
+        if matches!(value, 0x0590..=0x05ff) {
+            counts.hebrew += 1;
+        }
         if character.is_alphabetic() {
             counts.letters += 1;
         }
@@ -715,8 +833,8 @@ mod tests {
     use std::fmt::Write as _;
 
     #[test]
-    fn catalog_contains_all_twenty_product_languages() {
-        assert_eq!(SUPPORTED_LANGUAGES.len(), 20);
+    fn catalog_contains_all_twenty_eight_product_languages() {
+        assert_eq!(SUPPORTED_LANGUAGES.len(), 28);
         for language in SUPPORTED_LANGUAGES {
             assert_eq!(Language::try_from(language.code()).unwrap(), language);
             assert!(!language.native_name().is_empty());
@@ -734,7 +852,8 @@ mod tests {
             LANGUAGE_MENU_ORDER.map(Language::code),
             [
                 "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "hi", "es-419", "de", "ru", "id", "fr",
-                "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl",
+                "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl", "th", "fil", "bn", "ur", "ta",
+                "fa", "he", "cs",
             ]
         );
         let mut supported = SUPPORTED_LANGUAGES.map(Language::code);
@@ -764,6 +883,27 @@ mod tests {
             Some(ProviderLanguageCodes {
                 source: "ZH",
                 target: "ZH-HANT",
+            })
+        );
+        assert_eq!(
+            provider_language_codes(TranslationProvider::HyMt, Language::Filipino),
+            Some(ProviderLanguageCodes {
+                source: "tl",
+                target: "tl",
+            })
+        );
+        assert_eq!(
+            provider_language_codes(TranslationProvider::SubscriptionCli, Language::Filipino),
+            Some(ProviderLanguageCodes {
+                source: "fil",
+                target: "fil",
+            })
+        );
+        assert_eq!(
+            provider_language_codes(TranslationProvider::DeepL, Language::Filipino),
+            Some(ProviderLanguageCodes {
+                source: "TL",
+                target: "TL",
             })
         );
     }
@@ -796,7 +936,21 @@ mod tests {
             ("هل تريد أن نلعب معًا الليلة؟", Language::Arabic),
             ("Vuoi giocare insieme stasera?", Language::Italian),
             ("Wil je vanavond samen spelen?", Language::Dutch),
-            ("Nak main sama-sama malam ini?", Language::Malay),
+            (
+                "Awak mahu bermain bersama kami di pelayan malam ini?",
+                Language::Malay,
+            ),
+            ("คืนนี้คุณอยากเล่นเกมกับพวกเราไหม", Language::Thai),
+            (
+                "Gusto mo bang maglaro kasama namin mamayang gabi?",
+                Language::Filipino,
+            ),
+            ("তুমি কি আজ রাতে আমাদের সঙ্গে খেলতে চাও?", Language::Bengali),
+            ("کیا آپ آج رات ہمارے ساتھ کھیلنا چاہتے ہیں؟", Language::Urdu),
+            ("இன்றிரவு எங்களுடன் விளையாட விரும்புகிறீர்களா?", Language::Tamil),
+            ("آیا می‌خواهید امشب با ما بازی کنید؟", Language::Persian),
+            ("רוצה לשחק איתנו הערב בשרת?", Language::Hebrew),
+            ("Chceš si s námi dnes večer zahrát?", Language::Czech),
         ];
         let mut failures = Vec::new();
         for (text, expected) in samples {

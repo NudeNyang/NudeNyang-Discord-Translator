@@ -95,6 +95,7 @@ test("all supported display languages survive settings normalization", () => {
   assert.deepEqual(SUPPORTED_TARGET_LANGUAGES, [
     "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "hi", "es-419", "de", "ru",
     "id", "fr", "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl",
+    "th", "fil", "bn", "ur", "ta", "fa", "he", "cs",
   ]);
   for (const targetLanguage of SUPPORTED_TARGET_LANGUAGES) {
     assert.equal(normalizeConfig({ target_language: targetLanguage }).target_language, targetLanguage);
@@ -102,15 +103,17 @@ test("all supported display languages survive settings normalization", () => {
   assert.equal(normalizeConfig({ target_language: "unsupported" }).target_language, "ko");
 });
 
-test("restart message contains countdown and data-loss warning", () => {
+test("first accessibility transition message contains countdown and data-loss warning", () => {
   const message = restartCountdownMessage(15);
 
   assert.match(message, /15초/);
   assert.match(message, /작성 중인 메시지/);
   assert.match(message, /통화/);
+  assert.match(message, /최초 전환/);
+  assert.doesNotMatch(message, /디버그/);
 });
 
-test("restart prompt only opens for an enabled failed CDP connection", () => {
+test("restart prompt only opens for an enabled failed accessibility connection", () => {
   assert.equal(
     shouldPromptRestart(
       {

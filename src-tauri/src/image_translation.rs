@@ -23,7 +23,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
 (() => {
   const requestedUiLanguage = __UI_LANGUAGE__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
-  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl'];
+  const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl','th','fil','bn','ur','ta','fa','he','cs'];
   function resolveUiLanguage(value) {
     const normalized = String(value || '').replaceAll('_','-').toLowerCase();
     if (normalized.startsWith('zh')) return /(?:^|-)hant(?:-|$)/.test(normalized) || /^zh-(tw|hk|mo)(?:-|$)/.test(normalized) ? 'zh-Hant' : 'zh';
@@ -710,6 +710,12 @@ fn font_candidates(target: Language) -> Vec<PathBuf> {
                 &["simsunb.ttf", "NotoSansJP-VF.ttf", "malgun.ttf"]
             }
             Language::Korean => &["NotoSansKR-VF.ttf", "notosanskr-medium.ttf", "malgun.ttf"],
+            Language::Thai => &["leelawui.ttf", "Nirmala.ttf", "segoeui.ttf"],
+            Language::Bengali | Language::Tamil => &["Nirmala.ttf", "NirmalaB.ttf", "segoeui.ttf"],
+            Language::Urdu | Language::Persian | Language::Arabic => {
+                &["Nirmala.ttf", "segoeui.ttf", "arial.ttf"]
+            }
+            Language::Hebrew => &["segoeui.ttf", "arial.ttf"],
             _ => &["segoeui.ttf", "arial.ttf", "malgun.ttf"],
         };
         candidates.extend(names.iter().map(|name| root.join(name)));
@@ -724,6 +730,18 @@ fn font_candidates(target: Language) -> Vec<PathBuf> {
             Language::Korean => &[
                 "/System/Library/Fonts/AppleSDGothicNeo.ttc",
                 "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+            ],
+            Language::Thai => &[
+                "/System/Library/Fonts/Thonburi.ttc",
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+            ],
+            Language::Bengali | Language::Tamil | Language::Urdu => &[
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+                "/System/Library/Fonts/Supplemental/Arial.ttf",
+            ],
+            Language::Persian | Language::Arabic | Language::Hebrew => &[
+                "/System/Library/Fonts/Supplemental/Arial.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
             ],
             _ => &[
                 "/System/Library/Fonts/Supplemental/Arial.ttf",

@@ -2,6 +2,8 @@ import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 
 export const COPY = Object.freeze({
   "설정": ["Settings", "設定", "设置"],
+  "인터페이스 언어": ["Interface language", "インターフェース言語", "界面语言"],
+  "자동(시스템)": ["Automatic (system)", "自動（システム）", "自动（系统）"],
   "언어 검색": ["Search languages", "言語を検索", "搜索语言"],
   "검색 결과 없음": ["No matching languages", "一致する言語がありません", "没有匹配的语言"],
   "자동 감지": ["Auto detect", "自動検出", "自动检测"],
@@ -23,6 +25,7 @@ export const COPY = Object.freeze({
   "번역문을 수정하거나 Enter로 전송하십시오.": ["Edit the translation or press Enter to send it.", "翻訳文を修正するか、Enterで送信してください。", "请修改译文或按 Enter 发送。"],
   "번역 켜짐": ["Translation on", "翻訳オン", "翻译开启"],
   "표시": ["View", "表示", "显示"],
+  "원문": ["Original", "原文", "原文"],
   "원문 보기": ["Show original", "原文を表示", "查看原文"],
   "전송문 보기": ["Show sent message", "送信文を表示", "查看发送内容"],
   "번역 보기": ["Show translation", "翻訳を表示", "查看译图"],
@@ -259,11 +262,11 @@ export const COPY = Object.freeze({
   "설정을 초기화하지 못했습니다": ["Could not reset settings", "設定を初期化できませんでした", "无法重置设置"],
   "자동 시작 설정을 변경하지 못했습니다": ["Could not change the startup setting", "自動起動の設定を変更できませんでした", "无法更改自动启动设置"],
   "저장 공간 정보를 확인하지 못했습니다": ["Could not check storage information", "ストレージ情報を確認できませんでした", "无法检查存储信息"],
-  "Discord 자동 재시작을 허용하시겠습니까?": ["Allow Discord to restart automatically?", "Discordの自動再起動を許可しますか？", "是否允许 Discord 自动重启？"],
-  "실시간 번역을 켜면 Discord가 디버그 렌더러 모드로 실행되지 않았을 때 15초 안내 후 자동으로 다시 시작합니다.\n\n재시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.": ["When real-time translation is enabled and Discord is not running in debug renderer mode, it will restart automatically after a 15-second notice.\n\nRestarting may discard a message you are typing or end a call.", "リアルタイム翻訳をオンにした際、Discordがデバッグレンダラーモードで動作していない場合は、15秒の案内後に自動で再起動します。\n\n再起動すると、入力中のメッセージが消えたり、通話が終了したりする場合があります。", "开启实时翻译后，如果 Discord 未以调试渲染器模式运行，将在提示 15 秒后自动重启。\n\n重启可能会丢失正在输入的消息或结束通话。"],
-  "동의하고 켜기": ["Allow and enable", "許可してオンにする", "允许并开启"],
+  "Discord 접근성 모드를 준비할까요?": ["Prepare Discord accessibility mode?", "Discordのアクセシビリティモードを準備しますか？", "是否准备 Discord 辅助功能模式？"],
+  "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": ["NudeNyang and Sentory need a secure accessibility mode they can share. If Discord is currently in normal mode, it restarts only once during the initial transition and does not restart when you switch servers.\n\nCheck any message you are typing and active calls before restarting.", "NudeNyangとSentoryが共用できる安全なアクセシビリティモードが必要です。Discordが通常モードの場合、初回切り替え時に一度だけ再起動し、サーバー移動時には再起動しません。\n\n再起動前に入力中のメッセージと通話を確認してください。", "NudeNyang 和 Sentory 需要可共同使用的安全辅助功能模式。如果 Discord 当前处于普通模式，仅在首次切换时重启一次，切换服务器时不会重启。\n\n重启前请确认正在输入的消息和通话。"],
+  "확인하고 준비": ["Confirm and prepare", "確認して準備", "确认并准备"],
   "이번 번역 실행에서 자동 재시작을 이미 한 번 시도했습니다. Discord를 직접 종료한 후 다시 실행하십시오.": ["An automatic restart has already been attempted during this translation session. Close Discord completely and start it again.", "今回の翻訳実行では自動再起動をすでに一度試しました。Discordを完全に終了してから、もう一度起動してください。", "本次翻译运行中已尝试过一次自动重启。请完全退出 Discord 后重新启动。"],
-  "Discord 번역 연결을 준비합니다": ["Preparing the Discord translation connection", "Discord翻訳への接続を準備しています", "正在准备 Discord 翻译连接"],
+  "Discord 접근성 모드를 준비합니다": ["Preparing Discord accessibility mode", "Discordのアクセシビリティモードを準備しています", "正在准备 Discord 辅助功能模式"],
   "지금 재시작": ["Restart now", "今すぐ再起動", "立即重启"],
   "Discord 재시작 중": ["Restarting Discord", "Discordを再起動中", "正在重启 Discord"],
   "설치 중": ["Installing", "インストール中", "正在安装"],
@@ -360,10 +363,62 @@ export const COPY = Object.freeze({
   "회/초": ["/sec", "回/秒", "次/秒"],
 });
 
+export const DYNAMIC_TEMPLATE_COPY = Object.freeze({
+  "{seconds}초 후 Discord를 자동으로 다시 시작합니다.": ["Discord will restart automatically in {seconds} seconds."],
+  "이미지에서 {count}개 글자 영역을 번역했습니다.": ["Translated {count} text regions in the image."],
+  "표시 번역은 {display}, 실시간 통역은 {outgoing}을 사용합니다.": ["Display translation uses {display}, and real-time interpretation uses {outgoing}."],
+  "{model} 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.": ["Started preparing {model} in the background. The current model will remain in use until it is ready."],
+  "번역 모델 준비 실패: {error}": ["Translation model preparation failed: {error}"],
+  "이미지를 읽지 못했습니다: {error}": ["Could not read the image: {error}"],
+  "이미지 번역에 실패했습니다: {error}": ["Image translation failed: {error}"],
+  "로컬 모델 예열에 실패했습니다: {error}": ["Local model warm-up failed: {error}"],
+  "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": ["Discord is not running in accessibility-compatible mode yet.\nA message you are typing may be discarded or a call may end.\n\nDiscord will restart once for the initial transition in {seconds} seconds."],
+  "{name} CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.": ["Installing {name} CLI and its required runtime automatically."],
+  "{name} 계정 연결": ["Connect {name} account"],
+  "{name} CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다.": ["{name} CLI sign-in is retained and disabled only in NudeNyang Translator."],
+  "{name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.": ["Preparing the official {name} sign-in page. Please wait."],
+  "{name} 계정 로그인을 취소하고 있습니다.": ["Cancelling {name} account sign-in."],
+  "{name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.": ["Select Continue to open the official {name} sign-in page."],
+  "브라우저에서 {account} 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.": ["Complete {account} sign-in in the browser.\nThis window will close automatically when sign-in finishes."],
+  "{name} 연결을 해제하시겠습니까?": ["Disconnect {name}?"],
+  "{shortcut}로 적용되었습니다.": ["Applied {shortcut}."],
+  "{shortcut} 적용 중": ["Applying {shortcut}"],
+  "로컬 모델 파일 {size}를 삭제했습니다.": ["Deleted {size} of local model files."],
+  "번역 기록 {count}건을 정리했습니다.": ["Cleared {count} translation history records."],
+  "{model} 모델 다운로드 중": ["Downloading {model} model"],
+  "{model} 모델 파일 확인 중": ["Verifying {model} model file"],
+  "{model} 모델 불러오는 중": ["Loading {model} model"],
+  "{model} 모델 준비 대기 중": ["Waiting to prepare {model} model"],
+  "{model} CPU/RAM 전용 모드로 전환 중": ["Switching {model} to CPU/RAM-only mode"],
+  "{downloaded} / {total} 다운로드됨": ["{downloaded} / {total} downloaded"],
+  "{total} 다운로드 완료 · 파일 무결성을 확인하고 있습니다.": ["{total} downloaded · Verifying file integrity."],
+  "{total} 다운로드 완료 · 번역 엔진을 준비하고 있습니다.": ["{total} downloaded · Preparing the translation engine."],
+  "같은 로컬 모델 준비 작업이 끝나기를 기다리고 있습니다.": ["Waiting for the shared local model preparation to finish."],
+  "선택한 번역 모델: {model}. 번역 준비가 완료되었습니다.": ["Selected translation model: {model}. Translation is ready."],
+  "선택한 번역 모델: {model}. 번역을 켜면 모델을 준비합니다.": ["Selected translation model: {model}. The model will be prepared when translation is enabled."],
+  "새 버전 {version}을 사용할 수 있습니다.": ["Version {version} is available."],
+  "{version} 버전을 설치할 수 있습니다. 지금 설치하면 앱이 다시 실행됩니다. 작업 중이라면 나중에 설치해도 됩니다.": ["Version {version} is available. Installing it now will restart the app. You can install it later if you are working."],
+  "{version} 업데이트를 다운로드하고 있습니다...": ["Downloading update {version}..."],
+  "업데이트 다운로드 중 {progress}": ["Downloading update {progress}"],
+  "업데이트 확인 실패: {error}": ["Update check failed: {error}"],
+  "업데이트 설치 실패: {error}": ["Update installation failed: {error}"],
+  "{binding} 전역 단축키를 등록하지 못했습니다. 다른 앱에서 이 단축키를 사용 중입니다. 다른 조합을 선택하십시오.": [
+    "Could not register the {binding} global shortcut. Another app is already using this shortcut. Choose a different combination.",
+    "{binding} グローバルショートカットを登録できませんでした。このショートカットは別のアプリですでに使用されています。別の組み合わせを選択してください。",
+    "无法注册 {binding} 全局快捷键。其他应用已在使用此快捷键，请选择其他组合。",
+  ],
+  "예기치 않은 오류가 발생했습니다. 자세한 내용은 진단 로그를 확인하십시오.": [
+    "An unexpected error occurred. Check the diagnostic log for details.",
+    "予期しないエラーが発生しました。詳細は診断ログを確認してください。",
+    "发生意外错误。请查看诊断日志了解详情。",
+  ],
+});
+
 const LANGUAGE_INDEX = Object.freeze({ en: 0, ja: 1, zh: 2 });
 const SUPPORTED_UI_LANGUAGES = Object.freeze([
   "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "hi", "es-419", "de", "ru",
   "id", "fr", "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl",
+  "th", "fil", "bn", "ur", "ta", "fa", "he", "cs",
 ]);
 
 function canonicalUiLanguage(language) {
@@ -387,11 +442,12 @@ export function resolveUiLanguage(language, systemLanguage = globalThis.navigato
 
 export function translateCopy(language, korean) {
   language = resolveUiLanguage(language);
-  if (korean === "Auto(System)") return korean;
+  if (korean === "UI Language" || korean === "Auto (System)") return korean;
   if (language === "ko") return korean;
   const index = LANGUAGE_INDEX[language];
-  if (index !== undefined) return COPY[korean]?.[index] || COPY[korean]?.[0] || korean;
-  return UI_LOCALE_COPY[language]?.[korean] || COPY[korean]?.[0] || korean;
+  const source = COPY[korean] || DYNAMIC_TEMPLATE_COPY[korean];
+  if (index !== undefined) return source?.[index] || source?.[0] || korean;
+  return UI_LOCALE_COPY[language]?.[korean] || source?.[0] || korean;
 }
 
 export const DYNAMIC_COPY = Object.freeze([
@@ -451,11 +507,11 @@ export const DYNAMIC_COPY = Object.freeze([
     },
   },
   {
-    pattern: /^Discord 디버그 렌더러에 연결할 수 없습니다\.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다\.\n\n(\d+)초 후 Discord를 자동으로 다시 시작합니다\.$/,
+    pattern: /^Discord가 아직 접근성 호환 모드로 실행되지 않았습니다\.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다\.\n\n(\d+)초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다\.$/,
     render: {
-      en: seconds => `Could not connect to the Discord debug renderer.\nA message you are typing may be discarded or a call may end.\n\nDiscord will restart automatically in ${seconds} seconds.`,
-      ja: seconds => `Discordのデバッグレンダラーに接続できません。\n入力中のメッセージが消えたり、通話が終了したりする場合があります。\n\n${seconds}秒後にDiscordを自動で再起動します。`,
-      zh: seconds => `无法连接 Discord 调试渲染器。\n正在输入的消息可能会丢失，通话也可能会结束。\n\nDiscord 将在 ${seconds} 秒后自动重启。`,
+      en: seconds => `Discord is not running in accessibility-compatible mode yet.\nA message you are typing may be discarded or a call may end.\n\nDiscord will restart once for the initial transition in ${seconds} seconds.`,
+      ja: seconds => `Discordはまだアクセシビリティ互換モードで動作していません。\n入力中のメッセージが消えたり、通話が終了したりする場合があります。\n\n初回切り替えのため、${seconds}秒後にDiscordを一度再起動します。`,
+      zh: seconds => `Discord 尚未以辅助功能兼容模式运行。\n正在输入的消息可能会丢失，通话也可能会结束。\n\nDiscord 将在 ${seconds} 秒后为首次切换重启一次。`,
     },
   },
   {
@@ -684,15 +740,95 @@ export const DYNAMIC_COPY = Object.freeze([
   },
 ]);
 
+const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
+  ([seconds]) => ["{seconds}초 후 Discord를 자동으로 다시 시작합니다.", { seconds }],
+  ([count]) => ["이미지에서 {count}개 글자 영역을 번역했습니다.", { count }],
+  ([display, outgoing], language) => [
+    "표시 번역은 {display}, 실시간 통역은 {outgoing}을 사용합니다.",
+    { display: translateCopy(language, display), outgoing: translateCopy(language, outgoing) },
+  ],
+  ([model], language) => [
+    "{model} 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
+    { model: translateCopy(language, model) },
+  ],
+  ([kind, error], language) => [
+    `${kind}: {error}`,
+    { error: translateUserFacingError(language, error) },
+  ],
+  ([seconds]) => [
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.",
+    { seconds },
+  ],
+  ([name]) => ["{name} CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.", { name }],
+  ([name]) => ["{name} 계정 연결", { name }],
+  ([name]) => ["{name} CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다.", { name }],
+  ([name]) => ["{name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.", { name }],
+  ([name]) => ["{name} 계정 로그인을 취소하고 있습니다.", { name }],
+  ([name]) => ["{name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.", { name }],
+  ([account]) => ["브라우저에서 {account} 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.", { account }],
+  ([name]) => ["{name} 연결을 해제하시겠습니까?", { name }],
+  ([shortcut]) => ["{shortcut}로 적용되었습니다.", { shortcut }],
+  ([shortcut]) => ["{shortcut} 적용 중", { shortcut }],
+  ([size]) => ["로컬 모델 파일 {size}를 삭제했습니다.", { size }],
+  ([count]) => ["번역 기록 {count}건을 정리했습니다.", { count }],
+  ([model]) => ["{model} 모델 다운로드 중", { model }],
+  ([model]) => ["{model} 모델 파일 확인 중", { model }],
+  ([model]) => ["{model} 모델 불러오는 중", { model }],
+  ([model]) => ["{model} 모델 준비 대기 중", { model }],
+  ([model]) => ["{model} CPU/RAM 전용 모드로 전환 중", { model }],
+  ([downloaded, total]) => ["{downloaded} / {total} 다운로드됨", { downloaded, total }],
+  ([total]) => ["{total} 다운로드 완료 · 파일 무결성을 확인하고 있습니다.", { total }],
+  ([total]) => ["{total} 다운로드 완료 · 번역 엔진을 준비하고 있습니다.", { total }],
+  () => ["같은 로컬 모델 준비 작업이 끝나기를 기다리고 있습니다.", {}],
+  ([model], language) => [
+    "선택한 번역 모델: {model}. 번역 준비가 완료되었습니다.",
+    { model: translateCopy(language, model) },
+  ],
+  ([model], language) => [
+    "선택한 번역 모델: {model}. 번역을 켜면 모델을 준비합니다.",
+    { model: translateCopy(language, model) },
+  ],
+  ([version]) => ["새 버전 {version}을 사용할 수 있습니다.", { version }],
+  ([version]) => [
+    "{version} 버전을 설치할 수 있습니다. 지금 설치하면 앱이 다시 실행됩니다. 작업 중이라면 나중에 설치해도 됩니다.",
+    { version },
+  ],
+  ([version]) => ["{version} 업데이트를 다운로드하고 있습니다...", { version }],
+  ([progress]) => ["업데이트 다운로드 중 {progress}", { progress }],
+  ([kind, error], language) => [
+    `${kind}: {error}`,
+    { error: translateUserFacingError(language, error) },
+  ],
+]);
+
+function interpolateDynamicTemplate(template, values) {
+  return template.replace(/\{([a-z]+)\}/gi, (placeholder, name) => (
+    Object.hasOwn(values, name) ? String(values[name]) : placeholder
+  ));
+}
+
+function translateDynamicTemplate(language, index, captures) {
+  const resolver = DYNAMIC_TEMPLATE_RESOLVERS[index];
+  if (!resolver) return "";
+  const [key, values] = resolver(captures, language);
+  const template = translateCopy(language, key);
+  if (template === key) return "";
+  return interpolateDynamicTemplate(template, values);
+}
+
 export function translateDynamicCopy(language, korean) {
   language = resolveUiLanguage(language);
   const value = String(korean ?? "");
   if (language === "ko" || !value) return value;
   const exact = translateCopy(language, value);
   if (exact !== value) return exact;
-  for (const entry of DYNAMIC_COPY) {
+  for (const [index, entry] of DYNAMIC_COPY.entries()) {
     const match = value.match(entry.pattern);
-    if (match) return (entry.render[language] || entry.render.en)(...match.slice(1));
+    if (match) {
+      if (entry.render[language]) return entry.render[language](...match.slice(1));
+      return translateDynamicTemplate(language, index, match.slice(1))
+        || entry.render.en(...match.slice(1));
+    }
   }
   return value;
 }
@@ -706,11 +842,13 @@ export function translateUserFacingError(language, error) {
   if (shortcut) {
     const [, binding, detail] = shortcut;
     if (/already registered/i.test(detail)) {
-      return ({
-        en: `Could not register the ${binding} global shortcut. Another app is already using this shortcut. Choose a different combination.`,
-        ja: `${binding} グローバルショートカットを登録できませんでした。このショートカットは別のアプリですでに使用されています。別の組み合わせを選択してください。`,
-        zh: `无法注册 ${binding} 全局快捷键。其他应用已在使用此快捷键，请选择其他组合。`,
-      }[language] || `Could not register the ${binding} global shortcut. Another app is already using this shortcut. Choose a different combination.`);
+      return interpolateDynamicTemplate(
+        translateCopy(
+          language,
+          "{binding} 전역 단축키를 등록하지 못했습니다. 다른 앱에서 이 단축키를 사용 중입니다. 다른 조합을 선택하십시오.",
+        ),
+        { binding },
+      );
     }
   }
 
@@ -722,11 +860,10 @@ export function translateUserFacingError(language, error) {
   const safeDetail = detail && !/[가-힣]/.test(detail) && !/HotKey\s*\{/i.test(detail)
     ? detail
     : "";
-  const fallback = ({
-    en: "An unexpected error occurred. Check the diagnostic log for details.",
-    ja: "予期しないエラーが発生しました。詳細は診断ログを確認してください。",
-    zh: "发生意外错误。请查看诊断日志了解详情。",
-  }[language] || "An unexpected error occurred. Check the diagnostic log for details.");
+  const fallback = translateCopy(
+    language,
+    "예기치 않은 오류가 발생했습니다. 자세한 내용은 진단 로그를 확인하십시오.",
+  );
   return safeDetail ? `${fallback} ${safeDetail}` : fallback;
 }
 

@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod accessibility;
 pub mod cache;
 pub mod cdp;
 mod config;
@@ -666,8 +667,7 @@ fn system_memory_status_get() -> Value {
     })
 }
 
-#[tauri::command]
-fn autostart_get(app: AppHandle) -> Result<bool, String> {
+fn autostart_get_blocking(app: AppHandle) -> Result<bool, String> {
     let enabled = app
         .autolaunch()
         .is_enabled()
@@ -677,7 +677,13 @@ fn autostart_get(app: AppHandle) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
+async fn autostart_get(app: AppHandle) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || autostart_get_blocking(app))
+        .await
+        .map_err(|error| format!("자동 시작 상태 확인 작업을 기다리지 못했습니다: {error}"))?
+}
+
+fn autostart_set_blocking(app: AppHandle, enabled: bool) -> Result<bool, String> {
     let autolaunch = app.autolaunch();
     if enabled {
         autolaunch
@@ -698,6 +704,13 @@ fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
         .map_err(|error| format!("변경된 자동 시작 상태를 확인하지 못했습니다: {error}"))
 }
 
+#[tauri::command]
+async fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || autostart_set_blocking(app, enabled))
+        .await
+        .map_err(|error| format!("자동 시작 변경 작업을 기다리지 못했습니다: {error}"))?
+}
+
 fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
     if enabled {
         discord_startup::suppress()
@@ -706,26 +719,25 @@ fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
     }
 }
 
-fn start_pipe_discord_for_autostart(app: AppHandle) {
+fn start_accessible_discord_for_autostart() {
     if discord::current_process().is_some() {
         return;
     }
-    let engine = app.state::<RustEngine>().inner().clone();
-    tauri::async_runtime::spawn(async move {
-        let result = tauri::async_runtime::spawn_blocking(|| discord::restart_pipe(None)).await;
-        match result {
-            Ok(Ok((_process, cdp))) => {
-                if let Err(error) = engine.replace_cdp(cdp) {
-                    diagnostics::error("discord-startup", &error);
-                }
-            }
-            Ok(Err(error)) => diagnostics::warn("discord-startup", &error),
-            Err(error) => diagnostics::warn(
-                "discord-startup",
-                &format!("Discord 자동 실행 작업을 기다리지 못했습니다: {error}"),
-            ),
-        }
-    });
+    if let Err(error) = discord::start_accessibly() {
+        diagnostics::warn("discord-startup", &error);
+    }
+}
+
+fn initialize_autostart(app: AppHandle) {
+    match autostart_get_blocking(app) {
+        Ok(true) => start_accessible_discord_for_autostart(),
+        Ok(false) => {}
+        Err(error) => diagnostics::warn("discord-startup", &error),
+    }
+}
+
+fn initialize_autostart_in_background(app: AppHandle) {
+    tauri::async_runtime::spawn_blocking(move || initialize_autostart(app));
 }
 
 #[tauri::command]
@@ -894,18 +906,18 @@ async fn discord_restart(
 ) -> Result<Value, String> {
     let client = engine.inner().clone();
     let _ = client.set_enabled(false);
-    let restart_result =
-        tauri::async_runtime::spawn_blocking(move || discord::restart_pipe(expected_process_id))
-            .await
-            .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
-    let (process, cdp) = match restart_result {
+    let restart_result = tauri::async_runtime::spawn_blocking(move || {
+        discord::restart_accessibly(expected_process_id)
+    })
+    .await
+    .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
+    let process = match restart_result {
         Ok(result) => result,
         Err(error) => {
             let _ = client.set_enabled(true);
             return Err(error);
         }
     };
-    client.replace_cdp(cdp)?;
     let _ = client.set_enabled(true);
     Ok(json!({"connected": true, "process": process}))
 }
@@ -1000,17 +1012,12 @@ fn shutdown_translation(app: &AppHandle) {
         return;
     }
     let engine = app.state::<RustEngine>();
-    let pipe_discord = discord::current_pipe_process();
     let _ = app.state::<ProviderLoginState>().cancel();
     let _ = engine.set_enabled(false);
     let config = app.state::<ConfigStore>();
     let _ = config.update(json!({"enabled": false}));
     engine.stop();
-    if let Some(process) = pipe_discord {
-        if let Err(error) = discord::restart_accessibly_after_pipe(process) {
-            diagnostics::error("discord_restart", &error);
-        }
-    }
+    accessibility::hide_overlay(app);
 }
 
 fn hide_tray_menu(app: &AppHandle) {
@@ -1241,45 +1248,14 @@ fn main() {
     let process_arguments = std::env::args_os().collect::<Vec<_>>();
     if process_arguments
         .get(1)
-        .is_some_and(|argument| argument == "--discord-cdp-pipe-helper")
+        .is_some_and(|argument| argument == "--verify-discord-accessibility")
     {
-        let result = process_arguments
-            .get(2)
-            .map(std::path::Path::new)
-            .ok_or_else(|| "Discord 실행 경로가 없습니다.".to_string())
-            .and_then(discord::run_pipe_helper);
-        match result {
-            Ok(_) => {}
-            Err(error) => {
-                eprintln!("{error}");
-                std::process::exit(1);
-            }
-        }
-        return;
-    }
-    if process_arguments
-        .get(1)
-        .is_some_and(|argument| argument == "--verify-discord-cdp-pipe")
-    {
-        let expected_process_id = discord::current_process().map(|process| process.process_id);
-        match discord::restart_pipe(expected_process_id).and_then(|(process, mut client)| {
-            let marker = client.evaluate(
-                "(() => { const root = document.documentElement; const name = 'data-nudenyang-pipe-verify'; root.setAttribute(name, 'ok'); const value = root.getAttribute(name); root.removeAttribute(name); return value; })()",
-                false,
-            )?;
-            if marker != serde_json::Value::String("ok".to_string()) {
-                return Err(format!("Discord DOM 변조 검증 결과가 올바르지 않습니다: {marker}"));
-            }
-            drop(client);
-            discord::restart_accessibly_after_pipe(process.clone())?;
-            Ok(process)
-        }) {
-            Ok(process) => {
-                println!(
-                    "SECURE_PID={} DOM_MUTATION=OK ACCESSIBILITY_RESTART=OK",
-                    process.process_id
-                );
-            }
+        match accessibility::snapshot() {
+            Ok(snapshot) => println!(
+                "ACCESSIBILITY_PID={} VISIBLE_MESSAGES={}",
+                snapshot.process_id,
+                snapshot.parts.len()
+            ),
             Err(error) => {
                 eprintln!("{error}");
                 std::process::exit(1);
@@ -1341,22 +1317,12 @@ fn main() {
         .manage(engine)
         .setup(|app| {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
+            if let Some(overlay) = app.get_webview_window("translation-overlay") {
+                overlay.set_ignore_cursor_events(true)?;
+            }
             create_tray(app)?;
             let handle = app.handle().clone();
-            match app.autolaunch().is_enabled() {
-                Ok(enabled) => {
-                    if let Err(error) = synchronize_discord_startup(enabled) {
-                        diagnostics::warn("discord-startup", &error);
-                    }
-                    if enabled {
-                        start_pipe_discord_for_autostart(app.handle().clone());
-                    }
-                }
-                Err(error) => diagnostics::warn(
-                    "discord-startup",
-                    &format!("자동 시작 상태를 확인하지 못했습니다: {error}"),
-                ),
-            }
+            initialize_autostart_in_background(app.handle().clone());
             // Windows가 F12를 디버거 용도로 선점한 경우에도 기존 앱과 동일하게
             // 키 상태 폴링으로 동작시켜 설정 저장과 모델 변경이 막히지 않게 해.
             let _ = replace_shortcut(&handle, ShortcutAction::Translation, "F12");

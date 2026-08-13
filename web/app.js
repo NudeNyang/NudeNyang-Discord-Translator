@@ -76,7 +76,7 @@ const OPTIONS = {
     ["light", "라이트"],
     ["dark", "다크"],
   ],
-  ui_language: [["auto", "Auto(System)", "", "System language"], ...LANGUAGE_OPTIONS],
+  ui_language: [["auto", "Auto (System)", "", "System language"], ...LANGUAGE_OPTIONS],
   translation_history_retention_days: [
     [0, "사용 안 함"],
     [7, "7일 보관"],
@@ -1182,6 +1182,7 @@ function renderSelect(element) {
     if (!languageField && group && group !== previousGroup) {
       const groupLabel = document.createElement("span");
       groupLabel.className = "select-group-label";
+      groupLabel.dataset.i18nKey = SELECT_GROUP_LABELS[group];
       groupLabel.textContent = translateCopy(currentUiLanguage(), SELECT_GROUP_LABELS[group]);
       optionContainer.append(groupLabel);
       previousGroup = group;
@@ -1190,6 +1191,7 @@ function renderSelect(element) {
     option.type = "button";
     option.className = "select-option";
     option.dataset.value = value;
+    option.dataset.i18nKey = label;
     option.textContent = translateCopy(currentUiLanguage(), label);
     if (languageField) option.dir = "auto";
     option.setAttribute("role", "option");
@@ -1361,10 +1363,10 @@ async function waitForSettingsUpdates() {
 async function ensureRestartConsent() {
   if (state.config.discord_auto_restart_consent_granted) return true;
   const confirmed = await showModal({
-    title: "Discord 자동 재시작을 허용하시겠습니까?",
+    title: "Discord 접근성 모드를 준비할까요?",
     message:
-      "실시간 번역을 켜면 Discord가 디버그 렌더러 모드로 실행되지 않았을 때 15초 안내 후 자동으로 다시 시작합니다.\n\n재시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.",
-    acceptText: "동의하고 켜기",
+      "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.",
+    acceptText: "확인하고 준비",
   });
   if (!confirmed) return false;
   state.config = normalizeConfig(
@@ -1472,7 +1474,8 @@ function localizeRuntimeLabel(label, language) {
   if (!label || language === "ko") return label;
   for (const suffix of ["준비 중", "사용 중", "준비 실패"]) {
     if (label.endsWith(suffix)) {
-      return `${label.slice(0, -suffix.length).trim()} ${translateCopy(language, suffix)}`;
+      const runtimeName = label.slice(0, -suffix.length).trim();
+      return `${translateCopy(language, runtimeName)} ${translateCopy(language, suffix)}`;
     }
   }
   return translateCopy(language, label);
@@ -1511,7 +1514,7 @@ async function handleRestartRequired(status) {
       return;
     }
     const confirmed = await showModal({
-      title: "Discord 번역 연결을 준비합니다",
+      title: "Discord 접근성 모드를 준비합니다",
       message: restartCountdownMessage(15),
       acceptText: "지금 재시작",
       autoSeconds: 15,

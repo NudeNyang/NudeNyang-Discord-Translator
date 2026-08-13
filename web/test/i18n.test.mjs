@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   COPY,
+  DYNAMIC_COPY,
+  DYNAMIC_TEMPLATE_COPY,
   resolveUiLanguage,
   translateCopy,
   translateDynamicCopy,
@@ -24,6 +26,14 @@ test("automatic settings language follows supported system locales", () => {
   assert.equal(resolveUiLanguage("auto", "zh-CN"), "zh");
   assert.equal(resolveUiLanguage("auto", "pt-PT"), "pt-BR");
   assert.equal(resolveUiLanguage("auto", "es-MX"), "es-419");
+  assert.equal(resolveUiLanguage("auto", "th-TH"), "th");
+  assert.equal(resolveUiLanguage("auto", "fil-PH"), "fil");
+  assert.equal(resolveUiLanguage("auto", "bn-BD"), "bn");
+  assert.equal(resolveUiLanguage("auto", "ur-PK"), "ur");
+  assert.equal(resolveUiLanguage("auto", "ta-IN"), "ta");
+  assert.equal(resolveUiLanguage("auto", "fa-IR"), "fa");
+  assert.equal(resolveUiLanguage("auto", "he-IL"), "he");
+  assert.equal(resolveUiLanguage("auto", "cs-CZ"), "cs");
 });
 
 test("automatic settings language falls back to English", () => {
@@ -37,20 +47,24 @@ test("Arabic interface copy keeps the shared left-to-right settings layout", () 
   assert.doesNotMatch(i18nSource, /document\.documentElement\.dir = language === "ar" \? "rtl" : "ltr"/);
 });
 
-test("all twenty interface languages have complete static dictionaries", () => {
+test("all twenty-eight interface languages have complete static dictionaries", () => {
   const generatedLanguages = SUPPORTED_TARGET_LANGUAGES.filter(language => !["ko", "en", "ja", "zh"].includes(language));
-  const expectedKeys = Object.keys(COPY).sort();
+  const sourceCopy = { ...COPY, ...DYNAMIC_TEMPLATE_COPY };
+  const expectedKeys = Object.keys(sourceCopy).sort();
   assert.deepEqual(Object.keys(UI_LOCALE_COPY).sort(), generatedLanguages.sort());
   for (const language of generatedLanguages) {
     const dictionary = UI_LOCALE_COPY[language];
+    let unchangedEnglish = 0;
     assert.deepEqual(Object.keys(dictionary).sort(), expectedKeys, language);
     for (const [key, value] of Object.entries(dictionary)) {
       assert.ok(value.trim(), `${language}: ${key}`);
       assert.doesNotMatch(value, /[가-힣]/, `${language}: ${key}`);
-      const sourcePlaceholders = [...COPY[key][0].matchAll(/\{[^}]+\}/g)].map(match => match[0]).sort();
+      const sourcePlaceholders = [...sourceCopy[key][0].matchAll(/\{[^}]+\}/g)].map(match => match[0]).sort();
       const targetPlaceholders = [...value.matchAll(/\{[^}]+\}/g)].map(match => match[0]).sort();
       assert.deepEqual(targetPlaceholders, sourcePlaceholders, `${language}: ${key}`);
+      if (value === sourceCopy[key][0] && /[A-Za-z]{4}/.test(sourceCopy[key][0])) unchangedEnglish += 1;
     }
+    assert.ok(unchangedEnglish <= 10, `${language}: ${unchangedEnglish} ordinary English strings remain`);
   }
 });
 
@@ -65,9 +79,10 @@ test("settings header describes message, image, and app behavior configuration",
   );
 });
 
-test("automatic language option uses one universal label", () => {
+test("UI Language and Auto (System) stay universal", () => {
   for (const language of SUPPORTED_TARGET_LANGUAGES) {
-    assert.equal(translateCopy(language, "Auto(System)"), "Auto(System)");
+    assert.equal(translateCopy(language, "UI Language"), "UI Language");
+    assert.equal(translateCopy(language, "Auto (System)"), "Auto (System)");
   }
 });
 
@@ -233,6 +248,93 @@ test("backend runtime notices and provider details do not leak Korean into other
       assert.doesNotMatch(translateDynamicCopy(language, sample), /[가-힣]/, sample);
     }
   }
+});
+
+test("restart countdown and generic errors stay in every selected interface language", () => {
+  const restart = [
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.",
+    "작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.",
+    "",
+    "15초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.",
+  ].join("\n");
+  const englishRestart = translateDynamicCopy("en", restart);
+  const englishError = translateUserFacingError("en", "내부 저장소의 알 수 없는 오류입니다");
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => !["ko", "en"].includes(language))) {
+    const localizedRestart = translateDynamicCopy(language, restart);
+    const localizedError = translateUserFacingError(language, "내부 저장소의 알 수 없는 오류입니다");
+    assert.notEqual(localizedRestart, englishRestart, `${language}: restart countdown fell back to English`);
+    assert.notEqual(localizedError, englishError, `${language}: generic error fell back to English`);
+    assert.doesNotMatch(localizedRestart, /[가-힣]/, language);
+    assert.doesNotMatch(localizedError, /[가-힣]/, language);
+  }
+});
+
+test("every dynamic runtime message has a non-English generated-locale rendering", () => {
+  const samples = [
+    "7초 후 Discord를 자동으로 다시 시작합니다.",
+    "이미지에서 3개 글자 영역을 번역했습니다.",
+    "표시 번역은 Hy-MT2 1.8B, 실시간 통역은 Claude을 사용합니다.",
+    "Hy-MT2 7B 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
+    "번역 모델 준비 실패: 내부 오류",
+    "이미지를 읽지 못했습니다: 내부 오류",
+    "이미지 번역에 실패했습니다: 내부 오류",
+    "로컬 모델 예열에 실패했습니다: 내부 오류",
+    [
+      "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.",
+      "작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.",
+      "",
+      "9초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.",
+    ].join("\n"),
+    "Claude CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.",
+    "ChatGPT 계정 연결",
+    "Claude CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다.",
+    "ChatGPT 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.",
+    "Claude 계정 로그인을 취소하고 있습니다.",
+    "ChatGPT 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.",
+    "브라우저에서 ChatGPT 로그인을 완료하십시오.\n로그인이 완료되면 이 창이 자동으로 닫힙니다.",
+    "Claude 연결을 해제하시겠습니까?",
+    "F12로 적용되었습니다.",
+    "F12 적용 중",
+    "로컬 모델 파일 1.2GB를 삭제했습니다.",
+    "번역 기록 12건을 정리했습니다.",
+    "Hy-MT2 7B 모델 다운로드 중",
+    "Hy-MT2 7B 모델 파일 확인 중",
+    "Hy-MT2 7B 모델 불러오는 중",
+    "Hy-MT2 7B 모델 준비 대기 중",
+    "Hy-MT2 7B CPU/RAM 전용 모드로 전환 중",
+    "1.2GB / 4.6GB 다운로드됨",
+    "4.6GB 다운로드 완료 · 파일 무결성을 확인하고 있습니다.",
+    "4.6GB 다운로드 완료 · 번역 엔진을 준비하고 있습니다.",
+    "같은 로컬 모델 준비 작업이 끝나기를 기다리고 있습니다.",
+    "선택한 번역 모델: Hy-MT2 7B. 번역 준비가 완료되었습니다.",
+    "선택한 번역 모델: Hy-MT2 7B. 번역을 켜면 모델을 준비합니다.",
+    "새 버전 0.5.2을 사용할 수 있습니다.",
+    "0.5.2 버전을 설치할 수 있습니다. 지금 설치하면 앱이 다시 실행됩니다. 작업 중이라면 나중에 설치해도 됩니다.",
+    "0.5.2 업데이트를 다운로드하고 있습니다...",
+    "업데이트 다운로드 중 52%",
+    "업데이트 확인 실패: 내부 오류",
+    "업데이트 설치 실패: 내부 오류",
+  ];
+  for (const entry of DYNAMIC_COPY) {
+    assert.ok(samples.some(sample => entry.pattern.test(sample)), `missing sample for ${entry.pattern}`);
+  }
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => !["ko", "en", "ja", "zh"].includes(language))) {
+    for (const sample of samples) {
+      const english = translateDynamicCopy("en", sample);
+      const localized = translateDynamicCopy(language, sample);
+      assert.notEqual(localized, english, `${language}: ${sample}`);
+      assert.doesNotMatch(localized, /[가-힣]/, `${language}: ${sample}`);
+    }
+  }
+});
+
+test("the original-message runtime name is localized in every interface language", () => {
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
+    const localized = translateCopy(language, "원문");
+    assert.notEqual(localized, "원문", language);
+    assert.doesNotMatch(localized, /[가-힣]/, language);
+  }
+  assert.match(appScript, /translateCopy\(language, runtimeName\)/);
 });
 
 test("every literal localized status assignment has translations", () => {

@@ -264,6 +264,20 @@ pub fn translation_needs_repair(
     {
         return true;
     }
+    if target == Language::Filipino
+        && source != target
+        && contains_mixed_english_greeting(translated_text)
+        && contains_likely_filipino(translated_text)
+    {
+        return true;
+    }
+    if target == Language::Urdu
+        && source != target
+        && source_is_game_context_without_food(source_text)
+        && translated_text.contains("کھانا")
+    {
+        return true;
+    }
     let meaningful = source_normalized
         .chars()
         .filter(|character| character.is_alphabetic())
@@ -355,7 +369,11 @@ pub fn translation_needs_repair(
                 count_han(translated_text)
             }
             Language::Hindi => count_devanagari(translated_text),
-            Language::Arabic => count_arabic(translated_text),
+            Language::Thai => count_thai(translated_text),
+            Language::Bengali => count_bengali(translated_text),
+            Language::Tamil => count_tamil(translated_text),
+            Language::Arabic | Language::Urdu | Language::Persian => count_arabic(translated_text),
+            Language::Hebrew => count_hebrew(translated_text),
             Language::Russian | Language::Ukrainian => count_cyrillic(translated_text),
             _ => 1,
         };
@@ -367,7 +385,13 @@ pub fn translation_needs_repair(
                     | Language::ChineseSimplified
                     | Language::ChineseTraditional
                     | Language::Hindi
+                    | Language::Thai
+                    | Language::Bengali
+                    | Language::Tamil
                     | Language::Arabic
+                    | Language::Urdu
+                    | Language::Persian
+                    | Language::Hebrew
                     | Language::Russian
                     | Language::Ukrainian
             )
@@ -424,6 +448,18 @@ fn count_devanagari(text: &str) -> usize {
     count_in_ranges(text, &[(0x0900, 0x097f)])
 }
 
+fn count_thai(text: &str) -> usize {
+    count_in_ranges(text, &[(0x0e00, 0x0e7f)])
+}
+
+fn count_bengali(text: &str) -> usize {
+    count_in_ranges(text, &[(0x0980, 0x09ff)])
+}
+
+fn count_tamil(text: &str) -> usize {
+    count_in_ranges(text, &[(0x0b80, 0x0bff)])
+}
+
 fn count_arabic(text: &str) -> usize {
     count_in_ranges(
         text,
@@ -431,8 +467,46 @@ fn count_arabic(text: &str) -> usize {
     )
 }
 
+fn count_hebrew(text: &str) -> usize {
+    count_in_ranges(text, &[(0x0590, 0x05ff), (0xfb1d, 0xfb4f)])
+}
+
 fn count_cyrillic(text: &str) -> usize {
     count_in_ranges(text, &[(0x0400, 0x052f)])
+}
+
+fn contains_mixed_english_greeting(text: &str) -> bool {
+    let normalized = text.trim_start().to_ascii_lowercase();
+    ["hello ", "hello,", "hello!", "hi ", "hi,", "hi!"]
+        .iter()
+        .any(|prefix| normalized.starts_with(prefix))
+}
+
+fn contains_likely_filipino(text: &str) -> bool {
+    let normalized = format!(" {} ", text.to_ascii_lowercase());
+    [
+        " gusto ",
+        " bang ",
+        " mga ",
+        " ngayong ",
+        " kasama ",
+        " laro ",
+    ]
+    .iter()
+    .any(|word| normalized.contains(word))
+}
+
+fn source_is_game_context_without_food(text: &str) -> bool {
+    let normalized = text.to_ascii_lowercase();
+    let mentions_game = normalized.contains("game")
+        || normalized.contains("play")
+        || text.contains("게임")
+        || text.contains("플레이");
+    let mentions_food = normalized.contains("food")
+        || normalized.contains("eat")
+        || text.contains("음식")
+        || text.contains("먹");
+    mentions_game && !mentions_food
 }
 
 #[cfg(test)]
@@ -555,7 +629,13 @@ mod tests {
             (Language::ChineseSimplified, "我们很快在服务器见面"),
             (Language::ChineseTraditional, "我們很快在伺服器見面"),
             (Language::Hindi, "सर्वर पर जल्द मिलते हैं"),
+            (Language::Thai, "แล้วพบกันเร็ว ๆ นี้บนเซิร์ฟเวอร์"),
+            (Language::Bengali, "শিগগিরই সার্ভারে দেখা হবে"),
+            (Language::Tamil, "சேவையகத்தில் விரைவில் சந்திப்போம்"),
             (Language::Arabic, "نلتقي قريبًا على الخادم"),
+            (Language::Urdu, "سرور پر جلد ملتے ہیں"),
+            (Language::Persian, "به‌زودی در سرور می‌بینمتان"),
+            (Language::Hebrew, "נתראה בקרוב בשרת"),
             (Language::Russian, "Скоро увидимся на сервере"),
             (Language::Ukrainian, "Скоро побачимося на сервері"),
         ] {
@@ -587,6 +667,24 @@ mod tests {
             "Até logo no servidor",
             Language::English,
             Language::BrazilianPortuguese,
+        ));
+        assert!(translation_needs_repair(
+            "안녕, 오늘 밤 같이 게임할래?",
+            "Hello, gusto mo bang maglaro ngayong gabi?",
+            Language::Korean,
+            Language::Filipino,
+        ));
+        assert!(!translation_needs_repair(
+            "안녕, 오늘 밤 같이 게임할래?",
+            "Kumusta, gusto mo bang maglaro ngayong gabi?",
+            Language::Korean,
+            Language::Filipino,
+        ));
+        assert!(translation_needs_repair(
+            "안녕, 오늘 밤 같이 게임할래?",
+            "ہیلو، آج رات کونسا گیم کھانا چاہیے؟",
+            Language::Korean,
+            Language::Urdu,
         ));
     }
 }

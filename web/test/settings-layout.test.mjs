@@ -24,9 +24,12 @@ test("the user-facing product name is NudeNyang Translator", () => {
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });
 
-test("translation language options preserve RTL glyphs on the shared left edge", () => {
+test("translation language options keep the shared layout while RTL entries align right", () => {
   assert.match(styles, /\.select-option\s*\{[^}]*text-align:\s*start;/s);
-  assert.match(styles, /\.select-option:dir\(rtl\)\s*\{[^}]*text-align:\s*left;/s);
+  for (const language of ["ar", "ur", "fa", "he"]) {
+    assert.match(styles, new RegExp(`\\.select-option\\[data-value="${language}"\\]`));
+  }
+  assert.match(styles, /\.select-option\[data-value="he"\]\s*\{[^}]*text-align:\s*right;/s);
   assert.match(script, /trigger\.dir = "ltr"/);
   assert.match(script, /triggerLabel\.dir = languageField \? "auto" : "ltr"/);
   assert.match(styles, /\.select-trigger\s*\{[^}]*direction:\s*ltr;/s);
@@ -37,10 +40,11 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.1");
-  assert.match(tauriConfig, /"version": "0\.5\.1"/);
-  assert.match(cargoManifest, /^version = "0\.5\.1"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.1<\/span>/);
+  assert.equal(packageManifest.version, "0.5.3-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.3-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.3-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.3 Beta<\/span>/);
+  assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 
 test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
@@ -69,6 +73,13 @@ test("settings use six uniform navigation categories", () => {
   assert.ok(
     markup.indexOf('data-settings-panel="storage"') < markup.indexOf('data-settings-panel="about"'),
   );
+});
+
+test("settings window keeps a readable minimum width without horizontal navigation scrolling", () => {
+  const windowConfig = JSON.parse(tauriConfig).app.windows.find(window => window.label === "main");
+  assert.ok(windowConfig.minWidth >= 760);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.settings-navigation\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(styles, /\.settings-navigation\s*\{[^}]*overflow-x:\s*auto/);
 });
 
 test("settings reset is separated from the confirmation footer and native window chrome follows the selected theme", () => {
@@ -132,6 +143,18 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.doesNotMatch(script, /speech_style/);
 });
 
+test("outgoing automatic-language help reserves its card height", () => {
+  assert.match(
+    styles,
+    /\.select-help\[hidden\]\s*\{[^}]*display:\s*block;[^}]*visibility:\s*hidden;/s,
+  );
+});
+
+test("language select options relocalize after the saved interface language loads", () => {
+  assert.match(script, /option\.dataset\.i18nKey = label/);
+  assert.match(script, /groupLabel\.dataset\.i18nKey = SELECT_GROUP_LABELS\[group\]/);
+});
+
 test("display translation and outgoing interpretation present role-appropriate model choices", () => {
   assert.match(markup, /<h3>표시 언어 번역 모델<\/h3>/);
   assert.match(markup, /data-field="translator"/);
@@ -173,8 +196,8 @@ test("display translation and outgoing interpretation present role-appropriate m
 });
 
 test("convenience panel exposes global toggles and editable composer shortcuts", () => {
-  assert.match(markup, /<h3>Language<\/h3>/);
-  assert.match(script, /\["auto", "Auto\(System\)", "", "System language"\]/);
+  assert.match(markup, /<h3>UI Language<\/h3>/);
+  assert.match(script, /\["auto", "Auto \(System\)", "", "System language"\]/);
   assert.match(markup, /data-field="ui_language"/);
   assert.match(markup, /id="toggle-shortcut"/);
   assert.match(markup, /id="toggle-outgoing-shortcut"/);
@@ -210,15 +233,28 @@ test("system autostart is a cross-platform convenience setting that defaults to 
   assert.doesNotMatch(capabilities, /autostart:allow-/);
 });
 
-test("Windows autostart owns one private Discord pipe and safely migrates old registrations", () => {
+test("system autostart initialization and registry work stay off the setup thread", () => {
+  assert.match(rustMain, /async fn autostart_get\(/);
+  assert.match(rustMain, /async fn autostart_set\(/);
+  assert.match(rustMain, /fn initialize_autostart_in_background\(/);
+  assert.match(rustMain, /spawn_blocking\(move \|\| initialize_autostart/);
+  const setup = rustMain.slice(rustMain.indexOf(".setup(|app|"), rustMain.indexOf(".invoke_handler"));
+  assert.match(setup, /initialize_autostart_in_background\(app\.handle\(\)\.clone\(\)\)/);
+  assert.doesNotMatch(setup, /app\.autolaunch\(\)\.is_enabled\(\)/);
+  assert.doesNotMatch(setup, /synchronize_discord_startup\(/);
+});
+
+test("Windows autostart uses shared accessibility mode and safely migrates old registrations", () => {
   const startupRuntime = discordStartup.split("#[cfg(test)]")[0];
   assert.doesNotMatch(startupRuntime, /--remote-debugging-port=9222/);
   assert.match(discord, /--force-renderer-accessibility/);
-  assert.match(discord, /--remote-debugging-pipe/);
+  assert.doesNotMatch(discord, /fn restart_pipe/);
+  assert.doesNotMatch(discord, /fn run_pipe_helper/);
+  assert.match(discord, /accessibility-restart\.lock/);
   assert.match(discordStartup, /DiscordStartupBackup/);
   assert.match(discordStartup, /fn suppress_registration/);
   assert.match(discordStartup, /managed:\s*None/);
-  assert.match(rustMain, /start_pipe_discord_for_autostart/);
+  assert.match(rustMain, /start_accessible_discord_for_autostart/);
   assert.match(rustMain, /discord_startup::suppress\(\)/);
   assert.match(rustMain, /discord_startup::restore\(\)/);
   assert.match(rustMain, /--restore-discord-startup/);

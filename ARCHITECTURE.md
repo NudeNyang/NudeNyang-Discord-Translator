@@ -10,8 +10,8 @@ NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 �
 | 설정 저장·이전 | `src-tauri/src/config.rs` |
 | 트레이·창·단축키 | `src-tauri/src/main.rs` |
 | Discord 실행·재시작 | `src-tauri/src/discord.rs` |
-| CDP WebSocket | `src-tauri/src/cdp.rs` |
-| DOM 스냅샷·적용·복원 | `src-tauri/src/dom.rs`, `engine.rs` |
+| Windows 접근성 스냅샷·오버레이 | `src-tauri/src/accessibility.rs`, `engine.rs` |
+| 레거시 CDP/DOM 변환 코드(런타임 미연결) | `src-tauri/src/cdp.rs`, `dom.rs` |
 | 전송 메시지 통역·장문 첨부 | `src-tauri/src/outgoing.rs`, `engine.rs` |
 | 언어 판별 | `src-tauri/src/language.rs` |
 | 번역기·복구 정책 | `src-tauri/src/translation/` |
@@ -30,16 +30,19 @@ NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 �
 한 번 재시도하며, CPU 시도는 2,048토큰 문맥을 사용해 시스템 RAM 점유를 제한한다.
 번역 끄기는 원문을 복원하고, 예열 유지가 꺼져 있으면 llama-server도 종료한다.
 
-## Discord DOM 경계
+## Discord 접근성 경계
 
-Windows 앱은 Discord를 `--remote-debugging-pipe`와 함께 실행하고, 앱과 해당 Discord 프로세스가
-상속한 전용 익명 파이프로만 CDP를 주고받는다. TCP 디버깅 포트는 열지 않으며 파이프 핸들은
-명시적인 상속 목록으로 제한한다.
+Windows 앱은 Discord를 `--force-renderer-accessibility`만 사용해 실행한다. 원격 디버깅 포트나
+파이프를 열지 않으며 Discord DOM에 스크립트를 주입하지 않는다. 현재 사용자 로컬 데이터 폴더의
+공유 잠금 파일로 Sentory와 최초 모드 전환을 조율한다. 이미 접근성 모드인 Discord는 그대로
+사용하고, 일반 모드에서 접근성 모드로 처음 전환할 때만 사용자 동의 후 한 번 재시작한다.
+서버·채널 이동과 번역 켜기·끄기는 Discord 재시작 사유가 아니다.
 다음 경계를 지킨다.
 
 - Discord API, 사용자 토큰, self-bot을 사용하지 않는다.
 - Discord 설치 파일과 서버 데이터는 수정하지 않는다.
-- 현재 렌더링 세션에서 화면에 표시되는 텍스트와 이미지 요소만 바꾼다.
+- 포그라운드 Discord 창의 접근성 트리에 노출된 화면 메시지만 읽는다.
+- 번역 결과는 마우스 입력과 포커스를 받지 않는 별도 Tauri 오버레이에 textContent로 표시한다.
 - 전송 메시지 통역은 사용자가 Enter 또는 설정한 입력 단축키로 전송한 입력만 가로채며, 번역 결과를 같은 렌더러의
   입력창으로 되돌려 보낸다. 1,900 UTF-16 단위를 넘는 번역문은 여러 메시지로 반복 전송하지
   않고 UTF-8 텍스트 파일 하나로 첨부한다.
@@ -51,13 +54,11 @@ Windows 앱은 Discord를 `--remote-debugging-pipe`와 함께 실행하고, 앱�
   Enter를 누르면 확인한 번역문을 전송한다. 기본값 Ctrl+Enter인 즉시 전송 단축키와 기본값
   Alt+Enter인 항상 첨삭 단축키는 편의 기능에서 변경할 수 있다. 두 단축키는 한글·일본어 IME
   조합 중에도 동작하며, Shift+Enter는 기본적으로 Discord의 줄바꿈 동작을 유지한다.
-- 번역을 끄거나 엔진을 종료할 때 저장한 원문 DOM을 복원한다.
+- 번역을 끄거나 엔진을 종료하면 Discord를 종료하지 않고 번역 오버레이만 숨긴다.
 - 실시간 번역은 최초 위험 고지 동의 전에는 켜지지 않는다.
-- CDP 연결 실패가 반복될 때만 15초 안내를 시작하고 한 활성화 주기당 자동 재시작은 한 번으로 제한한다.
+- 접근성 호환 모드가 아닐 때만 15초 안내를 시작하고 한 활성화 주기당 자동 재시작은 한 번으로 제한한다.
 - 카운트다운 중 Discord PID가 바뀌면 오래된 재시작 요청을 폐기한다.
-- 연결할 실행 파일 경로·PID와 `https://discord.com` 페이지 대상을 모두 검증한다.
-- 앱이 정상 종료되면 파이프 Discord를 닫은 뒤 일반 Discord로 다시 열고, 비정상 종료 시에도
-  파이프가 닫혀 디버깅 세션이 남지 않는다.
+- 연결할 실행 파일 경로와 PID를 검증하고 원격 디버깅 인자가 있는 Discord는 접근성 호환 프로세스로 인정하지 않는다.
 
 이 방식은 공식 플러그인 API가 아니므로 Discord 업데이트로 선택자가 바뀌거나 정책상 위험이
 발생할 수 있다. 안전성을 보증하지 않으며 필요하면 배포를 중단할 수 있다.

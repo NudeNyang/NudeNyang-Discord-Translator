@@ -185,12 +185,12 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /표시 언어/);
   assert.match(outgoing, /action:'display-language'/);
   assert.match(outgoing, /getBoundingClientRect\(\)/);
-  assert.match(outgoing, /window\.innerWidth - composerBounds\.right/);
-  assert.match(outgoing, /window\.innerHeight - composerBounds\.top/);
-  assert.match(outgoing, /bounds\.height > 24/);
+  assert.match(outgoing, /window\.innerWidth - anchorBounds\.right/);
+  assert.match(outgoing, /window\.innerHeight - anchorBounds\.top/);
+  assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 35/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 36/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
