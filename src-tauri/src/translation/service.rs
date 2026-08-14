@@ -30,6 +30,7 @@ static ENGLISH_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 const MAX_TRANSLATION_CHARS: usize = 700;
 const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
+const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
 
 pub struct TranslationService {
     translator: Box<dyn Translator>,
@@ -422,6 +423,28 @@ impl TranslationService {
             if lines.len() == unit.members.len() && lines.iter().all(|line| !line.is_empty()) {
                 for (index, line) in unit.members.into_iter().zip(lines) {
                     output[index] = Some(line.to_string());
+                }
+                continue;
+            }
+
+            let source_parts = unit
+                .members
+                .iter()
+                .map(|index| texts[*index].as_str())
+                .collect::<Vec<_>>();
+            if let Some(reconciled) = reconcile_one_merged_context_boundary(&source_parts, &lines) {
+                crate::diagnostics::info(
+                    "translation-context-reconciled",
+                    &format!(
+                        "members={}; returned_parts={}; source_chars={}; translated_chars={}",
+                        unit.members.len(),
+                        lines.len(),
+                        unit.text.chars().count(),
+                        translated.chars().count(),
+                    ),
+                );
+                for (index, line) in unit.members.into_iter().zip(reconciled) {
+                    output[index] = Some(line);
                 }
                 continue;
             }
@@ -836,6 +859,90 @@ impl TranslationService {
     }
 }
 
+fn reconcile_one_merged_context_boundary(
+    source_parts: &[&str],
+    translated_parts: &[&str],
+) -> Option<Vec<String>> {
+    if source_parts.len() < 3
+        || translated_parts.len() < 2
+        || translated_parts.len() + 1 != source_parts.len()
+        || translated_parts.iter().any(|part| part.trim().is_empty())
+    {
+        return None;
+    }
+
+    let source_lengths = source_parts
+        .iter()
+        .map(|part| part.chars().count().max(1))
+        .collect::<Vec<_>>();
+    let translated_lengths = translated_parts
+        .iter()
+        .map(|part| part.chars().count().max(1))
+        .collect::<Vec<_>>();
+    let source_total = source_lengths.iter().sum::<usize>();
+    let translated_total = translated_lengths.iter().sum::<usize>();
+    let length_ratio = translated_total as f64 / source_total as f64;
+    if !(0.20..=2.0).contains(&length_ratio) {
+        return None;
+    }
+
+    let merge_at = (0..source_lengths.len() - 1).min_by(|left, right| {
+        merged_boundary_score(&source_lengths, &translated_lengths, *left).total_cmp(
+            &merged_boundary_score(&source_lengths, &translated_lengths, *right),
+        )
+    })?;
+
+    let mut reconciled = Vec::with_capacity(source_parts.len());
+    let mut source_index = 0_usize;
+    let mut translated_index = 0_usize;
+    while source_index < source_parts.len() {
+        reconciled.push(translated_parts[translated_index].trim().to_string());
+        if source_index == merge_at {
+            reconciled.push(CONTEXT_COLLAPSED_PLACEHOLDER.to_string());
+            source_index += 2;
+        } else {
+            source_index += 1;
+        }
+        translated_index += 1;
+    }
+    Some(reconciled)
+}
+
+fn merged_boundary_score(
+    source_lengths: &[usize],
+    translated_lengths: &[usize],
+    merge_at: usize,
+) -> f64 {
+    let mut grouped_source_lengths = Vec::with_capacity(translated_lengths.len());
+    let mut index = 0_usize;
+    while index < source_lengths.len() {
+        if index == merge_at {
+            grouped_source_lengths.push(source_lengths[index] + source_lengths[index + 1]);
+            index += 2;
+        } else {
+            grouped_source_lengths.push(source_lengths[index]);
+            index += 1;
+        }
+    }
+
+    let source_total = grouped_source_lengths.iter().sum::<usize>() as f64;
+    let translated_total = translated_lengths.iter().sum::<usize>() as f64;
+    let mut source_cumulative = 0_usize;
+    let mut translated_cumulative = 0_usize;
+    grouped_source_lengths
+        .iter()
+        .zip(translated_lengths)
+        .take(translated_lengths.len().saturating_sub(1))
+        .map(|(source, translated)| {
+            source_cumulative += source;
+            translated_cumulative += translated;
+            (source_cumulative as f64 / source_total
+                - translated_cumulative as f64 / translated_total)
+                .abs()
+        })
+        .sum()
+}
+
 fn navigation_context_scope(context_scope: &str) -> String {
     let mut segments = context_scope
         .split('/')
@@ -1000,6 +1107,10 @@ mod tests {
     }
 
     struct SeparatorDroppingTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
+    struct OneBoundaryMergingTranslator {
         inputs: Arc<Mutex<Vec<String>>>,
     }
 
@@ -1231,6 +1342,41 @@ mod tests {
             self.inputs.lock().unwrap().push(text.to_string());
             if text.contains(MESSAGE_CONTEXT_SEPARATOR) {
                 return Ok("경계가 사라진 잘못된 묶음 결과".to_string());
+            }
+            Ok(format!("개별 번역: {text}"))
+        }
+
+        fn should_cache(
+            &self,
+            _source_text: &str,
+            _translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            false
+        }
+    }
+
+    impl Translator for OneBoundaryMergingTranslator {
+        fn display_name(&self) -> &str {
+            "one-boundary-merging"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "one-boundary-merging:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            self.inputs.lock().unwrap().push(text.to_string());
+            if text.contains(MESSAGE_CONTEXT_SEPARATOR) {
+                return Ok(format!(
+                    "서버에 오신 것을 환영해요 제 이름은 카이오라예요{MESSAGE_CONTEXT_SEPARATOR}구독자는 새 역할을 받아요"
+                ));
             }
             Ok(format!("개별 번역: {text}"))
         }
@@ -1547,6 +1693,47 @@ mod tests {
         let recorded = inputs.lock().unwrap();
         assert_eq!(recorded.len(), 3);
         assert!(recorded[0].contains(MESSAGE_CONTEXT_SEPARATOR));
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn contextual_translation_reconciles_one_merged_dom_boundary() {
+        let path = cache_path("merged-message-boundary");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(OneBoundaryMergingTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = [
+            "Welcome to our server",
+            "my name is Kaioura",
+            "Subscribers receive new roles",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let message_keys = vec![Some("message:dto-welcome".to_string()); source.len()];
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &message_keys,
+                "/channels/guild/welcome",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            vec![
+                "서버에 오신 것을 환영해요 제 이름은 카이오라예요",
+                "\u{200b}",
+                "구독자는 새 역할을 받아요",
+            ]
+        );
+        assert_eq!(inputs.lock().unwrap().len(), 1);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
