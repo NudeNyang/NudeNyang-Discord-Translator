@@ -2283,6 +2283,29 @@ mod tests {
     }
 
     #[test]
+    fn incoming_korean_message_translates_long_casual_english_update() {
+        let path = cache_path("mixed-korean-long-casual-update");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let english = concat!(
+            "tomorrow I'm going to stream and chat about my experience at the con hehe, ",
+            "and there may or may not be a vlog of it otw soon!! just waiting to see what ",
+            "my editor says since there is a lil bit of audio issues here and there with my capture"
+        );
+        let source = format!(
+            "정말 즐거운 시간을 보냈으니 다시 한 번 고마워요!! ~ {english}\n모두 멋진 밤을 보내세요!!"
+        );
+
+        let translated = service.translate(&source, Language::Korean).unwrap();
+
+        assert!(
+            translated.contains(&format!("[ko] {english}")),
+            "English fragment was not translated: {translated}"
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn incoming_korean_guide_translates_long_and_short_english_fragments() {
         let path = cache_path("mixed-korean-guide-english");
         let cache = TranslationCache::open(path.clone(), 32).unwrap();

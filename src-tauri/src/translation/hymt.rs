@@ -2965,6 +2965,33 @@ mod tests {
 
     #[test]
     #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_long_casual_stream_update() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        let source = concat!(
+            "tomorrow I'm going to stream and chat about my experience at the con hehe, ",
+            "and there may or may not be a vlog of it otw soon!! just waiting to see what ",
+            "my editor says since there is a lil bit of audio issues here and there with my capture"
+        );
+        let translated = translator
+            .translate(source, Language::English, Language::Korean)
+            .expect("translate the reported stream update with Hy-MT2 1.8B");
+        assert_eq!(
+            detect_explicit_language(&translated),
+            Language::Korean,
+            "unexpected translation: {translated}"
+        );
+        assert_ne!(translated, source);
+        assert!(
+            !translation_needs_repair(source, &translated, Language::English, Language::Korean,),
+            "valid translation was rejected: {translated}"
+        );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
     fn live_small_model_translates_in_cpu_only_mode() {
         let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "cpu", "auto").unwrap();
         assert!(translator.model_is_ready());

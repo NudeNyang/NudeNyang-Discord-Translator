@@ -355,8 +355,15 @@ pub fn translation_needs_repair(
             {
                 return true;
             }
+            let untranslated_latin = untranslated_english_letters(source_text, translated_text);
+            // Long chat messages often preserve a handful of short expressions such as
+            // `hehe`, `vlog`, or `otw`. Treating any four remaining letters as a failure
+            // discarded an otherwise complete translation and restored the whole English
+            // source. Keep the strict floor for short messages, but judge long messages by
+            // the untranslated share so that actual English clauses are still repaired.
+            let allowed_untranslated_latin = ((source_latin + 11) / 12).max(3);
             return hangul > 0
-                && untranslated_english_letters(source_text, translated_text) >= 4
+                && untranslated_latin > allowed_untranslated_latin
                 && remaining_latin >= 4;
         }
     }
@@ -741,6 +748,33 @@ mod tests {
         assert!(translation_needs_repair(
             source,
             "정말 cute했어. 너무 emotional했어 gfjhdlkf",
+            Language::English,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn accepts_long_korean_translation_with_small_chat_term_residue() {
+        let source = concat!(
+            "tomorrow I'm going to stream and chat about my experience at the con hehe, ",
+            "and there may or may not be a vlog of it otw soon!! just waiting to see what ",
+            "my editor says since there is a lil bit of audio issues here and there with my capture"
+        );
+        let translated = concat!(
+            "내일에는 컨퍼런스에서 내 경험에 대해 스트리밍하고 채팅할 거야 hehe, ",
+            "그리고 곧 vlog도 올지 안 올지 모르겠네 otw!! 편집자가 뭐라고 할지 기다리고 있어. ",
+            "촬영하는 과정에서 여기저기에 소리 문제가 조금 있거든."
+        );
+
+        assert!(!translation_needs_repair(
+            source,
+            translated,
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            source,
+            "내일 스트리밍할 거야, and there may or may not be a vlog of it otw soon!! just waiting to see what my editor says",
             Language::English,
             Language::Korean,
         ));
