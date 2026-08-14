@@ -484,7 +484,8 @@ fn is_allowed_untranslated_name(word: &str, source_words: &[String]) -> bool {
     if matches!(
         lower.as_str(),
         "discord" | "vrchat" | "github" | "sentory" | "nudenyang"
-    ) {
+    ) || is_likely_keyboard_smash(word)
+    {
         return true;
     }
     if word.chars().any(|character| character.is_ascii_digit())
@@ -510,6 +511,15 @@ fn is_allowed_untranslated_name(word: &str, source_words: &[String]) -> bool {
                     .next()
                     .is_some_and(|character| character.is_ascii_uppercase())
         })
+}
+
+pub(crate) fn is_likely_keyboard_smash(word: &str) -> bool {
+    let length = word.len();
+    (7..=24).contains(&length)
+        && word.chars().all(|character| character.is_ascii_lowercase())
+        && !word
+            .chars()
+            .any(|character| matches!(character, 'a' | 'e' | 'i' | 'o' | 'u' | 'y'))
 }
 
 fn count_devanagari(text: &str) -> usize {
@@ -581,7 +591,7 @@ fn source_is_game_context_without_food(text: &str) -> bool {
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{translation_needs_repair, ResilientTranslator};
+    use super::{is_likely_keyboard_smash, translation_needs_repair, ResilientTranslator};
     use crate::language::Language;
     use crate::translation::Translator;
 
@@ -712,6 +722,25 @@ mod tests {
         assert!(translation_needs_repair(
             "Subscribers receive new roles and you can connect your Twitch account by going to User Settings in Discord.",
             "구독자는 새 역할을 받고 you can connect yourTwitchaccount by going toUser Settings그런 다음 연결Discord에서.",
+            Language::English,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn allows_keyboard_smash_without_ignoring_real_untranslated_words() {
+        let source = "it was so cute man, I GOT SO EMOTIONAL gfjhdlkf";
+        assert!(is_likely_keyboard_smash("gfjhdlkf"));
+        assert!(!is_likely_keyboard_smash("emotional"));
+        assert!(!translation_needs_repair(
+            source,
+            "정말 귀여웠어. 너무 감정적이었어 gfjhdlkf",
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            source,
+            "정말 cute했어. 너무 emotional했어 gfjhdlkf",
             Language::English,
             Language::Korean,
         ));

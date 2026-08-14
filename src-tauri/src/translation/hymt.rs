@@ -24,7 +24,7 @@ use super::local_model::{
     LocalCompletionApi, LocalModelProfile, LocalPromptStrategy, LOCAL_MODEL_PROFILES,
 };
 use super::protected_text::remove_unwritten_decorations;
-use super::resilient::translation_needs_repair;
+use super::resilient::{is_likely_keyboard_smash, translation_needs_repair};
 use super::Translator;
 
 #[cfg(windows)]
@@ -1239,6 +1239,7 @@ fn unchanged_lowercase_source_words(source_text: &str, translated_text: &str) ->
                 && word
                     .chars()
                     .any(|character| character.is_ascii_alphabetic())
+                && !is_likely_keyboard_smash(word)
         })
     {
         if source_words
@@ -2926,6 +2927,29 @@ mod tests {
         let translated = translator
             .translate(source, Language::English, Language::Korean)
             .expect("translate the reported casual reply with Hy-MT2 1.8B");
+        assert_eq!(
+            detect_explicit_language(&translated),
+            Language::Korean,
+            "unexpected translation: {translated}"
+        );
+        assert_ne!(translated, source);
+        assert!(
+            !translation_needs_repair(source, &translated, Language::English, Language::Korean,),
+            "valid translation was rejected: {translated}"
+        );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_emotional_reply_with_keyboard_smash() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        let source = "it was so cute man, I GOT SO EMOTIONAL gfjhdlkf";
+        let translated = translator
+            .translate(source, Language::English, Language::Korean)
+            .expect("translate the reported emotional reply with Hy-MT2 1.8B");
         assert_eq!(
             detect_explicit_language(&translated),
             Language::Korean,

@@ -2263,6 +2263,26 @@ mod tests {
     }
 
     #[test]
+    fn incoming_korean_message_translates_english_fragment_with_keyboard_smash_suffix() {
+        let path = cache_path("mixed-korean-english-keyboard-smash");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = concat!(
+            "새로운 영상이 나왔어요!! VR에서 베달과 함께 네오로이드가 무너지는 모습에 대한 제 반응 😥 ",
+            "it was so cute man, I GOT SO EMOTIONAL gfjhdlkf 🎉 ",
+            "여러분도 즐겁게 하시길 바랍니다!!"
+        );
+
+        let translated = service.translate(source, Language::Korean).unwrap();
+
+        assert!(
+            translated.contains("[ko] it was so cute man, I GOT SO EMOTIONAL gfjhdlkf"),
+            "English fragment was not translated: {translated}"
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn incoming_korean_guide_translates_long_and_short_english_fragments() {
         let path = cache_path("mixed-korean-guide-english");
         let cache = TranslationCache::open(path.clone(), 32).unwrap();
