@@ -25,6 +25,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "다국어 반응형 트레이와 Discord 보조 화면 번역을 개선하고, 초대 처리와 로컬 모델 번역 품질을 보강한 0.5.4 베타",
+    "Discord 긴 메시지와 보조 화면 번역 누락을 줄이고, 이미지 확대와 다국어 UI를 개선한 0.5.5 베타",
   );
 });
