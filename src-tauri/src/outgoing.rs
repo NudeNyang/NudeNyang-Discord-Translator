@@ -33,7 +33,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 37;
+  const CONTROLLER_VERSION = 38;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
@@ -282,7 +282,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     const copyWrap = document.createElement('span');
     const title = document.createElement('strong');
     const subtitle = document.createElement('small');
-    const collapse = document.createElement('span');
     heading.className = 'nt-heading';
     icon.className = 'nt-heading-icon';
     icon.setAttribute('aria-hidden', 'true');
@@ -291,11 +290,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     title.dir = 'auto';
     title.textContent = primary;
     subtitle.textContent = secondary;
-    collapse.className = 'nt-heading-collapse';
-    collapse.setAttribute('aria-hidden', 'true');
-    collapse.textContent = '⌃';
     copyWrap.append(title, subtitle);
-    heading.append(icon, copyWrap, collapse);
+    heading.append(icon, copyWrap);
     return heading;
   }
   function normalizeLanguageSearch(value) {
@@ -446,6 +442,21 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     }, {passive:false});
     menu.__ntScrollIndicator = {update:scheduleUpdate, reset};
   }
+  function bottomObstacleTop(anchorBounds) {
+    const controlRight = anchorBounds.right;
+    const controlLeft = controlRight - 84;
+    const candidates = [...document.querySelectorAll('[class*="channelBottomBar"], [class*="followButton"], button, [role="button"]')]
+      .filter(node => !node.closest(`#${ROOT_ID}`))
+      .map(node => node.getBoundingClientRect())
+      .filter(bounds => bounds.width >= 56
+        && bounds.height >= 28
+        && bounds.height <= 160
+        && bounds.top >= window.innerHeight * 0.55
+        && bounds.bottom > window.innerHeight - 180
+        && bounds.right > controlLeft - 8
+        && bounds.left < controlRight + 8);
+    return candidates.reduce((top, bounds) => Math.min(top, bounds.top), window.innerHeight);
+  }
   function ensureRoot(controller) {
     let root = document.getElementById(ROOT_ID);
     if (root) return root;
@@ -459,20 +470,20 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID},#${ROOT_ID} *{box-sizing:border-box}
       #${ROOT_ID} [hidden]{display:none!important}
       #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
-      #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:10px;max-width:100%}
+      #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:7px;max-width:100%}
       #${ROOT_ID} .nt-control-wrap{position:relative;flex:none}
       #${ROOT_ID} .nt-outgoing-control{--nt-role-accent:#5aa8f5;--nt-role-accent-deep:#176eaf;--nt-role-text:#f2f7fb;--nt-role-muted:#a9b7c4;--nt-icon-text:#eef9ff}
       #${ROOT_ID} .nt-display-control{--nt-role-accent:#d98243;--nt-role-accent-deep:#8f421b;--nt-role-text:#f2f7fb;--nt-role-muted:#c4b0a2;--nt-icon-text:#fff8f1}
       #${ROOT_ID}[data-open-menu="outgoing"] .nt-display-control,#${ROOT_ID}[data-open-menu="display"] .nt-outgoing-control{display:none}
-      #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{position:relative;z-index:4;display:flex;width:100px;height:58px;align-items:center;gap:10px;padding:0 13px 0 9px;overflow:hidden;border:1px solid #ffffff26;border-radius:22px;background:linear-gradient(145deg,#37424ff2,#1b222bee);box-shadow:0 14px 28px #0006,inset 0 1px #ffffff2e;color:var(--nt-role-text);backdrop-filter:blur(18px) saturate(125%);transition:transform 160ms cubic-bezier(.2,.8,.2,1),filter 160ms ease,border-color 160ms ease}
+      #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{position:relative;z-index:4;display:flex;width:76px;height:40px;align-items:center;gap:8px;padding:0 10px 0 7px;overflow:hidden;border:1px solid #ffffff26;border-radius:17px;background:linear-gradient(145deg,#37424ff2,#1b222bee);box-shadow:0 9px 20px #0006,inset 0 1px #ffffff2e;color:var(--nt-role-text);backdrop-filter:blur(18px) saturate(125%);transition:transform 160ms cubic-bezier(.2,.8,.2,1),filter 160ms ease,border-color 160ms ease}
       #${ROOT_ID} .nt-outgoing-trigger::after,#${ROOT_ID} .nt-display-trigger::after{position:absolute;inset:1px 10px auto;height:12px;border-radius:50%;background:linear-gradient(180deg,#ffffff20,transparent);content:"";pointer-events:none}
-      #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:color-mix(in srgb,var(--nt-role-accent) 46%,#ffffff26);filter:brightness(1.08);transform:translateY(-2px) scale(1.025)}
+      #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:color-mix(in srgb,var(--nt-role-accent) 46%,#ffffff26);filter:brightness(1.08);transform:translateY(-1px) scale(1.02)}
       #${ROOT_ID} .nt-outgoing-trigger:active,#${ROOT_ID} .nt-display-trigger:active{transform:translateY(1px) scale(.975)}
       #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:3px solid color-mix(in srgb,var(--nt-role-accent) 28%,transparent);outline-offset:2px}
-      #${ROOT_ID} .nt-outgoing-trigger[aria-expanded="true"],#${ROOT_ID} .nt-display-trigger[aria-expanded="true"]{width:258px;height:50px;justify-content:flex-end;border-color:transparent;border-radius:25px;background:#0a0d1159;box-shadow:inset 0 1px #ffffff0f;filter:none;transform:none}
-      #${ROOT_ID} .nt-role-icon{display:inline-flex;width:34px;height:34px;flex:none;align-items:center;justify-content:center;border:0;border-radius:50%;background:linear-gradient(145deg,var(--nt-role-accent),var(--nt-role-accent-deep));box-shadow:inset 0 1px #ffffff70,0 5px 12px color-mix(in srgb,var(--nt-role-accent-deep) 45%,transparent);color:var(--nt-icon-text);font-size:16px;font-weight:750;line-height:1}
-      #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:13px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
-      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;z-index:3;right:0;bottom:0;width:274px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:8px 8px 74px;border:1px solid #ffffff26;border-radius:34px;background:linear-gradient(145deg,#353d49f2,#171c23f7);box-shadow:0 25px 60px #0008,inset 0 1px #ffffff2e;color:var(--text-normal,#dbdee1);backdrop-filter:blur(26px) saturate(140%);transform-origin:bottom right;animation:nt-language-menu-enter 180ms cubic-bezier(.16,1,.3,1)}
+      #${ROOT_ID} .nt-outgoing-trigger[aria-expanded="true"],#${ROOT_ID} .nt-display-trigger[aria-expanded="true"]{border-color:color-mix(in srgb,var(--nt-role-accent) 54%,#ffffff26);filter:none;transform:none}
+      #${ROOT_ID} .nt-role-icon{display:inline-flex;width:24px;height:24px;flex:none;align-items:center;justify-content:center;border:0;border-radius:50%;background:linear-gradient(145deg,var(--nt-role-accent),var(--nt-role-accent-deep));box-shadow:inset 0 1px #ffffff70,0 3px 8px color-mix(in srgb,var(--nt-role-accent-deep) 40%,transparent);color:var(--nt-icon-text);font-size:12px;font-weight:750;line-height:1}
+      #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:12px;font-weight:750;letter-spacing:.025em;white-space:nowrap}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;z-index:3;right:0;bottom:0;width:274px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:8px 8px 56px;border:1px solid #ffffff26;border-radius:34px;background:linear-gradient(145deg,#353d49f2,#171c23f7);box-shadow:0 25px 60px #0008,inset 0 1px #ffffff2e;color:var(--text-normal,#dbdee1);backdrop-filter:blur(26px) saturate(140%);transform-origin:bottom right;animation:nt-language-menu-enter 180ms cubic-bezier(.16,1,.3,1)}
       @keyframes nt-language-menu-enter{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
       #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar{width:0;height:0}
       #${ROOT_ID} .nt-menu-scroll-indicator{position:absolute;z-index:5;right:2px;bottom:4px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
@@ -489,12 +500,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-menu button[aria-pressed="true"],#${ROOT_ID} .nt-display-menu button[aria-pressed="true"]{background:color-mix(in srgb,var(--nt-role-accent) 20%,#ffffff0e);color:#fff8f1}
       #${ROOT_ID} .nt-language-check{display:grid;width:24px;height:24px;flex:none;margin-left:auto;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--nt-role-accent),var(--nt-role-accent-deep));box-shadow:inset 0 1px #ffffff66;color:#fff;font-size:13px;font-weight:750}
       #${ROOT_ID} .nt-language-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      #${ROOT_ID} .nt-heading{display:flex;min-height:48px;align-items:center;gap:9px;padding:0 12px 4px;color:var(--nt-role-text)}
-      #${ROOT_ID} .nt-heading-icon{display:grid;width:28px;height:28px;flex:none;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--nt-role-accent),var(--nt-role-accent-deep));box-shadow:inset 0 1px #ffffff66;color:#fff;font-size:14px;font-weight:750}
+      #${ROOT_ID} .nt-heading{display:flex;min-height:44px;align-items:center;gap:9px;padding:0 12px 4px;color:var(--nt-role-text)}
+      #${ROOT_ID} .nt-heading-icon{display:grid;width:24px;height:24px;flex:none;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--nt-role-accent),var(--nt-role-accent-deep));box-shadow:inset 0 1px #ffffff66;color:#fff;font-size:12px;font-weight:750}
       #${ROOT_ID} .nt-heading-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}
       #${ROOT_ID} .nt-heading-copy strong{overflow:hidden;color:var(--nt-role-text);font-size:12px;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
       #${ROOT_ID} .nt-heading-copy small{color:var(--nt-role-muted);font-size:10px;font-weight:500}
-      #${ROOT_ID} .nt-heading-collapse{color:var(--nt-role-muted);font-size:13px}
       #${ROOT_ID} .nt-language-search{position:sticky;z-index:3;top:-8px;padding:4px 4px 8px;background:linear-gradient(180deg,#2d3541 74%,transparent)}
       #${ROOT_ID} .nt-language-search::before{position:absolute;z-index:1;left:18px;top:18px;color:var(--nt-role-muted);content:"⌕";font-size:16px;pointer-events:none}
       #${ROOT_ID} .nt-language-search input{box-sizing:border-box;width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #ffffff20;border-radius:18px;outline:none;background:#0d10157a;box-shadow:inset 0 1px #ffffff0f;color:var(--text-normal,#dbdee1);font:inherit}
@@ -675,9 +685,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         }
         const anchorBounds = anchor.getBoundingClientRect();
         this.root.style.right = `${Math.max(12, window.innerWidth - anchorBounds.right)}px`;
-        this.root.style.bottom = composer || readonlyComposer
-          ? `${Math.max(78, window.innerHeight - anchorBounds.top + 8)}px`
-          : `${Math.max(24, window.innerHeight - anchorBounds.bottom + 24)}px`;
+        if (composer || readonlyComposer) {
+          this.root.style.bottom = `${Math.max(78, window.innerHeight - anchorBounds.top + 8)}px`;
+        } else {
+          const obstacleTop = bottomObstacleTop(anchorBounds);
+          const baseBottom = Math.max(24, window.innerHeight - anchorBounds.bottom + 24);
+          this.root.style.bottom = `${Math.max(baseBottom, window.innerHeight - obstacleTop + 12)}px`;
+        }
         this.root.style.visibility = '';
       },
       updateLabel() {
@@ -2976,7 +2990,7 @@ mod tests {
             .expect("running app control state");
         eprintln!("running app overlay state: {state}");
         let any_enabled = config.enabled || config.outgoing_translation_enabled;
-        assert_eq!(state["version"].as_u64(), Some(37), "state: {state}");
+        assert_eq!(state["version"].as_u64(), Some(38), "state: {state}");
         assert_eq!(
             state["originalVersion"].as_u64(),
             Some(16),
@@ -3059,7 +3073,7 @@ mod tests {
                 .and_then(|value| value.trim_end_matches("px").parse::<f64>().ok())
                 .unwrap_or(f64::MAX);
             assert!(
-                (99.0..=101.0).contains(&width),
+                (75.0..=77.0).contains(&width),
                 "{role} has unexpected width: {state}"
             );
         }
@@ -3074,9 +3088,9 @@ mod tests {
         );
         assert_eq!(
             state["outgoingStyle"]["borderRadius"].as_str(),
-            Some("22px")
+            Some("17px")
         );
-        assert_eq!(state["displayStyle"]["borderRadius"].as_str(), Some("22px"));
+        assert_eq!(state["displayStyle"]["borderRadius"].as_str(), Some("17px"));
         assert_eq!(
             state["outgoingIconStyle"]["borderRadius"].as_str(),
             Some("50%")

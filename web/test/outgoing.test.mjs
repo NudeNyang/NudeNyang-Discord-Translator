@@ -187,10 +187,13 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /getBoundingClientRect\(\)/);
   assert.match(outgoing, /window\.innerWidth - anchorBounds\.right/);
   assert.match(outgoing, /window\.innerHeight - anchorBounds\.top/);
+  assert.match(outgoing, /function bottomObstacleTop\(anchorBounds\)/);
+  assert.match(outgoing, /\[class\*="channelBottomBar"\], \[class\*="followButton"\], button, \[role="button"\]/);
+  assert.match(outgoing, /window\.innerHeight - obstacleTop \+ 12/);
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 37/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 38/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
@@ -222,9 +225,11 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /class="nt-role-icon nt-display-icon" aria-hidden="true">↓/);
   assert.match(outgoing, /\.nt-outgoing-control\{--nt-role-accent:#5aa8f5/);
   assert.match(outgoing, /\.nt-display-control\{--nt-role-accent:#d98243[^}]*--nt-icon-text:#fff8f1/);
-  assert.match(outgoing, /\.nt-outgoing-trigger,#\$\{ROOT_ID\} \.nt-display-trigger\{[^}]*width:100px[^}]*height:58px[^}]*gap:10px[^}]*padding:0 13px 0 9px[^}]*border-radius:22px/);
-  assert.match(outgoing, /\.nt-outgoing-trigger\[aria-expanded="true"\],[\s\S]*?\.nt-display-trigger\[aria-expanded="true"\]\{[^}]*width:258px[^}]*justify-content:flex-end/);
-  assert.match(outgoing, /\.nt-outgoing-menu,#\$\{ROOT_ID\} \.nt-display-menu\{[^}]*right:0[^}]*bottom:0[^}]*width:274px[^}]*padding:8px 8px 74px[^}]*border-radius:34px/);
+  assert.match(outgoing, /\.nt-outgoing-trigger,#\$\{ROOT_ID\} \.nt-display-trigger\{[^}]*width:76px[^}]*height:40px[^}]*gap:8px[^}]*padding:0 10px 0 7px[^}]*border-radius:17px/);
+  assert.match(outgoing, /\.nt-role-icon\{[^}]*width:24px[^}]*height:24px[^}]*font-size:12px/);
+  assert.match(outgoing, /\.nt-outgoing-trigger\[aria-expanded="true"\],[\s\S]*?\.nt-display-trigger\[aria-expanded="true"\]\{[^}]*filter:none[^}]*transform:none/);
+  assert.doesNotMatch(outgoing, /\.nt-outgoing-trigger\[aria-expanded="true"\][^}]*width:/);
+  assert.match(outgoing, /\.nt-outgoing-menu,#\$\{ROOT_ID\} \.nt-display-menu\{[^}]*right:0[^}]*bottom:0[^}]*width:274px[^}]*padding:8px 8px 56px[^}]*border-radius:34px/);
   assert.match(outgoing, /\.nt-language-grid\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(outgoing, /\.nt-language-check\{/);
   assert.match(outgoing, /button\.setAttribute\('aria-pressed', String\(code === selectedValue\)\)/);
@@ -232,6 +237,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /root\.dataset\.openMenu = 'display'/);
   assert.match(outgoing, /@media \(prefers-reduced-motion:reduce\)/);
   assert.match(outgoing, /@media \(prefers-reduced-transparency:reduce\)/);
+  assert.doesNotMatch(outgoing, /nt-heading-collapse/);
   assert.match(outgoing, /aria-label="\$\{copy\('selectDisplayLanguage'\)\}"/);
   assert.doesNotMatch(outgoing, /class="nt-role-label"/);
   assert.doesNotMatch(outgoing, /<i>⌄<\/i>/);
