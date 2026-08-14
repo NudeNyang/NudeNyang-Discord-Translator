@@ -202,11 +202,48 @@ impl TranslationService {
         target: Language,
     ) -> Result<Vec<String>, String> {
         let source_hints = self.incoming_source_hints(texts, message_keys, context_scope)?;
-        if self.translator.isolate_incoming_failures() {
-            Ok(self.translate_many_best_effort_with_hints(texts, &source_hints, target))
-        } else {
-            self.translate_many_with_source_hints(texts, &source_hints, target)
+        let mut results = vec![None; texts.len()];
+        let mut pending_indices = Vec::new();
+        let mut pending_texts = Vec::new();
+        let mut pending_hints = Vec::new();
+
+        for (index, ((text, message_key), source_hint)) in texts
+            .iter()
+            .zip(message_keys)
+            .zip(&source_hints)
+            .enumerate()
+        {
+            if let Some(translated) =
+                preferred_navigation_translation(text, message_key.as_deref(), target)
+            {
+                results[index] = Some(translated);
+            } else {
+                pending_indices.push(index);
+                pending_texts.push(text.clone());
+                pending_hints.push(*source_hint);
+            }
         }
+
+        let translated = if self.translator.isolate_incoming_failures() {
+            self.translate_many_best_effort_with_hints(&pending_texts, &pending_hints, target)
+        } else {
+            self.translate_many_with_source_hints(&pending_texts, &pending_hints, target)?
+        };
+        if translated.len() != pending_indices.len() {
+            return Err("번역 엔진이 일부 텍스트의 결과를 반환하지 않았습니다.".to_string());
+        }
+
+        for (index, translated) in pending_indices.into_iter().zip(translated) {
+            results[index] = Some(translated);
+        }
+        results
+            .into_iter()
+            .map(|translated| {
+                translated.ok_or_else(|| {
+                    "번역 엔진이 일부 텍스트의 결과를 반환하지 않았습니다.".to_string()
+                })
+            })
+            .collect()
     }
 
     fn incoming_source_hints(
@@ -548,6 +585,27 @@ fn navigation_context_scope(context_scope: &str) -> String {
     }
 }
 
+fn preferred_navigation_translation(
+    text: &str,
+    message_key: Option<&str>,
+    target: Language,
+) -> Option<String> {
+    if message_key != Some("navigation") || target != Language::Korean {
+        return None;
+    }
+
+    let prefix = text.get(.."general".len())?;
+    if !prefix.eq_ignore_ascii_case("general") {
+        return None;
+    }
+    let suffix = &text["general".len()..];
+    if suffix.is_empty() || suffix.starts_with('_') || suffix.starts_with('-') {
+        Some(format!("일반{suffix}"))
+    } else {
+        None
+    }
+}
+
 impl Drop for TranslationService {
     fn drop(&mut self) {
         self.translator.close();
@@ -640,7 +698,10 @@ mod tests {
     use std::fmt::Write as _;
     use std::time::Instant;
 
-    use super::{has_terminal_punctuation, preserve_terminal_punctuation, TranslationService};
+    use super::{
+        has_terminal_punctuation, preferred_navigation_translation, preserve_terminal_punctuation,
+        TranslationService,
+    };
     use crate::cache::TranslationCache;
     use crate::language::{detect_language, Language};
     use crate::translation::hymt::{detect_speech_style, HyMtModelSize, HyMtTranslator};
@@ -913,8 +974,64 @@ mod tests {
             translated,
             source
                 .iter()
-                .map(|label| format!("[ko] {label}"))
+                .map(|label| {
+                    if label == "General" {
+                        "일반".to_string()
+                    } else {
+                        format!("[ko] {label}")
+                    }
+                })
                 .collect::<Vec<_>>()
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn korean_navigation_uses_one_general_term_and_preserves_identifier_suffixes() {
+        let path = cache_path("navigation-general-glossary");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = [
+            "General",
+            "general_en",
+            "general_cn",
+            "general_jp",
+            "general_kr",
+            "general_test",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let navigation_keys = vec![Some("navigation".to_string()); source.len()];
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &source,
+                    &navigation_keys,
+                    "/channels/guild/current",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec![
+                "일반".to_string(),
+                "일반_en".to_string(),
+                "일반_cn".to_string(),
+                "일반_jp".to_string(),
+                "일반_kr".to_string(),
+                "일반_test".to_string(),
+            ]
+        );
+        assert_eq!(
+            preferred_navigation_translation("general chat", Some("navigation"), Language::Korean,),
+            None
+        );
+        assert_eq!(
+            preferred_navigation_translation("general_en", Some("message-1"), Language::Korean,),
+            None
+        );
+        assert_eq!(
+            preferred_navigation_translation("general_en", Some("navigation"), Language::Japanese,),
+            None
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
