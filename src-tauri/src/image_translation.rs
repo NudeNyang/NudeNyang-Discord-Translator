@@ -40,7 +40,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v4';
+  const version = 'rust-image-ui-v5';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -90,6 +90,13 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     if (/\/(?:avatars|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source)) return false;
     return !String(img.className).match(/avatar|emoji|sticker|icon|placeholder/i);
   };
+  const activeViewerImage = () => [...document.querySelectorAll('[role="dialog"] img')]
+    .filter(img => inViewer(img) && eligible(img))
+    .sort((left, right) => {
+      const leftRect = left.getBoundingClientRect();
+      const rightRect = right.getBoundingClientRect();
+      return rightRect.width * rightRect.height - leftRect.width * leftRect.height;
+    })[0] || null;
   const ensure = img => {
     if (!img.dataset.ntImageId) img.dataset.ntImageId = `nt-image-${++window.__ntImageSequence}`;
     if (!img.dataset.ntOriginalSrc) {
@@ -134,14 +141,16 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   };
   window.__ntUpdateImageButton = update;
   const show = img => {
-    if (!window.__ntImageEnabled || !eligible(img)) {
+    const target = activeViewerImage() || img;
+    if (!window.__ntImageEnabled || !eligible(target)) {
       button.style.display = 'none';
       return;
     }
-    button.dataset.ntTarget = ensure(img);
-    update(img);
+    button.dataset.ntTarget = ensure(target);
+    button.dataset.ntViewerTarget = inViewer(target) ? 'true' : 'false';
+    update(target);
     button.style.display = 'block';
-    const rect = img.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     const inset = 8;
     const left = Math.max(inset, Math.min(
       innerWidth - button.offsetWidth - inset,
@@ -191,6 +200,29 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
       });
     }, {capture:true, signal});
     document.addEventListener('scroll', () => button.style.display = 'none', {capture:true, signal});
+    window.addEventListener('resize', () => {
+      if (button.style.display === 'none') return;
+      const viewer = activeViewerImage();
+      const target = viewer || imageById(button.dataset.ntTarget || '');
+      if (target && eligible(target)) show(target);
+      else button.style.display = 'none';
+    }, {signal});
+    const viewerObserver = new MutationObserver(mutations => {
+      const viewerChanged = mutations.some(mutation => [...mutation.addedNodes, ...mutation.removedNodes]
+        .some(node => node instanceof Element &&
+          (node.matches('[role="dialog"]') || node.closest('[role="dialog"]') || node.querySelector('[role="dialog"]'))));
+      if (!viewerChanged) return;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const viewer = activeViewerImage();
+        if (viewer) show(viewer);
+        else if (button.dataset.ntViewerTarget === 'true') {
+          button.style.display = 'none';
+          delete button.dataset.ntViewerTarget;
+        }
+      }));
+    });
+    viewerObserver.observe(document.body, {childList:true, subtree:true});
+    signal.addEventListener('abort', () => viewerObserver.disconnect(), {once:true});
     button.addEventListener('pointerenter', () => clearTimeout(window.__ntImageButtonTimer), {signal});
     button.addEventListener('pointerleave', hideSoon, {signal});
     button.addEventListener('click', event => {
@@ -1084,6 +1116,15 @@ mod tests {
     fn image_hover_never_selects_an_obscured_background_image() {
         assert!(IMAGE_UI_SCRIPT.contains("event.composedPath()"));
         assert!(!IMAGE_UI_SCRIPT.contains("document.elementsFromPoint(x, y)"));
+    }
+
+    #[test]
+    fn expanded_image_view_retargets_and_repositions_the_translation_button() {
+        assert!(IMAGE_UI_SCRIPT.contains("const activeViewerImage = () =>"));
+        assert!(IMAGE_UI_SCRIPT.contains("const target = activeViewerImage() || img"));
+        assert!(IMAGE_UI_SCRIPT.contains("new MutationObserver"));
+        assert!(IMAGE_UI_SCRIPT.contains("if (viewer) show(viewer)"));
+        assert!(IMAGE_UI_SCRIPT.contains("window.addEventListener('resize'"));
     }
 
     #[test]
