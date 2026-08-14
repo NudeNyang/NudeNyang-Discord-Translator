@@ -226,6 +226,43 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       roots.add(parent);
     }
   }
+  function choiceQuestionnaireSurfaces() {
+    const counts = new Map();
+    const choiceSelector = [
+      '[role="radio"]', 'input[type="radio"]',
+      '[aria-pressed="true"]', '[aria-pressed="false"]',
+      '[aria-selected="true"]', '[aria-selected="false"]',
+      'button', '[role="button"]'
+    ].join(',');
+    for (const control of document.querySelectorAll(choiceSelector)) {
+      if (!isRendered(control) || control.closest(
+        'nav,[id^="chat-messages-"],[data-list-item-id^="chat-messages___"],' +
+        '[contenteditable="true"],textarea,input[type="text"],[type="search"]'
+      )) continue;
+      const dialog = control.closest('[role="dialog"]');
+      if (!dialog || !isRendered(dialog) || !dialog.querySelector(
+        'h1,h2,h3,[data-text-variant^="heading-"]'
+      )) continue;
+      const controlRect = control.getBoundingClientRect();
+      const dialogRect = dialog.getBoundingClientRect();
+      const semanticChoice = control.matches(
+        '[role="radio"],input[type="radio"],' +
+        '[aria-pressed="true"],[aria-pressed="false"],' +
+        '[aria-selected="true"],[aria-selected="false"]'
+      );
+      const largeChoice = control.matches('button,[role="button"]') &&
+        controlRect.width >= Math.min(220, dialogRect.width * 0.28) &&
+        controlRect.height >= 44;
+      if (!semanticChoice && !largeChoice) continue;
+      const count = counts.get(dialog) || {semanticChoices: 0, largeChoices: 0};
+      if (semanticChoice) count.semanticChoices++;
+      if (largeChoice) count.largeChoices++;
+      counts.set(dialog, count);
+    }
+    return [...counts].filter(([, {semanticChoices, largeChoices}]) =>
+      semanticChoices >= 2 || largeChoices >= 3
+    ).map(([dialog]) => dialog);
+  }
   function inviteApplicationRoots() {
     const roots = new Set();
     const controls = [...document.querySelectorAll(
@@ -249,6 +286,9 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     }
     for (const surface of surfaces) {
       addTextParents(surface, roots);
+    }
+    for (const dialog of choiceQuestionnaireSurfaces()) {
+      addTextParents(dialog, roots, true);
     }
     return [...roots];
   }
@@ -725,6 +765,16 @@ mod tests {
         };
         let script = apply_script(&[DomChange::new(&part, "누구인가요?")]).unwrap();
         assert!(script.contains("data-dto-invite-context-id"));
+    }
+
+    #[test]
+    fn snapshot_supports_choice_only_onboarding_questions() {
+        assert!(SNAPSHOT_SCRIPT.contains("choiceQuestionnaireSurfaces"));
+        assert!(SNAPSHOT_SCRIPT.contains("[role=\"radio\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("input[type=\"radio\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[role=\"dialog\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("semanticChoices >= 2 || largeChoices >= 3"));
+        assert!(SNAPSHOT_SCRIPT.contains("addTextParents(dialog, roots, true)"));
     }
 
     #[test]
