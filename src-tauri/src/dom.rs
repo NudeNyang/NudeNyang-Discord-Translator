@@ -239,29 +239,29 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
         'nav,[id^="chat-messages-"],[data-list-item-id^="chat-messages___"],' +
         '[contenteditable="true"],textarea,input[type="text"],[type="search"]'
       )) continue;
-      const dialog = control.closest('[role="dialog"]');
-      if (!dialog || !isRendered(dialog) || !dialog.querySelector(
+      const surface = closestSupplementalSurface(control);
+      if (!surface || !surface.querySelector(
         'h1,h2,h3,[data-text-variant^="heading-"]'
       )) continue;
       const controlRect = control.getBoundingClientRect();
-      const dialogRect = dialog.getBoundingClientRect();
+      const surfaceRect = surface.getBoundingClientRect();
       const semanticChoice = control.matches(
         '[role="radio"],input[type="radio"],' +
         '[aria-pressed="true"],[aria-pressed="false"],' +
         '[aria-selected="true"],[aria-selected="false"]'
       );
       const largeChoice = control.matches('button,[role="button"]') &&
-        controlRect.width >= Math.min(220, dialogRect.width * 0.28) &&
+        controlRect.width >= Math.min(220, surfaceRect.width * 0.28) &&
         controlRect.height >= 44;
       if (!semanticChoice && !largeChoice) continue;
-      const count = counts.get(dialog) || {semanticChoices: 0, largeChoices: 0};
+      const count = counts.get(surface) || {semanticChoices: 0, largeChoices: 0};
       if (semanticChoice) count.semanticChoices++;
       if (largeChoice) count.largeChoices++;
-      counts.set(dialog, count);
+      counts.set(surface, count);
     }
     return [...counts].filter(([, {semanticChoices, largeChoices}]) =>
       semanticChoices >= 2 || largeChoices >= 3
-    ).map(([dialog]) => dialog);
+    ).map(([surface]) => surface);
   }
   function inviteApplicationRoots() {
     const roots = new Set();
@@ -287,8 +287,8 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     for (const surface of surfaces) {
       addTextParents(surface, roots);
     }
-    for (const dialog of choiceQuestionnaireSurfaces()) {
-      addTextParents(dialog, roots, true);
+    for (const surface of choiceQuestionnaireSurfaces()) {
+      addTextParents(surface, roots, true);
     }
     return [...roots];
   }
@@ -772,9 +772,10 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("choiceQuestionnaireSurfaces"));
         assert!(SNAPSHOT_SCRIPT.contains("[role=\"radio\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("input[type=\"radio\"]"));
-        assert!(SNAPSHOT_SCRIPT.contains("[role=\"dialog\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("closestSupplementalSurface(control)"));
+        assert!(!SNAPSHOT_SCRIPT.contains("const dialog = control.closest('[role=\"dialog\"]');"));
         assert!(SNAPSHOT_SCRIPT.contains("semanticChoices >= 2 || largeChoices >= 3"));
-        assert!(SNAPSHOT_SCRIPT.contains("addTextParents(dialog, roots, true)"));
+        assert!(SNAPSHOT_SCRIPT.contains("addTextParents(surface, roots, true)"));
     }
 
     #[test]

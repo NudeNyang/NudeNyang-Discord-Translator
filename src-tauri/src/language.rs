@@ -628,7 +628,7 @@ fn prepare_for_detection(text: &str) -> String {
 }
 
 fn has_clear_english_signal(text: &str) -> bool {
-    const STRONG: [&str; 14] = [
+    const STRONG: [&str; 19] = [
         "hello",
         "please",
         "welcome",
@@ -643,6 +643,11 @@ fn has_clear_english_signal(text: &str) -> bool {
         "blocking",
         "forced",
         "termination",
+        "power",
+        "adjust",
+        "volume",
+        "listening",
+        "tips",
     ];
     const COMMON: [&str; 36] = [
         "the", "this", "that", "these", "those", "from", "with", "without", "into", "for", "and",
@@ -1143,6 +1148,14 @@ mod tests {
             assert_eq!(detect_explicit_language(text), Language::Unknown, "{text}");
         }
         assert_eq!(detect_language("nice").confidence, 0.0);
+    }
+
+    #[test]
+    fn detects_short_english_instruction_labels_without_guessing_names() {
+        for text in ["Power On", "Adjust Volume", "Listening Tips"] {
+            assert_eq!(detect_explicit_language(text), Language::English, "{text}");
+        }
+        assert_eq!(detect_explicit_language("Silver Moon"), Language::Unknown);
     }
 
     #[test]

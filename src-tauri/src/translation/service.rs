@@ -613,9 +613,20 @@ impl TranslationService {
             )? {
                 let cached = sanitize_unexpected_marker_artifacts(text, &cached);
                 let cached = apply_conservative_semantic_repairs(&cached, text, source, target);
-                results[index] = Some(preserve_terminal_punctuation(text, &cached));
-                cache_hits += 1;
-                continue;
+                let cached = preserve_terminal_punctuation(text, &cached);
+                if self.translator.should_cache(text, &cached, source, target) {
+                    results[index] = Some(cached);
+                    cache_hits += 1;
+                    continue;
+                }
+                crate::diagnostics::info(
+                    "translation-cache",
+                    &format!(
+                        "stale result rejected; chars={}; hash={}",
+                        text.chars().count(),
+                        source_hash
+                    ),
+                );
             }
             pending.push((index, text.clone(), protected, source, source_hash));
         }
@@ -790,7 +801,17 @@ impl TranslationService {
         )? {
             let cached = sanitize_unexpected_marker_artifacts(text, &cached);
             let cached = apply_conservative_semantic_repairs(&cached, text, source, target);
-            return Ok(preserve_terminal_punctuation(text, &cached));
+            let cached = preserve_terminal_punctuation(text, &cached);
+            if self.translator.should_cache(text, &cached, source, target) {
+                return Ok(cached);
+            }
+            crate::diagnostics::info(
+                "translation-cache",
+                &format!(
+                    "stale fragment rejected; chars={}; hash={hash}",
+                    text.chars().count()
+                ),
+            );
         }
         let translated = self
             .translator
@@ -950,7 +971,7 @@ mod tests {
 
     use super::{
         has_terminal_punctuation, preferred_navigation_translation, preserve_terminal_punctuation,
-        TranslationService, MESSAGE_CONTEXT_SEPARATOR,
+        source_hash, TranslationService, MESSAGE_CONTEXT_SEPARATOR,
     };
     use crate::cache::TranslationCache;
     use crate::language::{detect_language, Language};
@@ -999,6 +1020,16 @@ mod tests {
         ) -> Result<String, String> {
             *self.calls.lock().unwrap() += 1;
             Ok(format!("[{}] {text}", target.code()))
+        }
+
+        fn should_cache(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            source_text != translated_text
         }
     }
 
@@ -1775,6 +1806,67 @@ mod tests {
                 .unwrap(),
             "Silver Moon에게 음료를 건넸어요"
         );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_korean_guide_translates_long_and_short_english_fragments() {
+        let path = cache_path("mixed-korean-guide-english");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = concat!(
+            "연말 분위기를 천천히 즐겨보세요.\n",
+            "In this residence, we invite you to enjoy a special experience — listening to Charlie Puth on vinyl while overlooking the city night view.\n",
+            "1️⃣ 전원 켜기 1️⃣ Power On\n",
+            "5️⃣ 볼륨 조절 5️⃣ Adjust Volume\n",
+            "6️⃣ 감상 팁 6️⃣ Listening Tips\n",
+            "감상이 끝나면 톤암을 거치대에 올려 주세요."
+        );
+
+        let translated = service.translate(source, Language::Korean).unwrap();
+
+        for fragment in [
+            "In this residence, we invite you to enjoy a special experience",
+            "listening to Charlie Puth on vinyl while overlooking the city night view.",
+            "Power On",
+            "Adjust Volume",
+            "Listening Tips",
+        ] {
+            assert!(
+                translated.contains(&format!("[ko] {fragment}")),
+                "English fragment was not translated: {fragment}\n{translated}"
+            );
+        }
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn invalid_unchanged_cache_entry_is_retranslated() {
+        let path = cache_path("invalid-unchanged-cache");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let calls = Arc::new(Mutex::new(0));
+        let translator = CountingTranslator {
+            calls: calls.clone(),
+        };
+        let namespace = translator.cache_namespace().to_string();
+        let source = "Power On";
+        cache
+            .put(
+                &source_hash(source),
+                source,
+                Language::English.code(),
+                Language::Korean.code(),
+                source,
+                &namespace,
+            )
+            .unwrap();
+        let mut service = TranslationService::new(Box::new(translator), cache);
+
+        assert_eq!(
+            service.translate(source, Language::Korean).unwrap(),
+            "[ko] Power On"
+        );
+        assert_eq!(*calls.lock().unwrap(), 1);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
