@@ -1289,8 +1289,16 @@ fn clean_korean_listener_question_person(
 }
 
 fn clean_cross_script_language_terms(text: &str, source: Language, target: Language) -> String {
+    let repaired = if target == Language::Korean {
+        text.replace("トーンアーム", "톤암")
+            .replace("톤アーム", "톤암")
+            .replace("톤아ーム", "톤암")
+            .replace("톤아ム", "톤암")
+    } else {
+        text.to_string()
+    };
     if source == Language::Tamil && target == Language::Korean {
-        return text.replace("서비스 센터", "서버");
+        return repaired.replace("서비스 센터", "서버");
     }
     if target == Language::Korean
         && matches!(
@@ -1298,7 +1306,7 @@ fn clean_cross_script_language_terms(text: &str, source: Language, target: Langu
             Language::ChineseSimplified | Language::ChineseTraditional
         )
     {
-        return text
+        return repaired
             .replace("중국어繁體", "중국어 번체")
             .replace("중국어繁体", "중국어 번체")
             .replace("중국어簡體", "중국어 간체")
@@ -1309,7 +1317,7 @@ fn clean_cross_script_language_terms(text: &str, source: Language, target: Langu
             .replace("简体", "간체")
             .replace("中文", "중국어");
     }
-    text.to_string()
+    repaired
 }
 
 pub(super) fn apply_conservative_semantic_repairs(
@@ -2106,6 +2114,21 @@ mod tests {
                     Language::Korean,
                 ),
                 expected
+            );
+        }
+    }
+
+    #[test]
+    fn korean_cleanup_normalizes_mixed_script_tonearm_terms() {
+        for contaminated in ["トーンアーム", "톤アーム", "톤아ーム", "톤아ム"] {
+            assert_eq!(
+                apply_conservative_semantic_repairs(
+                    &format!("사용 후 {contaminated}을 고정하세요."),
+                    "Secure the tonearm after use.",
+                    Language::English,
+                    Language::Korean,
+                ),
+                "사용 후 톤암을 고정하세요."
             );
         }
     }
