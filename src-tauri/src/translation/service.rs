@@ -29,6 +29,7 @@ static ENGLISH_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 const MAX_TRANSLATION_CHARS: usize = 700;
+const MAX_MESSAGE_CONTEXT_CHARS: usize = 320;
 const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
 const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
 
@@ -361,7 +362,7 @@ impl TranslationService {
             for index in indices {
                 let separator = if chunk.is_empty() { 0 } else { separator_chars };
                 let next = texts[index].chars().count() + separator;
-                if !chunk.is_empty() && chars + next > MAX_TRANSLATION_CHARS {
+                if !chunk.is_empty() && chars + next > MAX_MESSAGE_CONTEXT_CHARS {
                     finish_chunk(&mut chunk, &mut group_at, &mut grouped_indices);
                     chars = 0;
                 }
@@ -1596,6 +1597,51 @@ mod tests {
         let recorded = inputs.lock().unwrap();
         assert_eq!(recorded.len(), 1);
         assert!(recorded[0].contains(MESSAGE_CONTEXT_SEPARATOR));
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn long_rich_messages_use_small_context_batches_for_local_models() {
+        let path = cache_path("small-rich-message-batches");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(RecordingIdentityTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = [
+            "Find the join code of the guild you prefer on the recruitment board before continuing.",
+            "Enter the join code in the corresponding section under the board and then select Check.",
+            "If the request succeeds, the guild name and banner will appear in your player nameplate.",
+            "Create a VRC group because the guild will use the same name and banner as that group.",
+            "Open the creator page and purchase the current monthly guild poster from the shop.",
+            "After purchase, open the form and provide the group link together with its description.",
+            "The guild becomes available in game as soon as the owner publishes the updated list.",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let message_keys = vec![Some("message:dto-long-guild-guide".to_string()); source.len()];
+
+        service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &message_keys,
+                "/channels/guild/general",
+                Language::Korean,
+            )
+            .unwrap();
+
+        let grouped = inputs
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|text| text.contains(MESSAGE_CONTEXT_SEPARATOR))
+            .cloned()
+            .collect::<Vec<_>>();
+        assert!(grouped.len() >= 2);
+        assert!(grouped.iter().all(|text| text.chars().count() <= 320));
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
