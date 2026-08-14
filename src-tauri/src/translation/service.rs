@@ -25,7 +25,7 @@ static JAPANESE_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 static ENGLISH_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"[A-Za-z][A-Za-z0-9'’.,!?-]*(?:[ \t]+[A-Za-z0-9][A-Za-z0-9'’.,!?-]*)+").unwrap()
+    Regex::new(r"[A-Za-z][A-Za-z0-9'’.,!?-]*(?:[ \t\r\n]+[A-Za-z0-9][A-Za-z0-9'’.,!?-]*)+").unwrap()
 });
 
 const MAX_TRANSLATION_CHARS: usize = 700;
@@ -1003,6 +1003,8 @@ mod tests {
         inputs: Arc<Mutex<Vec<String>>>,
     }
 
+    struct JoinedLineContextTranslator;
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -1020,6 +1022,39 @@ mod tests {
         ) -> Result<String, String> {
             *self.calls.lock().unwrap() += 1;
             Ok(format!("[{}] {text}", target.code()))
+        }
+
+        fn should_cache(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            source_text != translated_text
+        }
+    }
+
+    impl Translator for JoinedLineContextTranslator {
+        fn display_name(&self) -> &str {
+            "joined-line-context"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "joined-line-context:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            if text == "In this residence,\nwe invite you to enjoy a special experience" {
+                Ok("이 레지던스에서는 특별한 경험으로 초대합니다".to_string())
+            } else {
+                Ok(text.to_string())
+            }
         }
 
         fn should_cache(
@@ -1837,6 +1872,29 @@ mod tests {
                 "English fragment was not translated: {fragment}\n{translated}"
             );
         }
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_korean_guide_keeps_adjacent_english_lines_in_one_context() {
+        let path = cache_path("mixed-korean-guide-adjacent-english-lines");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(JoinedLineContextTranslator), cache);
+        let source = concat!(
+            "연말 분위기를 천천히 즐겨보세요.\n",
+            "In this residence,\n",
+            "we invite you to enjoy a special experience\n",
+            "도시의 야경을 감상하세요."
+        );
+
+        assert_eq!(
+            service.translate(source, Language::Korean).unwrap(),
+            concat!(
+                "연말 분위기를 천천히 즐겨보세요.\n",
+                "이 레지던스에서는 특별한 경험으로 초대합니다\n",
+                "도시의 야경을 감상하세요."
+            )
+        );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

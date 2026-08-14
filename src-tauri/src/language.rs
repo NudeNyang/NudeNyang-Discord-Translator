@@ -1152,7 +1152,13 @@ mod tests {
 
     #[test]
     fn detects_short_english_instruction_labels_without_guessing_names() {
-        for text in ["Power On", "Adjust Volume", "Listening Tips"] {
+        for text in [
+            "Power On",
+            "Adjust Volume",
+            "Listening Tips",
+            "In this residence,",
+            "we invite you to enjoy a special experience",
+        ] {
             assert_eq!(detect_explicit_language(text), Language::English, "{text}");
         }
         assert_eq!(detect_explicit_language("Silver Moon"), Language::Unknown);
