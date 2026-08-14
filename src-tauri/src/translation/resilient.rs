@@ -37,7 +37,7 @@ impl ResilientTranslator {
             .as_ref()
             .map_or("local-only", |translator| translator.cache_namespace());
         let cache_namespace = format!(
-            "{}:quality-repair-v9:{fallback_namespace}",
+            "{}:quality-repair-v10:{fallback_namespace}",
             primary.cache_namespace()
         );
         Self {
