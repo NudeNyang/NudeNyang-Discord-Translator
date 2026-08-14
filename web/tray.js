@@ -26,6 +26,7 @@ const VIEW_HEIGHTS = Object.freeze({
   model: 427,
 });
 const UPDATE_ROW_HEIGHT = 58;
+const COMPACT_TRAY_LANGUAGES = new Set(["ko", "ja", "zh", "zh-Hant"]);
 
 document.querySelector("#language-view").innerHTML = `
   <div class="tray-language-search">
@@ -105,12 +106,13 @@ function measureText(element) {
 }
 
 function preferredTrayWidth() {
-  const activeRows = [...document.querySelectorAll(".brand-row, .menu-row")]
+  if (COMPACT_TRAY_LANGUAGES.has(resolveUiLanguage(selectedUiLanguage))) return 300;
+  const activeRows = [...document.querySelectorAll(".menu-row")]
     .filter(row => row.offsetParent !== null);
   const required = activeRows.reduce((widest, row) => {
-    const label = row.querySelector(".brand-copy strong, .menu-copy strong");
-    const value = row.querySelector(".open-label, .menu-value");
-    return Math.max(widest, measureText(label) + measureText(value) + 138);
+    const label = row.querySelector(".menu-copy strong");
+    const value = row.querySelector(".menu-value");
+    return Math.max(widest, measureText(label) + measureText(value) + 112);
   }, 300);
   return Math.min(390, Math.max(300, Math.ceil(required)));
 }

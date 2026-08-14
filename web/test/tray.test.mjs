@@ -93,6 +93,16 @@ test("tray actions remain aligned when translated labels are long", () => {
   assert.match(rustShell, /fn tray_menu_set_size\(app: AppHandle, width: u32, height: u32\)/);
 });
 
+test("compact interface languages keep the original narrow tray width", () => {
+  assert.match(trayScript, /const COMPACT_TRAY_LANGUAGES = new Set\(\["ko", "ja", "zh", "zh-Hant"\]\)/);
+  assert.match(
+    trayScript,
+    /if \(COMPACT_TRAY_LANGUAGES\.has\(resolveUiLanguage\(selectedUiLanguage\)\)\) return 300;/,
+  );
+  assert.match(trayScript, /querySelectorAll\("\.menu-row"\)/);
+  assert.doesNotMatch(trayScript, /querySelectorAll\("\.brand-row, \.menu-row"\)/);
+});
+
 test("display language can be changed inside the tray menu", () => {
   assert.equal(LANGUAGE_OPTIONS.length, 28);
   for (const [language] of LANGUAGE_OPTIONS) {
