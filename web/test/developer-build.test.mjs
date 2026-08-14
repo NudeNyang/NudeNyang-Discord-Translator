@@ -25,6 +25,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "UI Language와 Auto (System)을 복구용 영어 표기로 고정하고 베타 버전을 명시한 0.5.3 베타",
+    "다국어 반응형 트레이와 Discord 보조 화면 번역을 개선하고, 초대 처리와 로컬 모델 번역 품질을 보강한 0.5.4 베타",
   );
 });
