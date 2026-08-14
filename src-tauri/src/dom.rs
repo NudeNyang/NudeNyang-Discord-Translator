@@ -140,6 +140,37 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
   for (const part of document.querySelectorAll(embedPartSelector)) {
     embedRoots.add(outerEmbedRoot(part));
   }
+  function invitePreviewDescriptionRoots() {
+    const roots = new Set();
+    const inviteAnchors = document.querySelectorAll(
+      'a[href*="discord.gg/"],a[href*="discord.com/invite/"]'
+    );
+    const descriptionSelector = [
+      '[class*="guildDescription_"]',
+      '[class*="inviteDescription_"]',
+      '[class*="description_"]'
+    ].join(',');
+    for (const anchor of inviteAnchors) {
+      const row = anchor.closest(
+        '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]'
+      );
+      if (!row) continue;
+      for (const root of row.querySelectorAll(descriptionSelector)) {
+        if (!isVisible(root) || !root.textContent?.trim()) continue;
+        if (root.closest(
+          '[id^="message-content-"],[id^="message-content_"],' +
+          '[data-nt-invite-inline-assist],[data-nt-invite-browser-assist]'
+        )) continue;
+        if (root.closest('a,button,[role="button"]')) continue;
+        if (root.closest(embedContainerSelector)) continue;
+        roots.add(root);
+      }
+    }
+    return roots;
+  }
+  for (const root of invitePreviewDescriptionRoots()) {
+    embedRoots.add(root);
+  }
   for (const root of embedRoots) {
     if (!isVisible(root)) continue;
     const id = ensureRootId(root, 'data-dto-root-id', 'embed');
@@ -934,6 +965,17 @@ mod tests {
         };
         let script = apply_script(&[DomChange::new(&part, "#카푸치아바타즈")]).unwrap();
         assert!(script.contains("eligibleTextNodes(root, change.kind === 'embed')"));
+    }
+
+    #[test]
+    fn snapshot_collects_invite_preview_descriptions_without_native_controls() {
+        assert!(SNAPSHOT_SCRIPT.contains("invitePreviewDescriptionRoots"));
+        assert!(SNAPSHOT_SCRIPT.contains("a[href*=\"discord.gg/\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("a[href*=\"discord.com/invite/\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"guildDescription_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"description_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("closest('a,button,[role=\"button\"]')"));
+        assert!(SNAPSHOT_SCRIPT.contains("embedRoots.add(root)"));
     }
 
     #[test]
