@@ -420,10 +420,18 @@ impl TranslationService {
             let lines = translated
                 .split(MESSAGE_CONTEXT_SEPARATOR.trim())
                 .map(str::trim)
+                .map(str::to_string)
                 .collect::<Vec<_>>();
             if lines.len() == unit.members.len() && lines.iter().all(|line| !line.is_empty()) {
+                let lines = self.retry_incomplete_context_parts(
+                    &unit.members,
+                    lines,
+                    texts,
+                    unit.hint,
+                    target,
+                )?;
                 for (index, line) in unit.members.into_iter().zip(lines) {
-                    output[index] = Some(line.to_string());
+                    output[index] = Some(line);
                 }
                 continue;
             }
@@ -433,7 +441,10 @@ impl TranslationService {
                 .iter()
                 .map(|index| texts[*index].as_str())
                 .collect::<Vec<_>>();
-            if let Some(reconciled) = reconcile_one_merged_context_boundary(&source_parts, &lines) {
+            let translated_parts = lines.iter().map(String::as_str).collect::<Vec<_>>();
+            if let Some(reconciled) =
+                reconcile_one_merged_context_boundary(&source_parts, &translated_parts)
+            {
                 crate::diagnostics::info(
                     "translation-context-reconciled",
                     &format!(
@@ -444,6 +455,13 @@ impl TranslationService {
                         translated.chars().count(),
                     ),
                 );
+                let reconciled = self.retry_incomplete_context_parts(
+                    &unit.members,
+                    reconciled,
+                    texts,
+                    unit.hint,
+                    target,
+                )?;
                 for (index, line) in unit.members.into_iter().zip(reconciled) {
                     output[index] = Some(line);
                 }
@@ -490,6 +508,60 @@ impl TranslationService {
                 })
             })
             .collect()
+    }
+
+    fn retry_incomplete_context_parts(
+        &mut self,
+        members: &[usize],
+        mut translated_parts: Vec<String>,
+        texts: &[String],
+        source_hint: Option<Language>,
+        target: Language,
+    ) -> Result<Vec<String>, String> {
+        let Some(source) = source_hint.filter(|source| *source != Language::Unknown) else {
+            return Ok(translated_parts);
+        };
+        let incomplete = members
+            .iter()
+            .enumerate()
+            .filter_map(|(part_index, text_index)| {
+                (!self.translator.translation_is_acceptable(
+                    &texts[*text_index],
+                    &translated_parts[part_index],
+                    source,
+                    target,
+                ))
+                .then_some((part_index, *text_index))
+            })
+            .collect::<Vec<_>>();
+        if incomplete.is_empty() {
+            return Ok(translated_parts);
+        }
+
+        crate::diagnostics::info(
+            "translation-context-part-retry",
+            &format!(
+                "members={}; incomplete_parts={}; source={}; target={}",
+                members.len(),
+                incomplete.len(),
+                source.code(),
+                target.code(),
+            ),
+        );
+        let retry_texts = incomplete
+            .iter()
+            .map(|(_, text_index)| texts[*text_index].clone())
+            .collect::<Vec<_>>();
+        let retry_hints = vec![Some(source); retry_texts.len()];
+        let retried = if self.translator.isolate_incoming_failures() {
+            self.translate_many_best_effort_with_hints(&retry_texts, &retry_hints, target)
+        } else {
+            self.translate_many_with_source_hints(&retry_texts, &retry_hints, target)?
+        };
+        for ((part_index, _), translated) in incomplete.into_iter().zip(retried) {
+            translated_parts[part_index] = translated;
+        }
+        Ok(translated_parts)
     }
 
     fn incoming_source_hints(
@@ -1115,6 +1187,10 @@ mod tests {
         inputs: Arc<Mutex<Vec<String>>>,
     }
 
+    struct PartiallyTranslatedContextTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
     struct JoinedLineContextTranslator;
 
     impl Translator for CountingTranslator {
@@ -1600,6 +1676,64 @@ mod tests {
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
+    impl Translator for PartiallyTranslatedContextTranslator {
+        fn display_name(&self) -> &str {
+            "partially-translated-context"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "partially-translated-context:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            self.inputs.lock().unwrap().push(text.to_string());
+            if text.contains(MESSAGE_CONTEXT_SEPARATOR) {
+                return Ok([
+                    "Welcome to Kai's Comfy Fox Den!",
+                    "안녕하세요. 저는 카이오라이고 트위치에서 방송하는 여우 버튜버예요.",
+                    "구독자는 새 역할을 받고 you can connect your Twitch account by going to User Settings.",
+                ]
+                .join(MESSAGE_CONTEXT_SEPARATOR));
+            }
+            Ok(match text {
+                "Welcome to Kai's Comfy Fox Den!" => "카이의 아늑한 여우굴에 오신 것을 환영해요!",
+                "Hi, my name is Kaioura and I'm a fox VTuber who streams on Twitch." => {
+                    "안녕하세요. 저는 카이오라이고 트위치에서 방송하는 여우 버튜버예요."
+                }
+                "Subscribers receive new roles and you can connect your Twitch account by going to User Settings." => {
+                    "구독자는 새 역할을 받고 사용자 설정에서 트위치 계정을 연결할 수 있어요."
+                }
+                _ => text,
+            }
+            .to_string())
+        }
+
+        fn should_cache(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            !translation_needs_repair(source_text, translated_text, source, target)
+        }
+
+        fn translation_is_acceptable(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            !translation_needs_repair(source_text, translated_text, source, target)
+        }
+    }
+
     #[test]
     fn long_rich_messages_use_small_context_batches_for_local_models() {
         let path = cache_path("small-rich-message-batches");
@@ -1642,6 +1776,57 @@ mod tests {
             .collect::<Vec<_>>();
         assert!(grouped.len() >= 2);
         assert!(grouped.iter().all(|text| text.chars().count() <= 320));
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn partially_translated_context_parts_are_retried_individually() {
+        let path = cache_path("partial-context-part-retry");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(PartiallyTranslatedContextTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = [
+            "Welcome to Kai's Comfy Fox Den!",
+            "Hi, my name is Kaioura and I'm a fox VTuber who streams on Twitch.",
+            "Subscribers receive new roles and you can connect your Twitch account by going to User Settings.",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let message_keys = vec![Some("message:kai-welcome".to_string()); source.len()];
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &message_keys,
+                "/channels/guild/welcome",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            vec![
+                "카이의 아늑한 여우굴에 오신 것을 환영해요!",
+                "안녕하세요. 저는 카이오라이고 트위치에서 방송하는 여우 버튜버예요.",
+                "구독자는 새 역할을 받고 사용자 설정에서 트위치 계정을 연결할 수 있어요.",
+            ]
+        );
+        let recorded = inputs.lock().unwrap();
+        assert_eq!(
+            recorded
+                .iter()
+                .filter(|text| text.contains(MESSAGE_CONTEXT_SEPARATOR))
+                .count(),
+            1
+        );
+        assert!(recorded.iter().any(|text| text == &source[0]));
+        assert!(recorded.iter().any(|text| text == &source[2]));
+        assert!(!recorded.iter().any(|text| text == &source[1]));
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

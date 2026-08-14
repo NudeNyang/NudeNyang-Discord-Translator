@@ -205,6 +205,16 @@ impl Translator for ResilientTranslator {
         source: Language,
         target: Language,
     ) -> bool {
+        self.translation_is_acceptable(source_text, translated_text, source, target)
+    }
+
+    fn translation_is_acceptable(
+        &self,
+        source_text: &str,
+        translated_text: &str,
+        source: Language,
+        target: Language,
+    ) -> bool {
         !translation_needs_repair(source_text, translated_text, source, target)
     }
 
@@ -696,6 +706,12 @@ mod tests {
         assert!(!translation_needs_repair(
             "About Discord Rule Violations",
             "Discord 규칙 위반에 관하여",
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            "Subscribers receive new roles and you can connect your Twitch account by going to User Settings in Discord.",
+            "구독자는 새 역할을 받고 you can connect yourTwitchaccount by going toUser Settings그런 다음 연결Discord에서.",
             Language::English,
             Language::Korean,
         ));
