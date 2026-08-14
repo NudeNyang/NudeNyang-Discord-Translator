@@ -14,52 +14,85 @@
           <strong>NudeNyang Translator</strong>
           <small id="engine-summary" data-i18n-key="상태 확인 중">상태 확인 중</small>
         </span>
-        <span class="open-label" id="open-label" data-i18n-key="열기">열기</span>
+        <span class="open-label">
+          <svg class="open-label-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"/><path d="M11 13l9 -9"/><path d="M15 4h5v5"/></svg>
+          <span id="open-label" data-i18n-key="열기">열기</span>
+        </span>
       </button>
 
       <div id="main-menu">
         <div class="menu-group update-group" id="tray-update-group" hidden>
           <button class="menu-row update-row" id="install-update" type="button" hidden>
-            <span class="update-indicator" aria-hidden="true">↻</span>
+            <span class="menu-icon update-indicator" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>
+            </span>
             <span class="menu-copy">
               <strong data-i18n-key="업데이트 설치">업데이트 설치</strong>
               <small><span id="tray-update-version"></span> <span data-i18n-key="버전을 사용할 수 있습니다">버전을 사용할 수 있습니다</span></small>
             </span>
-            <span class="menu-value arrow-value" aria-hidden="true"><b>›</b></span>
+            <span class="menu-value arrow-value" aria-hidden="true"><svg class="menu-chevron" viewBox="0 0 24 24" focusable="false"><path d="M9 6l6 6l-6 6"/></svg></span>
           </button>
         </div>
         <div class="menu-group">
           <button class="menu-row" id="toggle-translation" type="button">
-            <span class="translation-indicator" id="translation-indicator" aria-hidden="true">
-              <span></span>
+            <span class="menu-icon" data-icon="language" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M9 6.371c0 4.418 -2.239 6.629 -5 6.629"/><path d="M4 6.371h7"/><path d="M5 9c0 2.144 2.252 3.908 6 4"/><path d="M12 20l4 -9l4 9"/><path d="M19.1 18h-6.2"/><path d="M6.694 3l.793 .582"/></svg>
             </span>
             <span class="menu-copy">
               <strong data-i18n-key="실시간 번역">실시간 번역</strong>
             </span>
             <span class="menu-value" id="translation-state" data-i18n-key="확인 중">확인 중</span>
+            <span class="translation-indicator" id="translation-indicator" aria-hidden="true">
+              <span></span>
+            </span>
+          </button>
+
+          <button class="menu-row" id="toggle-outgoing-translation" type="button">
+            <span class="menu-icon" data-icon="message-up" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M8 9l4 -4l4 4"/><path d="M12 5v8"/><path d="M6 7h-1a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h4l3 3l3 -3h4a2 2 0 0 0 2 -2v-8a2 2 0 0 0 -2 -2h-1"/></svg>
+            </span>
+            <span class="menu-copy">
+              <strong data-i18n-key="메시지 통역">메시지 통역</strong>
+            </span>
+            <span class="menu-value" id="outgoing-translation-state" data-i18n-key="확인 중">확인 중</span>
+            <span class="translation-indicator" id="outgoing-translation-indicator" aria-hidden="true">
+              <span></span>
+            </span>
           </button>
 
           <button class="menu-row compact" id="open-language-settings" type="button">
+            <span class="menu-icon" data-icon="world" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M3.6 9h16.8M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></svg>
+            </span>
             <span class="menu-copy">
               <strong data-i18n-key="표시 언어">표시 언어</strong>
             </span>
-            <span class="menu-value arrow-value"><span id="target-language">한국어</span><b>›</b></span>
+            <span class="menu-value arrow-value"><span id="target-language">한국어</span><svg class="menu-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6l-6 6"/></svg></span>
           </button>
 
           <button class="menu-row compact" id="open-model-settings" type="button">
+            <span class="menu-icon" data-icon="cpu" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M5 6a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -12"/><path d="M9 9h6v6h-6l0 -6"/><path d="M3 10h2M3 14h2M10 3v2M14 3v2M21 10h-2M21 14h-2M14 21v-2M10 21v-2"/></svg>
+            </span>
             <span class="menu-copy">
               <strong data-i18n-key="번역 모델">번역 모델</strong>
             </span>
-            <span class="menu-value arrow-value"><span id="translator-name">Hy-MT2 1.8B</span><b>›</b></span>
+            <span class="menu-value arrow-value"><span id="translator-name">Hy-MT2 1.8B</span><svg class="menu-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6l-6 6"/></svg></span>
           </button>
         </div>
 
         <div class="menu-group bottom-group">
           <button class="menu-row compact" id="open-settings-secondary" type="button">
+            <span class="menu-icon" data-icon="adjustments-horizontal" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 6l8 0M16 6l4 0M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 12l2 0M10 12l10 0M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 18l11 0M19 18l1 0"/></svg>
+            </span>
             <span class="menu-copy"><strong data-i18n-key="설정">설정</strong></span>
-            <span class="menu-value arrow-value" aria-hidden="true"><b>›</b></span>
+            <span class="menu-value arrow-value" aria-hidden="true"><svg class="menu-chevron" viewBox="0 0 24 24" focusable="false"><path d="M9 6l6 6l-6 6"/></svg></span>
           </button>
           <button class="menu-row compact danger" id="quit-app" type="button">
+            <span class="menu-icon" data-icon="power" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M7 4.7a9 9 0 1 0 10 0"/><path d="M12 3v9"/></svg>
+            </span>
             <span class="menu-copy"><strong data-i18n-key="종료">종료</strong></span>
           </button>
         </div>

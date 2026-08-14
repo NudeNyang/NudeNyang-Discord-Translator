@@ -29,12 +29,13 @@ test("confirming waits for real-time settings work before hiding the window", ()
 });
 
 test("custom tray menu exposes the expected actions and current app palette", () => {
-  for (const label of ["실시간 번역", "표시 언어", "번역 모델", "설정", "종료"]) {
+  for (const label of ["실시간 번역", "메시지 통역", "표시 언어", "번역 모델", "설정", "종료"]) {
     assert.match(trayMarkup, new RegExp(label));
   }
   for (const command of [
     "tray_open_settings",
     "tray_request_translation_toggle",
+    "tray_request_outgoing_translation_toggle",
     "tray_menu_hide",
     "application_exit",
   ]) {
@@ -43,6 +44,24 @@ test("custom tray menu exposes the expected actions and current app palette", ()
   assert.match(trayStyles, /--accent: #347fc7/);
   assert.match(trayStyles, /--accent: #5aa8f5/);
   assert.doesNotMatch(`${trayMarkup}${trayScript}`, /[—–]/);
+});
+
+test("primary tray actions use consistent semantic icons", () => {
+  for (const icon of ["language", "message-up", "world", "cpu", "adjustments-horizontal", "power"]) {
+    assert.match(trayMarkup, new RegExp(`data-icon="${icon}"`));
+  }
+  assert.match(trayMarkup, /id="toggle-translation"[\s\S]*data-icon="language"[\s\S]*id="translation-indicator"/);
+  assert.match(trayMarkup, /id="toggle-outgoing-translation"[\s\S]*data-icon="message-up"[\s\S]*id="outgoing-translation-indicator"/);
+  assert.match(trayMarkup, /class="open-label"[\s\S]*class="open-label-icon"/);
+  assert.match(trayStyles, /\.menu-icon \{[\s\S]*width: 28px;[\s\S]*flex: 0 0 28px;/);
+  assert.match(trayStyles, /\.menu-icon svg \{[\s\S]*width: 20px;[\s\S]*height: 20px;/);
+});
+
+test("tray chevrons use fixed icon boxes instead of font glyph baselines", () => {
+  assert.equal((trayMarkup.match(/class="menu-chevron"/g) || []).length, 4);
+  assert.doesNotMatch(trayMarkup, /<b>›<\/b>/);
+  assert.match(trayStyles, /\.menu-chevron \{[\s\S]*width: 16px;[\s\S]*height: 16px;[\s\S]*flex: 0 0 16px;/);
+  assert.match(trayStyles, /\.arrow-value \{[\s\S]*align-items: center;[\s\S]*line-height: 1;/);
 });
 
 test("tray menu follows the configured interface language", () => {
@@ -62,6 +81,16 @@ test("translation state changes are broadcast to the open tray menu", () => {
   assert.match(rustShell, /emit\("translation-state-changed"/);
   assert.match(trayScript, /listen\("translation-state-changed"/);
   assert.match(trayScript, /setInterval\(refresh, 700\)/);
+  assert.match(trayScript, /outgoing_translation_enabled/);
+});
+
+test("tray actions remain aligned when translated labels are long", () => {
+  assert.match(trayStyles, /\.menu-copy strong \{[^}]*overflow-wrap:\s*anywhere;/s);
+  assert.match(trayStyles, /\.menu-value \{[^}]*max-width:\s*46%;[^}]*text-overflow:\s*ellipsis;/s);
+  assert.match(trayScript, /function preferredTrayWidth\(/);
+  assert.match(trayScript, /Math\.min\(390, Math\.max\(300,/);
+  assert.match(trayScript, /invoke\("tray_menu_set_size", \{ width, height \}\)/);
+  assert.match(rustShell, /fn tray_menu_set_size\(app: AppHandle, width: u32, height: u32\)/);
 });
 
 test("display language can be changed inside the tray menu", () => {
@@ -106,20 +135,20 @@ test("translation model can be changed inside the tray menu", () => {
   );
 });
 
-test("tray window height hugs each menu view without clipping option lists", () => {
+test("tray window size hugs each menu view without clipping option lists", () => {
   const trayWindow = tauriConfig.app.windows.find(window => window.label === "tray-menu");
-  assert.equal(trayWindow.height, 318);
+  assert.equal(trayWindow.height, 362);
   assert.match(trayStyles, /\.language-view \.menu-row\.compact \{\s*min-height: 37px;/);
   assert.match(trayStyles, /\.model-view \.menu-row\.compact \{\s*min-height: 37px;/);
   assert.match(trayStyles, /\.bottom-group \{[^}]*padding-bottom: 0;/s);
-  assert.match(trayScript, /main: 318/);
+  assert.match(trayScript, /main: 362/);
   assert.match(trayScript, /language: 520/);
   assert.match(trayStyles, /\.language-view \{[^}]*overflow-y: auto;/s);
   assert.match(trayScript, /model: 427/);
   assert.match(trayScript, /VIEW_HEIGHTS\.main \+ \(availableUpdateVersion \? UPDATE_ROW_HEIGHT : 0\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.language\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.model\)/);
-  assert.match(rustShell, /fn tray_menu_set_height/);
+  assert.match(rustShell, /fn tray_menu_set_size/);
 });
 
 test("tray panel keeps a crisp border without a blurred outer shadow", () => {

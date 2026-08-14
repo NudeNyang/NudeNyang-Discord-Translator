@@ -82,6 +82,15 @@ test("settings window keeps a readable minimum width without horizontal navigati
   assert.doesNotMatch(styles, /\.settings-navigation\s*\{[^}]*overflow-x:\s*auto/);
 });
 
+test("settings navigation adapts to long localized labels", () => {
+  assert.match(
+    styles,
+    /\.settings-workspace\s*\{[^}]*grid-template-columns:\s*clamp\(168px,\s*22%,\s*236px\)\s+minmax\(0,\s*1fr\)/s,
+  );
+  assert.match(styles, /\.settings-nav-item\s*\{[^}]*padding:\s*8px 11px;[^}]*overflow-wrap:\s*anywhere;/s);
+  assert.match(styles, /\.settings-nav-item\s*\{[^}]*line-height:\s*1\.3;/s);
+});
+
 test("settings reset is separated from the confirmation footer and native window chrome follows the selected theme", () => {
   assert.doesNotMatch(markup, /id="cancel"/);
   assert.match(markup, /id="reset-settings"[^>]*>초기화<\/button>/);
@@ -247,7 +256,8 @@ test("system autostart initialization and registry work stay off the setup threa
 test("Windows autostart owns one private Discord pipe and safely migrates old registrations", () => {
   const startupRuntime = discordStartup.split("#[cfg(test)]")[0];
   assert.doesNotMatch(startupRuntime, /--remote-debugging-port=9222/);
-  assert.match(discord, /--force-renderer-accessibility/);
+  assert.match(discord, /"--force-renderer-accessibility"/);
+  assert.doesNotMatch(discord, /--force-renderer-accessibility=/);
   assert.match(discord, /--remote-debugging-pipe/);
   assert.match(discordStartup, /DiscordStartupBackup/);
   assert.match(discordStartup, /fn suppress_registration/);

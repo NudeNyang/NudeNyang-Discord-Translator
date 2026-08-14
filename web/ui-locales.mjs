@@ -400,7 +400,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang 和 Sentory 需要共用安全的無障礙模式。如果 Discord 目前處於一般模式，僅會在首次切換時重新啟動一次，切換伺服器時不會重新啟動。\n\n重新啟動前，請確認正在輸入的訊息及進行中的通話。",
     "확인하고 준비": "確認並準備",
     "Discord 접근성 모드를 준비합니다": "正在準備 Discord 無障礙模式",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord 尚未以無障礙相容模式執行。\n正在輸入的訊息可能會遺失，通話也可能會中斷。\n\nDiscord 將在 {seconds} 秒後重新啟動一次，以完成首次切換。"
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord 尚未以無障礙相容模式執行。\n正在輸入的訊息可能會遺失，通話也可能會中斷。\n\nDiscord 將在 {seconds} 秒後重新啟動一次，以完成首次切換。",
+    "메시지 통역": "訊息口譯",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "如果邀請未成功接受，請在瀏覽器中繼續。",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "若要接受此邀請，請在瀏覽器中繼續。",
+    "브라우저에서 계속": "在瀏覽器中繼續",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord 無法載入此邀請。請在瀏覽器中確認其狀態。",
+    "브라우저에서 확인": "在瀏覽器中確認"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -802,7 +808,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang e Sentory precisam de um modo de acessibilidade seguro que ambos possam usar. Se o Discord estiver no modo normal, ele será reiniciado apenas uma vez durante a transição inicial e não será reiniciado quando você trocar de servidor.\n\nVerifique qualquer mensagem que esteja digitando e as chamadas em andamento antes de reiniciar.",
     "확인하고 준비": "Confirmar e preparar",
     "Discord 접근성 모드를 준비합니다": "Preparando o modo de acessibilidade do Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "O Discord ainda não está sendo executado no modo compatível com acessibilidade.\nUma mensagem que você esteja digitando pode ser descartada ou uma chamada pode ser encerrada.\n\nO Discord será reiniciado uma vez para a transição inicial em {seconds} segundos."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "O Discord ainda não está sendo executado no modo compatível com acessibilidade.\nUma mensagem que você esteja digitando pode ser descartada ou uma chamada pode ser encerrada.\n\nO Discord será reiniciado uma vez para a transição inicial em {seconds} segundos.",
+    "메시지 통역": "Interpretação de mensagens",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Se o convite não for aceito, continue no navegador.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Para aceitar este convite, continue no navegador.",
+    "브라우저에서 계속": "Continuar no navegador",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "O Discord não conseguiu carregar este convite. Verifique o status dele no navegador.",
+    "브라우저에서 확인": "Verificar no navegador"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1204,7 +1216,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang और Sentory को एक सुरक्षित एक्सेसिबिलिटी मोड चाहिए, जिसे वे साझा कर सकें। अगर Discord अभी सामान्य मोड में है, तो शुरुआती बदलाव के दौरान यह केवल एक बार रीस्टार्ट होगा और सर्वर बदलने पर रीस्टार्ट नहीं होगा।\n\nरीस्टार्ट करने से पहले टाइप किया जा रहा कोई भी संदेश और चालू कॉल जाँच लें।",
     "확인하고 준비": "पुष्टि करके तैयार करें",
     "Discord 접근성 모드를 준비합니다": "Discord एक्सेसिबिलिटी मोड तैयार हो रहा है",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord अभी एक्सेसिबिलिटी-संगत मोड में नहीं चल रहा है।\nटाइप किया जा रहा संदेश हट सकता है या कॉल समाप्त हो सकती है।\n\nशुरुआती बदलाव के लिए Discord {seconds} सेकंड बाद एक बार रीस्टार्ट होगा।"
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord अभी एक्सेसिबिलिटी-संगत मोड में नहीं चल रहा है।\nटाइप किया जा रहा संदेश हट सकता है या कॉल समाप्त हो सकती है।\n\nशुरुआती बदलाव के लिए Discord {seconds} सेकंड बाद एक बार रीस्टार्ट होगा।",
+    "메시지 통역": "संदेश अनुवाद",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "यदि आमंत्रण स्वीकार नहीं हुआ है, तो कृपया अपने ब्राउज़र में जारी रखें।",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "इस आमंत्रण को स्वीकार करने के लिए, कृपया अपने ब्राउज़र में जारी रखें।",
+    "브라우저에서 계속": "ब्राउज़र में जारी रखें",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord इस आमंत्रण को लोड नहीं कर सका। कृपया अपने ब्राउज़र में इसकी स्थिति जाँचें।",
+    "브라우저에서 확인": "ब्राउज़र में जाँचें"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1606,7 +1624,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang y Sentory necesitan un modo de accesibilidad seguro que ambos puedan usar. Si Discord está actualmente en modo normal, solo se reiniciará una vez durante la transición inicial y no se reiniciará al cambiar de servidor.\n\nAntes de reiniciar, revisa los mensajes que estés escribiendo y las llamadas activas.",
     "확인하고 준비": "Confirmar y preparar",
     "Discord 접근성 모드를 준비합니다": "Preparando el modo de accesibilidad de Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord aún no se está ejecutando en un modo compatible con accesibilidad.\nEs posible que se descarte el mensaje que estás escribiendo o que finalice una llamada.\n\nDiscord se reiniciará una vez dentro de {seconds} segundos para realizar la transición inicial."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord aún no se está ejecutando en un modo compatible con accesibilidad.\nEs posible que se descarte el mensaje que estás escribiendo o que finalice una llamada.\n\nDiscord se reiniciará una vez dentro de {seconds} segundos para realizar la transición inicial.",
+    "메시지 통역": "Interpretación de mensajes",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Si no se acepta la invitación, continúa en tu navegador.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Para aceptar esta invitación, continúa en tu navegador.",
+    "브라우저에서 계속": "Continuar en el navegador",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord no pudo cargar esta invitación. Comprueba su estado en tu navegador.",
+    "브라우저에서 확인": "Comprobar en el navegador"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2008,7 +2032,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang und Sentory benötigen einen sicheren, gemeinsam nutzbaren Barrierefreiheitsmodus. Wenn Discord derzeit im normalen Modus ausgeführt wird, wird es beim ersten Wechsel nur einmal neu gestartet, jedoch nicht beim Wechseln des Servers.\n\nPrüfe vor dem Neustart noch nicht gesendete Nachrichten und aktive Anrufe.",
     "확인하고 준비": "Bestätigen und vorbereiten",
     "Discord 접근성 모드를 준비합니다": "Discord-Barrierefreiheitsmodus wird vorbereitet",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord wird noch nicht in einem barrierefreiheitskompatiblen Modus ausgeführt.\nEine Nachricht, die du gerade schreibst, kann verworfen oder ein Anruf beendet werden.\n\nDiscord wird für den ersten Wechsel in {seconds} Sekunden einmal neu gestartet."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord wird noch nicht in einem barrierefreiheitskompatiblen Modus ausgeführt.\nEine Nachricht, die du gerade schreibst, kann verworfen oder ein Anruf beendet werden.\n\nDiscord wird für den ersten Wechsel in {seconds} Sekunden einmal neu gestartet.",
+    "메시지 통역": "Nachrichtenübersetzung",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Wenn die Einladung nicht angenommen wurde, fahre bitte im Browser fort.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Um diese Einladung anzunehmen, fahre bitte im Browser fort.",
+    "브라우저에서 계속": "Im Browser fortfahren",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord konnte diese Einladung nicht laden. Bitte prüfe ihren Status im Browser.",
+    "브라우저에서 확인": "Im Browser prüfen"
   },
   "ru": {
     "설정": "Настройки",
@@ -2410,7 +2440,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang и Sentory требуется безопасный общий режим специальных возможностей. Если Discord сейчас работает в обычном режиме, он перезапустится только один раз при первоначальном переходе и не будет перезапускаться при переключении между серверами.\n\nПеред перезапуском проверьте набираемое сообщение и активные звонки.",
     "확인하고 준비": "Подтвердить и подготовить",
     "Discord 접근성 모드를 준비합니다": "Подготовка режима специальных возможностей Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ещё не запущен в режиме совместимости со специальными возможностями.\nНабираемое сообщение может быть потеряно, а звонок — завершён.\n\nЧерез {seconds} секунд Discord один раз перезапустится для первоначального перехода."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ещё не запущен в режиме совместимости со специальными возможностями.\nНабираемое сообщение может быть потеряно, а звонок — завершён.\n\nЧерез {seconds} секунд Discord один раз перезапустится для первоначального перехода.",
+    "메시지 통역": "Перевод сообщений",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Если приглашение не принято, продолжите в браузере.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Чтобы принять приглашение, продолжите в браузере.",
+    "브라우저에서 계속": "Продолжить в браузере",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord не удалось загрузить это приглашение. Проверьте его статус в браузере.",
+    "브라우저에서 확인": "Проверить в браузере"
   },
   "id": {
     "설정": "Pengaturan",
@@ -2812,7 +2848,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang dan Sentory memerlukan mode aksesibilitas aman yang dapat digunakan bersama. Jika Discord sedang dalam mode normal, Discord hanya akan dimulai ulang sekali saat peralihan awal dan tidak akan dimulai ulang saat Anda berpindah server.\n\nPeriksa pesan yang sedang Anda ketik dan panggilan aktif sebelum memulai ulang.",
     "확인하고 준비": "Konfirmasi dan siapkan",
     "Discord 접근성 모드를 준비합니다": "Menyiapkan mode aksesibilitas Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord belum berjalan dalam mode yang kompatibel dengan aksesibilitas.\nPesan yang sedang Anda ketik mungkin akan terhapus atau panggilan dapat berakhir.\n\nDiscord akan dimulai ulang sekali untuk peralihan awal dalam {seconds} detik."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord belum berjalan dalam mode yang kompatibel dengan aksesibilitas.\nPesan yang sedang Anda ketik mungkin akan terhapus atau panggilan dapat berakhir.\n\nDiscord akan dimulai ulang sekali untuk peralihan awal dalam {seconds} detik.",
+    "메시지 통역": "Interpretasi pesan",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Jika undangan tidak diterima, lanjutkan di browser.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Untuk menerima undangan ini, lanjutkan di browser.",
+    "브라우저에서 계속": "Lanjutkan di browser",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord tidak dapat memuat undangan ini. Periksa statusnya di browser.",
+    "브라우저에서 확인": "Periksa di browser"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3214,7 +3256,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang et Sentory ont besoin d’un mode d’accessibilité sécurisé qu’ils peuvent partager. Si Discord est actuellement en mode normal, il ne redémarrera qu’une seule fois lors de la transition initiale et ne redémarrera pas lorsque tu changes de serveur.\n\nVérifie tout message en cours de saisie et les appels actifs avant le redémarrage.",
     "확인하고 준비": "Confirmer et préparer",
     "Discord 접근성 모드를 준비합니다": "Préparation du mode d’accessibilité de Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ne fonctionne pas encore dans un mode compatible avec l’accessibilité.\nUn message en cours de saisie peut être perdu ou un appel peut être interrompu.\n\nDiscord redémarrera une fois pour effectuer la transition initiale dans {seconds} secondes."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ne fonctionne pas encore dans un mode compatible avec l’accessibilité.\nUn message en cours de saisie peut être perdu ou un appel peut être interrompu.\n\nDiscord redémarrera une fois pour effectuer la transition initiale dans {seconds} secondes.",
+    "메시지 통역": "Interprétation des messages",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Si l’invitation n’est pas acceptée, poursuivez dans votre navigateur.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Pour accepter cette invitation, poursuivez dans votre navigateur.",
+    "브라우저에서 계속": "Continuer dans le navigateur",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord n’a pas pu charger cette invitation. Vérifiez son statut dans votre navigateur.",
+    "브라우저에서 확인": "Vérifier dans le navigateur"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -3616,7 +3664,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang ve Sentory'nin birlikte kullanabileceği güvenli bir erişilebilirlik modu gerekiyor. Discord şu anda normal moddaysa yalnızca ilk geçiş sırasında bir kez yeniden başlatılır ve sunucu değiştirdiğinde yeniden başlatılmaz.\n\nYeniden başlatmadan önce yazmakta olduğun mesajları ve etkin aramaları kontrol et.",
     "확인하고 준비": "Onayla ve hazırla",
     "Discord 접근성 모드를 준비합니다": "Discord erişilebilirlik modu hazırlanıyor",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord henüz erişilebilirlikle uyumlu modda çalışmıyor.\nYazmakta olduğun bir mesaj silinebilir veya bir arama sona erebilir.\n\nİlk geçiş için Discord {seconds} saniye sonra bir kez yeniden başlatılacak."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord henüz erişilebilirlikle uyumlu modda çalışmıyor.\nYazmakta olduğun bir mesaj silinebilir veya bir arama sona erebilir.\n\nİlk geçiş için Discord {seconds} saniye sonra bir kez yeniden başlatılacak.",
+    "메시지 통역": "Mesaj yorumlama",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Davet kabul edilmediyse lütfen tarayıcınızda devam edin.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Bu daveti kabul etmek için lütfen tarayıcınızda devam edin.",
+    "브라우저에서 계속": "Tarayıcıda devam et",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord bu daveti yükleyemedi. Lütfen durumunu tarayıcınızda kontrol edin.",
+    "브라우저에서 확인": "Tarayıcıda kontrol et"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4018,7 +4072,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "يحتاج NudeNyang وSentory إلى وضع إمكانية وصول آمن يمكنهما استخدامه معًا. إذا كان Discord يعمل حاليًا في الوضع العادي، فستتم إعادة تشغيله مرة واحدة فقط أثناء الانتقال الأولي، ولن تتم إعادة تشغيله عند تبديل الخوادم.\n\nتحقق من أي رسالة تكتبها ومن المكالمات النشطة قبل إعادة التشغيل.",
     "확인하고 준비": "تأكيد وإعداد",
     "Discord 접근성 모드를 준비합니다": "جارٍ إعداد وضع إمكانية الوصول في Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord لا يعمل بعد في وضع متوافق مع إمكانية الوصول.\nقد يتم تجاهل الرسالة التي تكتبها أو إنهاء مكالمة.\n\nستتم إعادة تشغيل Discord مرة واحدة لإجراء الانتقال الأولي خلال {seconds} ثانية."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord لا يعمل بعد في وضع متوافق مع إمكانية الوصول.\nقد يتم تجاهل الرسالة التي تكتبها أو إنهاء مكالمة.\n\nستتم إعادة تشغيل Discord مرة واحدة لإجراء الانتقال الأولي خلال {seconds} ثانية.",
+    "메시지 통역": "ترجمة الرسائل",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "إذا لم يتم قبول الدعوة، فيُرجى المتابعة في المتصفح.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "لقبول هذه الدعوة، يُرجى المتابعة في المتصفح.",
+    "브라우저에서 계속": "المتابعة في المتصفح",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "تعذّر على Discord تحميل هذه الدعوة. يُرجى التحقق من حالتها في المتصفح.",
+    "브라우저에서 확인": "التحقق في المتصفح"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -4420,7 +4480,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang và Sentory cần một chế độ trợ năng an toàn để dùng chung. Nếu Discord hiện đang ở chế độ thông thường, ứng dụng chỉ khởi động lại một lần trong lần chuyển đổi đầu tiên và không khởi động lại khi bạn chuyển máy chủ.\n\nHãy kiểm tra tin nhắn đang soạn và các cuộc gọi đang diễn ra trước khi khởi động lại.",
     "확인하고 준비": "Xác nhận và chuẩn bị",
     "Discord 접근성 모드를 준비합니다": "Đang chuẩn bị chế độ trợ năng của Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord chưa chạy ở chế độ tương thích với trợ năng.\nTin nhắn đang soạn có thể bị mất hoặc cuộc gọi có thể kết thúc.\n\nDiscord sẽ khởi động lại một lần để chuyển đổi lần đầu sau {seconds} giây."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord chưa chạy ở chế độ tương thích với trợ năng.\nTin nhắn đang soạn có thể bị mất hoặc cuộc gọi có thể kết thúc.\n\nDiscord sẽ khởi động lại một lần để chuyển đổi lần đầu sau {seconds} giây.",
+    "메시지 통역": "Phiên dịch tin nhắn",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Nếu lời mời chưa được chấp nhận, vui lòng tiếp tục trong trình duyệt.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Để chấp nhận lời mời này, vui lòng tiếp tục trong trình duyệt.",
+    "브라우저에서 계속": "Tiếp tục trong trình duyệt",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord không thể tải lời mời này. Vui lòng kiểm tra trạng thái của lời mời trong trình duyệt.",
+    "브라우저에서 확인": "Kiểm tra trong trình duyệt"
   },
   "it": {
     "설정": "Impostazioni",
@@ -4822,7 +4888,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang e Sentory richiedono una modalità di accessibilità sicura da condividere. Se Discord è attualmente in modalità normale, verrà riavviato una sola volta durante la transizione iniziale e non verrà riavviato quando cambi server.\n\nPrima del riavvio, controlla eventuali messaggi in composizione e chiamate attive.",
     "확인하고 준비": "Conferma e prepara",
     "Discord 접근성 모드를 준비합니다": "Preparazione della modalità di accessibilità di Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord non è ancora in esecuzione in modalità compatibile con l'accessibilità.\nUn messaggio in composizione potrebbe andare perso o una chiamata potrebbe terminare.\n\nDiscord verrà riavviato una volta tra {seconds} secondi per la transizione iniziale."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord non è ancora in esecuzione in modalità compatibile con l'accessibilità.\nUn messaggio in composizione potrebbe andare perso o una chiamata potrebbe terminare.\n\nDiscord verrà riavviato una volta tra {seconds} secondi per la transizione iniziale.",
+    "메시지 통역": "Interpretazione dei messaggi",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Se l'invito non viene accettato, continua nel browser.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Per accettare questo invito, continua nel browser.",
+    "브라우저에서 계속": "Continua nel browser",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord non ha potuto caricare questo invito. Verificane lo stato nel browser.",
+    "브라우저에서 확인": "Verifica nel browser"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -5224,7 +5296,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang i Sentory potrzebują bezpiecznego, współdzielonego trybu ułatwień dostępu. Jeśli Discord działa obecnie w trybie normalnym, zostanie uruchomiony ponownie tylko raz podczas pierwszego przełączenia i nie będzie uruchamiany ponownie przy zmianie serwera.\n\nPrzed ponownym uruchomieniem sprawdź wpisywaną wiadomość i aktywne połączenia.",
     "확인하고 준비": "Potwierdź i przygotuj",
     "Discord 접근성 모드를 준비합니다": "Przygotowywanie trybu ułatwień dostępu Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord nie działa jeszcze w trybie zgodnym z ułatwieniami dostępu.\nWpisywana wiadomość może zostać utracona, a połączenie zakończone.\n\nDiscord zostanie uruchomiony ponownie za {seconds} s, aby dokonać pierwszego przełączenia."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord nie działa jeszcze w trybie zgodnym z ułatwieniami dostępu.\nWpisywana wiadomość może zostać utracona, a połączenie zakończone.\n\nDiscord zostanie uruchomiony ponownie za {seconds} s, aby dokonać pierwszego przełączenia.",
+    "메시지 통역": "Tłumaczenie wiadomości",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Jeśli zaproszenie nie zostało zaakceptowane, kontynuuj w przeglądarce.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Aby zaakceptować to zaproszenie, kontynuuj w przeglądarce.",
+    "브라우저에서 계속": "Kontynuuj w przeglądarce",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord nie mógł wczytać tego zaproszenia. Sprawdź jego status w przeglądarce.",
+    "브라우저에서 확인": "Sprawdź w przeglądarce"
   },
   "uk": {
     "설정": "Налаштування",
@@ -5626,7 +5704,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang і Sentory потрібен безпечний спільний режим доступності. Якщо Discord зараз працює у звичайному режимі, він перезапуститься лише один раз під час першого переходу й не перезапускатиметься при зміні серверів.\n\nПеред перезапуском перевірте повідомлення, яке ви вводите, та активні виклики.",
     "확인하고 준비": "Підтвердити й підготувати",
     "Discord 접근성 모드를 준비합니다": "Підготовка режиму доступності Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ще не працює в режимі, сумісному зі спеціальними можливостями.\nПовідомлення, яке ви вводите, може бути втрачено, а виклик — завершено.\n\nDiscord перезапуститься один раз для першого переходу через {seconds} с."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ще не працює в режимі, сумісному зі спеціальними можливостями.\nПовідомлення, яке ви вводите, може бути втрачено, а виклик — завершено.\n\nDiscord перезапуститься один раз для першого переходу через {seconds} с.",
+    "메시지 통역": "Інтерпретація повідомлень",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Якщо запрошення не прийнято, продовжте в браузері.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Щоб прийняти це запрошення, продовжте в браузері.",
+    "브라우저에서 계속": "Продовжити в браузері",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord не вдалося завантажити це запрошення. Перевірте його статус у браузері.",
+    "브라우저에서 확인": "Перевірити в браузері"
   },
   "ms": {
     "설정": "Tetapan",
@@ -6028,7 +6112,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang dan Sentory memerlukan mod kebolehcapaian selamat yang boleh digunakan bersama. Jika Discord sedang dalam mod biasa, ia akan dimulakan semula sekali sahaja semasa peralihan awal dan tidak akan dimulakan semula apabila anda bertukar pelayan.\n\nSemak mesej yang sedang anda taip dan panggilan aktif sebelum memulakan semula.",
     "확인하고 준비": "Sahkan dan sediakan",
     "Discord 접근성 모드를 준비합니다": "Menyediakan mod kebolehcapaian Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord belum berjalan dalam mod serasi kebolehcapaian.\nMesej yang sedang anda taip mungkin terpadam atau panggilan mungkin tamat.\n\nDiscord akan dimulakan semula sekali untuk peralihan awal dalam masa {seconds} saat."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord belum berjalan dalam mod serasi kebolehcapaian.\nMesej yang sedang anda taip mungkin terpadam atau panggilan mungkin tamat.\n\nDiscord akan dimulakan semula sekali untuk peralihan awal dalam masa {seconds} saat.",
+    "메시지 통역": "Pentafsiran mesej",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Jika jemputan tidak diterima, sila teruskan dalam pelayar anda.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Untuk menerima jemputan ini, sila teruskan dalam pelayar anda.",
+    "브라우저에서 계속": "Teruskan dalam pelayar",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord tidak dapat memuatkan jemputan ini. Sila semak statusnya dalam pelayar anda.",
+    "브라우저에서 확인": "Semak dalam pelayar"
   },
   "nl": {
     "설정": "Instellingen",
@@ -6430,7 +6520,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang en Sentory hebben een veilige, gedeelde toegankelijkheidsmodus nodig. Als Discord momenteel in de normale modus draait, wordt het alleen bij de eerste omschakeling één keer opnieuw gestart en niet wanneer je van server wisselt.\n\nControleer vóór het opnieuw starten of je nog een bericht typt of een gesprek voert.",
     "확인하고 준비": "Bevestigen en voorbereiden",
     "Discord 접근성 모드를 준비합니다": "Discord-toegankelijkheidsmodus voorbereiden",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord draait nog niet in een toegankelijkheidscompatibele modus.\nEen bericht dat je typt kan verloren gaan of een gesprek kan worden beëindigd.\n\nDiscord wordt over {seconds} seconden één keer opnieuw gestart voor de eerste omschakeling."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord draait nog niet in een toegankelijkheidscompatibele modus.\nEen bericht dat je typt kan verloren gaan of een gesprek kan worden beëindigd.\n\nDiscord wordt over {seconds} seconden één keer opnieuw gestart voor de eerste omschakeling.",
+    "메시지 통역": "Berichttolking",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Als de uitnodiging niet is geaccepteerd, ga dan verder in je browser.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Ga verder in je browser om deze uitnodiging te accepteren.",
+    "브라우저에서 계속": "Doorgaan in browser",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord kon deze uitnodiging niet laden. Controleer de status in je browser.",
+    "브라우저에서 확인": "Controleren in browser"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -6832,7 +6928,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang และ Sentory ต้องใช้โหมดการช่วยการเข้าถึงที่ปลอดภัยร่วมกัน หากขณะนี้ Discord อยู่ในโหมดปกติ โปรแกรมจะรีสตาร์ตเพียงครั้งเดียวเมื่อตั้งค่าเริ่มต้น และจะไม่รีสตาร์ตเมื่อคุณสลับเซิร์ฟเวอร์\n\nโปรดตรวจสอบข้อความที่กำลังพิมพ์และสายที่กำลังสนทนาก่อนรีสตาร์ต",
     "확인하고 준비": "ยืนยันและเตรียม",
     "Discord 접근성 모드를 준비합니다": "กำลังเตรียมโหมดการช่วยการเข้าถึงของ Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ยังไม่ได้ทำงานในโหมดที่รองรับการช่วยการเข้าถึง\nข้อความที่กำลังพิมพ์อาจหายไป หรือสายสนทนาอาจสิ้นสุดลง\n\nDiscord จะรีสตาร์ตหนึ่งครั้งในอีก {seconds} วินาทีเพื่อเปลี่ยนโหมดครั้งแรก"
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ยังไม่ได้ทำงานในโหมดที่รองรับการช่วยการเข้าถึง\nข้อความที่กำลังพิมพ์อาจหายไป หรือสายสนทนาอาจสิ้นสุดลง\n\nDiscord จะรีสตาร์ตหนึ่งครั้งในอีก {seconds} วินาทีเพื่อเปลี่ยนโหมดครั้งแรก",
+    "메시지 통역": "การแปลข้อความ",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "หากยังไม่ได้ยอมรับคำเชิญ โปรดดำเนินการต่อในเบราว์เซอร์",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "หากต้องการยอมรับคำเชิญนี้ โปรดดำเนินการต่อในเบราว์เซอร์",
+    "브라우저에서 계속": "ดำเนินการต่อในเบราว์เซอร์",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord ไม่สามารถโหลดคำเชิญนี้ได้ โปรดตรวจสอบสถานะในเบราว์เซอร์",
+    "브라우저에서 확인": "ตรวจสอบในเบราว์เซอร์"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -7234,7 +7336,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "Kailangan ng NudeNyang at Sentory ng ligtas na accessibility mode na magagamit nilang dalawa. Kung nasa normal mode ang Discord ngayon, isang beses lang itong magre-restart sa unang paglipat at hindi ito magre-restart kapag lumipat ka ng server.\n\nBago mag-restart, tingnan ang anumang mensaheng tina-type mo at mga aktibong tawag.",
     "확인하고 준비": "Kumpirmahin at ihanda",
     "Discord 접근성 모드를 준비합니다": "Inihahanda ang accessibility mode ng Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Hindi pa tumatakbo ang Discord sa mode na tugma sa accessibility.\nMaaaring mawala ang mensaheng tina-type mo o maputol ang isang tawag.\n\nMagre-restart nang isang beses ang Discord para sa unang paglipat pagkalipas ng {seconds} segundo."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Hindi pa tumatakbo ang Discord sa mode na tugma sa accessibility.\nMaaaring mawala ang mensaheng tina-type mo o maputol ang isang tawag.\n\nMagre-restart nang isang beses ang Discord para sa unang paglipat pagkalipas ng {seconds} segundo.",
+    "메시지 통역": "Interpretasyon ng mensahe",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Kung hindi matanggap ang imbitasyon, magpatuloy sa iyong browser.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Para tanggapin ang imbitasyong ito, magpatuloy sa iyong browser.",
+    "브라우저에서 계속": "Magpatuloy sa browser",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Hindi ma-load ng Discord ang imbitasyong ito. Pakitingnan ang status nito sa iyong browser.",
+    "브라우저에서 확인": "Tingnan sa browser"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -7636,7 +7744,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang ও Sentory-এর একসঙ্গে ব্যবহারের জন্য একটি নিরাপদ অ্যাক্সেসিবিলিটি মোড প্রয়োজন। Discord বর্তমানে সাধারণ মোডে থাকলে, প্রাথমিক পরিবর্তনের সময় এটি শুধু একবার পুনরায় চালু হবে এবং সার্ভার বদলালে পুনরায় চালু হবে না।\n\nপুনরায় চালু করার আগে আপনার টাইপ করা বার্তা ও চলমান কল যাচাই করুন।",
     "확인하고 준비": "নিশ্চিত করে প্রস্তুত করুন",
     "Discord 접근성 모드를 준비합니다": "Discord অ্যাক্সেসিবিলিটি মোড প্রস্তুত করা হচ্ছে",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord এখনও অ্যাক্সেসিবিলিটি-সামঞ্জস্যপূর্ণ মোডে চলছে না।\nআপনার টাইপ করা বার্তা মুছে যেতে পারে অথবা কল শেষ হয়ে যেতে পারে।\n\nপ্রাথমিক পরিবর্তনের জন্য {seconds} সেকেন্ড পর Discord একবার পুনরায় চালু হবে।"
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord এখনও অ্যাক্সেসিবিলিটি-সামঞ্জস্যপূর্ণ মোডে চলছে না।\nআপনার টাইপ করা বার্তা মুছে যেতে পারে অথবা কল শেষ হয়ে যেতে পারে।\n\nপ্রাথমিক পরিবর্তনের জন্য {seconds} সেকেন্ড পর Discord একবার পুনরায় চালু হবে।",
+    "메시지 통역": "বার্তার অনুবাদ",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "আমন্ত্রণটি গ্রহণ না হলে, ব্রাউজারে চালিয়ে যান।",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "এই আমন্ত্রণটি গ্রহণ করতে, ব্রাউজারে চালিয়ে যান।",
+    "브라우저에서 계속": "ব্রাউজারে চালিয়ে যান",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord এই আমন্ত্রণটি লোড করতে পারেনি। ব্রাউজারে এর অবস্থা দেখুন।",
+    "브라우저에서 확인": "ব্রাউজারে দেখুন"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -8038,7 +8152,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang اور Sentory کو ایک محفوظ قابلِ رسائی موڈ درکار ہے جسے وہ مشترکہ طور پر استعمال کر سکیں۔ اگر Discord فی الحال عام موڈ میں ہے تو ابتدائی تبدیلی کے دوران یہ صرف ایک بار دوبارہ شروع ہوگا اور سرور تبدیل کرنے پر دوبارہ شروع نہیں ہوگا۔\n\nدوبارہ شروع کرنے سے پہلے زیرِ تحریر پیغام اور جاری کالز چیک کر لیں۔",
     "확인하고 준비": "تصدیق کریں اور تیار کریں",
     "Discord 접근성 모드를 준비합니다": "Discord کا قابلِ رسائی موڈ تیار ہو رہا ہے",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ابھی تک قابلِ رسائی موڈ سے ہم آہنگ حالت میں نہیں چل رہا۔\nآپ کا زیرِ تحریر پیغام ضائع ہو سکتا ہے یا کال ختم ہو سکتی ہے۔\n\nابتدائی تبدیلی کے لیے Discord {seconds} سیکنڈ بعد ایک بار دوبارہ شروع ہوگا۔"
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord ابھی تک قابلِ رسائی موڈ سے ہم آہنگ حالت میں نہیں چل رہا۔\nآپ کا زیرِ تحریر پیغام ضائع ہو سکتا ہے یا کال ختم ہو سکتی ہے۔\n\nابتدائی تبدیلی کے لیے Discord {seconds} سیکنڈ بعد ایک بار دوبارہ شروع ہوگا۔",
+    "메시지 통역": "پیغامات کی ترجمانی",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "اگر دعوت قبول نہ ہو تو براہِ کرم اپنے براؤزر میں جاری رکھیں۔",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "یہ دعوت قبول کرنے کے لیے براہِ کرم اپنے براؤزر میں جاری رکھیں۔",
+    "브라우저에서 계속": "براؤزر میں جاری رکھیں",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord یہ دعوت لوڈ نہیں کر سکا۔ براہِ کرم اپنے براؤزر میں اس کی صورتحال چیک کریں۔",
+    "브라우저에서 확인": "براؤزر میں چیک کریں"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -8440,7 +8560,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang மற்றும் Sentory பகிர்ந்து பயன்படுத்தக்கூடிய பாதுகாப்பான அணுகல்தன்மை பயன்முறை தேவை. Discord தற்போது இயல்புப் பயன்முறையில் இருந்தால், முதல் முறை மாறும்போது மட்டும் ஒருமுறை மறுதொடக்கம் செய்யப்படும்; சர்வர்களை மாற்றும்போது மறுதொடக்கம் செய்யப்படாது.\n\nமறுதொடக்கம் செய்வதற்கு முன், நீங்கள் தட்டச்சு செய்யும் செய்தியையும் செயலில் உள்ள அழைப்புகளையும் சரிபார்க்கவும்.",
     "확인하고 준비": "உறுதிசெய்து தயாரி",
     "Discord 접근성 모드를 준비합니다": "Discord அணுகல்தன்மை பயன்முறை தயாராகிறது",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord இன்னும் அணுகல்தன்மைக்கு இணக்கமான பயன்முறையில் இயங்கவில்லை.\nநீங்கள் தட்டச்சு செய்யும் செய்தி நீக்கப்படலாம் அல்லது அழைப்பு முடிவடையலாம்.\n\nமுதல் முறை மாறுவதற்காக {seconds} வினாடிகளில் Discord ஒருமுறை மறுதொடக்கம் செய்யப்படும்."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord இன்னும் அணுகல்தன்மைக்கு இணக்கமான பயன்முறையில் இயங்கவில்லை.\nநீங்கள் தட்டச்சு செய்யும் செய்தி நீக்கப்படலாம் அல்லது அழைப்பு முடிவடையலாம்.\n\nமுதல் முறை மாறுவதற்காக {seconds} வினாடிகளில் Discord ஒருமுறை மறுதொடக்கம் செய்யப்படும்.",
+    "메시지 통역": "செய்தி உரைபெயர்ப்பு",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "அழைப்பு ஏற்கப்படவில்லை எனில், உங்கள் உலாவியில் தொடரவும்.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "இந்த அழைப்பை ஏற்க, உங்கள் உலாவியில் தொடரவும்.",
+    "브라우저에서 계속": "உலாவியில் தொடரவும்",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord-ஆல் இந்த அழைப்பை ஏற்ற முடியவில்லை. அதன் நிலையை உங்கள் உலாவியில் சரிபார்க்கவும்.",
+    "브라우저에서 확인": "உலாவியில் சரிபார்க்கவும்"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -8842,7 +8968,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang و Sentory به یک حالت دسترس‌پذیری امن و مشترک نیاز دارند. اگر Discord اکنون در حالت عادی است، فقط یک‌بار هنگام انتقال اولیه راه‌اندازی مجدد می‌شود و هنگام جابه‌جایی بین سرورها راه‌اندازی مجدد نمی‌شود.\n\nپیش از راه‌اندازی مجدد، پیام در حال نوشتن و تماس‌های فعال را بررسی کنید.",
     "확인하고 준비": "تأیید و آماده‌سازی",
     "Discord 접근성 모드를 준비합니다": "در حال آماده‌سازی حالت دسترس‌پذیری Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord هنوز در حالت سازگار با دسترس‌پذیری اجرا نشده است.\nممکن است پیام در حال نوشتن حذف یا تماس قطع شود.\n\nDiscord برای انتقال اولیه، پس از {seconds} ثانیه یک‌بار راه‌اندازی مجدد می‌شود."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord هنوز در حالت سازگار با دسترس‌پذیری اجرا نشده است.\nممکن است پیام در حال نوشتن حذف یا تماس قطع شود.\n\nDiscord برای انتقال اولیه، پس از {seconds} ثانیه یک‌بار راه‌اندازی مجدد می‌شود.",
+    "메시지 통역": "ترجمهٔ پیام",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "اگر دعوت پذیرفته نشد، لطفاً در مرورگر خود ادامه دهید.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "برای پذیرفتن این دعوت، لطفاً در مرورگر خود ادامه دهید.",
+    "브라우저에서 계속": "ادامه در مرورگر",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord نتوانست این دعوت را بارگیری کند. لطفاً وضعیت آن را در مرورگر خود بررسی کنید.",
+    "브라우저에서 확인": "بررسی در مرورگر"
   },
   "he": {
     "설정": "הגדרות",
@@ -9244,7 +9376,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang ו-Sentory זקוקים למצב נגישות מאובטח שבו יוכלו להשתמש יחד. אם Discord פועל כעת במצב רגיל, הוא יופעל מחדש פעם אחת בלבד במעבר הראשוני ולא יופעל מחדש בעת מעבר בין שרתים.\n\nלפני ההפעלה מחדש, יש לבדוק הודעה שנמצאת בכתיבה ושיחות פעילות.",
     "확인하고 준비": "אישור והכנה",
     "Discord 접근성 모드를 준비합니다": "מכין את מצב הנגישות של Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord עדיין אינו פועל במצב תואם נגישות.\nהודעה שנמצאת בכתיבה עלולה להימחק או ששיחה עלולה להסתיים.\n\nDiscord יופעל מחדש פעם אחת לצורך המעבר הראשוני בעוד {seconds} שניות."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord עדיין אינו פועל במצב תואם נגישות.\nהודעה שנמצאת בכתיבה עלולה להימחק או ששיחה עלולה להסתיים.\n\nDiscord יופעל מחדש פעם אחת לצורך המעבר הראשוני בעוד {seconds} שניות.",
+    "메시지 통역": "תרגום הודעות",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "אם ההזמנה לא התקבלה, יש להמשיך בדפדפן.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "כדי לקבל הזמנה זו, יש להמשיך בדפדפן.",
+    "브라우저에서 계속": "המשך בדפדפן",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord לא הצליח לטעון הזמנה זו. יש לבדוק את הסטטוס שלה בדפדפן.",
+    "브라우저에서 확인": "בדיקה בדפדפן"
   },
   "cs": {
     "설정": "Nastavení",
@@ -9646,6 +9784,12 @@ export const UI_LOCALE_COPY = Object.freeze({
     "NudeNyang과 Sentory가 함께 사용할 수 있는 안전한 접근성 모드가 필요합니다. 현재 Discord가 일반 모드라면 최초 전환 때 한 번만 다시 시작하며, 서버를 이동할 때는 다시 시작하지 않습니다.\n\n재시작 전에 작성 중인 메시지와 통화를 확인해 주세요.": "NudeNyang a Sentory potřebují bezpečný režim přístupnosti, který mohou sdílet. Pokud je Discord aktuálně v běžném režimu, restartuje se pouze jednou při prvním přepnutí a při přepínání serverů se již nerestartuje.\n\nPřed restartováním zkontrolujte rozepsané zprávy a probíhající hovory.",
     "확인하고 준비": "Potvrdit a připravit",
     "Discord 접근성 모드를 준비합니다": "Příprava režimu přístupnosti Discord",
-    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord zatím není spuštěn v režimu kompatibilním s funkcemi přístupnosti.\nRozepsaná zpráva může být zahozena nebo hovor ukončen.\n\nDiscord se za {seconds} sekund jednou restartuje kvůli prvnímu přepnutí."
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": "Discord zatím není spuštěn v režimu kompatibilním s funkcemi přístupnosti.\nRozepsaná zpráva může být zahozena nebo hovor ukončen.\n\nDiscord se za {seconds} sekund jednou restartuje kvůli prvnímu přepnutí.",
+    "메시지 통역": "Tlumočení zpráv",
+    "초대 수락이 완료되지 않으면 브라우저에서 계속해 주세요.": "Pokud pozvánka nebyla přijata, pokračujte v prohlížeči.",
+    "초대를 수락하려면 브라우저에서 계속해 주세요.": "Chcete-li tuto pozvánku přijmout, pokračujte v prohlížeči.",
+    "브라우저에서 계속": "Pokračovat v prohlížeči",
+    "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord nemohl načíst tuto pozvánku. Zkontrolujte její stav v prohlížeči.",
+    "브라우저에서 확인": "Zkontrolovat v prohlížeči"
   }
 });

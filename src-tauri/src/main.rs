@@ -978,7 +978,7 @@ fn tray_menu_hide(app: AppHandle) {
 }
 
 #[tauri::command]
-fn tray_menu_set_height(app: AppHandle, height: u32) -> Result<(), String> {
+fn tray_menu_set_size(app: AppHandle, width: u32, height: u32) -> Result<(), String> {
     let window = app
         .get_webview_window("tray-menu")
         .ok_or_else(|| "트레이 메뉴 창을 찾지 못했습니다.".to_string())?;
@@ -991,20 +991,20 @@ fn tray_menu_set_height(app: AppHandle, height: u32) -> Result<(), String> {
     let current_position = window
         .outer_position()
         .map_err(|error| format!("트레이 메뉴 위치를 확인하지 못했습니다: {error}"))?;
-    let physical_height = ((height.clamp(200, 500) as f64) * scale).round() as u32;
+    let physical_width = ((width.clamp(300, 390) as f64) * scale).round() as u32;
+    let physical_height = ((height.clamp(200, 560) as f64) * scale).round() as u32;
+    let right = current_position.x + current_size.width as i32;
     let bottom = current_position.y + current_size.height as i32;
+    let next_x = right - physical_width as i32;
     let next_y = bottom - physical_height as i32;
     window
         .set_size(Size::Physical(PhysicalSize::new(
-            current_size.width,
+            physical_width,
             physical_height,
         )))
         .map_err(|error| format!("트레이 메뉴 크기를 바꾸지 못했습니다: {error}"))?;
     window
-        .set_position(Position::Physical(PhysicalPosition::new(
-            current_position.x,
-            next_y,
-        )))
+        .set_position(Position::Physical(PhysicalPosition::new(next_x, next_y)))
         .map_err(|error| format!("트레이 메뉴 위치를 맞추지 못했습니다: {error}"))?;
     Ok(())
 }
@@ -1023,6 +1023,11 @@ fn tray_open_provider_settings(app: AppHandle, provider: String) {
 #[tauri::command]
 fn tray_request_translation_toggle(app: AppHandle) {
     let _ = app.emit("request-translation-toggle", ());
+}
+
+#[tauri::command]
+fn tray_request_outgoing_translation_toggle(app: AppHandle) {
+    let _ = app.emit("request-outgoing-translation-toggle", ());
 }
 
 #[tauri::command]
@@ -1506,10 +1511,11 @@ fn main() {
             main_window_show,
             main_window_hide,
             tray_menu_hide,
-            tray_menu_set_height,
+            tray_menu_set_size,
             tray_open_settings,
             tray_open_provider_settings,
             tray_request_translation_toggle,
+            tray_request_outgoing_translation_toggle,
             tray_request_update_install,
             application_exit
         ])

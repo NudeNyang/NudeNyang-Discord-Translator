@@ -21,7 +21,7 @@ const TRANSLATOR_LABELS = Object.freeze({
 });
 
 const VIEW_HEIGHTS = Object.freeze({
-  main: 318,
+  main: 362,
   language: 520,
   model: 427,
 });
@@ -45,6 +45,8 @@ const elements = {
   engineSummary: document.querySelector("#engine-summary"),
   translationIndicator: document.querySelector("#translation-indicator"),
   translationState: document.querySelector("#translation-state"),
+  outgoingTranslationIndicator: document.querySelector("#outgoing-translation-indicator"),
+  outgoingTranslationState: document.querySelector("#outgoing-translation-state"),
   targetLanguage: document.querySelector("#target-language"),
   translatorName: document.querySelector("#translator-name"),
   mainMenu: document.querySelector("#main-menu"),
@@ -62,6 +64,7 @@ const elements = {
 let currentConfig = null;
 let currentStatus = null;
 let refreshing = false;
+let lastTraySize = "";
 let providerConnections = new Map();
 let availableUpdateVersion = "";
 let selectedUiLanguage = "auto";
@@ -92,6 +95,24 @@ function applyTrayLanguage(language) {
   elements.languageSearch.placeholder = searchLabel;
   elements.languageSearch.setAttribute("aria-label", searchLabel);
   elements.languageSearchEmpty.textContent = translateCopy(selectedUiLanguage, "검색 결과 없음");
+}
+
+function measureText(element) {
+  const probe = document.createElement("canvas").getContext("2d");
+  if (!probe || !element) return 0;
+  probe.font = getComputedStyle(element).font;
+  return probe.measureText(element.textContent || "").width;
+}
+
+function preferredTrayWidth() {
+  const activeRows = [...document.querySelectorAll(".brand-row, .menu-row")]
+    .filter(row => row.offsetParent !== null);
+  const required = activeRows.reduce((widest, row) => {
+    const label = row.querySelector(".brand-copy strong, .menu-copy strong");
+    const value = row.querySelector(".open-label, .menu-value");
+    return Math.max(widest, measureText(label) + measureText(value) + 138);
+  }, 300);
+  return Math.min(390, Math.max(300, Math.ceil(required)));
 }
 
 function showMainView() {
@@ -189,14 +210,18 @@ function renderStatus(status, config) {
   if (status) currentStatus = status;
   status ||= currentStatus;
   const enabled = Boolean(status?.enabled ?? config?.enabled);
+  const outgoingEnabled = Boolean(config?.outgoing_translation_enabled);
   const connected = Boolean(status?.cdpConnected);
   elements.translationIndicator.classList.toggle("enabled", enabled);
   setTrayText(elements.translationState, enabled ? "켜짐" : "꺼짐");
+  elements.outgoingTranslationIndicator.classList.toggle("enabled", outgoingEnabled);
+  setTrayText(elements.outgoingTranslationState, outgoingEnabled ? "켜짐" : "꺼짐");
   setTrayText(elements.engineSummary, connected
     ? "Discord 연결됨"
     : enabled ? "Discord 연결 중" : "번역 대기 중");
   const targetLanguage = config?.target_language || status?.targetLanguage || "ko";
   elements.targetLanguage.textContent = LANGUAGE_LABELS[targetLanguage] || "한국어";
+  elements.targetLanguage.title = elements.targetLanguage.textContent;
   updateLanguageSelection(targetLanguage);
   const translator = config?.translator || status?.configuredTranslator || "hymt_1_8b";
   const translatorLabel = translateCopy(
@@ -212,6 +237,9 @@ function renderStatus(status, config) {
     : translatorFailed ? `${translatorLabel} ${translateCopy(currentUiLanguage(), "오류")}` : translatorLabel;
   elements.translatorName.title = translatorLabel;
   updateTranslatorSelection(translator);
+  resizeTray(elements.mainMenu.hidden
+    ? elements.languageView.hidden ? VIEW_HEIGHTS.model : VIEW_HEIGHTS.language
+    : VIEW_HEIGHTS.main + (availableUpdateVersion ? UPDATE_ROW_HEIGHT : 0));
 }
 
 async function refresh() {
@@ -243,7 +271,11 @@ async function run(command) {
 }
 
 function resizeTray(height) {
-  if (invoke) void invoke("tray_menu_set_height", { height });
+  const width = preferredTrayWidth();
+  const nextSize = `${width}x${height}`;
+  if (nextSize === lastTraySize) return;
+  lastTraySize = nextSize;
+  if (invoke) void invoke("tray_menu_set_size", { width, height });
 }
 
 async function selectLanguage(language) {
@@ -287,6 +319,7 @@ document.querySelector("#open-language-settings").addEventListener("click", show
 document.querySelector("#open-model-settings").addEventListener("click", showModelView);
 document.querySelector("#open-settings-secondary").addEventListener("click", () => run("tray_open_settings"));
 document.querySelector("#toggle-translation").addEventListener("click", () => run("tray_request_translation_toggle"));
+document.querySelector("#toggle-outgoing-translation").addEventListener("click", () => run("tray_request_outgoing_translation_toggle"));
 document.querySelector("#quit-app").addEventListener("click", () => run("application_exit"));
 elements.installUpdate.addEventListener("click", () => run("tray_request_update_install"));
 elements.languageSearch.addEventListener("input", event => filterTrayLanguages(event.currentTarget.value));

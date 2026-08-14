@@ -130,6 +130,7 @@ button:focus-visible {
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .brand-copy small,
@@ -151,9 +152,33 @@ button:focus-visible {
 }
 
 .open-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 7px;
   border-radius: 7px;
   background: var(--surface);
+}
+
+.menu-value {
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.open-label-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.open-label-icon,
+.menu-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .menu-group {
@@ -182,15 +207,33 @@ button:focus-visible {
 }
 
 .update-indicator {
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.menu-icon {
   display: grid;
   width: 28px;
   height: 28px;
-  flex: 0 0 auto;
+  flex: 0 0 28px;
   place-items: center;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  font-size: 17px;
-  font-weight: 800;
+  border-radius: 8px;
+  color: var(--muted);
+  transition: color 130ms ease, background-color 130ms ease;
+}
+
+.menu-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.menu-row:hover .menu-icon {
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.update-row .menu-icon {
+  color: var(--accent-strong);
 }
 
 .language-view,
@@ -338,22 +381,42 @@ button:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  line-height: 1;
 }
 
-.arrow-value b {
+.arrow-value > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-chevron {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
   color: var(--accent-strong);
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .danger:hover {
   color: var(--danger);
 }
 
+.danger:hover .menu-icon {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 11%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brand-row,
   .menu-row,
+  .menu-icon,
   .translation-indicator,
   .translation-indicator span {
     transition: none;
