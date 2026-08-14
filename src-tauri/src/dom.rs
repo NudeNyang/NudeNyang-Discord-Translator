@@ -7,6 +7,11 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const rect = node.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
   }
+  function isRendered(node) {
+    const rect = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+  }
   function eligibleTextNodes(root, allowLinkText = false) {
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -56,10 +61,11 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       : null;
     return typeof stored?.text === 'string' ? stored.text : displayed;
   }
-  function parts(kind, id, root, allowLinkText = false) {
+  function parts(kind, id, root, allowLinkText = false, contextId = null) {
     return eligibleTextNodes(root, allowLinkText).map((node, index) => ({
       kind,
       id,
+      contextId,
       index,
       text: canonicalOriginal(kind, id, index, node),
       displayedText: node.nodeValue,
@@ -97,7 +103,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     if (isOutgoingMessage(root)) continue;
     if (!isVisible(root)) continue;
     const id = ensureRootId(root, 'data-dto-message-id', 'message');
-    out.push(...parts('message', id, root));
+    out.push(...parts('message', id, root, false, messageContextId(root)));
   }
   for (const context of document.querySelectorAll('[id^="message-reply-context-"]')) {
     if (!isVisible(context)) continue;
@@ -193,12 +199,121 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const id = ensureRootId(root, 'data-dto-heading-id', 'heading');
     out.push(...parts('heading', id, root));
   }
+  function closestSupplementalSurface(seed) {
+    const minimumWidth = Math.min(480, innerWidth * 0.45);
+    const minimumHeight = Math.min(360, innerHeight * 0.42);
+    for (let current = seed?.parentElement; current && current !== document.body; current = current.parentElement) {
+      if (!isRendered(current)) continue;
+      const rect = current.getBoundingClientRect();
+      if (rect.width < minimumWidth || rect.height < minimumHeight) continue;
+      const fillsViewport = rect.width >= innerWidth * 0.98 && rect.height >= innerHeight * 0.98;
+      if (!fillsViewport && current.id !== 'app-mount') return current;
+    }
+    return null;
+  }
+  function addTextParents(surface, roots, allowControlText = false) {
+    const walker = document.createTreeWalker(surface, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.nodeValue?.trim()) continue;
+      const parent = node.parentElement;
+      if (!parent || !isVisible(parent)) continue;
+      if (parent.closest(
+        '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"],' +
+        '[contenteditable="true"],textarea,input,code,pre,[aria-hidden="true"]'
+      )) continue;
+      if (!allowControlText && parent.closest('a,button,[role="button"]')) continue;
+      roots.add(parent);
+    }
+  }
+  function inviteApplicationRoots() {
+    const roots = new Set();
+    const controls = [...document.querySelectorAll(
+      'textarea,input:not([type]),input[type="text"]'
+    )].filter(control =>
+      isRendered(control) &&
+      !control.matches('[type="search"],[role="combobox"]') &&
+      !control.closest('nav,[class*="searchBar_"],[class*="search_"]')
+    );
+    const surfaces = new Set();
+    for (const control of controls) {
+      const surface = closestSupplementalSurface(control);
+      if (!surface) continue;
+      const answers = [...surface.querySelectorAll(
+        'textarea,input:not([type]),input[type="text"]'
+      )].filter(isRendered);
+      const hasAgreement = Boolean(surface.querySelector(
+        'input[type="checkbox"],[role="checkbox"],[aria-checked]'
+      ));
+      if (answers.length >= 2 || (answers.length >= 1 && hasAgreement)) surfaces.add(surface);
+    }
+    for (const surface of surfaces) {
+      addTextParents(surface, roots);
+    }
+    return [...roots];
+  }
+  function messageContextId(root) {
+    const row = root.closest(
+      '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]'
+    );
+    return row
+      ? ensureRootId(row, 'data-dto-message-context-id', 'message-context')
+      : ensureRootId(root, 'data-dto-message-context-id', 'message-context');
+  }
+  const applicationRoots = inviteApplicationRoots();
+  for (const root of applicationRoots) {
+    const id = ensureRootId(root, 'data-dto-invite-context-id', 'invite-context');
+    out.push(...parts('invite-context', id, root));
+  }
+  function scheduledEventRoots() {
+    const roots = new Set();
+    const eventSeeds = document.querySelectorAll([
+      '[class*="guildEvent_"]', '[class*="eventCard_"]', '[class*="eventInfo_"]',
+      '[class*="eventDetails_"]', '[class*="eventContent_"]', '[class*="eventName_"]',
+      '[class*="eventTitle_"]', '[class*="eventDescription_"]', '[class*="eventLocation_"]',
+      'time:not([id^="message-timestamp-"])'
+    ].join(','));
+    const surfaces = new Set();
+    for (const seed of eventSeeds) {
+      if (!isRendered(seed) || seed.closest('[id^="chat-messages-"]')) continue;
+      const surface = closestSupplementalSurface(seed);
+      if (surface) surfaces.add(surface);
+    }
+    for (const surface of surfaces) {
+      addTextParents(surface, roots);
+    }
+    return [...roots];
+  }
+  for (const root of scheduledEventRoots()) {
+    const id = ensureRootId(root, 'data-dto-event-context-id', 'event-context');
+    out.push(...parts('event-context', id, root));
+  }
+  function channelBrowserRoots() {
+    const roots = new Set();
+    const surfaceCounts = new Map();
+    for (const control of document.querySelectorAll(
+      '[role="checkbox"],[role="switch"],input[type="checkbox"],[aria-checked]'
+    )) {
+      if (!isRendered(control) || control.closest('nav,[id^="chat-messages-"]')) continue;
+      const surface = closestSupplementalSurface(control);
+      if (!surface) continue;
+      surfaceCounts.set(surface, (surfaceCounts.get(surface) || 0) + 1);
+    }
+    for (const [surface, count] of surfaceCounts) {
+      if (count < 2) continue;
+      addTextParents(surface, roots, true);
+    }
+    return [...roots];
+  }
+  for (const root of channelBrowserRoots()) {
+    const id = ensureRootId(root, 'data-dto-browse-channel-id', 'browse-channel');
+    out.push(...parts('browse-channel', id, root));
+  }
   const contextSelector = [
     '[class*="guildDropdown_"] h2',
     '[class*="topic_"][class*="expandable_"]',
     'div[id^="chat-messages-"][class*="container_"] > div[class*="description_"]',
-    '[role="dialog"] [class*="headerSubtitle_"]',
-    '[role="dialog"] main[class*="bodyInner_"] [class*="markup_"]'
+    '[role="dialog"] [class*="headerSubtitle_"]'
   ].join(',');
   for (const root of document.querySelectorAll(contextSelector)) {
     if (!isVisible(root)) continue;
@@ -253,6 +368,9 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
     else if (change.kind === 'forum-title') root = document.querySelector(`[data-dto-forum-title-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'forum-tag') root = document.querySelector(`[data-dto-forum-tag-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'heading') root = document.querySelector(`[data-dto-heading-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'invite-context') root = document.querySelector(`[data-dto-invite-context-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'event-context') root = document.querySelector(`[data-dto-event-context-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'browse-channel') root = document.querySelector(`[data-dto-browse-channel-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'channel') {
       const channel = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"]`);
@@ -320,6 +438,9 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
       else if (change.kind === 'forum-title') root = document.querySelector(`[data-dto-forum-title-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'forum-tag') root = document.querySelector(`[data-dto-forum-tag-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'heading') root = document.querySelector(`[data-dto-heading-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'invite-context') root = document.querySelector(`[data-dto-invite-context-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'event-context') root = document.querySelector(`[data-dto-event-context-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'browse-channel') root = document.querySelector(`[data-dto-browse-channel-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'channel') {
         const channel = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"]`);
@@ -358,6 +479,8 @@ pub struct DomPart {
     pub kind: String,
     #[serde(rename = "id")]
     pub item_id: String,
+    #[serde(default, rename = "contextId")]
+    pub context_id: Option<String>,
     pub index: usize,
     pub text: String,
     #[serde(default, rename = "displayedText")]
@@ -480,6 +603,15 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     else if (change.kind === 'heading') root = document.querySelector(
       `[data-dto-heading-id="${{CSS.escape(change.id)}}"]`
     );
+    else if (change.kind === 'invite-context') root = document.querySelector(
+      `[data-dto-invite-context-id="${{CSS.escape(change.id)}}"]`
+    );
+    else if (change.kind === 'event-context') root = document.querySelector(
+      `[data-dto-event-context-id="${{CSS.escape(change.id)}}"]`
+    );
+    else if (change.kind === 'browse-channel') root = document.querySelector(
+      `[data-dto-browse-channel-id="${{CSS.escape(change.id)}}"]`
+    );
     else if (change.kind === 'context') root = document.querySelector(
       `[data-dto-context-id="${{CSS.escape(change.id)}}"]`
     );
@@ -541,6 +673,7 @@ mod tests {
             "parts": [{
                 "kind": "message",
                 "id": "dto-message-1",
+                "contextId": "dto-message-context-1",
                 "index": 2,
                 "text": "hello",
                 "displayedText": "안녕"
@@ -552,6 +685,10 @@ mod tests {
             ("message".into(), "dto-message-1".into(), 2)
         );
         assert_eq!(snapshot.parts[0].text, "hello");
+        assert_eq!(
+            snapshot.parts[0].context_id.as_deref(),
+            Some("dto-message-context-1")
+        );
         assert_eq!(snapshot.parts[0].rendered_text(), "안녕");
         assert!(SNAPSHOT_SCRIPT.contains("message-reply-context-"));
         assert!(SNAPSHOT_SCRIPT.contains("data-nt-outgoing-original"));
@@ -561,9 +698,78 @@ mod tests {
     #[test]
     fn snapshot_supports_read_only_rules_channel_message_containers() {
         assert!(SNAPSHOT_SCRIPT.contains("messageRootCandidates"));
+        assert!(SNAPSHOT_SCRIPT.contains("messageContextId"));
+        assert!(SNAPSHOT_SCRIPT.contains("data-dto-message-context-id"));
         assert!(SNAPSHOT_SCRIPT.contains("[id^=\"chat-messages-\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id^=\"chat-messages___\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"messageContent_\"]"));
+    }
+
+    #[test]
+    fn snapshot_supports_invite_application_rules_and_questions() {
+        assert!(SNAPSHOT_SCRIPT.contains("inviteApplicationRoots"));
+        assert!(SNAPSHOT_SCRIPT.contains("closestSupplementalSurface"));
+        assert!(SNAPSHOT_SCRIPT.contains("addTextParents"));
+        assert!(SNAPSHOT_SCRIPT.contains("parts('invite-context'"));
+        assert!(SNAPSHOT_SCRIPT.contains("data-dto-invite-context-id"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("data-dto-invite-context-id"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("data-dto-invite-context-id"));
+
+        let part = DomPart {
+            kind: "invite-context".to_string(),
+            item_id: "dto-invite-context-1".to_string(),
+            context_id: None,
+            index: 0,
+            text: "Wer bist du?".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "누구인가요?")]).unwrap();
+        assert!(script.contains("data-dto-invite-context-id"));
+    }
+
+    #[test]
+    fn snapshot_supports_scheduled_event_content() {
+        assert!(SNAPSHOT_SCRIPT.contains("scheduledEventRoots"));
+        assert!(SNAPSHOT_SCRIPT.contains("eventSeeds"));
+        assert!(SNAPSHOT_SCRIPT.contains("closestSupplementalSurface"));
+        assert!(SNAPSHOT_SCRIPT.contains("parts('event-context'"));
+        assert!(SNAPSHOT_SCRIPT.contains("data-dto-event-context-id"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("data-dto-event-context-id"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("data-dto-event-context-id"));
+
+        let part = DomPart {
+            kind: "event-context".to_string(),
+            item_id: "dto-event-context-1".to_string(),
+            context_id: None,
+            index: 0,
+            text: "ちょっと借ります".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "잠깐 빌릴게요")]).unwrap();
+        assert!(script.contains("data-dto-event-context-id"));
+    }
+
+    #[test]
+    fn snapshot_supports_channel_browser_names_and_descriptions() {
+        assert!(SNAPSHOT_SCRIPT.contains("channelBrowserRoots"));
+        assert!(SNAPSHOT_SCRIPT.contains("[aria-checked]"));
+        assert!(SNAPSHOT_SCRIPT.contains("closestSupplementalSurface"));
+        assert!(!SNAPSHOT_SCRIPT.contains("location.pathname.includes('/customize-community')"));
+        assert!(SNAPSHOT_SCRIPT.contains("parts('browse-channel'"));
+        assert!(SNAPSHOT_SCRIPT.contains("data-dto-browse-channel-id"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("data-dto-browse-channel-id"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("data-dto-browse-channel-id"));
+
+        let part = DomPart {
+            kind: "browse-channel".to_string(),
+            item_id: "dto-browse-channel-1".to_string(),
+            context_id: None,
+            index: 0,
+            text: "Hey, check out the channel".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "이 채널을 확인해 보세요")]).unwrap();
+        assert!(script.contains("data-dto-browse-channel-id"));
     }
 
     #[test]
@@ -584,6 +790,7 @@ mod tests {
         let part = DomPart {
             kind: "forum-tag".to_string(),
             item_id: "dto-forum-tag-1".to_string(),
+            context_id: None,
             index: 0,
             text: "動画編集".to_string(),
             displayed_text: None,
@@ -646,6 +853,7 @@ mod tests {
         let part = DomPart {
             kind: "embed".to_string(),
             item_id: "dto-embed-link-title".to_string(),
+            context_id: None,
             index: 0,
             text: "원문 제목".to_string(),
             displayed_text: None,
@@ -668,6 +876,7 @@ mod tests {
         let part = DomPart {
             kind: "embed".to_string(),
             item_id: "dto-embed-card".to_string(),
+            context_id: None,
             index: 0,
             text: "#かぷちゃあばたーず".to_string(),
             displayed_text: None,
@@ -750,6 +959,7 @@ mod tests {
         let part = DomPart {
             kind: "message".to_string(),
             item_id: "dto-message-scroll-remount".to_string(),
+            context_id: None,
             index: 0,
             text: "送信した文".to_string(),
             displayed_text: None,
@@ -763,6 +973,7 @@ mod tests {
         let part = DomPart {
             kind: "message".to_string(),
             item_id: "dto-message-1".to_string(),
+            context_id: None,
             index: 0,
             text: "original".to_string(),
             displayed_text: None,
@@ -777,6 +988,7 @@ mod tests {
         let part = DomPart {
             kind: "message".to_string(),
             item_id: "dto-message-1".to_string(),
+            context_id: None,
             index: 0,
             text: "원문".to_string(),
             displayed_text: None,

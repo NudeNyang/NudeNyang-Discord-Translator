@@ -40,7 +40,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v3';
+  const version = 'rust-image-ui-v4';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -142,8 +142,29 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     update(img);
     button.style.display = 'block';
     const rect = img.getBoundingClientRect();
-    button.style.left = `${Math.max(8, Math.min(innerWidth - 8, rect.right) - button.offsetWidth - 8)}px`;
-    button.style.top = `${Math.max(8, Math.min(innerHeight, rect.bottom) - button.offsetHeight - 8)}px`;
+    const inset = 8;
+    const left = Math.max(inset, Math.min(
+      innerWidth - button.offsetWidth - inset,
+      rect.right - button.offsetWidth - inset
+    ));
+    const top = Math.max(inset, Math.min(
+      innerHeight - button.offsetHeight - inset,
+      rect.bottom - button.offsetHeight - inset
+    ));
+    button.style.left = `${left}px`;
+    button.style.top = `${top}px`;
+  };
+  const imageFromPointerPath = (path, x, y) => {
+    for (const element of path) {
+      if (eligible(element)) return element;
+      if (!(element instanceof Element) || element === document.body || element === document.documentElement) break;
+      for (const img of element.querySelectorAll('img')) {
+        if (!eligible(img)) continue;
+        const rect = img.getBoundingClientRect();
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return img;
+      }
+    }
+    return null;
   };
   const hideSoon = () => {
     clearTimeout(window.__ntImageButtonTimer);
@@ -162,9 +183,10 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
       }
       if (window.__ntImageFrame) return;
       const x = event.clientX, y = event.clientY;
+      const path = event.composedPath();
       window.__ntImageFrame = requestAnimationFrame(() => {
         window.__ntImageFrame = 0;
-        const img = document.elementsFromPoint(x, y).find(element => eligible(element));
+        const img = imageFromPointerPath(path, x, y);
         if (img) show(img); else hideSoon();
       });
     }, {capture:true, signal});
@@ -1056,6 +1078,12 @@ mod tests {
         assert!(arabic.contains("const requestedUiLanguage = \"ar\""));
         assert!(arabic.contains("\"ar\":{"));
         assert!(!arabic.contains("__GENERATED_IMAGE_COPIES__"));
+    }
+
+    #[test]
+    fn image_hover_never_selects_an_obscured_background_image() {
+        assert!(IMAGE_UI_SCRIPT.contains("event.composedPath()"));
+        assert!(!IMAGE_UI_SCRIPT.contains("document.elementsFromPoint(x, y)"));
     }
 
     #[test]

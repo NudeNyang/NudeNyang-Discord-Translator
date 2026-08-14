@@ -9,6 +9,7 @@ use base64::Engine as _;
 use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::cache::{CacheCleanupResult, TranslationCache};
 use crate::cdp::CdpClient;
@@ -23,6 +24,7 @@ use crate::image_translation::{
     parse_image_requests, restore_images_script, ImageTranslationOutcome,
     ImageTranslationProcessor,
 };
+use crate::invite_assist::{invite_assist_script, parse_invite_open_request};
 use crate::language::Language;
 use crate::outgoing::{
     apply_outgoing_detected_script, apply_outgoing_error_script, apply_outgoing_review_script,
@@ -41,6 +43,7 @@ use crate::translation::{
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
+const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
 const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
@@ -621,10 +624,13 @@ fn run_controller(
                 }
                 Control::ReplaceCdp(mut replacement) => {
                     restore(&mut client, &states, false);
-                    if let Err(error) = replacement
-                        .connect()
-                        .and_then(|_| replacement.evaluate(INSTALL_TEXT_RESTORE_SCRIPT, false))
-                    {
+                    let prepare = replacement.connect().and_then(|_| {
+                        for script in cdp_attach_text_scripts() {
+                            replacement.evaluate(script, false)?;
+                        }
+                        Ok(())
+                    });
+                    if let Err(error) = prepare {
                         crate::diagnostics::error("cdp", &error);
                     }
                     client = Some(replacement);
@@ -783,6 +789,11 @@ fn run_controller(
                 runtime.cdp_connected = true;
                 runtime.connection_issue.clear();
             });
+            handle_invite_assist(
+                client.as_mut().expect("connected CDP client"),
+                app_handle.as_ref(),
+                &config.ui_language,
+            )?;
             ensure_outgoing_originals(
                 client.as_mut().expect("connected CDP client"),
                 outgoing_original_store.as_ref(),
@@ -937,6 +948,30 @@ fn run_controller(
     if let Some(mut client) = client {
         client.close();
     }
+}
+
+fn handle_invite_assist(
+    client: &mut CdpClient,
+    app: Option<&AppHandle>,
+    ui_language: &str,
+) -> Result<(), String> {
+    let request =
+        parse_invite_open_request(client.evaluate(&invite_assist_script(ui_language), false)?);
+    let (Some(code), Some(app)) = (request, app) else {
+        return Ok(());
+    };
+    let url = format!("https://discord.com/invite/{code}");
+    match app.opener().open_url(url, None::<&str>) {
+        Ok(()) => crate::diagnostics::info(
+            "discord-invite",
+            "security-check invite handed off to the default browser",
+        ),
+        Err(error) => crate::diagnostics::error(
+            "discord-invite",
+            &format!("기본 브라우저에서 Discord 초대를 열지 못했습니다: {error}"),
+        ),
+    }
+    Ok(())
 }
 
 fn maybe_cleanup_translation_history(
@@ -1169,8 +1204,21 @@ fn plan_dom_updates(
             part.index,
             part.text.clone(),
         );
-        if pending.contains(&pending_key) || parts.len() >= MAX_BATCH_ITEMS {
+        if pending.contains(&pending_key) {
             continue;
+        }
+        if parts.len() >= MAX_BATCH_ITEMS {
+            let last_context = parts.last().and_then(incoming_context_key);
+            let current_context = incoming_context_key(&part);
+            let extends_message_context = current_context.as_deref().is_some_and(|key| {
+                ["message:", "reply:", "embed:"]
+                    .iter()
+                    .any(|prefix| key.starts_with(prefix))
+            }) && current_context == last_context
+                && parts.len() < MAX_MESSAGE_CONTEXT_BATCH_ITEMS;
+            if !extends_message_context {
+                continue;
+            }
         }
         pending.insert(pending_key);
         parts.push(part);
@@ -1943,10 +1991,25 @@ fn run_translation_worker(
 
 fn incoming_context_key(part: &DomPart) -> Option<String> {
     match part.kind.as_str() {
-        "message" | "reply" | "embed" => Some(format!("{}:{}", part.kind, part.item_id)),
+        "message" | "reply" | "embed" => Some(format!(
+            "{}:{}",
+            part.kind,
+            part.context_id.as_deref().unwrap_or(&part.item_id)
+        )),
         "channel" | "category" => Some("navigation".to_string()),
+        "invite-context" => Some("invite-context".to_string()),
+        "event-context" => Some("event-context".to_string()),
+        "browse-channel" => Some("browse-navigation".to_string()),
         _ => None,
     }
+}
+
+fn cdp_attach_text_scripts() -> [&'static str; 3] {
+    [
+        RESTORE_TEXT_SCRIPT,
+        CLEAR_TEXT_REGISTRY_SCRIPT,
+        INSTALL_TEXT_RESTORE_SCRIPT,
+    ]
 }
 
 fn run_outgoing_translation_worker(
@@ -2100,12 +2163,10 @@ fn make_translator(
     name: &str,
     progress_observer: Option<ModelProgressObserver>,
 ) -> Result<Box<dyn Translator>, String> {
+    if let Some(model_size) = HyMtModelSize::from_config_id(name) {
+        return make_local_translator(config, model_size, progress_observer);
+    }
     match name {
-        "hymt_1_8b" => make_local_translator(config, HyMtModelSize::Small, progress_observer),
-        "hymt_7b" => make_local_translator(config, HyMtModelSize::Large, progress_observer),
-        "translategemma_4b" => {
-            make_local_translator(config, HyMtModelSize::TranslateGemma4B, progress_observer)
-        }
         "chatgpt" | "claude" | "gemini" => Ok(Box::new(ResilientTranslator::new(
             Box::new(SubscriptionCliTranslator::new(
                 name,
@@ -2196,10 +2257,10 @@ fn poll_interval(capture_fps: u32) -> Duration {
 }
 
 fn translator_label(name: &str) -> &str {
+    if let Some(model_size) = HyMtModelSize::from_config_id(name) {
+        return model_size.runtime_label();
+    }
     match name {
-        "hymt_1_8b" => "Hy-MT2 1.8B Q4 (경량·기본)",
-        "hymt_7b" => "Hy-MT2 7B Q4 (품질·약 4.6GB)",
-        "translategemma_4b" => "TranslateGemma 4B Q4 (실험·약 2.5GB)",
         "chatgpt" => "GPT-5.6 Luna/Terra · 품질 최우선 (Codex CLI)",
         "claude" => "Claude · 품질 최우선 (Claude Code)",
         "gemini" => "Gemini · 품질 최우선 (Antigravity CLI)",
@@ -2210,7 +2271,7 @@ fn translator_label(name: &str) -> &str {
 }
 
 fn is_local_model_name(name: &str) -> bool {
-    matches!(name, "hymt_1_8b" | "hymt_7b" | "translategemma_4b")
+    HyMtModelSize::from_config_id(name).is_some()
 }
 
 fn translator_activation_notice(name: &str, model_is_prepared: bool) -> String {
@@ -2236,8 +2297,8 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        incoming_context_key, next_worker_command, plan_dom_updates, poll_interval,
-        preparation_plan_for_active_lanes, run_outgoing_translation_worker,
+        cdp_attach_text_scripts, incoming_context_key, next_worker_command, plan_dom_updates,
+        poll_interval, preparation_plan_for_active_lanes, run_outgoing_translation_worker,
         translator_activation_notice, translator_label, translator_preparation_plan,
         OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
         TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
@@ -2245,7 +2306,8 @@ mod tests {
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
     use crate::dom::{
-        apply_script, parse_snapshot, DomChange, DomPart, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
+        apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
+        INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
     use crate::language::{detect_explicit_language, Language};
     use std::collections::{HashMap, HashSet, VecDeque};
@@ -2267,6 +2329,7 @@ mod tests {
         let channel = DomPart {
             kind: "channel".to_string(),
             item_id: "channels___rules".to_string(),
+            context_id: None,
             index: 0,
             text: "rules".to_string(),
             displayed_text: None,
@@ -2274,6 +2337,7 @@ mod tests {
         let category = DomPart {
             kind: "category".to_string(),
             item_id: "channels___general".to_string(),
+            context_id: None,
             index: 0,
             text: "General".to_string(),
             displayed_text: None,
@@ -2287,6 +2351,62 @@ mod tests {
             incoming_context_key(&category).as_deref(),
             Some("navigation")
         );
+    }
+
+    #[test]
+    fn split_message_roots_share_the_discord_row_context() {
+        let first = DomPart {
+            kind: "message".to_string(),
+            item_id: "dto-message-root-1".to_string(),
+            context_id: Some("dto-message-context-1".to_string()),
+            index: 0,
+            text: "About Discord Rule Violations".to_string(),
+            displayed_text: None,
+        };
+        let second = DomPart {
+            kind: "message".to_string(),
+            item_id: "dto-message-root-2".to_string(),
+            context_id: Some("dto-message-context-1".to_string()),
+            index: 0,
+            text: "day blocked".to_string(),
+            displayed_text: None,
+        };
+
+        assert_eq!(incoming_context_key(&first), incoming_context_key(&second));
+        assert_eq!(
+            incoming_context_key(&first).as_deref(),
+            Some("message:dto-message-context-1")
+        );
+    }
+
+    #[test]
+    fn cdp_attach_restores_orphaned_translation_before_installing_the_new_hook() {
+        assert_eq!(
+            cdp_attach_text_scripts(),
+            [
+                RESTORE_TEXT_SCRIPT,
+                CLEAR_TEXT_REGISTRY_SCRIPT,
+                INSTALL_TEXT_RESTORE_SCRIPT,
+            ]
+        );
+    }
+
+    #[test]
+    fn supplemental_surfaces_share_language_context_for_short_labels() {
+        for kind in ["invite-context", "event-context", "browse-channel"] {
+            let part = DomPart {
+                kind: kind.to_string(),
+                item_id: "surface-1".to_string(),
+                context_id: None,
+                index: 0,
+                text: "General".to_string(),
+                displayed_text: None,
+            };
+            assert!(
+                incoming_context_key(&part).is_some(),
+                "{kind} must provide a contextual language key"
+            );
+        }
     }
 
     #[test]
@@ -2449,6 +2569,7 @@ mod tests {
                     parts: vec![DomPart {
                         kind: "message".to_string(),
                         item_id: item_id.to_string(),
+                        context_id: None,
                         index: 0,
                         text: item_id.to_string(),
                         displayed_text: None,
@@ -2477,6 +2598,7 @@ mod tests {
                     parts: vec![DomPart {
                         kind: "message".to_string(),
                         item_id: item_id.to_string(),
+                        context_id: None,
                         index: 0,
                         text: item_id.to_string(),
                         displayed_text: None,
@@ -2507,6 +2629,7 @@ mod tests {
         let part = DomPart {
             kind: "message".to_string(),
             item_id: "dto-message-1".to_string(),
+            context_id: None,
             index: 0,
             text: "Hello".to_string(),
             displayed_text: Some("안녕하세요".to_string()),
@@ -2533,6 +2656,7 @@ mod tests {
         let restored = DomPart {
             kind: "message".to_string(),
             item_id: "dto-message-1".to_string(),
+            context_id: None,
             index: 0,
             text: "Hello".to_string(),
             displayed_text: Some("Hello".to_string()),
@@ -2542,6 +2666,35 @@ mod tests {
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].text, "안녕하세요");
         assert!(queued.is_empty());
+    }
+
+    #[test]
+    fn dom_planning_does_not_split_one_message_at_the_soft_batch_limit() {
+        let mut snapshot = (0..33)
+            .map(|index| DomPart {
+                kind: "message".to_string(),
+                item_id: format!("dto-message-{index}"),
+                context_id: Some("dto-message-context-shared".to_string()),
+                index: 0,
+                text: format!("rule fragment {index}"),
+                displayed_text: None,
+            })
+            .collect::<Vec<_>>();
+        snapshot.push(DomPart {
+            kind: "message".to_string(),
+            item_id: "dto-message-next".to_string(),
+            context_id: Some("dto-message-context-next".to_string()),
+            index: 0,
+            text: "next message".to_string(),
+            displayed_text: None,
+        });
+
+        let mut pending = HashSet::new();
+        let (_, queued) = plan_dom_updates(snapshot, &HashMap::new(), &mut pending, 7);
+        assert_eq!(queued.len(), 33);
+        assert!(queued
+            .iter()
+            .all(|part| { part.context_id.as_deref() == Some("dto-message-context-shared") }));
     }
 
     #[test]

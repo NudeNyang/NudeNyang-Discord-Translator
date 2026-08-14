@@ -624,14 +624,15 @@ mod windows_pipe_launcher {
             "--remote-debugging-io-pipes={},{}",
             input_handle.0 as usize, output_handle.0 as usize
         );
+        let mut arguments = Vec::with_capacity(discord_debug_arguments().len() + 2);
+        arguments.push(launch_executable.as_os_str());
+        for argument in discord_debug_arguments() {
+            arguments.push(std::ffi::OsStr::new(argument));
+        }
+        arguments.push(std::ffi::OsStr::new(&io_pipes));
         spawn_discord_with_handles(
             &launch_executable,
-            &[
-                launch_executable.as_os_str(),
-                std::ffi::OsStr::new(discord_debug_arguments()[0]),
-                std::ffi::OsStr::new(discord_debug_arguments()[1]),
-                std::ffi::OsStr::new(&io_pipes),
-            ],
+            &arguments,
             &[input_handle.0, output_handle.0],
         )
     }

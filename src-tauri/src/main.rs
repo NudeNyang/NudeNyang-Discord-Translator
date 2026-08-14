@@ -10,6 +10,7 @@ mod discord_startup;
 pub mod dom;
 mod engine;
 pub mod image_translation;
+pub mod invite_assist;
 pub mod language;
 pub mod ocr;
 pub mod outgoing;
