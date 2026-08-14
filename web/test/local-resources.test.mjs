@@ -12,6 +12,10 @@ const hymt = readFileSync(
   new URL("../../src-tauri/src/translation/hymt.rs", import.meta.url),
   "utf8",
 );
+const localModels = readFileSync(
+  new URL("../../src-tauri/src/translation/local_model.rs", import.meta.url),
+  "utf8",
+);
 
 const GiB = 1024 ** 3;
 
@@ -79,6 +83,7 @@ test("settings expose CPU and RAM-only execution with a low-memory preset", () =
 test("automatic GPU failure reports CPU fallback and uses the low-memory context", () => {
   assert.match(hymt, /report_progress\("cpu-fallback"/);
   assert.match(engine, /CPU\/RAM 전용 모드로 전환했습니다/);
-  assert.match(hymt, /fn context_size_for_attempt\(/);
-  assert.match(hymt, /\("cpu", _\) => "2048"/);
+  assert.match(hymt, /self\.profile\.context_size\(attempt\)/);
+  assert.match(localModels, /cpu_context_size: "2048"/);
+  assert.match(localModels, /if attempt == "cpu"/);
 });

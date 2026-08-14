@@ -29,6 +29,7 @@ static ENGLISH_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 const MAX_TRANSLATION_CHARS: usize = 700;
+const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
 
 pub struct TranslationService {
     translator: Box<dyn Translator>,
@@ -206,6 +207,7 @@ impl TranslationService {
         let mut pending_indices = Vec::new();
         let mut pending_texts = Vec::new();
         let mut pending_hints = Vec::new();
+        let mut pending_keys = Vec::new();
 
         for (index, ((text, message_key), source_hint)) in texts
             .iter()
@@ -221,14 +223,16 @@ impl TranslationService {
                 pending_indices.push(index);
                 pending_texts.push(text.clone());
                 pending_hints.push(*source_hint);
+                pending_keys.push(message_key.clone());
             }
         }
 
-        let translated = if self.translator.isolate_incoming_failures() {
-            self.translate_many_best_effort_with_hints(&pending_texts, &pending_hints, target)
-        } else {
-            self.translate_many_with_source_hints(&pending_texts, &pending_hints, target)?
-        };
+        let translated = self.translate_contextual_pending(
+            &pending_texts,
+            &pending_hints,
+            &pending_keys,
+            target,
+        )?;
         if translated.len() != pending_indices.len() {
             return Err("번역 엔진이 일부 텍스트의 결과를 반환하지 않았습니다.".to_string());
         }
@@ -237,6 +241,224 @@ impl TranslationService {
             results[index] = Some(translated);
         }
         results
+            .into_iter()
+            .map(|translated| {
+                translated.ok_or_else(|| {
+                    "번역 엔진이 일부 텍스트의 결과를 반환하지 않았습니다.".to_string()
+                })
+            })
+            .collect()
+    }
+
+    fn translate_contextual_pending(
+        &mut self,
+        texts: &[String],
+        source_hints: &[Option<Language>],
+        message_keys: &[Option<String>],
+        target: Language,
+    ) -> Result<Vec<String>, String> {
+        if texts.len() != source_hints.len() || texts.len() != message_keys.len() {
+            return Err("번역 문맥 정보의 개수가 원문 개수와 다릅니다.".to_string());
+        }
+
+        let mut candidates = HashMap::<(String, Language), Vec<usize>>::new();
+        let mut resolved_sources = vec![Language::Unknown; texts.len()];
+        let mut known_fragments = Vec::<(usize, String, Language)>::new();
+        for (index, ((text, hint), message_key)) in
+            texts.iter().zip(source_hints).zip(message_keys).enumerate()
+        {
+            let Some(message_key) = message_key
+                .as_deref()
+                .filter(|key| is_message_context_key(key))
+            else {
+                continue;
+            };
+            if text.contains('\r')
+                || text.contains('\n')
+                || text.contains(MESSAGE_CONTEXT_SEPARATOR.trim())
+            {
+                continue;
+            }
+            let detected = detect_explicit_language(text);
+            let source = if detected == Language::Unknown {
+                hint.unwrap_or(Language::Unknown)
+            } else {
+                detected
+            };
+            resolved_sources[index] = source;
+            if source == Language::Unknown || source == target {
+                continue;
+            }
+            known_fragments.push((index, message_key.to_string(), source));
+            candidates
+                .entry((message_key.to_string(), source))
+                .or_default()
+                .push(index);
+        }
+
+        // Discord can render one sentence as separate text nodes such as
+        // `1`, `Violation:`, `1`, and `day blocked`. Numeric and punctuation-only
+        // nodes have no detectable language, so attach them to the nearest
+        // translated fragment from the same message to preserve the full context.
+        for (index, ((text, message_key), source)) in texts
+            .iter()
+            .zip(message_keys)
+            .zip(&resolved_sources)
+            .enumerate()
+        {
+            if *source != Language::Unknown
+                || text.contains('\r')
+                || text.contains('\n')
+                || text.contains(MESSAGE_CONTEXT_SEPARATOR.trim())
+                || !text.chars().any(|character| character.is_ascii_digit())
+            {
+                continue;
+            }
+            let Some(message_key) = message_key
+                .as_deref()
+                .filter(|key| is_message_context_key(key))
+            else {
+                continue;
+            };
+            let nearest = known_fragments
+                .iter()
+                .filter(|(_, key, _)| key == message_key)
+                .min_by_key(|(known_index, _, _)| {
+                    (
+                        known_index.abs_diff(index),
+                        usize::from(*known_index > index),
+                    )
+                });
+            if let Some((_, _, language)) = nearest {
+                candidates
+                    .entry((message_key.to_string(), *language))
+                    .or_default()
+                    .push(index);
+            }
+        }
+
+        let mut group_at = HashMap::<usize, (Vec<usize>, Language)>::new();
+        let mut grouped_indices = HashSet::new();
+        for ((_, source), indices) in candidates {
+            let mut indices = indices;
+            indices.sort_unstable();
+            let mut chunk = Vec::new();
+            let mut chars = 0_usize;
+            let separator_chars = MESSAGE_CONTEXT_SEPARATOR.chars().count();
+            let finish_chunk =
+                |chunk: &mut Vec<usize>,
+                 group_at: &mut HashMap<usize, (Vec<usize>, Language)>,
+                 grouped_indices: &mut HashSet<usize>| {
+                    if chunk.len() < 2 {
+                        chunk.clear();
+                        return;
+                    }
+                    let members = std::mem::take(chunk);
+                    grouped_indices.extend(members.iter().copied());
+                    group_at.insert(members[0], (members, source));
+                };
+            for index in indices {
+                let separator = if chunk.is_empty() { 0 } else { separator_chars };
+                let next = texts[index].chars().count() + separator;
+                if !chunk.is_empty() && chars + next > MAX_TRANSLATION_CHARS {
+                    finish_chunk(&mut chunk, &mut group_at, &mut grouped_indices);
+                    chars = 0;
+                }
+                chars += texts[index].chars().count()
+                    + if chunk.is_empty() { 0 } else { separator_chars };
+                chunk.push(index);
+            }
+            finish_chunk(&mut chunk, &mut group_at, &mut grouped_indices);
+        }
+
+        struct Unit {
+            members: Vec<usize>,
+            text: String,
+            hint: Option<Language>,
+        }
+        let mut units = Vec::new();
+        for index in 0..texts.len() {
+            if let Some((members, source)) = group_at.remove(&index) {
+                let text = members
+                    .iter()
+                    .map(|member| texts[*member].as_str())
+                    .collect::<Vec<_>>()
+                    .join(MESSAGE_CONTEXT_SEPARATOR);
+                units.push(Unit {
+                    members,
+                    text,
+                    hint: Some(source),
+                });
+            } else if !grouped_indices.contains(&index) {
+                units.push(Unit {
+                    members: vec![index],
+                    text: texts[index].clone(),
+                    hint: source_hints[index],
+                });
+            }
+        }
+
+        let unit_texts = units
+            .iter()
+            .map(|unit| unit.text.clone())
+            .collect::<Vec<_>>();
+        let unit_hints = units.iter().map(|unit| unit.hint).collect::<Vec<_>>();
+        let translated_units = if self.translator.isolate_incoming_failures() {
+            self.translate_many_best_effort_with_hints(&unit_texts, &unit_hints, target)
+        } else {
+            self.translate_many_with_source_hints(&unit_texts, &unit_hints, target)?
+        };
+
+        let mut output = vec![None; texts.len()];
+        for (unit, translated) in units.into_iter().zip(translated_units) {
+            if unit.members.len() == 1 {
+                output[unit.members[0]] = Some(translated);
+                continue;
+            }
+            let lines = translated
+                .split(MESSAGE_CONTEXT_SEPARATOR.trim())
+                .map(str::trim)
+                .collect::<Vec<_>>();
+            if lines.len() == unit.members.len() && lines.iter().all(|line| !line.is_empty()) {
+                for (index, line) in unit.members.into_iter().zip(lines) {
+                    output[index] = Some(line.to_string());
+                }
+                continue;
+            }
+
+            crate::diagnostics::info(
+                "translation-context-fallback",
+                &format!(
+                    "members={}; returned_parts={}; source_chars={}; translated_chars={}; empty_parts={}",
+                    unit.members.len(),
+                    lines.len(),
+                    unit.text.chars().count(),
+                    translated.chars().count(),
+                    lines.iter().filter(|line| line.is_empty()).count(),
+                ),
+            );
+
+            let fallback_texts = unit
+                .members
+                .iter()
+                .map(|index| texts[*index].clone())
+                .collect::<Vec<_>>();
+            let fallback_hints = unit
+                .members
+                .iter()
+                .map(|index| source_hints[*index])
+                .collect::<Vec<_>>();
+            let fallback = if self.translator.isolate_incoming_failures() {
+                self.translate_many_best_effort_with_hints(&fallback_texts, &fallback_hints, target)
+            } else {
+                self.translate_many_with_source_hints(&fallback_texts, &fallback_hints, target)?
+            };
+            for (index, translated) in unit.members.into_iter().zip(fallback) {
+                output[index] = Some(translated);
+            }
+        }
+
+        output
             .into_iter()
             .map(|translated| {
                 translated.ok_or_else(|| {
@@ -288,7 +510,7 @@ impl TranslationService {
             })
             .collect::<HashMap<_, _>>();
         for ((message_key, family), language) in &grouped_languages {
-            if message_key == "navigation" {
+            if is_navigation_context_key(message_key) {
                 self.navigation_languages.insert(*family, *language);
             }
         }
@@ -303,7 +525,7 @@ impl TranslationService {
                 {
                     let group_key = (message_key.clone(), family);
                     if remembered_groups.insert(group_key) {
-                        if message_key == "navigation" {
+                        if is_navigation_context_key(message_key) {
                             self.navigation_languages.entry(family).or_insert(direct);
                         } else {
                             self.incoming_detector.remember(direct);
@@ -324,14 +546,14 @@ impl TranslationService {
             let group_key = (message_key.clone(), family);
             if let Some(language) = grouped_languages.get(&group_key).copied() {
                 if remembered_groups.insert(group_key) {
-                    if message_key != "navigation" {
+                    if !is_navigation_context_key(message_key) {
                         self.incoming_detector.remember(language);
                     }
                 }
                 hints.push(Some(language));
                 continue;
             }
-            let recent = if message_key == "navigation" {
+            let recent = if is_navigation_context_key(message_key) {
                 self.navigation_languages.get(&family).copied()
             } else {
                 self.incoming_detector.recent_language_for(text)
@@ -459,7 +681,25 @@ impl TranslationService {
         text: &str,
         target: Language,
     ) -> Result<String, String> {
-        let translated = self.translate_japanese_fragments(text, target)?;
+        // Discord can replace a text node after we translated only part of it.
+        // In that case the renderer gives us a Korean-majority node whose
+        // remaining foreign moderation lines would otherwise be classified as
+        // Korean and skipped forever. Repair each line independently before
+        // the generic fragment pass so mixed rule notices converge cleanly.
+        let repaired = text
+            .split_inclusive('\n')
+            .map(|line| {
+                let (body, ending) = line
+                    .strip_suffix('\n')
+                    .map_or((line, ""), |body| (body, "\n"));
+                format!(
+                    "{}{}",
+                    apply_conservative_semantic_repairs(body, body, target, target),
+                    ending
+                )
+            })
+            .collect::<String>();
+        let translated = self.translate_japanese_fragments(&repaired, target)?;
         self.translate_english_fragments(&translated, target)
     }
 
@@ -585,12 +825,22 @@ fn navigation_context_scope(context_scope: &str) -> String {
     }
 }
 
+fn is_navigation_context_key(message_key: &str) -> bool {
+    matches!(message_key, "navigation" | "browse-navigation")
+}
+
+fn is_message_context_key(message_key: &str) -> bool {
+    ["message:", "reply:", "embed:"]
+        .iter()
+        .any(|prefix| message_key.starts_with(prefix))
+}
+
 fn preferred_navigation_translation(
     text: &str,
     message_key: Option<&str>,
     target: Language,
 ) -> Option<String> {
-    if message_key != Some("navigation") || target != Language::Korean {
+    if !message_key.is_some_and(is_navigation_context_key) || target != Language::Korean {
         return None;
     }
 
@@ -700,7 +950,7 @@ mod tests {
 
     use super::{
         has_terminal_punctuation, preferred_navigation_translation, preserve_terminal_punctuation,
-        TranslationService,
+        TranslationService, MESSAGE_CONTEXT_SEPARATOR,
     };
     use crate::cache::TranslationCache;
     use crate::language::{detect_language, Language};
@@ -721,6 +971,14 @@ mod tests {
     struct FailOnTextTranslator;
 
     struct FormattingHostileTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
+    struct ContextAwareRuleTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
+    struct SeparatorDroppingTranslator {
         inputs: Arc<Mutex<Vec<String>>>,
     }
 
@@ -847,6 +1105,81 @@ mod tests {
         }
     }
 
+    impl Translator for ContextAwareRuleTranslator {
+        fn display_name(&self) -> &str {
+            "context-aware-rule"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "context-aware-rule:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            self.inputs.lock().unwrap().push(text.to_string());
+            if !text.contains(MESSAGE_CONTEXT_SEPARATOR) {
+                return Ok(text.to_string());
+            }
+            Ok(text
+                .replace(
+                    "About Discord Rule Violations",
+                    "Discord 규칙 위반에 관하여",
+                )
+                .replace("1 Violation: 1 day blocked", "1회 위반: 1일 차단")
+                .replace("2 Violation: 7 days blocked", "2회 위반: 7일 차단")
+                .replace(
+                    "Third violation: Permanent blocking and forced termination",
+                    "3회 위반: 영구 차단 및 강제 퇴장",
+                )
+                .replace("Violation:", "위반:")
+                .replace("violation:", "위반:")
+                .replace("day blocked", "일 차단")
+                .replace("days blocked", "일 차단")
+                .replace("Third violation", "세 번째 위반")
+                .replace(
+                    "Permanent blocking and forced termination",
+                    "영구 차단 및 강제 퇴장",
+                ))
+        }
+    }
+
+    impl Translator for SeparatorDroppingTranslator {
+        fn display_name(&self) -> &str {
+            "separator-dropping"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "separator-dropping:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            self.inputs.lock().unwrap().push(text.to_string());
+            if text.contains(MESSAGE_CONTEXT_SEPARATOR) {
+                return Ok("경계가 사라진 잘못된 묶음 결과".to_string());
+            }
+            Ok(format!("개별 번역: {text}"))
+        }
+
+        fn should_cache(
+            &self,
+            _source_text: &str,
+            _translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            false
+        }
+    }
+
     fn cache_path(name: &str) -> std::path::PathBuf {
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -940,6 +1273,218 @@ mod tests {
     }
 
     #[test]
+    fn multilingual_rule_message_still_translates_its_english_lines() {
+        let path = cache_path("multilingual-rule-message");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = [
+            "About Discord Rule Violations",
+            "1 Violation: 1 day blocked",
+            "2 Violation: 7 days blocked",
+            "Third violation: Permanent blocking and forced termination",
+            "关于违反Discord规则",
+            "디스코드 규칙 위반에 관하여",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let message_keys = vec![Some("message-rule".to_string()); source.len()];
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &message_keys,
+                "/channels/guild/rules",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(translated[0], "디스코드 규칙 위반에 관하여");
+        assert_eq!(translated[1], "1회 위반: 1일 차단");
+        assert_eq!(translated[2], "2회 위반: 7일 차단");
+        assert_eq!(translated[3], "3회 위반: 영구 차단 및 강제 퇴장");
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn partially_translated_multilingual_rule_node_converges_to_korean() {
+        let path = cache_path("partially-translated-rule-node");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(RecordingIdentityTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let mixed = concat!(
+            "1 Violation: 1일 차단\n",
+            "2 violation: 7일 차단\n",
+            "关于违反Discord规则\n",
+            "违反1次:1日切断\n",
+            "2回 違反:7日 遮断\n",
+            "การฝ่าฝืน 3 ครั้ง: บล็อกถาวรและบังคับให้ออก"
+        );
+
+        let translated = service.translate(mixed, Language::Korean).unwrap();
+
+        assert_eq!(
+            translated,
+            concat!(
+                "1회 위반: 1일 차단\n",
+                "2회 위반: 7일 차단\n",
+                "디스코드 규칙 위반에 관하여\n",
+                "1회 위반: 1일 차단\n",
+                "2회 위반: 7일 차단\n",
+                "3회 위반: 영구 차단 및 강제 퇴장"
+            )
+        );
+        assert!(inputs.lock().unwrap().is_empty());
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn same_message_language_fragments_are_translated_with_shared_context() {
+        let path = cache_path("shared-message-context");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(ContextAwareRuleTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = [
+            "About Discord Rule Violations",
+            "1 Violation: 1 day blocked",
+            "2 Violation: 7 days blocked",
+            "Third violation: Permanent blocking and forced termination",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let message_keys = vec![Some("message:dto-rule-1".to_string()); source.len()];
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &message_keys,
+                "/channels/guild/rules",
+                Language::Korean,
+            )
+            .unwrap();
+        assert_eq!(
+            translated,
+            vec![
+                "디스코드 규칙 위반에 관하여",
+                "1회 위반: 1일 차단",
+                "2회 위반: 7일 차단",
+                "3회 위반: 영구 차단 및 강제 퇴장",
+            ]
+        );
+        assert!(translated.iter().all(|text| !text.contains("NTSPLIT")));
+        let recorded = inputs.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
+        assert!(recorded[0].contains(MESSAGE_CONTEXT_SEPARATOR));
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn split_rule_line_keeps_numbers_inside_the_shared_context() {
+        let path = cache_path("split-rule-line-context");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(ContextAwareRuleTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = [
+            "About Discord Rule Violations",
+            "1",
+            "Violation:",
+            "1",
+            "day blocked",
+            "2",
+            "violation:",
+            "7",
+            "days blocked",
+            "Third violation",
+            "Permanent blocking and forced termination",
+            "(",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let message_keys = vec![Some("message:dto-split-rule".to_string()); source.len()];
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &message_keys,
+                "/channels/guild/rules",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            vec![
+                "디스코드 규칙 위반에 관하여",
+                "1",
+                "위반:",
+                "1",
+                "일 차단",
+                "2",
+                "위반:",
+                "7",
+                "일 차단",
+                "3회 위반",
+                "영구 차단 및 강제 퇴장",
+                "(",
+            ]
+        );
+        let recorded = inputs.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
+        assert!(recorded[0].contains("1 <NTSPLIT> Violation:"));
+        assert!(recorded[0].contains("7 <NTSPLIT> days blocked"));
+        assert!(!recorded[0].ends_with("<NTSPLIT> ("));
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn contextual_translation_falls_back_when_separator_is_lost() {
+        let path = cache_path("lost-message-separator");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(SeparatorDroppingTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = ["First rule", "Second rule"].map(str::to_string).to_vec();
+        let message_keys = vec![Some("message:dto-rule-fallback".to_string()); source.len()];
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                &source,
+                &message_keys,
+                "/channels/guild/rules",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            vec!["개별 번역: First rule", "개별 번역: Second rule"]
+        );
+        assert!(translated.iter().all(|text| !text.contains("NTSPLIT")));
+        let recorded = inputs.lock().unwrap();
+        assert_eq!(recorded.len(), 3);
+        assert!(recorded[0].contains(MESSAGE_CONTEXT_SEPARATOR));
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn incoming_navigation_context_translates_short_english_labels() {
         let path = cache_path("short-english-navigation");
         let cache = TranslationCache::open(path.clone(), 32).unwrap();
@@ -983,6 +1528,41 @@ mod tests {
                 })
                 .collect::<Vec<_>>()
         );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn channel_browser_language_context_survives_translation_batches() {
+        let path = cache_path("browse-navigation-context");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &["Friendlyfire Perfect Soldiers Server".to_string()],
+                    &[Some("browse-navigation".to_string())],
+                    "/channels/guild/current",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec!["[ko] Friendlyfire Perfect Soldiers Server".to_string()]
+        );
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &["general".to_string(), "glory-photozone".to_string()],
+                    &[
+                        Some("browse-navigation".to_string()),
+                        Some("browse-navigation".to_string()),
+                    ],
+                    "/channels/guild/current",
+                    Language::Korean,
+                )
+                .unwrap(),
+            vec!["일반".to_string(), "[ko] glory-photozone".to_string()]
+        );
+
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

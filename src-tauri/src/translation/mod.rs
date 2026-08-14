@@ -1,6 +1,7 @@
 mod deepl;
 mod discord_format;
 pub mod hymt;
+mod local_model;
 mod mock;
 pub mod protected_text;
 mod resilient;

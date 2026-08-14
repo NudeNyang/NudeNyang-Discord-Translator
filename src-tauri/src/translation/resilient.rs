@@ -37,7 +37,7 @@ impl ResilientTranslator {
             .as_ref()
             .map_or("local-only", |translator| translator.cache_namespace());
         let cache_namespace = format!(
-            "{}:quality-repair-v1:{fallback_namespace}",
+            "{}:quality-repair-v9:{fallback_namespace}",
             primary.cache_namespace()
         );
         Self {
@@ -120,13 +120,11 @@ impl Translator for ResilientTranslator {
                 .enumerate()
                 .filter_map(|(line_index, line)| (!line.trim().is_empty()).then_some(line_index))
                 .collect();
-            if nonempty.len() > 1 {
-                line_items.extend(
-                    nonempty
-                        .iter()
-                        .map(|line_index| (lines[*line_index].clone(), *source)),
-                );
-            }
+            line_items.extend(
+                nonempty
+                    .iter()
+                    .map(|line_index| (lines[*line_index].clone(), *source)),
+            );
             source_lines[index] = lines;
             nonempty_lines[index] = nonempty;
         }
@@ -146,13 +144,9 @@ impl Translator for ResilientTranslator {
         for &index in &failed {
             repaired[index] = source_lines[index].clone();
             let nonempty = &nonempty_lines[index];
-            if nonempty.len() > 1 {
-                for &line_index in nonempty {
-                    repaired[index][line_index] = local_lines[cursor].clone();
-                    cursor += 1;
-                }
-            } else if let Some(&line_index) = nonempty.first() {
-                repaired[index][line_index] = results[index].clone();
+            for &line_index in nonempty {
+                repaired[index][line_index] = local_lines[cursor].clone();
+                cursor += 1;
             }
         }
 
@@ -344,10 +338,16 @@ pub fn translation_needs_repair(
         if source == Language::English {
             let source_latin = count_latin(source_text);
             let remaining_latin = count_latin(translated_text);
-            return hangul == 0
+            if hangul == 0
                 && source_latin >= 6
                 && remaining_latin >= (source_latin as f64 * 0.8).round() as usize
-                && (source_text.contains(' ') || source_text.chars().count() >= 14);
+                && (source_text.contains(' ') || source_text.chars().count() >= 14)
+            {
+                return true;
+            }
+            return hangul > 0
+                && untranslated_english_letters(source_text, translated_text) >= 4
+                && remaining_latin >= 4;
         }
     }
     if target == Language::English && source == Language::Japanese {
@@ -442,6 +442,64 @@ fn count_han(text: &str) -> usize {
 
 fn count_latin(text: &str) -> usize {
     text.chars().filter(char::is_ascii_alphabetic).count()
+}
+
+fn untranslated_english_letters(source_text: &str, translated_text: &str) -> usize {
+    let source_words = ascii_words(source_text);
+    let translated_words = ascii_words(translated_text);
+    translated_words
+        .iter()
+        .filter(|translated| {
+            source_words
+                .iter()
+                .any(|source| source.eq_ignore_ascii_case(translated))
+                && !is_allowed_untranslated_name(translated, &source_words)
+        })
+        .map(|word| word.len())
+        .sum()
+}
+
+fn ascii_words(text: &str) -> Vec<String> {
+    text.split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .filter(|word| {
+            word.chars()
+                .any(|character| character.is_ascii_alphabetic())
+        })
+        .map(str::to_string)
+        .collect()
+}
+
+fn is_allowed_untranslated_name(word: &str, source_words: &[String]) -> bool {
+    let lower = word.to_ascii_lowercase();
+    if matches!(
+        lower.as_str(),
+        "discord" | "vrchat" | "github" | "sentory" | "nudenyang"
+    ) {
+        return true;
+    }
+    if word.chars().any(|character| character.is_ascii_digit())
+        || word.contains('_')
+        || (word
+            .chars()
+            .all(|character| !character.is_ascii_lowercase())
+            && word.chars().any(|character| character.is_ascii_uppercase()))
+        || word
+            .chars()
+            .skip(1)
+            .any(|character| character.is_ascii_uppercase())
+    {
+        return true;
+    }
+    source_words
+        .iter()
+        .position(|source| source.eq_ignore_ascii_case(word))
+        .is_some_and(|index| {
+            index > 0
+                && word
+                    .chars()
+                    .next()
+                    .is_some_and(|character| character.is_ascii_uppercase())
+        })
 }
 
 fn count_devanagari(text: &str) -> usize {
@@ -618,6 +676,38 @@ mod tests {
             "Das Talent ist wirklich gut ZXQKEEP",
             Language::Korean,
             Language::German,
+        ));
+    }
+
+    #[test]
+    fn rejects_partial_english_to_korean_rule_translations() {
+        assert!(translation_needs_repair(
+            "1 Violation: 1 day blocked",
+            "1 Violation: 1 날이 막힌",
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            "Third violation: Permanent blocking and forced termination",
+            "세 번째 위반: Permanent blocking and forced termination",
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(!translation_needs_repair(
+            "About Discord Rule Violations",
+            "Discord 규칙 위반에 관하여",
+            Language::English,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn rejects_identical_english_sentences_even_with_product_names() {
+        assert!(translation_needs_repair(
+            "Added resize.gg button to image viewer and VRChat support",
+            "Added resize.gg button to image viewer and VRChat support",
+            Language::English,
+            Language::Korean,
         ));
     }
 

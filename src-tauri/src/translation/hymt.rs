@@ -19,6 +19,10 @@ use sha2::{Digest, Sha256};
 
 use crate::language::{provider_language_codes, Language, TranslationProvider};
 
+pub use super::local_model::{HyMtModel, HyMtModelSize};
+use super::local_model::{
+    LocalCompletionApi, LocalModelProfile, LocalPromptStrategy, LOCAL_MODEL_PROFILES,
+};
 use super::protected_text::remove_unwritten_decorations;
 use super::resilient::translation_needs_repair;
 use super::Translator;
@@ -36,7 +40,6 @@ use windows::Win32::System::JobObjects::{
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 
-const PROMPT_VERSION: &str = "meaning-preserving-v12";
 const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -62,24 +65,6 @@ const PROMPT_ECHO_HINTS: [&str; 17] = [
 
 static PROTECTED_MARKER_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"ZXQKEEP\d{3}QXZ").unwrap());
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HyMtModelSize {
-    Small,
-    Large,
-    TranslateGemma4B,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct HyMtModel {
-    pub key: &'static str,
-    pub family: &'static str,
-    pub label: &'static str,
-    pub repository: &'static str,
-    pub filename: &'static str,
-    pub expected_bytes: u64,
-    pub expected_sha256: &'static str,
-}
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -169,68 +154,15 @@ fn stop_shared_runtime(runtime: &mut SharedModelRuntime) {
     runtime.clients = 0;
 }
 
-impl HyMtModelSize {
-    pub fn model(self) -> HyMtModel {
-        match self {
-            Self::Small => HyMtModel {
-                key: "1.8b",
-                family: "hy-mt2",
-                label: "Hy-MT2 1.8B Q4_K_M",
-                repository: "tencent/Hy-MT2-1.8B-GGUF",
-                filename: "Hy-MT2-1.8B-Q4_K_M.gguf",
-                expected_bytes: 1_133_080_448,
-                expected_sha256: "dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699",
-            },
-            Self::Large => HyMtModel {
-                key: "7b",
-                family: "hy-mt2",
-                label: "Hy-MT2 7B Q4_K_M",
-                repository: "tencent/Hy-MT2-7B-GGUF",
-                filename: "Hy-MT2-7B-Q4_K_M.gguf",
-                expected_bytes: 4_624_648_896,
-                expected_sha256: "9f96256500f3fc1ab4d64336b58f52a949a95ad7516b0c229476eef782f9f77b",
-            },
-            Self::TranslateGemma4B => HyMtModel {
-                key: "4b",
-                family: "translategemma",
-                label: "TranslateGemma 4B Q4_K_M",
-                repository: "SandLogicTechnologies/translategemma-4b-it-GGUF",
-                filename: "translategemma-4b_Q4_K_M.gguf",
-                expected_bytes: 2_489_909_312,
-                expected_sha256: "526747309109c016db547c6fc1c7b0c9c286b5e7a7556827b5419fd9543a09cd",
-            },
-        }
-    }
-}
-
-const LOCAL_MODEL_SIZES: [HyMtModelSize; 3] = [
-    HyMtModelSize::Small,
-    HyMtModelSize::Large,
-    HyMtModelSize::TranslateGemma4B,
-];
-
 fn model_size_from_config_id(id: &str) -> Option<HyMtModelSize> {
-    match id {
-        "hymt_1_8b" => Some(HyMtModelSize::Small),
-        "hymt_7b" => Some(HyMtModelSize::Large),
-        "translategemma_4b" => Some(HyMtModelSize::TranslateGemma4B),
-        _ => None,
-    }
-}
-
-fn config_id_for_model_size(size: HyMtModelSize) -> &'static str {
-    match size {
-        HyMtModelSize::Small => "hymt_1_8b",
-        HyMtModelSize::Large => "hymt_7b",
-        HyMtModelSize::TranslateGemma4B => "translategemma_4b",
-    }
+    LocalModelProfile::from_config_id(id).map(|profile| profile.kind)
 }
 
 pub fn local_model_storage_status() -> Vec<LocalModelStorageStatus> {
-    LOCAL_MODEL_SIZES
+    LOCAL_MODEL_PROFILES
         .into_iter()
-        .map(|size| {
-            let model = size.model();
+        .map(|profile| {
+            let model = profile.model;
             let cached = cached_model_path(model);
             let partial = partial_path(&cached);
             let cached_bytes = cached
@@ -243,7 +175,7 @@ pub fn local_model_storage_status() -> Vec<LocalModelStorageStatus> {
                 .unwrap_or(0);
             let bundled = bundled_model_path(model).is_some();
             LocalModelStorageStatus {
-                id: config_id_for_model_size(size).to_string(),
+                id: profile.config_id.to_string(),
                 label: model.label.to_string(),
                 installed: bundled || cached_bytes > 0,
                 bundled,
@@ -303,7 +235,7 @@ fn remove_cached_model_files(path: &Path) -> Result<u64, String> {
 }
 
 pub struct HyMtTranslator {
-    model_size: HyMtModelSize,
+    profile: LocalModelProfile,
     model: HyMtModel,
     device: String,
     speech_style: String,
@@ -326,7 +258,8 @@ impl HyMtTranslator {
         device: impl Into<String>,
         speech_style: impl Into<String>,
     ) -> Result<Self, String> {
-        let model = model_size.model();
+        let profile = model_size.profile();
+        let model = profile.model;
         let device = device.into();
         if !matches!(device.as_str(), "auto" | "cpu") {
             return Err(format!("지원하지 않는 Hy-MT2 실행 장치입니다: {device}"));
@@ -343,7 +276,7 @@ impl HyMtTranslator {
         let server_path = None;
         let runtime = shared_model_runtime(&model_path, server_path.as_deref(), &device);
         Ok(Self {
-            model_size,
+            profile,
             model,
             device,
             speech_style: speech_style.clone(),
@@ -352,16 +285,7 @@ impl HyMtTranslator {
             startup_timeout: Duration::from_secs(240),
             request_timeout: Duration::from_secs(90),
             display_name: format!("{} (로컬)", model.label),
-            cache_namespace: match model_size {
-                HyMtModelSize::TranslateGemma4B => format!(
-                    "translategemma:{}:q4_k_m:source-faithful-v3:{speech_style}",
-                    model.key
-                ),
-                _ => format!(
-                    "hy-mt2:{}:q4_k_m:{PROMPT_VERSION}:{speech_style}",
-                    model.key
-                ),
-            },
+            cache_namespace: profile.cache_namespace(&speech_style),
             runtime,
             runtime_attached: false,
             progress_observer: None,
@@ -461,7 +385,7 @@ impl HyMtTranslator {
         let diagnostics_scope = self.model.family;
         for (index, attempt) in attempts.iter().enumerate() {
             crate::diagnostics::info(diagnostics_scope, &format!("server start; mode={attempt}"));
-            let context_size = context_size_for_attempt(attempt, self.model_size);
+            let context_size = self.profile.context_size(attempt);
             let mut command = Command::new(&executable);
             command.args([
                 "--model",
@@ -477,11 +401,11 @@ impl HyMtTranslator {
                 "--parallel",
                 "1",
             ]);
-            if matches!(self.model_size, HyMtModelSize::TranslateGemma4B) {
+            if !self.profile.server_compatibility_args.is_empty() {
                 // The current llama.cpp build cannot initialize its generic parser from
                 // these translation models' templates. Their request paths render the
                 // official text-translation prompts directly instead.
-                command.args(["--no-jinja", "--skip-chat-parsing"]);
+                command.args(self.profile.server_compatibility_args);
             }
             if *attempt == "cpu" {
                 command.args(["--device", "none", "--gpu-layers", "0", "--no-op-offload"]);
@@ -923,12 +847,9 @@ fn startup_device_attempts(device: &str) -> Vec<&'static str> {
     }
 }
 
+#[cfg(test)]
 fn context_size_for_attempt(attempt: &str, model_size: HyMtModelSize) -> &'static str {
-    match (attempt, model_size) {
-        ("cpu", _) => "2048",
-        (_, HyMtModelSize::TranslateGemma4B) => "2048",
-        _ => "8192",
-    }
+    model_size.profile().context_size(attempt)
 }
 
 impl Translator for HyMtTranslator {
@@ -962,7 +883,7 @@ impl Translator for HyMtTranslator {
             return Ok(text.to_string());
         }
         self.ensure_server()?;
-        if self.model_size == HyMtModelSize::TranslateGemma4B {
+        if self.profile.completion_api == LocalCompletionApi::RawCompletion {
             let style = self.speech_style.clone();
             return translate_with_translate_gemma(
                 text,
@@ -975,8 +896,8 @@ impl Translator for HyMtTranslator {
             );
         }
         let style = self.speech_style.clone();
-        translate_with_completion_for_model(
-            self.model_size,
+        translate_with_completion_for_profile(
+            self.profile,
             text,
             source,
             target,
@@ -1058,13 +979,35 @@ where
         source,
         target,
         speech_style,
-        HyMtModelSize::Large,
+        HyMtModelSize::Large.profile(),
         &mut complete,
     )
 }
 
+#[cfg(test)]
 fn translate_with_completion_for_model<F>(
     model_size: HyMtModelSize,
+    text: &str,
+    source: Language,
+    target: Language,
+    speech_style: &str,
+    mut complete: F,
+) -> Result<String, String>
+where
+    F: FnMut(&str, &str) -> Result<String, String>,
+{
+    translate_with_completion_for_profile(
+        model_size.profile(),
+        text,
+        source,
+        target,
+        speech_style,
+        &mut complete,
+    )
+}
+
+fn translate_with_completion_for_profile<F>(
+    profile: LocalModelProfile,
     text: &str,
     source: Language,
     target: Language,
@@ -1079,7 +1022,7 @@ where
         source,
         target,
         speech_style,
-        model_size,
+        profile,
         &mut complete,
     )
 }
@@ -1136,7 +1079,7 @@ fn translate_with_completion_using_prompt<F>(
     source: Language,
     target: Language,
     speech_style: &str,
-    model_size: HyMtModelSize,
+    profile: LocalModelProfile,
     complete: &mut F,
 ) -> Result<String, String>
 where
@@ -1167,8 +1110,8 @@ where
         let leading_len = part.len() - part.trim_start().len();
         let trailing_start = part.trim_end().len();
         let core = part.trim();
-        let prompt = translation_prompt_for_model(model_size, core, source, target, resolved_style);
-        let model_key = model_size.model().key;
+        let prompt = translation_prompt_for_profile(profile, core, source, target, resolved_style);
+        let model_key = profile.model.key;
         let mut result = complete_translation_with_retry(
             model_key,
             &prompt,
@@ -1181,7 +1124,7 @@ where
                 || has_register_artifact(&result, target))
         {
             let rewrite_prompt =
-                rewrite_style_prompt_for_model(model_size, &result, target, resolved_style);
+                rewrite_style_prompt_for_profile(profile, &result, target, resolved_style);
             let rewritten = complete(&rewrite_prompt, &result)?;
             if rewrite_preserves_content(&result, &rewritten) {
                 result = rewritten;
@@ -1376,17 +1319,119 @@ pub(super) fn apply_conservative_semantic_repairs(
     target: Language,
 ) -> String {
     let repaired = clean_cross_script_language_terms(text, source, target);
-    clean_korean_listener_question_person(&repaired, original, source, target)
+    let repaired = clean_korean_listener_question_person(&repaired, original, source, target);
+    clean_korean_moderation_terms(&repaired, original, target)
+}
+
+fn clean_korean_moderation_terms(text: &str, original: &str, target: Language) -> String {
+    if target != Language::Korean || !is_moderation_rule_text(original) {
+        return text.to_string();
+    }
+
+    const CONTEXT_SEPARATOR: &str = "<NTSPLIT>";
+    if original.contains(CONTEXT_SEPARATOR) && text.contains(CONTEXT_SEPARATOR) {
+        let original_parts = original.split(CONTEXT_SEPARATOR).collect::<Vec<_>>();
+        let translated_parts = text.split(CONTEXT_SEPARATOR).collect::<Vec<_>>();
+        if original_parts.len() == translated_parts.len() {
+            return translated_parts
+                .into_iter()
+                .zip(original_parts)
+                .map(|(translated, original)| {
+                    clean_korean_moderation_terms(translated.trim(), original.trim(), target)
+                })
+                .collect::<Vec<_>>()
+                .join(" <NTSPLIT> ");
+        }
+    }
+
+    let original_normalized = original.trim().to_ascii_lowercase();
+    match original_normalized.as_str() {
+        "violation:" => return "위반:".to_string(),
+        "day blocked" | "days blocked" => return "일 차단".to_string(),
+        "third violation" => return "3회 위반".to_string(),
+        "permanent blocking and forced termination" => return "영구 차단 및 강제 퇴장".to_string(),
+        _ => {}
+    }
+
+    let numbers = original
+        .split(|character: char| !character.is_ascii_digit())
+        .filter_map(|part| (!part.is_empty()).then_some(part))
+        .collect::<Vec<_>>();
+    let has_violation = original_normalized.contains("violation")
+        || ["违反", "違反", "ละเมิด", "ฝ่าฝืน"]
+            .iter()
+            .any(|signal| original.contains(signal));
+    let has_block = original_normalized.contains("block")
+        || original.contains("차단")
+        || original.contains("막힌")
+        || ["切断", "阻断", "遮断", "บล็อก"]
+            .iter()
+            .any(|signal| original.contains(signal));
+    let has_permanent = original_normalized.contains("permanent")
+        || original.contains("영구")
+        || ["永久", "ถาวร"]
+            .iter()
+            .any(|signal| original.contains(signal));
+    let ordinal_violation_count = if original_normalized.contains("third violation")
+        || original.contains("세 번째 위반")
+    {
+        Some("3")
+    } else {
+        None
+    };
+    let is_discord_rule_title = has_violation
+        && (original_normalized.contains("discord")
+            || original.contains("ディスコード規則違反")
+            || original.contains("กฎดิสคอร์ด"));
+    if is_discord_rule_title && numbers.is_empty() && !has_block && !has_permanent {
+        return "디스코드 규칙 위반에 관하여".to_string();
+    }
+    if has_violation && has_permanent {
+        if let Some(count) = numbers.first().copied().or(ordinal_violation_count) {
+            return format!("{count}회 위반: 영구 차단 및 강제 퇴장");
+        }
+    }
+    if has_violation && has_block && numbers.len() >= 2 {
+        return format!("{}회 위반: {}일 차단", numbers[0], numbers[1]);
+    }
+
+    text.replace("날이 막힌", "일 차단")
+        .replace("하루가 막힌", "일 차단")
+        .replace("일일 차단", "일 차단")
+        .replace("차단된 날들", "일 차단")
+        .replace("차단된 일수", "일 차단")
+        .replace("세 번째 위반", "3회 위반")
+        .replace("1번 위반", "1회 위반")
+        .replace("2번 위반", "2회 위반")
+        .replace("3번 위반", "3회 위반")
+        .replace("영구적인 차단", "영구 차단")
+        .replace("강제 종료", "강제 퇴장")
+        .replace("강제 탈퇴", "강제 퇴장")
+}
+
+fn is_moderation_rule_text(text: &str) -> bool {
+    let lower = text.to_ascii_lowercase();
+    ["violation", "blocked", "blocking", "termination"]
+        .iter()
+        .any(|signal| lower.contains(signal))
+        || ["违反", "違反", "切断", "阻断", "遮断", "永久"]
+            .iter()
+            .any(|signal| text.contains(signal))
+        || ["ละเมิด", "ฝ่าฝืน", "บล็อก", "ถาวร"]
+            .iter()
+            .any(|signal| text.contains(signal))
 }
 
 fn translation_prompt(text: &str, source: Language, target: Language, style: &str) -> String {
+    let separator_requirement = context_separator_requirement(text);
+    let moderation_requirement = moderation_policy_requirement(text, target);
     format!(
         "Translate the following {} text into {}.\n\
          Translate every clause and preserve every piece of information without adding or omitting anything.\n\
          Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts in the translation; never replace an animal, person, object, or place with a related but different one.\n\
          Preserve the speaker's exact social register, warmth, directness, slang, contractions, fragments, and emotional intensity. Do not make casual language polite, formal, literary, or businesslike.\n\
          Style requirement: {}\n\
-         Preserve paragraph boundaries, line breaks, emojis, and punctuation intent. {NO_UNWRITTEN_DECORATIONS} If a source line has no sentence-final punctuation, do not add a period, full stop, question mark, or exclamation mark. Preserve ellipses and repeated punctuation.\n\
+         Preserve paragraph boundaries, line breaks, emojis, and punctuation intent. {NO_UNWRITTEN_DECORATIONS}{separator_requirement}{moderation_requirement} If a source line has no sentence-final punctuation, do not add a period, full stop, question mark, or exclamation mark. Preserve ellipses and repeated punctuation.\n\
          Only output the translated result without an explanation.\n\n{}",
         source.english_name(),
         target.english_name(),
@@ -1395,6 +1440,7 @@ fn translation_prompt(text: &str, source: Language, target: Language, style: &st
     )
 }
 
+#[cfg(test)]
 fn translation_prompt_for_model(
     model_size: HyMtModelSize,
     text: &str,
@@ -1402,10 +1448,21 @@ fn translation_prompt_for_model(
     target: Language,
     style: &str,
 ) -> String {
-    match model_size {
-        HyMtModelSize::Small => compact_translation_prompt(text, source, target, style),
-        HyMtModelSize::Large => translation_prompt(text, source, target, style),
-        HyMtModelSize::TranslateGemma4B => compact_translation_prompt(text, source, target, style),
+    translation_prompt_for_profile(model_size.profile(), text, source, target, style)
+}
+
+fn translation_prompt_for_profile(
+    profile: LocalModelProfile,
+    text: &str,
+    source: Language,
+    target: Language,
+    style: &str,
+) -> String {
+    match profile.prompt_strategy {
+        LocalPromptStrategy::Compact | LocalPromptStrategy::TranslateGemma => {
+            compact_translation_prompt(text, source, target, style)
+        }
+        LocalPromptStrategy::Full => translation_prompt(text, source, target, style),
     }
 }
 
@@ -1415,6 +1472,8 @@ fn compact_translation_prompt(
     target: Language,
     style: &str,
 ) -> String {
+    let separator_requirement = context_separator_requirement(text);
+    let moderation_requirement = moderation_policy_requirement(text, target);
     let style = compact_style_requirement(target, style);
     let style = if style.is_empty() {
         String::new()
@@ -1422,12 +1481,28 @@ fn compact_translation_prompt(
         format!(" {style}")
     };
     format!(
-        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names, and do not introduce a third language. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar; game and gameplay never mean food or eating. Preserve its tone, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS}{} Output only the translation without explanation:\n\n{}",
+        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names, and do not introduce a third language. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar; game and gameplay never mean food or eating. Preserve its tone, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS}{separator_requirement}{moderation_requirement}{} Output only the translation without explanation:\n\n{}",
         source.english_name(),
         target.english_name(),
         style,
         text
     )
+}
+
+fn context_separator_requirement(text: &str) -> &'static str {
+    if text.contains("<NTSPLIT>") {
+        " Copy every <NTSPLIT> token exactly, in the same order and count; it is an immutable boundary, not text to translate."
+    } else {
+        ""
+    }
+}
+
+fn moderation_policy_requirement(text: &str, target: Language) -> &'static str {
+    if target == Language::Korean && is_moderation_rule_text(text) {
+        " For moderation or sanction rules, use concise Korean policy wording such as ‘N회 위반’, ‘N일 차단’, and ‘영구 차단 및 강제 퇴장’ where applicable."
+    } else {
+        ""
+    }
 }
 
 fn complete_translation_with_retry<F>(
@@ -1467,8 +1542,10 @@ fn retryable_completion_error(error: &str) -> bool {
 }
 
 fn minimal_translation_prompt(text: &str, target: Language) -> String {
+    let separator_requirement = context_separator_requirement(text);
+    let moderation_requirement = moderation_policy_requirement(text, target);
     format!(
-        "Translate the following segment into {}. Preserve the exact identity of every concrete noun, and keep distinct source nouns as distinct concepts. {NO_UNWRITTEN_DECORATIONS} Output only the translation without additional explanation:\n{}",
+        "Translate the following segment into {}. Preserve the exact identity of every concrete noun, and keep distinct source nouns as distinct concepts. {NO_UNWRITTEN_DECORATIONS}{separator_requirement}{moderation_requirement} Output only the translation without additional explanation:\n{}",
         target.english_name(),
         text
     )
@@ -1489,13 +1566,13 @@ pub fn rewrite_style_prompt(text: &str, target: Language, style: &str) -> String
     )
 }
 
-fn rewrite_style_prompt_for_model(
-    model_size: HyMtModelSize,
+fn rewrite_style_prompt_for_profile(
+    profile: LocalModelProfile,
     text: &str,
     target: Language,
     style: &str,
 ) -> String {
-    if model_size == HyMtModelSize::Large {
+    if profile.prompt_strategy == LocalPromptStrategy::Full {
         return rewrite_style_prompt(text, target, style);
     }
     format!(
@@ -1803,11 +1880,11 @@ fn free_tcp_port() -> Result<u16, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        clean_cross_script_language_terms, clean_korean_listener_question_person,
-        clean_translation, complete_translation_with_retry, completion_payload, completion_result,
-        context_size_for_attempt, detect_speech_style, find_llama_server, max_output_tokens,
-        remove_cached_model_files, rewrite_style_prompt, startup_device_attempts,
-        translate_gemma_completion_payload, translate_with_completion,
+        apply_conservative_semantic_repairs, clean_cross_script_language_terms,
+        clean_korean_listener_question_person, clean_translation, complete_translation_with_retry,
+        completion_payload, completion_result, context_size_for_attempt, detect_speech_style,
+        find_llama_server, max_output_tokens, remove_cached_model_files, rewrite_style_prompt,
+        startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
         translate_with_completion_for_model, translate_with_translate_gemma,
         translation_prompt_for_model, HyMtModel, HyMtModelSize, HyMtTranslator,
     };
@@ -1948,6 +2025,89 @@ mod tests {
         assert!(!prompt.contains("Translate every clause"));
         assert!(!prompt.contains("exact social register"));
         assert!(!prompt.contains("sentence-final punctuation"));
+    }
+
+    #[test]
+    fn contextual_separator_is_explicitly_preserved_in_local_model_prompts() {
+        for model in [HyMtModelSize::Small, HyMtModelSize::Large] {
+            let prompt = translation_prompt_for_model(
+                model,
+                "1 <NTSPLIT> Violation: <NTSPLIT> 1 <NTSPLIT> day blocked",
+                Language::English,
+                Language::Korean,
+                "auto",
+            );
+            assert!(prompt.contains("Copy every <NTSPLIT> token exactly"));
+            assert!(prompt.contains("same order and count"));
+        }
+    }
+
+    #[test]
+    fn moderation_rule_prompt_and_cleanup_use_concise_korean_policy_terms() {
+        let prompt = translation_prompt_for_model(
+            HyMtModelSize::Small,
+            "Third violation <NTSPLIT> Permanent blocking and forced termination",
+            Language::English,
+            Language::Korean,
+            "auto",
+        );
+        assert!(prompt.contains("N회 위반"));
+        assert!(prompt.contains("N일 차단"));
+        assert_eq!(
+            apply_conservative_semantic_repairs(
+                "세 번째 위반",
+                "Third violation",
+                Language::English,
+                Language::Korean,
+            ),
+            "3회 위반"
+        );
+        assert_eq!(
+            apply_conservative_semantic_repairs(
+                "영구적인 차단 및 강제 종료",
+                "Permanent blocking and forced termination",
+                Language::English,
+                Language::Korean,
+            ),
+            "영구 차단 및 강제 퇴장"
+        );
+        for (source, translated, expected) in [
+            (
+                "1 Violation: 1일 차단",
+                "1 Violation: 1일 차단",
+                "1회 위반: 1일 차단",
+            ),
+            (
+                "关于违反Discord规则",
+                "关于违反Discord规则",
+                "디스코드 규칙 위반에 관하여",
+            ),
+            (
+                "违反1次:1日切断",
+                "1번 위반: 1일간 차단",
+                "1회 위반: 1일 차단",
+            ),
+            (
+                "2回 違反:7日 遮断",
+                "2번 위반: 7일 차단",
+                "2회 위반: 7일 차단",
+            ),
+            (
+                "การฝ่าฝืน 3 ครั้ง: บล็อกถาวรและบังคับให้ออก",
+                "세 번 위반: 영구 차단",
+                "3회 위반: 영구 차단 및 강제 퇴장",
+            ),
+        ] {
+            assert_eq!(
+                apply_conservative_semantic_repairs(
+                    translated,
+                    source,
+                    Language::Unknown,
+                    Language::Korean,
+                ),
+                expected
+            );
+        }
     }
 
     #[test]

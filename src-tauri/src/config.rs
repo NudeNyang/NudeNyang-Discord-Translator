@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::language::is_supported_language_code;
+use crate::translation::HyMtModelSize;
 
 const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Translator";
 const LEGACY_UPDATE_REPOSITORY: &str = "NudeNyang/DiscordTranslateOverlay";
@@ -289,7 +290,7 @@ impl AppConfig {
 }
 
 fn is_local_translator(value: &str) -> bool {
-    matches!(value, "hymt_1_8b" | "hymt_7b" | "translategemma_4b")
+    HyMtModelSize::from_config_id(value).is_some()
 }
 
 pub struct ConfigStore {

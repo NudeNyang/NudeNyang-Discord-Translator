@@ -628,8 +628,21 @@ fn prepare_for_detection(text: &str) -> String {
 }
 
 fn has_clear_english_signal(text: &str) -> bool {
-    const STRONG: [&str; 7] = [
-        "hello", "please", "welcome", "thanks", "thank", "sorry", "hey",
+    const STRONG: [&str; 14] = [
+        "hello",
+        "please",
+        "welcome",
+        "thanks",
+        "thank",
+        "sorry",
+        "hey",
+        "violation",
+        "violations",
+        "blocked",
+        "permanent",
+        "blocking",
+        "forced",
+        "termination",
     ];
     const COMMON: [&str; 36] = [
         "the", "this", "that", "these", "those", "from", "with", "without", "into", "for", "and",
@@ -1130,6 +1143,33 @@ mod tests {
             assert_eq!(detect_explicit_language(text), Language::Unknown, "{text}");
         }
         assert_eq!(detect_language("nice").confidence, 0.0);
+    }
+
+    #[test]
+    fn moderation_rule_fragments_keep_a_usable_source_language() {
+        for text in [
+            "Violation:",
+            "day blocked",
+            "Third violation",
+            "Permanent blocking and forced termination",
+        ] {
+            assert_eq!(detect_explicit_language(text), Language::English, "{text}");
+        }
+        assert_eq!(
+            detect_explicit_language("违反1次:1日切断"),
+            Language::ChineseSimplified
+        );
+        assert_eq!(
+            detect_explicit_language("การฝ่าฝืน 1 ครั้ง: บล็อก 1 วัน"),
+            Language::Thai
+        );
+
+        let mut detector = LanguageDetector::default();
+        detector.detect("ディスコード規則違反について", true);
+        assert_eq!(
+            detector.detect("1回 違反:1日 遮断", true),
+            Language::Japanese
+        );
     }
 
     #[test]
