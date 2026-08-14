@@ -1528,6 +1528,25 @@ mod tests {
     }
 
     #[test]
+    fn incoming_japanese_chat_with_korean_laughter_is_sent_to_the_model() {
+        let path = cache_path("japanese-chat-with-korean-laughter");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+
+        assert_eq!(
+            service
+                .translate("きっとそうな国だㅋㅋㅋ", Language::Korean)
+                .unwrap(),
+            "[ko] きっとそうな国だㅋㅋㅋ"
+        );
+        assert_eq!(
+            service.translate("ㅋㅋㅋ", Language::Korean).unwrap(),
+            "ㅋㅋㅋ"
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn incoming_message_context_translates_short_english_dom_parts() {
         let path = cache_path("short-english-context");
         let cache = TranslationCache::open(path.clone(), 32).unwrap();

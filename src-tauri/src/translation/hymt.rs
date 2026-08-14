@@ -2992,6 +2992,40 @@ mod tests {
 
     #[test]
     #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_reported_japanese_chat_messages() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        for source in [
+            "残念ながら、庭がないんだ...",
+            "もしなければ、通りに置いてください",
+            "きっとそうな国だㅋㅋㅋ",
+            "刑務所でデコ（デコレーション）できる",
+            "但し、公衆の面前でのわいせつ行為は、通常は罰金刑になるんじゃないかな",
+            "ボディソープとシャンプーを忘れずに持って出かけなくちゃ",
+            "XX市に住むNさんの、夜遅くまで騒がしい行動について",
+            "必要なものをすべて揃えてお渡しします",
+        ] {
+            let translated = translator
+                .translate(source, Language::Japanese, Language::Korean)
+                .expect("translate the reported Japanese chat message with Hy-MT2 1.8B");
+            eprintln!("SOURCE: {source}\nRESULT: {translated}\n");
+            assert_ne!(translated, source, "untranslated Japanese source: {source}");
+            assert!(
+                !translation_needs_repair(
+                    source,
+                    &translated,
+                    Language::Japanese,
+                    Language::Korean,
+                ),
+                "valid translation was rejected: {translated}"
+            );
+        }
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
     fn live_small_model_translates_in_cpu_only_mode() {
         let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "cpu", "auto").unwrap();
         assert!(translator.model_is_ready());
@@ -3080,6 +3114,39 @@ mod tests {
             "polite",
             "polite source became casual: {polite}"
         );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "TranslateGemma 4B 모델 다운로드와 llama-server가 필요합니다"]
+    fn live_translate_gemma_4b_translates_reported_japanese_chat_messages() {
+        let mut translator =
+            HyMtTranslator::new(HyMtModelSize::TranslateGemma4B, "auto", "auto").unwrap();
+        translator
+            .prepare()
+            .expect("start TranslateGemma 4B server");
+        for source in [
+            "残念ながら、庭がないんだ...",
+            "もしなければ、通りに置いてください",
+            "刑務所でデコ（デコレーション）できる",
+            "ボディソープとシャンプーを忘れずに持って出かけなくちゃ",
+            "XX市に住むNさんの、夜遅くまで騒がしい行動について",
+        ] {
+            let translated = translator
+                .translate(source, Language::Japanese, Language::Korean)
+                .expect("translate the reported Japanese chat message with TranslateGemma 4B");
+            eprintln!("SOURCE: {source}\nRESULT: {translated}\n");
+            assert_ne!(translated, source, "untranslated Japanese source: {source}");
+            assert!(
+                !translation_needs_repair(
+                    source,
+                    &translated,
+                    Language::Japanese,
+                    Language::Korean,
+                ),
+                "valid translation was rejected: {translated}"
+            );
+        }
         translator.close();
     }
 }
