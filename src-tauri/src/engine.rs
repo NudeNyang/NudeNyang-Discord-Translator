@@ -862,7 +862,10 @@ fn run_controller(
             }
             let target =
                 Language::try_from(config.target_language.as_str()).unwrap_or(Language::Korean);
-            if config.enabled {
+            let display_ready = status.lock().is_ok_and(|runtime| {
+                display_translation_is_ready(&config, &runtime.active_translator)
+            });
+            if display_ready {
                 scan_dom(
                     client.as_mut().expect("connected CDP client"),
                     &states,
@@ -881,7 +884,7 @@ fn run_controller(
                     &config.ui_language,
                 )?;
                 image_ui_needs_cleanup = true;
-            } else {
+            } else if !config.enabled {
                 client
                     .as_mut()
                     .expect("connected CDP client")
@@ -2256,6 +2259,10 @@ fn poll_interval(capture_fps: u32) -> Duration {
     Duration::from_secs_f64(1.0 / capture_fps.clamp(2, 20) as f64)
 }
 
+fn display_translation_is_ready(config: &AppConfig, active_translator: &str) -> bool {
+    config.enabled && active_translator == config.translator
+}
+
 fn translator_label(name: &str) -> &str {
     if let Some(model_size) = HyMtModelSize::from_config_id(name) {
         return model_size.runtime_label();
@@ -2297,11 +2304,12 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_attach_text_scripts, incoming_context_key, next_worker_command, plan_dom_updates,
-        poll_interval, preparation_plan_for_active_lanes, run_outgoing_translation_worker,
-        translator_activation_notice, translator_label, translator_preparation_plan,
-        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
-        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
+        cdp_attach_text_scripts, display_translation_is_ready, incoming_context_key,
+        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
+        run_outgoing_translation_worker, translator_activation_notice, translator_label,
+        translator_preparation_plan, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
+        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
+        WorkerResult,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -2507,6 +2515,18 @@ mod tests {
         engine.ui_ready().unwrap();
         wait_for_translator(&engine, "mock");
         engine.stop();
+    }
+
+    #[test]
+    fn display_translation_waits_for_the_configured_translator() {
+        let config = AppConfig {
+            enabled: true,
+            translator: "hymt_1_8b".to_string(),
+            ..Default::default()
+        };
+
+        assert!(!display_translation_is_ready(&config, "original"));
+        assert!(display_translation_is_ready(&config, "hymt_1_8b"));
     }
 
     #[test]
