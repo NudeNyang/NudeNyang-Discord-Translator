@@ -20,6 +20,12 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
   assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings"]);
 });
 
+test("히어로에는 다운로드 CTA만 노출한다", () => {
+  assert.match(html, /class="button primary"[^>]*>Windows 베타 다운로드<\/a>/);
+  assert.doesNotMatch(html, /class="button secondary"[^>]*href="#how-it-works"/);
+  assert.doesNotMatch(html, />작동 방식 보기<\/a>/);
+});
+
 test("기존 앱의 색상 토큰과 반응형 규칙을 사용한다", () => {
   for (const token of ["#f1f6fa", "#fbfdff", "#12283a", "#347fc7"]) {
     assert.ok(css.includes(token), `${token} 색상 토큰이 필요합니다.`);
