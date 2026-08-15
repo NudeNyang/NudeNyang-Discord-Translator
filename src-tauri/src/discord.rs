@@ -18,7 +18,7 @@ const DISCORD_INSTALLS: [(&str, &str); 3] = [
     ("DiscordCanary", "DiscordCanary.exe"),
 ];
 const RESTART_LEASE_FILE: &str = "accessibility-restart.lock";
-const GUARDIAN_STATE_VERSION: u32 = 1;
+const GUARDIAN_STATE_VERSION: u32 = 2;
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -44,8 +44,14 @@ struct PipeGuardianState {
     version: u32,
     guardian_process_id: u32,
     discord_process_id: u32,
+    discord_executable: PathBuf,
     reader_handle: usize,
     writer_handle: usize,
+}
+
+fn guardian_state_matches_process(state: &PipeGuardianState, process: &DiscordProcess) -> bool {
+    state.version == GUARDIAN_STATE_VERSION
+        && normalized_path(&state.discord_executable) == normalized_path(&process.executable)
 }
 
 pub fn current_process() -> Option<DiscordProcess> {
@@ -161,9 +167,9 @@ pub fn restart_pipe(
             }
             thread::sleep(Duration::from_millis(200));
         }
-        return Err(format!(
+        Err(format!(
             "Discord를 다시 열었지만 보안 CDP 파이프가 준비되지 않았습니다. 마지막 오류: {last_error}"
-        ));
+        ))
     }
 
     #[cfg(not(windows))]
@@ -176,7 +182,7 @@ pub fn restart_pipe(
 pub fn connect_guarded_pipe(process: &DiscordProcess) -> Result<CdpClient, String> {
     #[cfg(windows)]
     {
-        windows_pipe_launcher::connect_guarded_pipe(process.process_id)
+        windows_pipe_launcher::connect_guarded_pipe(process)
     }
     #[cfg(not(windows))]
     {
@@ -229,6 +235,7 @@ fn acquire_restart_lease(timeout: Duration) -> Result<File, String> {
     loop {
         let file = match OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(&path)
@@ -417,8 +424,9 @@ fn is_main_discord_arguments(arguments: &[std::ffi::OsString]) -> bool {
 mod windows_pipe_launcher {
     use super::configure_background;
     use super::{
-        discord_debug_arguments, guardian_state_path, integration_root, normalized_path,
-        validate_discord_executable, PipeGuardianState, GUARDIAN_STATE_VERSION,
+        discord_debug_arguments, guardian_state_matches_process, guardian_state_path,
+        integration_root, is_discord_name, is_main_discord_arguments, normalized_path,
+        validate_discord_executable, DiscordProcess, PipeGuardianState, GUARDIAN_STATE_VERSION,
     };
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -442,7 +450,7 @@ mod windows_pipe_launcher {
 
     use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
-    use crate::cdp::CdpClient;
+    use crate::{cdp::CdpClient, diagnostics};
 
     pub(super) struct PipeLaunch {
         pub process_id: u32,
@@ -469,6 +477,7 @@ mod windows_pipe_launcher {
     }
 
     pub(super) fn launch(executable: &Path) -> Result<PipeLaunch, String> {
+        prepare_guardian_session();
         let helper = std::env::current_exe()
             .map_err(|error| format!("보안 파이프 헬퍼 경로를 찾지 못했습니다: {error}"))?;
         let mut command = Command::new(helper);
@@ -510,7 +519,7 @@ mod windows_pipe_launcher {
             })?;
         let reader = unsafe { File::from_raw_handle(parent_read.into_raw_handle()) };
         let writer = unsafe { File::from_raw_handle(parent_write.into_raw_handle()) };
-        start_guardian(process_id, &reader, &writer)?;
+        start_guardian(process_id, executable, &reader, &writer)?;
         Ok(PipeLaunch {
             process_id,
             reader,
@@ -518,9 +527,17 @@ mod windows_pipe_launcher {
         })
     }
 
-    fn start_guardian(discord_process_id: u32, reader: &File, writer: &File) -> Result<(), String> {
+    fn start_guardian(
+        discord_process_id: u32,
+        discord_executable: &Path,
+        reader: &File,
+        writer: &File,
+    ) -> Result<(), String> {
         let source = std::env::current_exe()
             .map_err(|error| format!("보안 파이프 가디언 경로를 찾지 못했습니다: {error}"))?;
+        let discord_executable = discord_executable.canonicalize().map_err(|error| {
+            format!("Discord 보안 파이프 실행 경로를 확인하지 못했습니다: {error}")
+        })?;
         let root = integration_root();
         std::fs::create_dir_all(&root)
             .map_err(|error| format!("보안 파이프 가디언 폴더를 만들지 못했습니다: {error}"))?;
@@ -543,12 +560,31 @@ mod windows_pipe_launcher {
                 guardian.as_os_str(),
                 std::ffi::OsStr::new("--discord-cdp-pipe-guardian"),
                 std::ffi::OsStr::new(&discord_id),
+                discord_executable.as_os_str(),
                 std::ffi::OsStr::new(&reader_id),
                 std::ffi::OsStr::new(&writer_id),
             ],
             &[reader_copy.0, writer_copy.0],
         )?;
         wait_for_guardian_state(discord_process_id, guardian_process_id)
+    }
+
+    fn prepare_guardian_session() {
+        let root = integration_root();
+        let Ok(entries) = std::fs::read_dir(root) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.file_name().is_some_and(|name| {
+                let name = name.to_string_lossy();
+                name.starts_with("cdp-pipe-guardian-") && name.ends_with(".json")
+            }) {
+                // Removing the state file is also the authenticated shutdown signal
+                // for an older guardian left by the Discord instance we just stopped.
+                let _ = std::fs::remove_file(path);
+            }
+        }
     }
 
     fn cleanup_stale_guardian_artifacts(root: &Path) {
@@ -569,8 +605,8 @@ mod windows_pipe_launcher {
                     .ok()
                     .and_then(|contents| serde_json::from_str::<PipeGuardianState>(&contents).ok())
                     .is_some_and(|state| {
-                        process_exists(state.guardian_process_id)
-                            && process_exists(state.discord_process_id)
+                        state.version == GUARDIAN_STATE_VERSION
+                            && process_exists(state.guardian_process_id)
                     });
                 if !active {
                     let _ = std::fs::remove_file(path);
@@ -780,12 +816,17 @@ mod windows_pipe_launcher {
 
     pub(super) fn run_guardian(
         discord_process_id: u32,
+        discord_executable: &Path,
         reader_handle: usize,
         writer_handle: usize,
     ) -> Result<(), String> {
         if reader_handle == 0 || writer_handle == 0 {
             return Err("Discord 보안 파이프 가디언 핸들이 없습니다.".to_string());
         }
+        let discord_executable = discord_executable.canonicalize().map_err(|error| {
+            format!("Discord 보안 파이프 실행 경로를 확인하지 못했습니다: {error}")
+        })?;
+        validate_discord_executable(&discord_executable)?;
         let _reader = unsafe { File::from_raw_handle(reader_handle as HANDLE) };
         let _writer = unsafe { File::from_raw_handle(writer_handle as HANDLE) };
         let path = guardian_state_path(discord_process_id);
@@ -798,6 +839,7 @@ mod windows_pipe_launcher {
             version: GUARDIAN_STATE_VERSION,
             guardian_process_id: std::process::id(),
             discord_process_id,
+            discord_executable: discord_executable.clone(),
             reader_handle,
             writer_handle,
         };
@@ -806,11 +848,22 @@ mod windows_pipe_launcher {
         std::fs::write(&path, serialized)
             .map_err(|error| format!("Discord 보안 파이프 상태를 저장하지 못했습니다: {error}"))?;
 
-        let discord_pid = Pid::from_u32(discord_process_id);
         let mut system = System::new();
+        let mut last_matching_process = Instant::now();
         loop {
-            system.refresh_processes(ProcessesToUpdate::Some(&[discord_pid]), true);
-            if system.process(discord_pid).is_none() {
+            if !path.is_file() {
+                break;
+            }
+            system.refresh_processes_specifics(
+                ProcessesToUpdate::All,
+                true,
+                ProcessRefreshKind::nothing()
+                    .with_exe(UpdateKind::Always)
+                    .with_cmd(UpdateKind::Always),
+            );
+            if matching_pipe_discord_exists(&system, &discord_executable) {
+                last_matching_process = Instant::now();
+            } else if last_matching_process.elapsed() >= Duration::from_secs(15) {
                 break;
             }
             thread::sleep(Duration::from_millis(500));
@@ -819,16 +872,32 @@ mod windows_pipe_launcher {
         Ok(())
     }
 
-    pub(super) fn connect_guarded_pipe(discord_process_id: u32) -> Result<CdpClient, String> {
-        let path = guardian_state_path(discord_process_id);
-        let contents = std::fs::read_to_string(&path)
-            .map_err(|error| format!("Discord 보안 파이프 가디언을 찾지 못했습니다: {error}"))?;
-        let state: PipeGuardianState = serde_json::from_str(&contents)
-            .map_err(|error| format!("Discord 보안 파이프 상태가 올바르지 않습니다: {error}"))?;
-        if state.version != GUARDIAN_STATE_VERSION || state.discord_process_id != discord_process_id
-        {
-            return Err(
-                "Discord 보안 파이프 상태가 현재 프로세스와 일치하지 않습니다.".to_string(),
+    fn matching_pipe_discord_exists(system: &System, executable: &Path) -> bool {
+        let expected = normalized_path(executable);
+        system.processes().values().any(|process| {
+            is_discord_name(&process.name().to_string_lossy())
+                && is_main_discord_arguments(process.cmd())
+                && process
+                    .exe()
+                    .is_some_and(|path| normalized_path(path) == expected)
+                && process
+                    .cmd()
+                    .iter()
+                    .any(|argument| argument == "--remote-debugging-pipe")
+        })
+    }
+
+    pub(super) fn connect_guarded_pipe(process: &DiscordProcess) -> Result<CdpClient, String> {
+        let state = guardian_state_for_process(process)?;
+        if state.discord_process_id != process.process_id {
+            diagnostics::info(
+                "discord-connection",
+                &format!(
+                    "guardian pipe recovered after Discord PID handoff; original_pid={}; current_pid={}; executable={}",
+                    state.discord_process_id,
+                    process.process_id,
+                    process.executable.display()
+                ),
             );
         }
         validate_guardian_process(&state)?;
@@ -845,6 +914,49 @@ mod windows_pipe_launcher {
         let writer =
             duplicate_remote_handle(guardian.0, state.writer_handle as HANDLE)?.into_file();
         Ok(CdpClient::from_pipe(reader, writer))
+    }
+
+    fn guardian_state_for_process(process: &DiscordProcess) -> Result<PipeGuardianState, String> {
+        let exact = guardian_state_path(process.process_id);
+        let mut candidates = Vec::new();
+        if exact.is_file() {
+            candidates.push(exact.clone());
+        }
+        if let Ok(entries) = std::fs::read_dir(integration_root()) {
+            let mut other = entries
+                .flatten()
+                .map(|entry| entry.path())
+                .filter(|path| path != &exact)
+                .filter(|path| {
+                    path.file_name().is_some_and(|name| {
+                        let name = name.to_string_lossy();
+                        name.starts_with("cdp-pipe-guardian-") && name.ends_with(".json")
+                    })
+                })
+                .collect::<Vec<_>>();
+            other.sort_by_key(|path| {
+                std::fs::metadata(path)
+                    .and_then(|metadata| metadata.modified())
+                    .ok()
+            });
+            other.reverse();
+            candidates.extend(other);
+        }
+
+        for path in candidates {
+            let Ok(contents) = std::fs::read_to_string(path) else {
+                continue;
+            };
+            let Ok(state) = serde_json::from_str::<PipeGuardianState>(&contents) else {
+                continue;
+            };
+            if guardian_state_matches_process(&state, process)
+                && validate_guardian_process(&state).is_ok()
+            {
+                return Ok(state);
+            }
+        }
+        Err("현재 Discord 설치 경로와 일치하는 보안 파이프 가디언을 찾지 못했습니다.".to_string())
     }
 
     fn validate_guardian_process(state: &PipeGuardianState) -> Result<(), String> {
@@ -864,6 +976,7 @@ mod windows_pipe_launcher {
             return Err("Discord 보안 파이프 가디언 실행 파일이 일치하지 않습니다.".to_string());
         }
         let expected_discord_id = state.discord_process_id.to_string();
+        let expected_executable = normalized_path(&state.discord_executable);
         let arguments = process
             .cmd()
             .iter()
@@ -875,6 +988,9 @@ mod windows_pipe_launcher {
             || !arguments
                 .iter()
                 .any(|argument| argument == &expected_discord_id)
+            || !arguments.iter().any(|argument| {
+                normalized_path(Path::new(argument.as_ref())) == expected_executable
+            })
         {
             return Err("Discord 보안 파이프 가디언 인수가 일치하지 않습니다.".to_string());
         }
@@ -922,10 +1038,16 @@ pub fn run_pipe_helper(executable: &Path) -> Result<u32, String> {
 #[cfg(windows)]
 pub fn run_pipe_guardian(
     discord_process_id: u32,
+    discord_executable: &Path,
     reader_handle: usize,
     writer_handle: usize,
 ) -> Result<(), String> {
-    windows_pipe_launcher::run_guardian(discord_process_id, reader_handle, writer_handle)
+    windows_pipe_launcher::run_guardian(
+        discord_process_id,
+        discord_executable,
+        reader_handle,
+        writer_handle,
+    )
 }
 
 #[cfg(not(windows))]
@@ -936,6 +1058,7 @@ pub fn run_pipe_helper(_executable: &Path) -> Result<u32, String> {
 #[cfg(not(windows))]
 pub fn run_pipe_guardian(
     _discord_process_id: u32,
+    _discord_executable: &Path,
     _reader_handle: usize,
     _writer_handle: usize,
 ) -> Result<(), String> {
@@ -945,8 +1068,9 @@ pub fn run_pipe_guardian(
 #[cfg(test)]
 mod tests {
     use super::{
-        discord_debug_arguments, installed_executable_in, is_discord_name,
-        is_main_discord_arguments, validate_discord_executable,
+        discord_debug_arguments, guardian_state_matches_process, installed_executable_in,
+        is_discord_name, is_main_discord_arguments, validate_discord_executable, DiscordProcess,
+        PipeGuardianState, GUARDIAN_STATE_VERSION,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1009,5 +1133,48 @@ mod tests {
         fs::write(&executable, b"test").unwrap();
         assert!(validate_discord_executable(&executable).is_err());
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn guardian_session_accepts_a_replacement_pid_from_the_same_discord_installation() {
+        let executable = std::path::PathBuf::from(
+            r"C:\Users\tester\AppData\Local\Discord\app-1.0.999\Discord.exe",
+        );
+        let state = PipeGuardianState {
+            version: GUARDIAN_STATE_VERSION,
+            guardian_process_id: 20,
+            discord_process_id: 30,
+            discord_executable: executable.clone(),
+            reader_handle: 40,
+            writer_handle: 50,
+        };
+        let replacement = DiscordProcess {
+            process_id: 31,
+            executable,
+        };
+
+        assert!(guardian_state_matches_process(&state, &replacement));
+    }
+
+    #[test]
+    fn guardian_session_rejects_a_different_discord_installation() {
+        let state = PipeGuardianState {
+            version: GUARDIAN_STATE_VERSION,
+            guardian_process_id: 20,
+            discord_process_id: 30,
+            discord_executable: std::path::PathBuf::from(
+                r"C:\Users\tester\AppData\Local\Discord\app-1.0.999\Discord.exe",
+            ),
+            reader_handle: 40,
+            writer_handle: 50,
+        };
+        let canary = DiscordProcess {
+            process_id: 31,
+            executable: std::path::PathBuf::from(
+                r"C:\Users\tester\AppData\Local\DiscordCanary\app-1.0.999\DiscordCanary.exe",
+            ),
+        };
+
+        assert!(!guardian_state_matches_process(&state, &canary));
     }
 }

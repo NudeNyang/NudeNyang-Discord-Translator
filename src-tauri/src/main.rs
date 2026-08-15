@@ -1286,7 +1286,7 @@ fn main() {
         .get(1)
         .is_some_and(|argument| argument == "--discord-cdp-pipe-guardian")
     {
-        let parsed = (|| -> Result<(u32, usize, usize), String> {
+        let parsed = (|| -> Result<(u32, std::path::PathBuf, usize, usize), String> {
             let parse = |index: usize, label: &str| {
                 process_arguments
                     .get(index)
@@ -1296,17 +1296,34 @@ fn main() {
             let discord_process_id = parse(2, "Discord 프로세스 ID")?
                 .parse::<u32>()
                 .map_err(|error| format!("Discord 프로세스 ID가 올바르지 않습니다: {error}"))?;
-            let reader_handle = parse(3, "CDP 읽기 핸들")?
+            let discord_executable = std::path::PathBuf::from(
+                process_arguments
+                    .get(3)
+                    .ok_or_else(|| "Discord 실행 경로가 없습니다.".to_string())?,
+            );
+            let reader_handle = parse(4, "CDP 읽기 핸들")?
                 .parse::<usize>()
                 .map_err(|error| format!("CDP 읽기 핸들이 올바르지 않습니다: {error}"))?;
-            let writer_handle = parse(4, "CDP 쓰기 핸들")?
+            let writer_handle = parse(5, "CDP 쓰기 핸들")?
                 .parse::<usize>()
                 .map_err(|error| format!("CDP 쓰기 핸들이 올바르지 않습니다: {error}"))?;
-            Ok((discord_process_id, reader_handle, writer_handle))
+            Ok((
+                discord_process_id,
+                discord_executable,
+                reader_handle,
+                writer_handle,
+            ))
         })();
-        let result = parsed.and_then(|(discord_process_id, reader_handle, writer_handle)| {
-            discord::run_pipe_guardian(discord_process_id, reader_handle, writer_handle)
-        });
+        let result = parsed.and_then(
+            |(discord_process_id, discord_executable, reader_handle, writer_handle)| {
+                discord::run_pipe_guardian(
+                    discord_process_id,
+                    &discord_executable,
+                    reader_handle,
+                    writer_handle,
+                )
+            },
+        );
         if let Err(error) = result {
             eprintln!("{error}");
             std::process::exit(1);
