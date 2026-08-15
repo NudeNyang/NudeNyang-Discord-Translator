@@ -427,6 +427,21 @@ export const DYNAMIC_TEMPLATE_COPY = Object.freeze({
     "予期しないエラーが発生しました。詳細は診断ログを確認してください。",
     "发生意外错误。请查看诊断日志了解详情。",
   ],
+  "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": [
+    "Another translation service connection is in progress. Try again after it finishes.",
+    "別の翻訳サービスへの接続処理が進行中です。完了後にもう一度お試しください。",
+    "正在连接其他翻译服务。请在连接完成后重试。",
+  ],
+  "다른 계정 로그인이 이미 진행 중입니다.": [
+    "Another account sign-in is already in progress.",
+    "別のアカウントへのログインがすでに進行中です。",
+    "已有其他账户正在登录。",
+  ],
+  "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": [
+    "Windows App Installer could not complete the CLI installation. Check the installer message in the diagnostic log, then try again.",
+    "Windows アプリ インストーラーで CLI のインストールを完了できませんでした。診断ログのインストーラーメッセージを確認してから、もう一度お試しください。",
+    "Windows 应用安装程序未能完成 CLI 安装。请查看诊断日志中的安装程序消息，然后重试。",
+  ],
 });
 
 const LANGUAGE_INDEX = Object.freeze({ en: 0, ja: 1, zh: 2 });

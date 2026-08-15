@@ -6,6 +6,7 @@ import {
   localModelStorageDisplay,
   modelPreparationBanner,
   normalizeConfig,
+  providerOperationAvailability,
   resolveEnabledState,
   restartCountdownMessage,
   shortcutFromKeyboardEvent,
@@ -14,6 +15,21 @@ import {
   SUPPORTED_TARGET_LANGUAGES,
   translatorRuntimeLabel,
 } from "../state.mjs";
+
+test("provider connection operations lock every provider row until completion", () => {
+  assert.deepEqual(providerOperationAvailability("", "chatgpt"), {
+    blocked: false,
+    active: false,
+  });
+  assert.deepEqual(providerOperationAvailability("claude", "claude"), {
+    blocked: true,
+    active: true,
+  });
+  assert.deepEqual(providerOperationAvailability("claude", "gemini"), {
+    blocked: true,
+    active: false,
+  });
+});
 
 test("an active partial model download is labelled as downloading in storage", () => {
   assert.deepEqual(
@@ -144,6 +160,13 @@ test("restart prompt only opens for an enabled failed CDP connection", () => {
     shouldPromptRestart(
       { enabled: true, connectionIssue: "port closed", cdpConnected: true },
       { promptActive: false, repairActive: false },
+    ),
+    false,
+  );
+  assert.equal(
+    shouldPromptRestart(
+      { enabled: true, connectionIssue: "pipe delayed", cdpConnected: false },
+      { promptActive: false, repairActive: false, restartAttempted: true },
     ),
     false,
   );

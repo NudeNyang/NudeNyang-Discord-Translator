@@ -200,6 +200,25 @@ test("unknown backend errors use a localized safe fallback instead of leaking an
   }
 });
 
+test("provider connection and CLI installer failures remain actionable in every UI language", () => {
+  const samples = [
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.",
+    "다른 계정 로그인이 이미 진행 중입니다.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.",
+  ];
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
+    for (const sample of samples) {
+      const translated = translateUserFacingError(language, sample);
+      assert.doesNotMatch(translated, /[가-힣]/, `${language}: ${sample}`);
+      assert.notEqual(
+        translated,
+        translateCopy(language, "예기치 않은 오류가 발생했습니다. 자세한 내용은 진단 로그를 확인하십시오."),
+        `${language}: actionable error fell back to the generic message`,
+      );
+    }
+  }
+});
+
 test("settings script routes backend errors and direct status copy through localization", () => {
   assert.match(appScript, /translateUserFacingError\(currentUiLanguage\(\), message\)/);
   assert.match(appScript, /setLocalizedBackendText\(status\.querySelector\("span"\), connection\.detail\)/);

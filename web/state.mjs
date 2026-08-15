@@ -109,8 +109,17 @@ export function shouldPromptRestart(status, flags) {
       status?.connectionIssue &&
       !status?.cdpConnected &&
       !flags.promptActive &&
-      !flags.repairActive,
+      !flags.repairActive &&
+      !flags.restartAttempted,
   );
+}
+
+export function providerOperationAvailability(activeProvider, requestedProvider) {
+  const active = String(activeProvider || "");
+  return {
+    blocked: Boolean(active),
+    active: Boolean(active) && active === String(requestedProvider || ""),
+  };
 }
 
 export function resolveEnabledState(reportedEnabled, pendingEnabled) {

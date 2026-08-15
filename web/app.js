@@ -4,6 +4,7 @@ import {
   localModelStorageDisplay,
   modelPreparationBanner,
   normalizeConfig,
+  providerOperationAvailability,
   resolveEnabledState,
   restartCountdownMessage,
   scrollThumbMetrics,
@@ -116,6 +117,7 @@ const state = {
   autostartLoading: false,
   providerConnections: new Map(),
   providerLoading: false,
+  providerOperation: "",
   storageStatus: null,
   systemMemory: null,
 };
@@ -392,16 +394,18 @@ function renderProviderConnections(connections) {
     const status = row.querySelector(".provider-status");
     const action = row.querySelector(".provider-action");
     const disconnect = row.querySelector(".provider-disconnect");
+    const operation = providerOperationAvailability(state.providerOperation, row.dataset.provider);
     status.dataset.state = connection.state;
     setLocalizedText(status.querySelector("strong"), providerStateLabel(connection));
     setLocalizedBackendText(status.querySelector("span"), connection.detail);
     if (action) {
       action.hidden = connection.canDisconnect;
-      action.disabled = connection.connected;
+      action.disabled = connection.connected || operation.blocked;
       setProviderActionLabel(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
     }
     if (disconnect) {
       disconnect.hidden = !connection.canDisconnect;
+      disconnect.disabled = operation.blocked;
       setProviderActionLabel(disconnect, "연결 해제");
     }
     const secret = row.querySelector(".provider-secret");
@@ -471,6 +475,11 @@ async function connectProvider(row) {
     secret.focus();
     throw new Error("DeepL API 키를 입력하십시오.");
   }
+  if (providerOperationAvailability(state.providerOperation, provider).blocked) {
+    throw new Error("다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.");
+  }
+  state.providerOperation = provider;
+  renderProviderConnections([...state.providerConnections.values()]);
   action.disabled = true;
   try {
     let current = providerConnection(provider);
@@ -517,6 +526,7 @@ async function connectProvider(row) {
     renderProviderConnections([...state.providerConnections.values()]);
     if (secret && connection.connected) secret.value = "";
   } finally {
+    state.providerOperation = "";
     if (providerConnection(provider)) {
       renderProviderConnections([...state.providerConnections.values()]);
     } else {
@@ -626,17 +636,29 @@ async function savePendingProviderCredentials() {
   const secret = row?.querySelector(".provider-secret");
   const credential = secret?.value.trim() || "";
   if (!credential) return;
+  if (providerOperationAvailability(state.providerOperation, "deepl").blocked) {
+    throw new Error("다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.");
+  }
 
-  setLocalizedText(elements.saveStatus, "DeepL API 키 확인 중");
-  const connection = await invoke("provider_connect", { provider: "deepl", credential });
-  if (!connection.connected) throw new Error("DeepL API 키를 저장하지 못했습니다.");
-  state.providerConnections.set("deepl", connection);
+  state.providerOperation = "deepl";
   renderProviderConnections([...state.providerConnections.values()]);
-  secret.value = "";
+  setLocalizedText(elements.saveStatus, "DeepL API 키 확인 중");
+  try {
+    const connection = await invoke("provider_connect", { provider: "deepl", credential });
+    if (!connection.connected) throw new Error("DeepL API 키를 저장하지 못했습니다.");
+    state.providerConnections.set("deepl", connection);
+    secret.value = "";
+  } finally {
+    state.providerOperation = "";
+    renderProviderConnections([...state.providerConnections.values()]);
+  }
 }
 
 async function disconnectProvider(row) {
   const provider = row.dataset.provider;
+  if (providerOperationAvailability(state.providerOperation, provider).blocked) {
+    throw new Error("다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.");
+  }
   const currentConnection = providerConnection(provider);
   const isDeepL = provider === "deepl";
   const confirmed = await showModal({
@@ -647,9 +669,15 @@ async function disconnectProvider(row) {
     acceptText: "연결 해제",
   });
   if (!confirmed) return;
-  const connection = await invoke("provider_disconnect", { provider });
-  state.providerConnections.set(provider, connection);
+  state.providerOperation = provider;
   renderProviderConnections([...state.providerConnections.values()]);
+  try {
+    const connection = await invoke("provider_disconnect", { provider });
+    state.providerConnections.set(provider, connection);
+  } finally {
+    state.providerOperation = "";
+    renderProviderConnections([...state.providerConnections.values()]);
+  }
 }
 
 async function checkForUpdates(silent = false) {
@@ -1508,14 +1536,6 @@ async function handleRestartRequired(status) {
   try {
     if (!(await ensureRestartConsent())) {
       await disableTranslationFeaturesForConnectionFailure();
-      return;
-    }
-    if (state.restartAttempted) {
-      await disableTranslationFeaturesForConnectionFailure();
-      await showError(
-        "Discord 연결 실패",
-        "이번 번역 실행에서 자동 재시작을 이미 한 번 시도했습니다. Discord를 직접 종료한 후 다시 실행하십시오.",
-      );
       return;
     }
     const confirmed = await showModal({

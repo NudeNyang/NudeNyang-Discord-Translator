@@ -13,7 +13,7 @@ use regex::Regex;
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use crate::language::Language;
+use crate::{diagnostics, language::Language};
 
 use super::Translator;
 
@@ -1342,9 +1342,26 @@ fn install_winget_cli(
                 return Ok(probe);
             }
         }
-        return Err(format!(
-            "Windows 앱 설치 관리자가 {product_name} 설치를 완료하지 못했습니다. 네트워크 연결을 확인한 후 다시 시도하십시오."
-        ));
+        let exit_code = output
+            .status
+            .code()
+            .map_or_else(|| "unknown".to_string(), |code| code.to_string());
+        let detail = format!(
+            "{}\n{}",
+            decode_process_output(&output.stdout),
+            decode_process_output(&output.stderr)
+        );
+        diagnostics::error(
+            "provider-installer",
+            &format!(
+                "winget failed; product={product_name}; package={package_id}; action={action}; exit_code={exit_code}; output={}",
+                tail_chars(detail.trim(), 2_000)
+            ),
+        );
+        return Err(
+            "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오."
+                .to_string(),
+        );
     }
     let probe = probe_subscription_connection(provider.key())?;
     if !probe.installed {

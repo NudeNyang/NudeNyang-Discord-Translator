@@ -414,7 +414,10 @@
     "자동 처리": "自動處理",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "先使用快速模型辨識，再以較高品質的模型重新檢查不確定的區域。",
     "고품질 모델": "較高品質模型",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "約 70MB。首次需要時下載，閒置 5 分鐘後從記憶體釋放。"
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "約 70MB。首次需要時下載，閒置 5 分鐘後從記憶體釋放。",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "另一個翻譯服務連線正在進行中。請在完成後再試一次。",
+    "다른 계정 로그인이 이미 진행 중입니다.": "另一個帳號的登入程序已在進行中。",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows 應用程式安裝程式無法完成 CLI 安裝。請查看診斷記錄中的安裝程式訊息，然後再試一次。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -831,7 +834,10 @@
     "자동 처리": "Processamento automático",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Use primeiro o modelo rápido e depois verifique novamente apenas as regiões incertas com o modelo de maior qualidade.",
     "고품질 모델": "Modelo de maior qualidade",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Cerca de 70MB. O download é feito quando necessário pela primeira vez, e o modelo é liberado da memória após 5 minutos de inatividade."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Cerca de 70MB. O download é feito quando necessário pela primeira vez, e o modelo é liberado da memória após 5 minutos de inatividade.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Outra conexão de serviço de tradução está em andamento. Tente novamente após a conclusão.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "O login de outra conta já está em andamento.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "O Instalador de Aplicativo do Windows não conseguiu concluir a instalação da CLI. Verifique a mensagem do instalador no log de diagnóstico e tente novamente."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1248,7 +1254,10 @@
     "자동 처리": "स्वचालित प्रोसेसिंग",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "पहले तेज़ मॉडल का उपयोग करें, फिर केवल अनिश्चित क्षेत्रों की उच्च-गुणवत्ता वाले मॉडल से दोबारा जाँच करें।",
     "고품질 모델": "उच्च-गुणवत्ता वाला मॉडल",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "लगभग 70MB। पहली बार ज़रूरत पड़ने पर यह डाउनलोड होता है और 5 मिनट तक निष्क्रिय रहने के बाद मेमोरी से हटा दिया जाता है।"
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "लगभग 70MB। पहली बार ज़रूरत पड़ने पर यह डाउनलोड होता है और 5 मिनट तक निष्क्रिय रहने के बाद मेमोरी से हटा दिया जाता है।",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "किसी अन्य अनुवाद सेवा का कनेक्शन जारी है। इसके पूरा होने के बाद फिर से कोशिश करें।",
+    "다른 계정 로그인이 이미 진행 중입니다.": "किसी अन्य खाते में साइन-इन पहले से जारी है।",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows ऐप इंस्टॉलर CLI इंस्टॉलेशन पूरा नहीं कर सका। डायग्नोस्टिक लॉग में इंस्टॉलर का संदेश देखें, फिर से कोशिश करें।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1665,7 +1674,10 @@
     "자동 처리": "Procesamiento automático",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Usa primero el modelo rápido y vuelve a comprobar solo las regiones dudosas con el modelo de mayor calidad.",
     "고품질 모델": "Modelo de mayor calidad",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Aproximadamente 70 MB. Se descarga cuando se necesita por primera vez y se libera de la memoria tras 5 minutos de inactividad."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Aproximadamente 70 MB. Se descarga cuando se necesita por primera vez y se libera de la memoria tras 5 minutos de inactividad.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Hay otra conexión a un servicio de traducción en curso. Inténtalo de nuevo cuando termine.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Ya hay un inicio de sesión en otra cuenta en curso.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "El Instalador de aplicaciones de Windows no pudo completar la instalación de la CLI. Revisa el mensaje del instalador en el registro de diagnóstico y vuelve a intentarlo."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2082,7 +2094,10 @@
     "자동 처리": "Automatische Verarbeitung",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Zuerst das schnelle Modell verwenden und nur unsichere Bereiche mit dem höherwertigen Modell erneut prüfen.",
     "고품질 모델": "Höherwertiges Modell",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Etwa 70 MB. Wird bei der ersten Verwendung heruntergeladen und nach 5 Minuten Inaktivität aus dem Arbeitsspeicher entfernt."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Etwa 70 MB. Wird bei der ersten Verwendung heruntergeladen und nach 5 Minuten Inaktivität aus dem Arbeitsspeicher entfernt.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Eine Verbindung zu einem anderen Übersetzungsdienst wird gerade hergestellt. Versuche es nach Abschluss erneut.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Die Anmeldung bei einem anderen Konto läuft bereits.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer konnte die CLI-Installation nicht abschließen. Prüfe die Installationsmeldung im Diagnoseprotokoll und versuche es erneut."
   },
   "ru": {
     "설정": "Настройки",
@@ -2499,7 +2514,10 @@
     "자동 처리": "Автоматическая обработка",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Сначала использовать быструю модель, затем повторно проверять только сомнительные области с помощью более качественной модели.",
     "고품질 모델": "Модель повышенного качества",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Около 70 МБ. Скачивается при первом использовании и выгружается из памяти после 5 минут бездействия."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Около 70 МБ. Скачивается при первом использовании и выгружается из памяти после 5 минут бездействия.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Выполняется подключение к другому сервису перевода. Повторите попытку после его завершения.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Вход в другую учётную запись уже выполняется.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Установщику приложений Windows не удалось завершить установку CLI. Проверьте сообщение установщика в журнале диагностики и повторите попытку."
   },
   "id": {
     "설정": "Pengaturan",
@@ -2916,7 +2934,10 @@
     "자동 처리": "Pemrosesan otomatis",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gunakan model cepat terlebih dahulu, lalu periksa ulang hanya area yang tidak pasti dengan model berkualitas lebih tinggi.",
     "고품질 모델": "Model berkualitas lebih tinggi",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Sekitar 70MB. Diunduh saat pertama kali diperlukan dan dihapus dari memori setelah tidak digunakan selama 5 menit."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Sekitar 70MB. Diunduh saat pertama kali diperlukan dan dihapus dari memori setelah tidak digunakan selama 5 menit.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Koneksi layanan terjemahan lain sedang berlangsung. Coba lagi setelah selesai.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Proses masuk ke akun lain sudah berlangsung.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer tidak dapat menyelesaikan instalasi CLI. Periksa pesan penginstal di log diagnostik, lalu coba lagi."
   },
   "fr": {
     "설정": "Paramètres",
@@ -3333,7 +3354,10 @@
     "자동 처리": "Traitement automatique",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Utilisez d’abord le modèle rapide, puis revérifiez uniquement les zones incertaines avec le modèle de meilleure qualité.",
     "고품질 모델": "Modèle de meilleure qualité",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Environ 70MB. Il est téléchargé à la première utilisation et libéré de la mémoire après 5 minutes d’inactivité."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Environ 70MB. Il est téléchargé à la première utilisation et libéré de la mémoire après 5 minutes d’inactivité.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "La connexion à un autre service de traduction est en cours. Réessayez une fois celle-ci terminée.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "La connexion à un autre compte est déjà en cours.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Le programme d’installation d’applications Windows n’a pas pu terminer l’installation de la CLI. Consultez le message du programme d’installation dans le journal de diagnostic, puis réessayez."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -3750,7 +3774,10 @@
     "자동 처리": "Otomatik işleme",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Önce hızlı modeli kullanın, ardından yalnızca belirsiz bölgeleri daha yüksek kaliteli modelle yeniden kontrol edin.",
     "고품질 모델": "Daha yüksek kaliteli model",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Yaklaşık 70MB. İlk gerektiğinde indirilir ve 5 dakika kullanılmadığında bellekten kaldırılır."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Yaklaşık 70MB. İlk gerektiğinde indirilir ve 5 dakika kullanılmadığında bellekten kaldırılır.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Başka bir çeviri hizmetine bağlantı kuruluyor. Tamamlandıktan sonra tekrar deneyin.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Başka bir hesapta oturum açma işlemi zaten devam ediyor.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows Uygulama Yükleyicisi CLI kurulumunu tamamlayamadı. Tanılama günlüğündeki yükleyici mesajını kontrol edip tekrar deneyin."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4167,7 +4194,10 @@
     "자동 처리": "معالجة تلقائية",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "استخدم النموذج السريع أولًا، ثم أعد التحقق من المناطق غير المؤكدة فقط باستخدام النموذج الأعلى جودة.",
     "고품질 모델": "نموذج أعلى جودة",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حوالي 70MB. يُنزّل عند الحاجة إليه لأول مرة، ويُحرّر من الذاكرة بعد 5 دقائق من عدم الاستخدام."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حوالي 70MB. يُنزّل عند الحاجة إليه لأول مرة، ويُحرّر من الذاكرة بعد 5 دقائق من عدم الاستخدام.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "جارٍ الاتصال بخدمة ترجمة أخرى. حاول مجددًا بعد اكتمال الاتصال.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "جارٍ بالفعل تسجيل الدخول إلى حساب آخر.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "تعذّر على مثبّت تطبيقات Windows إكمال تثبيت CLI. تحقّق من رسالة المثبّت في سجل التشخيص، ثم حاول مجددًا."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -4584,7 +4614,10 @@
     "자동 처리": "Xử lý tự động",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Trước tiên dùng mô hình nhanh, sau đó chỉ kiểm tra lại các vùng chưa chắc chắn bằng mô hình chất lượng cao hơn.",
     "고품질 모델": "Mô hình chất lượng cao hơn",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Khoảng 70MB. Được tải xuống khi cần lần đầu và giải phóng khỏi bộ nhớ sau 5 phút không hoạt động."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Khoảng 70MB. Được tải xuống khi cần lần đầu và giải phóng khỏi bộ nhớ sau 5 phút không hoạt động.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Đang kết nối với một dịch vụ dịch thuật khác. Hãy thử lại sau khi quá trình này hoàn tất.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Đang đăng nhập bằng một tài khoản khác.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer không thể hoàn tất việc cài đặt CLI. Hãy kiểm tra thông báo của trình cài đặt trong nhật ký chẩn đoán, rồi thử lại."
   },
   "it": {
     "설정": "Impostazioni",
@@ -5001,7 +5034,10 @@
     "자동 처리": "Elaborazione automatica",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Usa prima il modello rapido, poi ricontrolla solo le aree incerte con il modello di qualità superiore.",
     "고품질 모델": "Modello di qualità superiore",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Circa 70MB. Viene scaricato al primo utilizzo e rimosso dalla memoria dopo 5 minuti di inattività."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Circa 70MB. Viene scaricato al primo utilizzo e rimosso dalla memoria dopo 5 minuti di inattività.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "È in corso la connessione a un altro servizio di traduzione. Riprova al termine.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "È già in corso l'accesso a un altro account.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer non ha potuto completare l'installazione della CLI. Controlla il messaggio del programma di installazione nel registro diagnostico, quindi riprova."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -5418,7 +5454,10 @@
     "자동 처리": "Przetwarzanie automatyczne",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Najpierw użyj szybkiego modelu, a następnie ponownie sprawdź tylko niepewne obszary modelem wyższej jakości.",
     "고품질 모델": "Model wyższej jakości",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Około 70 MB. Jest pobierany przy pierwszym użyciu i usuwany z pamięci po 5 minutach bezczynności."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Około 70 MB. Jest pobierany przy pierwszym użyciu i usuwany z pamięci po 5 minutach bezczynności.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Trwa łączenie z inną usługą tłumaczeniową. Spróbuj ponownie po jego zakończeniu.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Trwa już logowanie na inne konto.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Instalator aplikacji Windows nie mógł ukończyć instalacji CLI. Sprawdź komunikat instalatora w dzienniku diagnostycznym, a następnie spróbuj ponownie."
   },
   "uk": {
     "설정": "Налаштування",
@@ -5835,7 +5874,10 @@
     "자동 처리": "Автоматична обробка",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Спочатку використовуйте швидку модель, а потім повторно перевіряйте лише невпевнено розпізнані ділянки за допомогою моделі вищої якості.",
     "고품질 모델": "Модель вищої якості",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Близько 70 МБ. Завантажується за першої потреби та вивантажується з пам’яті після 5 хвилин бездіяльності."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Близько 70 МБ. Завантажується за першої потреби та вивантажується з пам’яті після 5 хвилин бездіяльності.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Триває підключення іншого сервісу перекладу. Спробуйте ще раз після його завершення.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Уже триває вхід до іншого облікового запису.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Інсталятору програм Windows не вдалося завершити встановлення CLI. Перевірте повідомлення інсталятора в журналі діагностики, а потім спробуйте ще раз."
   },
   "ms": {
     "설정": "Tetapan",
@@ -6252,7 +6294,10 @@
     "자동 처리": "Pemprosesan automatik",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gunakan model pantas terlebih dahulu, kemudian semak semula hanya bahagian yang tidak pasti dengan model berkualiti lebih tinggi.",
     "고품질 모델": "Model berkualiti lebih tinggi",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Kira-kira 70MB. Dimuat turun apabila diperlukan buat kali pertama dan dilepaskan daripada memori selepas 5 minit tidak aktif."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Kira-kira 70MB. Dimuat turun apabila diperlukan buat kali pertama dan dilepaskan daripada memori selepas 5 minit tidak aktif.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Sambungan perkhidmatan terjemahan lain sedang berlangsung. Cuba lagi selepas selesai.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Log masuk akaun lain sudah sedang berlangsung.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer tidak dapat melengkapkan pemasangan CLI. Semak mesej pemasang dalam log diagnostik, kemudian cuba lagi."
   },
   "nl": {
     "설정": "Instellingen",
@@ -6669,7 +6714,10 @@
     "자동 처리": "Automatische verwerking",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gebruik eerst het snelle model en controleer daarna alleen onzekere gebieden opnieuw met het model van hogere kwaliteit.",
     "고품질 모델": "Model van hogere kwaliteit",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Ongeveer 70MB. Wordt bij het eerste gebruik gedownload en na 5 minuten inactiviteit uit het geheugen verwijderd."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Ongeveer 70MB. Wordt bij het eerste gebruik gedownload en na 5 minuten inactiviteit uit het geheugen verwijderd.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Er wordt al verbinding gemaakt met een andere vertaalservice. Probeer het opnieuw zodra dit is voltooid.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Er wordt al ingelogd bij een ander account.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer kon de CLI-installatie niet voltooien. Controleer het bericht van het installatieprogramma in het diagnostische logboek en probeer het opnieuw."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -7086,7 +7134,10 @@
     "자동 처리": "ประมวลผลอัตโนมัติ",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "ใช้โมเดลแบบเร็วก่อน แล้วตรวจสอบซ้ำเฉพาะบริเวณที่ไม่แน่นอนด้วยโมเดลคุณภาพสูงกว่า",
     "고품질 모델": "โมเดลคุณภาพสูงกว่า",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "ประมาณ 70MB โดยจะดาวน์โหลดเมื่อจำเป็นครั้งแรก และนำออกจากหน่วยความจำเมื่อไม่มีการใช้งานเป็นเวลา 5 นาที"
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "ประมาณ 70MB โดยจะดาวน์โหลดเมื่อจำเป็นครั้งแรก และนำออกจากหน่วยความจำเมื่อไม่มีการใช้งานเป็นเวลา 5 นาที",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "กำลังเชื่อมต่อบริการแปลอื่นอยู่ โปรดลองอีกครั้งหลังจากเสร็จสิ้น",
+    "다른 계정 로그인이 이미 진행 중입니다.": "กำลังลงชื่อเข้าใช้บัญชีอื่นอยู่แล้ว",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer ไม่สามารถติดตั้ง CLI ให้เสร็จสมบูรณ์ได้ โปรดตรวจสอบข้อความจากตัวติดตั้งในบันทึกการวินิจฉัย แล้วลองอีกครั้ง"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -7503,7 +7554,10 @@
     "자동 처리": "Awtomatikong pagproseso",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gamitin muna ang mabilis na modelo, pagkatapos ay suriin muli gamit ang mas mataas na kalidad na modelo ang mga bahaging hindi tiyak.",
     "고품질 모델": "Mas mataas na kalidad na modelo",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Humigit-kumulang 70MB. Ida-download ito sa unang pagkakataong kailanganin at aalisin sa memory kapag hindi nagamit nang 5 minuto."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Humigit-kumulang 70MB. Ida-download ito sa unang pagkakataong kailanganin at aalisin sa memory kapag hindi nagamit nang 5 minuto.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "May kasalukuyang ikinokonektang ibang serbisyo sa pagsasalin. Subukan ulit kapag natapos na ito.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "May kasalukuyang pag-sign in sa ibang account.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Hindi nakumpleto ng Windows App Installer ang pag-install ng CLI. Tingnan ang mensahe ng installer sa diagnostic log, pagkatapos ay subukan ulit."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -7920,7 +7974,10 @@
     "자동 처리": "স্বয়ংক্রিয় প্রক্রিয়াকরণ",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "প্রথমে দ্রুত মডেল ব্যবহার করুন, তারপর শুধু অনিশ্চিত অংশগুলো উচ্চতর গুণমানের মডেল দিয়ে আবার যাচাই করুন।",
     "고품질 모델": "উচ্চতর গুণমানের মডেল",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "প্রায় 70MB। প্রথমবার প্রয়োজন হলে এটি ডাউনলোড হয় এবং 5 মিনিট ব্যবহার না করলে মেমোরি থেকে সরিয়ে দেওয়া হয়।"
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "প্রায় 70MB। প্রথমবার প্রয়োজন হলে এটি ডাউনলোড হয় এবং 5 মিনিট ব্যবহার না করলে মেমোরি থেকে সরিয়ে দেওয়া হয়।",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "অন্য একটি অনুবাদ পরিষেবার সংযোগ প্রক্রিয়া চলছে। এটি শেষ হলে আবার চেষ্টা করুন।",
+    "다른 계정 로그인이 이미 진행 중입니다.": "অন্য একটি অ্যাকাউন্টে সাইন-ইন প্রক্রিয়া ইতিমধ্যেই চলছে।",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer CLI ইনস্টলেশন সম্পন্ন করতে পারেনি। ডায়াগনস্টিক লগে ইনস্টলারের বার্তা দেখে আবার চেষ্টা করুন।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -8337,7 +8394,10 @@
     "자동 처리": "خودکار کارروائی",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "پہلے تیز ماڈل استعمال کریں، پھر صرف غیر یقینی حصوں کو زیادہ معیاری ماڈل سے دوبارہ جانچیں۔",
     "고품질 모델": "زیادہ معیاری ماڈل",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "تقریباً 70MB۔ پہلی بار ضرورت پڑنے پر یہ ڈاؤن لوڈ ہوتا ہے اور 5 منٹ تک استعمال نہ ہونے پر میموری سے ہٹا دیا جاتا ہے۔"
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "تقریباً 70MB۔ پہلی بار ضرورت پڑنے پر یہ ڈاؤن لوڈ ہوتا ہے اور 5 منٹ تک استعمال نہ ہونے پر میموری سے ہٹا دیا جاتا ہے۔",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "ایک اور ترجمہ سروس سے کنکشن جاری ہے۔ اس کے مکمل ہونے کے بعد دوبارہ کوشش کریں۔",
+    "다른 계정 로그인이 이미 진행 중입니다.": "کسی دوسرے اکاؤنٹ میں سائن اِن پہلے ہی جاری ہے۔",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer، CLI کی تنصیب مکمل نہیں کر سکا۔ تشخیصی لاگ میں انسٹالر کا پیغام دیکھیں، پھر دوبارہ کوشش کریں۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -8754,7 +8814,10 @@
     "자동 처리": "தானியங்கி செயலாக்கம்",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "முதலில் வேகமான மாதிரியைப் பயன்படுத்தி, பின்னர் உறுதியற்ற பகுதிகளை மட்டும் உயர்தர மாதிரியால் மீண்டும் சரிபார்க்கவும்.",
     "고품질 모델": "உயர்தர மாதிரி",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "சுமார் 70MB. முதன்முதலில் தேவைப்படும்போது பதிவிறக்கப்பட்டு, 5 நிமிடங்கள் பயன்படுத்தப்படாவிட்டால் நினைவகத்திலிருந்து விடுவிக்கப்படும்."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "சுமார் 70MB. முதன்முதலில் தேவைப்படும்போது பதிவிறக்கப்பட்டு, 5 நிமிடங்கள் பயன்படுத்தப்படாவிட்டால் நினைவகத்திலிருந்து விடுவிக்கப்படும்.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "மற்றொரு மொழிபெயர்ப்புச் சேவை இணைப்பு நடைபெறுகிறது. அது முடிந்ததும் மீண்டும் முயலவும்.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "மற்றொரு கணக்கில் உள்நுழைவு ஏற்கனவே நடைபெறுகிறது.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer-ஆல் CLI நிறுவலை முடிக்க முடியவில்லை. கண்டறிதல் பதிவில் நிறுவியின் செய்தியைச் சரிபார்த்து, மீண்டும் முயலவும்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -9171,7 +9234,10 @@
     "자동 처리": "پردازش خودکار",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "ابتدا از مدل سریع استفاده کنید، سپس فقط بخش‌های نامطمئن را با مدل باکیفیت‌تر دوباره بررسی کنید.",
     "고품질 모델": "مدل باکیفیت‌تر",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حدود 70MB است. هنگام اولین نیاز دانلود می‌شود و پس از ۵ دقیقه عدم استفاده از حافظه آزاد می‌شود."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حدود 70MB است. هنگام اولین نیاز دانلود می‌شود و پس از ۵ دقیقه عدم استفاده از حافظه آزاد می‌شود.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "اتصال به یک سرویس ترجمهٔ دیگر در حال انجام است. پس از اتمام آن دوباره تلاش کنید.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "ورود به حساب دیگری از قبل در حال انجام است.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer نتوانست نصب CLI را کامل کند. پیام نصب‌کننده را در گزارش عیب‌یابی بررسی کنید، سپس دوباره تلاش کنید."
   },
   "he": {
     "설정": "הגדרות",
@@ -9588,7 +9654,10 @@
     "자동 처리": "עיבוד אוטומטי",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "תחילה ייעשה שימוש במודל המהיר, ולאחר מכן רק אזורים לא ודאיים ייבדקו מחדש באמצעות המודל האיכותי יותר.",
     "고품질 모델": "מודל איכותי יותר",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "כ-70MB. ההורדה מתבצעת בפעם הראשונה שנדרש, והוא מפונה מהזיכרון לאחר 5 דקות ללא פעילות."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "כ-70MB. ההורדה מתבצעת בפעם הראשונה שנדרש, והוא מפונה מהזיכרון לאחר 5 דקות ללא פעילות.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "חיבור לשירות תרגום אחר מתבצע כעת. נסה שוב לאחר שיסתיים.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "כבר מתבצעת כניסה לחשבון אחר.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "מתקין האפליקציות של Windows לא הצליח להשלים את התקנת ה-CLI. בדוק את הודעת המתקין ביומן האבחון ולאחר מכן נסה שוב."
   },
   "cs": {
     "설정": "Nastavení",
@@ -10005,6 +10074,9 @@
     "자동 처리": "Automatické zpracování",
     "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Nejprve použije rychlý model a poté znovu zkontroluje pouze nejisté oblasti pomocí kvalitnějšího modelu.",
     "고품질 모델": "Kvalitnější model",
-    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Přibližně 70 MB. Stáhne se při prvním použití a po 5 minutách nečinnosti se uvolní z paměti."
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Přibližně 70 MB. Stáhne se při prvním použití a po 5 minutách nečinnosti se uvolní z paměti.",
+    "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Probíhá připojování k jiné překladatelské službě. Zkuste to znovu po dokončení.",
+    "다른 계정 로그인이 이미 진행 중입니다.": "Již probíhá přihlašování k jinému účtu.",
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Instalační služba aplikací pro Windows nemohla dokončit instalaci CLI. Zkontrolujte zprávu instalační služby v diagnostickém protokolu a zkuste to znovu."
   }
 }

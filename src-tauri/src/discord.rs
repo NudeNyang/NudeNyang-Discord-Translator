@@ -9,7 +9,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
-use crate::cdp::CdpClient;
+use crate::{cdp::CdpClient, diagnostics};
 
 const DISCORD_EXECUTABLES: [&str; 3] = ["Discord.exe", "DiscordPTB.exe", "DiscordCanary.exe"];
 const DISCORD_INSTALLS: [(&str, &str); 3] = [
@@ -134,6 +134,13 @@ pub fn restart_pipe(
         .canonicalize()
         .map_err(|error| format!("Discord 설치 경로를 확인하지 못했습니다: {error}"))?;
     validate_discord_executable(&executable)?;
+    diagnostics::info(
+        "discord-connection",
+        &format!(
+            "secure pipe restart started; expected_pid={expected_process_id:?}; executable={}",
+            executable.display()
+        ),
+    );
     stop_matching_processes(&executable)?;
 
     #[cfg(windows)]
@@ -141,29 +148,64 @@ pub fn restart_pipe(
         let launched = windows_pipe_launcher::launch(&executable)?;
         let process =
             wait_for_restarted_process(&executable, launched.process_id, Duration::from_secs(15))?;
+        diagnostics::info(
+            "discord-connection",
+            &format!(
+                "Discord restarted for secure pipe; process_id={}",
+                process.process_id
+            ),
+        );
         let mut client = CdpClient::from_pipe(launched.reader, launched.writer);
-        let deadline = Instant::now() + Duration::from_secs(30);
-        let mut last_error = "Discord 렌더러가 아직 준비되지 않았습니다.".to_string();
-        let mut connected = false;
-        while Instant::now() < deadline {
-            if !connected {
-                match client.connect() {
-                    Ok(()) => connected = true,
-                    Err(error) => last_error = error,
+        match wait_for_pipe_ready(&mut client, Duration::from_secs(30)) {
+            Ok(()) => {
+                diagnostics::info(
+                    "discord-connection",
+                    &format!(
+                        "secure pipe ready after restart; process_id={}",
+                        process.process_id
+                    ),
+                );
+                return Ok((process, client));
+            }
+            Err(initial_error) => {
+                diagnostics::warn(
+                    "discord-connection",
+                    &format!(
+                        "initial secure pipe handshake failed; process_id={}; error={initial_error}; attempting guardian recovery without another Discord restart",
+                        process.process_id
+                    ),
+                );
+                drop(client);
+                let mut recovered = connect_guarded_pipe(&process).map_err(|recovery_error| {
+                    format_pipe_recovery_failure(&initial_error, &recovery_error)
+                })?;
+                match wait_for_pipe_ready(&mut recovered, Duration::from_secs(15)) {
+                    Ok(()) => {
+                        diagnostics::info(
+                            "discord-connection",
+                            &format!(
+                                "secure pipe recovered through guardian; process_id={}",
+                                process.process_id
+                            ),
+                        );
+                        return Ok((process, recovered));
+                    }
+                    Err(recovery_error) => {
+                        diagnostics::error(
+                            "discord-connection",
+                            &format!(
+                                "guardian secure pipe recovery failed; process_id={}; initial_error={initial_error}; recovery_error={recovery_error}",
+                                process.process_id
+                            ),
+                        );
+                        return Err(format_pipe_recovery_failure(
+                            &initial_error,
+                            &recovery_error,
+                        ));
+                    }
                 }
             }
-            if connected {
-                match client.evaluate("document.documentElement !== null", false) {
-                    Ok(serde_json::Value::Bool(true)) => return Ok((process, client)),
-                    Ok(_) => last_error = "Discord DOM이 아직 준비되지 않았습니다.".to_string(),
-                    Err(error) => last_error = error,
-                }
-            }
-            thread::sleep(Duration::from_millis(200));
         }
-        return Err(format!(
-            "Discord를 다시 열었지만 보안 CDP 파이프가 준비되지 않았습니다. 마지막 오류: {last_error}"
-        ));
     }
 
     #[cfg(not(windows))]
@@ -194,12 +236,62 @@ pub fn connect_or_restart_pipe(
                 "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
             );
         }
-        if let Ok(client) = connect_guarded_pipe(&process) {
-            return Ok((process, client));
+        if let Ok(mut client) = connect_guarded_pipe(&process) {
+            match wait_for_pipe_ready(&mut client, Duration::from_secs(12)) {
+                Ok(()) => {
+                    diagnostics::info(
+                        "discord-connection",
+                        &format!(
+                            "reused existing guardian pipe without Discord restart; process_id={}",
+                            process.process_id
+                        ),
+                    );
+                    return Ok((process, client));
+                }
+                Err(error) => diagnostics::warn(
+                    "discord-connection",
+                    &format!(
+                        "existing guardian pipe was not ready; process_id={}; error={error}",
+                        process.process_id
+                    ),
+                ),
+            }
         }
         return restart_pipe(Some(process.process_id));
     }
     restart_pipe(expected_process_id)
+}
+
+fn wait_for_pipe_ready(client: &mut CdpClient, timeout: Duration) -> Result<(), String> {
+    let deadline = Instant::now() + timeout;
+    let mut last_error = "Discord 렌더러가 아직 준비되지 않았습니다.".to_string();
+    let mut connected = false;
+    while Instant::now() < deadline {
+        if !connected {
+            match client.connect() {
+                Ok(()) => connected = true,
+                Err(error) => last_error = error,
+            }
+        }
+        if connected {
+            match client.evaluate("document.documentElement !== null", false) {
+                Ok(serde_json::Value::Bool(true)) => return Ok(()),
+                Ok(_) => last_error = "Discord DOM이 아직 준비되지 않았습니다.".to_string(),
+                Err(error) => {
+                    last_error = error;
+                    connected = false;
+                }
+            }
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
+    Err(last_error)
+}
+
+fn format_pipe_recovery_failure(initial_error: &str, recovery_error: &str) -> String {
+    format!(
+        "Discord를 다시 열었지만 보안 연결 준비가 완료되지 않았습니다. 자동 재시작은 추가로 수행하지 않았습니다. 초기 연결 오류: {initial_error}; 복구 연결 오류: {recovery_error}"
+    )
 }
 
 fn pipe_restart_lock() -> &'static Mutex<()> {
@@ -945,8 +1037,8 @@ pub fn run_pipe_guardian(
 #[cfg(test)]
 mod tests {
     use super::{
-        discord_debug_arguments, installed_executable_in, is_discord_name,
-        is_main_discord_arguments, validate_discord_executable,
+        discord_debug_arguments, format_pipe_recovery_failure, installed_executable_in,
+        is_discord_name, is_main_discord_arguments, validate_discord_executable,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -958,6 +1050,14 @@ mod tests {
             discord_debug_arguments(),
             ["--force-renderer-accessibility", "--remote-debugging-pipe"]
         );
+    }
+
+    #[test]
+    fn delayed_pipe_recovery_reports_both_handshake_stages_without_requesting_another_restart() {
+        let message = format_pipe_recovery_failure("initial timeout", "guardian timeout");
+        assert!(message.contains("자동 재시작은 추가로 수행하지 않았습니다"));
+        assert!(message.contains("initial timeout"));
+        assert!(message.contains("guardian timeout"));
     }
 
     #[test]
