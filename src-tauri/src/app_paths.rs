@@ -42,8 +42,43 @@ fn migrate_directory(legacy: &Path, current: &Path) -> Result<bool, String> {
         return Ok(true);
     }
 
+    if legacy.join("settings.json").is_file() && !current.join("settings.json").exists() {
+        promote_legacy_directory(legacy, current)?;
+        return Ok(true);
+    }
+
     merge_directory_without_overwrite(legacy, current)?;
     Ok(true)
+}
+
+fn promote_legacy_directory(legacy: &Path, current: &Path) -> Result<(), String> {
+    let parent = current
+        .parent()
+        .ok_or_else(|| "새 데이터 폴더의 상위 경로를 확인하지 못했습니다.".to_string())?;
+    let mut backup = parent.join(format!("{CURRENT_DATA_DIRECTORY}.migration-backup"));
+    let mut suffix = 2;
+    while backup.exists() {
+        backup = parent.join(format!(
+            "{CURRENT_DATA_DIRECTORY}.migration-backup-{suffix}"
+        ));
+        suffix += 1;
+    }
+
+    fs::rename(current, &backup).map_err(|error| {
+        format!(
+            "새 이름으로 먼저 생성된 데이터 폴더를 보존하지 못했습니다 ({}): {error}",
+            current.display()
+        )
+    })?;
+    if let Err(error) = fs::rename(legacy, current) {
+        let _ = fs::rename(&backup, current);
+        return Err(format!(
+            "기존 설정이 있는 데이터 폴더를 새 이름으로 이전하지 못했습니다 ({} -> {}): {error}",
+            legacy.display(),
+            current.display()
+        ));
+    }
+    merge_directory_without_overwrite(&backup, current)
 }
 
 fn merge_directory_without_overwrite(source: &Path, destination: &Path) -> Result<(), String> {
@@ -150,6 +185,34 @@ mod tests {
         assert_eq!(fs::read(current.join("settings.json")).unwrap(), b"current");
         assert_eq!(fs::read(current.join("model.gguf")).unwrap(), b"model");
         assert!(legacy.join("settings.json").exists());
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn legacy_settings_take_priority_over_a_new_cache_created_before_migration() {
+        let root = temporary_root("promote-legacy");
+        let legacy = root.join(LEGACY_DATA_DIRECTORY);
+        let current = root.join(CURRENT_DATA_DIRECTORY);
+        fs::create_dir_all(legacy.join("Cache")).expect("create legacy folder");
+        fs::create_dir_all(current.join("Cache")).expect("create current folder");
+        fs::write(legacy.join("settings.json"), b"legacy settings").expect("write settings");
+        fs::write(legacy.join("Cache/cache.db"), b"legacy history").expect("write legacy cache");
+        fs::write(current.join("Cache/cache.db"), b"empty new cache").expect("write new cache");
+
+        assert!(migrate_directory(&legacy, &current).expect("promote legacy directory"));
+        assert_eq!(
+            fs::read(current.join("settings.json")).unwrap(),
+            b"legacy settings"
+        );
+        assert_eq!(
+            fs::read(current.join("Cache/cache.db")).unwrap(),
+            b"legacy history"
+        );
+        let backup = root.join(format!("{CURRENT_DATA_DIRECTORY}.migration-backup"));
+        assert_eq!(
+            fs::read(backup.join("Cache/cache.db")).unwrap(),
+            b"empty new cache"
+        );
         fs::remove_dir_all(root).expect("remove test root");
     }
 }
