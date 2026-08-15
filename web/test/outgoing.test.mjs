@@ -193,7 +193,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 39/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 40/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
@@ -211,6 +211,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /selectionCoversComposer\(editor\)/);
   assert.match(outgoing, /inputType && !inputType\.startsWith\('delete'\)/);
   assert.match(outgoing, /nt-outgoing-control[\s\S]*nt-display-control/);
+  assert.match(outgoing, /#\$\{ROOT_ID\}\{[^}]*right:32px/);
   assert.match(outgoing, /\.nt-controls-row\{[^}]*flex-direction:column/);
   assert.match(outgoing, /\.nt-outgoing-status\{[^}]*order:-1/);
   assert.match(outgoing, /outgoingLanguage:'전송'/);
@@ -225,7 +226,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /class="nt-role-icon nt-display-icon" aria-hidden="true">↓/);
   assert.match(outgoing, /\.nt-outgoing-control\{--nt-role-accent:#8ab7df[^}]*--nt-icon-surface:#313842[^}]*--nt-icon-text:#8ab7df/);
   assert.match(outgoing, /\.nt-display-control\{--nt-role-accent:#d7a47e[^}]*--nt-icon-surface:#3d342f[^}]*--nt-icon-text:#d7a47e/);
-  assert.match(outgoing, /\.nt-outgoing-trigger,#\$\{ROOT_ID\} \.nt-display-trigger\{[^}]*width:68px[^}]*height:32px[^}]*gap:7px[^}]*padding:0 7px 0 4px[^}]*border-radius:10px[^}]*background:#25272cf2/);
+  assert.match(outgoing, /\.nt-outgoing-trigger,#\$\{ROOT_ID\} \.nt-display-trigger\{[^}]*width:72px[^}]*height:36px[^}]*gap:7px[^}]*padding:0 8px 0 4px[^}]*border-radius:15px[^}]*background:linear-gradient\(145deg,#353d49f2,#20252cf7\)[^}]*box-shadow:0 8px 22px #0006,inset 0 1px #ffffff26/);
   assert.match(outgoing, /\.nt-role-icon\{[^}]*width:22px[^}]*height:22px[^}]*border-radius:7px[^}]*background:var\(--nt-icon-surface\)[^}]*font-size:11px/);
   assert.doesNotMatch(outgoing, /\.nt-(?:outgoing|display)-trigger::after/);
   assert.match(outgoing, /\.nt-outgoing-trigger\[aria-expanded="true"\],[\s\S]*?\.nt-display-trigger\[aria-expanded="true"\]\{[^}]*filter:none[^}]*transform:none/);

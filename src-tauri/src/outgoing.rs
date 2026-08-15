@@ -33,7 +33,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 39;
+  const CONTROLLER_VERSION = 40;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
@@ -466,7 +466,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
-      #${ROOT_ID}{position:fixed;right:18px;bottom:82px;z-index:2147483000;display:flex;max-width:calc(100vw - 32px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:2147483000;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
       #${ROOT_ID},#${ROOT_ID} *{box-sizing:border-box}
       #${ROOT_ID} [hidden]{display:none!important}
       #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
@@ -475,11 +475,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-control{--nt-role-accent:#8ab7df;--nt-role-accent-deep:#5d7f9d;--nt-role-text:#f2f3f5;--nt-role-muted:#a9b7c4;--nt-icon-surface:#313842;--nt-icon-text:#8ab7df}
       #${ROOT_ID} .nt-display-control{--nt-role-accent:#d7a47e;--nt-role-accent-deep:#9a6c4d;--nt-role-text:#f2f3f5;--nt-role-muted:#c4b0a2;--nt-icon-surface:#3d342f;--nt-icon-text:#d7a47e}
       #${ROOT_ID}[data-open-menu="outgoing"] .nt-display-control,#${ROOT_ID}[data-open-menu="display"] .nt-outgoing-control{display:none}
-      #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{position:relative;z-index:4;display:flex;width:68px;height:32px;align-items:center;gap:7px;padding:0 7px 0 4px;overflow:hidden;border:1px solid #383a40;border-radius:10px;background:#25272cf2;box-shadow:0 3px 9px #00000040;color:var(--nt-role-text);backdrop-filter:blur(10px);transition:transform 140ms cubic-bezier(.2,.8,.2,1),background-color 140ms ease,border-color 140ms ease}
-      #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:#4d5058;background:#2b2d31;filter:none;transform:translateY(-1px)}
+      #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{position:relative;z-index:4;display:flex;width:72px;height:36px;align-items:center;gap:7px;padding:0 8px 0 4px;overflow:hidden;border:1px solid #ffffff26;border-radius:15px;background:linear-gradient(145deg,#353d49f2,#20252cf7);box-shadow:0 8px 22px #0006,inset 0 1px #ffffff26;color:var(--nt-role-text);backdrop-filter:blur(18px) saturate(135%);transition:transform 140ms cubic-bezier(.2,.8,.2,1),background 140ms ease,border-color 140ms ease,box-shadow 140ms ease}
+      #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:#ffffff3d;background:linear-gradient(145deg,#3d4654f5,#252b34fa);box-shadow:0 10px 26px #0007,inset 0 1px #ffffff30;filter:none;transform:translateY(-1px)}
       #${ROOT_ID} .nt-outgoing-trigger:active,#${ROOT_ID} .nt-display-trigger:active{transform:translateY(0) scale(.98)}
       #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-icon-text) 42%,transparent);outline-offset:2px}
-      #${ROOT_ID} .nt-outgoing-trigger[aria-expanded="true"],#${ROOT_ID} .nt-display-trigger[aria-expanded="true"]{border-color:#4d5058;background:#2b2d31;filter:none;transform:none}
+      #${ROOT_ID} .nt-outgoing-trigger[aria-expanded="true"],#${ROOT_ID} .nt-display-trigger[aria-expanded="true"]{border-color:color-mix(in srgb,var(--nt-role-accent) 44%,#ffffff26);background:linear-gradient(145deg,#3b4451f5,#242a32fa);box-shadow:0 10px 28px #0008,inset 0 1px #ffffff30;filter:none;transform:none}
       #${ROOT_ID} .nt-role-icon{display:inline-flex;width:22px;height:22px;flex:none;align-items:center;justify-content:center;border:0;border-radius:7px;background:var(--nt-icon-surface);box-shadow:inset 0 1px #ffffff0d;color:var(--nt-icon-text);font-size:11px;font-weight:700;line-height:1}
       #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
       #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;z-index:3;right:0;bottom:0;width:274px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:8px 8px 48px;border:1px solid #ffffff26;border-radius:34px;background:linear-gradient(145deg,#353d49f2,#171c23f7);box-shadow:0 25px 60px #0008,inset 0 1px #ffffff2e;color:var(--text-normal,#dbdee1);backdrop-filter:blur(26px) saturate(140%);transform-origin:bottom right;animation:nt-language-menu-enter 180ms cubic-bezier(.16,1,.3,1)}
@@ -514,7 +514,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-status{order:-1;max-width:270px;margin:0 0 6px;padding:7px 9px;border-radius:7px;background:var(--background-floating,#111214);box-shadow:0 4px 16px #0008;white-space:pre-line}
       #${ROOT_ID} .nt-outgoing-status[data-error="true"]{color:#ff9ca3}
       @media (prefers-reduced-motion:reduce){#${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger,#${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu,#${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{animation:none;transition:none}}
-      @media (prefers-reduced-transparency:reduce){#${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{background:#25272c;backdrop-filter:none}#${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{background:#202630;backdrop-filter:none}}
+      @media (prefers-reduced-transparency:reduce){#${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{background:#252b34;backdrop-filter:none}#${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{background:#202630;backdrop-filter:none}}
     `;
     document.head.append(style);
     document.body.append(root);
