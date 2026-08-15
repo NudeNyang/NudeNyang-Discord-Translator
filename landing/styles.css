@@ -416,6 +416,17 @@ summary:focus-visible {
   text-wrap: balance;
 }
 
+:lang(ko) .hero h1,
+:lang(ko) .section h2,
+:lang(ko) .privacy-section h2,
+:lang(ko) .download-section h2 {
+  word-break: keep-all;
+}
+
+:lang(ja) {
+  word-break: auto-phrase;
+}
+
 .hero h1 {
   font-size: clamp(44px, 4.5vw, 62px);
 }

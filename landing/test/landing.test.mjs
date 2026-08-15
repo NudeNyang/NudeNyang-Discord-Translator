@@ -34,6 +34,8 @@ test("기존 앱의 색상 토큰과 반응형 규칙을 사용한다", () => {
   assert.match(css, /min-height:\s*calc\(100dvh/);
   assert.match(css, /@media \(max-width: 720px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /:lang\(ko\)[^{]*h2[^}]*word-break:\s*keep-all/s);
+  assert.match(css, /:lang\(ja\)[^{]*\{[^}]*word-break:\s*auto-phrase/s);
 });
 
 test("테마, 모바일 메뉴와 스크롤 공개 동작을 제공한다", () => {
@@ -88,6 +90,18 @@ test("중국어 간체와 번체 선택값이 서로 섞이지 않는다", () =>
 test("사용자 노출 문구에 금지된 대시 문자가 없다", () => {
   assert.equal(/[—–]/u.test(html), false);
   assert.equal(/[—–]/u.test(JSON.stringify(LANDING_LOCALES)), false);
+});
+
+test("별도 번역기를 사용하지 않아도 된다는 제목을 언어별로 자연스럽게 표시한다", () => {
+  const workflowTitle = "번역하려고 별도의 번역기를 켤 필요가 없습니다.";
+  const japaneseTitle = LANDING_LOCALES.ja[workflowTitle];
+
+  assert.equal(LANDING_LOCALES.ko[workflowTitle], workflowTitle);
+  assert.equal(japaneseTitle.replaceAll("\u2060", ""), "翻訳のために別の翻訳アプリを開く必要はありません。");
+  assert.match(japaneseTitle, /翻\u2060訳\u2060ア\u2060プ\u2060リ\u2060を/u);
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.doesNotMatch(LANDING_LOCALES[locale][workflowTitle], /Discord/u);
+  }
 });
 
 test("페이지 UI 번역이 28개 언어에 빠짐없이 제공된다", () => {
