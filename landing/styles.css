@@ -460,50 +460,27 @@ summary:focus-visible {
 }
 
 .supported-languages {
-  padding-block: clamp(58px, 7vw, 88px);
+  padding-block: 48px;
   border-block: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
 .supported-languages-layout {
   display: grid;
-  grid-template-columns: minmax(150px, 0.24fr) minmax(0, 1fr);
-  column-gap: clamp(32px, 5vw, 72px);
-  row-gap: 30px;
+  grid-template-columns: 1fr;
+  align-items: start;
+  row-gap: 16px;
 }
 
 .supported-language-label {
-  margin: 9px 0 0;
-  color: var(--muted);
-  font-size: 15px;
-  font-weight: 720;
-}
-
-.supported-language-copy {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 32px;
-}
-
-.supported-language-copy h2 {
-  max-width: 560px;
   margin: 0;
-  font-size: clamp(30px, 3.2vw, 44px);
-  letter-spacing: -0.045em;
-  line-height: 1.12;
-}
-
-.supported-language-copy p {
-  max-width: 390px;
-  margin: 0 0 4px;
   color: var(--muted);
-  line-height: 1.65;
+  font-size: 14px;
+  font-weight: 680;
 }
 
 .supported-language-grid {
   display: grid;
-  grid-column: 2;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
@@ -513,18 +490,17 @@ summary:focus-visible {
 }
 
 .supported-language-button {
-  position: relative;
-  display: grid;
-  place-content: center;
-  gap: 2px;
-  min-height: 68px;
-  padding: 10px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  padding: 8px 10px;
   border: 0;
   color: var(--muted);
   background: var(--surface-raised);
   cursor: pointer;
   text-align: center;
-  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  transition: color 150ms ease, background-color 150ms ease;
 }
 
 .supported-language-button span {
@@ -532,13 +508,6 @@ summary:focus-visible {
   font-weight: 700;
   line-height: 1.3;
   text-wrap: balance;
-}
-
-.supported-language-button small {
-  color: color-mix(in srgb, currentColor 68%, transparent);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.05em;
 }
 
 .supported-language-button:hover {
@@ -554,7 +523,6 @@ summary:focus-visible {
   z-index: 1;
   color: var(--accent-ink);
   background: var(--accent-soft);
-  box-shadow: inset 0 -3px 0 var(--accent);
 }
 
 .fact-band {
@@ -1019,12 +987,6 @@ summary:focus-visible {
     transform: none;
   }
 
-  .supported-language-copy {
-    display: grid;
-    align-items: start;
-    gap: 12px;
-  }
-
   .supported-language-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -1100,29 +1062,30 @@ html[dir="rtl"] .theme-toggle {
   }
 
   .supported-languages {
-    padding-block: 64px;
+    padding-block: 44px;
   }
 
   .supported-languages-layout {
     grid-template-columns: 1fr;
-    row-gap: 18px;
+    row-gap: 14px;
   }
 
   .supported-language-label {
     margin-top: 0;
   }
 
-  .supported-language-copy {
-    margin-bottom: 12px;
-  }
-
   .supported-language-grid {
-    grid-column: 1;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-color: color-mix(in srgb, var(--accent) 40%, transparent) transparent;
+    scrollbar-width: thin;
   }
 
   .supported-language-button {
-    min-height: 60px;
+    flex: 0 0 138px;
+    min-height: 54px;
+    scroll-snap-align: start;
   }
 
   .fact-grid {

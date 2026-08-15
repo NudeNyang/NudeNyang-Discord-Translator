@@ -95,17 +95,15 @@ function renderLanguageOptions(filter = "") {
 
 function renderSupportedLanguages() {
   supportedLanguageGrid.replaceChildren(
-    ...LANGUAGE_OPTIONS.map(([code, label, compact, english]) => {
+    ...LANGUAGE_OPTIONS.map(([code, label, , english]) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "supported-language-button";
       button.dataset.locale = code;
       button.setAttribute("aria-label", `${label}, ${english}`);
       const labelNode = document.createElement("span");
-      const compactNode = document.createElement("small");
       labelNode.textContent = label;
-      compactNode.textContent = compact;
-      button.append(labelNode, compactNode);
+      button.append(labelNode);
       return button;
     }),
   );

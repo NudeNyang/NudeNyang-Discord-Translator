@@ -66,8 +66,6 @@ const overrides = {
     "지원": "Support",
     "작동 방식 보기": "See how it works",
     "앱 지원 언어": "Supported UI languages",
-    "28개 UI 언어를 지원합니다.": "Choose from 28 interface languages.",
-    "언어를 선택하면 페이지 전체가 바로 해당 언어로 바뀝니다.": "Select a language to update the entire page instantly.",
   },
 };
 

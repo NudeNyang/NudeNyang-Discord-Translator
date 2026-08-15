@@ -39,9 +39,21 @@ test("테마, 모바일 메뉴와 스크롤 공개 동작을 제공한다", () =
 test("메인 화면에서 28개 지원 언어를 선택해 UI 언어를 바꿀 수 있다", () => {
   assert.match(html, /id="supported-languages"/);
   assert.match(html, /class="[^"]*supported-language-grid[^"]*"/);
+  assert.doesNotMatch(html, /28개 UI 언어를 지원합니다/);
+  assert.doesNotMatch(html, /언어를 선택하면 페이지 전체/);
+  assert.match(css, /\.supported-languages-layout\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(script, /renderSupportedLanguages/);
   assert.match(script, /supportedLanguageGrid\.addEventListener\("click"/);
   assert.match(script, /applyLocale\(option\.dataset\.locale\)/);
+  assert.doesNotMatch(script, /compactNode/);
+});
+
+test("중국어 간체 선택값과 번역 데이터가 올바르게 연결된다", () => {
+  const simplifiedChinese = LANGUAGE_OPTIONS.find(([code]) => code === "zh");
+  assert.equal(simplifiedChinese[1], "简体中文");
+  assert.equal(simplifiedChinese[3], "Simplified Chinese");
+  assert.notEqual(LANDING_LOCALES.zh["Discord는 그대로,"], LANDING_LOCALES.ko["Discord는 그대로,"]);
+  assert.match(script, /normalizeLocale\(locale\)/);
 });
 
 test("사용자 노출 문구에 금지된 대시 문자가 없다", () => {
