@@ -61,11 +61,16 @@ const overrides = {
     "Discord는 그대로,": "Discord stays the same,",
     "대화는 내 언어로.": "the conversation is in my language.",
     "메시지와 채널명, 이미지 속 글자까지 Discord 화면 안에서 바로 번역합니다.": "Translate messages, channel names, and text in images directly inside Discord.",
+    "번역하려고 Discord를 오갈 필요가 없습니다.": "No need to leave Discord to translate.",
+    "메시지와 답장은 물론, 이미지 속 글자까지 Discord 화면에서 바로 번역합니다.": "Translate messages, replies, and text in images right inside Discord.",
     "어둡게": "Dark",
     "밝게": "Light",
     "지원": "Support",
     "작동 방식 보기": "See how it works",
     "앱 지원 언어": "Supported UI languages",
+  },
+  zh: {
+    "아닙니다. 이미지의 글자는 PC에서 인식하며 선택한 외부 번역기에는 추출된 텍스트만 전달합니다.": "不会。图像中的文本由 PC 识别，并且仅将提取的文本传递给选定的外部翻译器。",
   },
 };
 
