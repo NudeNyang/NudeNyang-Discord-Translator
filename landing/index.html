@@ -61,14 +61,22 @@
           </div>
         </div>
 
-        <!-- TODO: 1600x1200 또는 4:3 비율의 실제 Discord 번역 영상으로 교체합니다. -->
-        <div class="media-stage hero-media reveal" data-media-slot="hero" role="img" aria-label="Discord 번역 전후 영상을 넣을 자리">
-          <div class="media-slot-copy">
-            <strong data-i18n>히어로 영상</strong>
-            <span data-i18n>Discord 번역 전후 화면</span>
-            <small data-i18n>권장 1600 × 1200, MP4 또는 WebM</small>
-          </div>
-        </div>
+        <video
+          class="media-stage hero-media reveal"
+          data-media-slot="hero"
+          data-hero-video
+          muted
+          loop
+          playsinline
+          controls
+          controlslist="nodownload noremoteplayback"
+          disablepictureinpicture
+          preload="metadata"
+          poster="./assets/hero-discord-translation-poster.jpg"
+          aria-label="Discord 번역 전후 화면"
+        >
+          <source src="./assets/hero-discord-translation.mp4" type="video/mp4" />
+        </video>
       </section>
 
       <section class="supported-languages" id="supported-languages" aria-labelledby="supported-languages-title">

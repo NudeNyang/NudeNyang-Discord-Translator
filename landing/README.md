@@ -24,12 +24,14 @@ npm run landing:locales
 
 HTML에서 `data-media-slot`을 검색하면 교체할 위치를 확인할 수 있습니다.
 
-- `hero`: Discord 번역 전후 영상, 1600 × 1200 또는 4:3
+- `hero`: `assets/hero-discord-translation.mp4`를 사용하며, 포스터는 `assets/hero-discord-translation-poster.jpg`입니다.
 - `workflow`: 수신 번역부터 답장 전송까지의 사용 영상, 1920 × 1080
 - `image-translation`: 이미지 번역 전후 사진, 1200 × 900
 - `settings`: 라이트 모드 설정 화면, 1600 × 1000
 
-각 슬롯의 `div.media-stage`를 `video` 또는 `picture` 요소로 교체합니다. 기존 `media-stage` 클래스와 비율 클래스를 유지하면 레이아웃과 모서리 규칙이 그대로 적용됩니다.
+나머지 슬롯의 `div.media-stage`는 `video` 또는 `picture` 요소로 교체합니다. 기존 `media-stage` 클래스와 비율 클래스를 유지하면 레이아웃과 모서리 규칙이 그대로 적용됩니다.
+
+히어로 영상은 모션 줄이기 설정이 꺼져 있을 때 무음으로 자동 재생되며, 탭이 보이지 않거나 모션 줄이기 설정이 켜지면 일시 정지됩니다.
 
 ## 배포 전 확인
 

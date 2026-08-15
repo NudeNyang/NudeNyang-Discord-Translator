@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "../locales.generated.mjs";
 import { normalizeLocale } from "../locale-utils.mjs";
@@ -24,6 +24,24 @@ test("히어로에는 다운로드 CTA만 노출한다", () => {
   assert.match(html, /class="button primary"[^>]*>Windows 베타 다운로드<\/a>/);
   assert.doesNotMatch(html, /class="button secondary"[^>]*href="#how-it-works"/);
   assert.doesNotMatch(html, />작동 방식 보기<\/a>/);
+});
+
+test("히어로에서 실제 번역 영상을 재생한다", async () => {
+  assert.match(html, /<video\b[^>]*class="media-stage hero-media reveal"[^>]*data-media-slot="hero"[^>]*data-hero-video/s);
+  assert.match(html, /<source src="\.\/assets\/hero-discord-translation\.mp4" type="video\/mp4"\s*\/>/);
+  assert.match(html, /<video\b[^>]*muted[^>]*loop[^>]*playsinline[^>]*controls/s);
+  assert.match(html, /<video\b[^>]*preload="metadata"/s);
+  assert.match(html, /<video\b[^>]*poster="\.\/assets\/hero-discord-translation-poster\.jpg"/s);
+  assert.match(css, /\.hero-media\s*\{[^}]*object-fit:\s*cover/s);
+  assert.match(script, /prefers-reduced-motion:\s*reduce/);
+  assert.match(script, /heroVideo\.play\(\)/);
+
+  const [video, poster] = await Promise.all([
+    stat(new URL("../assets/hero-discord-translation.mp4", import.meta.url)),
+    stat(new URL("../assets/hero-discord-translation-poster.jpg", import.meta.url)),
+  ]);
+  assert.ok(video.size > 1_000_000, "히어로 MP4 파일이 필요합니다.");
+  assert.ok(poster.size > 10_000, "히어로 포스터 이미지가 필요합니다.");
 });
 
 test("기존 앱의 색상 토큰과 반응형 규칙을 사용한다", () => {

@@ -14,9 +14,22 @@ const languageSearch = document.querySelector("#language-search");
 const languageOptions = document.querySelector(".language-options");
 const languageEmpty = document.querySelector(".language-empty");
 const supportedLanguageGrid = document.querySelector(".supported-language-grid");
+const heroVideo = document.querySelector("[data-hero-video]");
 const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+const reduceMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 const translationNodes = [...document.querySelectorAll("[data-i18n]")];
 const placeholderNodes = [...document.querySelectorAll("[data-i18n-placeholder]")];
+
+function syncHeroVideoPlayback() {
+  if (!heroVideo) return;
+  if (reduceMotionPreference.matches || document.hidden) {
+    heroVideo.pause();
+    return;
+  }
+
+  heroVideo.muted = true;
+  heroVideo.play().catch(() => {});
+}
 
 translationNodes.forEach((node) => {
   node.dataset.i18nSource = node.textContent.trim();
@@ -142,6 +155,10 @@ systemTheme.addEventListener("change", () => {
   if (!root.dataset.theme) updateThemeControl();
 });
 
+reduceMotionPreference.addEventListener("change", syncHeroVideoPlayback);
+document.addEventListener("visibilitychange", syncHeroVideoPlayback);
+syncHeroVideoPlayback();
+
 menuButton.addEventListener("click", () => {
   const isOpen = menu.classList.toggle("is-open");
   menuButton.setAttribute("aria-expanded", String(isOpen));
@@ -190,7 +207,7 @@ document.addEventListener("keydown", (event) => {
   languageTrigger.focus();
 });
 
-const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reduceMotion = reduceMotionPreference.matches;
 const revealItems = document.querySelectorAll(".reveal");
 
 if (reduceMotion || !("IntersectionObserver" in window)) {

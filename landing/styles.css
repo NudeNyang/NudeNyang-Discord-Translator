@@ -477,7 +477,10 @@ summary:focus-visible {
 }
 
 .hero-media {
+  width: 100%;
   aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #111016;
   transform: rotate(1.2deg);
 }
 
