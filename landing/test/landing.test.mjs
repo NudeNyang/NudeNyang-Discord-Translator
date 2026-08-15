@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "../locales.generated.mjs";
+import { normalizeLocale } from "../locale-utils.mjs";
 
 const baseUrl = new URL("../", import.meta.url);
 const [html, css, script] = await Promise.all([
@@ -48,12 +49,17 @@ test("메인 화면에서 28개 지원 언어를 선택해 UI 언어를 바꿀 �
   assert.doesNotMatch(script, /compactNode/);
 });
 
-test("중국어 간체 선택값과 번역 데이터가 올바르게 연결된다", () => {
+test("중국어 간체와 번체 선택값이 서로 섞이지 않는다", () => {
   const simplifiedChinese = LANGUAGE_OPTIONS.find(([code]) => code === "zh");
   assert.equal(simplifiedChinese[1], "简体中文");
   assert.equal(simplifiedChinese[3], "Simplified Chinese");
   assert.notEqual(LANDING_LOCALES.zh["Discord는 그대로,"], LANDING_LOCALES.ko["Discord는 그대로,"]);
-  assert.match(script, /normalizeLocale\(locale\)/);
+  assert.equal(normalizeLocale("zh"), "zh");
+  assert.equal(normalizeLocale("zh-CN"), "zh");
+  assert.equal(normalizeLocale("zh-Hans"), "zh");
+  assert.equal(normalizeLocale("zh-Hant"), "zh-Hant");
+  assert.equal(normalizeLocale("zh-TW"), "zh-Hant");
+  assert.equal(normalizeLocale("zh-HK"), "zh-Hant");
 });
 
 test("사용자 노출 문구에 금지된 대시 문자가 없다", () => {

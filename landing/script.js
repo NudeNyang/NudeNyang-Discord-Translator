@@ -1,4 +1,5 @@
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "./locales.generated.mjs";
+import { normalizeLocale } from "./locale-utils.mjs";
 
 const root = document.documentElement;
 const themeButton = document.querySelector(".theme-toggle");
@@ -20,19 +21,6 @@ const placeholderNodes = [...document.querySelectorAll("[data-i18n-placeholder]"
 translationNodes.forEach((node) => {
   node.dataset.i18nSource = node.textContent.trim();
 });
-
-function normalizeLocale(locale) {
-  if (!locale) return null;
-  const normalized = locale.replace("_", "-");
-  if (normalized.toLowerCase() === "zh-tw" || normalized.toLowerCase() === "zh-hk") return "zh-Hant";
-  if (normalized.toLowerCase().startsWith("zh")) return "zh";
-  if (normalized.toLowerCase().startsWith("pt")) return "pt-BR";
-  if (normalized.toLowerCase().startsWith("es")) return "es-419";
-  const exact = LANGUAGE_OPTIONS.find(([code]) => code.toLowerCase() === normalized.toLowerCase());
-  if (exact) return exact[0];
-  const base = normalized.split("-")[0].toLowerCase();
-  return LANGUAGE_OPTIONS.find(([code]) => code.split("-")[0].toLowerCase() === base)?.[0] || null;
-}
 
 function initialLocale() {
   const saved = normalizeLocale(window.localStorage.getItem("landing-locale"));
