@@ -32,7 +32,6 @@ function Resolve-VcRuntimeDirectory {
     }
     return $selected.DirectoryName
 }
-
 function Copy-VcRuntimeFiles {
     param([Parameter(Mandatory)][string]$DestinationDirectory)
 
@@ -47,4 +46,3 @@ function Copy-VcRuntimeFiles {
     }
     Write-Host "Microsoft Visual C++ x64 앱 로컬 런타임 포함 완료: $DestinationDirectory"
 }
-
