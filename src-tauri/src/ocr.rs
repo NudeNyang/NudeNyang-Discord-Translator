@@ -482,6 +482,7 @@ fn recognize_regions(
                 text: vertical.text.clone(),
                 confidence: f64::from(vertical.confidence),
             });
+            candidates.extend(recognize_vertical_glyphs(recognizer, region, engine_name)?);
         }
         let (best, language) = selector.choose(&candidates);
         lines.push(TextLine {
@@ -495,6 +496,95 @@ fn recognize_regions(
     }
     lines.sort_by(line_order);
     Ok(lines)
+}
+
+fn recognize_vertical_glyphs(
+    recognizer: &mut RecOnlyEngine,
+    region: &DetectedRegion,
+    engine_name: &str,
+) -> Result<Vec<RecognitionCandidate>, String> {
+    let mut candidates = Vec::new();
+    let maximum_columns = (region.crop.width() / 18).clamp(1, 3);
+    for columns in 1..=maximum_columns {
+        let crops = vertical_glyph_crops(&region.crop, columns);
+        if crops.len() < 2 {
+            continue;
+        }
+        let expected = crops.len();
+        let recognized = recognizer
+            .recognize_batch(&crops)
+            .map_err(|error| format!("PP-OCRv6 세로 글자 분할 인식에 실패했습니다: {error}"))?;
+        let useful = recognized
+            .into_iter()
+            .filter(|result| {
+                result.confidence >= 0.32 && result.text.chars().any(is_japanese_or_han_character)
+            })
+            .collect::<Vec<_>>();
+        if useful.len() < 2 || useful.len() * 2 < expected {
+            continue;
+        }
+        let text = useful
+            .iter()
+            .map(|result| result.text.trim())
+            .collect::<String>();
+        let east_asian = text
+            .chars()
+            .filter(|value| is_japanese_or_han_character(*value))
+            .count();
+        if east_asian < 2 {
+            continue;
+        }
+        let coverage = useful.len() as f64 / expected as f64;
+        let confidence = useful
+            .iter()
+            .map(|result| f64::from(result.confidence))
+            .sum::<f64>()
+            / useful.len() as f64
+            * coverage.sqrt();
+        candidates.push(RecognitionCandidate {
+            engine: format!("{engine_name}-vertical-glyphs-{columns}col"),
+            text,
+            // A structurally valid upright-glyph sequence is more reliable than a
+            // whole-column crop whose characters were rotated sideways.
+            confidence: (confidence + 0.12).min(1.0),
+        });
+    }
+    Ok(candidates)
+}
+
+fn vertical_glyph_crops(image: &DynamicImage, columns: u32) -> Vec<DynamicImage> {
+    if columns == 0 || image.width() == 0 || image.height() == 0 {
+        return Vec::new();
+    }
+    let cell_width = (image.width() as f64 / f64::from(columns)).max(1.0);
+    let rows = (f64::from(image.height()) / cell_width)
+        .round()
+        .clamp(2.0, 24.0) as u32;
+    let mut crops = Vec::with_capacity((columns * rows) as usize);
+    // Traditional Japanese columns are read from right to left, and each column
+    // is read from top to bottom. Keep every glyph upright for the recognizer.
+    for column in (0..columns).rev() {
+        let left = image.width() * column / columns;
+        let right = image.width() * (column + 1) / columns;
+        for row in 0..rows {
+            let top = image.height() * row / rows;
+            let bottom = image.height() * (row + 1) / rows;
+            crops.push(image.crop_imm(
+                left,
+                top,
+                right.saturating_sub(left).max(1),
+                bottom.saturating_sub(top).max(1),
+            ));
+        }
+    }
+    crops
+}
+
+fn is_japanese_or_han_character(character: char) -> bool {
+    matches!(
+        character as u32,
+        0x3040..=0x30ff | 0x31f0..=0x31ff | 0x3400..=0x4dbf | 0x4e00..=0x9fff | 0xf900..=0xfaff
+    )
 }
 
 fn is_vertical_region(region: &DetectedRegion) -> bool {
@@ -908,8 +998,8 @@ fn default_model_root() -> PathBuf {
 mod tests {
     use super::{
         is_vertical_region, medium_retry_plan, merge_text_lines, polygon_overlap_ratio,
-        recognition_crop, DetectedRegion, Language, MediumRetryPlan, OcrQualityMode, Point, Rect,
-        TextLine, MEDIUM_MODEL_ASSETS, MODEL_ASSETS, MODEL_REVISION,
+        recognition_crop, vertical_glyph_crops, DetectedRegion, Language, MediumRetryPlan,
+        OcrQualityMode, Point, Rect, TextLine, MEDIUM_MODEL_ASSETS, MODEL_ASSETS, MODEL_REVISION,
     };
     use std::collections::BTreeMap;
     use std::fmt::Write as _;
@@ -1022,6 +1112,27 @@ mod tests {
         let rotated = recognition_crop(&region).to_rgba8();
         assert_eq!(rotated.dimensions(), (5, 2));
         assert_eq!(rotated.get_pixel(0, 1), &image::Rgba([255, 0, 0, 255]));
+    }
+
+    #[test]
+    fn vertical_glyph_crops_keep_glyphs_upright_and_use_japanese_column_order() {
+        let mut pixels = image::RgbaImage::new(40, 80);
+        pixels.put_pixel(20, 0, image::Rgba([255, 0, 0, 255]));
+        pixels.put_pixel(0, 0, image::Rgba([0, 0, 255, 255]));
+        let image = image::DynamicImage::ImageRgba8(pixels);
+
+        let crops = vertical_glyph_crops(&image, 2);
+
+        assert_eq!(crops.len(), 8);
+        assert_eq!((crops[0].width(), crops[0].height()), (20, 20));
+        assert_eq!(
+            crops[0].to_rgba8().get_pixel(0, 0),
+            &image::Rgba([255, 0, 0, 255])
+        );
+        assert_eq!(
+            crops[4].to_rgba8().get_pixel(0, 0),
+            &image::Rgba([0, 0, 255, 255])
+        );
     }
 
     #[test]

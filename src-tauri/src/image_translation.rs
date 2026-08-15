@@ -18,7 +18,7 @@ use crate::ocr::{OcrQualityMode, PaddleDualOcr, Point, Rect, TextLine};
 use crate::translation::TranslationService;
 use crate::ui_locale::generated_copies;
 
-const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v2-vertical-original-resolution";
+const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v3-vertical-glyphs-hires-upgrade";
 
 pub const IMAGE_UI_SCRIPT: &str = r##"
 (() => {
@@ -41,7 +41,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v6-original-resolution';
+  const version = 'rust-image-ui-v7-resolution-aware';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -64,6 +64,10 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   window.__ntImageVisibility ||= {};
   window.__ntImageEnabled = true;
 
+  const translationRecord = value => typeof value === 'string'
+    ? {src:value, width:0, height:0}
+    : {src:String(value?.src || ''), width:Number(value?.width || 0), height:Number(value?.height || 0)};
+
   const sourceKey = source => {
     if (!source) return '';
     try {
@@ -78,10 +82,11 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     if (!source || source.startsWith('data:') || source.startsWith('blob:')) return source || '';
     try {
       const url = new URL(source, location.href);
-      if (/\/attachments\//i.test(url.pathname) && /^(?:media|cdn)\.discordapp\.(?:net|com)$/i.test(url.hostname)) {
-        if (url.hostname.toLowerCase() === 'media.discordapp.net') url.hostname = 'cdn.discordapp.com';
+      if (/^(?:media|cdn|images-ext-\d+)\.discordapp\.(?:net|com)$/i.test(url.hostname)) {
+        if (/\/attachments\//i.test(url.pathname) && url.hostname.toLowerCase() === 'media.discordapp.net') url.hostname = 'cdn.discordapp.com';
         for (const name of ['width','height','format','quality']) url.searchParams.delete(name);
       }
+      if (/^pbs\.twimg\.com$/i.test(url.hostname)) url.searchParams.set('name', 'orig');
       return url.href;
     } catch (_) { return source; }
   };
@@ -277,11 +282,24 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     if (!eligible(img)) continue;
     const original = img.dataset.ntOriginalSrc || img.currentSrc || img.src || '';
     const key = img.dataset.ntSourceKey || sourceKey(original);
-    const translated = window.__ntTranslatedImages[key];
-    if (!translated) continue;
-    ensure(img); img.dataset.ntTranslatedSrc = translated;
+    const record = translationRecord(window.__ntTranslatedImages[key]);
+    if (!record.src) continue;
+    ensure(img);
+    const rect = img.getBoundingClientRect();
+    const pixelRatio = Math.max(1, Number(devicePixelRatio || 1));
+    const requiredWidth = Math.max(Number(img.naturalWidth || 0), Math.ceil(rect.width * pixelRatio));
+    const requiredHeight = Math.max(Number(img.naturalHeight || 0), Math.ceil(rect.height * pixelRatio));
+    const needsUpgrade = inViewer(img) && img.dataset.ntResolutionUpgradeTried !== 'true' &&
+      (!record.width || !record.height || requiredWidth > record.width * 1.18 || requiredHeight > record.height * 1.18);
+    if (needsUpgrade) {
+      img.dataset.ntResolutionUpgradeTried = 'true';
+      img.dataset.ntImageStatus = 'processing';
+      window.__ntImageRequests.push({id:img.dataset.ntImageId, sourceKey:key});
+      continue;
+    }
+    img.dataset.ntTranslatedSrc = record.src;
     if (window.__ntImageVisibility[key] !== 'hidden') {
-      img.removeAttribute('srcset'); img.src = translated; img.dataset.ntImageStatus = 'translated';
+      img.removeAttribute('srcset'); img.src = record.src; img.dataset.ntImageStatus = 'translated';
     } else img.dataset.ntImageStatus = 'translated-hidden';
   }
   return window.__ntImageRequests.splice(0);
@@ -607,7 +625,14 @@ pub fn apply_image_result_script(
           const img = document.querySelector(`[data-nt-image-id="${{CSS.escape(id)}}"]`);
           const key = requestedKey || img?.dataset.ntSourceKey || window.__ntImageSourceKey?.(img?.dataset.ntOriginalSrc || '') || '';
           window.__ntTranslatedImages ||= {{}}; window.__ntImageVisibility ||= {{}};
-          if (key) {{ window.__ntTranslatedImages[key]=src; window.__ntImageVisibility[key]='visible'; }}
+          if (key) {{
+            window.__ntTranslatedImages[key]={{
+              src,
+              width:Number(preload.naturalWidth || 0),
+              height:Number(preload.naturalHeight || 0)
+            }};
+            window.__ntImageVisibility[key]='visible';
+          }}
           if (!img) return {{applied:false, remembered:Boolean(key)}};
           img.dataset.ntTranslatedSrc=src; if (key) img.dataset.ntSourceKey=key;
           img.removeAttribute('srcset'); img.src=src; img.dataset.ntImageStatus='translated';
@@ -1114,9 +1139,10 @@ fn default_cache_dir() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_image_error_script, fetch_image_data_script, group_dense_text_lines, image_cache_key,
-        image_capture_info_script, image_ui_script, parse_image_capture_info, parse_image_requests,
-        restore_images_script, ImageTranslationProcessor, OcrRecognizer, IMAGE_UI_SCRIPT,
+        apply_image_error_script, apply_image_result_script, fetch_image_data_script,
+        group_dense_text_lines, image_cache_key, image_capture_info_script, image_ui_script,
+        parse_image_capture_info, parse_image_requests, restore_images_script,
+        ImageTranslationProcessor, OcrRecognizer, IMAGE_UI_SCRIPT,
     };
     use crate::cache::TranslationCache;
     use crate::language::Language;
@@ -1215,6 +1241,7 @@ mod tests {
         assert!(current < raw_attribute);
         assert!(IMAGE_UI_SCRIPT.contains("url.hostname = 'cdn.discordapp.com'"));
         assert!(IMAGE_UI_SCRIPT.contains("['width','height','format','quality']"));
+        assert!(IMAGE_UI_SCRIPT.contains("url.searchParams.set('name', 'orig')"));
 
         let fetch = fetch_image_data_script("nt-image-1", 1024).unwrap();
         assert!(fetch.contains("window.__ntImageSourceCandidates?.(img)"));
@@ -1252,6 +1279,21 @@ mod tests {
         assert!(IMAGE_UI_SCRIPT.contains("new MutationObserver"));
         assert!(IMAGE_UI_SCRIPT.contains("if (viewer) show(viewer)"));
         assert!(IMAGE_UI_SCRIPT.contains("window.addEventListener('resize'"));
+    }
+
+    #[test]
+    fn expanded_image_view_reprocesses_a_low_resolution_translation() {
+        assert!(IMAGE_UI_SCRIPT.contains("const translationRecord = value =>"));
+        assert!(IMAGE_UI_SCRIPT.contains("requiredWidth > record.width * 1.18"));
+        assert!(IMAGE_UI_SCRIPT.contains("img.dataset.ntResolutionUpgradeTried = 'true'"));
+        assert!(IMAGE_UI_SCRIPT
+            .contains("window.__ntImageRequests.push({id:img.dataset.ntImageId, sourceKey:key})"));
+
+        let script =
+            apply_image_result_script("nt-image-1", "data:image/png;base64,AA==", "same-image")
+                .unwrap();
+        assert!(script.contains("width:Number(preload.naturalWidth || 0)"));
+        assert!(script.contains("height:Number(preload.naturalHeight || 0)"));
     }
 
     #[test]
