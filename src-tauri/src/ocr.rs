@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::env;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
@@ -267,7 +268,7 @@ impl PaddleDualOcr {
                 self.ensure_medium()?;
                 let crops = indices
                     .iter()
-                    .map(|index| regions[*index].crop.clone())
+                    .map(|index| recognition_crop(&regions[*index]))
                     .collect::<Vec<_>>();
                 let recognized = self
                     .medium
@@ -440,9 +441,30 @@ fn recognize_regions(
         return Err("OCR 인식 결과 수가 감지 영역 수와 일치하지 않습니다.".to_string());
     }
 
+    let vertical_indices = regions
+        .iter()
+        .enumerate()
+        .filter_map(|(index, region)| is_vertical_region(region).then_some(index))
+        .collect::<Vec<_>>();
+    let vertical_results = if vertical_indices.is_empty() {
+        Vec::new()
+    } else {
+        let crops = vertical_indices
+            .iter()
+            .map(|index| recognition_crop(&regions[*index]))
+            .collect::<Vec<_>>();
+        recognizer
+            .recognize_batch(&crops)
+            .map_err(|error| format!("PP-OCRv6 세로 글자 인식에 실패했습니다: {error}"))?
+    };
+    let vertical_by_index = vertical_indices
+        .into_iter()
+        .zip(vertical_results)
+        .collect::<HashMap<_, _>>();
+
     let mut lines = Vec::with_capacity(regions.len());
-    for ((region, v6), korean) in regions.iter().zip(v6).zip(korean) {
-        let candidates = vec![
+    for (index, ((region, v6), korean)) in regions.iter().zip(v6).zip(korean).enumerate() {
+        let mut candidates = vec![
             RecognitionCandidate {
                 engine: engine_name.to_string(),
                 text: v6.text,
@@ -454,6 +476,13 @@ fn recognize_regions(
                 confidence: f64::from(korean.confidence),
             },
         ];
+        if let Some(vertical) = vertical_by_index.get(&index) {
+            candidates.push(RecognitionCandidate {
+                engine: format!("{engine_name}-vertical"),
+                text: vertical.text.clone(),
+                confidence: f64::from(vertical.confidence),
+            });
+        }
         let (best, language) = selector.choose(&candidates);
         lines.push(TextLine {
             polygon: region.polygon,
@@ -466,6 +495,22 @@ fn recognize_regions(
     }
     lines.sort_by(line_order);
     Ok(lines)
+}
+
+fn is_vertical_region(region: &DetectedRegion) -> bool {
+    let width = region.bbox.width();
+    let height = region.bbox.height();
+    width >= 12 && height >= 48 && height >= width.saturating_mul(2)
+}
+
+fn recognition_crop(region: &DetectedRegion) -> DynamicImage {
+    if is_vertical_region(region) {
+        // Japanese tategaki is read top-to-bottom. Rotating the crop counter-clockwise
+        // presents that order left-to-right to Paddle's horizontal recognizer.
+        region.crop.rotate270()
+    } else {
+        region.crop.clone()
+    }
 }
 
 fn line_order(left: &TextLine, right: &TextLine) -> Ordering {
@@ -862,8 +907,9 @@ fn default_model_root() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::{
-        medium_retry_plan, merge_text_lines, polygon_overlap_ratio, Language, MediumRetryPlan,
-        OcrQualityMode, Point, Rect, TextLine, MEDIUM_MODEL_ASSETS, MODEL_ASSETS, MODEL_REVISION,
+        is_vertical_region, medium_retry_plan, merge_text_lines, polygon_overlap_ratio,
+        recognition_crop, DetectedRegion, Language, MediumRetryPlan, OcrQualityMode, Point, Rect,
+        TextLine, MEDIUM_MODEL_ASSETS, MODEL_ASSETS, MODEL_REVISION,
     };
     use std::collections::BTreeMap;
     use std::fmt::Write as _;
@@ -954,6 +1000,28 @@ mod tests {
             medium_retry_plan(OcrQualityMode::Fast, &[]),
             MediumRetryPlan::Skip
         );
+    }
+
+    #[test]
+    fn vertical_japanese_regions_are_rotated_counter_clockwise_for_recognition() {
+        let mut pixels = image::RgbaImage::new(2, 5);
+        pixels.put_pixel(0, 0, image::Rgba([255, 0, 0, 255]));
+        let region = DetectedRegion {
+            crop: image::DynamicImage::ImageRgba8(pixels),
+            polygon: [Point { x: 0.0, y: 0.0 }; 4],
+            bbox: Rect {
+                left: 0,
+                top: 0,
+                right: 20,
+                bottom: 120,
+            },
+            confidence: 0.9,
+        };
+
+        assert!(is_vertical_region(&region));
+        let rotated = recognition_crop(&region).to_rgba8();
+        assert_eq!(rotated.dimensions(), (5, 2));
+        assert_eq!(rotated.get_pixel(0, 1), &image::Rgba([255, 0, 0, 255]));
     }
 
     #[test]

@@ -18,7 +18,7 @@ use crate::ocr::{OcrQualityMode, PaddleDualOcr, Point, Rect, TextLine};
 use crate::translation::TranslationService;
 use crate::ui_locale::generated_copies;
 
-const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v1";
+const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v2-vertical-original-resolution";
 
 pub const IMAGE_UI_SCRIPT: &str = r##"
 (() => {
@@ -41,7 +41,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v5';
+  const version = 'rust-image-ui-v6-original-resolution';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -74,6 +74,30 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   };
   window.__ntImageSourceKey = sourceKey;
 
+  const canonicalImageSource = source => {
+    if (!source || source.startsWith('data:') || source.startsWith('blob:')) return source || '';
+    try {
+      const url = new URL(source, location.href);
+      if (/\/attachments\//i.test(url.pathname) && /^(?:media|cdn)\.discordapp\.(?:net|com)$/i.test(url.hostname)) {
+        if (url.hostname.toLowerCase() === 'media.discordapp.net') url.hostname = 'cdn.discordapp.com';
+        for (const name of ['width','height','format','quality']) url.searchParams.delete(name);
+      }
+      return url.href;
+    } catch (_) { return source; }
+  };
+  const largestSrcsetSource = img => {
+    const values = String(img.getAttribute('srcset') || '').split(',').map(value => value.trim()).filter(Boolean);
+    return values.sort((left, right) => {
+      const size = value => Number(value.match(/\s(\d+(?:\.\d+)?)(?:w|x)$/)?.[1] || 0);
+      return size(right) - size(left);
+    })[0]?.replace(/\s+\d+(?:\.\d+)?(?:w|x)$/, '') || '';
+  };
+  const sourceCandidates = img => {
+    const raw = [img?.currentSrc || '', largestSrcsetSource(img), img?.dataset?.ntOriginalSrc || '', img?.getAttribute?.('src') || '', img?.src || ''];
+    return [...new Set(raw.flatMap(source => [canonicalImageSource(source), source]).filter(source => source && !source.startsWith('data:') && !source.startsWith('blob:')))];
+  };
+  window.__ntImageSourceCandidates = sourceCandidates;
+
   const inViewer = img => {
     const dialog = img.closest('[role="dialog"]');
     if (!dialog) return false;
@@ -101,7 +125,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   const ensure = img => {
     if (!img.dataset.ntImageId) img.dataset.ntImageId = `nt-image-${++window.__ntImageSequence}`;
     if (!img.dataset.ntOriginalSrc) {
-      img.dataset.ntOriginalSrc = img.getAttribute('src') || img.currentSrc;
+      img.dataset.ntOriginalSrc = img.currentSrc || largestSrcsetSource(img) || img.getAttribute('src') || img.src;
       img.dataset.ntOriginalSrcset = img.getAttribute('srcset') || '';
     }
     img.dataset.ntSourceKey ||= sourceKey(img.dataset.ntOriginalSrc);
@@ -313,6 +337,7 @@ pub struct ImageCaptureInfo {
     pub y: f64,
     pub width: f64,
     pub height: f64,
+    pub scale: f64,
     pub fully_visible: bool,
 }
 
@@ -505,7 +530,13 @@ pub fn image_capture_info_script(image_id: &str) -> Result<String, String> {
           const img=document.querySelector(`[data-nt-image-id="${{CSS.escape(id)}}"]`);
           if (!img) return null;
           const rect=img.getBoundingClientRect();
+          const naturalScale=Math.min(
+            Number(img.naturalWidth || 0) / Math.max(rect.width, 1),
+            Number(img.naturalHeight || 0) / Math.max(rect.height, 1)
+          );
+          const scale=Math.max(1, Math.min(2.5, Number.isFinite(naturalScale) ? naturalScale : 1));
           return {{x:rect.left+scrollX,y:rect.top+scrollY,width:rect.width,height:rect.height,
+            scale,
             fullyVisible:rect.width>=160&&rect.height>=90&&rect.left>=0&&rect.top>=0&&rect.right<=innerWidth&&rect.bottom<=innerHeight}};
         }})()"##
     ))
@@ -523,31 +554,39 @@ pub fn fetch_image_data_script(image_id: &str, max_bytes: usize) -> Result<Strin
           const id = {id};
           const img = document.querySelector(`[data-nt-image-id="${{CSS.escape(id)}}"]`);
           if (!img) return null;
-          const source = img.dataset.ntOriginalSrc || img.currentSrc || img.src || '';
-          if (!source || source.startsWith('data:') || source.startsWith('blob:')) return null;
           const maxBytes = {max_bytes};
-          const response = await fetch(source, {{cache:'force-cache', credentials:'omit'}});
-          if (!response.ok) throw new Error(`이미지 읽기 실패: HTTP ${{response.status}}`);
-          const contentLength = Number(response.headers.get('content-length') || 0);
-          if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error('이미지가 허용 크기를 초과했습니다.');
-          if (!response.body) throw new Error('이미지 응답 스트림을 읽을 수 없습니다.');
-          const reader = response.body.getReader(), chunks = [];
-          let received = 0;
-          while (true) {{
-            const {{done, value}} = await reader.read();
-            if (done) break;
-            received += value.byteLength;
-            if (received > maxBytes) {{ await reader.cancel(); throw new Error('이미지가 허용 크기를 초과했습니다.'); }}
-            chunks.push(value);
+          const fallbackCandidates = [img.currentSrc || '', img.dataset.ntOriginalSrc || '', img.src || '']
+            .filter(source => source && !source.startsWith('data:') && !source.startsWith('blob:'));
+          const candidates = window.__ntImageSourceCandidates?.(img) || [...new Set(fallbackCandidates)];
+          let lastError = null;
+          for (const source of candidates) {{
+            try {{
+              const response = await fetch(source, {{cache:'force-cache', credentials:'omit'}});
+              if (!response.ok) throw new Error(`이미지 읽기 실패: HTTP ${{response.status}}`);
+              const contentLength = Number(response.headers.get('content-length') || 0);
+              if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error('이미지가 허용 크기를 초과했습니다.');
+              if (!response.body) throw new Error('이미지 응답 스트림을 읽을 수 없습니다.');
+              const reader = response.body.getReader(), chunks = [];
+              let received = 0;
+              while (true) {{
+                const {{done, value}} = await reader.read();
+                if (done) break;
+                received += value.byteLength;
+                if (received > maxBytes) {{ await reader.cancel(); throw new Error('이미지가 허용 크기를 초과했습니다.'); }}
+                chunks.push(value);
+              }}
+              const blob = new Blob(chunks, {{type: response.headers.get('content-type') || ''}});
+              const dataUrl = await new Promise((resolve, reject) => {{
+                const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(reader.error || new Error('이미지 읽기 실패'));
+                reader.readAsDataURL(blob);
+              }});
+              const comma = dataUrl.indexOf(',');
+              return {{base64: comma >= 0 ? dataUrl.slice(comma + 1) : '', mime: blob.type || '', source}};
+            }} catch (error) {{ lastError = error; }}
           }}
-          const blob = new Blob(chunks, {{type: response.headers.get('content-type') || ''}});
-          const dataUrl = await new Promise((resolve, reject) => {{
-            const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || ''));
-            reader.onerror = () => reject(reader.error || new Error('이미지 읽기 실패'));
-            reader.readAsDataURL(blob);
-          }});
-          const comma = dataUrl.indexOf(',');
-          return {{base64: comma >= 0 ? dataUrl.slice(comma + 1) : '', mime: blob.type || '', source}};
+          if (lastError) throw lastError;
+          return null;
         }})()"##
     ))
 }
@@ -1076,14 +1115,14 @@ fn default_cache_dir() -> PathBuf {
 mod tests {
     use super::{
         apply_image_error_script, fetch_image_data_script, group_dense_text_lines, image_cache_key,
-        image_ui_script, parse_image_requests, restore_images_script, ImageTranslationProcessor,
-        OcrRecognizer, IMAGE_UI_SCRIPT,
+        image_capture_info_script, image_ui_script, parse_image_capture_info, parse_image_requests,
+        restore_images_script, ImageTranslationProcessor, OcrRecognizer, IMAGE_UI_SCRIPT,
     };
     use crate::cache::TranslationCache;
     use crate::language::Language;
     use crate::ocr::{OcrQualityMode, Point, Rect, TextLine};
     use crate::translation::{MockTranslator, TranslationService};
-    use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
+    use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
     use std::io::Cursor;
     use std::path::PathBuf;
     use std::time::{Duration, Instant};
@@ -1166,6 +1205,40 @@ mod tests {
     }
 
     #[test]
+    fn image_fetch_prefers_the_selected_full_resolution_source() {
+        let current = IMAGE_UI_SCRIPT
+            .find("img.currentSrc || largestSrcsetSource(img)")
+            .expect("currentSrc must be preferred");
+        let raw_attribute = IMAGE_UI_SCRIPT
+            .find("img.getAttribute('src') || img.src")
+            .expect("raw src remains a fallback");
+        assert!(current < raw_attribute);
+        assert!(IMAGE_UI_SCRIPT.contains("url.hostname = 'cdn.discordapp.com'"));
+        assert!(IMAGE_UI_SCRIPT.contains("['width','height','format','quality']"));
+
+        let fetch = fetch_image_data_script("nt-image-1", 1024).unwrap();
+        assert!(fetch.contains("window.__ntImageSourceCandidates?.(img)"));
+        assert!(fetch.contains("for (const source of candidates)"));
+    }
+
+    #[test]
+    fn screenshot_fallback_uses_the_decoded_image_resolution() {
+        let script = image_capture_info_script("nt-image-1").unwrap();
+        assert!(script.contains("img.naturalWidth"));
+        assert!(script.contains("img.naturalHeight"));
+        let info = parse_image_capture_info(serde_json::json!({
+            "x": 0.0,
+            "y": 0.0,
+            "width": 800.0,
+            "height": 600.0,
+            "scale": 2.0,
+            "fullyVisible": true
+        }))
+        .unwrap();
+        assert_eq!(info.scale, 2.0);
+    }
+
+    #[test]
     fn image_cache_is_separated_by_ocr_quality_mode() {
         let fast = image_cache_key(b"same-image", Language::Korean, "same-model", "fast");
         let quality = image_cache_key(b"same-image", Language::Korean, "same-model", "quality");
@@ -1242,7 +1315,9 @@ mod tests {
             )
             .unwrap();
         assert_eq!(outcome.translated_count, 1);
-        assert!(image::load_from_memory_with_format(&outcome.png_bytes, ImageFormat::Png).is_ok());
+        let rendered =
+            image::load_from_memory_with_format(&outcome.png_bytes, ImageFormat::Png).unwrap();
+        assert_eq!(rendered.dimensions(), source.dimensions());
         let _ = std::fs::remove_dir_all(root);
     }
 

@@ -1129,7 +1129,7 @@ fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, 
                     "y": info.y,
                     "width": info.width,
                     "height": info.height,
-                    "scale": 1
+                    "scale": info.scale
                 }
             }),
         )
