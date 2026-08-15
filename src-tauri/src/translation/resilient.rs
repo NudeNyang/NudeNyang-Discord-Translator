@@ -37,7 +37,7 @@ impl ResilientTranslator {
             .as_ref()
             .map_or("local-only", |translator| translator.cache_namespace());
         let cache_namespace = format!(
-            "{}:quality-repair-v10:{fallback_namespace}",
+            "{}:quality-repair-v11:{fallback_namespace}",
             primary.cache_namespace()
         );
         Self {
@@ -343,7 +343,11 @@ pub fn translation_needs_repair(
             ) {
                 return remaining_han >= 2;
             }
-            return remaining_kana >= 5.max((hangul as f64 * 0.55).round() as usize);
+            // A mostly Korean result can still contain a full untranslated Japanese
+            // name or clause. Judge the longest contiguous run instead of the total:
+            // this repairs embed fragments such as `おきゅーとぱー`, while allowing
+            // short preserved names/terms such as `すてら` and `ダンス部`.
+            return remaining_kana >= 5 && max_kana_run(translated_text) >= 5;
         }
         if source == Language::English {
             let source_latin = count_latin(source_text);
@@ -448,6 +452,31 @@ fn count_hangul(text: &str) -> usize {
 
 fn count_kana(text: &str) -> usize {
     count_in_ranges(text, &[(0x3040, 0x30ff), (0x31f0, 0x31ff)])
+}
+
+fn max_kana_run(text: &str) -> usize {
+    text.chars()
+        .fold(
+            (0usize, 0usize, 0u8),
+            |(current, longest, script), character| {
+                let code = character as u32;
+                let next_script = match code {
+                    0x3040..=0x309f => 1,
+                    0x30a0..=0x30fb | 0x30fd..=0x30ff | 0x31f0..=0x31ff => 2,
+                    0x30fc if script != 0 => script,
+                    _ => 0,
+                };
+                let next = if next_script == 0 {
+                    0
+                } else if next_script == script {
+                    current + 1
+                } else {
+                    1
+                };
+                (next, longest.max(next), next_script)
+            },
+        )
+        .1
 }
 
 fn count_han(text: &str) -> usize {
@@ -703,6 +732,26 @@ mod tests {
             "Das Talent ist wirklich gut ZXQKEEP",
             Language::Korean,
             Language::German,
+        ));
+    }
+
+    #[test]
+    fn rejects_short_japanese_spans_left_inside_a_korean_embed_translation() {
+        let source = "アシちゃんのアイドルグループはASHenputtelです。よろしくお願いします。";
+        let partial =
+            "アシちゃん의 아이돌 그룹은 ASHenputtel입니다. 부탁드립니다. (おきゅーとぱー)";
+
+        assert!(translation_needs_repair(
+            source,
+            partial,
+            Language::Japanese,
+            Language::Korean,
+        ));
+        assert!(!translation_needs_repair(
+            "第4回すてらダンス部コラボ授業です！",
+            "제4회 すてら댄스부 컬래버레이션 수업입니다!",
+            Language::Japanese,
+            Language::Korean,
         ));
     }
 
