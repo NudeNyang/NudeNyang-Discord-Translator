@@ -418,7 +418,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "約 70MB。首次需要時下載，閒置 5 分鐘後從記憶體釋放。",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "另一個翻譯服務連線正在進行中。請在完成後再試一次。",
     "다른 계정 로그인이 이미 진행 중입니다.": "另一個帳號的登入程序已在進行中。",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows 應用程式安裝程式無法完成 CLI 安裝。請查看診斷記錄中的安裝程式訊息，然後再試一次。"
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows 應用程式安裝程式無法完成 CLI 安裝。請查看診斷記錄中的安裝程式訊息，然後再試一次。",
+    "연결 확인 필요": "檢查 Discord 連線"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -838,7 +839,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Cerca de 70MB. O download é feito quando necessário pela primeira vez, e o modelo é liberado da memória após 5 minutos de inatividade.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Outra conexão de serviço de tradução está em andamento. Tente novamente após a conclusão.",
     "다른 계정 로그인이 이미 진행 중입니다.": "O login de outra conta já está em andamento.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "O Instalador de Aplicativo do Windows não conseguiu concluir a instalação da CLI. Verifique a mensagem do instalador no log de diagnóstico e tente novamente."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "O Instalador de Aplicativo do Windows não conseguiu concluir a instalação da CLI. Verifique a mensagem do instalador no log de diagnóstico e tente novamente.",
+    "연결 확인 필요": "Verificar conexão com o Discord"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1258,7 +1260,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "लगभग 70MB। पहली बार ज़रूरत पड़ने पर यह डाउनलोड होता है और 5 मिनट तक निष्क्रिय रहने के बाद मेमोरी से हटा दिया जाता है।",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "किसी अन्य अनुवाद सेवा का कनेक्शन जारी है। इसके पूरा होने के बाद फिर से कोशिश करें।",
     "다른 계정 로그인이 이미 진행 중입니다.": "किसी अन्य खाते में साइन-इन पहले से जारी है।",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows ऐप इंस्टॉलर CLI इंस्टॉलेशन पूरा नहीं कर सका। डायग्नोस्टिक लॉग में इंस्टॉलर का संदेश देखें, फिर से कोशिश करें।"
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows ऐप इंस्टॉलर CLI इंस्टॉलेशन पूरा नहीं कर सका। डायग्नोस्टिक लॉग में इंस्टॉलर का संदेश देखें, फिर से कोशिश करें।",
+    "연결 확인 필요": "Discord कनेक्शन जाँचें"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1678,7 +1681,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Aproximadamente 70 MB. Se descarga cuando se necesita por primera vez y se libera de la memoria tras 5 minutos de inactividad.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Hay otra conexión a un servicio de traducción en curso. Inténtalo de nuevo cuando termine.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Ya hay un inicio de sesión en otra cuenta en curso.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "El Instalador de aplicaciones de Windows no pudo completar la instalación de la CLI. Revisa el mensaje del instalador en el registro de diagnóstico y vuelve a intentarlo."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "El Instalador de aplicaciones de Windows no pudo completar la instalación de la CLI. Revisa el mensaje del instalador en el registro de diagnóstico y vuelve a intentarlo.",
+    "연결 확인 필요": "Comprobar la conexión con Discord"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2098,7 +2102,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Etwa 70 MB. Wird bei der ersten Verwendung heruntergeladen und nach 5 Minuten Inaktivität aus dem Arbeitsspeicher entfernt.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Eine Verbindung zu einem anderen Übersetzungsdienst wird gerade hergestellt. Versuche es nach Abschluss erneut.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Die Anmeldung bei einem anderen Konto läuft bereits.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer konnte die CLI-Installation nicht abschließen. Prüfe die Installationsmeldung im Diagnoseprotokoll und versuche es erneut."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer konnte die CLI-Installation nicht abschließen. Prüfe die Installationsmeldung im Diagnoseprotokoll und versuche es erneut.",
+    "연결 확인 필요": "Discord-Verbindung prüfen"
   },
   "ru": {
     "설정": "Настройки",
@@ -2518,7 +2523,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Около 70 МБ. Скачивается при первом использовании и выгружается из памяти после 5 минут бездействия.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Выполняется подключение к другому сервису перевода. Повторите попытку после его завершения.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Вход в другую учётную запись уже выполняется.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Установщику приложений Windows не удалось завершить установку CLI. Проверьте сообщение установщика в журнале диагностики и повторите попытку."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Установщику приложений Windows не удалось завершить установку CLI. Проверьте сообщение установщика в журнале диагностики и повторите попытку.",
+    "연결 확인 필요": "Проверьте подключение к Discord"
   },
   "id": {
     "설정": "Pengaturan",
@@ -2938,7 +2944,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Sekitar 70MB. Diunduh saat pertama kali diperlukan dan dihapus dari memori setelah tidak digunakan selama 5 menit.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Koneksi layanan terjemahan lain sedang berlangsung. Coba lagi setelah selesai.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Proses masuk ke akun lain sudah berlangsung.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer tidak dapat menyelesaikan instalasi CLI. Periksa pesan penginstal di log diagnostik, lalu coba lagi."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer tidak dapat menyelesaikan instalasi CLI. Periksa pesan penginstal di log diagnostik, lalu coba lagi.",
+    "연결 확인 필요": "Periksa koneksi Discord"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3358,7 +3365,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Environ 70MB. Il est téléchargé à la première utilisation et libéré de la mémoire après 5 minutes d’inactivité.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "La connexion à un autre service de traduction est en cours. Réessayez une fois celle-ci terminée.",
     "다른 계정 로그인이 이미 진행 중입니다.": "La connexion à un autre compte est déjà en cours.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Le programme d’installation d’applications Windows n’a pas pu terminer l’installation de la CLI. Consultez le message du programme d’installation dans le journal de diagnostic, puis réessayez."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Le programme d’installation d’applications Windows n’a pas pu terminer l’installation de la CLI. Consultez le message du programme d’installation dans le journal de diagnostic, puis réessayez.",
+    "연결 확인 필요": "Vérifier la connexion à Discord"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -3778,7 +3786,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Yaklaşık 70MB. İlk gerektiğinde indirilir ve 5 dakika kullanılmadığında bellekten kaldırılır.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Başka bir çeviri hizmetine bağlantı kuruluyor. Tamamlandıktan sonra tekrar deneyin.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Başka bir hesapta oturum açma işlemi zaten devam ediyor.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows Uygulama Yükleyicisi CLI kurulumunu tamamlayamadı. Tanılama günlüğündeki yükleyici mesajını kontrol edip tekrar deneyin."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows Uygulama Yükleyicisi CLI kurulumunu tamamlayamadı. Tanılama günlüğündeki yükleyici mesajını kontrol edip tekrar deneyin.",
+    "연결 확인 필요": "Discord bağlantısını kontrol et"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4198,7 +4207,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حوالي 70MB. يُنزّل عند الحاجة إليه لأول مرة، ويُحرّر من الذاكرة بعد 5 دقائق من عدم الاستخدام.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "جارٍ الاتصال بخدمة ترجمة أخرى. حاول مجددًا بعد اكتمال الاتصال.",
     "다른 계정 로그인이 이미 진행 중입니다.": "جارٍ بالفعل تسجيل الدخول إلى حساب آخر.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "تعذّر على مثبّت تطبيقات Windows إكمال تثبيت CLI. تحقّق من رسالة المثبّت في سجل التشخيص، ثم حاول مجددًا."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "تعذّر على مثبّت تطبيقات Windows إكمال تثبيت CLI. تحقّق من رسالة المثبّت في سجل التشخيص، ثم حاول مجددًا.",
+    "연결 확인 필요": "تحقق من اتصال Discord"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -4618,7 +4628,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Khoảng 70MB. Được tải xuống khi cần lần đầu và giải phóng khỏi bộ nhớ sau 5 phút không hoạt động.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Đang kết nối với một dịch vụ dịch thuật khác. Hãy thử lại sau khi quá trình này hoàn tất.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Đang đăng nhập bằng một tài khoản khác.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer không thể hoàn tất việc cài đặt CLI. Hãy kiểm tra thông báo của trình cài đặt trong nhật ký chẩn đoán, rồi thử lại."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer không thể hoàn tất việc cài đặt CLI. Hãy kiểm tra thông báo của trình cài đặt trong nhật ký chẩn đoán, rồi thử lại.",
+    "연결 확인 필요": "Kiểm tra kết nối Discord"
   },
   "it": {
     "설정": "Impostazioni",
@@ -5038,7 +5049,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Circa 70MB. Viene scaricato al primo utilizzo e rimosso dalla memoria dopo 5 minuti di inattività.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "È in corso la connessione a un altro servizio di traduzione. Riprova al termine.",
     "다른 계정 로그인이 이미 진행 중입니다.": "È già in corso l'accesso a un altro account.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer non ha potuto completare l'installazione della CLI. Controlla il messaggio del programma di installazione nel registro diagnostico, quindi riprova."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer non ha potuto completare l'installazione della CLI. Controlla il messaggio del programma di installazione nel registro diagnostico, quindi riprova.",
+    "연결 확인 필요": "Verifica la connessione a Discord"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -5458,7 +5470,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Około 70 MB. Jest pobierany przy pierwszym użyciu i usuwany z pamięci po 5 minutach bezczynności.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Trwa łączenie z inną usługą tłumaczeniową. Spróbuj ponownie po jego zakończeniu.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Trwa już logowanie na inne konto.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Instalator aplikacji Windows nie mógł ukończyć instalacji CLI. Sprawdź komunikat instalatora w dzienniku diagnostycznym, a następnie spróbuj ponownie."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Instalator aplikacji Windows nie mógł ukończyć instalacji CLI. Sprawdź komunikat instalatora w dzienniku diagnostycznym, a następnie spróbuj ponownie.",
+    "연결 확인 필요": "Sprawdź połączenie z Discord"
   },
   "uk": {
     "설정": "Налаштування",
@@ -5878,7 +5891,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Близько 70 МБ. Завантажується за першої потреби та вивантажується з пам’яті після 5 хвилин бездіяльності.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Триває підключення іншого сервісу перекладу. Спробуйте ще раз після його завершення.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Уже триває вхід до іншого облікового запису.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Інсталятору програм Windows не вдалося завершити встановлення CLI. Перевірте повідомлення інсталятора в журналі діагностики, а потім спробуйте ще раз."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Інсталятору програм Windows не вдалося завершити встановлення CLI. Перевірте повідомлення інсталятора в журналі діагностики, а потім спробуйте ще раз.",
+    "연결 확인 필요": "Перевірте підключення до Discord"
   },
   "ms": {
     "설정": "Tetapan",
@@ -6298,7 +6312,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Kira-kira 70MB. Dimuat turun apabila diperlukan buat kali pertama dan dilepaskan daripada memori selepas 5 minit tidak aktif.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Sambungan perkhidmatan terjemahan lain sedang berlangsung. Cuba lagi selepas selesai.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Log masuk akaun lain sudah sedang berlangsung.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer tidak dapat melengkapkan pemasangan CLI. Semak mesej pemasang dalam log diagnostik, kemudian cuba lagi."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer tidak dapat melengkapkan pemasangan CLI. Semak mesej pemasang dalam log diagnostik, kemudian cuba lagi.",
+    "연결 확인 필요": "Semak sambungan Discord"
   },
   "nl": {
     "설정": "Instellingen",
@@ -6718,7 +6733,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Ongeveer 70MB. Wordt bij het eerste gebruik gedownload en na 5 minuten inactiviteit uit het geheugen verwijderd.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Er wordt al verbinding gemaakt met een andere vertaalservice. Probeer het opnieuw zodra dit is voltooid.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Er wordt al ingelogd bij een ander account.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer kon de CLI-installatie niet voltooien. Controleer het bericht van het installatieprogramma in het diagnostische logboek en probeer het opnieuw."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer kon de CLI-installatie niet voltooien. Controleer het bericht van het installatieprogramma in het diagnostische logboek en probeer het opnieuw.",
+    "연결 확인 필요": "Controleer de Discord-verbinding"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -7138,7 +7154,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "ประมาณ 70MB โดยจะดาวน์โหลดเมื่อจำเป็นครั้งแรก และนำออกจากหน่วยความจำเมื่อไม่มีการใช้งานเป็นเวลา 5 นาที",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "กำลังเชื่อมต่อบริการแปลอื่นอยู่ โปรดลองอีกครั้งหลังจากเสร็จสิ้น",
     "다른 계정 로그인이 이미 진행 중입니다.": "กำลังลงชื่อเข้าใช้บัญชีอื่นอยู่แล้ว",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer ไม่สามารถติดตั้ง CLI ให้เสร็จสมบูรณ์ได้ โปรดตรวจสอบข้อความจากตัวติดตั้งในบันทึกการวินิจฉัย แล้วลองอีกครั้ง"
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer ไม่สามารถติดตั้ง CLI ให้เสร็จสมบูรณ์ได้ โปรดตรวจสอบข้อความจากตัวติดตั้งในบันทึกการวินิจฉัย แล้วลองอีกครั้ง",
+    "연결 확인 필요": "ตรวจสอบการเชื่อมต่อ Discord"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -7558,7 +7575,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Humigit-kumulang 70MB. Ida-download ito sa unang pagkakataong kailanganin at aalisin sa memory kapag hindi nagamit nang 5 minuto.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "May kasalukuyang ikinokonektang ibang serbisyo sa pagsasalin. Subukan ulit kapag natapos na ito.",
     "다른 계정 로그인이 이미 진행 중입니다.": "May kasalukuyang pag-sign in sa ibang account.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Hindi nakumpleto ng Windows App Installer ang pag-install ng CLI. Tingnan ang mensahe ng installer sa diagnostic log, pagkatapos ay subukan ulit."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Hindi nakumpleto ng Windows App Installer ang pag-install ng CLI. Tingnan ang mensahe ng installer sa diagnostic log, pagkatapos ay subukan ulit.",
+    "연결 확인 필요": "Suriin ang koneksyon sa Discord"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -7978,7 +7996,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "প্রায় 70MB। প্রথমবার প্রয়োজন হলে এটি ডাউনলোড হয় এবং 5 মিনিট ব্যবহার না করলে মেমোরি থেকে সরিয়ে দেওয়া হয়।",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "অন্য একটি অনুবাদ পরিষেবার সংযোগ প্রক্রিয়া চলছে। এটি শেষ হলে আবার চেষ্টা করুন।",
     "다른 계정 로그인이 이미 진행 중입니다.": "অন্য একটি অ্যাকাউন্টে সাইন-ইন প্রক্রিয়া ইতিমধ্যেই চলছে।",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer CLI ইনস্টলেশন সম্পন্ন করতে পারেনি। ডায়াগনস্টিক লগে ইনস্টলারের বার্তা দেখে আবার চেষ্টা করুন।"
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer CLI ইনস্টলেশন সম্পন্ন করতে পারেনি। ডায়াগনস্টিক লগে ইনস্টলারের বার্তা দেখে আবার চেষ্টা করুন।",
+    "연결 확인 필요": "Discord সংযোগ পরীক্ষা করুন"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -8398,7 +8417,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "تقریباً 70MB۔ پہلی بار ضرورت پڑنے پر یہ ڈاؤن لوڈ ہوتا ہے اور 5 منٹ تک استعمال نہ ہونے پر میموری سے ہٹا دیا جاتا ہے۔",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "ایک اور ترجمہ سروس سے کنکشن جاری ہے۔ اس کے مکمل ہونے کے بعد دوبارہ کوشش کریں۔",
     "다른 계정 로그인이 이미 진행 중입니다.": "کسی دوسرے اکاؤنٹ میں سائن اِن پہلے ہی جاری ہے۔",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer، CLI کی تنصیب مکمل نہیں کر سکا۔ تشخیصی لاگ میں انسٹالر کا پیغام دیکھیں، پھر دوبارہ کوشش کریں۔"
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer، CLI کی تنصیب مکمل نہیں کر سکا۔ تشخیصی لاگ میں انسٹالر کا پیغام دیکھیں، پھر دوبارہ کوشش کریں۔",
+    "연결 확인 필요": "Discord کنکشن چیک کریں"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -8818,7 +8838,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "சுமார் 70MB. முதன்முதலில் தேவைப்படும்போது பதிவிறக்கப்பட்டு, 5 நிமிடங்கள் பயன்படுத்தப்படாவிட்டால் நினைவகத்திலிருந்து விடுவிக்கப்படும்.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "மற்றொரு மொழிபெயர்ப்புச் சேவை இணைப்பு நடைபெறுகிறது. அது முடிந்ததும் மீண்டும் முயலவும்.",
     "다른 계정 로그인이 이미 진행 중입니다.": "மற்றொரு கணக்கில் உள்நுழைவு ஏற்கனவே நடைபெறுகிறது.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer-ஆல் CLI நிறுவலை முடிக்க முடியவில்லை. கண்டறிதல் பதிவில் நிறுவியின் செய்தியைச் சரிபார்த்து, மீண்டும் முயலவும்."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer-ஆல் CLI நிறுவலை முடிக்க முடியவில்லை. கண்டறிதல் பதிவில் நிறுவியின் செய்தியைச் சரிபார்த்து, மீண்டும் முயலவும்.",
+    "연결 확인 필요": "Discord இணைப்பைச் சரிபார்க்கவும்"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -9238,7 +9259,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حدود 70MB است. هنگام اولین نیاز دانلود می‌شود و پس از ۵ دقیقه عدم استفاده از حافظه آزاد می‌شود.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "اتصال به یک سرویس ترجمهٔ دیگر در حال انجام است. پس از اتمام آن دوباره تلاش کنید.",
     "다른 계정 로그인이 이미 진행 중입니다.": "ورود به حساب دیگری از قبل در حال انجام است.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer نتوانست نصب CLI را کامل کند. پیام نصب‌کننده را در گزارش عیب‌یابی بررسی کنید، سپس دوباره تلاش کنید."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Windows App Installer نتوانست نصب CLI را کامل کند. پیام نصب‌کننده را در گزارش عیب‌یابی بررسی کنید، سپس دوباره تلاش کنید.",
+    "연결 확인 필요": "اتصال Discord را بررسی کنید"
   },
   "he": {
     "설정": "הגדרות",
@@ -9658,7 +9680,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "כ-70MB. ההורדה מתבצעת בפעם הראשונה שנדרש, והוא מפונה מהזיכרון לאחר 5 דקות ללא פעילות.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "חיבור לשירות תרגום אחר מתבצע כעת. נסה שוב לאחר שיסתיים.",
     "다른 계정 로그인이 이미 진행 중입니다.": "כבר מתבצעת כניסה לחשבון אחר.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "מתקין האפליקציות של Windows לא הצליח להשלים את התקנת ה-CLI. בדוק את הודעת המתקין ביומן האבחון ולאחר מכן נסה שוב."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "מתקין האפליקציות של Windows לא הצליח להשלים את התקנת ה-CLI. בדוק את הודעת המתקין ביומן האבחון ולאחר מכן נסה שוב.",
+    "연결 확인 필요": "בדיקת החיבור ל-Discord"
   },
   "cs": {
     "설정": "Nastavení",
@@ -10078,6 +10101,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Přibližně 70 MB. Stáhne se při prvním použití a po 5 minutách nečinnosti se uvolní z paměti.",
     "다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.": "Probíhá připojování k jiné překladatelské službě. Zkuste to znovu po dokončení.",
     "다른 계정 로그인이 이미 진행 중입니다.": "Již probíhá přihlašování k jinému účtu.",
-    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Instalační služba aplikací pro Windows nemohla dokončit instalaci CLI. Zkontrolujte zprávu instalační služby v diagnostickém protokolu a zkuste to znovu."
+    "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": "Instalační služba aplikací pro Windows nemohla dokončit instalaci CLI. Zkontrolujte zprávu instalační služby v diagnostickém protokolu a zkuste to znovu.",
+    "연결 확인 필요": "Zkontrolovat připojení k Discordu"
   }
 });

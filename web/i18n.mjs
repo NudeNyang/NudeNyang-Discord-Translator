@@ -188,6 +188,7 @@ export const COPY = Object.freeze({
   "번역 대기 중": ["Translation ready", "翻訳待機中", "翻译待机中"],
   "Discord 연결 중": ["Connecting to Discord", "Discord接続中", "正在连接 Discord"],
   "Discord 연결됨": ["Discord connected", "Discord接続済み", "Discord 已连接"],
+  "연결 확인 필요": ["Check Discord connection", "Discord接続を確認", "检查 Discord 连接"],
   "준비 중": ["preparing", "準備中", "准备中"],
   "사용 중": ["active", "使用中", "使用中"],
   "준비 실패": ["failed to prepare", "準備失敗", "准备失败"],

@@ -365,3 +365,11 @@ test("every literal localized status assignment has translations", () => {
     }
   }
 });
+
+test("Discord connection warning follows every selected interface language", () => {
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
+    const localized = translateCopy(language, "연결 확인 필요");
+    assert.notEqual(localized, "연결 확인 필요", language);
+    assert.doesNotMatch(localized, /[가-힣]/, language);
+  }
+});

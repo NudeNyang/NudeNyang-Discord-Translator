@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const betaPackaging = readFileSync(
@@ -9,6 +9,14 @@ const betaPackaging = readFileSync(
 const releasePaths = readFileSync(
   new URL("../../scripts/release_paths.ps1", import.meta.url),
   "utf8",
+);
+const portablePackaging = readFileSync(
+  new URL("../../scripts/package.ps1", import.meta.url),
+  "utf8",
+);
+const vcRuntimeScriptUrl = new URL("../../scripts/stage_vc_runtime.ps1", import.meta.url);
+const tauriConfig = JSON.parse(
+  readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
 );
 
 test("beta packaging updates the renamed developer executable", () => {
@@ -35,6 +43,25 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "CLI 계정 연결 충돌과 Discord 보안 연결 복구를 개선한 0.5.7 베타",
+    "Discord 연결 상태 안내와 Windows 필수 런타임을 보강한 0.5.8 베타",
   );
+});
+
+test("all Windows packages stage an app-local Visual C++ runtime for llama-server", () => {
+  assert.ok(existsSync(vcRuntimeScriptUrl), "Visual C++ runtime staging helper is required");
+  const vcRuntimeScript = readFileSync(vcRuntimeScriptUrl, "utf8");
+  for (const packagingScript of [betaPackaging, portablePackaging]) {
+    assert.match(packagingScript, /stage_vc_runtime\.ps1/);
+    assert.match(packagingScript, /Copy-VcRuntimeFiles/);
+  }
+  for (const dependency of ["msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll"]) {
+    assert.match(vcRuntimeScript, new RegExp(dependency.replace(".", "\\."), "i"));
+  }
+});
+
+test("the Windows installer carries the WebView2 bootstrapper for clean PCs", () => {
+  assert.deepEqual(tauriConfig.bundle.windows.webviewInstallMode, {
+    type: "embedBootstrapper",
+    silent: true,
+  });
 });
