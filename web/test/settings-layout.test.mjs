@@ -160,6 +160,16 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.doesNotMatch(script, /speech_style/);
 });
 
+test("incoming and outgoing message cards use distinct semantic accents", () => {
+  assert.match(markup, /<article class="settings-card message-settings-card message-settings-card--incoming">/);
+  assert.match(markup, /<article class="settings-card message-settings-card message-settings-card--outgoing">/);
+  assert.match(styles, /\.message-settings-card--incoming\s*\{[^}]*--message-flow-accent:\s*#d4a24a;/s);
+  assert.match(styles, /\.message-settings-card--outgoing\s*\{[^}]*--message-flow-accent:\s*var\(--accent\);/s);
+  assert.match(styles, /\.message-settings-card\s*\{[^}]*border-color:[^}]*--message-flow-accent/s);
+  assert.match(styles, /\.message-settings-card \.card-heading\s*\{[^}]*--message-flow-accent/s);
+  assert.match(styles, /\.message-settings-card \.message-direction-icon\s*\{[^}]*--message-flow-accent/s);
+});
+
 test("outgoing automatic-language help reserves its card height", () => {
   assert.match(
     styles,
