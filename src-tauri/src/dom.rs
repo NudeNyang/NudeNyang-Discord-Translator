@@ -21,7 +21,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       const parent = node.parentElement;
       if (!parent) continue;
       const protectedSelector = allowLinkText
-        ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        ? 'code,pre,[contenteditable="true"],textarea,input'
         : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
       const protectedParent = parent.closest(
         protectedSelector
@@ -419,7 +419,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       const parent = node.parentElement;
       if (!parent) continue;
       const protectedSelector = allowLinkText
-        ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        ? 'code,pre,[contenteditable="true"],textarea,input'
         : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
       const protectedParent = parent.closest(
         protectedSelector
@@ -489,7 +489,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
         const parent = node.parentElement;
         if (!parent) continue;
         const protectedSelector = allowLinkText
-          ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+          ? 'code,pre,[contenteditable="true"],textarea,input'
           : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
         const protectedParent = parent.closest(
           protectedSelector
@@ -631,7 +631,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       const parent = node.parentElement;
       if (!parent) continue;
       const protectedSelector = allowLinkText
-        ? 'button,[role="button"],code,pre,[contenteditable="true"],textarea,input'
+        ? 'code,pre,[contenteditable="true"],textarea,input'
         : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
       const protectedParent = parent.closest(
         protectedSelector
@@ -954,6 +954,12 @@ mod tests {
         assert!(RESTORE_TEXT_SCRIPT.contains("eligibleTextNodes(root, change.kind === 'embed')"));
         assert!(INSTALL_TEXT_RESTORE_SCRIPT
             .contains("eligibleTextNodes(root, change.kind === 'embed')"));
+        assert!(SNAPSHOT_SCRIPT.contains(
+            "allowLinkText\n        ? 'code,pre,[contenteditable=\"true\"],textarea,input'"
+        ));
+        assert!(
+            !SNAPSHOT_SCRIPT.contains("allowLinkText\n        ? 'button,[role=\"button\"],code")
+        );
 
         let part = DomPart {
             kind: "embed".to_string(),
