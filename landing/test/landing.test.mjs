@@ -37,6 +37,23 @@ test("테마, 모바일 메뉴와 스크롤 공개 동작을 제공한다", () =
   assert.match(script, /aria-expanded/);
 });
 
+test("헤더 언어 선택창의 V 아이콘이 버튼 중앙에 정렬된다", () => {
+  assert.match(html, /class="language-trigger-chevron"/);
+  assert.doesNotMatch(html, />⌄</);
+  assert.match(css, /\.language-trigger\s*\{[^}]*align-items:\s*center[^}]*min-height:\s*48px/s);
+  assert.match(css, /\.language-trigger-chevron\s*\{[^}]*width:\s*14px[^}]*height:\s*14px/s);
+  assert.match(css, /\.language-trigger-chevron::before\s*\{[^}]*top:\s*50%[^}]*left:\s*50%/s);
+  assert.match(css, /\.language-trigger\[aria-expanded="true"\] \.language-trigger-chevron/);
+});
+
+test("제품 지원 범위의 위 구분선만 콘텐츠 너비 안에서 끝난다", () => {
+  assert.match(css, /\.fact-band\s*\{[^}]*border-bottom:\s*1px solid var\(--border\)/s);
+  assert.doesNotMatch(css, /\.fact-band\s*\{[^}]*border-top:/s);
+  assert.match(css, /\.fact-grid\s*\{[^}]*border-top:\s*1px solid var\(--border\)/s);
+  assert.doesNotMatch(css, /\.fact-grid\s*\{[^}]*border-bottom:/s);
+  assert.match(css, /\.supported-languages\s*\{[^}]*border-top:\s*1px solid var\(--border\)/s);
+});
+
 test("메인 화면에서 28개 지원 언어를 선택해 UI 언어를 바꿀 수 있다", () => {
   assert.match(html, /id="supported-languages"/);
   assert.match(html, /class="[^"]*supported-language-grid[^"]*"/);

@@ -174,24 +174,66 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-width: 116px;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
+  gap: 18px;
+  width: 184px;
+  min-height: 48px;
+  padding: 0 16px 0 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, var(--text));
+  border-radius: 12px;
   color: var(--text);
   background: var(--surface-raised);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 650;
-  max-width: 184px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.language-trigger:hover {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+  background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-soft));
+}
+
+.language-trigger:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.language-trigger:active {
+  transform: translateY(1px);
 }
 
 .language-trigger-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.language-trigger-chevron {
+  position: relative;
+  display: block;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: transform 180ms ease;
+}
+
+.language-trigger-chevron::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1.75px solid currentColor;
+  border-bottom: 1.75px solid currentColor;
+  content: "";
+  transform: translate(-50%, -68%) rotate(45deg);
+}
+
+.language-trigger[aria-expanded="true"] .language-trigger-chevron {
+  transform: rotate(180deg);
 }
 
 .language-popover {
@@ -461,7 +503,7 @@ summary:focus-visible {
 
 .supported-languages {
   padding-block: 48px;
-  border-block: 1px solid var(--border);
+  border-top: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
@@ -526,7 +568,7 @@ summary:focus-visible {
 }
 
 .fact-band {
-  border-block: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 84%, transparent);
 }
 
@@ -534,6 +576,7 @@ summary:focus-visible {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   padding-block: 28px;
+  border-top: 1px solid var(--border);
 }
 
 .fact-grid > div {
