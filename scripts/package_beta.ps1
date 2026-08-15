@@ -8,6 +8,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'verify_llama_runtime.ps1')
+. (Join-Path $PSScriptRoot 'stage_msvc_runtime.ps1')
 . (Join-Path $PSScriptRoot 'release_paths.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $SecretDirectory = Resolve-NudeNyangReleaseSecretDirectory
@@ -112,6 +113,7 @@ if (-not $SkipBuild) {
     Assert-LlamaRuntimeVerified -SourceDirectory $llamaSource
     Copy-Item -LiteralPath (Join-Path $llamaSource 'llama-server.exe') -Destination $llamaDestination -Force
     Get-ChildItem -LiteralPath $llamaSource -Filter '*.dll' | Copy-Item -Destination $llamaDestination -Force
+    Copy-MsvcRuntime -DestinationDirectory $llamaDestination
 
     if ($IncludeDefaultModel) {
         $modelSource = Join-Path $env:LOCALAPPDATA 'LocalTools\NudeNyang Discord Translator\Cache\models\hy-mt2\1.8b\Hy-MT2-1.8B-Q4_K_M.gguf'

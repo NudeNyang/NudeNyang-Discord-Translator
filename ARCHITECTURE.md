@@ -129,6 +129,7 @@ OCR 품질 정책, 번역기 네임스페이스, 렌더러 버전을 키로 로�
 - Discord 설치 위치와 프로세스 재시작
 - 전역 단축키 네이티브 구현
 - llama-server 실행 파일과 번들 자원 위치
+- llama-server 옆에 배치하는 Microsoft 서명 Visual C++ 앱 로컬 런타임
 - 코드 서명·공증·업데이트 설치 방식
 
 공통 번역·CDP·DOM·OCR 코어에는 Python이나 PySide 의존성이 없다. Apple Silicon용 경로와
