@@ -33,7 +33,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 41;
+  const CONTROLLER_VERSION = 42;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
@@ -473,9 +473,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:6px;max-width:100%}
       #${ROOT_ID} .nt-control-wrap{position:relative;flex:none}
       #${ROOT_ID} .nt-outgoing-control{--nt-role-accent:#8ab7df;--nt-role-accent-deep:#5d7f9d;--nt-role-text:#f2f3f5;--nt-role-muted:#a9b7c4;--nt-icon-surface:#313842;--nt-icon-text:#8ab7df}
-      #${ROOT_ID} .nt-display-control{--nt-role-accent:#d7a47e;--nt-role-accent-deep:#9a6c4d;--nt-role-text:#f2f3f5;--nt-role-muted:#c4b0a2;--nt-icon-surface:#3d342f;--nt-icon-text:#d7a47e}
+      #${ROOT_ID} .nt-display-control{--nt-role-accent:#c98552;--nt-role-accent-deep:#7b4a30;--nt-role-text:#f2f3f5;--nt-role-muted:#c4b0a2;--nt-icon-surface:#4a3025;--nt-icon-text:#e08a4f}
       #${ROOT_ID}[data-open-menu="outgoing"] .nt-display-control,#${ROOT_ID}[data-open-menu="display"] .nt-outgoing-control{display:none}
       #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{position:relative;z-index:4;display:flex;width:68px;height:34px;align-items:center;gap:7px;padding:0 7px 0 4px;overflow:hidden;border:1px solid #ffffff26;border-radius:14px;background:linear-gradient(145deg,#353d49f2,#20252cf7);box-shadow:0 8px 22px #0006,inset 0 1px #ffffff26;color:var(--nt-role-text);backdrop-filter:blur(18px) saturate(135%);transition:transform 140ms cubic-bezier(.2,.8,.2,1),background 140ms ease,border-color 140ms ease,box-shadow 140ms ease}
+      #${ROOT_ID} .nt-display-trigger{width:64px;padding:0 5px 0 3px}
       #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:#ffffff3d;background:linear-gradient(145deg,#3d4654f5,#252b34fa);box-shadow:0 10px 26px #0007,inset 0 1px #ffffff30;filter:none;transform:translateY(-1px)}
       #${ROOT_ID} .nt-outgoing-trigger:active,#${ROOT_ID} .nt-display-trigger:active{transform:translateY(0) scale(.98)}
       #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-icon-text) 42%,transparent);outline-offset:2px}
