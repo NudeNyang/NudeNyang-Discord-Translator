@@ -35,6 +35,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "제품명을 NudeNyang Discord Translator로 변경하고 데이터와 설치 경로를 안전하게 이전한 0.5.6 베타",
+    "Discord 업데이트 후 사라진 설치 경로를 자동으로 복구하도록 개선한 0.5.11 베타",
   );
 });

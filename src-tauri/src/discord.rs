@@ -132,15 +132,8 @@ pub fn restart_pipe(
             "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
         );
     }
-    let executable = current
-        .map(|process| process.executable)
-        .or_else(installed_executable)
-        .ok_or_else(|| "Discord 설치 경로를 찾지 못했습니다.".to_string())?;
-    let executable = executable
-        .canonicalize()
-        .map_err(|error| format!("Discord 설치 경로를 확인하지 못했습니다: {error}"))?;
-    validate_discord_executable(&executable)?;
-    stop_matching_processes(&executable)?;
+    let executable = restart_executable_from(current.as_ref(), local_app_data().as_deref())?;
+    stop_installation_processes(&executable, current.as_ref())?;
 
     #[cfg(windows)]
     {
@@ -288,8 +281,11 @@ fn validate_discord_executable(executable: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn stop_matching_processes(executable: &Path) -> Result<(), String> {
-    let expected = normalized_path(executable);
+fn stop_installation_processes(
+    executable: &Path,
+    current: Option<&DiscordProcess>,
+) -> Result<(), String> {
+    let current_process_id = current.map(|process| process.process_id);
     let mut system = System::new_all();
     system.refresh_processes_specifics(
         ProcessesToUpdate::All,
@@ -300,9 +296,11 @@ fn stop_matching_processes(executable: &Path) -> Result<(), String> {
         .processes()
         .values()
         .filter(|process| {
-            process
-                .exe()
-                .is_some_and(|path| normalized_path(path) == expected)
+            is_discord_name(&process.name().to_string_lossy())
+                && (current_process_id.is_some_and(|id| id == process.pid().as_u32())
+                    || process
+                        .exe()
+                        .is_some_and(|path| same_discord_installation(path, executable)))
         })
         .map(|process| process.pid())
         .collect();
@@ -322,37 +320,124 @@ fn stop_matching_processes(executable: &Path) -> Result<(), String> {
     Err("선택한 Discord 프로세스를 종료하지 못했습니다.".to_string())
 }
 
-fn installed_executable() -> Option<PathBuf> {
-    let local_app_data = env::var_os("LOCALAPPDATA").filter(|value| !value.is_empty())?;
-    installed_executable_in(Path::new(&local_app_data))
+fn local_app_data() -> Option<PathBuf> {
+    env::var_os("LOCALAPPDATA")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+}
+
+fn restart_executable_from(
+    current: Option<&DiscordProcess>,
+    local_app_data: Option<&Path>,
+) -> Result<PathBuf, String> {
+    let preferred_name = current
+        .and_then(|process| process.executable.file_name())
+        .and_then(|name| name.to_str())
+        .filter(|name| is_discord_name(name));
+    let mut candidates = Vec::new();
+    if let Some(process) = current {
+        candidates.push(process.executable.clone());
+        if let Some(replacement) = replacement_executable(&process.executable) {
+            candidates.push(replacement);
+        }
+    }
+    if let Some(local_app_data) = local_app_data {
+        if let Some(installed) = installed_executable_in_preferred(local_app_data, preferred_name) {
+            candidates.push(installed);
+        }
+    }
+
+    for candidate in candidates {
+        let Ok(canonical) = candidate.canonicalize() else {
+            continue;
+        };
+        if validate_discord_executable(&canonical).is_ok() {
+            return Ok(canonical);
+        }
+    }
+
+    Err(
+        "Discord 설치 경로를 찾지 못했습니다. Discord를 완전히 종료한 뒤 공식 설치본을 다시 실행하고 재시도하십시오."
+            .to_string(),
+    )
 }
 
 fn installed_executable_in(local_app_data: &Path) -> Option<PathBuf> {
-    for (directory, executable_name) in DISCORD_INSTALLS {
-        let root = local_app_data.join(directory);
-        let Ok(entries) = std::fs::read_dir(root) else {
-            continue;
-        };
-        let mut versions: Vec<PathBuf> = entries
-            .flatten()
-            .map(|entry| entry.path())
-            .filter(|path| {
-                path.is_dir()
-                    && path
-                        .file_name()
-                        .is_some_and(|name| name.to_string_lossy().starts_with("app-"))
-            })
-            .collect();
-        versions.sort_by(|left, right| right.file_name().cmp(&left.file_name()));
-        if let Some(found) = versions
-            .into_iter()
-            .map(|version| version.join(executable_name))
-            .find(|candidate| candidate.is_file())
-        {
-            return found.canonicalize().ok().or(Some(found));
-        }
+    installed_executable_in_preferred(local_app_data, None)
+}
+
+fn installed_executable_in_preferred(
+    local_app_data: &Path,
+    preferred_name: Option<&str>,
+) -> Option<PathBuf> {
+    let mut installs = DISCORD_INSTALLS.to_vec();
+    if let Some(preferred_name) = preferred_name {
+        installs.sort_by_key(|(_, executable_name)| {
+            !executable_name.eq_ignore_ascii_case(preferred_name)
+        });
     }
-    None
+    installs
+        .into_iter()
+        .find_map(|(directory, executable_name)| {
+            latest_executable_in(&local_app_data.join(directory), executable_name)
+        })
+}
+
+fn replacement_executable(reported: &Path) -> Option<PathBuf> {
+    let (root, executable_name) = discord_install_identity(reported)?;
+    latest_executable_in(&root, &executable_name)
+}
+
+fn latest_executable_in(root: &Path, executable_name: &str) -> Option<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return None;
+    };
+    let mut versions: Vec<PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_dir()
+                && path
+                    .file_name()
+                    .is_some_and(|name| name.to_string_lossy().starts_with("app-"))
+        })
+        .collect();
+    versions.sort_by(|left, right| right.file_name().cmp(&left.file_name()));
+    versions
+        .into_iter()
+        .map(|version| version.join(executable_name))
+        .find(|candidate| candidate.is_file())
+        .and_then(|found| found.canonicalize().ok().or(Some(found)))
+}
+
+fn discord_install_identity(path: &Path) -> Option<(PathBuf, String)> {
+    let executable_name = path.file_name()?.to_str()?;
+    let version = path.parent()?;
+    if !version
+        .file_name()
+        .is_some_and(|name| name.to_string_lossy().starts_with("app-"))
+    {
+        return None;
+    }
+    let root = version.parent()?;
+    let root_name = root.file_name()?.to_str()?;
+    DISCORD_INSTALLS
+        .iter()
+        .any(|(directory, expected_executable)| {
+            directory.eq_ignore_ascii_case(root_name)
+                && expected_executable.eq_ignore_ascii_case(executable_name)
+        })
+        .then(|| (root.to_path_buf(), executable_name.to_ascii_lowercase()))
+}
+
+fn same_discord_installation(left: &Path, right: &Path) -> bool {
+    let Some((left_root, left_name)) = discord_install_identity(left) else {
+        return false;
+    };
+    let Some((right_root, right_name)) = discord_install_identity(right) else {
+        return false;
+    };
+    left_name == right_name && normalized_path(&left_root) == normalized_path(&right_root)
 }
 
 fn wait_for_restarted_process(
@@ -1069,8 +1154,9 @@ pub fn run_pipe_guardian(
 mod tests {
     use super::{
         discord_debug_arguments, guardian_state_matches_process, installed_executable_in,
-        is_discord_name, is_main_discord_arguments, validate_discord_executable, DiscordProcess,
-        PipeGuardianState, GUARDIAN_STATE_VERSION,
+        is_discord_name, is_main_discord_arguments, restart_executable_from,
+        same_discord_installation, validate_discord_executable, DiscordProcess, PipeGuardianState,
+        GUARDIAN_STATE_VERSION,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1120,6 +1206,73 @@ mod tests {
         assert!(executable.to_string_lossy().contains("app-2.0.0"));
         validate_discord_executable(&executable).unwrap();
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn stale_running_version_falls_back_to_the_latest_installed_discord() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("nude-translator-discord-stale-{nonce}"));
+        let stale = root.join("Discord").join("app-1.0.0").join("Discord.exe");
+        let latest = root.join("Discord").join("app-2.0.0").join("Discord.exe");
+        fs::create_dir_all(latest.parent().unwrap()).unwrap();
+        fs::write(&latest, b"test").unwrap();
+        let current = DiscordProcess {
+            process_id: 42,
+            executable: stale,
+        };
+
+        let selected = restart_executable_from(Some(&current), Some(&root)).unwrap();
+
+        assert_eq!(selected, latest.canonicalize().unwrap());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn stale_canary_version_does_not_fall_back_to_stable_discord() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("nude-translator-canary-stale-{nonce}"));
+        let stale = root
+            .join("DiscordCanary")
+            .join("app-1.0.0")
+            .join("DiscordCanary.exe");
+        let canary = root
+            .join("DiscordCanary")
+            .join("app-2.0.0")
+            .join("DiscordCanary.exe");
+        let stable = root.join("Discord").join("app-9.0.0").join("Discord.exe");
+        for executable in [&canary, &stable] {
+            fs::create_dir_all(executable.parent().unwrap()).unwrap();
+            fs::write(executable, b"test").unwrap();
+        }
+        let current = DiscordProcess {
+            process_id: 42,
+            executable: stale,
+        };
+
+        let selected = restart_executable_from(Some(&current), Some(&root)).unwrap();
+
+        assert_eq!(selected, canary.canonicalize().unwrap());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn discord_install_family_matches_versions_but_not_release_channels() {
+        let old_stable =
+            std::path::Path::new(r"C:\Users\tester\AppData\Local\Discord\app-1.0.0\Discord.exe");
+        let new_stable =
+            std::path::Path::new(r"C:\Users\tester\AppData\Local\Discord\app-2.0.0\Discord.exe");
+        let canary = std::path::Path::new(
+            r"C:\Users\tester\AppData\Local\DiscordCanary\app-2.0.0\DiscordCanary.exe",
+        );
+
+        assert!(same_discord_installation(old_stable, new_stable));
+        assert!(!same_discord_installation(old_stable, canary));
     }
 
     #[test]
