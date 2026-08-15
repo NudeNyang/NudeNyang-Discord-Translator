@@ -36,6 +36,14 @@ test("테마, 모바일 메뉴와 스크롤 공개 동작을 제공한다", () =
   assert.match(script, /aria-expanded/);
 });
 
+test("메인 화면에서 28개 지원 언어를 선택해 UI 언어를 바꿀 수 있다", () => {
+  assert.match(html, /id="supported-languages"/);
+  assert.match(html, /class="[^"]*supported-language-grid[^"]*"/);
+  assert.match(script, /renderSupportedLanguages/);
+  assert.match(script, /supportedLanguageGrid\.addEventListener\("click"/);
+  assert.match(script, /applyLocale\(option\.dataset\.locale\)/);
+});
+
 test("사용자 노출 문구에 금지된 대시 문자가 없다", () => {
   assert.equal(/[—–]/u.test(html), false);
   assert.equal(/[—–]/u.test(JSON.stringify(LANDING_LOCALES)), false);

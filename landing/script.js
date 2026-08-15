@@ -12,6 +12,7 @@ const languagePopover = document.querySelector("#language-popover");
 const languageSearch = document.querySelector("#language-search");
 const languageOptions = document.querySelector(".language-options");
 const languageEmpty = document.querySelector(".language-empty");
+const supportedLanguageGrid = document.querySelector(".supported-language-grid");
 const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
 const translationNodes = [...document.querySelectorAll("[data-i18n]")];
 const placeholderNodes = [...document.querySelectorAll("[data-i18n-placeholder]")];
@@ -92,6 +93,32 @@ function renderLanguageOptions(filter = "") {
   languageEmpty.hidden = filtered.length !== 0;
 }
 
+function renderSupportedLanguages() {
+  supportedLanguageGrid.replaceChildren(
+    ...LANGUAGE_OPTIONS.map(([code, label, compact, english]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "supported-language-button";
+      button.dataset.locale = code;
+      button.setAttribute("aria-label", `${label}, ${english}`);
+      const labelNode = document.createElement("span");
+      const compactNode = document.createElement("small");
+      labelNode.textContent = label;
+      compactNode.textContent = compact;
+      button.append(labelNode, compactNode);
+      return button;
+    }),
+  );
+}
+
+function updateSupportedLanguageSelection() {
+  supportedLanguageGrid.querySelectorAll(".supported-language-button").forEach((button) => {
+    const isCurrent = button.dataset.locale === currentLocale;
+    button.classList.toggle("is-active", isCurrent);
+    button.setAttribute("aria-pressed", String(isCurrent));
+  });
+}
+
 function applyLocale(locale, { persist = true } = {}) {
   currentLocale = normalizeLocale(locale) || "ko";
   root.lang = currentLocale;
@@ -111,12 +138,14 @@ function applyLocale(locale, { persist = true } = {}) {
   document.title = `NudeNyang Discord Translator | ${languageLabel}`;
   updateThemeControl();
   renderLanguageOptions(languageSearch.value);
+  updateSupportedLanguageSelection();
   if (persist) window.localStorage.setItem("landing-locale", currentLocale);
 }
 
 const savedTheme = window.localStorage.getItem("landing-theme");
 if (savedTheme === "light" || savedTheme === "dark") root.dataset.theme = savedTheme;
 
+renderSupportedLanguages();
 applyLocale(currentLocale, { persist: false });
 
 themeButton.addEventListener("click", () => {
@@ -157,6 +186,12 @@ languageOptions.addEventListener("click", (event) => {
   applyLocale(option.dataset.locale);
   closeLanguagePicker();
   languageTrigger.focus();
+});
+
+supportedLanguageGrid.addEventListener("click", (event) => {
+  const option = event.target.closest(".supported-language-button");
+  if (!option) return;
+  applyLocale(option.dataset.locale);
 });
 
 document.addEventListener("click", (event) => {
