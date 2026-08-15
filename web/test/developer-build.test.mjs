@@ -35,6 +35,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "Discord 업데이트 후 사라진 설치 경로를 자동으로 복구하도록 개선한 0.5.11 베타",
+    "Discord 보안 파이프 재연결 시 기존 가디언과 충돌하지 않도록 개선한 0.5.12 베타",
   );
 });

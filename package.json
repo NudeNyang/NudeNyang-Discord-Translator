@@ -1,7 +1,7 @@
 {
   "name": "nude-translator-tauri",
   "private": true,
-  "version": "0.5.11-beta",
+  "version": "0.5.12-beta",
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {

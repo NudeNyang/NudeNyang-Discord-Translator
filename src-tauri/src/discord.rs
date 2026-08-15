@@ -1,6 +1,7 @@
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU64;
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -19,6 +20,7 @@ const DISCORD_INSTALLS: [(&str, &str); 3] = [
 ];
 const RESTART_LEASE_FILE: &str = "accessibility-restart.lock";
 const GUARDIAN_STATE_VERSION: u32 = 2;
+static GUARDIAN_COPY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -213,6 +215,18 @@ fn integration_root() -> PathBuf {
         .unwrap_or_else(env::temp_dir)
         .join("NudeNyang")
         .join("DiscordIntegration")
+}
+
+fn guardian_executable_path(
+    root: &Path,
+    owner_process_id: u32,
+    discord_process_id: u32,
+    launched_at_nanos: u128,
+    sequence: u64,
+) -> PathBuf {
+    root.join(format!(
+        "nudenyang-discord-pipe-guardian-{owner_process_id}-{discord_process_id}-{launched_at_nanos}-{sequence}.exe"
+    ))
 }
 
 fn guardian_state_path(discord_process_id: u32) -> PathBuf {
@@ -509,9 +523,10 @@ fn is_main_discord_arguments(arguments: &[std::ffi::OsString]) -> bool {
 mod windows_pipe_launcher {
     use super::configure_background;
     use super::{
-        discord_debug_arguments, guardian_state_matches_process, guardian_state_path,
-        integration_root, is_discord_name, is_main_discord_arguments, normalized_path,
-        validate_discord_executable, DiscordProcess, PipeGuardianState, GUARDIAN_STATE_VERSION,
+        discord_debug_arguments, guardian_executable_path, guardian_state_matches_process,
+        guardian_state_path, integration_root, is_discord_name, is_main_discord_arguments,
+        normalized_path, validate_discord_executable, DiscordProcess, PipeGuardianState,
+        GUARDIAN_COPY_SEQUENCE, GUARDIAN_STATE_VERSION,
     };
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -519,8 +534,9 @@ mod windows_pipe_launcher {
     use std::os::windows::io::{AsRawHandle, FromRawHandle, IntoRawHandle};
     use std::path::Path;
     use std::process::{Command, Stdio};
+    use std::sync::atomic::Ordering;
     use std::thread;
-    use std::time::{Duration, Instant};
+    use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     use windows_sys::Win32::Foundation::{
         CloseHandle, DuplicateHandle, DUPLICATE_SAME_ACCESS, HANDLE,
@@ -628,10 +644,18 @@ mod windows_pipe_launcher {
             .map_err(|error| format!("보안 파이프 가디언 폴더를 만들지 못했습니다: {error}"))?;
         cleanup_stale_guardian_artifacts(&root);
         let _ = std::fs::remove_file(guardian_state_path(discord_process_id));
-        let guardian = root.join(format!(
-            "nudenyang-discord-pipe-guardian-{}.exe",
-            std::process::id()
-        ));
+        let launched_at_nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let sequence = GUARDIAN_COPY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let guardian = guardian_executable_path(
+            &root,
+            std::process::id(),
+            discord_process_id,
+            launched_at_nanos,
+            sequence,
+        );
         std::fs::copy(&source, &guardian)
             .map_err(|error| format!("보안 파이프 가디언을 준비하지 못했습니다: {error}"))?;
         let reader_copy = duplicate_inheritable_handle(reader.as_raw_handle())?;
@@ -1153,10 +1177,10 @@ pub fn run_pipe_guardian(
 #[cfg(test)]
 mod tests {
     use super::{
-        discord_debug_arguments, guardian_state_matches_process, installed_executable_in,
-        is_discord_name, is_main_discord_arguments, restart_executable_from,
-        same_discord_installation, validate_discord_executable, DiscordProcess, PipeGuardianState,
-        GUARDIAN_STATE_VERSION,
+        discord_debug_arguments, guardian_executable_path, guardian_state_matches_process,
+        installed_executable_in, is_discord_name, is_main_discord_arguments,
+        restart_executable_from, same_discord_installation, validate_discord_executable,
+        DiscordProcess, PipeGuardianState, GUARDIAN_STATE_VERSION,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1329,5 +1353,19 @@ mod tests {
         };
 
         assert!(!guardian_state_matches_process(&state, &canary));
+    }
+
+    #[test]
+    fn each_guardian_launch_uses_a_distinct_executable_path() {
+        let root =
+            std::path::Path::new(r"C:\Users\tester\AppData\Local\NudeNyang\DiscordIntegration");
+        let first = guardian_executable_path(root, 100, 200, 300, 0);
+        let second = guardian_executable_path(root, 100, 200, 301, 1);
+
+        assert_ne!(first, second);
+        assert!(first.file_name().is_some_and(|name| {
+            let name = name.to_string_lossy();
+            name.starts_with("nudenyang-discord-pipe-guardian-100-200-") && name.ends_with(".exe")
+        }));
     }
 }
