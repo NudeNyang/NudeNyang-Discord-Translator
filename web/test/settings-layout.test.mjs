@@ -129,8 +129,8 @@ test("settings apply immediately and the primary footer action only confirms", (
 });
 
 test("outgoing interpretation asks only when automatic language detection is uncertain", () => {
-  assert.match(markup, /class="card-index message-direction-icon" aria-hidden="true">↓<\/span>[\s\S]*?<h3>받는 메시지<\/h3>/);
-  assert.match(markup, /class="card-index message-direction-icon" aria-hidden="true">↑<\/span>[\s\S]*?<h3>보내는 메시지<\/h3>/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--incoming" aria-hidden="true">↓<\/span>[\s\S]*?<h3>받는 메시지<\/h3>/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--outgoing" aria-hidden="true">↑<\/span>[\s\S]*?<h3>보내는 메시지<\/h3>/);
   assert.doesNotMatch(markup, /class="card-index" aria-hidden="true">0[123]<\/span>/);
   assert.match(markup, /<h3>전송 메시지 통역<\/h3>/);
   assert.match(markup, /id="outgoing-translation"/);
@@ -160,14 +160,12 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.doesNotMatch(script, /speech_style/);
 });
 
-test("incoming and outgoing message cards use distinct semantic accents", () => {
-  assert.match(markup, /<article class="settings-card message-settings-card message-settings-card--incoming">/);
-  assert.match(markup, /<article class="settings-card message-settings-card message-settings-card--outgoing">/);
-  assert.match(styles, /\.message-settings-card--incoming\s*\{[^}]*--message-flow-accent:\s*#d4a24a;/s);
-  assert.match(styles, /\.message-settings-card--outgoing\s*\{[^}]*--message-flow-accent:\s*var\(--accent\);/s);
-  assert.match(styles, /\.message-settings-card\s*\{[^}]*border-color:[^}]*--message-flow-accent/s);
-  assert.match(styles, /\.message-settings-card \.card-heading\s*\{[^}]*--message-flow-accent/s);
-  assert.match(styles, /\.message-settings-card \.message-direction-icon\s*\{[^}]*--message-flow-accent/s);
+test("only the incoming and outgoing direction icons use distinct semantic accents", () => {
+  assert.doesNotMatch(markup, /message-settings-card/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--incoming" aria-hidden="true">↓<\/span>/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--outgoing" aria-hidden="true">↑<\/span>/);
+  assert.match(styles, /\.message-direction-icon--incoming\s*\{[^}]*--message-direction-accent:\s*#d4a24a;[^}]*border-color:[^}]*--message-direction-accent/s);
+  assert.doesNotMatch(styles, /\.message-settings-card/);
 });
 
 test("outgoing automatic-language help reserves its card height", () => {

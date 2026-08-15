@@ -487,42 +487,11 @@ input:focus-visible,
   line-height: 1;
 }
 
-.message-settings-card {
-  --message-flow-accent: var(--accent);
-  border-color: color-mix(in srgb, var(--message-flow-accent) 34%, var(--border));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--message-flow-accent) 4%, var(--surface)) 0%,
-    var(--surface) 34%
-  );
-  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--message-flow-accent) 52%, transparent);
-}
-
-.message-settings-card--incoming {
-  --message-flow-accent: #d4a24a;
-}
-
-.message-settings-card--outgoing {
-  --message-flow-accent: var(--accent);
-}
-
-.message-settings-card .card-heading {
-  border-bottom-color: color-mix(in srgb, var(--message-flow-accent) 28%, var(--border));
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--message-flow-accent) 11%, var(--surface-toned)),
-    color-mix(in srgb, var(--message-flow-accent) 3%, var(--surface-toned))
-  );
-}
-
-.message-settings-card .message-direction-icon {
-  border-color: color-mix(in srgb, var(--message-flow-accent) 58%, var(--border));
-  color: color-mix(in srgb, var(--message-flow-accent) 76%, var(--text));
-  background: color-mix(in srgb, var(--message-flow-accent) 18%, var(--surface));
-}
-
-.message-settings-card .switch[aria-checked="true"] span {
-  background: var(--message-flow-accent);
+.message-direction-icon--incoming {
+  --message-direction-accent: #d4a24a;
+  border-color: color-mix(in srgb, var(--message-direction-accent) 58%, var(--border));
+  color: color-mix(in srgb, var(--message-direction-accent) 76%, var(--text));
+  background: color-mix(in srgb, var(--message-direction-accent) 18%, var(--surface));
 }
 
 .settings-card .setting-row {
