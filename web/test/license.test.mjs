@@ -29,7 +29,7 @@ test("in-app license documents match the repository files", async () => {
 
 test("in-app license view contains the app, notices, and both bundled model licenses", () => {
   assert.equal(LICENSE_DOCUMENTS.length, 4);
-  assert.match(LICENSE_DOCUMENTS_TEXT, /NudeNyang Translator \(GPL-3\.0-only\)/);
+  assert.match(LICENSE_DOCUMENTS_TEXT, /NudeNyang Discord Translator \(GPL-3\.0-only\)/);
   assert.match(LICENSE_DOCUMENTS_TEXT, /Hy-MT2 1\.8B GGUF \(Apache-2\.0\)/);
   assert.match(LICENSE_DOCUMENTS_TEXT, /Hy-MT2 7B GGUF \(Apache-2\.0\)/);
 });

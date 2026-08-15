@@ -1894,7 +1894,7 @@ fn default_cache_root() -> PathBuf {
     if let Some(local) = env::var_os("LOCALAPPDATA") {
         return PathBuf::from(local)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("Cache");
     }
     #[cfg(target_os = "macos")]
@@ -1902,9 +1902,9 @@ fn default_cache_root() -> PathBuf {
         return PathBuf::from(home)
             .join("Library")
             .join("Caches")
-            .join("DiscordTranslateOverlay");
+            .join("NudeNyang Discord Translator");
     }
-    env::temp_dir().join("DiscordTranslateOverlay")
+    env::temp_dir().join("NudeNyang Discord Translator")
 }
 
 pub fn local_model_storage_root() -> PathBuf {

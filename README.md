@@ -1,8 +1,8 @@
-# NudeNyang Translator
+# NudeNyang Discord Translator
 
 제품 내 사용자 노출 문구의 작성 기준은 [제품 문체 원칙](PRODUCT_LANGUAGE.md)을 따릅니다.
 
-NudeNyang Translator는 Windows 10/11의 Discord 화면을 한국어·일본어·영어·중국어로 바꿔
+NudeNyang Discord Translator는 Windows 10/11의 Discord 화면을 한국어·일본어·영어·중국어로 바꿔
 표시하는 Tauri 2 + Rust 데스크톱 앱이다. Discord API, 사용자 토큰, self-bot을 사용하지
 않고 외부에 열리지 않는 전용 디버깅 파이프로 현재 렌더러의 DOM만 변경한다.
 
@@ -70,7 +70,7 @@ Hy-MT2 모델은 처음 선택할 때 공식 Hugging Face 저장소에서 이어
 크기와 SHA-256을 검증한다. OCR 모델도 첫 이미지 번역 때 고정된 리비전에서 내려받아 같은
 검증을 거친다. 이미지 OCR은 Small 모델을 기본으로 사용하며, 자동 또는 고품질 우선 설정에서만
 약 70MB의 Medium MNN 모델을 필요할 때 추가로 내려받는다. 사용하지 않는 OCR 엔진은 5분 뒤
-메모리에서 해제한다. 캐시와 설정은 기존 사용자 경로를 호환해 사용한다.
+메모리에서 해제한다. 캐시와 설정은 `%LOCALAPPDATA%\LocalTools\NudeNyang Discord Translator`에 저장하며, 기존 `DiscordTranslateOverlay` 폴더는 첫 실행 때 덮어쓰지 않고 안전하게 이전한다.
 
 설정의 `번역 서비스 연결`에서 ChatGPT·Gemini 공식 CLI를 설치하고 계정 로그인을 진행할 수
 있다. CLI와 Node.js 20 이상이 없으면 Windows 앱 설치 관리자를 통해 자동으로 준비한다. DeepL
@@ -107,13 +107,14 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
 ```
 
 업데이트 서명 키와 베타 토큰, 친구용 최초 설치 링크는 저장소 밖의
-`%LOCALAPPDATA%\NudeTranslator\secrets`에만 저장한다. 다음 베타에서는 앱 버전을 올린 뒤
+`%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`에만 저장한다. 기존
+`%LOCALAPPDATA%\NudeTranslator\secrets`는 배포 스크립트를 처음 실행할 때 새 폴더로 이전한다. 다음 베타에서는 앱 버전을 올린 뒤
 패키징과 배포 스크립트만 다시 실행한다.
 
 ## 진단 로그
 
 앱과 번역 엔진에서 발생한 오류는 Windows의
-`%LOCALAPPDATA%\NudeNyang Translator\NudeNyangTranslator.log` 한 파일에 기록한다. 설정의
+`%LOCALAPPDATA%\NudeNyang Discord Translator\NudeNyangDiscordTranslator.log` 한 파일에 기록한다. 설정의
 `앱 정보 > 로그 파일 찾기`를 누르면 탐색기에서 바로 선택된다. 로그는 최대 5MB로 유지하며
 이전 기록을 별도 파일로 회전하지 않는다. 사용자 홈 경로, API 키, 토큰, 비밀번호는 기록 전에
 가리고 번역할 메시지 본문과 Hy-MT2 프롬프트는 기록하지 않는다.

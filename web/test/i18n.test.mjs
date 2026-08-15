@@ -287,7 +287,7 @@ test("every dynamic runtime message has a non-English generated-locale rendering
     ].join("\n"),
     "Claude CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.",
     "ChatGPT 계정 연결",
-    "Claude CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다.",
+    "Claude CLI 로그인 정보는 유지되며 NudeNyang Discord Translator에서만 사용을 중지했습니다.",
     "ChatGPT 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.",
     "Claude 계정 로그인을 취소하고 있습니다.",
     "ChatGPT 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.",

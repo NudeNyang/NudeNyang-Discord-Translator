@@ -1550,7 +1550,7 @@ fn dispatch_outgoing_text_file(
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-    let filename = format!("NudeNyangTranslator-translation-{timestamp}.txt");
+    let filename = format!("NudeNyangDiscordTranslator-translation-{timestamp}.txt");
     let attached = client.evaluate(
         &attach_outgoing_text_file_script(request_id, content, &filename)?,
         false,
@@ -2779,7 +2779,7 @@ mod tests {
             .find(|part| part.kind == "message")
             .expect("복원 검증에 사용할 Discord 메시지가 필요합니다");
         let locator = part.locator();
-        let marker = "[NudeNyang Translator restore verification]";
+        let marker = "[NudeNyang Discord Translator restore verification]";
         let script = apply_script(&[DomChange::new(&part, marker)]).unwrap();
         client.evaluate(&script, false).unwrap();
         let translated = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false).unwrap()).unwrap();

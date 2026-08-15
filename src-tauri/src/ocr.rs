@@ -979,7 +979,7 @@ fn default_model_root() -> PathBuf {
     if let Some(local) = env::var_os("LOCALAPPDATA") {
         return PathBuf::from(local)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("Cache")
             .join("ocr-rust");
     }
@@ -988,10 +988,10 @@ fn default_model_root() -> PathBuf {
         return PathBuf::from(home)
             .join("Library")
             .join("Caches")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("ocr-rust");
     }
-    env::temp_dir().join("DiscordTranslateOverlay/ocr-rust")
+    env::temp_dir().join("NudeNyang Discord Translator/ocr-rust")
 }
 
 #[cfg(test)]

@@ -6,12 +6,22 @@ const betaPackaging = readFileSync(
   new URL("../../scripts/package_beta.ps1", import.meta.url),
   "utf8",
 );
+const releasePaths = readFileSync(
+  new URL("../../scripts/release_paths.ps1", import.meta.url),
+  "utf8",
+);
 
-test("beta packaging updates both current and legacy developer executables", () => {
+test("beta packaging updates the renamed developer executable", () => {
   assert.match(betaPackaging, /Sync-DeveloperBuild/);
-  assert.match(betaPackaging, /dist\\NudeNyangTranslator\\NudeNyangTranslator\.exe/);
-  assert.match(betaPackaging, /dist\\NudeTranslator\\NudeTranslator\.exe/);
+  assert.match(betaPackaging, /dist\\NudeNyangDiscordTranslator\\NudeNyangDiscordTranslator\.exe/);
+  assert.doesNotMatch(betaPackaging, /dist\\NudeTranslator\\NudeTranslator\.exe/);
   assert.match(betaPackaging, /개발자 실행본이 열려 있습니다/);
+});
+
+test("release credentials migrate into the renamed application folder", () => {
+  assert.match(releasePaths, /NudeNyang Discord Translator\\secrets/);
+  assert.match(releasePaths, /NudeTranslator\\secrets/);
+  assert.match(releasePaths, /Move-Item -LiteralPath \$legacy -Destination \$current/);
 });
 
 test("beta manifest is written as UTF-8 without a BOM on Windows PowerShell", () => {
@@ -25,6 +35,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "Discord 긴 메시지와 보조 화면 번역 누락을 줄이고, 이미지 확대와 다국어 UI를 개선한 0.5.5 베타",
+    "제품명을 NudeNyang Discord Translator로 변경하고 데이터와 설치 경로를 안전하게 이전한 0.5.6 베타",
   );
 });

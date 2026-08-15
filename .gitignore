@@ -11,5 +11,5 @@ infra/update-worker/worker-configuration.d.ts
 src-tauri/target/
 src-tauri/bundle-resources/runtime/*
 !src-tauri/bundle-resources/runtime/.gitkeep
-NudeNyang Translator (Tauri).lnk
+NudeNyang Discord Translator (Tauri).lnk
 Nude Translator (Tauri).lnk

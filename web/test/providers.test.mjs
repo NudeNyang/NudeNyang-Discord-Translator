@@ -179,7 +179,7 @@ test("DeepL API keys are applied when editing finishes and before confirmation",
   );
 });
 
-test("subscription CLI disconnect only disables the provider inside NudeNyang Translator", () => {
+test("subscription CLI disconnect only disables the provider inside NudeNyang Discord Translator", () => {
   for (const provider of ["chatgpt", "claude", "gemini"]) {
     const row = markup.match(new RegExp(`<article class="provider-row" data-provider="${provider}">[\\s\\S]*?<\\/article>`))?.[0] || "";
     assert.match(row, /provider-disconnect/);
@@ -187,7 +187,7 @@ test("subscription CLI disconnect only disables the provider inside NudeNyang Tr
   assert.match(config, /disabled_providers/);
   assert.match(providers, /CLI 로그인 정보는 유지/);
   assert.match(providers, /state:\s*if disabled\s*\{\s*"disabled"/);
-  assert.match(script, /NudeNyang Translator에서만 사용을 중지합니다/);
+  assert.match(script, /NudeNyang Discord Translator에서만 사용을 중지합니다/);
   assert.match(script, /provider === "deepl"/);
   assert.match(rustMain, /"disabled_providers"/);
   assert.match(rustMain, /patch\["translator"\]\s*=\s*json!\("hymt_1_8b"\)/);

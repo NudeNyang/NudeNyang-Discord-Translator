@@ -7,7 +7,7 @@ use std::sync::{LazyLock, Mutex};
 use regex::Regex;
 use time::OffsetDateTime;
 
-pub const LOG_FILENAME: &str = "NudeNyangTranslator.log";
+pub const LOG_FILENAME: &str = "NudeNyangDiscordTranslator.log";
 pub const MAX_LOG_BYTES: u64 = 5 * 1024 * 1024;
 const RETAIN_LOG_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_MESSAGE_CHARS: usize = 8_000;
@@ -26,7 +26,7 @@ pub fn default_log_path() -> PathBuf {
     #[cfg(target_os = "windows")]
     if let Some(local) = env::var_os("LOCALAPPDATA").filter(|value| !value.is_empty()) {
         return PathBuf::from(local)
-            .join("NudeNyang Translator")
+            .join("NudeNyang Discord Translator")
             .join(LOG_FILENAME);
     }
     #[cfg(target_os = "macos")]
@@ -34,16 +34,17 @@ pub fn default_log_path() -> PathBuf {
         return PathBuf::from(home)
             .join("Library")
             .join("Logs")
-            .join("NudeNyang Translator")
+            .join("NudeNyang Discord Translator")
             .join(LOG_FILENAME);
     }
     env::temp_dir()
-        .join("NudeNyang Translator")
+        .join("NudeNyang Discord Translator")
         .join(LOG_FILENAME)
 }
 
 pub fn initialize(version: &str) -> Result<PathBuf, String> {
     let path = default_log_path();
+    migrate_legacy_log(&path)?;
     prepare_log_file(&path)?;
     install_panic_hook();
     info(
@@ -55,6 +56,39 @@ pub fn initialize(version: &str) -> Result<PathBuf, String> {
         ),
     );
     Ok(path)
+}
+
+fn migrate_legacy_log(destination: &Path) -> Result<(), String> {
+    if destination.exists()
+        || env::var_os("NUDENYANG_TRANSLATOR_LOG").is_some_and(|value| !value.is_empty())
+    {
+        return Ok(());
+    }
+    let Some(parent) = destination.parent() else {
+        return Ok(());
+    };
+    let Some(base) = parent.parent() else {
+        return Ok(());
+    };
+    for legacy_directory in ["NudeNyang Translator", "Nude Translator"] {
+        let source = base.join(legacy_directory).join("NudeNyangTranslator.log");
+        if !source.is_file() {
+            continue;
+        }
+        ensure_parent(destination)?;
+        fs::copy(&source, destination).map_err(|error| {
+            format!(
+                "기존 진단 로그를 새 폴더로 옮기지 못했습니다 ({}): {error}",
+                source.display()
+            )
+        })?;
+        let _ = fs::remove_file(&source);
+        if let Some(directory) = source.parent() {
+            let _ = fs::remove_dir(directory);
+        }
+        break;
+    }
+    Ok(())
 }
 
 pub fn log_path() -> PathBuf {
@@ -260,8 +294,8 @@ fn utc_timestamp() -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        compact_log_file, external_line_is_diagnostic, prepare_log_file, redact_sensitive,
-        MAX_LOG_BYTES,
+        compact_log_file, external_line_is_diagnostic, migrate_legacy_log, prepare_log_file,
+        redact_sensitive, MAX_LOG_BYTES,
     };
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -290,7 +324,7 @@ mod tests {
             .unwrap_or_default()
             .as_nanos();
         let directory = std::env::temp_dir().join(format!("nudenyang-diagnostics-{nonce}"));
-        let path = directory.join("NudeNyangTranslator.log");
+        let path = directory.join("NudeNyangDiscordTranslator.log");
         fs::create_dir_all(&directory).unwrap();
         fs::write(&path, vec![b'x'; MAX_LOG_BYTES as usize + 1]).unwrap();
 
@@ -308,13 +342,36 @@ mod tests {
             .unwrap_or_default()
             .as_nanos();
         let directory = std::env::temp_dir().join(format!("nudenyang-log-create-{nonce}"));
-        let path = directory.join("NudeNyangTranslator.log");
+        let path = directory.join("NudeNyangDiscordTranslator.log");
 
         prepare_log_file(&path).unwrap();
 
         assert!(path.is_file());
         assert_eq!(fs::read_dir(&directory).unwrap().count(), 1);
         fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn previous_product_log_moves_to_the_renamed_directory() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let base = std::env::temp_dir().join(format!("nudenyang-log-migration-{nonce}"));
+        let legacy = base
+            .join("NudeNyang Translator")
+            .join("NudeNyangTranslator.log");
+        let current = base
+            .join("NudeNyang Discord Translator")
+            .join("NudeNyangDiscordTranslator.log");
+        fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        fs::write(&legacy, b"previous log").unwrap();
+
+        migrate_legacy_log(&current).unwrap();
+
+        assert_eq!(fs::read(&current).unwrap(), b"previous log");
+        assert!(!legacy.exists());
+        fs::remove_dir_all(base).unwrap();
     }
 
     #[test]

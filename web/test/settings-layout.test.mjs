@@ -14,11 +14,11 @@ const discordStartup = readFileSync(new URL("../../src-tauri/src/discord_startup
 const discord = readFileSync(new URL("../../src-tauri/src/discord.rs", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
-test("the user-facing product name is NudeNyang Translator", () => {
-  assert.match(markup, /NudeNyang Translator/);
-  assert.match(tauriConfig, /"productName": "NudeNyang Translator"/);
-  assert.match(script, /https:\/\/github\.com\/NudeNyang\/NudeNyang-Translator/);
-  assert.match(markup, /class="app-info-product-brand"><img class="app-info-product-icon" src="\.\/app-icon\.png" alt="" width="34" height="34" \/><div><h3>NudeNyang Translator<\/h3>/);
+test("the user-facing product name is NudeNyang Discord Translator", () => {
+  assert.match(markup, /NudeNyang Discord Translator/);
+  assert.match(tauriConfig, /"productName": "NudeNyang Discord Translator"/);
+  assert.match(script, /https:\/\/github\.com\/NudeNyang\/NudeNyang-Discord-Translator/);
+  assert.match(markup, /class="app-info-product-brand"><img class="app-info-product-icon" src="\.\/app-icon\.png" alt="" width="34" height="34" \/><div><h3>NudeNyang Discord Translator<\/h3>/);
   assert.match(styles, /\.app-info-product-brand\s*\{[\s\S]*?display:\s*flex;[\s\S]*?gap:\s*10px;/);
   assert.doesNotMatch(markup, /Nude Translator/);
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
@@ -40,16 +40,17 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.5-beta");
-  assert.match(tauriConfig, /"version": "0\.5\.5-beta"/);
-  assert.match(cargoManifest, /^version = "0\.5\.5-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.5 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.6-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.6-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.6-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.6 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 
-test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
+test("the installer migrates legacy shortcuts to the NudeNyang Discord Translator name", () => {
   assert.match(tauriConfig, /"installerHooks": "\.\/windows\/hooks\.nsh"/);
-  assert.match(installerHooks, /NudeNyang Translator\.lnk/);
+  assert.match(installerHooks, /NudeNyang Discord Translator\.lnk/);
+  assert.match(installerHooks, /Delete "\$DESKTOP\\NudeNyang Discord Translator\.lnk"/);
   assert.match(installerHooks, /Delete "\$DESKTOP\\Nude Translator\.lnk"/);
   assert.match(installerHooks, /Delete "\$SMPROGRAMS\\Nude Translator\.lnk"/);
 });
@@ -311,7 +312,7 @@ test("footer action labels stay on one line", () => {
 test("friends can reveal one privacy-safe diagnostic log file", () => {
   const diagnostics = readFileSync(new URL("../../src-tauri/src/diagnostics.rs", import.meta.url), "utf8");
   const hymt = readFileSync(new URL("../../src-tauri/src/translation/hymt.rs", import.meta.url), "utf8");
-  assert.match(diagnostics, /NudeNyangTranslator\.log/);
+  assert.match(diagnostics, /NudeNyangDiscordTranslator\.log/);
   assert.match(diagnostics, /MAX_LOG_BYTES/);
   assert.match(diagnostics, /redact_sensitive/);
   assert.match(hymt, /pipe_external_output/);

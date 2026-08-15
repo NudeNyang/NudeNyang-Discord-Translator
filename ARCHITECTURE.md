@@ -2,7 +2,7 @@
 
 ## 단일 Rust 엔진
 
-NudeNyang Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정과 트레이 렌더링만
+NudeNyang Discord Translator의 앱 셸과 엔진은 Tauri 2 + Rust다. WebView UI는 설정과 트레이 렌더링만
 담당하며, 모든 상태 변경은 Tauri command/event를 통해 Rust 상태로 들어간다.
 
 | 영역 | 소유 모듈 |
@@ -59,7 +59,7 @@ Discord PID와 DOM 세션에 다시 연결하며, 가디언은 Discord가 종료
 - CDP 연결 실패가 반복될 때만 15초 안내를 시작하고 한 활성화 주기당 자동 재시작은 한 번으로 제한한다.
 - 카운트다운 중 Discord PID가 바뀌면 오래된 재시작 요청을 폐기한다.
 - 서버 참가, 채널 이동, 번역 토글과 앱 재실행은 Discord 재시작 사유로 취급하지 않는다.
-- NudeNyang Translator와 Sentory는 공통 재시작 잠금을 사용해 동시에 Discord를 재실행하지 않는다.
+- NudeNyang Discord Translator와 Sentory는 공통 재시작 잠금을 사용해 동시에 Discord를 재실행하지 않는다.
 - 연결할 실행 파일 경로·PID와 `https://discord.com` 페이지 대상을 모두 검증한다.
 - 앱이 정상 종료되면 번역 DOM을 원문으로 복원하고 앱의 CDP 세션만 분리한다. Discord와 전용
   파이프는 가디언이 유지하므로 사용자의 통화·채팅 세션은 끊기지 않으며, 다음 앱 실행에서 같은

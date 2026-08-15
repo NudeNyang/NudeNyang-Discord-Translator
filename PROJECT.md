@@ -1,8 +1,8 @@
-# Nude Translator 프로젝트 기준
+# NudeNyang Discord Translator 프로젝트 기준
 
 ## 제품 목표
 
-Nude Translator는 Discord 데스크톱 클라이언트의 DOM을 이용해 받은 메시지, 보내는 메시지와
+NudeNyang Discord Translator는 Discord 데스크톱 클라이언트의 DOM을 이용해 받은 메시지, 보내는 메시지와
 이미지의 텍스트를 번역하는 Windows 우선 데스크톱 애플리케이션이다. 앱 셸과 핵심 엔진은
 Tauri/Rust를 기준으로 유지하며, 장기적으로 macOS를 지원할 수 있는 구조를 지향한다.
 

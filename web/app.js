@@ -29,7 +29,7 @@ const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 const SCROLL_INDICATOR_REVEAL_DISTANCE = 44;
 const APP_LINKS = Object.freeze({
   author: "https://x.com/NudeNyang_VRC",
-  repository: "https://github.com/NudeNyang/NudeNyang-Translator",
+  repository: "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
 });
 
 const DISPLAY_TRANSLATOR_OPTIONS = [
@@ -643,7 +643,7 @@ async function disconnectProvider(row) {
     title: `${currentConnection?.name || "번역 서비스"} 연결을 해제하시겠습니까?`,
     message: isDeepL
       ? "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다."
-      : "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.",
+      : "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Discord Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.",
     acceptText: "연결 해제",
   });
   if (!confirmed) return;

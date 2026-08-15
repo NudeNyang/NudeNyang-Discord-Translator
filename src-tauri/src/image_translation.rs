@@ -654,7 +654,7 @@ pub fn apply_image_error_script(image_id: &str, message: &str) -> Result<String,
           if (!img) return {{applied:false}};
           img.dataset.ntImageStatus='error'; img.dataset.ntImageError=message;
           const button=document.getElementById('nt-image-translate-button');
-          if (message) console.warn('[NudeNyang Translator] image translation failed:', message);
+          if (message) console.warn('[NudeNyang Discord Translator] image translation failed:', message);
           if (button?.dataset.ntTarget===id) window.__ntUpdateImageButton?.(img);
           return {{applied:true}};
         }})()"##
@@ -1124,16 +1124,16 @@ fn default_cache_dir() -> PathBuf {
     if let Some(local) = env::var_os("LOCALAPPDATA") {
         return PathBuf::from(local)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("Cache")
             .join("image-translations");
     }
     #[cfg(target_os = "macos")]
     if let Some(home) = env::var_os("HOME") {
         return PathBuf::from(home)
-            .join("Library/Caches/DiscordTranslateOverlay/image-translations");
+            .join("Library/Caches/NudeNyang Discord Translator/image-translations");
     }
-    env::temp_dir().join("DiscordTranslateOverlay/image-translations")
+    env::temp_dir().join("NudeNyang Discord Translator/image-translations")
 }
 
 #[cfg(test)]

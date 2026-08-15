@@ -11,7 +11,7 @@ const generatedLanguages = SUPPORTED_TARGET_LANGUAGES.filter(
 const sourceCopy = Object.freeze({ ...COPY, ...DYNAMIC_TEMPLATE_COPY });
 const expectedKeys = Object.keys(sourceCopy).sort();
 const protectedTokens = [
-  "NudeNyang Translator", "Discord", "Hy-MT2", "TranslateGemma", "ChatGPT", "Claude",
+  "NudeNyang Discord Translator", "Discord", "Hy-MT2", "TranslateGemma", "ChatGPT", "Claude",
   "Gemini", "DeepL", "Antigravity", "API", "CLI", "GPU", "CPU", "RAM", "VRAM",
   "F1", "F8", "F12", "F24", "Ctrl", "Alt", "Shift", "Enter", "Esc", "OAuth",
 ];

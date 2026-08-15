@@ -845,7 +845,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.activeRequest = '';
           this.bypass = 0;
         }
-        if (message) console.warn('[NudeNyang Translator] outgoing translation failed:', message);
+        if (message) console.warn('[NudeNyang Discord Translator] outgoing translation failed:', message);
         this.setStatus(copy('translationFailed'), true);
       },
       prunePending() {
@@ -3125,7 +3125,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "실행 중인 Discord와 NudeNyang Translator가 필요합니다"]
+    #[ignore = "실행 중인 Discord와 NudeNyang Discord Translator가 필요합니다"]
     fn live_running_app_f12_controls_all_outgoing_message_views() {
         let _guard = lock_live_outgoing();
         let config = ConfigStore::load_default()
@@ -3647,7 +3647,7 @@ mod tests {
                 &attach_outgoing_text_file_script(
                     request_id,
                     content,
-                    "NudeNyangTranslator-test.txt",
+                    "NudeNyangDiscordTranslator-test.txt",
                 )
                 .expect("attach script"),
                 false,
@@ -3662,7 +3662,7 @@ mod tests {
             .expect("read attached file");
         assert_eq!(
             result["name"].as_str(),
-            Some("NudeNyangTranslator-test.txt")
+            Some("NudeNyangDiscordTranslator-test.txt")
         );
         assert_eq!(result["content"].as_str(), Some(content));
         assert_eq!(result["editor"].as_str(), Some(""));

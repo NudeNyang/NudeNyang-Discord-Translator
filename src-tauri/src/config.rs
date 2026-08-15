@@ -9,8 +9,11 @@ use serde_json::Value;
 use crate::language::is_supported_language_code;
 use crate::translation::HyMtModelSize;
 
-const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Translator";
-const LEGACY_UPDATE_REPOSITORY: &str = "NudeNyang/DiscordTranslateOverlay";
+const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Discord-Translator";
+const LEGACY_UPDATE_REPOSITORIES: &[&str] = &[
+    "NudeNyang/NudeNyang-Translator",
+    "NudeNyang/DiscordTranslateOverlay",
+];
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
@@ -200,7 +203,10 @@ impl AppConfig {
             Value::Array(disabled_providers.into_iter().map(Value::String).collect()),
         );
 
-        if object.get("update_repository").and_then(Value::as_str) == Some(LEGACY_UPDATE_REPOSITORY)
+        if object
+            .get("update_repository")
+            .and_then(Value::as_str)
+            .is_some_and(|repository| LEGACY_UPDATE_REPOSITORIES.contains(&repository))
         {
             object.insert(
                 "update_repository".to_string(),
@@ -360,7 +366,7 @@ pub fn default_config_path() -> PathBuf {
     if let Some(local_app_data) = env::var_os("LOCALAPPDATA").filter(|value| !value.is_empty()) {
         return PathBuf::from(local_app_data)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("settings.json");
     }
 
@@ -369,7 +375,7 @@ pub fn default_config_path() -> PathBuf {
         return PathBuf::from(home)
             .join("Library")
             .join("Application Support")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("settings.json");
     }
 
@@ -382,7 +388,8 @@ pub fn default_config_path() -> PathBuf {
                 .map(|home| PathBuf::from(home).join(".config"))
         })
         .unwrap_or_else(|| PathBuf::from("."));
-    base.join("DiscordTranslateOverlay").join("settings.json")
+    base.join("NudeNyang Discord Translator")
+        .join("settings.json")
 }
 
 fn load_config(path: &Path) -> Result<AppConfig, String> {
@@ -466,7 +473,10 @@ mod tests {
         assert!(!restored.enabled);
         assert_eq!(restored.translator, "hymt_1_8b");
         assert_eq!(restored.outgoing_translator, "hymt_1_8b");
-        assert_eq!(restored.update_repository, "NudeNyang/NudeNyang-Translator");
+        assert_eq!(
+            restored.update_repository,
+            "NudeNyang/NudeNyang-Discord-Translator"
+        );
         assert!(serde_json::to_value(&restored)
             .expect("serialize migrated config")
             .get("speech_style")
@@ -488,6 +498,19 @@ mod tests {
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
         assert_eq!(claude.translator, "claude");
+    }
+
+    #[test]
+    fn previous_repository_name_migrates_to_the_discord_product_repository() {
+        let restored = AppConfig::from_value(json!({
+            "update_repository": "NudeNyang/NudeNyang-Translator"
+        }))
+        .expect("previous repository should migrate");
+
+        assert_eq!(
+            restored.update_repository,
+            "NudeNyang/NudeNyang-Discord-Translator"
+        );
     }
 
     #[test]

@@ -31,4 +31,4 @@ if (-not $InstalledServer) {
 }
 Assert-LlamaRuntimeVerified -SourceDirectory $InstalledServer.DirectoryName
 
-Write-Host "설치가 완료되었습니다. 실행 중인 NudeNyang Translator를 완전히 종료한 후 다시 실행하십시오."
+Write-Host "설치가 완료되었습니다. 실행 중인 NudeNyang Discord Translator를 완전히 종료한 후 다시 실행하십시오."

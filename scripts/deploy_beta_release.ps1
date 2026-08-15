@@ -1,9 +1,10 @@
 param(
-    [string]$Version = '0.5.5-beta',
+    [string]$Version = '0.5.6-beta',
     [string]$BucketName = 'nude-translator-beta-releases'
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'release_paths.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
 $ManifestPath = Join-Path $ReleaseDirectory 'latest.json'
@@ -27,7 +28,7 @@ finally {
     Pop-Location
 }
 
-$SecretDirectory = Join-Path $env:LOCALAPPDATA 'NudeTranslator\secrets'
+$SecretDirectory = Resolve-NudeNyangReleaseSecretDirectory
 $Endpoint = (Get-Content -Raw -LiteralPath (Join-Path $SecretDirectory 'update-endpoint.txt')).Trim()
 $BetaToken = (Get-Content -Raw -LiteralPath (Join-Path $SecretDirectory 'beta-token.txt')).Trim()
 $CheckUrl = $Endpoint.Replace('{{target}}', 'windows').Replace('{{arch}}', 'x86_64').Replace('{{current_version}}', '0.0.0')

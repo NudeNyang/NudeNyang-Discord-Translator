@@ -1,23 +1,23 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('RGlzY29yZCDquLQg66mU7Iuc7KeA7JmAIOuztOyhsCDtmZTrqbQg67KI7JetIOuIhOudveydhCDspITsnbTqs6AsIOydtOuvuOyngCDtmZXrjIDsmYAg64uk6rWt7Ja0IFVJ66W8IOqwnOyEoO2VnCAwLjUuNSDrsqDtg4A=')),
+    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('7KCc7ZKI66qF7J2EIE51ZGVOeWFuZyBEaXNjb3JkIFRyYW5zbGF0b3LroZwg67OA6rK97ZWY6rOgIOuNsOydtO2EsOyZgCDshKTsuZgg6rK966Gc66W8IOyViOyghO2VmOqyjCDsnbTsoITtlZwgMC41LjYg67Kg7YOA')),
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'verify_llama_runtime.ps1')
+. (Join-Path $PSScriptRoot 'release_paths.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
-$SecretDirectory = Join-Path $env:LOCALAPPDATA 'NudeTranslator\secrets'
+$SecretDirectory = Resolve-NudeNyangReleaseSecretDirectory
 $EndpointFile = Join-Path $SecretDirectory 'update-endpoint.txt'
 $TokenFile = Join-Path $SecretDirectory 'beta-token.txt'
 $PrivateKey = Join-Path $SecretDirectory 'updater.key'
 $PrivateKeyPasswordFile = Join-Path $SecretDirectory 'updater-password.txt'
 $StagingRuntime = Join-Path $ProjectRoot 'src-tauri\bundle-resources\runtime'
 $DeveloperBuildTargets = @(
-    (Join-Path $ProjectRoot 'dist\NudeNyangTranslator\NudeNyangTranslator.exe'),
-    (Join-Path $ProjectRoot 'dist\NudeTranslator\NudeTranslator.exe')
+    (Join-Path $ProjectRoot 'dist\NudeNyangDiscordTranslator\NudeNyangDiscordTranslator.exe')
 )
 $TauriConfig = Get-Content -Raw (Join-Path $ProjectRoot 'src-tauri\tauri.conf.json') | ConvertFrom-Json
 $Version = [string]$TauriConfig.version
@@ -114,7 +114,7 @@ if (-not $SkipBuild) {
     Get-ChildItem -LiteralPath $llamaSource -Filter '*.dll' | Copy-Item -Destination $llamaDestination -Force
 
     if ($IncludeDefaultModel) {
-        $modelSource = Join-Path $env:LOCALAPPDATA 'LocalTools\DiscordTranslateOverlay\Cache\models\hy-mt2\1.8b\Hy-MT2-1.8B-Q4_K_M.gguf'
+        $modelSource = Join-Path $env:LOCALAPPDATA 'LocalTools\NudeNyang Discord Translator\Cache\models\hy-mt2\1.8b\Hy-MT2-1.8B-Q4_K_M.gguf'
         if (-not (Test-Path -LiteralPath $modelSource)) {
             throw "내장할 Hy-MT2 1.8B 모델이 없습니다: $modelSource"
         }
@@ -157,7 +157,7 @@ if (-not (Test-Path -LiteralPath $Signature)) {
 
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
 New-Item -ItemType Directory -Path $ReleaseDirectory -Force | Out-Null
-$InstallerName = "NudeNyangTranslator-$Version-Windows-x64-Setup.exe"
+$InstallerName = "NudeNyangDiscordTranslator-$Version-Windows-x64-Setup.exe"
 $ReleaseInstaller = Join-Path $ReleaseDirectory $InstallerName
 Copy-Item -LiteralPath $Installer.FullName -Destination $ReleaseInstaller -Force
 Copy-Item -LiteralPath $Signature -Destination "$ReleaseInstaller.sig" -Force
