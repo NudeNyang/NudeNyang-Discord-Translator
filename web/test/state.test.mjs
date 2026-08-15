@@ -75,6 +75,14 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
   assert.equal(config.hotkeys.review_outgoing_before_send, "Alt+Enter");
   assert.equal(config.ui_language, "auto");
+  assert.equal(config.image_ocr_quality, "adaptive");
+});
+
+test("image OCR quality keeps only supported execution policies", () => {
+  for (const mode of ["fast", "adaptive", "quality"]) {
+    assert.equal(normalizeConfig({ image_ocr_quality: mode }).image_ocr_quality, mode);
+  }
+  assert.equal(normalizeConfig({ image_ocr_quality: "maximum" }).image_ocr_quality, "adaptive");
 });
 
 test("translation history retention accepts supported periods and rejects other values", () => {

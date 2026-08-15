@@ -405,7 +405,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "若要接受此邀請，請在瀏覽器中繼續。",
     "브라우저에서 계속": "在瀏覽器中繼續",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord 無法載入此邀請。請在瀏覽器中確認其狀態。",
-    "브라우저에서 확인": "在瀏覽器中確認"
+    "브라우저에서 확인": "在瀏覽器中確認",
+    "이미지 OCR 품질": "圖片 OCR 品質",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "針對不同的文字樣式和背景，平衡辨識速度與準確度。",
+    "자동 (권장)": "自動（建議）",
+    "빠른 처리": "加快處理速度",
+    "고품질 우선": "品質優先",
+    "자동 처리": "自動處理",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "先使用快速模型辨識，再以較高品質的模型重新檢查不確定的區域。",
+    "고품질 모델": "較高品質模型",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "約 70MB。首次需要時下載，閒置 5 分鐘後從記憶體釋放。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -813,7 +822,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Para aceitar este convite, continue no navegador.",
     "브라우저에서 계속": "Continuar no navegador",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "O Discord não conseguiu carregar este convite. Verifique o status dele no navegador.",
-    "브라우저에서 확인": "Verificar no navegador"
+    "브라우저에서 확인": "Verificar no navegador",
+    "이미지 OCR 품질": "Qualidade do OCR de imagens",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Equilibre a velocidade e a precisão do reconhecimento para diferentes estilos de texto e fundos.",
+    "자동 (권장)": "Automático (recomendado)",
+    "빠른 처리": "Processamento mais rápido",
+    "고품질 우선": "Priorizar qualidade",
+    "자동 처리": "Processamento automático",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Use primeiro o modelo rápido e depois verifique novamente apenas as regiões incertas com o modelo de maior qualidade.",
+    "고품질 모델": "Modelo de maior qualidade",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Cerca de 70MB. O download é feito quando necessário pela primeira vez, e o modelo é liberado da memória após 5 minutos de inatividade."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1221,7 +1239,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "इस आमंत्रण को स्वीकार करने के लिए, कृपया अपने ब्राउज़र में जारी रखें।",
     "브라우저에서 계속": "ब्राउज़र में जारी रखें",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord इस आमंत्रण को लोड नहीं कर सका। कृपया अपने ब्राउज़र में इसकी स्थिति जाँचें।",
-    "브라우저에서 확인": "ब्राउज़र में जाँचें"
+    "브라우저에서 확인": "ब्राउज़र में जाँचें",
+    "이미지 OCR 품질": "इमेज OCR गुणवत्ता",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "अलग-अलग टेक्स्ट शैलियों और बैकग्राउंड के लिए पहचान की गति और सटीकता में संतुलन रखें।",
+    "자동 (권장)": "स्वचालित (अनुशंसित)",
+    "빠른 처리": "तेज़ प्रोसेसिंग",
+    "고품질 우선": "गुणवत्ता को प्राथमिकता दें",
+    "자동 처리": "स्वचालित प्रोसेसिंग",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "पहले तेज़ मॉडल का उपयोग करें, फिर केवल अनिश्चित क्षेत्रों की उच्च-गुणवत्ता वाले मॉडल से दोबारा जाँच करें।",
+    "고품질 모델": "उच्च-गुणवत्ता वाला मॉडल",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "लगभग 70MB। पहली बार ज़रूरत पड़ने पर यह डाउनलोड होता है और 5 मिनट तक निष्क्रिय रहने के बाद मेमोरी से हटा दिया जाता है।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1629,7 +1656,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Para aceptar esta invitación, continúa en tu navegador.",
     "브라우저에서 계속": "Continuar en el navegador",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord no pudo cargar esta invitación. Comprueba su estado en tu navegador.",
-    "브라우저에서 확인": "Comprobar en el navegador"
+    "브라우저에서 확인": "Comprobar en el navegador",
+    "이미지 OCR 품질": "Calidad del OCR de imágenes",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Equilibra la velocidad y la precisión del reconocimiento según los estilos de texto y los fondos.",
+    "자동 (권장)": "Automático (recomendado)",
+    "빠른 처리": "Procesamiento más rápido",
+    "고품질 우선": "Priorizar la calidad",
+    "자동 처리": "Procesamiento automático",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Usa primero el modelo rápido y vuelve a comprobar solo las regiones dudosas con el modelo de mayor calidad.",
+    "고품질 모델": "Modelo de mayor calidad",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Aproximadamente 70 MB. Se descarga cuando se necesita por primera vez y se libera de la memoria tras 5 minutos de inactividad."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2037,7 +2073,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Um diese Einladung anzunehmen, fahre bitte im Browser fort.",
     "브라우저에서 계속": "Im Browser fortfahren",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord konnte diese Einladung nicht laden. Bitte prüfe ihren Status im Browser.",
-    "브라우저에서 확인": "Im Browser prüfen"
+    "브라우저에서 확인": "Im Browser prüfen",
+    "이미지 OCR 품질": "OCR-Bildqualität",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Erkennungsgeschwindigkeit und -genauigkeit an unterschiedliche Textstile und Hintergründe anpassen.",
+    "자동 (권장)": "Automatisch (empfohlen)",
+    "빠른 처리": "Schnellere Verarbeitung",
+    "고품질 우선": "Qualität priorisieren",
+    "자동 처리": "Automatische Verarbeitung",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Zuerst das schnelle Modell verwenden und nur unsichere Bereiche mit dem höherwertigen Modell erneut prüfen.",
+    "고품질 모델": "Höherwertiges Modell",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Etwa 70 MB. Wird bei der ersten Verwendung heruntergeladen und nach 5 Minuten Inaktivität aus dem Arbeitsspeicher entfernt."
   },
   "ru": {
     "설정": "Настройки",
@@ -2445,7 +2490,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Чтобы принять приглашение, продолжите в браузере.",
     "브라우저에서 계속": "Продолжить в браузере",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord не удалось загрузить это приглашение. Проверьте его статус в браузере.",
-    "브라우저에서 확인": "Проверить в браузере"
+    "브라우저에서 확인": "Проверить в браузере",
+    "이미지 OCR 품질": "Качество распознавания текста на изображениях",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Баланс скорости и точности распознавания для разных стилей текста и фонов.",
+    "자동 (권장)": "Автоматически (рекомендуется)",
+    "빠른 처리": "Ускоренная обработка",
+    "고품질 우선": "Приоритет качества",
+    "자동 처리": "Автоматическая обработка",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Сначала использовать быструю модель, затем повторно проверять только сомнительные области с помощью более качественной модели.",
+    "고품질 모델": "Модель повышенного качества",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Около 70 МБ. Скачивается при первом использовании и выгружается из памяти после 5 минут бездействия."
   },
   "id": {
     "설정": "Pengaturan",
@@ -2853,7 +2907,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Untuk menerima undangan ini, lanjutkan di browser.",
     "브라우저에서 계속": "Lanjutkan di browser",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord tidak dapat memuat undangan ini. Periksa statusnya di browser.",
-    "브라우저에서 확인": "Periksa di browser"
+    "브라우저에서 확인": "Periksa di browser",
+    "이미지 OCR 품질": "Kualitas OCR gambar",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Seimbangkan kecepatan dan akurasi pengenalan untuk berbagai gaya teks dan latar belakang.",
+    "자동 (권장)": "Otomatis (disarankan)",
+    "빠른 처리": "Pemrosesan lebih cepat",
+    "고품질 우선": "Utamakan kualitas",
+    "자동 처리": "Pemrosesan otomatis",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gunakan model cepat terlebih dahulu, lalu periksa ulang hanya area yang tidak pasti dengan model berkualitas lebih tinggi.",
+    "고품질 모델": "Model berkualitas lebih tinggi",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Sekitar 70MB. Diunduh saat pertama kali diperlukan dan dihapus dari memori setelah tidak digunakan selama 5 menit."
   },
   "fr": {
     "설정": "Paramètres",
@@ -3261,7 +3324,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Pour accepter cette invitation, poursuivez dans votre navigateur.",
     "브라우저에서 계속": "Continuer dans le navigateur",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord n’a pas pu charger cette invitation. Vérifiez son statut dans votre navigateur.",
-    "브라우저에서 확인": "Vérifier dans le navigateur"
+    "브라우저에서 확인": "Vérifier dans le navigateur",
+    "이미지 OCR 품질": "Qualité de l’OCR d’image",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Équilibrez la vitesse et la précision de reconnaissance selon les styles de texte et les arrière-plans.",
+    "자동 (권장)": "Automatique (recommandé)",
+    "빠른 처리": "Traitement plus rapide",
+    "고품질 우선": "Privilégier la qualité",
+    "자동 처리": "Traitement automatique",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Utilisez d’abord le modèle rapide, puis revérifiez uniquement les zones incertaines avec le modèle de meilleure qualité.",
+    "고품질 모델": "Modèle de meilleure qualité",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Environ 70MB. Il est téléchargé à la première utilisation et libéré de la mémoire après 5 minutes d’inactivité."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -3669,7 +3741,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Bu daveti kabul etmek için lütfen tarayıcınızda devam edin.",
     "브라우저에서 계속": "Tarayıcıda devam et",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord bu daveti yükleyemedi. Lütfen durumunu tarayıcınızda kontrol edin.",
-    "브라우저에서 확인": "Tarayıcıda kontrol et"
+    "브라우저에서 확인": "Tarayıcıda kontrol et",
+    "이미지 OCR 품질": "Görüntü OCR kalitesi",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Farklı metin stilleri ve arka planlar için tanıma hızını ve doğruluğunu dengeleyin.",
+    "자동 (권장)": "Otomatik (önerilen)",
+    "빠른 처리": "Daha hızlı işleme",
+    "고품질 우선": "Kaliteye öncelik ver",
+    "자동 처리": "Otomatik işleme",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Önce hızlı modeli kullanın, ardından yalnızca belirsiz bölgeleri daha yüksek kaliteli modelle yeniden kontrol edin.",
+    "고품질 모델": "Daha yüksek kaliteli model",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Yaklaşık 70MB. İlk gerektiğinde indirilir ve 5 dakika kullanılmadığında bellekten kaldırılır."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4077,7 +4158,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "لقبول هذه الدعوة، يُرجى المتابعة في المتصفح.",
     "브라우저에서 계속": "المتابعة في المتصفح",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "تعذّر على Discord تحميل هذه الدعوة. يُرجى التحقق من حالتها في المتصفح.",
-    "브라우저에서 확인": "التحقق في المتصفح"
+    "브라우저에서 확인": "التحقق في المتصفح",
+    "이미지 OCR 품질": "جودة OCR للصور",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "وازن بين سرعة التعرّف ودقته لمختلف أنماط النصوص والخلفيات.",
+    "자동 (권장)": "تلقائي (موصى به)",
+    "빠른 처리": "معالجة أسرع",
+    "고품질 우선": "إعطاء الأولوية للجودة",
+    "자동 처리": "معالجة تلقائية",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "استخدم النموذج السريع أولًا، ثم أعد التحقق من المناطق غير المؤكدة فقط باستخدام النموذج الأعلى جودة.",
+    "고품질 모델": "نموذج أعلى جودة",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حوالي 70MB. يُنزّل عند الحاجة إليه لأول مرة، ويُحرّر من الذاكرة بعد 5 دقائق من عدم الاستخدام."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -4485,7 +4575,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Để chấp nhận lời mời này, vui lòng tiếp tục trong trình duyệt.",
     "브라우저에서 계속": "Tiếp tục trong trình duyệt",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord không thể tải lời mời này. Vui lòng kiểm tra trạng thái của lời mời trong trình duyệt.",
-    "브라우저에서 확인": "Kiểm tra trong trình duyệt"
+    "브라우저에서 확인": "Kiểm tra trong trình duyệt",
+    "이미지 OCR 품질": "Chất lượng OCR hình ảnh",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Cân bằng tốc độ và độ chính xác nhận dạng cho nhiều kiểu chữ và nền khác nhau.",
+    "자동 (권장)": "Tự động (khuyên dùng)",
+    "빠른 처리": "Xử lý nhanh hơn",
+    "고품질 우선": "Ưu tiên chất lượng",
+    "자동 처리": "Xử lý tự động",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Trước tiên dùng mô hình nhanh, sau đó chỉ kiểm tra lại các vùng chưa chắc chắn bằng mô hình chất lượng cao hơn.",
+    "고품질 모델": "Mô hình chất lượng cao hơn",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Khoảng 70MB. Được tải xuống khi cần lần đầu và giải phóng khỏi bộ nhớ sau 5 phút không hoạt động."
   },
   "it": {
     "설정": "Impostazioni",
@@ -4893,7 +4992,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Per accettare questo invito, continua nel browser.",
     "브라우저에서 계속": "Continua nel browser",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord non ha potuto caricare questo invito. Verificane lo stato nel browser.",
-    "브라우저에서 확인": "Verifica nel browser"
+    "브라우저에서 확인": "Verifica nel browser",
+    "이미지 OCR 품질": "Qualità OCR delle immagini",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Bilancia velocità e precisione del riconoscimento per diversi stili di testo e sfondi.",
+    "자동 (권장)": "Automatica (consigliata)",
+    "빠른 처리": "Elaborazione più rapida",
+    "고품질 우선": "Priorità alla qualità",
+    "자동 처리": "Elaborazione automatica",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Usa prima il modello rapido, poi ricontrolla solo le aree incerte con il modello di qualità superiore.",
+    "고품질 모델": "Modello di qualità superiore",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Circa 70MB. Viene scaricato al primo utilizzo e rimosso dalla memoria dopo 5 minuti di inattività."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -5301,7 +5409,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Aby zaakceptować to zaproszenie, kontynuuj w przeglądarce.",
     "브라우저에서 계속": "Kontynuuj w przeglądarce",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord nie mógł wczytać tego zaproszenia. Sprawdź jego status w przeglądarce.",
-    "브라우저에서 확인": "Sprawdź w przeglądarce"
+    "브라우저에서 확인": "Sprawdź w przeglądarce",
+    "이미지 OCR 품질": "Jakość OCR obrazów",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Dostosuj szybkość i dokładność rozpoznawania do różnych stylów tekstu i teł.",
+    "자동 (권장)": "Automatycznie (zalecane)",
+    "빠른 처리": "Szybsze przetwarzanie",
+    "고품질 우선": "Priorytet jakości",
+    "자동 처리": "Przetwarzanie automatyczne",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Najpierw użyj szybkiego modelu, a następnie ponownie sprawdź tylko niepewne obszary modelem wyższej jakości.",
+    "고품질 모델": "Model wyższej jakości",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Około 70 MB. Jest pobierany przy pierwszym użyciu i usuwany z pamięci po 5 minutach bezczynności."
   },
   "uk": {
     "설정": "Налаштування",
@@ -5709,7 +5826,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Щоб прийняти це запрошення, продовжте в браузері.",
     "브라우저에서 계속": "Продовжити в браузері",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord не вдалося завантажити це запрошення. Перевірте його статус у браузері.",
-    "브라우저에서 확인": "Перевірити в браузері"
+    "브라우저에서 확인": "Перевірити в браузері",
+    "이미지 OCR 품질": "Якість OCR зображень",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Збалансуйте швидкість і точність розпізнавання для різних стилів тексту та фонів.",
+    "자동 (권장)": "Автоматично (рекомендовано)",
+    "빠른 처리": "Швидша обробка",
+    "고품질 우선": "Пріоритет якості",
+    "자동 처리": "Автоматична обробка",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Спочатку використовуйте швидку модель, а потім повторно перевіряйте лише невпевнено розпізнані ділянки за допомогою моделі вищої якості.",
+    "고품질 모델": "Модель вищої якості",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Близько 70 МБ. Завантажується за першої потреби та вивантажується з пам’яті після 5 хвилин бездіяльності."
   },
   "ms": {
     "설정": "Tetapan",
@@ -6117,7 +6243,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Untuk menerima jemputan ini, sila teruskan dalam pelayar anda.",
     "브라우저에서 계속": "Teruskan dalam pelayar",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord tidak dapat memuatkan jemputan ini. Sila semak statusnya dalam pelayar anda.",
-    "브라우저에서 확인": "Semak dalam pelayar"
+    "브라우저에서 확인": "Semak dalam pelayar",
+    "이미지 OCR 품질": "Kualiti OCR imej",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Seimbangkan kelajuan dan ketepatan pengecaman untuk pelbagai gaya teks dan latar belakang.",
+    "자동 (권장)": "Automatik (disyorkan)",
+    "빠른 처리": "Pemprosesan lebih pantas",
+    "고품질 우선": "Utamakan kualiti",
+    "자동 처리": "Pemprosesan automatik",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gunakan model pantas terlebih dahulu, kemudian semak semula hanya bahagian yang tidak pasti dengan model berkualiti lebih tinggi.",
+    "고품질 모델": "Model berkualiti lebih tinggi",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Kira-kira 70MB. Dimuat turun apabila diperlukan buat kali pertama dan dilepaskan daripada memori selepas 5 minit tidak aktif."
   },
   "nl": {
     "설정": "Instellingen",
@@ -6525,7 +6660,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Ga verder in je browser om deze uitnodiging te accepteren.",
     "브라우저에서 계속": "Doorgaan in browser",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord kon deze uitnodiging niet laden. Controleer de status in je browser.",
-    "브라우저에서 확인": "Controleren in browser"
+    "브라우저에서 확인": "Controleren in browser",
+    "이미지 OCR 품질": "OCR-kwaliteit van afbeeldingen",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Stem de herkenningssnelheid en nauwkeurigheid af op verschillende tekststijlen en achtergronden.",
+    "자동 (권장)": "Automatisch (aanbevolen)",
+    "빠른 처리": "Snellere verwerking",
+    "고품질 우선": "Kwaliteit prioriteren",
+    "자동 처리": "Automatische verwerking",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gebruik eerst het snelle model en controleer daarna alleen onzekere gebieden opnieuw met het model van hogere kwaliteit.",
+    "고품질 모델": "Model van hogere kwaliteit",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Ongeveer 70MB. Wordt bij het eerste gebruik gedownload en na 5 minuten inactiviteit uit het geheugen verwijderd."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -6933,7 +7077,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "หากต้องการยอมรับคำเชิญนี้ โปรดดำเนินการต่อในเบราว์เซอร์",
     "브라우저에서 계속": "ดำเนินการต่อในเบราว์เซอร์",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord ไม่สามารถโหลดคำเชิญนี้ได้ โปรดตรวจสอบสถานะในเบราว์เซอร์",
-    "브라우저에서 확인": "ตรวจสอบในเบราว์เซอร์"
+    "브라우저에서 확인": "ตรวจสอบในเบราว์เซอร์",
+    "이미지 OCR 품질": "คุณภาพ OCR ของรูปภาพ",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "ปรับสมดุลความเร็วและความแม่นยำในการจดจำให้เหมาะกับรูปแบบข้อความและพื้นหลังต่างๆ",
+    "자동 (권장)": "อัตโนมัติ (แนะนำ)",
+    "빠른 처리": "ประมวลผลเร็วขึ้น",
+    "고품질 우선": "ให้ความสำคัญกับคุณภาพ",
+    "자동 처리": "ประมวลผลอัตโนมัติ",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "ใช้โมเดลแบบเร็วก่อน แล้วตรวจสอบซ้ำเฉพาะบริเวณที่ไม่แน่นอนด้วยโมเดลคุณภาพสูงกว่า",
+    "고품질 모델": "โมเดลคุณภาพสูงกว่า",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "ประมาณ 70MB โดยจะดาวน์โหลดเมื่อจำเป็นครั้งแรก และนำออกจากหน่วยความจำเมื่อไม่มีการใช้งานเป็นเวลา 5 นาที"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -7341,7 +7494,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Para tanggapin ang imbitasyong ito, magpatuloy sa iyong browser.",
     "브라우저에서 계속": "Magpatuloy sa browser",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Hindi ma-load ng Discord ang imbitasyong ito. Pakitingnan ang status nito sa iyong browser.",
-    "브라우저에서 확인": "Tingnan sa browser"
+    "브라우저에서 확인": "Tingnan sa browser",
+    "이미지 OCR 품질": "Kalidad ng OCR ng larawan",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Balansehin ang bilis at katumpakan ng pagkilala para sa iba’t ibang estilo ng teksto at background.",
+    "자동 (권장)": "Awtomatiko (inirerekomenda)",
+    "빠른 처리": "Mas mabilis na pagproseso",
+    "고품질 우선": "Unahin ang kalidad",
+    "자동 처리": "Awtomatikong pagproseso",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Gamitin muna ang mabilis na modelo, pagkatapos ay suriin muli gamit ang mas mataas na kalidad na modelo ang mga bahaging hindi tiyak.",
+    "고품질 모델": "Mas mataas na kalidad na modelo",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Humigit-kumulang 70MB. Ida-download ito sa unang pagkakataong kailanganin at aalisin sa memory kapag hindi nagamit nang 5 minuto."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -7749,7 +7911,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "এই আমন্ত্রণটি গ্রহণ করতে, ব্রাউজারে চালিয়ে যান।",
     "브라우저에서 계속": "ব্রাউজারে চালিয়ে যান",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord এই আমন্ত্রণটি লোড করতে পারেনি। ব্রাউজারে এর অবস্থা দেখুন।",
-    "브라우저에서 확인": "ব্রাউজারে দেখুন"
+    "브라우저에서 확인": "ব্রাউজারে দেখুন",
+    "이미지 OCR 품질": "ছবির OCR গুণমান",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "বিভিন্ন টেক্সটের ধরন ও ব্যাকগ্রাউন্ড অনুযায়ী শনাক্তকরণের গতি ও নির্ভুলতার ভারসাম্য রাখুন।",
+    "자동 (권장)": "স্বয়ংক্রিয় (প্রস্তাবিত)",
+    "빠른 처리": "দ্রুততর প্রক্রিয়াকরণ",
+    "고품질 우선": "গুণমানকে অগ্রাধিকার দিন",
+    "자동 처리": "স্বয়ংক্রিয় প্রক্রিয়াকরণ",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "প্রথমে দ্রুত মডেল ব্যবহার করুন, তারপর শুধু অনিশ্চিত অংশগুলো উচ্চতর গুণমানের মডেল দিয়ে আবার যাচাই করুন।",
+    "고품질 모델": "উচ্চতর গুণমানের মডেল",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "প্রায় 70MB। প্রথমবার প্রয়োজন হলে এটি ডাউনলোড হয় এবং 5 মিনিট ব্যবহার না করলে মেমোরি থেকে সরিয়ে দেওয়া হয়।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -8157,7 +8328,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "یہ دعوت قبول کرنے کے لیے براہِ کرم اپنے براؤزر میں جاری رکھیں۔",
     "브라우저에서 계속": "براؤزر میں جاری رکھیں",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord یہ دعوت لوڈ نہیں کر سکا۔ براہِ کرم اپنے براؤزر میں اس کی صورتحال چیک کریں۔",
-    "브라우저에서 확인": "براؤزر میں چیک کریں"
+    "브라우저에서 확인": "براؤزر میں چیک کریں",
+    "이미지 OCR 품질": "تصویری OCR کا معیار",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "مختلف تحریری انداز اور پس منظر کے لیے شناخت کی رفتار اور درستگی میں توازن رکھیں۔",
+    "자동 (권장)": "خودکار (تجویز کردہ)",
+    "빠른 처리": "تیز تر کارروائی",
+    "고품질 우선": "معیار کو ترجیح دیں",
+    "자동 처리": "خودکار کارروائی",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "پہلے تیز ماڈل استعمال کریں، پھر صرف غیر یقینی حصوں کو زیادہ معیاری ماڈل سے دوبارہ جانچیں۔",
+    "고품질 모델": "زیادہ معیاری ماڈل",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "تقریباً 70MB۔ پہلی بار ضرورت پڑنے پر یہ ڈاؤن لوڈ ہوتا ہے اور 5 منٹ تک استعمال نہ ہونے پر میموری سے ہٹا دیا جاتا ہے۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -8565,7 +8745,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "இந்த அழைப்பை ஏற்க, உங்கள் உலாவியில் தொடரவும்.",
     "브라우저에서 계속": "உலாவியில் தொடரவும்",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord-ஆல் இந்த அழைப்பை ஏற்ற முடியவில்லை. அதன் நிலையை உங்கள் உலாவியில் சரிபார்க்கவும்.",
-    "브라우저에서 확인": "உலாவியில் சரிபார்க்கவும்"
+    "브라우저에서 확인": "உலாவியில் சரிபார்க்கவும்",
+    "이미지 OCR 품질": "பட OCR தரம்",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "வெவ்வேறு உரை வடிவங்கள் மற்றும் பின்னணிகளுக்கு ஏற்ப அடையாளம் காணும் வேகத்தையும் துல்லியத்தையும் சமநிலைப்படுத்தவும்.",
+    "자동 (권장)": "தானியங்கி (பரிந்துரைக்கப்படுகிறது)",
+    "빠른 처리": "வேகமான செயலாக்கம்",
+    "고품질 우선": "தரத்திற்கு முன்னுரிமை",
+    "자동 처리": "தானியங்கி செயலாக்கம்",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "முதலில் வேகமான மாதிரியைப் பயன்படுத்தி, பின்னர் உறுதியற்ற பகுதிகளை மட்டும் உயர்தர மாதிரியால் மீண்டும் சரிபார்க்கவும்.",
+    "고품질 모델": "உயர்தர மாதிரி",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "சுமார் 70MB. முதன்முதலில் தேவைப்படும்போது பதிவிறக்கப்பட்டு, 5 நிமிடங்கள் பயன்படுத்தப்படாவிட்டால் நினைவகத்திலிருந்து விடுவிக்கப்படும்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -8973,7 +9162,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "برای پذیرفتن این دعوت، لطفاً در مرورگر خود ادامه دهید.",
     "브라우저에서 계속": "ادامه در مرورگر",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord نتوانست این دعوت را بارگیری کند. لطفاً وضعیت آن را در مرورگر خود بررسی کنید.",
-    "브라우저에서 확인": "بررسی در مرورگر"
+    "브라우저에서 확인": "بررسی در مرورگر",
+    "이미지 OCR 품질": "کیفیت OCR تصویر",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "سرعت و دقت تشخیص را برای سبک‌های مختلف متن و پس‌زمینه‌ها متعادل کنید.",
+    "자동 (권장)": "خودکار (پیشنهادی)",
+    "빠른 처리": "پردازش سریع‌تر",
+    "고품질 우선": "اولویت با کیفیت",
+    "자동 처리": "پردازش خودکار",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "ابتدا از مدل سریع استفاده کنید، سپس فقط بخش‌های نامطمئن را با مدل باکیفیت‌تر دوباره بررسی کنید.",
+    "고품질 모델": "مدل باکیفیت‌تر",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "حدود 70MB است. هنگام اولین نیاز دانلود می‌شود و پس از ۵ دقیقه عدم استفاده از حافظه آزاد می‌شود."
   },
   "he": {
     "설정": "הגדרות",
@@ -9381,7 +9579,16 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "כדי לקבל הזמנה זו, יש להמשיך בדפדפן.",
     "브라우저에서 계속": "המשך בדפדפן",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord לא הצליח לטעון הזמנה זו. יש לבדוק את הסטטוס שלה בדפדפן.",
-    "브라우저에서 확인": "בדיקה בדפדפן"
+    "브라우저에서 확인": "בדיקה בדפדפן",
+    "이미지 OCR 품질": "איכות OCR של תמונות",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "איזון בין מהירות הזיהוי לדיוק עבור סגנונות טקסט ורקעים שונים.",
+    "자동 (권장)": "אוטומטי (מומלץ)",
+    "빠른 처리": "עיבוד מהיר יותר",
+    "고품질 우선": "העדפת איכות",
+    "자동 처리": "עיבוד אוטומטי",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "תחילה ייעשה שימוש במודל המהיר, ולאחר מכן רק אזורים לא ודאיים ייבדקו מחדש באמצעות המודל האיכותי יותר.",
+    "고품질 모델": "מודל איכותי יותר",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "כ-70MB. ההורדה מתבצעת בפעם הראשונה שנדרש, והוא מפונה מהזיכרון לאחר 5 דקות ללא פעילות."
   },
   "cs": {
     "설정": "Nastavení",
@@ -9789,6 +9996,15 @@
     "초대를 수락하려면 브라우저에서 계속해 주세요.": "Chcete-li tuto pozvánku přijmout, pokračujte v prohlížeči.",
     "브라우저에서 계속": "Pokračovat v prohlížeči",
     "초대 정보를 불러오지 못했습니다. 브라우저에서 초대 상태를 확인해 주세요.": "Discord nemohl načíst tuto pozvánku. Zkontrolujte její stav v prohlížeči.",
-    "브라우저에서 확인": "Zkontrolovat v prohlížeči"
+    "브라우저에서 확인": "Zkontrolovat v prohlížeči",
+    "이미지 OCR 품질": "Kvalita OCR obrázků",
+    "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": "Vyvažte rychlost a přesnost rozpoznávání pro různé styly textu a pozadí.",
+    "자동 (권장)": "Automaticky (doporučeno)",
+    "빠른 처리": "Rychlejší zpracování",
+    "고품질 우선": "Upřednostnit kvalitu",
+    "자동 처리": "Automatické zpracování",
+    "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": "Nejprve použije rychlý model a poté znovu zkontroluje pouze nejisté oblasti pomocí kvalitnějšího modelu.",
+    "고품질 모델": "Kvalitnější model",
+    "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": "Přibližně 70 MB. Stáhne se při prvním použití a po 5 minutách nečinnosti se uvolní z paměti."
   }
 }

@@ -75,6 +75,14 @@ test("settings use six uniform navigation categories", () => {
   );
 });
 
+test("image translation exposes adaptive local OCR quality controls", () => {
+  assert.match(markup, /data-field="image_ocr_quality"/);
+  assert.match(markup, /빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다/);
+  assert.match(markup, /약 70MB이며 처음 필요할 때 다운로드합니다/);
+  assert.match(script, /image_ocr_quality:\s*\[/);
+  assert.match(script, /\["adaptive", "자동 \(권장\)"\]/);
+});
+
 test("settings window keeps a readable minimum width without horizontal navigation scrolling", () => {
   const windowConfig = JSON.parse(tauriConfig).app.windows.find(window => window.label === "main");
   assert.ok(windowConfig.minWidth >= 760);

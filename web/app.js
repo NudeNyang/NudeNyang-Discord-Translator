@@ -71,6 +71,11 @@ const OPTIONS = {
     ["auto", "자동 (GPU 우선, CPU 대체)"],
     ["cpu", "CPU/RAM 전용"],
   ],
+  image_ocr_quality: [
+    ["adaptive", "자동 (권장)"],
+    ["fast", "빠른 처리"],
+    ["quality", "고품질 우선"],
+  ],
   ui_theme: [
     ["system", "시스템 설정 따르기"],
     ["light", "라이트"],

@@ -44,6 +44,21 @@ const V6_CHARSET: ModelAsset = ModelAsset {
     expected_bytes: 74_947,
     expected_sha256: "b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d",
 };
+const MEDIUM_DET_MODEL: ModelAsset = ModelAsset {
+    filename: "PP-OCRv6_medium_det.mnn",
+    expected_bytes: 31_078_716,
+    expected_sha256: "a174009ef81dd84f29034047cd56e50b73ef624a3a409226418be63ffc46ca60",
+};
+const MEDIUM_REC_MODEL: ModelAsset = ModelAsset {
+    filename: "PP-OCRv6_medium_rec.mnn",
+    expected_bytes: 38_382_108,
+    expected_sha256: "11bbedb5af3a33cb7fee505de19223243d85b82c7b507af51e345ea1b4e68e72",
+};
+const MEDIUM_CHARSET: ModelAsset = ModelAsset {
+    filename: "ppocr_keys_v6_medium.txt",
+    expected_bytes: 74_947,
+    expected_sha256: "b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d",
+};
 const KO_CHARSET: ModelAsset = ModelAsset {
     filename: "ppocr_keys_korean.txt",
     expected_bytes: 47_451,
@@ -56,6 +71,39 @@ const MODEL_ASSETS: [ModelAsset; 5] = [
     V6_CHARSET,
     KO_CHARSET,
 ];
+const MEDIUM_MODEL_ASSETS: [ModelAsset; 3] = [MEDIUM_DET_MODEL, MEDIUM_REC_MODEL, MEDIUM_CHARSET];
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OcrQualityMode {
+    Fast,
+    Adaptive,
+    Quality,
+}
+
+impl OcrQualityMode {
+    pub fn from_config(value: &str) -> Self {
+        match value {
+            "fast" => Self::Fast,
+            "quality" => Self::Quality,
+            _ => Self::Adaptive,
+        }
+    }
+
+    pub fn cache_key(self) -> &'static str {
+        match self {
+            Self::Fast => "fast",
+            Self::Adaptive => "adaptive",
+            Self::Quality => "quality",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum MediumRetryPlan {
+    Skip,
+    Regions(Vec<usize>),
+    FullImage,
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Point {
@@ -95,8 +143,22 @@ pub struct PaddleDualOcr {
     detector: DetOnlyEngine,
     v6_recognizer: RecOnlyEngine,
     ko_recognizer: RecOnlyEngine,
+    medium: Option<MediumOcr>,
     selector: CandidateSelector,
     enhance_colored_text: bool,
+}
+
+struct MediumOcr {
+    detector: DetOnlyEngine,
+    recognizer: RecOnlyEngine,
+}
+
+#[derive(Clone)]
+struct DetectedRegion {
+    crop: DynamicImage,
+    polygon: [Point; 4],
+    bbox: Rect,
+    confidence: f64,
 }
 
 impl PaddleDualOcr {
@@ -125,63 +187,191 @@ impl PaddleDualOcr {
             detector,
             v6_recognizer,
             ko_recognizer,
+            medium: None,
             selector: CandidateSelector::default(),
             enhance_colored_text,
         })
     }
 
     pub fn recognize(&mut self, image: &DynamicImage) -> Result<Vec<TextLine>, String> {
-        let primary = self.recognize_once(image)?;
+        self.recognize_with_quality(image, OcrQualityMode::Adaptive)
+    }
+
+    pub fn recognize_with_quality(
+        &mut self,
+        image: &DynamicImage,
+        quality: OcrQualityMode,
+    ) -> Result<Vec<TextLine>, String> {
+        let primary = self.recognize_once(image, quality)?;
         if !self.enhance_colored_text || colored_pixel_ratio(image) < 0.01 {
             return Ok(primary);
         }
         let enhanced = minimum_channel_image(image);
-        let secondary = self.recognize_once(&enhanced)?;
+        let secondary = self.recognize_once(&enhanced, quality)?;
         Ok(merge_text_lines(primary, secondary))
     }
 
-    fn recognize_once(&mut self, image: &DynamicImage) -> Result<Vec<TextLine>, String> {
-        let mut detections = self
-            .detector
-            .detect_and_crop(image)
-            .map_err(|error| format!("이미지에서 글자 영역을 찾지 못했습니다: {error}"))?;
-        detections.sort_by(|(_, left), (_, right)| {
-            left.rect
-                .top()
-                .cmp(&right.rect.top())
-                .then_with(|| left.rect.left().cmp(&right.rect.left()))
-        });
-        if detections.is_empty() {
-            return Ok(Vec::new());
-        }
-        let crops: Vec<_> = detections.iter().map(|(crop, _)| crop.clone()).collect();
-        let v6 = self
-            .v6_recognizer
-            .recognize_batch(&crops)
-            .map_err(|error| format!("PP-OCRv6 글자 인식에 실패했습니다: {error}"))?;
-        let korean = self
-            .ko_recognizer
-            .recognize_batch(&crops)
-            .map_err(|error| format!("한국어 PP-OCRv5 글자 인식에 실패했습니다: {error}"))?;
-        if v6.len() != detections.len() || korean.len() != detections.len() {
-            return Err("OCR 인식 결과 수가 감지 영역 수와 일치하지 않습니다.".to_string());
+    fn recognize_once(
+        &mut self,
+        image: &DynamicImage,
+        quality: OcrQualityMode,
+    ) -> Result<Vec<TextLine>, String> {
+        if quality == OcrQualityMode::Quality {
+            self.ensure_medium()?;
+            let regions = detect_regions(
+                &mut self.medium.as_mut().expect("medium OCR is loaded").detector,
+                image,
+            )?;
+            return recognize_regions(
+                &mut self
+                    .medium
+                    .as_mut()
+                    .expect("medium OCR is loaded")
+                    .recognizer,
+                &mut self.ko_recognizer,
+                &mut self.selector,
+                &regions,
+                "PP-OCRv6-medium",
+            );
         }
 
-        let mut lines = Vec::with_capacity(detections.len());
-        for (((_, detected), v6), korean) in detections.into_iter().zip(v6).zip(korean) {
-            let candidates = vec![
-                RecognitionCandidate {
-                    engine: "PP-OCRv6-small".to_string(),
-                    text: v6.text,
-                    confidence: f64::from(v6.confidence),
-                },
-                RecognitionCandidate {
-                    engine: "korean_PP-OCRv5-mobile".to_string(),
-                    text: korean.text,
-                    confidence: f64::from(korean.confidence),
-                },
-            ];
-            let (best, language) = self.selector.choose(&candidates);
+        let regions = detect_regions(&mut self.detector, image)?;
+        let mut lines = recognize_regions(
+            &mut self.v6_recognizer,
+            &mut self.ko_recognizer,
+            &mut self.selector,
+            &regions,
+            "PP-OCRv6-small",
+        )?;
+        match medium_retry_plan(quality, &lines) {
+            MediumRetryPlan::Skip => Ok(lines),
+            MediumRetryPlan::FullImage => {
+                self.ensure_medium()?;
+                let regions = detect_regions(
+                    &mut self.medium.as_mut().expect("medium OCR is loaded").detector,
+                    image,
+                )?;
+                recognize_regions(
+                    &mut self
+                        .medium
+                        .as_mut()
+                        .expect("medium OCR is loaded")
+                        .recognizer,
+                    &mut self.ko_recognizer,
+                    &mut self.selector,
+                    &regions,
+                    "PP-OCRv6-medium",
+                )
+            }
+            MediumRetryPlan::Regions(indices) => {
+                self.ensure_medium()?;
+                let crops = indices
+                    .iter()
+                    .map(|index| regions[*index].crop.clone())
+                    .collect::<Vec<_>>();
+                let recognized = self
+                    .medium
+                    .as_mut()
+                    .expect("medium OCR is loaded")
+                    .recognizer
+                    .recognize_batch(&crops)
+                    .map_err(|error| {
+                        format!("PP-OCRv6 Medium 글자 인식에 실패했습니다: {error}")
+                    })?;
+                if recognized.len() != indices.len() {
+                    return Err(
+                        "Medium OCR 인식 결과 수가 재처리 영역 수와 일치하지 않습니다.".to_string(),
+                    );
+                }
+                for (index, result) in indices.into_iter().zip(recognized) {
+                    lines[index].candidates.push(RecognitionCandidate {
+                        engine: "PP-OCRv6-medium".to_string(),
+                        text: result.text,
+                        confidence: f64::from(result.confidence),
+                    });
+                    let (best, language) = self.selector.choose(&lines[index].candidates);
+                    lines[index].text = best.text.trim().to_string();
+                    lines[index].confidence = regions[index].confidence.min(best.confidence);
+                    lines[index].language = language;
+                }
+                lines.sort_by(line_order);
+                Ok(lines)
+            }
+        }
+    }
+
+    fn ensure_medium(&mut self) -> Result<(), String> {
+        if self.medium.is_some() {
+            return Ok(());
+        }
+        let root = ensure_medium_models()?;
+        let detector = OcrEngine::det_only(
+            root.join(MEDIUM_DET_MODEL.filename),
+            Some(
+                OcrEngineConfig::new().with_det_options(DetOptions::new().with_max_side_len(1536)),
+            ),
+        )
+        .map_err(|error| format!("PP-OCRv6 Medium 감지 모델을 열지 못했습니다: {error}"))?;
+        let recognizer = OcrEngine::rec_only(
+            root.join(MEDIUM_REC_MODEL.filename),
+            root.join(MEDIUM_CHARSET.filename),
+            Some(OcrEngineConfig::new()),
+        )
+        .map_err(|error| format!("PP-OCRv6 Medium 인식 모델을 열지 못했습니다: {error}"))?;
+        self.medium = Some(MediumOcr {
+            detector,
+            recognizer,
+        });
+        Ok(())
+    }
+}
+
+fn medium_retry_plan(quality: OcrQualityMode, lines: &[TextLine]) -> MediumRetryPlan {
+    match quality {
+        OcrQualityMode::Fast => MediumRetryPlan::Skip,
+        OcrQualityMode::Quality => MediumRetryPlan::FullImage,
+        OcrQualityMode::Adaptive if lines.is_empty() => MediumRetryPlan::FullImage,
+        OcrQualityMode::Adaptive => {
+            let indices = lines
+                .iter()
+                .enumerate()
+                .filter_map(|(index, line)| {
+                    let useful_characters = line
+                        .text
+                        .chars()
+                        .filter(|character| character.is_alphanumeric())
+                        .count();
+                    (line.confidence < 0.72
+                        || line.language == Language::Unknown
+                        || useful_characters <= 2)
+                        .then_some(index)
+                })
+                .collect::<Vec<_>>();
+            if indices.is_empty() {
+                MediumRetryPlan::Skip
+            } else {
+                MediumRetryPlan::Regions(indices)
+            }
+        }
+    }
+}
+
+fn detect_regions(
+    detector: &mut DetOnlyEngine,
+    image: &DynamicImage,
+) -> Result<Vec<DetectedRegion>, String> {
+    let mut detections = detector
+        .detect_and_crop(image)
+        .map_err(|error| format!("이미지에서 글자 영역을 찾지 못했습니다: {error}"))?;
+    detections.sort_by(|(_, left), (_, right)| {
+        left.rect
+            .top()
+            .cmp(&right.rect.top())
+            .then_with(|| left.rect.left().cmp(&right.rect.left()))
+    });
+    Ok(detections
+        .into_iter()
+        .map(|(crop, detected)| {
             let rect = detected.rect;
             let polygon = detected.points.map_or_else(
                 || {
@@ -211,7 +401,8 @@ impl PaddleDualOcr {
                     })
                 },
             );
-            lines.push(TextLine {
+            DetectedRegion {
+                crop,
                 polygon,
                 bbox: Rect {
                     left: rect.left(),
@@ -219,15 +410,62 @@ impl PaddleDualOcr {
                     right: rect.right(),
                     bottom: rect.bottom(),
                 },
-                text: best.text.trim().to_string(),
-                confidence: f64::from(detected.score).min(best.confidence),
-                language,
-                candidates,
-            });
-        }
-        lines.sort_by(line_order);
-        Ok(lines)
+                confidence: f64::from(detected.score),
+            }
+        })
+        .collect())
+}
+
+fn recognize_regions(
+    recognizer: &mut RecOnlyEngine,
+    ko_recognizer: &mut RecOnlyEngine,
+    selector: &mut CandidateSelector,
+    regions: &[DetectedRegion],
+    engine_name: &str,
+) -> Result<Vec<TextLine>, String> {
+    if regions.is_empty() {
+        return Ok(Vec::new());
     }
+    let crops = regions
+        .iter()
+        .map(|region| region.crop.clone())
+        .collect::<Vec<_>>();
+    let v6 = recognizer
+        .recognize_batch(&crops)
+        .map_err(|error| format!("PP-OCRv6 글자 인식에 실패했습니다: {error}"))?;
+    let korean = ko_recognizer
+        .recognize_batch(&crops)
+        .map_err(|error| format!("한국어 PP-OCRv5 글자 인식에 실패했습니다: {error}"))?;
+    if v6.len() != regions.len() || korean.len() != regions.len() {
+        return Err("OCR 인식 결과 수가 감지 영역 수와 일치하지 않습니다.".to_string());
+    }
+
+    let mut lines = Vec::with_capacity(regions.len());
+    for ((region, v6), korean) in regions.iter().zip(v6).zip(korean) {
+        let candidates = vec![
+            RecognitionCandidate {
+                engine: engine_name.to_string(),
+                text: v6.text,
+                confidence: f64::from(v6.confidence),
+            },
+            RecognitionCandidate {
+                engine: "korean_PP-OCRv5-mobile".to_string(),
+                text: korean.text,
+                confidence: f64::from(korean.confidence),
+            },
+        ];
+        let (best, language) = selector.choose(&candidates);
+        lines.push(TextLine {
+            polygon: region.polygon,
+            bbox: region.bbox,
+            text: best.text.trim().to_string(),
+            confidence: region.confidence.min(best.confidence),
+            language,
+            candidates,
+        });
+    }
+    lines.sort_by(line_order);
+    Ok(lines)
 }
 
 fn line_order(left: &TextLine, right: &TextLine) -> Ordering {
@@ -448,6 +686,16 @@ fn ensure_models() -> Result<PathBuf, String> {
     Ok(root)
 }
 
+fn ensure_medium_models() -> Result<PathBuf, String> {
+    let root = default_model_root();
+    fs::create_dir_all(&root)
+        .map_err(|error| format!("OCR 모델 폴더를 만들지 못했습니다: {error}"))?;
+    for asset in MEDIUM_MODEL_ASSETS {
+        ensure_asset(&root, asset)?;
+    }
+    Ok(root)
+}
+
 fn ensure_asset(root: &Path, asset: ModelAsset) -> Result<(), String> {
     let destination = root.join(asset.filename);
     if asset_is_verified(&destination, asset)? {
@@ -614,8 +862,8 @@ fn default_model_root() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::{
-        merge_text_lines, polygon_overlap_ratio, Language, Point, Rect, TextLine, MODEL_ASSETS,
-        MODEL_REVISION,
+        medium_retry_plan, merge_text_lines, polygon_overlap_ratio, Language, MediumRetryPlan,
+        OcrQualityMode, Point, Rect, TextLine, MEDIUM_MODEL_ASSETS, MODEL_ASSETS, MODEL_REVISION,
     };
     use std::collections::BTreeMap;
     use std::fmt::Write as _;
@@ -656,6 +904,56 @@ mod tests {
                 .chars()
                 .all(|value| value.is_ascii_hexdigit()));
         }
+        assert_eq!(MEDIUM_MODEL_ASSETS.len(), 3);
+        assert_eq!(
+            MEDIUM_MODEL_ASSETS
+                .iter()
+                .map(|asset| asset.expected_bytes)
+                .sum::<u64>(),
+            69_535_771
+        );
+    }
+
+    #[test]
+    fn ocr_quality_mode_uses_a_safe_adaptive_default() {
+        assert_eq!(OcrQualityMode::from_config("fast"), OcrQualityMode::Fast);
+        assert_eq!(
+            OcrQualityMode::from_config("quality"),
+            OcrQualityMode::Quality
+        );
+        assert_eq!(
+            OcrQualityMode::from_config("unexpected"),
+            OcrQualityMode::Adaptive
+        );
+    }
+
+    #[test]
+    fn adaptive_ocr_retries_only_uncertain_regions() {
+        let mut certain = line(0.0, 0.0, 100.0, 30.0, "Readable title");
+        certain.confidence = 0.93;
+        let mut uncertain = line(0.0, 40.0, 100.0, 70.0, "I0Ol");
+        uncertain.confidence = 0.61;
+
+        assert_eq!(
+            medium_retry_plan(OcrQualityMode::Adaptive, &[certain, uncertain]),
+            MediumRetryPlan::Regions(vec![1])
+        );
+    }
+
+    #[test]
+    fn quality_mode_uses_medium_detection_and_fast_mode_never_does() {
+        assert_eq!(
+            medium_retry_plan(OcrQualityMode::Quality, &[]),
+            MediumRetryPlan::FullImage
+        );
+        assert_eq!(
+            medium_retry_plan(OcrQualityMode::Adaptive, &[]),
+            MediumRetryPlan::FullImage
+        );
+        assert_eq!(
+            medium_retry_plan(OcrQualityMode::Fast, &[]),
+            MediumRetryPlan::Skip
+        );
     }
 
     #[test]
@@ -770,5 +1068,15 @@ mod tests {
         let mut engine = super::PaddleDualOcr::new(true).unwrap();
         let image = image::open("../assets/nude-translator.png").unwrap();
         engine.recognize(&image).unwrap();
+    }
+
+    #[test]
+    #[ignore = "downloads and loads the pinned PP-OCRv6 Medium MNN models"]
+    fn live_medium_ocr_models_load_and_run_without_python() {
+        let mut engine = super::PaddleDualOcr::new(true).unwrap();
+        let image = image::open("../assets/nude-translator.png").unwrap();
+        engine
+            .recognize_with_quality(&image, super::OcrQualityMode::Quality)
+            .unwrap();
     }
 }

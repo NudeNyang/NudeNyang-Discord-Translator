@@ -26,6 +26,7 @@ use crate::image_translation::{
 };
 use crate::invite_assist::{invite_assist_script, parse_invite_open_request};
 use crate::language::Language;
+use crate::ocr::OcrQualityMode;
 use crate::outgoing::{
     apply_outgoing_detected_script, apply_outgoing_error_script, apply_outgoing_review_script,
     apply_outgoing_suggestion_script, attach_outgoing_text_file_script,
@@ -134,6 +135,7 @@ struct ImageTranslationBatch {
     image_id: String,
     source_key: String,
     image_bytes: Vec<u8>,
+    quality: OcrQualityMode,
     queued_at: Instant,
 }
 
@@ -451,6 +453,8 @@ fn run_controller(
                     let history_retention_changed = updated.translation_history_retention_days
                         != config.translation_history_retention_days;
                     let target_changed = updated.target_language != config.target_language;
+                    let image_ocr_quality_changed =
+                        updated.image_ocr_quality != config.image_ocr_quality;
                     let mut requested_preparation = translator_preparation_plan(&config, &updated);
                     if ui_ready && requested_preparation.any() {
                         if let Ok(runtime) = status.lock() {
@@ -466,7 +470,7 @@ fn run_controller(
                         updated.outgoing_translation_enabled != config.outgoing_translation_enabled;
                     let warm_changed =
                         updated.keep_local_model_warm != config.keep_local_model_warm;
-                    if target_changed || runtime_changed {
+                    if target_changed || runtime_changed || image_ocr_quality_changed {
                         reset_translation_state(
                             &mut client,
                             &mut states,
@@ -882,6 +886,7 @@ fn run_controller(
                     &worker_tx,
                     &status,
                     &config.ui_language,
+                    OcrQualityMode::from_config(&config.image_ocr_quality),
                 )?;
                 image_ui_needs_cleanup = true;
             } else if !config.enabled {
@@ -1027,6 +1032,7 @@ fn scan_images(
     worker: &mpsc::Sender<WorkerCommand>,
     status: &Arc<Mutex<RuntimeStatus>>,
     ui_language: &str,
+    quality: OcrQualityMode,
 ) -> Result<(), String> {
     let requests = parse_image_requests(client.evaluate(&image_ui_script(ui_language), false)?)?;
     for request in requests.into_iter().take(2) {
@@ -1064,6 +1070,7 @@ fn scan_images(
                 image_id: request.id,
                 source_key: request.source_key,
                 image_bytes,
+                quality,
                 queued_at: Instant::now(),
             }))
             .map_err(|_| "Rust 이미지 번역 작업 스레드가 종료되었습니다.".to_string())?;
@@ -1911,7 +1918,21 @@ fn run_translation_worker(
     let mut service = TranslationService::new(Box::new(OriginalTranslator), cache);
     let mut image_processor = ImageTranslationProcessor::new();
     let mut backlog = VecDeque::new();
-    while let Ok(command) = next_worker_command(&commands, &mut backlog) {
+    loop {
+        image_processor.release_ocr_if_idle(Instant::now());
+        if backlog.is_empty() {
+            match commands.recv_timeout(Duration::from_secs(30)) {
+                Ok(command) => backlog.push_back(command),
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    image_processor.release_ocr_if_idle(Instant::now());
+                    continue;
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            }
+        }
+        let Ok(command) = next_worker_command(&commands, &mut backlog) else {
+            break;
+        };
         match command {
             WorkerCommand::Translate(batch) => {
                 log_worker_queue(
@@ -1945,8 +1966,12 @@ fn run_translation_worker(
             }
             WorkerCommand::TranslateImage(batch) => {
                 log_worker_queue("image", batch.queued_at, 1, batch.image_bytes.len());
-                let outcome =
-                    image_processor.process(&batch.image_bytes, batch.target, &mut service);
+                let outcome = image_processor.process(
+                    &batch.image_bytes,
+                    batch.target,
+                    batch.quality,
+                    &mut service,
+                );
                 let _ = results.send(WorkerResult::ImageTranslated {
                     generation: batch.generation,
                     target: batch.target,
@@ -1983,6 +2008,7 @@ fn run_translation_worker(
             }
             WorkerCommand::Release => {
                 service.translator_mut().close();
+                image_processor.release_ocr();
             }
             WorkerCommand::ClearCacheMemory => {
                 let _ = service.clear_cache_memory();

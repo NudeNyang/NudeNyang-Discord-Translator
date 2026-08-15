@@ -80,6 +80,7 @@ pub struct AppConfig {
     pub stable_frames: u32,
     pub change_threshold: f64,
     pub ocr_device: String,
+    pub image_ocr_quality: String,
     pub translator: String,
     pub outgoing_translator: String,
     pub disabled_providers: Vec<String>,
@@ -113,6 +114,7 @@ impl Default for AppConfig {
             stable_frames: 2,
             change_threshold: 0.015,
             ocr_device: "auto".to_string(),
+            image_ocr_quality: "adaptive".to_string(),
             translator: "hymt_1_8b".to_string(),
             outgoing_translator: "hymt_1_8b".to_string(),
             disabled_providers: Vec::new(),
@@ -251,6 +253,16 @@ impl AppConfig {
             object.insert(
                 "translation_history_retention_days".to_string(),
                 Value::from(30),
+            );
+        }
+        if object
+            .get("image_ocr_quality")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "fast" | "adaptive" | "quality"))
+        {
+            object.insert(
+                "image_ocr_quality".to_string(),
+                Value::String("adaptive".to_string()),
             );
         }
 
@@ -462,6 +474,7 @@ mod tests {
         assert_eq!(restored.ui_theme, "system");
         assert_eq!(restored.ui_language, "auto");
         assert!(restored.keep_local_model_warm);
+        assert_eq!(restored.image_ocr_quality, "adaptive");
         assert!(!restored.outgoing_translation_enabled);
         assert_eq!(restored.outgoing_target_language, "auto");
         assert!(restored.outgoing_confirm_send);
@@ -475,6 +488,19 @@ mod tests {
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
         assert_eq!(claude.translator, "claude");
+    }
+
+    #[test]
+    fn image_ocr_quality_accepts_only_supported_modes() {
+        for mode in ["fast", "adaptive", "quality"] {
+            let config = AppConfig::from_value(json!({"image_ocr_quality": mode}))
+                .expect("supported OCR quality mode");
+            assert_eq!(config.image_ocr_quality, mode);
+        }
+
+        let invalid = AppConfig::from_value(json!({"image_ocr_quality": "maximum"}))
+            .expect("invalid OCR quality mode should reset");
+        assert_eq!(invalid.image_ocr_quality, "adaptive");
     }
 
     #[test]

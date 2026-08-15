@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use ab_glyph::{FontArc, PxScale};
 use image::codecs::png::PngEncoder;
@@ -13,7 +14,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 use crate::language::{is_supported_language_code, Language};
-use crate::ocr::{PaddleDualOcr, Point, Rect, TextLine};
+use crate::ocr::{OcrQualityMode, PaddleDualOcr, Point, Rect, TextLine};
 use crate::translation::TranslationService;
 use crate::ui_locale::generated_copies;
 
@@ -323,17 +324,26 @@ pub struct ImageTranslationOutcome {
 }
 
 pub trait OcrRecognizer: Send {
-    fn recognize(&mut self, image: &DynamicImage) -> Result<Vec<TextLine>, String>;
+    fn recognize(
+        &mut self,
+        image: &DynamicImage,
+        quality: OcrQualityMode,
+    ) -> Result<Vec<TextLine>, String>;
 }
 
 impl OcrRecognizer for PaddleDualOcr {
-    fn recognize(&mut self, image: &DynamicImage) -> Result<Vec<TextLine>, String> {
-        PaddleDualOcr::recognize(self, image)
+    fn recognize(
+        &mut self,
+        image: &DynamicImage,
+        quality: OcrQualityMode,
+    ) -> Result<Vec<TextLine>, String> {
+        PaddleDualOcr::recognize_with_quality(self, image, quality)
     }
 }
 
 pub struct ImageTranslationProcessor {
     ocr: Option<Box<dyn OcrRecognizer>>,
+    last_ocr_use: Option<Instant>,
     cache_dir: PathBuf,
 }
 
@@ -347,6 +357,7 @@ impl ImageTranslationProcessor {
     pub fn new() -> Self {
         Self {
             ocr: None,
+            last_ocr_use: None,
             cache_dir: default_cache_dir(),
         }
     }
@@ -355,6 +366,7 @@ impl ImageTranslationProcessor {
     fn with_ocr(ocr: Box<dyn OcrRecognizer>, cache_dir: PathBuf) -> Self {
         Self {
             ocr: Some(ocr),
+            last_ocr_use: Some(Instant::now()),
             cache_dir,
         }
     }
@@ -363,13 +375,40 @@ impl ImageTranslationProcessor {
         self.ocr.is_some()
     }
 
+    pub fn note_ocr_use(&mut self, now: Instant) {
+        self.last_ocr_use = Some(now);
+    }
+
+    pub fn release_ocr(&mut self) -> bool {
+        let released = self.ocr.take().is_some();
+        self.last_ocr_use = None;
+        released
+    }
+
+    pub fn release_ocr_if_idle(&mut self, now: Instant) -> bool {
+        const OCR_IDLE_TTL: Duration = Duration::from_secs(5 * 60);
+        if self
+            .last_ocr_use
+            .is_some_and(|last| now.saturating_duration_since(last) >= OCR_IDLE_TTL)
+        {
+            return self.release_ocr();
+        }
+        false
+    }
+
     pub fn process(
         &mut self,
         image_bytes: &[u8],
         target: Language,
+        quality: OcrQualityMode,
         service: &mut TranslationService,
     ) -> Result<ImageTranslationOutcome, String> {
-        let cache_key = image_cache_key(image_bytes, target, service.namespace());
+        let cache_key = image_cache_key(
+            image_bytes,
+            target,
+            service.namespace(),
+            quality.cache_key(),
+        );
         let cache_path = self.cache_dir.join(format!("{cache_key}.png"));
         if let Ok(cached) = fs::read(&cache_path) {
             if image::load_from_memory_with_format(&cached, ImageFormat::Png).is_ok() {
@@ -385,11 +424,12 @@ impl ImageTranslationProcessor {
         if self.ocr.is_none() {
             self.ocr = Some(Box::new(PaddleDualOcr::new(true)?));
         }
+        self.note_ocr_use(Instant::now());
         let mut lines = self
             .ocr
             .as_mut()
             .expect("OCR was initialized")
-            .recognize(&image)?;
+            .recognize(&image, quality)?;
         lines = group_dense_text_lines(lines, image.width(), image.height());
         let selected: Vec<_> = lines
             .into_iter()
@@ -1001,13 +1041,15 @@ fn luminance(color: (u8, u8, u8)) -> u16 {
     (u16::from(color.0) * 54 + u16::from(color.1) * 183 + u16::from(color.2) * 19) / 256
 }
 
-fn image_cache_key(image: &[u8], target: Language, namespace: &str) -> String {
+fn image_cache_key(image: &[u8], target: Language, namespace: &str, quality: &str) -> String {
     let mut digest = Sha256::new();
     digest.update(image);
     digest.update([0]);
     digest.update(target.code().as_bytes());
     digest.update([0]);
     digest.update(namespace.as_bytes());
+    digest.update([0]);
+    digest.update(quality.as_bytes());
     digest.update([0]);
     digest.update(IMAGE_RENDER_VERSION.as_bytes());
     format!("{:x}", digest.finalize())
@@ -1033,22 +1075,27 @@ fn default_cache_dir() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_image_error_script, fetch_image_data_script, group_dense_text_lines, image_ui_script,
-        parse_image_requests, restore_images_script, ImageTranslationProcessor, OcrRecognizer,
-        IMAGE_UI_SCRIPT,
+        apply_image_error_script, fetch_image_data_script, group_dense_text_lines, image_cache_key,
+        image_ui_script, parse_image_requests, restore_images_script, ImageTranslationProcessor,
+        OcrRecognizer, IMAGE_UI_SCRIPT,
     };
     use crate::cache::TranslationCache;
     use crate::language::Language;
-    use crate::ocr::{Point, Rect, TextLine};
+    use crate::ocr::{OcrQualityMode, Point, Rect, TextLine};
     use crate::translation::{MockTranslator, TranslationService};
     use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
     use std::io::Cursor;
     use std::path::PathBuf;
+    use std::time::{Duration, Instant};
 
     struct FakeOcr;
 
     impl OcrRecognizer for FakeOcr {
-        fn recognize(&mut self, _image: &DynamicImage) -> Result<Vec<TextLine>, String> {
+        fn recognize(
+            &mut self,
+            _image: &DynamicImage,
+            _quality: OcrQualityMode,
+        ) -> Result<Vec<TextLine>, String> {
             Ok(vec![line(35, "Hello poster")])
         }
     }
@@ -1119,6 +1166,13 @@ mod tests {
     }
 
     #[test]
+    fn image_cache_is_separated_by_ocr_quality_mode() {
+        let fast = image_cache_key(b"same-image", Language::Korean, "same-model", "fast");
+        let quality = image_cache_key(b"same-image", Language::Korean, "same-model", "quality");
+        assert_ne!(fast, quality);
+    }
+
+    #[test]
     fn expanded_image_view_retargets_and_repositions_the_translation_button() {
         assert!(IMAGE_UI_SCRIPT.contains("const activeViewerImage = () =>"));
         assert!(IMAGE_UI_SCRIPT.contains("const target = activeViewerImage() || img"));
@@ -1180,10 +1234,30 @@ mod tests {
         let mut encoded = Cursor::new(Vec::new());
         source.write_to(&mut encoded, ImageFormat::Png).unwrap();
         let outcome = processor
-            .process(encoded.get_ref(), Language::Korean, &mut service)
+            .process(
+                encoded.get_ref(),
+                Language::Korean,
+                OcrQualityMode::Adaptive,
+                &mut service,
+            )
             .unwrap();
         assert_eq!(outcome.translated_count, 1);
         assert!(image::load_from_memory_with_format(&outcome.png_bytes, ImageFormat::Png).is_ok());
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn idle_ocr_models_are_released_after_five_minutes() {
+        let root = std::env::temp_dir().join(format!(
+            "nude-translator-ocr-idle-test-{}",
+            std::process::id()
+        ));
+        let mut processor = ImageTranslationProcessor::with_ocr(Box::new(FakeOcr), root);
+        let started = Instant::now();
+        processor.note_ocr_use(started);
+
+        assert!(!processor.release_ocr_if_idle(started + Duration::from_secs(299)));
+        assert!(processor.release_ocr_if_idle(started + Duration::from_secs(301)));
+        assert!(!processor.ocr_ready());
     }
 }
