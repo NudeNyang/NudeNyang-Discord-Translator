@@ -1,7 +1,7 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('7KCc7ZKI66qF7J2EIE51ZGVOeWFuZyBEaXNjb3JkIFRyYW5zbGF0b3LroZwg67OA6rK97ZWY6rOgIOuNsOydtO2EsOyZgCDshKTsuZgg6rK966Gc66W8IOyViOyghO2VmOqyjCDsnbTsoITtlZwgMC41LjYg67Kg7YOA')),
+    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('Q0xJIOqzhOyglSDsl7DqsrAg7Lap64+M6rO8IERpc2NvcmQg67O07JWIIOyXsOqysCDrs7Xqtazrpbwg6rCc7ISg7ZWcIDAuNS43IOuyoO2DgA==')),
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
