@@ -35,6 +35,15 @@ export const COPY = Object.freeze({
   "번역": ["Translation", "翻訳", "翻译"],
   "번역 엔진": ["Translation engine", "翻訳エンジン", "翻译引擎"],
   "이미지 번역": ["Image translation", "画像翻訳", "图片翻译"],
+  "이미지 OCR 품질": ["Image OCR quality", "画像OCR品質", "图片 OCR 质量"],
+  "글자 모양과 배경에 따라 인식 속도와 정확도를 조절합니다.": ["Balance recognition speed and accuracy for different text styles and backgrounds.", "文字の形や背景に合わせて、認識速度と精度を調整します。", "根据文字样式和背景调整识别速度与准确度。"],
+  "자동 (권장)": ["Automatic (recommended)", "自動（推奨）", "自动（推荐）"],
+  "빠른 처리": ["Faster processing", "高速処理", "快速处理"],
+  "고품질 우선": ["Prioritize quality", "品質優先", "质量优先"],
+  "자동 처리": ["Automatic processing", "自動処理", "自动处理"],
+  "빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.": ["Use the fast model first, then recheck only uncertain regions with the higher-quality model.", "まず高速モデルで認識し、不確かな領域のみ高品質モデルで再確認します。", "先使用快速模型识别，再仅用高质量模型复查不确定区域。"],
+  "고품질 모델": ["Higher-quality model", "高品質モデル", "高质量模型"],
+  "약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.": ["About 70MB. It downloads when first needed and is released from memory after 5 minutes of inactivity.", "約70MBです。初めて必要になったときにダウンロードし、5分間使用しないとメモリから解放します。", "约 70MB。首次需要时下载，闲置 5 分钟后从内存中释放。"],
   "편의 기능": ["Preferences", "便利機能", "便捷功能"],
   "앱 정보": ["About", "アプリ情報", "应用信息"],
   "Discord 메시지·이미지 번역과 앱 동작을 설정합니다.": ["Configure Discord message and image translation, and app behavior.", "Discordのメッセージ・画像翻訳とアプリの動作を設定します。", "设置 Discord 消息与图片翻译以及应用行为。"],
@@ -300,7 +309,7 @@ export const COPY = Object.freeze({
   "번역 모델을 바꾸지 못함": ["Could not change the translation model", "翻訳モデルを変更できません", "无法更改翻译模型"],
   "오류": ["Error", "エラー", "错误"],
   "버전을 사용할 수 있습니다": ["version is available", "バージョンを利用できます", "版本可用"],
-  "NudeNyang Translator 트레이 메뉴": ["NudeNyang Translator tray menu", "NudeNyang Translator トレイメニュー", "NudeNyang Translator 托盘菜单"],
+  "NudeNyang Discord Translator 트레이 메뉴": ["NudeNyang Discord Translator tray menu", "NudeNyang Discord Translator トレイメニュー", "NudeNyang Discord Translator 托盘菜单"],
   "표시 언어 선택": ["Select display language", "表示言語を選択", "选择显示语言"],
   "번역 모델 선택": ["Select translation model", "翻訳モデルを選択", "选择翻译模型"],
   "모델 다운로드 진행률": ["Model download progress", "モデルのダウンロード進行状況", "模型下载进度"],
@@ -343,7 +352,7 @@ export const COPY = Object.freeze({
   "단축키를 적용하지 못했습니다.": ["Could not apply the shortcut.", "ショートカットを適用できませんでした。", "无法应用快捷键。"],
   "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.": ["Enter a new shortcut combination. Press Esc to cancel.", "新しいショートカットの組み合わせを入力してください。Escでキャンセルできます。", "请输入新的快捷键组合。按 Esc 可取消。"],
   "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다.": ["Delete the DeepL API key from the operating system secure storage. If DeepL is selected, switch to the default local model.", "OSのセキュアストレージからDeepL APIキーを削除します。DeepLが選択されている場合は、標準のローカルモデルへ切り替えます。", "从操作系统安全存储中删除 DeepL API 密钥。如果当前选择了 DeepL，将切换到默认本地模型。"],
-  "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.": ["Keep the CLI sign-in and installation, but disable the service only in NudeNyang Translator. If the service is selected, switch to the default local model.", "CLIのログイン情報とインストール状態は保持し、NudeNyang Translatorでのみ使用を停止します。そのサービスが選択されている場合は、標準のローカルモデルへ切り替えます。", "保留 CLI 登录信息和安装状态，仅在 NudeNyang Translator 中停用该服务。如果当前选择了该服务，将切换到默认本地模型。"],
+  "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Discord Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.": ["Keep the CLI sign-in and installation, but disable the service only in NudeNyang Discord Translator. If the service is selected, switch to the default local model.", "CLIのログイン情報とインストール状態は保持し、NudeNyang Discord Translatorでのみ使用を停止します。そのサービスが選択されている場合は、標準のローカルモデルへ切り替えます。", "保留 CLI 登录信息和安装状态，仅在 NudeNyang Discord Translator 中停用该服务。如果当前选择了该服务，将切换到默认本地模型。"],
   "켜짐": ["On", "オン", "开启"],
   "꺼짐": ["Off", "オフ", "关闭"],
   "사용": ["On", "使用", "启用"],
@@ -381,7 +390,7 @@ export const DYNAMIC_TEMPLATE_COPY = Object.freeze({
   "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.": ["Discord is not running in accessibility-compatible mode yet.\nA message you are typing may be discarded or a call may end.\n\nDiscord will restart once for the initial transition in {seconds} seconds."],
   "{name} CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.": ["Installing {name} CLI and its required runtime automatically."],
   "{name} 계정 연결": ["Connect {name} account"],
-  "{name} CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다.": ["{name} CLI sign-in is retained and disabled only in NudeNyang Translator."],
+  "{name} CLI 로그인 정보는 유지되며 NudeNyang Discord Translator에서만 사용을 중지했습니다.": ["{name} CLI sign-in is retained and disabled only in NudeNyang Discord Translator."],
   "{name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.": ["Preparing the official {name} sign-in page. Please wait."],
   "{name} 계정 로그인을 취소하고 있습니다.": ["Cancelling {name} account sign-in."],
   "{name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.": ["Select Continue to open the official {name} sign-in page."],
@@ -537,11 +546,11 @@ export const DYNAMIC_COPY = Object.freeze([
     },
   },
   {
-    pattern: /^(.+) CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다\.$/,
+    pattern: /^(.+) CLI 로그인 정보는 유지되며 NudeNyang Discord Translator에서만 사용을 중지했습니다\.$/,
     render: {
-      en: name => `${name} CLI sign-in is retained and disabled only in NudeNyang Translator.`,
-      ja: name => `${name} CLIのログイン情報は保持され、NudeNyang Translatorでのみ使用を停止しました。`,
-      zh: name => `${name} CLI 登录信息已保留，仅在 NudeNyang Translator 中停用。`,
+      en: name => `${name} CLI sign-in is retained and disabled only in NudeNyang Discord Translator.`,
+      ja: name => `${name} CLIのログイン情報は保持され、NudeNyang Discord Translatorでのみ使用を停止しました。`,
+      zh: name => `${name} CLI 登录信息已保留，仅在 NudeNyang Discord Translator 中停用。`,
     },
   },
   {
@@ -767,7 +776,7 @@ const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
   ],
   ([name]) => ["{name} CLI와 필요한 실행 환경을 자동으로 설치하고 있습니다.", { name }],
   ([name]) => ["{name} 계정 연결", { name }],
-  ([name]) => ["{name} CLI 로그인 정보는 유지되며 NudeNyang Translator에서만 사용을 중지했습니다.", { name }],
+  ([name]) => ["{name} CLI 로그인 정보는 유지되며 NudeNyang Discord Translator에서만 사용을 중지했습니다.", { name }],
   ([name]) => ["{name} 공식 로그인 페이지를 준비하고 있습니다. 잠시 기다리십시오.", { name }],
   ([name]) => ["{name} 계정 로그인을 취소하고 있습니다.", { name }],
   ([name]) => ["{name} 공식 로그인 페이지로 이동하려면 이동을 선택하십시오.", { name }],
@@ -883,8 +892,8 @@ export function applyStaticTranslations(root, language) {
   document.documentElement.lang = language === "zh" ? "zh-CN" : language === "zh-Hant" ? "zh-TW" : language;
   document.documentElement.dir = "ltr";
   document.title = language === "ko"
-    ? "NudeNyang Translator 설정"
-    : `NudeNyang Translator · ${translateCopy(language, "설정")}`;
+    ? "NudeNyang Discord Translator 설정"
+    : `NudeNyang Discord Translator · ${translateCopy(language, "설정")}`;
   const elements = root.querySelectorAll("h1, h2, h3, p, span, strong, b, button, small");
   for (const element of elements) {
     if (element.children.length > 0) continue;

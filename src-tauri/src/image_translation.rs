@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use ab_glyph::{FontArc, PxScale};
 use image::codecs::png::PngEncoder;
@@ -13,11 +14,11 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 use crate::language::{is_supported_language_code, Language};
-use crate::ocr::{PaddleDualOcr, Point, Rect, TextLine};
+use crate::ocr::{OcrQualityMode, PaddleDualOcr, Point, Rect, TextLine};
 use crate::translation::TranslationService;
 use crate::ui_locale::generated_copies;
 
-const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v1";
+const IMAGE_RENDER_VERSION: &str = "rust-poster-plates-v3-vertical-glyphs-hires-upgrade";
 
 pub const IMAGE_UI_SCRIPT: &str = r##"
 (() => {
@@ -40,7 +41,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v4';
+  const version = 'rust-image-ui-v7-resolution-aware';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -63,6 +64,10 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   window.__ntImageVisibility ||= {};
   window.__ntImageEnabled = true;
 
+  const translationRecord = value => typeof value === 'string'
+    ? {src:value, width:0, height:0}
+    : {src:String(value?.src || ''), width:Number(value?.width || 0), height:Number(value?.height || 0)};
+
   const sourceKey = source => {
     if (!source) return '';
     try {
@@ -72,6 +77,31 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     } catch (_) { return source.split(/[?#]/, 1)[0]; }
   };
   window.__ntImageSourceKey = sourceKey;
+
+  const canonicalImageSource = source => {
+    if (!source || source.startsWith('data:') || source.startsWith('blob:')) return source || '';
+    try {
+      const url = new URL(source, location.href);
+      if (/^(?:media|cdn|images-ext-\d+)\.discordapp\.(?:net|com)$/i.test(url.hostname)) {
+        if (/\/attachments\//i.test(url.pathname) && url.hostname.toLowerCase() === 'media.discordapp.net') url.hostname = 'cdn.discordapp.com';
+        for (const name of ['width','height','format','quality']) url.searchParams.delete(name);
+      }
+      if (/^pbs\.twimg\.com$/i.test(url.hostname)) url.searchParams.set('name', 'orig');
+      return url.href;
+    } catch (_) { return source; }
+  };
+  const largestSrcsetSource = img => {
+    const values = String(img.getAttribute('srcset') || '').split(',').map(value => value.trim()).filter(Boolean);
+    return values.sort((left, right) => {
+      const size = value => Number(value.match(/\s(\d+(?:\.\d+)?)(?:w|x)$/)?.[1] || 0);
+      return size(right) - size(left);
+    })[0]?.replace(/\s+\d+(?:\.\d+)?(?:w|x)$/, '') || '';
+  };
+  const sourceCandidates = img => {
+    const raw = [img?.currentSrc || '', largestSrcsetSource(img), img?.dataset?.ntOriginalSrc || '', img?.getAttribute?.('src') || '', img?.src || ''];
+    return [...new Set(raw.flatMap(source => [canonicalImageSource(source), source]).filter(source => source && !source.startsWith('data:') && !source.startsWith('blob:')))];
+  };
+  window.__ntImageSourceCandidates = sourceCandidates;
 
   const inViewer = img => {
     const dialog = img.closest('[role="dialog"]');
@@ -90,10 +120,17 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     if (/\/(?:avatars|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source)) return false;
     return !String(img.className).match(/avatar|emoji|sticker|icon|placeholder/i);
   };
+  const activeViewerImage = () => [...document.querySelectorAll('[role="dialog"] img')]
+    .filter(img => inViewer(img) && eligible(img))
+    .sort((left, right) => {
+      const leftRect = left.getBoundingClientRect();
+      const rightRect = right.getBoundingClientRect();
+      return rightRect.width * rightRect.height - leftRect.width * leftRect.height;
+    })[0] || null;
   const ensure = img => {
     if (!img.dataset.ntImageId) img.dataset.ntImageId = `nt-image-${++window.__ntImageSequence}`;
     if (!img.dataset.ntOriginalSrc) {
-      img.dataset.ntOriginalSrc = img.getAttribute('src') || img.currentSrc;
+      img.dataset.ntOriginalSrc = img.currentSrc || largestSrcsetSource(img) || img.getAttribute('src') || img.src;
       img.dataset.ntOriginalSrcset = img.getAttribute('srcset') || '';
     }
     img.dataset.ntSourceKey ||= sourceKey(img.dataset.ntOriginalSrc);
@@ -134,14 +171,16 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   };
   window.__ntUpdateImageButton = update;
   const show = img => {
-    if (!window.__ntImageEnabled || !eligible(img)) {
+    const target = activeViewerImage() || img;
+    if (!window.__ntImageEnabled || !eligible(target)) {
       button.style.display = 'none';
       return;
     }
-    button.dataset.ntTarget = ensure(img);
-    update(img);
+    button.dataset.ntTarget = ensure(target);
+    button.dataset.ntViewerTarget = inViewer(target) ? 'true' : 'false';
+    update(target);
     button.style.display = 'block';
-    const rect = img.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     const inset = 8;
     const left = Math.max(inset, Math.min(
       innerWidth - button.offsetWidth - inset,
@@ -191,6 +230,29 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
       });
     }, {capture:true, signal});
     document.addEventListener('scroll', () => button.style.display = 'none', {capture:true, signal});
+    window.addEventListener('resize', () => {
+      if (button.style.display === 'none') return;
+      const viewer = activeViewerImage();
+      const target = viewer || imageById(button.dataset.ntTarget || '');
+      if (target && eligible(target)) show(target);
+      else button.style.display = 'none';
+    }, {signal});
+    const viewerObserver = new MutationObserver(mutations => {
+      const viewerChanged = mutations.some(mutation => [...mutation.addedNodes, ...mutation.removedNodes]
+        .some(node => node instanceof Element &&
+          (node.matches('[role="dialog"]') || node.closest('[role="dialog"]') || node.querySelector('[role="dialog"]'))));
+      if (!viewerChanged) return;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const viewer = activeViewerImage();
+        if (viewer) show(viewer);
+        else if (button.dataset.ntViewerTarget === 'true') {
+          button.style.display = 'none';
+          delete button.dataset.ntViewerTarget;
+        }
+      }));
+    });
+    viewerObserver.observe(document.body, {childList:true, subtree:true});
+    signal.addEventListener('abort', () => viewerObserver.disconnect(), {once:true});
     button.addEventListener('pointerenter', () => clearTimeout(window.__ntImageButtonTimer), {signal});
     button.addEventListener('pointerleave', hideSoon, {signal});
     button.addEventListener('click', event => {
@@ -220,11 +282,24 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     if (!eligible(img)) continue;
     const original = img.dataset.ntOriginalSrc || img.currentSrc || img.src || '';
     const key = img.dataset.ntSourceKey || sourceKey(original);
-    const translated = window.__ntTranslatedImages[key];
-    if (!translated) continue;
-    ensure(img); img.dataset.ntTranslatedSrc = translated;
+    const record = translationRecord(window.__ntTranslatedImages[key]);
+    if (!record.src) continue;
+    ensure(img);
+    const rect = img.getBoundingClientRect();
+    const pixelRatio = Math.max(1, Number(devicePixelRatio || 1));
+    const requiredWidth = Math.max(Number(img.naturalWidth || 0), Math.ceil(rect.width * pixelRatio));
+    const requiredHeight = Math.max(Number(img.naturalHeight || 0), Math.ceil(rect.height * pixelRatio));
+    const needsUpgrade = inViewer(img) && img.dataset.ntResolutionUpgradeTried !== 'true' &&
+      (!record.width || !record.height || requiredWidth > record.width * 1.18 || requiredHeight > record.height * 1.18);
+    if (needsUpgrade) {
+      img.dataset.ntResolutionUpgradeTried = 'true';
+      img.dataset.ntImageStatus = 'processing';
+      window.__ntImageRequests.push({id:img.dataset.ntImageId, sourceKey:key});
+      continue;
+    }
+    img.dataset.ntTranslatedSrc = record.src;
     if (window.__ntImageVisibility[key] !== 'hidden') {
-      img.removeAttribute('srcset'); img.src = translated; img.dataset.ntImageStatus = 'translated';
+      img.removeAttribute('srcset'); img.src = record.src; img.dataset.ntImageStatus = 'translated';
     } else img.dataset.ntImageStatus = 'translated-hidden';
   }
   return window.__ntImageRequests.splice(0);
@@ -280,6 +355,7 @@ pub struct ImageCaptureInfo {
     pub y: f64,
     pub width: f64,
     pub height: f64,
+    pub scale: f64,
     pub fully_visible: bool,
 }
 
@@ -291,17 +367,26 @@ pub struct ImageTranslationOutcome {
 }
 
 pub trait OcrRecognizer: Send {
-    fn recognize(&mut self, image: &DynamicImage) -> Result<Vec<TextLine>, String>;
+    fn recognize(
+        &mut self,
+        image: &DynamicImage,
+        quality: OcrQualityMode,
+    ) -> Result<Vec<TextLine>, String>;
 }
 
 impl OcrRecognizer for PaddleDualOcr {
-    fn recognize(&mut self, image: &DynamicImage) -> Result<Vec<TextLine>, String> {
-        PaddleDualOcr::recognize(self, image)
+    fn recognize(
+        &mut self,
+        image: &DynamicImage,
+        quality: OcrQualityMode,
+    ) -> Result<Vec<TextLine>, String> {
+        PaddleDualOcr::recognize_with_quality(self, image, quality)
     }
 }
 
 pub struct ImageTranslationProcessor {
     ocr: Option<Box<dyn OcrRecognizer>>,
+    last_ocr_use: Option<Instant>,
     cache_dir: PathBuf,
 }
 
@@ -315,6 +400,7 @@ impl ImageTranslationProcessor {
     pub fn new() -> Self {
         Self {
             ocr: None,
+            last_ocr_use: None,
             cache_dir: default_cache_dir(),
         }
     }
@@ -323,6 +409,7 @@ impl ImageTranslationProcessor {
     fn with_ocr(ocr: Box<dyn OcrRecognizer>, cache_dir: PathBuf) -> Self {
         Self {
             ocr: Some(ocr),
+            last_ocr_use: Some(Instant::now()),
             cache_dir,
         }
     }
@@ -331,13 +418,40 @@ impl ImageTranslationProcessor {
         self.ocr.is_some()
     }
 
+    pub fn note_ocr_use(&mut self, now: Instant) {
+        self.last_ocr_use = Some(now);
+    }
+
+    pub fn release_ocr(&mut self) -> bool {
+        let released = self.ocr.take().is_some();
+        self.last_ocr_use = None;
+        released
+    }
+
+    pub fn release_ocr_if_idle(&mut self, now: Instant) -> bool {
+        const OCR_IDLE_TTL: Duration = Duration::from_secs(5 * 60);
+        if self
+            .last_ocr_use
+            .is_some_and(|last| now.saturating_duration_since(last) >= OCR_IDLE_TTL)
+        {
+            return self.release_ocr();
+        }
+        false
+    }
+
     pub fn process(
         &mut self,
         image_bytes: &[u8],
         target: Language,
+        quality: OcrQualityMode,
         service: &mut TranslationService,
     ) -> Result<ImageTranslationOutcome, String> {
-        let cache_key = image_cache_key(image_bytes, target, service.namespace());
+        let cache_key = image_cache_key(
+            image_bytes,
+            target,
+            service.namespace(),
+            quality.cache_key(),
+        );
         let cache_path = self.cache_dir.join(format!("{cache_key}.png"));
         if let Ok(cached) = fs::read(&cache_path) {
             if image::load_from_memory_with_format(&cached, ImageFormat::Png).is_ok() {
@@ -353,11 +467,12 @@ impl ImageTranslationProcessor {
         if self.ocr.is_none() {
             self.ocr = Some(Box::new(PaddleDualOcr::new(true)?));
         }
+        self.note_ocr_use(Instant::now());
         let mut lines = self
             .ocr
             .as_mut()
             .expect("OCR was initialized")
-            .recognize(&image)?;
+            .recognize(&image, quality)?;
         lines = group_dense_text_lines(lines, image.width(), image.height());
         let selected: Vec<_> = lines
             .into_iter()
@@ -433,7 +548,13 @@ pub fn image_capture_info_script(image_id: &str) -> Result<String, String> {
           const img=document.querySelector(`[data-nt-image-id="${{CSS.escape(id)}}"]`);
           if (!img) return null;
           const rect=img.getBoundingClientRect();
+          const naturalScale=Math.min(
+            Number(img.naturalWidth || 0) / Math.max(rect.width, 1),
+            Number(img.naturalHeight || 0) / Math.max(rect.height, 1)
+          );
+          const scale=Math.max(1, Math.min(2.5, Number.isFinite(naturalScale) ? naturalScale : 1));
           return {{x:rect.left+scrollX,y:rect.top+scrollY,width:rect.width,height:rect.height,
+            scale,
             fullyVisible:rect.width>=160&&rect.height>=90&&rect.left>=0&&rect.top>=0&&rect.right<=innerWidth&&rect.bottom<=innerHeight}};
         }})()"##
     ))
@@ -451,31 +572,39 @@ pub fn fetch_image_data_script(image_id: &str, max_bytes: usize) -> Result<Strin
           const id = {id};
           const img = document.querySelector(`[data-nt-image-id="${{CSS.escape(id)}}"]`);
           if (!img) return null;
-          const source = img.dataset.ntOriginalSrc || img.currentSrc || img.src || '';
-          if (!source || source.startsWith('data:') || source.startsWith('blob:')) return null;
           const maxBytes = {max_bytes};
-          const response = await fetch(source, {{cache:'force-cache', credentials:'omit'}});
-          if (!response.ok) throw new Error(`이미지 읽기 실패: HTTP ${{response.status}}`);
-          const contentLength = Number(response.headers.get('content-length') || 0);
-          if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error('이미지가 허용 크기를 초과했습니다.');
-          if (!response.body) throw new Error('이미지 응답 스트림을 읽을 수 없습니다.');
-          const reader = response.body.getReader(), chunks = [];
-          let received = 0;
-          while (true) {{
-            const {{done, value}} = await reader.read();
-            if (done) break;
-            received += value.byteLength;
-            if (received > maxBytes) {{ await reader.cancel(); throw new Error('이미지가 허용 크기를 초과했습니다.'); }}
-            chunks.push(value);
+          const fallbackCandidates = [img.currentSrc || '', img.dataset.ntOriginalSrc || '', img.src || '']
+            .filter(source => source && !source.startsWith('data:') && !source.startsWith('blob:'));
+          const candidates = window.__ntImageSourceCandidates?.(img) || [...new Set(fallbackCandidates)];
+          let lastError = null;
+          for (const source of candidates) {{
+            try {{
+              const response = await fetch(source, {{cache:'force-cache', credentials:'omit'}});
+              if (!response.ok) throw new Error(`이미지 읽기 실패: HTTP ${{response.status}}`);
+              const contentLength = Number(response.headers.get('content-length') || 0);
+              if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error('이미지가 허용 크기를 초과했습니다.');
+              if (!response.body) throw new Error('이미지 응답 스트림을 읽을 수 없습니다.');
+              const reader = response.body.getReader(), chunks = [];
+              let received = 0;
+              while (true) {{
+                const {{done, value}} = await reader.read();
+                if (done) break;
+                received += value.byteLength;
+                if (received > maxBytes) {{ await reader.cancel(); throw new Error('이미지가 허용 크기를 초과했습니다.'); }}
+                chunks.push(value);
+              }}
+              const blob = new Blob(chunks, {{type: response.headers.get('content-type') || ''}});
+              const dataUrl = await new Promise((resolve, reject) => {{
+                const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(reader.error || new Error('이미지 읽기 실패'));
+                reader.readAsDataURL(blob);
+              }});
+              const comma = dataUrl.indexOf(',');
+              return {{base64: comma >= 0 ? dataUrl.slice(comma + 1) : '', mime: blob.type || '', source}};
+            }} catch (error) {{ lastError = error; }}
           }}
-          const blob = new Blob(chunks, {{type: response.headers.get('content-type') || ''}});
-          const dataUrl = await new Promise((resolve, reject) => {{
-            const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || ''));
-            reader.onerror = () => reject(reader.error || new Error('이미지 읽기 실패'));
-            reader.readAsDataURL(blob);
-          }});
-          const comma = dataUrl.indexOf(',');
-          return {{base64: comma >= 0 ? dataUrl.slice(comma + 1) : '', mime: blob.type || '', source}};
+          if (lastError) throw lastError;
+          return null;
         }})()"##
     ))
 }
@@ -496,7 +625,14 @@ pub fn apply_image_result_script(
           const img = document.querySelector(`[data-nt-image-id="${{CSS.escape(id)}}"]`);
           const key = requestedKey || img?.dataset.ntSourceKey || window.__ntImageSourceKey?.(img?.dataset.ntOriginalSrc || '') || '';
           window.__ntTranslatedImages ||= {{}}; window.__ntImageVisibility ||= {{}};
-          if (key) {{ window.__ntTranslatedImages[key]=src; window.__ntImageVisibility[key]='visible'; }}
+          if (key) {{
+            window.__ntTranslatedImages[key]={{
+              src,
+              width:Number(preload.naturalWidth || 0),
+              height:Number(preload.naturalHeight || 0)
+            }};
+            window.__ntImageVisibility[key]='visible';
+          }}
           if (!img) return {{applied:false, remembered:Boolean(key)}};
           img.dataset.ntTranslatedSrc=src; if (key) img.dataset.ntSourceKey=key;
           img.removeAttribute('srcset'); img.src=src; img.dataset.ntImageStatus='translated';
@@ -518,7 +654,7 @@ pub fn apply_image_error_script(image_id: &str, message: &str) -> Result<String,
           if (!img) return {{applied:false}};
           img.dataset.ntImageStatus='error'; img.dataset.ntImageError=message;
           const button=document.getElementById('nt-image-translate-button');
-          if (message) console.warn('[NudeNyang Translator] image translation failed:', message);
+          if (message) console.warn('[NudeNyang Discord Translator] image translation failed:', message);
           if (button?.dataset.ntTarget===id) window.__ntUpdateImageButton?.(img);
           return {{applied:true}};
         }})()"##
@@ -969,13 +1105,15 @@ fn luminance(color: (u8, u8, u8)) -> u16 {
     (u16::from(color.0) * 54 + u16::from(color.1) * 183 + u16::from(color.2) * 19) / 256
 }
 
-fn image_cache_key(image: &[u8], target: Language, namespace: &str) -> String {
+fn image_cache_key(image: &[u8], target: Language, namespace: &str, quality: &str) -> String {
     let mut digest = Sha256::new();
     digest.update(image);
     digest.update([0]);
     digest.update(target.code().as_bytes());
     digest.update([0]);
     digest.update(namespace.as_bytes());
+    digest.update([0]);
+    digest.update(quality.as_bytes());
     digest.update([0]);
     digest.update(IMAGE_RENDER_VERSION.as_bytes());
     format!("{:x}", digest.finalize())
@@ -986,37 +1124,43 @@ fn default_cache_dir() -> PathBuf {
     if let Some(local) = env::var_os("LOCALAPPDATA") {
         return PathBuf::from(local)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("Cache")
             .join("image-translations");
     }
     #[cfg(target_os = "macos")]
     if let Some(home) = env::var_os("HOME") {
         return PathBuf::from(home)
-            .join("Library/Caches/DiscordTranslateOverlay/image-translations");
+            .join("Library/Caches/NudeNyang Discord Translator/image-translations");
     }
-    env::temp_dir().join("DiscordTranslateOverlay/image-translations")
+    env::temp_dir().join("NudeNyang Discord Translator/image-translations")
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_image_error_script, fetch_image_data_script, group_dense_text_lines, image_ui_script,
-        parse_image_requests, restore_images_script, ImageTranslationProcessor, OcrRecognizer,
-        IMAGE_UI_SCRIPT,
+        apply_image_error_script, apply_image_result_script, fetch_image_data_script,
+        group_dense_text_lines, image_cache_key, image_capture_info_script, image_ui_script,
+        parse_image_capture_info, parse_image_requests, restore_images_script,
+        ImageTranslationProcessor, OcrRecognizer, IMAGE_UI_SCRIPT,
     };
     use crate::cache::TranslationCache;
     use crate::language::Language;
-    use crate::ocr::{Point, Rect, TextLine};
+    use crate::ocr::{OcrQualityMode, Point, Rect, TextLine};
     use crate::translation::{MockTranslator, TranslationService};
-    use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
+    use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
     use std::io::Cursor;
     use std::path::PathBuf;
+    use std::time::{Duration, Instant};
 
     struct FakeOcr;
 
     impl OcrRecognizer for FakeOcr {
-        fn recognize(&mut self, _image: &DynamicImage) -> Result<Vec<TextLine>, String> {
+        fn recognize(
+            &mut self,
+            _image: &DynamicImage,
+            _quality: OcrQualityMode,
+        ) -> Result<Vec<TextLine>, String> {
             Ok(vec![line(35, "Hello poster")])
         }
     }
@@ -1087,6 +1231,72 @@ mod tests {
     }
 
     #[test]
+    fn image_fetch_prefers_the_selected_full_resolution_source() {
+        let current = IMAGE_UI_SCRIPT
+            .find("img.currentSrc || largestSrcsetSource(img)")
+            .expect("currentSrc must be preferred");
+        let raw_attribute = IMAGE_UI_SCRIPT
+            .find("img.getAttribute('src') || img.src")
+            .expect("raw src remains a fallback");
+        assert!(current < raw_attribute);
+        assert!(IMAGE_UI_SCRIPT.contains("url.hostname = 'cdn.discordapp.com'"));
+        assert!(IMAGE_UI_SCRIPT.contains("['width','height','format','quality']"));
+        assert!(IMAGE_UI_SCRIPT.contains("url.searchParams.set('name', 'orig')"));
+
+        let fetch = fetch_image_data_script("nt-image-1", 1024).unwrap();
+        assert!(fetch.contains("window.__ntImageSourceCandidates?.(img)"));
+        assert!(fetch.contains("for (const source of candidates)"));
+    }
+
+    #[test]
+    fn screenshot_fallback_uses_the_decoded_image_resolution() {
+        let script = image_capture_info_script("nt-image-1").unwrap();
+        assert!(script.contains("img.naturalWidth"));
+        assert!(script.contains("img.naturalHeight"));
+        let info = parse_image_capture_info(serde_json::json!({
+            "x": 0.0,
+            "y": 0.0,
+            "width": 800.0,
+            "height": 600.0,
+            "scale": 2.0,
+            "fullyVisible": true
+        }))
+        .unwrap();
+        assert_eq!(info.scale, 2.0);
+    }
+
+    #[test]
+    fn image_cache_is_separated_by_ocr_quality_mode() {
+        let fast = image_cache_key(b"same-image", Language::Korean, "same-model", "fast");
+        let quality = image_cache_key(b"same-image", Language::Korean, "same-model", "quality");
+        assert_ne!(fast, quality);
+    }
+
+    #[test]
+    fn expanded_image_view_retargets_and_repositions_the_translation_button() {
+        assert!(IMAGE_UI_SCRIPT.contains("const activeViewerImage = () =>"));
+        assert!(IMAGE_UI_SCRIPT.contains("const target = activeViewerImage() || img"));
+        assert!(IMAGE_UI_SCRIPT.contains("new MutationObserver"));
+        assert!(IMAGE_UI_SCRIPT.contains("if (viewer) show(viewer)"));
+        assert!(IMAGE_UI_SCRIPT.contains("window.addEventListener('resize'"));
+    }
+
+    #[test]
+    fn expanded_image_view_reprocesses_a_low_resolution_translation() {
+        assert!(IMAGE_UI_SCRIPT.contains("const translationRecord = value =>"));
+        assert!(IMAGE_UI_SCRIPT.contains("requiredWidth > record.width * 1.18"));
+        assert!(IMAGE_UI_SCRIPT.contains("img.dataset.ntResolutionUpgradeTried = 'true'"));
+        assert!(IMAGE_UI_SCRIPT
+            .contains("window.__ntImageRequests.push({id:img.dataset.ntImageId, sourceKey:key})"));
+
+        let script =
+            apply_image_result_script("nt-image-1", "data:image/png;base64,AA==", "same-image")
+                .unwrap();
+        assert!(script.contains("width:Number(preload.naturalWidth || 0)"));
+        assert!(script.contains("height:Number(preload.naturalHeight || 0)"));
+    }
+
+    #[test]
     fn generated_scripts_json_escape_untrusted_values() {
         let fetch = fetch_image_data_script("x\";throw new Error('bad')//", 1024).unwrap();
         assert!(fetch.contains("\\\""));
@@ -1139,10 +1349,32 @@ mod tests {
         let mut encoded = Cursor::new(Vec::new());
         source.write_to(&mut encoded, ImageFormat::Png).unwrap();
         let outcome = processor
-            .process(encoded.get_ref(), Language::Korean, &mut service)
+            .process(
+                encoded.get_ref(),
+                Language::Korean,
+                OcrQualityMode::Adaptive,
+                &mut service,
+            )
             .unwrap();
         assert_eq!(outcome.translated_count, 1);
-        assert!(image::load_from_memory_with_format(&outcome.png_bytes, ImageFormat::Png).is_ok());
+        let rendered =
+            image::load_from_memory_with_format(&outcome.png_bytes, ImageFormat::Png).unwrap();
+        assert_eq!(rendered.dimensions(), source.dimensions());
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn idle_ocr_models_are_released_after_five_minutes() {
+        let root = std::env::temp_dir().join(format!(
+            "nude-translator-ocr-idle-test-{}",
+            std::process::id()
+        ));
+        let mut processor = ImageTranslationProcessor::with_ocr(Box::new(FakeOcr), root);
+        let started = Instant::now();
+        processor.note_ocr_use(started);
+
+        assert!(!processor.release_ocr_if_idle(started + Duration::from_secs(299)));
+        assert!(processor.release_ocr_if_idle(started + Duration::from_secs(301)));
+        assert!(!processor.ocr_ready());
     }
 }

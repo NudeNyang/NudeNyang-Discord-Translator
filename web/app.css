@@ -487,6 +487,13 @@ input:focus-visible,
   line-height: 1;
 }
 
+.message-direction-icon--incoming {
+  --message-direction-accent: #d4a24a;
+  border-color: color-mix(in srgb, var(--message-direction-accent) 58%, var(--border));
+  color: color-mix(in srgb, var(--message-direction-accent) 76%, var(--text));
+  background: color-mix(in srgb, var(--message-direction-accent) 18%, var(--surface));
+}
+
 .settings-card .setting-row {
   margin: 0 16px;
 }

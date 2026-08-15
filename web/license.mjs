@@ -677,7 +677,7 @@ Public License instead of this License.  But first, please read
 
 export const THIRD_PARTY_NOTICES_TEXT = `# Third-party notices
 
-NudeNyang Translator 자체 소스와 구성요소는 \`GPL-3.0-only\`로 배포한다. 이 라이선스는 아래
+NudeNyang Discord Translator 자체 소스와 구성요소는 \`GPL-3.0-only\`로 배포한다. 이 라이선스는 아래
 제3자 구성요소의 별도 라이선스와 저작권을 대체하지 않는다.
 
 ## Hy-MT2 내장 배포
@@ -699,7 +699,7 @@ Apache License 2.0이 별도로 적용된다. 각 모델의 공식 라이선스 
 | llama.cpp | GGUF 추론 서버 | MIT, <https://github.com/ggml-org/llama.cpp> |
 | ocr-rs | Rust OCR 전·후처리와 MNN 바인딩 | Apache-2.0, <https://github.com/zibo-chen/rust-paddle-ocr> |
 | MNN | 네이티브 OCR 추론 런타임 | Apache-2.0, <https://github.com/alibaba/MNN> |
-| PaddleOCR 모델 | PP-OCRv6 감지·인식 및 한국어 PP-OCRv5 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
+| PaddleOCR 모델 | PP-OCRv6 Small/Medium 감지·인식 및 한국어 PP-OCRv5 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
 | Lingua 1.8.0 및 선택 언어 모델 | 오프라인 채팅 언어 감지 | Apache-2.0, Copyright © 2020-present Peter M. Stahl, <https://github.com/pemistahl/lingua-rs> |
 | Tabler Icons | 설정 메뉴 아이콘 | MIT, Copyright (c) 2020-2026 Paweł Kuna, <https://github.com/tabler/tabler-icons> |
 
@@ -1132,7 +1132,7 @@ Hy-MT2-7B-GGUF is licensed under the Apache License, Version 2.0.
 `;
 
 export const LICENSE_DOCUMENTS = Object.freeze([
-  Object.freeze({ title: "NudeNyang Translator (GPL-3.0-only)", text: APP_LICENSE_TEXT }),
+  Object.freeze({ title: "NudeNyang Discord Translator (GPL-3.0-only)", text: APP_LICENSE_TEXT }),
   Object.freeze({ title: "제3자 고지", text: THIRD_PARTY_NOTICES_TEXT }),
   Object.freeze({ title: "Hy-MT2 1.8B GGUF (Apache-2.0)", text: HYMT_1_8B_LICENSE_TEXT }),
   Object.freeze({ title: "Hy-MT2 7B GGUF (Apache-2.0)", text: HYMT_7B_LICENSE_TEXT }),

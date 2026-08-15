@@ -4,13 +4,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'release_paths.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $WorkerPath = Join-Path $ProjectRoot $WorkerDirectory
-$SecretDirectory = Join-Path $env:LOCALAPPDATA 'NudeTranslator\secrets'
+$SecretDirectory = Resolve-NudeNyangReleaseSecretDirectory
 $TokenFile = Join-Path $SecretDirectory 'beta-token.txt'
 $EndpointFile = Join-Path $SecretDirectory 'update-endpoint.txt'
 $InviteFile = Join-Path $SecretDirectory 'beta-invite-link.txt'
-New-Item -ItemType Directory -Path $SecretDirectory -Force | Out-Null
 
 if (-not (Test-Path -LiteralPath $TokenFile)) {
     $bytes = New-Object byte[] 32

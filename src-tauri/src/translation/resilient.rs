@@ -37,7 +37,7 @@ impl ResilientTranslator {
             .as_ref()
             .map_or("local-only", |translator| translator.cache_namespace());
         let cache_namespace = format!(
-            "{}:quality-repair-v9:{fallback_namespace}",
+            "{}:quality-repair-v11:{fallback_namespace}",
             primary.cache_namespace()
         );
         Self {
@@ -205,6 +205,16 @@ impl Translator for ResilientTranslator {
         source: Language,
         target: Language,
     ) -> bool {
+        self.translation_is_acceptable(source_text, translated_text, source, target)
+    }
+
+    fn translation_is_acceptable(
+        &self,
+        source_text: &str,
+        translated_text: &str,
+        source: Language,
+        target: Language,
+    ) -> bool {
         !translation_needs_repair(source_text, translated_text, source, target)
     }
 
@@ -333,7 +343,11 @@ pub fn translation_needs_repair(
             ) {
                 return remaining_han >= 2;
             }
-            return remaining_kana >= 5.max((hangul as f64 * 0.55).round() as usize);
+            // A mostly Korean result can still contain a full untranslated Japanese
+            // name or clause. Judge the longest contiguous run instead of the total:
+            // this repairs embed fragments such as `おきゅーとぱー`, while allowing
+            // short preserved names/terms such as `すてら` and `ダンス部`.
+            return remaining_kana >= 5 && max_kana_run(translated_text) >= 5;
         }
         if source == Language::English {
             let source_latin = count_latin(source_text);
@@ -345,8 +359,15 @@ pub fn translation_needs_repair(
             {
                 return true;
             }
+            let untranslated_latin = untranslated_english_letters(source_text, translated_text);
+            // Long chat messages often preserve a handful of short expressions such as
+            // `hehe`, `vlog`, or `otw`. Treating any four remaining letters as a failure
+            // discarded an otherwise complete translation and restored the whole English
+            // source. Keep the strict floor for short messages, but judge long messages by
+            // the untranslated share so that actual English clauses are still repaired.
+            let allowed_untranslated_latin = ((source_latin + 11) / 12).max(3);
             return hangul > 0
-                && untranslated_english_letters(source_text, translated_text) >= 4
+                && untranslated_latin > allowed_untranslated_latin
                 && remaining_latin >= 4;
         }
     }
@@ -433,6 +454,31 @@ fn count_kana(text: &str) -> usize {
     count_in_ranges(text, &[(0x3040, 0x30ff), (0x31f0, 0x31ff)])
 }
 
+fn max_kana_run(text: &str) -> usize {
+    text.chars()
+        .fold(
+            (0usize, 0usize, 0u8),
+            |(current, longest, script), character| {
+                let code = character as u32;
+                let next_script = match code {
+                    0x3040..=0x309f => 1,
+                    0x30a0..=0x30fb | 0x30fd..=0x30ff | 0x31f0..=0x31ff => 2,
+                    0x30fc if script != 0 => script,
+                    _ => 0,
+                };
+                let next = if next_script == 0 {
+                    0
+                } else if next_script == script {
+                    current + 1
+                } else {
+                    1
+                };
+                (next, longest.max(next), next_script)
+            },
+        )
+        .1
+}
+
 fn count_han(text: &str) -> usize {
     count_in_ranges(
         text,
@@ -474,7 +520,8 @@ fn is_allowed_untranslated_name(word: &str, source_words: &[String]) -> bool {
     if matches!(
         lower.as_str(),
         "discord" | "vrchat" | "github" | "sentory" | "nudenyang"
-    ) {
+    ) || is_likely_keyboard_smash(word)
+    {
         return true;
     }
     if word.chars().any(|character| character.is_ascii_digit())
@@ -500,6 +547,15 @@ fn is_allowed_untranslated_name(word: &str, source_words: &[String]) -> bool {
                     .next()
                     .is_some_and(|character| character.is_ascii_uppercase())
         })
+}
+
+pub(crate) fn is_likely_keyboard_smash(word: &str) -> bool {
+    let length = word.len();
+    (7..=24).contains(&length)
+        && word.chars().all(|character| character.is_ascii_lowercase())
+        && !word
+            .chars()
+            .any(|character| matches!(character, 'a' | 'e' | 'i' | 'o' | 'u' | 'y'))
 }
 
 fn count_devanagari(text: &str) -> usize {
@@ -571,7 +627,7 @@ fn source_is_game_context_without_food(text: &str) -> bool {
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{translation_needs_repair, ResilientTranslator};
+    use super::{is_likely_keyboard_smash, translation_needs_repair, ResilientTranslator};
     use crate::language::Language;
     use crate::translation::Translator;
 
@@ -680,6 +736,26 @@ mod tests {
     }
 
     #[test]
+    fn rejects_short_japanese_spans_left_inside_a_korean_embed_translation() {
+        let source = "アシちゃんのアイドルグループはASHenputtelです。よろしくお願いします。";
+        let partial =
+            "アシちゃん의 아이돌 그룹은 ASHenputtel입니다. 부탁드립니다. (おきゅーとぱー)";
+
+        assert!(translation_needs_repair(
+            source,
+            partial,
+            Language::Japanese,
+            Language::Korean,
+        ));
+        assert!(!translation_needs_repair(
+            "第4回すてらダンス部コラボ授業です！",
+            "제4회 すてら댄스부 컬래버레이션 수업입니다!",
+            Language::Japanese,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
     fn rejects_partial_english_to_korean_rule_translations() {
         assert!(translation_needs_repair(
             "1 Violation: 1 day blocked",
@@ -696,6 +772,58 @@ mod tests {
         assert!(!translation_needs_repair(
             "About Discord Rule Violations",
             "Discord 규칙 위반에 관하여",
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            "Subscribers receive new roles and you can connect your Twitch account by going to User Settings in Discord.",
+            "구독자는 새 역할을 받고 you can connect yourTwitchaccount by going toUser Settings그런 다음 연결Discord에서.",
+            Language::English,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn allows_keyboard_smash_without_ignoring_real_untranslated_words() {
+        let source = "it was so cute man, I GOT SO EMOTIONAL gfjhdlkf";
+        assert!(is_likely_keyboard_smash("gfjhdlkf"));
+        assert!(!is_likely_keyboard_smash("emotional"));
+        assert!(!translation_needs_repair(
+            source,
+            "정말 귀여웠어. 너무 감정적이었어 gfjhdlkf",
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            source,
+            "정말 cute했어. 너무 emotional했어 gfjhdlkf",
+            Language::English,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn accepts_long_korean_translation_with_small_chat_term_residue() {
+        let source = concat!(
+            "tomorrow I'm going to stream and chat about my experience at the con hehe, ",
+            "and there may or may not be a vlog of it otw soon!! just waiting to see what ",
+            "my editor says since there is a lil bit of audio issues here and there with my capture"
+        );
+        let translated = concat!(
+            "내일에는 컨퍼런스에서 내 경험에 대해 스트리밍하고 채팅할 거야 hehe, ",
+            "그리고 곧 vlog도 올지 안 올지 모르겠네 otw!! 편집자가 뭐라고 할지 기다리고 있어. ",
+            "촬영하는 과정에서 여기저기에 소리 문제가 조금 있거든."
+        );
+
+        assert!(!translation_needs_repair(
+            source,
+            translated,
+            Language::English,
+            Language::Korean,
+        ));
+        assert!(translation_needs_repair(
+            source,
+            "내일 스트리밍할 거야, and there may or may not be a vlog of it otw soon!! just waiting to see what my editor says",
             Language::English,
             Language::Korean,
         ));

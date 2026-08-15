@@ -691,7 +691,7 @@ fn default_cache_path() -> PathBuf {
     if let Some(local_app_data) = env::var_os("LOCALAPPDATA").filter(|value| !value.is_empty()) {
         return PathBuf::from(local_app_data)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("Cache")
             .join("cache.db");
     }
@@ -701,7 +701,7 @@ fn default_cache_path() -> PathBuf {
         return PathBuf::from(home)
             .join("Library")
             .join("Caches")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("cache.db");
     }
 
@@ -710,7 +710,7 @@ fn default_cache_path() -> PathBuf {
         .map(PathBuf::from)
         .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("DiscordTranslateOverlay")
+        .join("NudeNyang Discord Translator")
         .join("cache.db")
 }
 

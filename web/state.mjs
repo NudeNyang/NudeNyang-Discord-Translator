@@ -11,6 +11,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   hymt_device: "auto",
   keep_local_model_warm: true,
   capture_fps: 8,
+  image_ocr_quality: "adaptive",
   ui_theme: "system",
   ui_language: "auto",
   discord_auto_restart_consent_granted: false,
@@ -75,6 +76,9 @@ export function normalizeConfig(value = {}) {
   )
     ? Number(value.translation_history_retention_days)
     : DEFAULT_CONFIG.translation_history_retention_days;
+  const imageOcrQuality = ["fast", "adaptive", "quality"].includes(value.image_ocr_quality)
+    ? value.image_ocr_quality
+    : DEFAULT_CONFIG.image_ocr_quality;
   return {
     ...DEFAULT_CONFIG,
     ...value,
@@ -82,6 +86,7 @@ export function normalizeConfig(value = {}) {
     outgoing_target_language: outgoingTargetLanguage,
     ui_language: uiLanguage,
     translation_history_retention_days: retentionDays,
+    image_ocr_quality: imageOcrQuality,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),

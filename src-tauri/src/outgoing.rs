@@ -33,7 +33,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 36;
+  const CONTROLLER_VERSION = 43;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
@@ -264,8 +264,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (action === 'language' || action === 'display-language') {
       const label = document.createElement('span');
       button.dir = 'ltr';
+      label.className = 'nt-language-label';
       label.dir = 'auto';
       label.textContent = text;
+      button.setAttribute('aria-label', text);
+      button.title = text;
       button.append(label);
     } else {
       button.textContent = text;
@@ -273,14 +276,34 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (value) button.dataset.value = value;
     return button;
   }
+  function makeMenuHeading(primary, secondary, arrow) {
+    const heading = document.createElement('div');
+    const icon = document.createElement('span');
+    const copyWrap = document.createElement('span');
+    const title = document.createElement('strong');
+    const subtitle = document.createElement('small');
+    heading.className = 'nt-heading';
+    icon.className = 'nt-heading-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = arrow;
+    copyWrap.className = 'nt-heading-copy';
+    title.dir = 'auto';
+    title.textContent = primary;
+    subtitle.textContent = secondary;
+    copyWrap.append(title, subtitle);
+    heading.append(icon, copyWrap);
+    return heading;
+  }
   function normalizeLanguageSearch(value) {
     return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
   }
-  function appendLanguageChoices(menu, choices, action) {
+  function appendLanguageChoices(menu, choices, action, selectedValue = '') {
     const search = document.createElement('div');
     const input = document.createElement('input');
+    const grid = document.createElement('div');
     const empty = document.createElement('div');
     search.className = 'nt-language-search';
+    grid.className = 'nt-language-grid';
     input.type = 'search';
     input.autocomplete = 'off';
     input.spellcheck = false;
@@ -290,9 +313,20 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     empty.textContent = copy('noMatchingLanguages');
     empty.hidden = true;
     search.append(input);
-    menu.append(search);
-    const buttons = choices.map(code => makeButton(languageLabels[code], action, code));
-    menu.append(...buttons, empty);
+    const buttons = choices.map(code => {
+      const button = makeButton(languageLabels[code], action, code);
+      button.setAttribute('aria-pressed', String(code === selectedValue));
+      if (code === selectedValue) {
+        const check = document.createElement('span');
+        check.className = 'nt-language-check';
+        check.setAttribute('aria-hidden', 'true');
+        check.textContent = '✓';
+        button.append(check);
+      }
+      return button;
+    });
+    grid.append(...buttons, empty);
+    menu.append(search, grid);
     input.addEventListener('input', () => {
       const query = normalizeLanguageSearch(input.value);
       const exactCodes = new Set(query ? choices.filter(code =>
@@ -408,6 +442,21 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     }, {passive:false});
     menu.__ntScrollIndicator = {update:scheduleUpdate, reset};
   }
+  function bottomObstacleTop(anchorBounds) {
+    const controlRight = anchorBounds.right;
+    const controlLeft = controlRight - 76;
+    const candidates = [...document.querySelectorAll('[class*="channelBottomBar"], [class*="followButton"], button, [role="button"]')]
+      .filter(node => !node.closest(`#${ROOT_ID}`))
+      .map(node => node.getBoundingClientRect())
+      .filter(bounds => bounds.width >= 56
+        && bounds.height >= 28
+        && bounds.height <= 160
+        && bounds.top >= window.innerHeight * 0.55
+        && bounds.bottom > window.innerHeight - 180
+        && bounds.right > controlLeft - 8
+        && bounds.left < controlRight + 8);
+    return candidates.reduce((top, bounds) => Math.min(top, bounds.top), window.innerHeight);
+  }
   function ensureRoot(controller) {
     let root = document.getElementById(ROOT_ID);
     if (root) return root;
@@ -417,38 +466,55 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
-      #${ROOT_ID}{position:fixed;right:18px;bottom:82px;z-index:2147483000;display:flex;max-width:calc(100vw - 32px);flex-direction:column;align-items:flex-end;gap:6px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:2147483000;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID},#${ROOT_ID} *{box-sizing:border-box}
       #${ROOT_ID} [hidden]{display:none!important}
       #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
-      #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:5px;max-width:100%}
+      #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:6px;max-width:100%}
       #${ROOT_ID} .nt-control-wrap{position:relative;flex:none}
-      #${ROOT_ID} .nt-outgoing-control{--nt-role-bg:#0f202c;--nt-role-border:#2d4558;--nt-role-text:#f2f7fb;--nt-role-muted:#9bb7cb;--nt-role-accent:#5aa8f5;--nt-icon-bg:#08141d;--nt-icon-text:#76b8fa}
-      #${ROOT_ID} .nt-display-control{--nt-role-bg:#0f202c;--nt-role-border:#2d4558;--nt-role-text:#f2f7fb;--nt-role-muted:#9bb7cb;--nt-role-accent:#d98243;--nt-icon-bg:#2a1d14;--nt-icon-text:#f0a15c}
-      #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{display:flex;width:auto;min-width:56px;min-height:32px;align-items:center;gap:4px;padding:3px 5px;border:1px solid var(--nt-role-border);border-radius:9px;background:var(--nt-role-bg);box-shadow:0 3px 10px #0004;color:var(--nt-role-text);transition:transform 100ms ease,background-color 120ms ease,border-color 120ms ease}
-      #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:color-mix(in srgb,var(--nt-role-accent) 66%,var(--nt-role-border));background:color-mix(in srgb,var(--nt-role-bg) 90%,var(--nt-role-accent))}
-      #${ROOT_ID} .nt-outgoing-trigger:active,#${ROOT_ID} .nt-display-trigger:active{transform:translateY(1px)}
-      #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-role-accent) 58%,transparent);outline-offset:2px}
-      #${ROOT_ID} .nt-role-icon{display:inline-flex;width:20px;height:20px;flex:none;align-items:center;justify-content:center;border:1px solid color-mix(in srgb,var(--nt-role-accent) 50%,var(--nt-role-border));border-radius:50%;background:var(--nt-icon-bg);color:var(--nt-icon-text);font-size:13px;font-weight:750;line-height:1}
-      #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:11px;font-weight:750;letter-spacing:.035em;white-space:nowrap}
-      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;right:0;bottom:40px;width:238px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:6px 12px 6px 6px;border:1px solid color-mix(in srgb,var(--nt-role-accent) 45%,transparent);border-radius:11px;background:var(--background-floating,#111214);box-shadow:0 10px 30px #0008;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID} .nt-outgoing-control{--nt-role-accent:#8ab7df;--nt-role-accent-deep:#5d7f9d;--nt-role-text:#f2f3f5;--nt-role-muted:#a9b7c4;--nt-icon-surface:#313842;--nt-icon-text:#8ab7df}
+      #${ROOT_ID} .nt-display-control{--nt-role-accent:#d4a24a;--nt-role-accent-deep:#8a6524;--nt-role-text:#f2f3f5;--nt-role-muted:#c4b0a2;--nt-icon-surface:#443d27;--nt-icon-text:#e5b75a}
+      #${ROOT_ID}[data-open-menu="outgoing"] .nt-display-control,#${ROOT_ID}[data-open-menu="display"] .nt-outgoing-control{display:none}
+      #${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{position:relative;z-index:4;display:flex;width:64px;height:34px;align-items:center;gap:7px;padding:0 5px 0 3px;overflow:hidden;border:1px solid #ffffff26;border-radius:14px;background:linear-gradient(145deg,#353d49f2,#20252cf7);box-shadow:0 8px 22px #0006,inset 0 1px #ffffff26;color:var(--nt-role-text);backdrop-filter:blur(18px) saturate(135%);transition:transform 140ms cubic-bezier(.2,.8,.2,1),background 140ms ease,border-color 140ms ease,box-shadow 140ms ease}
+      #${ROOT_ID} .nt-outgoing-trigger:hover,#${ROOT_ID} .nt-display-trigger:hover{border-color:#ffffff3d;background:linear-gradient(145deg,#3d4654f5,#252b34fa);box-shadow:0 10px 26px #0007,inset 0 1px #ffffff30;filter:none;transform:translateY(-1px)}
+      #${ROOT_ID} .nt-outgoing-trigger:active,#${ROOT_ID} .nt-display-trigger:active{transform:translateY(0) scale(.98)}
+      #${ROOT_ID} .nt-outgoing-trigger:focus-visible,#${ROOT_ID} .nt-display-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--nt-icon-text) 42%,transparent);outline-offset:2px}
+      #${ROOT_ID} .nt-outgoing-trigger[aria-expanded="true"],#${ROOT_ID} .nt-display-trigger[aria-expanded="true"]{border-color:color-mix(in srgb,var(--nt-role-accent) 44%,#ffffff26);background:linear-gradient(145deg,#3b4451f5,#242a32fa);box-shadow:0 10px 28px #0008,inset 0 1px #ffffff30;filter:none;transform:none}
+      #${ROOT_ID} .nt-role-icon{display:inline-flex;width:22px;height:22px;flex:none;align-items:center;justify-content:center;border:0;border-radius:7px;background:var(--nt-icon-surface);box-shadow:inset 0 1px #ffffff0d;color:var(--nt-icon-text);font-size:11px;font-weight:700;line-height:1}
+      #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;z-index:3;right:0;bottom:0;width:274px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:8px 8px 48px;border:1px solid #ffffff26;border-radius:34px;background:linear-gradient(145deg,#353d49f2,#171c23f7);box-shadow:0 25px 60px #0008,inset 0 1px #ffffff2e;color:var(--text-normal,#dbdee1);backdrop-filter:blur(26px) saturate(140%);transform-origin:bottom right;animation:nt-language-menu-enter 180ms cubic-bezier(.16,1,.3,1)}
+      @keyframes nt-language-menu-enter{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
       #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar{width:0;height:0}
-      #${ROOT_ID} .nt-menu-scroll-indicator{position:absolute;z-index:2;right:1px;bottom:44px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
+      #${ROOT_ID} .nt-menu-scroll-indicator{position:absolute;z-index:5;right:2px;bottom:4px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
       #${ROOT_ID} .nt-outgoing-menu[hidden]+.nt-menu-scroll-indicator,#${ROOT_ID} .nt-display-menu[hidden]+.nt-menu-scroll-indicator{display:none}
       #${ROOT_ID} .nt-menu-scroll-indicator:not(.scrollable){pointer-events:none}
       #${ROOT_ID} .nt-menu-scroll-indicator.nt-scrolling,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-near,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-dragging,#${ROOT_ID} .nt-menu-scroll-indicator:hover{opacity:1}
       #${ROOT_ID} .nt-menu-scroll-thumb{position:absolute;top:0;right:3px;width:3px;min-height:32px;border-radius:3px;background:var(--nt-role-accent);opacity:.46;transition:width 140ms ease,right 140ms ease,opacity 140ms ease}
       #${ROOT_ID} .nt-menu-scroll-indicator:hover .nt-menu-scroll-thumb,#${ROOT_ID} .nt-menu-scroll-indicator.nt-scroll-dragging .nt-menu-scroll-thumb{right:2px;width:6px;opacity:.95}
-      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:32px;align-items:center;justify-content:flex-start;padding:7px 9px;border:0;border-radius:7px;background:transparent;text-align:left}
+      #${ROOT_ID} .nt-language-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+      #${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{display:flex;width:100%;min-height:42px;align-items:center;justify-content:flex-start;padding:8px 11px;border:0;border-radius:15px;background:#ffffff0e;text-align:left;transition:transform 110ms ease,background-color 140ms ease}
       #${ROOT_ID} .nt-outgoing-menu button:is([data-value="ar"],[data-value="ur"],[data-value="fa"],[data-value="he"]),#${ROOT_ID} .nt-display-menu button:is([data-value="ar"],[data-value="ur"],[data-value="fa"],[data-value="he"]){justify-content:flex-end;text-align:right}
-      #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:color-mix(in srgb,#5aa8f5 24%,transparent)}
-      #${ROOT_ID} .nt-outgoing-menu .nt-heading,#${ROOT_ID} .nt-display-menu .nt-heading{padding:7px 9px 4px;color:var(--text-muted,#949ba4);font-size:11px}
-      #${ROOT_ID} .nt-language-search{position:sticky;z-index:1;top:-6px;padding:5px 3px 6px;background:var(--background-floating,#111214)}
-      #${ROOT_ID} .nt-language-search input{box-sizing:border-box;width:100%;min-height:32px;padding:6px 8px;border:1px solid var(--background-modifier-accent,#ffffff24);border-radius:7px;outline:none;background:var(--input-background,#1e1f22);color:var(--text-normal,#dbdee1);font:inherit}
-      #${ROOT_ID} .nt-language-search input:focus{border-color:var(--nt-role-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--nt-role-accent) 22%,transparent)}
-      #${ROOT_ID} .nt-language-search-empty{padding:16px 9px;color:var(--text-muted,#949ba4);text-align:center}
-      #${ROOT_ID} .nt-outgoing-menu .nt-divider{height:1px;margin:5px;background:var(--background-modifier-accent,#ffffff14)}
+      #${ROOT_ID} .nt-outgoing-menu button:hover,#${ROOT_ID} .nt-display-menu button:hover{background:#ffffff1a}
+      #${ROOT_ID} .nt-outgoing-menu button:active,#${ROOT_ID} .nt-display-menu button:active{transform:scale(.975)}
+      #${ROOT_ID} .nt-outgoing-menu button[aria-pressed="true"],#${ROOT_ID} .nt-display-menu button[aria-pressed="true"]{background:color-mix(in srgb,var(--nt-role-accent) 20%,#ffffff0e);color:#fff8f1}
+      #${ROOT_ID} .nt-language-check{display:grid;width:24px;height:24px;flex:none;margin-left:auto;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--nt-role-accent),var(--nt-role-accent-deep));box-shadow:inset 0 1px #ffffff66;color:#fff;font-size:13px;font-weight:750}
+      #${ROOT_ID} .nt-language-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #${ROOT_ID} .nt-heading{display:flex;min-height:44px;align-items:center;gap:9px;padding:0 12px 4px;color:var(--nt-role-text)}
+      #${ROOT_ID} .nt-heading-icon{display:grid;width:22px;height:22px;flex:none;place-items:center;border-radius:7px;background:var(--nt-icon-surface);box-shadow:inset 0 1px #ffffff0d;color:var(--nt-icon-text);font-size:11px;font-weight:700}
+      #${ROOT_ID} .nt-heading-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}
+      #${ROOT_ID} .nt-heading-copy strong{overflow:hidden;color:var(--nt-role-text);font-size:12px;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
+      #${ROOT_ID} .nt-heading-copy small{color:var(--nt-role-muted);font-size:10px;font-weight:500}
+      #${ROOT_ID} .nt-language-search{position:sticky;z-index:3;top:-8px;padding:4px 4px 8px;background:linear-gradient(180deg,#2d3541 74%,transparent)}
+      #${ROOT_ID} .nt-language-search::before{position:absolute;z-index:1;left:18px;top:18px;color:var(--nt-role-muted);content:"⌕";font-size:16px;pointer-events:none}
+      #${ROOT_ID} .nt-language-search input{box-sizing:border-box;width:100%;height:48px;padding:0 14px 0 42px;border:1px solid #ffffff20;border-radius:18px;outline:none;background:#0d10157a;box-shadow:inset 0 1px #ffffff0f;color:var(--text-normal,#dbdee1);font:inherit}
+      #${ROOT_ID} .nt-language-search input:focus{border-color:color-mix(in srgb,var(--nt-role-accent) 68%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--nt-role-accent) 14%,transparent),inset 0 1px #ffffff14}
+      #${ROOT_ID} .nt-language-search-empty{grid-column:1/-1;padding:18px 9px;color:var(--text-muted,#949ba4);text-align:center}
+      #${ROOT_ID} .nt-outgoing-menu .nt-divider{height:1px;margin:10px 4px 8px;background:#ffffff17}
+      #${ROOT_ID} .nt-outgoing-menu button[data-action="original-once"]{min-height:42px;background:#0a0d1159}
       #${ROOT_ID} .nt-outgoing-status{order:-1;max-width:270px;margin:0 0 6px;padding:7px 9px;border-radius:7px;background:var(--background-floating,#111214);box-shadow:0 4px 16px #0008;white-space:pre-line}
       #${ROOT_ID} .nt-outgoing-status[data-error="true"]{color:#ff9ca3}
+      @media (prefers-reduced-motion:reduce){#${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger,#${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu,#${ROOT_ID} .nt-outgoing-menu button,#${ROOT_ID} .nt-display-menu button{animation:none;transition:none}}
+      @media (prefers-reduced-transparency:reduce){#${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{background:#252b34;backdrop-filter:none}#${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{background:#202630;backdrop-filter:none}}
     `;
     document.head.append(style);
     document.body.append(root);
@@ -618,9 +684,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         }
         const anchorBounds = anchor.getBoundingClientRect();
         this.root.style.right = `${Math.max(12, window.innerWidth - anchorBounds.right)}px`;
-        this.root.style.bottom = composer || readonlyComposer
-          ? `${Math.max(78, window.innerHeight - anchorBounds.top + 8)}px`
-          : `${Math.max(24, window.innerHeight - anchorBounds.bottom + 24)}px`;
+        if (composer || readonlyComposer) {
+          this.root.style.bottom = `${Math.max(78, window.innerHeight - anchorBounds.top + 8)}px`;
+        } else {
+          const obstacleTop = bottomObstacleTop(anchorBounds);
+          const baseBottom = Math.max(24, window.innerHeight - anchorBounds.bottom + 24);
+          this.root.style.bottom = `${Math.max(baseBottom, window.innerHeight - obstacleTop + 12)}px`;
+        }
         this.root.style.visibility = '';
       },
       updateLabel() {
@@ -656,21 +726,24 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         displayMenu.__ntScrollIndicator?.reset();
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
+        delete this.root.dataset.openMenu;
       },
       showLanguageMenu(heading = copy('selectLanguage'), requestId = '') {
         this.manualRequest = requestId;
         const menu = this.root.querySelector('.nt-outgoing-menu');
         menu.replaceChildren();
-        const title = document.createElement('div');
-        title.className = 'nt-heading';
-        title.textContent = heading;
+        menu.setAttribute('aria-label', heading);
+        const selectedLanguage = selectedLanguageForChannel(currentChannelKey(), this.defaultLanguage, this.channelLanguages);
+        const selectedLabel = selectedLanguage === 'auto' ? copy('auto') : (languageLabels[selectedLanguage] || heading);
+        const title = makeMenuHeading(requestId ? heading : selectedLabel, copy('outgoingLanguage'), '↑');
         menu.append(title);
         const choices = requestId ? languageCodes : ['auto', ...languageCodes];
-        const searchInput = appendLanguageChoices(menu, choices, 'language');
+        const searchInput = appendLanguageChoices(menu, choices, 'language', selectedLanguage);
         const divider = document.createElement('div');
         divider.className = 'nt-divider';
         menu.append(divider, makeButton(copy('originalOnce'), 'original-once'));
         menu.hidden = false;
+        this.root.dataset.openMenu = 'outgoing';
         menu.__ntScrollIndicator?.update();
         searchInput.focus();
         const displayMenu = this.root.querySelector('.nt-display-menu');
@@ -682,17 +755,17 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       toggleMenu() {
         const menu = this.root.querySelector('.nt-outgoing-menu');
         if (menu.hidden) this.showLanguageMenu();
-        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false'); }
+        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); delete this.root.dataset.openMenu; this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false'); }
       },
       showDisplayLanguageMenu() {
         const menu = this.root.querySelector('.nt-display-menu');
         menu.replaceChildren();
-        const title = document.createElement('div');
-        title.className = 'nt-heading';
-        title.textContent = copy('selectDisplayLanguage');
+        menu.setAttribute('aria-label', copy('selectDisplayLanguage'));
+        const title = makeMenuHeading(languageLabels[this.displayLanguage] || copy('selectDisplayLanguage'), copy('displayLanguage'), '↓');
         menu.append(title);
-        const searchInput = appendLanguageChoices(menu, languageCodes, 'display-language');
+        const searchInput = appendLanguageChoices(menu, languageCodes, 'display-language', this.displayLanguage);
         menu.hidden = false;
+        this.root.dataset.openMenu = 'display';
         menu.__ntScrollIndicator?.update();
         searchInput.focus();
         const outgoingMenu = this.root.querySelector('.nt-outgoing-menu');
@@ -704,7 +777,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       toggleDisplayMenu() {
         const menu = this.root.querySelector('.nt-display-menu');
         if (menu.hidden) this.showDisplayLanguageMenu();
-        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false'); }
+        else { menu.hidden = true; menu.__ntScrollIndicator?.reset(); delete this.root.dataset.openMenu; this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false'); }
       },
       onDisplayMenu(event) {
         const button = event.target.closest('button[data-action="display-language"]');
@@ -722,6 +795,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const menu = this.root.querySelector('.nt-display-menu');
         menu.hidden = true;
         menu.__ntScrollIndicator?.reset();
+        delete this.root.dataset.openMenu;
         this.root.querySelector('.nt-display-trigger').setAttribute('aria-expanded', 'false');
         this.updateLabel();
       },
@@ -747,6 +821,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         }
         this.root.querySelector('.nt-outgoing-menu').hidden = true;
         this.root.querySelector('.nt-outgoing-menu').__ntScrollIndicator?.reset();
+        delete this.root.dataset.openMenu;
         this.root.querySelector('.nt-outgoing-trigger').setAttribute('aria-expanded', 'false');
       },
       retry(id, language) {
@@ -770,7 +845,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.activeRequest = '';
           this.bypass = 0;
         }
-        if (message) console.warn('[NudeNyang Translator] outgoing translation failed:', message);
+        if (message) console.warn('[NudeNyang Discord Translator] outgoing translation failed:', message);
         this.setStatus(copy('translationFailed'), true);
       },
       prunePending() {
@@ -2914,7 +2989,7 @@ mod tests {
             .expect("running app control state");
         eprintln!("running app overlay state: {state}");
         let any_enabled = config.enabled || config.outgoing_translation_enabled;
-        assert_eq!(state["version"].as_u64(), Some(36), "state: {state}");
+        assert_eq!(state["version"].as_u64(), Some(39), "state: {state}");
         assert_eq!(
             state["originalVersion"].as_u64(),
             Some(16),
@@ -2997,35 +3072,31 @@ mod tests {
                 .and_then(|value| value.trim_end_matches("px").parse::<f64>().ok())
                 .unwrap_or(f64::MAX);
             assert!(
-                (56.0..=72.0).contains(&width),
-                "{role} is not content-hugging: {state}"
+                (67.0..=69.0).contains(&width),
+                "{role} has unexpected width: {state}"
             );
-            assert_eq!(state[role]["minHeight"].as_str(), Some("32px"));
         }
         assert_eq!(state["autoFits"].as_bool(), Some(true), "state: {state}");
         assert_eq!(
-            state["outgoingStyle"]["backgroundColor"].as_str(),
-            Some("rgb(15, 32, 44)")
-        );
-        assert_eq!(
-            state["displayStyle"]["backgroundColor"].as_str(),
-            Some("rgb(15, 32, 44)")
-        );
-        assert_eq!(
             state["outgoingIconStyle"]["color"].as_str(),
-            Some("rgb(118, 184, 250)")
+            Some("rgb(238, 249, 255)")
         );
         assert_eq!(
             state["displayIconStyle"]["color"].as_str(),
-            Some("rgb(240, 161, 92)")
+            Some("rgb(255, 248, 241)")
         );
         assert_eq!(
+            state["outgoingStyle"]["borderRadius"].as_str(),
+            Some("10px")
+        );
+        assert_eq!(state["displayStyle"]["borderRadius"].as_str(), Some("10px"));
+        assert_eq!(
             state["outgoingIconStyle"]["borderRadius"].as_str(),
-            Some("50%")
+            Some("7px")
         );
         assert_eq!(
             state["displayIconStyle"]["borderRadius"].as_str(),
-            Some("50%")
+            Some("7px")
         );
         if config.enabled && config.outgoing_translation_enabled {
             assert_eq!(state["stacked"].as_bool(), Some(true), "state: {state}");
@@ -3054,7 +3125,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "실행 중인 Discord와 NudeNyang Translator가 필요합니다"]
+    #[ignore = "실행 중인 Discord와 NudeNyang Discord Translator가 필요합니다"]
     fn live_running_app_f12_controls_all_outgoing_message_views() {
         let _guard = lock_live_outgoing();
         let config = ConfigStore::load_default()
@@ -3576,7 +3647,7 @@ mod tests {
                 &attach_outgoing_text_file_script(
                     request_id,
                     content,
-                    "NudeNyangTranslator-test.txt",
+                    "NudeNyangDiscordTranslator-test.txt",
                 )
                 .expect("attach script"),
                 false,
@@ -3591,7 +3662,7 @@ mod tests {
             .expect("read attached file");
         assert_eq!(
             result["name"].as_str(),
-            Some("NudeNyangTranslator-test.txt")
+            Some("NudeNyangDiscordTranslator-test.txt")
         );
         assert_eq!(result["content"].as_str(), Some(content));
         assert_eq!(result["editor"].as_str(), Some(""));

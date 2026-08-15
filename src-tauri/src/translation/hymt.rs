@@ -24,7 +24,7 @@ use super::local_model::{
     LocalCompletionApi, LocalModelProfile, LocalPromptStrategy, LOCAL_MODEL_PROFILES,
 };
 use super::protected_text::remove_unwritten_decorations;
-use super::resilient::translation_needs_repair;
+use super::resilient::{is_likely_keyboard_smash, translation_needs_repair};
 use super::Translator;
 
 #[cfg(windows)]
@@ -1138,13 +1138,7 @@ where
         result = clean_korean_listener_question_person(&result, core, source, target);
         result = remove_unwritten_decorations(core, &result);
         if translation_needs_repair(core, &result, source, target) {
-            let repair_prompt = format!(
-                "Retranslate the original {} source completely into {}. The draft is flawed; do not copy its untranslated words or meaning errors. Keep only proper names unchanged. Preserve the original grammatical person, exact meaning, tone, and punctuation. In online-game context, game or play must never become food or eating. Output only the corrected translation.\n\nOriginal source:\n{}\n\nFlawed draft:\n{}",
-                source.english_name(),
-                target.english_name(),
-                core,
-                result,
-            );
+            let repair_prompt = repair_translation_prompt(core, &result, source, target);
             if let Ok(rewritten) = complete(&repair_prompt, core) {
                 let rewritten = remove_unwritten_decorations(core, rewritten.trim());
                 if !rewritten.is_empty()
@@ -1153,12 +1147,193 @@ where
                     result = rewritten;
                 }
             }
+            if target == Language::Korean && translation_needs_repair(core, &result, source, target)
+            {
+                let remaining = unchanged_lowercase_source_words(core, &result);
+                if !remaining.is_empty() {
+                    let strict_prompt = format!(
+                        "Rewrite the full English source as natural Korean. The previous draft still contains these forbidden unconverted source tokens: {}. None of those tokens may appear in Latin letters in the output. Translate ordinary words and transliterate names or usernames into Hangul. Preserve the exact meaning, person, tone, and punctuation. Output only the complete corrected Korean translation.\n\nEnglish source:\n{}\n\nPrevious draft:\n{}",
+                        remaining.join(", "),
+                        core,
+                        result,
+                    );
+                    if let Ok(rewritten) = complete(&strict_prompt, core) {
+                        let rewritten = remove_unwritten_decorations(core, rewritten.trim());
+                        if !rewritten.is_empty()
+                            && !translation_needs_repair(core, &rewritten, source, target)
+                        {
+                            result = rewritten;
+                        }
+                    }
+                    if translation_needs_repair(core, &result, source, target)
+                        && remaining.len() <= 4
+                    {
+                        let mut word_repaired = result.clone();
+                        for word in &remaining {
+                            let word_prompt = translation_prompt_for_profile(
+                                profile,
+                                word,
+                                Language::English,
+                                Language::Korean,
+                                "neutral",
+                            );
+                            if let Ok(replacement) = complete_translation_with_retry(
+                                profile.model.key,
+                                &word_prompt,
+                                word,
+                                Language::Korean,
+                                |retry_prompt, retry_text| complete(retry_prompt, retry_text),
+                            ) {
+                                let replacement = replacement.trim();
+                                if valid_korean_word_replacement(replacement) {
+                                    word_repaired =
+                                        replace_ascii_word(&word_repaired, word, replacement);
+                                }
+                            }
+                        }
+                        if !translation_needs_repair(core, &word_repaired, source, target) {
+                            result = word_repaired;
+                        }
+                    }
+                }
+            }
         }
         output.push_str(&part[..leading_len]);
         output.push_str(&result);
         output.push_str(&part[trailing_start..]);
     }
     Ok(output)
+}
+
+fn repair_translation_prompt(
+    source_text: &str,
+    flawed_draft: &str,
+    source: Language,
+    target: Language,
+) -> String {
+    let name_instruction = if target == Language::Korean {
+        "Keep established brand names unchanged. Translate every ordinary English word. If an all-lowercase personal name or username would otherwise be mistaken for untranslated English, transliterate it naturally into Hangul. Do not leave lowercase English source words in the output."
+    } else {
+        "Keep only proper names and established brand names unchanged. Translate every ordinary source word."
+    };
+    format!(
+        "Retranslate the original {} source completely into {}. The draft is flawed; do not copy its untranslated words or meaning errors. {} Preserve the original grammatical person, exact meaning, tone, and punctuation. In online-game context, game or play must never become food or eating. Output only the corrected translation.\n\nOriginal source:\n{}\n\nFlawed draft:\n{}",
+        source.english_name(),
+        target.english_name(),
+        name_instruction,
+        source_text,
+        flawed_draft,
+    )
+}
+
+fn unchanged_lowercase_source_words(source_text: &str, translated_text: &str) -> Vec<String> {
+    let source_words = ascii_words(source_text);
+    let mut remaining = Vec::new();
+    for translated in translated_text
+        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .filter(|word| {
+            word.len() >= 2
+                && word.chars().all(|character| {
+                    !character.is_ascii_alphabetic() || character.is_ascii_lowercase()
+                })
+                && word
+                    .chars()
+                    .any(|character| character.is_ascii_alphabetic())
+                && !is_likely_keyboard_smash(word)
+        })
+    {
+        if source_words
+            .iter()
+            .any(|source| source.eq_ignore_ascii_case(translated))
+            && !remaining
+                .iter()
+                .any(|word: &String| word.eq_ignore_ascii_case(translated))
+        {
+            remaining.push(translated.to_string());
+        }
+    }
+    remaining
+}
+
+fn ascii_words(text: &str) -> Vec<String> {
+    text.split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .filter(|word| {
+            word.chars()
+                .any(|character| character.is_ascii_alphabetic())
+        })
+        .map(str::to_string)
+        .collect()
+}
+
+fn valid_korean_word_replacement(text: &str) -> bool {
+    !text.is_empty()
+        && text.chars().count() <= 24
+        && text.chars().any(|character| {
+            matches!(
+                character as u32,
+                0x1100..=0x11ff | 0x3130..=0x318f | 0xac00..=0xd7af
+            )
+        })
+        && !text
+            .chars()
+            .any(|character| character.is_ascii_alphabetic())
+        && !text.contains('\n')
+}
+
+fn replace_ascii_word(text: &str, word: &str, replacement: &str) -> String {
+    Regex::new(&format!(
+        r"(?i)(?P<prefix>^|[^A-Za-z0-9_]){}(?P<particle>[가이은는을를와과])?(?P<suffix>$|[^A-Za-z0-9_])",
+        regex::escape(word)
+    ))
+    .expect("escaped word regex")
+        .replace_all(text, |captures: &regex::Captures<'_>| {
+            let prefix = captures.name("prefix").map_or("", |value| value.as_str());
+            let suffix = captures.name("suffix").map_or("", |value| value.as_str());
+            let particle = captures.name("particle").map_or("", |value| {
+                matching_korean_particle(replacement, value.as_str())
+            });
+            format!("{prefix}{replacement}{particle}{suffix}")
+        })
+    .into_owned()
+}
+
+fn matching_korean_particle(word: &str, particle: &str) -> &'static str {
+    let has_batchim = word
+        .chars()
+        .rev()
+        .find(|character| matches!(*character as u32, 0xac00..=0xd7a3))
+        .is_some_and(|character| (character as u32 - 0xac00) % 28 != 0);
+    match particle {
+        "이" | "가" => {
+            if has_batchim {
+                "이"
+            } else {
+                "가"
+            }
+        }
+        "은" | "는" => {
+            if has_batchim {
+                "은"
+            } else {
+                "는"
+            }
+        }
+        "을" | "를" => {
+            if has_batchim {
+                "을"
+            } else {
+                "를"
+            }
+        }
+        "과" | "와" => {
+            if has_batchim {
+                "과"
+            } else {
+                "와"
+            }
+        }
+        _ => "",
+    }
 }
 
 pub fn detect_speech_style(text: &str, source: Language) -> &'static str {
@@ -1719,7 +1894,7 @@ fn default_cache_root() -> PathBuf {
     if let Some(local) = env::var_os("LOCALAPPDATA") {
         return PathBuf::from(local)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("Cache");
     }
     #[cfg(target_os = "macos")]
@@ -1727,9 +1902,9 @@ fn default_cache_root() -> PathBuf {
         return PathBuf::from(home)
             .join("Library")
             .join("Caches")
-            .join("DiscordTranslateOverlay");
+            .join("NudeNyang Discord Translator");
     }
-    env::temp_dir().join("DiscordTranslateOverlay")
+    env::temp_dir().join("NudeNyang Discord Translator")
 }
 
 pub fn local_model_storage_root() -> PathBuf {
@@ -1891,14 +2066,43 @@ mod tests {
         apply_conservative_semantic_repairs, clean_cross_script_language_terms,
         clean_korean_listener_question_person, clean_translation, complete_translation_with_retry,
         completion_payload, completion_result, context_size_for_attempt, detect_speech_style,
-        find_llama_server, max_output_tokens, remove_cached_model_files, rewrite_style_prompt,
-        startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
+        find_llama_server, max_output_tokens, remove_cached_model_files, repair_translation_prompt,
+        replace_ascii_word, rewrite_style_prompt, startup_device_attempts,
+        translate_gemma_completion_payload, translate_with_completion,
         translate_with_completion_for_model, translate_with_translate_gemma,
-        translation_prompt_for_model, HyMtModel, HyMtModelSize, HyMtTranslator,
+        translation_prompt_for_model, unchanged_lowercase_source_words,
+        valid_korean_word_replacement, HyMtModel, HyMtModelSize, HyMtTranslator,
     };
     use crate::language::{detect_explicit_language, Language};
-    use crate::translation::Translator;
+    use crate::translation::{translation_needs_repair, Translator};
     use std::sync::Arc;
+
+    #[test]
+    fn korean_repair_prompt_resolves_lowercase_name_validation_conflict() {
+        let prompt = repair_translation_prompt(
+            "You need a leash katantie",
+            "leash가 필요해 katantie",
+            Language::English,
+            Language::Korean,
+        );
+        assert!(prompt.contains("Translate every ordinary English word"));
+        assert!(prompt.contains("transliterate it naturally into Hangul"));
+        assert!(prompt.contains("Do not leave lowercase English source words"));
+        assert_eq!(
+            unchanged_lowercase_source_words(
+                "Says the one who called me daddy. You need a leash katantie",
+                "처음 만났을 때 나를 대디라고 불렀어. leash가 필요해 katantie",
+            ),
+            ["leash", "katantie"]
+        );
+        assert!(valid_korean_word_replacement("목줄"));
+        assert!(valid_korean_word_replacement("카탄티"));
+        assert!(!valid_korean_word_replacement("leash"));
+        assert_eq!(
+            replace_ascii_word("leash가 필요해 LEASH", "leash", "목줄"),
+            "목줄이 필요해 목줄"
+        );
+    }
 
     #[test]
     fn cached_model_cleanup_removes_model_partial_and_hash_files_only() {
@@ -2715,6 +2919,113 @@ mod tests {
 
     #[test]
     #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_casual_reply_sentence() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        let source = "Says the one who called me daddy on her first meeting with me. You need a leash katantie";
+        let translated = translator
+            .translate(source, Language::English, Language::Korean)
+            .expect("translate the reported casual reply with Hy-MT2 1.8B");
+        assert_eq!(
+            detect_explicit_language(&translated),
+            Language::Korean,
+            "unexpected translation: {translated}"
+        );
+        assert_ne!(translated, source);
+        assert!(
+            !translation_needs_repair(source, &translated, Language::English, Language::Korean,),
+            "valid translation was rejected: {translated}"
+        );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_emotional_reply_with_keyboard_smash() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        let source = "it was so cute man, I GOT SO EMOTIONAL gfjhdlkf";
+        let translated = translator
+            .translate(source, Language::English, Language::Korean)
+            .expect("translate the reported emotional reply with Hy-MT2 1.8B");
+        assert_eq!(
+            detect_explicit_language(&translated),
+            Language::Korean,
+            "unexpected translation: {translated}"
+        );
+        assert_ne!(translated, source);
+        assert!(
+            !translation_needs_repair(source, &translated, Language::English, Language::Korean,),
+            "valid translation was rejected: {translated}"
+        );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_long_casual_stream_update() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        let source = concat!(
+            "tomorrow I'm going to stream and chat about my experience at the con hehe, ",
+            "and there may or may not be a vlog of it otw soon!! just waiting to see what ",
+            "my editor says since there is a lil bit of audio issues here and there with my capture"
+        );
+        let translated = translator
+            .translate(source, Language::English, Language::Korean)
+            .expect("translate the reported stream update with Hy-MT2 1.8B");
+        assert_eq!(
+            detect_explicit_language(&translated),
+            Language::Korean,
+            "unexpected translation: {translated}"
+        );
+        assert_ne!(translated, source);
+        assert!(
+            !translation_needs_repair(source, &translated, Language::English, Language::Korean,),
+            "valid translation was rejected: {translated}"
+        );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_translates_reported_japanese_chat_messages() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        for source in [
+            "残念ながら、庭がないんだ...",
+            "もしなければ、通りに置いてください",
+            "きっとそうな国だㅋㅋㅋ",
+            "刑務所でデコ（デコレーション）できる",
+            "但し、公衆の面前でのわいせつ行為は、通常は罰金刑になるんじゃないかな",
+            "ボディソープとシャンプーを忘れずに持って出かけなくちゃ",
+            "XX市に住むNさんの、夜遅くまで騒がしい行動について",
+            "必要なものをすべて揃えてお渡しします",
+        ] {
+            let translated = translator
+                .translate(source, Language::Japanese, Language::Korean)
+                .expect("translate the reported Japanese chat message with Hy-MT2 1.8B");
+            eprintln!("SOURCE: {source}\nRESULT: {translated}\n");
+            assert_ne!(translated, source, "untranslated Japanese source: {source}");
+            assert!(
+                !translation_needs_repair(
+                    source,
+                    &translated,
+                    Language::Japanese,
+                    Language::Korean,
+                ),
+                "valid translation was rejected: {translated}"
+            );
+        }
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
     fn live_small_model_translates_in_cpu_only_mode() {
         let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "cpu", "auto").unwrap();
         assert!(translator.model_is_ready());
@@ -2803,6 +3114,39 @@ mod tests {
             "polite",
             "polite source became casual: {polite}"
         );
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "TranslateGemma 4B 모델 다운로드와 llama-server가 필요합니다"]
+    fn live_translate_gemma_4b_translates_reported_japanese_chat_messages() {
+        let mut translator =
+            HyMtTranslator::new(HyMtModelSize::TranslateGemma4B, "auto", "auto").unwrap();
+        translator
+            .prepare()
+            .expect("start TranslateGemma 4B server");
+        for source in [
+            "残念ながら、庭がないんだ...",
+            "もしなければ、通りに置いてください",
+            "刑務所でデコ（デコレーション）できる",
+            "ボディソープとシャンプーを忘れずに持って出かけなくちゃ",
+            "XX市に住むNさんの、夜遅くまで騒がしい行動について",
+        ] {
+            let translated = translator
+                .translate(source, Language::Japanese, Language::Korean)
+                .expect("translate the reported Japanese chat message with TranslateGemma 4B");
+            eprintln!("SOURCE: {source}\nRESULT: {translated}\n");
+            assert_ne!(translated, source, "untranslated Japanese source: {source}");
+            assert!(
+                !translation_needs_repair(
+                    source,
+                    &translated,
+                    Language::Japanese,
+                    Language::Korean,
+                ),
+                "valid translation was rejected: {translated}"
+            );
+        }
         translator.close();
     }
 }

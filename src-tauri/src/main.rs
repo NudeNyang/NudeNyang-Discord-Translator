@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_paths;
 pub mod cache;
 pub mod cdp;
 mod config;
@@ -1254,10 +1255,10 @@ fn start_fallback_shortcut_poller(_app: AppHandle) {}
 
 fn create_tray(app: &tauri::App) -> tauri::Result<()> {
     TrayIconBuilder::with_id("nude-translator")
-        .tooltip("NudeNyang Translator")
+        .tooltip("NudeNyang Discord Translator")
         .icon(
             app.default_window_icon()
-                .expect("NudeNyang Translator 아이콘이 필요해")
+                .expect("NudeNyang Discord Translator 아이콘이 필요해")
                 .clone(),
         )
         .on_tray_icon_event(|tray, event| {
@@ -1376,7 +1377,16 @@ fn main() {
         }
         return;
     }
+    let data_directory_migration = app_paths::migrate_legacy_data_directory();
     let _ = diagnostics::initialize(env!("CARGO_PKG_VERSION"));
+    match data_directory_migration {
+        Ok(true) => diagnostics::info(
+            "startup",
+            "기존 앱 데이터 폴더를 NudeNyang Discord Translator 이름으로 이전했습니다.",
+        ),
+        Ok(false) => {}
+        Err(error) => diagnostics::warn("startup", &error),
+    }
     match translation::hymt::remove_retired_milmmt_files() {
         Ok(removed_bytes) if removed_bytes > 0 => diagnostics::info(
             "migration",
@@ -1385,10 +1395,11 @@ fn main() {
         Ok(_) => {}
         Err(error) => diagnostics::warn("migration", &error),
     }
-    let config = ConfigStore::load_default().expect("NudeNyang Translator 설정을 읽지 못했습니다");
+    let config =
+        ConfigStore::load_default().expect("NudeNyang Discord Translator 설정을 읽지 못했습니다");
     let initial_config = config
         .get()
-        .expect("NudeNyang Translator 초기 설정을 읽지 못했습니다");
+        .expect("NudeNyang Discord Translator 초기 설정을 읽지 못했습니다");
     let engine = RustEngine::start(initial_config);
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
@@ -1520,7 +1531,7 @@ fn main() {
             application_exit
         ])
         .build(tauri::generate_context!())
-        .expect("NudeNyang Translator Tauri 앱을 만들지 못했습니다");
+        .expect("NudeNyang Discord Translator Tauri 앱을 만들지 못했습니다");
     app.run(move |handle, event| match event {
         tauri::RunEvent::ExitRequested { .. } => shutdown_translation(handle),
         tauri::RunEvent::Exit => {

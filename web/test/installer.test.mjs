@@ -15,14 +15,19 @@ test("the Windows uninstaller removes every app-owned data store when requested"
   assert.match(installerHooks, /\$UpdateMode <> 1/);
   assert.match(
     installerHooks,
+    /RMDir \/r "\$LOCALAPPDATA\\LocalTools\\NudeNyang Discord Translator"/,
+  );
+  assert.match(
+    installerHooks,
     /RMDir \/r "\$LOCALAPPDATA\\LocalTools\\DiscordTranslateOverlay"/,
   );
-  assert.match(installerHooks, /RMDir \/r "\$LOCALAPPDATA\\NudeNyang Translator"/);
+  assert.match(installerHooks, /RMDir \/r "\$LOCALAPPDATA\\NudeNyang Discord Translator"/);
+  assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.NudeNyang Discord Translator/);
   assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.NudeNyang Translator/);
   assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.Nude Translator/);
 });
 
-test("the Windows uninstaller uses the NudeNyang Translator icon", () => {
+test("the Windows uninstaller uses the NudeNyang Discord Translator icon", () => {
   assert.equal(
     tauriConfig.bundle.windows.nsis.uninstallerIcon,
     "../assets/nude-translator.ico",

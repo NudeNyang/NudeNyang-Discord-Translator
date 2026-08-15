@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "NudeNyang Translator main window permissions",
+  "description": "NudeNyang Discord Translator main window permissions",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -9,8 +9,8 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://x.com/NudeNyang_VRC" },
-        { "url": "https://github.com/NudeNyang/NudeNyang-Translator" },
-        { "url": "https://github.com/NudeNyang/NudeNyang-Translator/releases/**" }
+        { "url": "https://github.com/NudeNyang/NudeNyang-Discord-Translator" },
+        { "url": "https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/**" }
       ]
     }
   ]

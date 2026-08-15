@@ -476,6 +476,17 @@ pub fn detect_language(text: &str) -> Detection {
         return Detection::unknown();
     }
     let counts = script_counts(prepared);
+    let meaningful_hangul = prepared
+        .chars()
+        .filter(|character| {
+            is_hangul(*character) && !matches!(character, 'ㅋ' | 'ㅎ' | 'ㅠ' | 'ㅜ')
+        })
+        .count();
+    // Japanese chat often ends with Korean reaction jamo such as `ㅋㅋ` or `ㅎㅎ`.
+    // Those are emotive punctuation, not evidence that the Japanese sentence itself is Korean.
+    if meaningful_hangul == 0 && (counts.kana >= 2 || (counts.kana > 0 && counts.han > 0)) {
+        return Detection::certain(Language::Japanese);
+    }
     if counts.hangul >= 2 || (counts.hangul > 0 && counts.letters == counts.hangul) {
         return Detection::certain(Language::Korean);
     }
@@ -891,6 +902,10 @@ fn script_counts(text: &str) -> ScriptCounts {
     counts
 }
 
+fn is_hangul(character: char) -> bool {
+    matches!(character as u32, 0x1100..=0x11ff | 0x3130..=0x318f | 0xac00..=0xd7af)
+}
+
 fn is_complete_v6_candidate(
     candidate: &RecognitionCandidate,
     candidates: &[&RecognitionCandidate],
@@ -1125,6 +1140,28 @@ mod tests {
             println!("{}", path.display());
         }
         assert!(failures.is_empty(), "\n{report}");
+    }
+
+    #[test]
+    fn reported_japanese_chat_messages_are_detected_before_translation() {
+        for text in [
+            "残念ながら、庭がないんだ...",
+            "もしなければ、通りに置いてください",
+            "きっとそうな国だㅋㅋㅋ",
+            "刑務所でデコ（デコレーション）できる",
+            "但し、公衆の面前でのわいせつ行為は、通常は罰金刑になるんじゃないかな",
+            "ボディソープとシャンプーを忘れずに持って出かけなくちゃ",
+            "XX市に住むNさんの、夜遅くまで騒がしい行動について",
+            "必要なものをすべて揃えてお渡しします",
+        ] {
+            assert_eq!(
+                detect_explicit_language(text),
+                Language::Japanese,
+                "unexpected detection for: {text}"
+            );
+        }
+        assert_eq!(detect_explicit_language("ㅋㅋㅋ"), Language::Korean);
+        assert_eq!(detect_explicit_language("ㅎㅎ ㅋㅋ"), Language::Korean);
     }
 
     #[test]

@@ -14,11 +14,11 @@ const discordStartup = readFileSync(new URL("../../src-tauri/src/discord_startup
 const discord = readFileSync(new URL("../../src-tauri/src/discord.rs", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
-test("the user-facing product name is NudeNyang Translator", () => {
-  assert.match(markup, /NudeNyang Translator/);
-  assert.match(tauriConfig, /"productName": "NudeNyang Translator"/);
-  assert.match(script, /https:\/\/github\.com\/NudeNyang\/NudeNyang-Translator/);
-  assert.match(markup, /class="app-info-product-brand"><img class="app-info-product-icon" src="\.\/app-icon\.png" alt="" width="34" height="34" \/><div><h3>NudeNyang Translator<\/h3>/);
+test("the user-facing product name is NudeNyang Discord Translator", () => {
+  assert.match(markup, /NudeNyang Discord Translator/);
+  assert.match(tauriConfig, /"productName": "NudeNyang Discord Translator"/);
+  assert.match(script, /https:\/\/github\.com\/NudeNyang\/NudeNyang-Discord-Translator/);
+  assert.match(markup, /class="app-info-product-brand"><img class="app-info-product-icon" src="\.\/app-icon\.png" alt="" width="34" height="34" \/><div><h3>NudeNyang Discord Translator<\/h3>/);
   assert.match(styles, /\.app-info-product-brand\s*\{[\s\S]*?display:\s*flex;[\s\S]*?gap:\s*10px;/);
   assert.doesNotMatch(markup, /Nude Translator/);
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
@@ -40,16 +40,17 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.4-beta");
-  assert.match(tauriConfig, /"version": "0\.5\.4-beta"/);
-  assert.match(cargoManifest, /^version = "0\.5\.4-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.4 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.6-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.6-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.6-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.6 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 
-test("the installer migrates legacy shortcuts to the NudeNyang Translator name", () => {
+test("the installer migrates legacy shortcuts to the NudeNyang Discord Translator name", () => {
   assert.match(tauriConfig, /"installerHooks": "\.\/windows\/hooks\.nsh"/);
-  assert.match(installerHooks, /NudeNyang Translator\.lnk/);
+  assert.match(installerHooks, /NudeNyang Discord Translator\.lnk/);
+  assert.match(installerHooks, /Delete "\$DESKTOP\\NudeNyang Discord Translator\.lnk"/);
   assert.match(installerHooks, /Delete "\$DESKTOP\\Nude Translator\.lnk"/);
   assert.match(installerHooks, /Delete "\$SMPROGRAMS\\Nude Translator\.lnk"/);
 });
@@ -73,6 +74,14 @@ test("settings use six uniform navigation categories", () => {
   assert.ok(
     markup.indexOf('data-settings-panel="storage"') < markup.indexOf('data-settings-panel="about"'),
   );
+});
+
+test("image translation exposes adaptive local OCR quality controls", () => {
+  assert.match(markup, /data-field="image_ocr_quality"/);
+  assert.match(markup, /빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다/);
+  assert.match(markup, /약 70MB이며 처음 필요할 때 다운로드합니다/);
+  assert.match(script, /image_ocr_quality:\s*\[/);
+  assert.match(script, /\["adaptive", "자동 \(권장\)"\]/);
 });
 
 test("settings window keeps a readable minimum width without horizontal navigation scrolling", () => {
@@ -121,8 +130,8 @@ test("settings apply immediately and the primary footer action only confirms", (
 });
 
 test("outgoing interpretation asks only when automatic language detection is uncertain", () => {
-  assert.match(markup, /class="card-index message-direction-icon" aria-hidden="true">↓<\/span>[\s\S]*?<h3>받는 메시지<\/h3>/);
-  assert.match(markup, /class="card-index message-direction-icon" aria-hidden="true">↑<\/span>[\s\S]*?<h3>보내는 메시지<\/h3>/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--incoming" aria-hidden="true">↓<\/span>[\s\S]*?<h3>받는 메시지<\/h3>/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--outgoing" aria-hidden="true">↑<\/span>[\s\S]*?<h3>보내는 메시지<\/h3>/);
   assert.doesNotMatch(markup, /class="card-index" aria-hidden="true">0[123]<\/span>/);
   assert.match(markup, /<h3>전송 메시지 통역<\/h3>/);
   assert.match(markup, /id="outgoing-translation"/);
@@ -152,6 +161,14 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.doesNotMatch(script, /speech_style/);
 });
 
+test("only the incoming and outgoing direction icons use distinct semantic accents", () => {
+  assert.doesNotMatch(markup, /message-settings-card/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--incoming" aria-hidden="true">↓<\/span>/);
+  assert.match(markup, /class="card-index message-direction-icon message-direction-icon--outgoing" aria-hidden="true">↑<\/span>/);
+  assert.match(styles, /\.message-direction-icon--incoming\s*\{[^}]*--message-direction-accent:\s*#d4a24a;[^}]*border-color:[^}]*--message-direction-accent/s);
+  assert.doesNotMatch(styles, /\.message-settings-card/);
+});
+
 test("outgoing automatic-language help reserves its card height", () => {
   assert.match(
     styles,
@@ -174,6 +191,9 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(script, /elements\.vramProtectionNote\.hidden = !LOCAL_TRANSLATORS\.has\(selected\)/);
   assert.doesNotMatch(markup, /1\.8B와 7B 중 하나의 로컬 모델만 사용합니다/);
   assert.doesNotMatch(markup, /처리 위치 안내/);
+  assert.doesNotMatch(markup, /OCR은 PC에서 실행됩니다/);
+  assert.doesNotMatch(markup, /번역 메뉴의 표시 언어 설정을 따릅니다/);
+  assert.doesNotMatch(markup, /실시간 번역이 켜져 있을 때만 활성화됩니다/);
   assert.doesNotMatch(markup, /로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다/);
   assert.doesNotMatch(markup, /Hy-MT2와 이미지 OCR은 PC에서 실행됩니다/);
   assert.match(markup, /로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다/);
@@ -292,7 +312,7 @@ test("footer action labels stay on one line", () => {
 test("friends can reveal one privacy-safe diagnostic log file", () => {
   const diagnostics = readFileSync(new URL("../../src-tauri/src/diagnostics.rs", import.meta.url), "utf8");
   const hymt = readFileSync(new URL("../../src-tauri/src/translation/hymt.rs", import.meta.url), "utf8");
-  assert.match(diagnostics, /NudeNyangTranslator\.log/);
+  assert.match(diagnostics, /NudeNyangDiscordTranslator\.log/);
   assert.match(diagnostics, /MAX_LOG_BYTES/);
   assert.match(diagnostics, /redact_sensitive/);
   assert.match(hymt, /pipe_external_output/);

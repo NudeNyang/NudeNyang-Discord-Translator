@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "NudeNyang Translator",
-  "version": "0.5.4-beta",
+  "productName": "NudeNyang Discord Translator",
+  "version": "0.5.6-beta",
   "identifier": "com.nudenyang.nudetranslator",
   "build": {
     "frontendDist": "../web"
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "NudeNyang Translator 설정",
+        "title": "NudeNyang Discord Translator 설정",
         "width": 860,
         "height": 780,
         "minWidth": 760,
@@ -20,7 +20,7 @@
       },
       {
         "label": "tray-menu",
-        "title": "NudeNyang Translator",
+        "title": "NudeNyang Discord Translator",
         "url": "tray.html",
         "width": 300,
         "height": 362,

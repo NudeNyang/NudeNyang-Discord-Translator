@@ -1,10 +1,10 @@
 [package]
 name = "nude-translator-tauri"
-version = "0.5.4-beta"
-description = "NudeNyang Translator Tauri desktop shell"
+version = "0.5.6-beta"
+description = "NudeNyang Discord Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
-repository = "https://github.com/NudeNyang/NudeNyang-Translator"
+repository = "https://github.com/NudeNyang/NudeNyang-Discord-Translator"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

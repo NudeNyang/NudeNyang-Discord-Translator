@@ -62,6 +62,15 @@ pub trait Translator: Send {
     ) -> bool {
         true
     }
+    fn translation_is_acceptable(
+        &self,
+        _source_text: &str,
+        _translated_text: &str,
+        _source: Language,
+        _target: Language,
+    ) -> bool {
+        true
+    }
     fn model_is_ready(&self) -> bool {
         true
     }

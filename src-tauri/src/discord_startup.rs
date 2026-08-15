@@ -101,7 +101,8 @@ mod windows_registry {
 
     const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
     const DISCORD_VALUE: &str = "Discord";
-    const BACKUP_KEY: &str = r"Software\NudeNyang Translator\DiscordStartupBackup";
+    const BACKUP_KEY: &str = r"Software\NudeNyang Discord Translator\DiscordStartupBackup";
+    const LEGACY_BACKUP_KEY: &str = r"Software\NudeNyang Translator\DiscordStartupBackup";
 
     pub(super) struct WindowsDiscordStartupRegistry;
 
@@ -155,13 +156,11 @@ mod windows_registry {
 
         fn read_backup(&self) -> Result<Option<DiscordStartupBackup>, String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
-            let key = match current_user.open_subkey(BACKUP_KEY) {
-                Ok(key) => key,
-                Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
-                Err(error) => {
-                    return Err(format!("Discord 시작 명령 백업을 열지 못했습니다: {error}"))
-                }
+            let key = match open_backup_key(&current_user, BACKUP_KEY)? {
+                Some(key) => Some(key),
+                None => open_backup_key(&current_user, LEGACY_BACKUP_KEY)?,
             };
+            let Some(key) = key else { return Ok(None) };
             let managed_marker: u32 = key.get_value("Managed").unwrap_or(0);
             if managed_marker != 1 {
                 return Ok(None);
@@ -219,13 +218,18 @@ mod windows_registry {
 
         fn delete_backup(&mut self) -> Result<(), String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
-            match current_user.delete_subkey_all(BACKUP_KEY) {
-                Ok(()) => Ok(()),
-                Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
-                Err(error) => Err(format!(
-                    "Discord 시작 명령 백업을 삭제하지 못했습니다: {error}"
-                )),
+            for path in [BACKUP_KEY, LEGACY_BACKUP_KEY] {
+                match current_user.delete_subkey_all(path) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == ErrorKind::NotFound => {}
+                    Err(error) => {
+                        return Err(format!(
+                            "Discord 시작 명령 백업을 삭제하지 못했습니다: {error}"
+                        ))
+                    }
+                }
             }
+            Ok(())
         }
 
         fn safe_default_command(&self) -> Option<DiscordStartupCommand> {
@@ -239,6 +243,14 @@ mod windows_registry {
                 ),
                 kind: RegistryStringKind::String,
             })
+        }
+    }
+
+    fn open_backup_key(current_user: &RegKey, path: &str) -> Result<Option<RegKey>, String> {
+        match current_user.open_subkey(path) {
+            Ok(key) => Ok(Some(key)),
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(format!("Discord 시작 명령 백업을 열지 못했습니다: {error}")),
         }
     }
 

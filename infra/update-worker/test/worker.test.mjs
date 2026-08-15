@@ -19,10 +19,10 @@ const manifest = {
   version: "0.3.0-beta.1",
   notes: "테스트 업데이트",
   pub_date: "2026-08-10T00:00:00Z",
-  installer_object_key: "beta/releases/0.3.0-beta.1/NudeNyangTranslator-Setup.exe",
+  installer_object_key: "beta/releases/0.3.0-beta.1/NudeNyangDiscordTranslator-Setup.exe",
   platforms: {
     "windows-x86_64": {
-      object_key: "beta/releases/0.3.0-beta.1/NudeNyangTranslator-Setup.exe",
+      object_key: "beta/releases/0.3.0-beta.1/NudeNyangDiscordTranslator-Setup.exe",
       signature: "signed-update",
     },
   },
@@ -83,7 +83,7 @@ test("authorized clients receive a newer signed update", async () => {
   assert.equal(body.signature, "signed-update");
   assert.equal(
     body.url,
-    "https://updates.example/v1/artifacts/beta/releases/0.3.0-beta.1/NudeNyangTranslator-Setup.exe",
+    "https://updates.example/v1/artifacts/beta/releases/0.3.0-beta.1/NudeNyangDiscordTranslator-Setup.exe",
   );
 });
 
@@ -103,6 +103,6 @@ test("installer links accept a revocable beta code", async () => {
     environment(),
   );
   assert.equal(response.status, 200);
-  assert.match(response.headers.get("Content-Disposition"), /NudeNyangTranslator-Setup\.exe/);
+  assert.match(response.headers.get("Content-Disposition"), /NudeNyangDiscordTranslator-Setup\.exe/);
   assert.equal(await response.text(), "installer");
 });

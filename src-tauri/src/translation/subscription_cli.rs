@@ -1104,7 +1104,7 @@ fn authenticate_gemini_acp_process_with_cache(
             json!({
                 "protocolVersion": 1,
                 "clientCapabilities": {},
-                "clientInfo": {"name": "NudeNyang Translator", "version": env!("CARGO_PKG_VERSION")}
+                "clientInfo": {"name": "NudeNyang Discord Translator", "version": env!("CARGO_PKG_VERSION")}
             }),
         )?;
 
@@ -2345,7 +2345,7 @@ impl CodexAppServer {
         self.send(&json!({
             "method": "initialize",
             "id": initialize_id,
-            "params": {"clientInfo": {"name": "nudenyang_translator", "title": "NudeNyang Translator", "version": env!("CARGO_PKG_VERSION")}},
+            "params": {"clientInfo": {"name": "nudenyang_translator", "title": "NudeNyang Discord Translator", "version": env!("CARGO_PKG_VERSION")}},
         }))?;
         self.wait_for_response(initialize_id, deadline)?;
         self.send(&json!({"method": "initialized", "params": {}}))?;

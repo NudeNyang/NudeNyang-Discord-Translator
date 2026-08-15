@@ -9,8 +9,11 @@ use serde_json::Value;
 use crate::language::is_supported_language_code;
 use crate::translation::HyMtModelSize;
 
-const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Translator";
-const LEGACY_UPDATE_REPOSITORY: &str = "NudeNyang/DiscordTranslateOverlay";
+const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Discord-Translator";
+const LEGACY_UPDATE_REPOSITORIES: &[&str] = &[
+    "NudeNyang/NudeNyang-Translator",
+    "NudeNyang/DiscordTranslateOverlay",
+];
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
@@ -80,6 +83,7 @@ pub struct AppConfig {
     pub stable_frames: u32,
     pub change_threshold: f64,
     pub ocr_device: String,
+    pub image_ocr_quality: String,
     pub translator: String,
     pub outgoing_translator: String,
     pub disabled_providers: Vec<String>,
@@ -113,6 +117,7 @@ impl Default for AppConfig {
             stable_frames: 2,
             change_threshold: 0.015,
             ocr_device: "auto".to_string(),
+            image_ocr_quality: "adaptive".to_string(),
             translator: "hymt_1_8b".to_string(),
             outgoing_translator: "hymt_1_8b".to_string(),
             disabled_providers: Vec::new(),
@@ -198,7 +203,10 @@ impl AppConfig {
             Value::Array(disabled_providers.into_iter().map(Value::String).collect()),
         );
 
-        if object.get("update_repository").and_then(Value::as_str) == Some(LEGACY_UPDATE_REPOSITORY)
+        if object
+            .get("update_repository")
+            .and_then(Value::as_str)
+            .is_some_and(|repository| LEGACY_UPDATE_REPOSITORIES.contains(&repository))
         {
             object.insert(
                 "update_repository".to_string(),
@@ -251,6 +259,16 @@ impl AppConfig {
             object.insert(
                 "translation_history_retention_days".to_string(),
                 Value::from(30),
+            );
+        }
+        if object
+            .get("image_ocr_quality")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "fast" | "adaptive" | "quality"))
+        {
+            object.insert(
+                "image_ocr_quality".to_string(),
+                Value::String("adaptive".to_string()),
             );
         }
 
@@ -348,7 +366,7 @@ pub fn default_config_path() -> PathBuf {
     if let Some(local_app_data) = env::var_os("LOCALAPPDATA").filter(|value| !value.is_empty()) {
         return PathBuf::from(local_app_data)
             .join("LocalTools")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("settings.json");
     }
 
@@ -357,7 +375,7 @@ pub fn default_config_path() -> PathBuf {
         return PathBuf::from(home)
             .join("Library")
             .join("Application Support")
-            .join("DiscordTranslateOverlay")
+            .join("NudeNyang Discord Translator")
             .join("settings.json");
     }
 
@@ -370,7 +388,8 @@ pub fn default_config_path() -> PathBuf {
                 .map(|home| PathBuf::from(home).join(".config"))
         })
         .unwrap_or_else(|| PathBuf::from("."));
-    base.join("DiscordTranslateOverlay").join("settings.json")
+    base.join("NudeNyang Discord Translator")
+        .join("settings.json")
 }
 
 fn load_config(path: &Path) -> Result<AppConfig, String> {
@@ -454,7 +473,10 @@ mod tests {
         assert!(!restored.enabled);
         assert_eq!(restored.translator, "hymt_1_8b");
         assert_eq!(restored.outgoing_translator, "hymt_1_8b");
-        assert_eq!(restored.update_repository, "NudeNyang/NudeNyang-Translator");
+        assert_eq!(
+            restored.update_repository,
+            "NudeNyang/NudeNyang-Discord-Translator"
+        );
         assert!(serde_json::to_value(&restored)
             .expect("serialize migrated config")
             .get("speech_style")
@@ -462,6 +484,7 @@ mod tests {
         assert_eq!(restored.ui_theme, "system");
         assert_eq!(restored.ui_language, "auto");
         assert!(restored.keep_local_model_warm);
+        assert_eq!(restored.image_ocr_quality, "adaptive");
         assert!(!restored.outgoing_translation_enabled);
         assert_eq!(restored.outgoing_target_language, "auto");
         assert!(restored.outgoing_confirm_send);
@@ -475,6 +498,32 @@ mod tests {
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
         assert_eq!(claude.translator, "claude");
+    }
+
+    #[test]
+    fn previous_repository_name_migrates_to_the_discord_product_repository() {
+        let restored = AppConfig::from_value(json!({
+            "update_repository": "NudeNyang/NudeNyang-Translator"
+        }))
+        .expect("previous repository should migrate");
+
+        assert_eq!(
+            restored.update_repository,
+            "NudeNyang/NudeNyang-Discord-Translator"
+        );
+    }
+
+    #[test]
+    fn image_ocr_quality_accepts_only_supported_modes() {
+        for mode in ["fast", "adaptive", "quality"] {
+            let config = AppConfig::from_value(json!({"image_ocr_quality": mode}))
+                .expect("supported OCR quality mode");
+            assert_eq!(config.image_ocr_quality, mode);
+        }
+
+        let invalid = AppConfig::from_value(json!({"image_ocr_quality": "maximum"}))
+            .expect("invalid OCR quality mode should reset");
+        assert_eq!(invalid.image_ocr_quality, "adaptive");
     }
 
     #[test]
