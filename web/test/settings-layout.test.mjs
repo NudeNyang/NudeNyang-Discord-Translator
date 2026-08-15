@@ -182,6 +182,9 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(script, /elements\.vramProtectionNote\.hidden = !LOCAL_TRANSLATORS\.has\(selected\)/);
   assert.doesNotMatch(markup, /1\.8B와 7B 중 하나의 로컬 모델만 사용합니다/);
   assert.doesNotMatch(markup, /처리 위치 안내/);
+  assert.doesNotMatch(markup, /OCR은 PC에서 실행됩니다/);
+  assert.doesNotMatch(markup, /번역 메뉴의 표시 언어 설정을 따릅니다/);
+  assert.doesNotMatch(markup, /실시간 번역이 켜져 있을 때만 활성화됩니다/);
   assert.doesNotMatch(markup, /로컬 번역 모델과 이미지 OCR은 이 PC에서 처리됩니다/);
   assert.doesNotMatch(markup, /Hy-MT2와 이미지 OCR은 PC에서 실행됩니다/);
   assert.match(markup, /로컬 번역 모델의 실행 장치와 자원 사용 방식을 설정합니다/);
