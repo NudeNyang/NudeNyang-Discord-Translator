@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Discord 메시지, 채널명과 이미지 속 글자를 원하는 언어로 번역하는 Windows 데스크톱 앱입니다."
+    />
+    <meta name="theme-color" content="#f1f6fa" />
+    <title>NudeNyang Discord Translator</title>
+    <link rel="icon" href="../assets/nude-translator.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./script.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content" data-i18n>본문으로 이동</a>
+
+    <header class="site-header" id="top">
+      <nav class="navigation shell" aria-label="주요 메뉴">
+        <a class="brand" href="#top" aria-label="NudeNyang Discord Translator 처음으로">
+          <img src="../assets/nude-translator.png" alt="" width="40" height="40" />
+          <span>NudeNyang <b>Translator</b></span>
+        </a>
+
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-menu" data-i18n>
+          메뉴
+        </button>
+
+        <div class="primary-menu" id="primary-menu">
+          <a href="#features" data-i18n>기능</a>
+          <a href="#privacy" data-i18n>개인정보</a>
+          <a href="#faq">FAQ</a>
+          <a href="https://github.com/NudeNyang/NudeNyang-Translator">GitHub</a>
+          <div class="language-picker">
+            <button class="language-trigger" type="button" aria-expanded="false" aria-controls="language-popover">
+              <span class="language-trigger-label">한국어</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+            <div class="language-popover" id="language-popover" hidden>
+              <label for="language-search" data-i18n>언어 검색</label>
+              <input id="language-search" type="search" autocomplete="off" data-i18n-placeholder="언어 검색" />
+              <div class="language-options" role="listbox" aria-label="인터페이스 언어"></div>
+              <p class="language-empty" hidden data-i18n>검색 결과 없음</p>
+            </div>
+          </div>
+          <button class="theme-toggle" type="button" aria-label="어두운 테마로 전환" data-i18n>어둡게</button>
+          <a class="nav-cta" href="https://github.com/NudeNyang/NudeNyang-Translator/releases/latest" data-i18n>베타 다운로드</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="hero shell" aria-labelledby="hero-title">
+        <div class="hero-copy reveal">
+          <p class="eyebrow" data-i18n>Discord 실시간 번역</p>
+          <h1 id="hero-title"><span class="hero-title-line" data-i18n>Discord는 그대로,</span><br /><span data-i18n>대화는 내 언어로.</span></h1>
+          <p class="hero-description" data-i18n>메시지와 채널명, 이미지 속 글자까지 Discord 화면 안에서 바로 번역합니다.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/NudeNyang/NudeNyang-Translator/releases/latest" data-i18n>Windows 베타 다운로드</a>
+            <a class="button secondary" href="#how-it-works" data-i18n>작동 방식 보기</a>
+          </div>
+        </div>
+
+        <!-- TODO: 1600x1200 또는 4:3 비율의 실제 Discord 번역 영상으로 교체합니다. -->
+        <div class="media-stage hero-media reveal" data-media-slot="hero" role="img" aria-label="Discord 번역 전후 영상을 넣을 자리">
+          <div class="media-slot-copy">
+            <strong data-i18n>히어로 영상</strong>
+            <span data-i18n>Discord 번역 전후 화면</span>
+            <small data-i18n>권장 1600 × 1200, MP4 또는 WebM</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="fact-band" aria-label="제품 지원 범위">
+        <div class="shell fact-grid">
+          <div><strong data-i18n>Windows 10·11</strong><span data-i18n>x64 우선 지원</span></div>
+          <div><strong data-i18n>실시간 번역</strong><span data-i18n>메시지와 채널명</span></div>
+          <div><strong data-i18n>이미지 OCR</strong><span data-i18n>PC에서 글자 감지</span></div>
+          <div><strong data-i18n>로컬 모델</strong><span data-i18n>Hy-MT2 선택 가능</span></div>
+        </div>
+      </section>
+
+      <section class="section shell workflow" id="how-it-works" aria-labelledby="workflow-title">
+        <div class="section-heading reveal">
+          <h2 id="workflow-title" data-i18n>읽고, 답하고, 이미지를 확인하는 흐름을 그대로 유지합니다.</h2>
+          <p data-i18n>별도의 번역창을 오가지 않고 사용하던 Discord 화면에서 대화를 이어갈 수 있습니다.</p>
+        </div>
+
+        <!-- TODO: 1920x1080 비율의 실제 사용 흐름 영상으로 교체합니다. -->
+        <div class="media-stage workflow-media reveal" data-media-slot="workflow" role="img" aria-label="실제 사용 흐름 영상을 넣을 자리">
+          <div class="media-slot-copy">
+            <strong data-i18n>기능 소개 영상</strong>
+            <span data-i18n>수신 번역부터 답장 전송까지</span>
+            <small data-i18n>권장 1920 × 1080, 8-12초 무음 영상</small>
+          </div>
+        </div>
+
+        <ol class="workflow-list reveal">
+          <li><strong data-i18n>읽기</strong><span data-i18n>받은 메시지와 채널명을 선택한 언어로 표시합니다.</span></li>
+          <li><strong data-i18n>답장하기</strong><span data-i18n>최근 대화 언어를 기준으로 입력한 메시지를 번역합니다.</span></li>
+          <li><strong data-i18n>이미지 확인</strong><span data-i18n>첨부 이미지의 글자를 인식하고 번역 결과를 합성합니다.</span></li>
+        </ol>
+      </section>
+
+      <section class="section shell" id="features" aria-labelledby="features-title">
+        <div class="section-heading compact reveal">
+          <p class="eyebrow" data-i18n>주요 기능</p>
+          <h2 id="features-title" data-i18n>대화에 필요한 번역을 한곳에 모았습니다.</h2>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card feature-primary reveal">
+            <div>
+              <h3 data-i18n>Discord 화면에서 바로 읽습니다.</h3>
+              <p data-i18n>언어를 구분하여 메시지와 채널명을 번역하고, 원문과 같은 언어는 그대로 표시합니다.</p>
+            </div>
+            <span class="feature-word" aria-hidden="true">안녕하세요</span>
+          </article>
+
+          <article class="feature-card feature-outgoing reveal">
+            <h3 data-i18n>보내는 메시지도 번역합니다.</h3>
+            <p data-i18n>상대방에게 보낼 문장을 확인하고 수정한 뒤 전송할 수 있습니다.</p>
+          </article>
+
+          <article class="feature-card feature-image reveal">
+            <div>
+              <h3 data-i18n>이미지 속 글자까지 확인합니다.</h3>
+              <p data-i18n>이미지 원본은 외부 번역 서비스로 보내지 않습니다.</p>
+            </div>
+            <!-- TODO: 1200x900 비율의 이미지 번역 전후 사진으로 교체합니다. -->
+            <div class="media-stage compact-media" data-media-slot="image-translation" role="img" aria-label="이미지 번역 전후 사진을 넣을 자리">
+              <div class="media-slot-copy">
+                <strong data-i18n>이미지 번역 사진</strong>
+                <small data-i18n>권장 1200 × 900</small>
+              </div>
+            </div>
+          </article>
+
+          <article class="feature-card feature-engines reveal">
+            <div>
+              <h3 data-i18n>원하는 번역 엔진을 선택합니다.</h3>
+              <p data-i18n>로컬 모델부터 구독 CLI와 DeepL까지 용도에 맞게 연결할 수 있습니다.</p>
+            </div>
+            <div class="provider-list" aria-label="지원 번역 서비스">
+              <span><img src="../web/assets/provider-openai.svg" alt="ChatGPT" /></span>
+              <span><img src="../web/assets/provider-claude.svg" alt="Claude" /></span>
+              <span><img src="../web/assets/provider-gemini.svg" alt="Gemini" /></span>
+              <span><img src="../web/assets/provider-deepl.svg" alt="DeepL" /></span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section privacy-section" id="privacy" aria-labelledby="privacy-title">
+        <div class="shell privacy-layout">
+          <div class="privacy-copy reveal">
+            <p class="eyebrow" data-i18n>작동 방식과 개인정보</p>
+            <h2 id="privacy-title" data-i18n>필요한 범위만 연결하고, 선택한 방식으로 번역합니다.</h2>
+            <p data-i18n>Discord 사용자 토큰과 self-bot을 사용하지 않으며 설치 파일과 서버 데이터를 수정하지 않습니다.</p>
+          </div>
+
+          <div class="privacy-points reveal">
+            <article>
+              <strong data-i18n>로컬 번역</strong>
+              <p data-i18n>Hy-MT2를 선택하면 번역할 텍스트를 외부 번역 서비스로 전송하지 않습니다.</p>
+            </article>
+            <article>
+              <strong data-i18n>온라인 번역</strong>
+              <p data-i18n>선택한 서비스에 필요한 텍스트만 전달하며 인증은 각 공식 방식으로 관리합니다.</p>
+            </article>
+            <article>
+              <strong data-i18n>이미지 처리</strong>
+              <p data-i18n>이미지는 PC에서 인식하며 외부 서비스에는 추출된 텍스트만 전달합니다.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section shell showcase" aria-labelledby="showcase-title">
+        <div class="showcase-copy reveal">
+          <h2 id="showcase-title" data-i18n>설정은 단순하게, 선택지는 분명하게 구성했습니다.</h2>
+          <p data-i18n>받는 메시지, 보내는 메시지, 이미지 번역과 엔진 연결 상태를 한 화면에서 관리합니다.</p>
+        </div>
+
+        <!-- TODO: 1600x1000 비율의 라이트 모드 설정 화면 사진으로 교체합니다. -->
+        <div class="media-stage settings-media reveal" data-media-slot="settings" role="img" aria-label="라이트 모드 설정 화면 사진을 넣을 자리">
+          <div class="media-slot-copy">
+            <strong data-i18n>설정 화면 사진</strong>
+            <span data-i18n>라이트 모드 전체 화면</span>
+            <small data-i18n>권장 1600 × 1000, PNG</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="section shell faq-section" id="faq" aria-labelledby="faq-title">
+        <div class="section-heading compact reveal">
+          <h2 id="faq-title" data-i18n>자주 묻는 질문</h2>
+        </div>
+
+        <div class="faq-list reveal">
+          <details>
+            <summary data-i18n>Discord 계정 토큰이 필요한가요?</summary>
+            <p data-i18n>필요하지 않습니다. 사용자 토큰이나 비공식 Discord API를 사용하지 않습니다.</p>
+          </details>
+          <details>
+            <summary data-i18n>번역 내용이 외부로 전송되나요?</summary>
+            <p data-i18n>로컬 모델을 선택하면 외부 번역 서비스로 전송되지 않습니다. 온라인 서비스를 선택하면 필요한 텍스트만 해당 서비스에 전달됩니다.</p>
+          </details>
+          <details>
+            <summary data-i18n>이미지 원본도 외부 서비스에 전달되나요?</summary>
+            <p data-i18n>아닙니다. 이미지의 글자는 PC에서 인식하며 선택한 외부 번역기에는 추출된 텍스트만 전달합니다.</p>
+          </details>
+          <details>
+            <summary data-i18n>어떤 운영체제를 지원하나요?</summary>
+            <p data-i18n>현재 Windows 10과 Windows 11의 x64 환경을 지원합니다. macOS는 아직 지원하지 않습니다.</p>
+          </details>
+          <details>
+            <summary data-i18n>Discord 업데이트 이후에도 계속 작동하나요?</summary>
+            <p data-i18n>Discord가 공식으로 제공하는 확장 방식이 아니므로 클라이언트 업데이트에 따라 일시적으로 작동하지 않을 수 있습니다.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="download-section" id="download" aria-labelledby="download-title">
+        <div class="shell download-layout reveal">
+          <img src="../assets/nude-translator.png" alt="NudeNyang Discord Translator 앱 아이콘" width="104" height="104" />
+          <div>
+            <h2 id="download-title" data-i18n>Discord 대화를 원하는 언어로 확인해 보십시오.</h2>
+            <p data-i18n>현재 Windows 10·11 x64 환경을 지원합니다.</p>
+          </div>
+          <a class="button primary" href="https://github.com/NudeNyang/NudeNyang-Translator/releases/latest" data-i18n>Windows 베타 다운로드</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-layout">
+        <div>
+          <a class="brand footer-brand" href="#top">
+            <img src="../assets/nude-translator.png" alt="" width="36" height="36" />
+            <span>NudeNyang <b>Translator</b></span>
+          </a>
+          <p data-i18n>Discord 화면에서 이어지는 실시간 번역</p>
+        </div>
+        <nav aria-label="하단 메뉴">
+          <a href="https://github.com/NudeNyang/NudeNyang-Translator" data-i18n>소스 코드</a>
+          <a href="https://github.com/NudeNyang/NudeNyang-Translator/issues" data-i18n>지원</a>
+          <a href="https://github.com/NudeNyang/NudeNyang-Translator/blob/main/LICENSE">GPLv3</a>
+        </nav>
+        <p class="legal" data-i18n>Discord는 Discord Inc.의 상표입니다. 본 프로젝트는 Discord와 제휴하거나 보증받지 않았습니다.</p>
+        <p class="copyright">Copyright © 2026 NudeNyang</p>
+      </div>
+    </footer>
+  </body>
+</html>
