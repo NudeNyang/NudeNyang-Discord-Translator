@@ -32,6 +32,8 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
     assert.ok(html.includes(copy), `\"${copy}\" 문구가 필요합니다.`);
   }
   assert.match(html, /로컬 AI를 사용하면 별도의 번역 API 비용 없이 PC에서 번역할 수 있습니다\./);
+  assert.match(html, /여러 언어가 동시에 표시되는 Discord 화면에서도 메시지별 언어를 자동으로 감지해 번역합니다\./);
+  assert.doesNotMatch(html, /최근 대화 언어를 감지하여 답장에 맞는 번역 방향을 제안합니다\./);
   assert.doesNotMatch(html, /Hy-MT2/);
 });
 
@@ -79,6 +81,31 @@ test("히어로에서 실제 번역 영상을 재생한다", async () => {
   ]);
   assert.ok(video.size > 1_000_000, "히어로 MP4 파일이 필요합니다.");
   assert.ok(poster.size > 10_000, "히어로 포스터 이미지가 필요합니다.");
+});
+
+test("기능 소개 영상은 화면에 들어온 뒤 조작부 없이 자동 재생한다", async () => {
+  const workflowOpenTag = html.match(/<video\b[^>]*class="media-stage workflow-media reveal"[^>]*data-media-slot="workflow"[^>]*data-scroll-autoplay[^>]*>/s)?.[0];
+  assert.ok(workflowOpenTag, "기능 소개 video 요소가 필요합니다.");
+  assert.match(html, /<source src="\.\/assets\/workflow-discord-translation\.mp4" type="video\/mp4"\s*\/>/);
+  assert.match(workflowOpenTag, /muted[\s\S]*playsinline[\s\S]*disablepictureinpicture/);
+  assert.match(workflowOpenTag, /preload="metadata"[\s\S]*poster="\.\/assets\/workflow-discord-translation-poster\.jpg"/);
+  assert.match(workflowOpenTag, /tabindex="0"/);
+  assert.doesNotMatch(workflowOpenTag, /\scontrols(?:\s|>|=)/);
+  assert.doesNotMatch(workflowOpenTag, /\sloop(?:\s|>|=)/);
+  assert.match(script, /const workflowVideo = document\.querySelector\("\[data-scroll-autoplay\]"\)/);
+  assert.match(script, /window\.setTimeout\([\s\S]*?300\)/);
+  assert.match(script, /threshold:\s*\[0,\s*0\.12\]/);
+  assert.match(script, /rootMargin:\s*"0px 0px -20% 0px"/);
+  assert.match(script, /reduceMotionPreference\.matches/);
+  assert.match(css, /\.workflow-media\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9[^}]*height:\s*auto[^}]*object-fit:\s*contain/s);
+
+  const [video, poster] = await Promise.all([
+    stat(new URL("../assets/workflow-discord-translation.mp4", import.meta.url)),
+    stat(new URL("../assets/workflow-discord-translation-poster.jpg", import.meta.url)),
+  ]);
+  assert.ok(video.size > 1_000_000, "기능 소개 MP4 파일이 필요합니다.");
+  assert.ok(video.size < 30_000_000, "기능 소개 MP4는 웹 전송에 맞게 최적화해야 합니다.");
+  assert.ok(poster.size > 10_000, "기능 소개 포스터 이미지가 필요합니다.");
 });
 
 test("기존 앱의 색상 토큰과 반응형 규칙을 사용한다", () => {

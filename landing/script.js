@@ -16,6 +16,7 @@ const languageOptions = document.querySelector(".language-options");
 const languageEmpty = document.querySelector(".language-empty");
 const supportedLanguageGrid = document.querySelector(".supported-language-grid");
 const heroVideo = document.querySelector("[data-hero-video]");
+const workflowVideo = document.querySelector("[data-scroll-autoplay]");
 const pageScrollIndicator = document.querySelector("[data-page-scroll-indicator]");
 const pageScrollThumb = pageScrollIndicator?.querySelector(".page-scroll-indicator-thumb");
 const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -141,6 +142,81 @@ function syncHeroVideoPlayback() {
   heroVideo.play().catch(() => {});
 }
 
+async function toggleWorkflowVideoPlayback() {
+  if (!workflowVideo) return;
+
+  if (workflowVideo.paused) {
+    try {
+      workflowVideo.muted = true;
+      await workflowVideo.play();
+      workflowVideo.dataset.autoplayState = "playing";
+    } catch {
+      workflowVideo.dataset.autoplayState = "manual";
+    }
+    return;
+  }
+
+  workflowVideo.pause();
+  workflowVideo.dataset.autoplayState = "paused";
+}
+
+function bindWorkflowVideoPlayback() {
+  if (!workflowVideo) return;
+
+  workflowVideo.addEventListener("click", toggleWorkflowVideoPlayback);
+  workflowVideo.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    toggleWorkflowVideoPlayback();
+  });
+
+  if (!("IntersectionObserver" in window)) {
+    workflowVideo.dataset.autoplayState = "manual";
+    return;
+  }
+
+  let playTimer = 0;
+  const cancelScheduledPlay = () => {
+    if (!playTimer) return;
+    window.clearTimeout(playTimer);
+    playTimer = 0;
+    workflowVideo.dataset.autoplayState = "idle";
+  };
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry.isIntersecting || entry.intersectionRatio < 0.12 || reduceMotionPreference.matches) {
+        cancelScheduledPlay();
+        return;
+      }
+
+      if (playTimer || workflowVideo.dataset.autoplayState === "playing") return;
+      workflowVideo.dataset.autoplayState = "waiting";
+      playTimer = window.setTimeout(async () => {
+        playTimer = 0;
+        try {
+          workflowVideo.muted = true;
+          await workflowVideo.play();
+          workflowVideo.dataset.autoplayState = "playing";
+          observer.unobserve(workflowVideo);
+        } catch {
+          workflowVideo.dataset.autoplayState = "manual";
+        }
+      }, 300);
+    },
+    { threshold: [0, 0.12], rootMargin: "0px 0px -20% 0px" },
+  );
+
+  reduceMotionPreference.addEventListener("change", () => {
+    if (!reduceMotionPreference.matches) return;
+    cancelScheduledPlay();
+    workflowVideo.pause();
+    workflowVideo.dataset.autoplayState = "manual";
+  });
+
+  observer.observe(workflowVideo);
+}
+
 translationNodes.forEach((node) => {
   node.dataset.i18nSource = node.textContent.trim();
 });
@@ -257,6 +333,7 @@ if (savedTheme === "light" || savedTheme === "dark") root.dataset.theme = savedT
 renderSupportedLanguages();
 applyLocale(currentLocale, { persist: false });
 bindPageScrollIndicator();
+bindWorkflowVideoPlayback();
 
 themeButton.addEventListener("click", () => {
   applyTheme(resolvedTheme() === "dark" ? "light" : "dark");

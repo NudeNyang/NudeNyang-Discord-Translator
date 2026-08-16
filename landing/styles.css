@@ -718,8 +718,19 @@ summary:focus-visible {
 }
 
 .workflow-media {
+  display: block;
+  width: 100%;
   aspect-ratio: 16 / 9;
+  height: auto;
+  object-fit: contain;
+  background: #111016;
   box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.workflow-media:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 62%, white);
+  outline-offset: 4px;
 }
 
 .workflow-list {

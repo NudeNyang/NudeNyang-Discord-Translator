@@ -99,17 +99,26 @@
           <p data-i18n>메시지와 답장은 물론, 이미지 속 글자까지 Discord 화면에서 바로 번역합니다.</p>
         </div>
 
-        <!-- TODO: 1920x1080 비율의 실제 사용 흐름 영상으로 교체합니다. -->
-        <div class="media-stage workflow-media reveal" data-media-slot="workflow" role="img" aria-label="실제 사용 흐름 영상을 넣을 자리">
-          <div class="media-slot-copy">
-            <strong data-i18n>기능 소개 영상</strong>
-            <span data-i18n>수신 번역부터 답장 전송까지</span>
-            <small data-i18n>권장 1920 × 1080, 8-12초 무음 영상</small>
-          </div>
-        </div>
+        <video
+          class="media-stage workflow-media reveal"
+          id="workflow-video"
+          data-media-slot="workflow"
+          data-scroll-autoplay
+          width="1920"
+          height="1080"
+          muted
+          playsinline
+          disablepictureinpicture
+          preload="metadata"
+          poster="./assets/workflow-discord-translation-poster.jpg"
+          tabindex="0"
+          aria-label="Discord 번역 기능 소개 영상. 클릭하면 재생하거나 일시정지할 수 있습니다."
+        >
+          <source src="./assets/workflow-discord-translation.mp4" type="video/mp4" />
+        </video>
 
         <ol class="workflow-list reveal">
-          <li><strong data-i18n>언어 자동 감지</strong><span data-i18n>최근 대화 언어를 감지하여 답장에 맞는 번역 방향을 제안합니다.</span></li>
+          <li><strong data-i18n>언어 자동 감지</strong><span data-i18n>여러 언어가 동시에 표시되는 Discord 화면에서도 메시지별 언어를 자동으로 감지해 번역합니다.</span></li>
           <li><strong data-i18n>실시간 화면 번역</strong><span data-i18n>받은 메시지와 채널명을 Discord 화면에서 바로 번역합니다.</span></li>
           <li><strong data-i18n>전송 메시지 통역</strong><span data-i18n>작성한 문장을 확인하고 상대방의 언어로 번역해 보냅니다.</span></li>
         </ol>
