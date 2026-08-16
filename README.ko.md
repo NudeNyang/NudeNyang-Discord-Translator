@@ -23,15 +23,9 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ## 동작 화면
 
-<p align="center">
-  <a href="landing/assets/hero-discord-translation.mp4?raw=1">
-    <img src="landing/assets/hero-discord-translation-poster.jpg" width="920" alt="Discord 대화를 번역하는 NudeNyang">
-  </a>
-</p>
+https://github.com/user-attachments/assets/ca870b61-7b9c-489c-af42-ae66805f6bd5
 
 <p align="center">
-  <a href="landing/assets/hero-discord-translation.mp4?raw=1">짧은 시연 · MP4 · 6.4 MB</a>
-  &nbsp;·&nbsp;
   <a href="landing/assets/full-discord-translation-demo.mp4?raw=1">전체 시연 · MP4 · 41.3 MB</a>
 </p>
 

@@ -27,15 +27,9 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 ## See it in action
 
-<p align="center">
-  <a href="landing/assets/hero-discord-translation.mp4?raw=1">
-    <img src="landing/assets/hero-discord-translation-poster.jpg" width="920" alt="NudeNyang translating a Discord conversation">
-  </a>
-</p>
+https://github.com/user-attachments/assets/ca870b61-7b9c-489c-af42-ae66805f6bd5
 
 <p align="center">
-  <a href="landing/assets/hero-discord-translation.mp4?raw=1">Quick demo · MP4 · 6.4 MB</a>
-  &nbsp;·&nbsp;
   <a href="landing/assets/full-discord-translation-demo.mp4?raw=1">Full demo · MP4 · 41.3 MB</a>
 </p>
 
