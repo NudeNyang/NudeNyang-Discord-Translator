@@ -1154,12 +1154,6 @@ summary:focus-visible {
   font-size: 17px;
 }
 
-.discord-notice-copy .discord-notice-responsibility {
-  margin-top: 12px;
-  color: var(--text);
-  font-weight: 720;
-}
-
 .discord-policy-links {
   display: flex;
   flex-wrap: wrap;

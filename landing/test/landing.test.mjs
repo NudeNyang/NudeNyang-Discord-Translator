@@ -199,12 +199,19 @@ test("개인정보 구간은 자체 서버와 수집 여부를 명확히 설명�
   assert.doesNotMatch(css, /\.privacy-copy\s*\{[^}]*position:\s*sticky/s);
 });
 
-test("Discord 이용 안내와 공식 정책 링크를 FAQ 앞에 제공한다", () => {
+test("Discord 이용 전 안내와 공식 정책 링크를 FAQ 앞에 제공한다", () => {
   const noticeIndex = html.indexOf('id="discord-notice"');
   const faqIndex = html.indexOf('id="faq"');
+  const noticeTitle = "Discord 이용 전 확인해 주세요";
+  const noticeCopy = "이 앱은 사용자 토큰이나 비공식 Discord API를 사용하지 않습니다. 다만 Discord가 공식적으로 승인한 도구는 아니며, 정책 해석에 따라 이용이 제한될 수 있습니다. 사용 전 최신 정책을 확인해 주세요. 최종적인 이용 판단과 그에 따른 책임은 사용자에게 있습니다.";
 
-  assert.ok(noticeIndex > 0, "Discord 이용 안내 구간이 필요합니다.");
-  assert.ok(noticeIndex < faqIndex, "Discord 이용 안내는 FAQ 앞에 배치해야 합니다.");
+  assert.ok(noticeIndex > 0, "Discord 이용 전 안내 구간이 필요합니다.");
+  assert.ok(noticeIndex < faqIndex, "Discord 이용 전 안내는 FAQ 앞에 배치해야 합니다.");
+  assert.match(html, />Discord 이용 전 확인해 주세요</);
+  assert.match(html, /정책 해석에 따라 이용이 제한될 수 있습니다/);
+  assert.match(html, /최종적인 이용 판단과 그에 따른 책임은 사용자에게 있습니다/);
+  assert.doesNotMatch(html, /계정에 조치가 적용될 수 있습니다/);
+  assert.doesNotMatch(html, /<p class="discord-notice-responsibility"/);
   assert.match(html, /href="https:\/\/discord\.com\/terms"/);
   assert.match(html, /href="https:\/\/discord\.com\/safety\/platform-manipulation-policy-explainer-oct-2023"/);
   assert.match(html, />Discord 이용 약관</);
@@ -214,6 +221,11 @@ test("Discord 이용 안내와 공식 정책 링크를 FAQ 앞에 제공한다",
   assert.doesNotMatch(css, /\.discord-notice[^}]*#[0-9a-f]{3,8}/i);
   assert.doesNotMatch(css, /\.discord-policy-links a\s*\{[^}]*border-bottom:/s);
   assert.doesNotMatch(css, /\.discord-policy-links a:hover\s*\{[^}]*border-bottom/s);
+
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.ok(LANDING_LOCALES[locale]?.[noticeTitle], `${locale} Discord 안내 제목 번역이 필요합니다.`);
+    assert.ok(LANDING_LOCALES[locale]?.[noticeCopy], `${locale} Discord 안내 본문 번역이 필요합니다.`);
+  }
 });
 
 test("FAQ는 개인정보 보호와 공식 Discord 앱 사용 방식을 설명한다", () => {
