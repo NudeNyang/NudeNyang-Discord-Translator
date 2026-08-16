@@ -352,7 +352,13 @@ input:focus-visible,
   }
 }
 
-.update-banner .button {
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-banner-actions .button {
   min-width: 118px;
   white-space: nowrap;
 }

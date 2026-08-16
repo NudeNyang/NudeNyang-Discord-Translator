@@ -321,6 +321,8 @@ test("every dynamic runtime message has a non-English generated-locale rendering
     "Hy-MT2 7B 모델 불러오는 중",
     "Hy-MT2 7B 모델 준비 대기 중",
     "Hy-MT2 7B CPU/RAM 전용 모드로 전환 중",
+    "Hy-MT2 7B VRAM 보호 전환 중",
+    "Hy-MT2 7B GPU 모드 복귀 중",
     "1.2GB / 4.6GB 다운로드됨",
     "4.6GB 다운로드 완료 · 파일 무결성을 확인하고 있습니다.",
     "4.6GB 다운로드 완료 · 번역 엔진을 준비하고 있습니다.",

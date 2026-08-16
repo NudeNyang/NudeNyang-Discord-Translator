@@ -89,8 +89,10 @@ cargo clippy --bin nude-translator-tauri -- -D warnings
 cargo build --release
 ```
 
-Windows 배포 ZIP은 다음 명령으로 만든다. 기본 패키지는 Tauri/Rust 앱, llama.cpp와
-Hy-MT2 1.8B 모델을 내장한다. `-IncludeLargeModel`을 추가하면 7B 모델도 포함한다.
+Windows 배포 ZIP은 다음 명령으로 만든다. 기본 패키지는 Tauri/Rust 앱, llama.cpp,
+Microsoft Visual C++ 앱 로컬 런타임과 Hy-MT2 1.8B 모델을 내장한다. 따라서 Visual C++
+재배포 패키지가 없는 새 Windows에서도 로컬 엔진을 실행할 수 있다. `-IncludeLargeModel`을
+추가하면 7B 모델도 포함한다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
@@ -98,7 +100,8 @@ powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
 
 비공개 베타는 Cloudflare R2와 Worker를 사용한다. 최초 한 번 인프라를 준비한 뒤 서명된
 NSIS 설치 파일을 만들고 업로드한다. 기본 베타 패키지는 Hy-MT2 모델을 제외해 업데이트
-용량을 줄이며, 모델은 앱에서 처음 선택할 때 공식 저장소에서 내려받는다.
+용량을 줄이며, 모델은 앱에서 처음 선택할 때 공식 저장소에서 내려받는다. llama.cpp와
+Microsoft 서명이 유효한 Visual C++ 런타임은 설치 파일에 항상 포함한다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup_beta_r2.ps1

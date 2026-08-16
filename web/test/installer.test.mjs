@@ -9,6 +9,18 @@ const installerHooks = readFileSync(
 const tauriConfig = JSON.parse(
   readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
 );
+const betaPackager = readFileSync(
+  new URL("../../scripts/package_beta.ps1", import.meta.url),
+  "utf8",
+);
+const portablePackager = readFileSync(
+  new URL("../../scripts/package.ps1", import.meta.url),
+  "utf8",
+);
+const msvcRuntimeStager = readFileSync(
+  new URL("../../scripts/stage_msvc_runtime.ps1", import.meta.url),
+  "utf8",
+);
 
 test("the Windows uninstaller removes every app-owned data store when requested", () => {
   assert.match(installerHooks, /\$DeleteAppDataCheckboxState = 1/);
@@ -32,4 +44,31 @@ test("the Windows uninstaller uses the NudeNyang Discord Translator icon", () =>
     tauriConfig.bundle.windows.nsis.uninstallerIcon,
     "../assets/nude-translator.ico",
   );
+});
+
+test("Windows packages carry the complete signed MSVC runtime beside llama-server", () => {
+  for (const packager of [betaPackager, portablePackager]) {
+    assert.match(packager, /stage_msvc_runtime\.ps1/);
+    assert.match(
+      packager,
+      /Copy-MsvcRuntime\s+-DestinationDirectory\s+\$[A-Za-z]+Destination/,
+    );
+  }
+
+  for (const file of [
+    "concrt140.dll",
+    "msvcp140.dll",
+    "msvcp140_1.dll",
+    "msvcp140_2.dll",
+    "msvcp140_atomic_wait.dll",
+    "msvcp140_codecvt_ids.dll",
+    "vccorlib140.dll",
+    "vcruntime140.dll",
+    "vcruntime140_1.dll",
+    "vcruntime140_threads.dll",
+  ]) {
+    assert.ok(msvcRuntimeStager.includes(file), `${file} must be staged`);
+  }
+  assert.match(msvcRuntimeStager, /Get-AuthenticodeSignature/);
+  assert.match(msvcRuntimeStager, /Microsoft Corporation/);
 });

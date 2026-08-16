@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'verify_llama_runtime.ps1')
-. (Join-Path $PSScriptRoot 'stage_vc_runtime.ps1')
+. (Join-Path $PSScriptRoot 'stage_msvc_runtime.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $DistDirectory = Join-Path $ProjectRoot 'dist\NudeNyangDiscordTranslator'
 $ReleaseDirectory = Join-Path $ProjectRoot 'release'
@@ -55,7 +55,7 @@ $LlamaDestination = Join-Path $DistDirectory 'runtime\llama'
 New-Item -ItemType Directory -Force $LlamaDestination | Out-Null
 Copy-Item -LiteralPath (Join-Path $LlamaSource 'llama-server.exe') -Destination $LlamaDestination -Force
 Get-ChildItem -LiteralPath $LlamaSource -Filter '*.dll' | Copy-Item -Destination $LlamaDestination -Force
-Copy-VcRuntimeFiles -DestinationDirectory $LlamaDestination
+Copy-MsvcRuntime -DestinationDirectory $LlamaDestination
 
 $ModelCache = Join-Path $env:LOCALAPPDATA 'LocalTools\NudeNyang Discord Translator\Cache\models\hy-mt2'
 $Models = @(

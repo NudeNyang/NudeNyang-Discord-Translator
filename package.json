@@ -1,12 +1,15 @@
 {
   "name": "nude-translator-tauri",
   "private": true,
-  "version": "0.5.8-beta",
+  "version": "0.5.13-beta",
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
-    "test": "npm run test:web",
+    "test": "npm run test:web && npm run test:landing",
     "test:web": "node --test web/test/*.test.mjs",
+    "test:landing": "node --test landing/test/*.test.mjs",
+    "landing:locales": "node scripts/generate-landing-locales.mjs",
+    "landing:serve": "node scripts/serve-landing.mjs",
     "test:locales": "node scripts/validate-ui-locales.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

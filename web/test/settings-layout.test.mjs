@@ -40,10 +40,10 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.8-beta");
-  assert.match(tauriConfig, /"version": "0\.5\.8-beta"/);
-  assert.match(cargoManifest, /^version = "0\.5\.8-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.8 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.13-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.13-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.13-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.13 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 
@@ -332,6 +332,13 @@ test("automatic updates are announced outside the app information panel", () => 
   assert.match(script, /showAvailableUpdate\(result\.version, \{ prompt: silent \}\)/);
   assert.match(script, /title: "새 업데이트가 있습니다"/);
   assert.match(script, /cancelText: "나중에"/);
+});
+
+test("local model preparation can be cancelled without discarding resumable data", () => {
+  assert.match(markup, /id="model-banner-cancel"[^>]*hidden/);
+  assert.match(script, /invoke\("model_preparation_cancel"\)/);
+  assert.match(rustMain, /fn model_preparation_cancel\(/);
+  assert.match(rustMain, /engine\.cancel_model_preparation\(\)/);
 });
 
 test("dynamic app information and runtime notices follow the interface language", () => {

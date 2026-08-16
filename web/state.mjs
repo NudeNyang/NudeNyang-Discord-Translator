@@ -267,6 +267,30 @@ export function modelPreparationBanner(progress) {
       indeterminate: true,
     };
   }
+  if (progress.phase === "vram-protected") {
+    return {
+      title: `${model} VRAM 보호 전환 중`,
+      detail: "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.",
+      progress: 1,
+      indeterminate: true,
+    };
+  }
+  if (progress.phase === "gpu-restored") {
+    return {
+      title: `${model} GPU 모드 복귀 중`,
+      detail: "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.",
+      progress: 1,
+      indeterminate: true,
+    };
+  }
+  if (progress.phase === "starting") {
+    return {
+      title: `${model} 모델 준비 시작 중`,
+      detail: "모델 파일을 확인하고 필요한 다운로드를 준비하고 있습니다.",
+      progress: 0,
+      indeterminate: true,
+    };
+  }
   return {
     title: `${model} 모델 준비 대기 중`,
     detail: "같은 로컬 모델 준비 작업이 끝나기를 기다리고 있습니다.",

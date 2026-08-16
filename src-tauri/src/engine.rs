@@ -38,20 +38,22 @@ use crate::outgoing::{
 };
 use crate::text_split::split_for_discord;
 use crate::translation::{
-    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationProgress,
-    ModelProgressObserver, OriginalTranslator, ResilientTranslator, SubscriptionCliTranslator,
-    TranslationService, Translator,
+    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationCancellation,
+    ModelPreparationProgress, ModelProgressObserver, OriginalTranslator, ResilientTranslator,
+    SubscriptionCliTranslator, TranslationService, Translator,
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
+const CPU_MAX_BATCH_ITEMS: usize = 6;
 const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
+const DISPLAY_VIEW_SETTLE_DELAY: Duration = Duration::from_millis(250);
 const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
 const MAX_IMAGE_BASE64_BYTES: usize = (MAX_IMAGE_BYTES * 4 / 3) + 8;
 
 type Locator = (String, String, usize);
-type PendingKey = (u64, String, String, usize, String);
+type PendingKey = (u64, u64, String, String, usize, String);
 type ImagePendingKey = (u64, String);
 type OutgoingPendingKey = (u64, String);
 
@@ -109,6 +111,7 @@ pub struct RustEngine {
 enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
+    CancelModelPreparation,
     ReplaceCdp(CdpClient),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
@@ -121,8 +124,48 @@ struct PartState {
     translated: String,
 }
 
+#[derive(Default)]
+struct DisplayViewState {
+    scope: String,
+    epoch: u64,
+    settle_until: Option<Instant>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DisplayViewObservation {
+    Initial,
+    Stable,
+    Changed,
+}
+
+impl DisplayViewState {
+    fn observe(&mut self, url: &str, now: Instant) -> DisplayViewObservation {
+        let scope = display_view_scope(url);
+        if scope == self.scope {
+            return DisplayViewObservation::Stable;
+        }
+        let initial = self.scope.is_empty();
+        self.scope = scope;
+        self.epoch = self.epoch.wrapping_add(1).max(1);
+        if initial {
+            self.settle_until = None;
+            DisplayViewObservation::Initial
+        } else {
+            self.settle_until = Some(now + DISPLAY_VIEW_SETTLE_DELAY);
+            DisplayViewObservation::Changed
+        }
+    }
+
+    fn is_ready(&self, now: Instant) -> bool {
+        self.settle_until
+            .is_none_or(|settle_until| now >= settle_until)
+    }
+}
+
 struct TranslationBatch {
     generation: u64,
+    view_epoch: u64,
+    view_scope: String,
     target: Language,
     parts: Vec<DomPart>,
     context_scope: String,
@@ -151,6 +194,10 @@ struct OutgoingTranslationBatch {
 enum WorkerCommand {
     Translate(TranslationBatch),
     TranslateImage(ImageTranslationBatch),
+    DiscardDisplayBefore {
+        generation: u64,
+        view_epoch: u64,
+    },
     Activate {
         generation: u64,
         name: String,
@@ -181,6 +228,7 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
         | WorkerCommand::Warm
         | WorkerCommand::Release
         | WorkerCommand::ClearCacheMemory
+        | WorkerCommand::DiscardDisplayBefore { .. }
         | WorkerCommand::Stop => 0,
         WorkerCommand::Translate(_) => 1,
         WorkerCommand::TranslateImage(_) => 2,
@@ -196,6 +244,27 @@ fn next_worker_command(
     }
     while let Ok(command) = commands.try_recv() {
         backlog.push_back(command);
+    }
+    if let Some(latest_view) = backlog
+        .iter()
+        .filter_map(|command| match command {
+            WorkerCommand::Translate(batch) => Some((batch.generation, batch.view_epoch)),
+            WorkerCommand::DiscardDisplayBefore {
+                generation,
+                view_epoch,
+            } => Some((*generation, *view_epoch)),
+            _ => None,
+        })
+        .max()
+    {
+        backlog.retain(|command| match command {
+            WorkerCommand::Translate(batch) => (batch.generation, batch.view_epoch) == latest_view,
+            WorkerCommand::DiscardDisplayBefore {
+                generation,
+                view_epoch,
+            } => (*generation, *view_epoch) == latest_view,
+            _ => true,
+        });
     }
     let priority = backlog
         .iter()
@@ -221,6 +290,8 @@ fn next_worker_command(
 enum WorkerResult {
     Translated {
         generation: u64,
+        view_epoch: u64,
+        view_scope: String,
         target: Language,
         parts: Vec<DomPart>,
         values: Result<Vec<String>, String>,
@@ -318,6 +389,25 @@ fn preparation_plan_for_active_lanes(
     }
 }
 
+fn display_preparation_is_required(runtime: &RuntimeStatus, config: &AppConfig) -> bool {
+    if runtime.active_translator == config.translator {
+        return false;
+    }
+    !(runtime.translator_state == "preparing" && runtime.configured_translator == config.translator)
+}
+
+fn initial_model_preparation_progress(name: &str) -> Option<ModelPreparationProgress> {
+    HyMtModelSize::from_config_id(name).map(|model_size| {
+        let model = model_size.model();
+        ModelPreparationProgress {
+            model: model.label.to_string(),
+            phase: "starting".to_string(),
+            downloaded: 0,
+            total: model.expected_bytes,
+        }
+    })
+}
+
 impl RustEngine {
     pub fn start(config: AppConfig) -> Self {
         let (control_tx, control_rx) = mpsc::channel();
@@ -347,6 +437,22 @@ impl RustEngine {
         self.controls
             .send(Control::SetEnabled(enabled))
             .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
+    }
+
+    pub fn cancel_model_preparation(&self) -> Result<(), String> {
+        if let Ok(mut status) = self.status.lock() {
+            status.enabled = false;
+            status.controller_enabled = false;
+            status.translator_state = "queued".to_string();
+            status.translator_error.clear();
+            status.model_progress = None;
+            status.notice.clear();
+        }
+        self.controls
+            .send(Control::CancelModelPreparation)
+            .map_err(|_| {
+                "Rust 번역 엔진이 종료되어 모델 다운로드를 취소하지 못했습니다.".to_string()
+            })
     }
 
     pub fn replace_cdp(&self, client: CdpClient) -> Result<(), String> {
@@ -426,10 +532,12 @@ fn run_controller(
     let mut client: Option<CdpClient> = None;
     let mut states: HashMap<Locator, PartState> = HashMap::new();
     let mut pending: HashSet<PendingKey> = HashSet::new();
+    let mut display_view = DisplayViewState::default();
     let mut image_pending: HashSet<ImagePendingKey> = HashSet::new();
     let mut outgoing_pending: HashSet<OutgoingPendingKey> = HashSet::new();
     let mut generation = 0_u64;
     let mut preparation_generation = 0_u64;
+    let mut preparation_cancellation: Option<ModelPreparationCancellation> = None;
     let mut consecutive_connection_failures = 0_u8;
     let mut connection_issue_reported = false;
     let mut image_ui_needs_cleanup = true;
@@ -459,7 +567,7 @@ fn run_controller(
                     if ui_ready && requested_preparation.any() {
                         if let Ok(runtime) = status.lock() {
                             requested_preparation.display |=
-                                runtime.active_translator != updated.translator;
+                                display_preparation_is_required(&runtime, &updated);
                             requested_preparation.outgoing |=
                                 runtime.active_outgoing_translator != updated.outgoing_translator;
                         }
@@ -504,9 +612,13 @@ fn run_controller(
                             &progress_result_tx,
                             &status,
                             &mut preparation_generation,
+                            &mut preparation_cancellation,
                         );
                         preparation_requested = true;
                     } else if runtime_changed {
+                        if let Some(cancellation) = preparation_cancellation.take() {
+                            cancellation.cancel();
+                        }
                         preparation_generation += 1;
                         if requested_preparation.display && !preparation_plan.display {
                             let _ = worker_tx.send(WorkerCommand::Release);
@@ -534,9 +646,9 @@ fn run_controller(
                             let _ = worker_tx.send(WorkerCommand::Release);
                         }
                     } else if enabled_changed {
-                        let needs_preparation = status
-                            .lock()
-                            .is_ok_and(|runtime| runtime.active_translator != config.translator);
+                        let needs_preparation = status.lock().is_ok_and(|runtime| {
+                            display_preparation_is_required(&runtime, &config)
+                        });
                         if ui_ready && needs_preparation && !preparation_requested {
                             request_translator_preparation(
                                 &config,
@@ -548,6 +660,7 @@ fn run_controller(
                                 &progress_result_tx,
                                 &status,
                                 &mut preparation_generation,
+                                &mut preparation_cancellation,
                             );
                             preparation_requested = true;
                         } else if !needs_preparation {
@@ -573,6 +686,7 @@ fn run_controller(
                                     &progress_result_tx,
                                     &status,
                                     &mut preparation_generation,
+                                    &mut preparation_cancellation,
                                 );
                             } else if !needs_preparation {
                                 let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
@@ -606,7 +720,7 @@ fn run_controller(
                             }
                         } else {
                             let needs_preparation = status.lock().is_ok_and(|runtime| {
-                                runtime.active_translator != config.translator
+                                display_preparation_is_required(&runtime, &config)
                             });
                             if ui_ready && needs_preparation {
                                 request_translator_preparation(
@@ -619,12 +733,36 @@ fn run_controller(
                                     &progress_result_tx,
                                     &status,
                                     &mut preparation_generation,
+                                    &mut preparation_cancellation,
                                 );
                             } else {
                                 let _ = worker_tx.send(WorkerCommand::Warm);
                             }
                         }
                     }
+                }
+                Control::CancelModelPreparation => {
+                    if let Some(cancellation) = preparation_cancellation.take() {
+                        cancellation.cancel();
+                    }
+                    preparation_generation += 1;
+                    config.enabled = false;
+                    config.outgoing_translation_enabled = false;
+                    restore(&mut client, &states, false);
+                    pending.clear();
+                    image_pending.clear();
+                    outgoing_pending.clear();
+                    generation += 1;
+                    let _ = worker_tx.send(WorkerCommand::Release);
+                    let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
+                    update_status(&status, |runtime| {
+                        runtime.enabled = false;
+                        runtime.controller_enabled = false;
+                        runtime.translator_state = "queued".to_string();
+                        runtime.translator_error.clear();
+                        runtime.model_progress = None;
+                        runtime.notice.clear();
+                    });
                 }
                 Control::ReplaceCdp(mut replacement) => {
                     restore(&mut client, &states, false);
@@ -640,6 +778,7 @@ fn run_controller(
                     client = Some(replacement);
                     states.clear();
                     pending.clear();
+                    display_view = DisplayViewState::default();
                     image_pending.clear();
                     outgoing_pending.clear();
                     generation += 1;
@@ -675,6 +814,7 @@ fn run_controller(
                                 &progress_result_tx,
                                 &status,
                                 &mut preparation_generation,
+                                &mut preparation_cancellation,
                             );
                         } else {
                             update_status(&status, |runtime| {
@@ -770,6 +910,7 @@ fn run_controller(
             &mut client,
             &mut states,
             &mut pending,
+            &display_view,
             &mut image_pending,
             &mut outgoing_pending,
             &mut generation,
@@ -793,6 +934,15 @@ fn run_controller(
                 runtime.cdp_connected = true;
                 runtime.connection_issue.clear();
             });
+            if !prepare_display_view_for_dom(
+                client.as_mut().expect("connected CDP client"),
+                &mut pending,
+                &mut display_view,
+                generation,
+                &worker_tx,
+            )? {
+                return Ok(());
+            }
             handle_invite_assist(
                 client.as_mut().expect("connected CDP client"),
                 app_handle.as_ref(),
@@ -870,25 +1020,29 @@ fn run_controller(
                 display_translation_is_ready(&config, &runtime.active_translator)
             });
             if display_ready {
-                scan_dom(
+                let display_view_ready = scan_dom(
                     client.as_mut().expect("connected CDP client"),
                     &states,
                     &mut pending,
+                    &mut display_view,
                     generation,
                     target,
+                    display_batch_item_limit(&config),
                     &worker_tx,
                 )?;
-                scan_images(
-                    client.as_mut().expect("connected CDP client"),
-                    &mut image_pending,
-                    generation,
-                    target,
-                    &worker_tx,
-                    &status,
-                    &config.ui_language,
-                    OcrQualityMode::from_config(&config.image_ocr_quality),
-                )?;
-                image_ui_needs_cleanup = true;
+                if display_view_ready {
+                    scan_images(
+                        client.as_mut().expect("connected CDP client"),
+                        &mut image_pending,
+                        generation,
+                        target,
+                        &worker_tx,
+                        &status,
+                        &config.ui_language,
+                        OcrQualityMode::from_config(&config.image_ocr_quality),
+                    )?;
+                    image_ui_needs_cleanup = true;
+                }
             } else if !config.enabled {
                 client
                     .as_mut()
@@ -1159,13 +1313,26 @@ fn scan_dom(
     client: &mut CdpClient,
     states: &HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
+    display_view: &mut DisplayViewState,
     generation: u64,
     target: Language,
+    max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
     let context_scope = snapshot.url.clone();
-    let (changes, parts) = plan_dom_updates(snapshot.parts, states, pending, generation);
+    if display_view.observe(&snapshot.url, Instant::now()) == DisplayViewObservation::Changed {
+        discard_stale_display_work(pending, display_view, generation, worker)?;
+        return Ok(false);
+    }
+    let (changes, parts) = plan_dom_updates(
+        snapshot.parts,
+        states,
+        pending,
+        generation,
+        display_view.epoch,
+        max_batch_items,
+    );
     if !changes.is_empty() {
         client.evaluate(&apply_script(&changes)?, false)?;
     }
@@ -1173,6 +1340,8 @@ fn scan_dom(
         worker
             .send(WorkerCommand::Translate(TranslationBatch {
                 generation,
+                view_epoch: display_view.epoch,
+                view_scope: display_view.scope.clone(),
                 target,
                 parts,
                 context_scope,
@@ -1180,6 +1349,50 @@ fn scan_dom(
             }))
             .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
     }
+    Ok(true)
+}
+
+fn prepare_display_view_for_dom(
+    client: &mut CdpClient,
+    pending: &mut HashSet<PendingKey>,
+    display_view: &mut DisplayViewState,
+    generation: u64,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<bool, String> {
+    let now = Instant::now();
+    let current_url = client
+        .evaluate("location.href", false)?
+        .as_str()
+        .ok_or_else(|| "Discord 화면 주소를 확인하지 못했습니다.".to_string())?
+        .to_string();
+    if display_view.observe(&current_url, now) == DisplayViewObservation::Changed {
+        discard_stale_display_work(pending, display_view, generation, worker)?;
+        return Ok(false);
+    }
+    Ok(display_view.is_ready(now))
+}
+
+fn discard_stale_display_work(
+    pending: &mut HashSet<PendingKey>,
+    display_view: &DisplayViewState,
+    generation: u64,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<(), String> {
+    pending.clear();
+    worker
+        .send(WorkerCommand::DiscardDisplayBefore {
+            generation,
+            view_epoch: display_view.epoch,
+        })
+        .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
+    crate::diagnostics::info(
+        "translation-viewport",
+        &format!(
+            "display view changed; epoch={}; DOM scan paused for {}ms",
+            display_view.epoch,
+            DISPLAY_VIEW_SETTLE_DELAY.as_millis()
+        ),
+    );
     Ok(())
 }
 
@@ -1188,6 +1401,8 @@ fn plan_dom_updates(
     states: &HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
     generation: u64,
+    view_epoch: u64,
+    max_batch_items: usize,
 ) -> (Vec<DomChange>, Vec<DomPart>) {
     let mut changes = Vec::new();
     let mut parts = Vec::new();
@@ -1209,6 +1424,7 @@ fn plan_dom_updates(
         }
         let pending_key = (
             generation,
+            view_epoch,
             part.kind.clone(),
             part.item_id.clone(),
             part.index,
@@ -1217,7 +1433,7 @@ fn plan_dom_updates(
         if pending.contains(&pending_key) {
             continue;
         }
-        if parts.len() >= MAX_BATCH_ITEMS {
+        if parts.len() >= max_batch_items {
             let last_context = parts.last().and_then(incoming_context_key);
             let current_context = incoming_context_key(&part);
             let extends_message_context = current_context.as_deref().is_some_and(|key| {
@@ -1621,6 +1837,7 @@ fn drain_worker_results(
     client: &mut Option<CdpClient>,
     states: &mut HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
+    display_view: &DisplayViewState,
     image_pending: &mut HashSet<ImagePendingKey>,
     outgoing_pending: &mut HashSet<OutgoingPendingKey>,
     generation: &mut u64,
@@ -1634,6 +1851,8 @@ fn drain_worker_results(
         match result {
             WorkerResult::Translated {
                 generation: result_generation,
+                view_epoch: result_view_epoch,
+                view_scope: result_view_scope,
                 target: result_target,
                 parts,
                 values,
@@ -1641,13 +1860,25 @@ fn drain_worker_results(
                 for part in &parts {
                     pending.remove(&(
                         result_generation,
+                        result_view_epoch,
                         part.kind.clone(),
                         part.item_id.clone(),
                         part.index,
                         part.text.clone(),
                     ));
                 }
-                if result_generation != *generation || result_target != target {
+                let current_view_scope = client.as_mut().and_then(|client| {
+                    client
+                        .evaluate("location.href", false)
+                        .ok()
+                        .and_then(|value| value.as_str().map(display_view_scope))
+                });
+                if result_generation != *generation
+                    || result_view_epoch != display_view.epoch
+                    || result_view_scope != display_view.scope
+                    || current_view_scope.as_deref() != Some(result_view_scope.as_str())
+                    || result_target != target
+                {
                     continue;
                 }
                 match values {
@@ -1835,6 +2066,16 @@ fn drain_worker_results(
                         if progress.phase == "cpu-fallback" {
                             runtime.local_model_device = "cpu-fallback".to_string();
                             runtime.notice = "VRAM이 부족하거나 GPU를 사용할 수 없어 CPU/RAM 전용 모드로 전환했습니다.".to_string();
+                        } else if progress.phase == "vram-protected" {
+                            runtime.local_model_device = "vram-protected".to_string();
+                            runtime.notice =
+                                "다른 프로그램을 위해 VRAM을 확보하고 CPU/RAM으로 전환했습니다."
+                                    .to_string();
+                        } else if progress.phase == "gpu-restored" {
+                            runtime.local_model_device = "auto".to_string();
+                            runtime.notice =
+                                "VRAM 여유가 안정적으로 회복되어 GPU 사용을 다시 시작합니다."
+                                    .to_string();
                         }
                         runtime.model_progress = Some(progress);
                     });
@@ -1881,7 +2122,9 @@ fn finish_activation_status(
             || config.enabled
             || config.outgoing_translation_enabled
             || config.keep_local_model_warm;
-        runtime.notice = if runtime.local_model_device == "cpu-fallback" {
+        runtime.notice = if runtime.local_model_device == "vram-protected" {
+            "다른 프로그램을 위해 VRAM을 확보하고 CPU/RAM으로 전환했습니다.".to_string()
+        } else if runtime.local_model_device == "cpu-fallback" {
             "VRAM이 부족하거나 GPU를 사용할 수 없어 CPU/RAM 전용 모드로 전환했습니다.".to_string()
         } else if runtime.active_translator == runtime.active_outgoing_translator {
             translator_activation_notice(&runtime.active_translator, model_is_prepared)
@@ -1959,6 +2202,8 @@ fn run_translation_worker(
                 );
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,
+                    view_epoch: batch.view_epoch,
+                    view_scope: batch.view_scope,
                     target: batch.target,
                     parts: batch.parts,
                     values,
@@ -1980,6 +2225,7 @@ fn run_translation_worker(
                     outcome,
                 });
             }
+            WorkerCommand::DiscardDisplayBefore { .. } => {}
             WorkerCommand::Activate {
                 generation,
                 name,
@@ -2117,7 +2363,18 @@ fn request_translator_preparation(
     progress_sender: &mpsc::Sender<WorkerResult>,
     status: &Arc<Mutex<RuntimeStatus>>,
     generation: &mut u64,
+    cancellation_slot: &mut Option<ModelPreparationCancellation>,
 ) {
+    let preparation_is_active = status
+        .lock()
+        .is_ok_and(|runtime| runtime.model_progress.is_some());
+    if preparation_is_active {
+        if let Some(previous) = cancellation_slot.take() {
+            previous.cancel();
+        }
+    }
+    let cancellation = ModelPreparationCancellation::default();
+    *cancellation_slot = Some(cancellation.clone());
     *generation += 1;
     let current_generation = *generation;
     let config = config.clone();
@@ -2131,12 +2388,12 @@ fn request_translator_preparation(
             runtime.translator_error.clear();
         }
         runtime.local_model_device = config.hymt_device.clone();
-        runtime.model_progress = None;
         let preparing_name = if plan.display {
             &display_name
         } else {
             &outgoing_name
         };
+        runtime.model_progress = initial_model_preparation_progress(preparing_name);
         runtime.notice = format!(
             "{} 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
             translator_label(preparing_name)
@@ -2157,12 +2414,18 @@ fn request_translator_preparation(
                     &config,
                     &display_name,
                     Some(observer.clone()),
+                    Some(cancellation.clone()),
                 )?)
             } else {
                 None
             };
             let outgoing_translator = if plan.outgoing {
-                Some(make_translator(&config, &outgoing_name, Some(observer))?)
+                Some(make_translator(
+                    &config,
+                    &outgoing_name,
+                    Some(observer),
+                    Some(cancellation.clone()),
+                )?)
             } else {
                 None
             };
@@ -2191,9 +2454,15 @@ fn make_translator(
     config: &AppConfig,
     name: &str,
     progress_observer: Option<ModelProgressObserver>,
+    preparation_cancellation: Option<ModelPreparationCancellation>,
 ) -> Result<Box<dyn Translator>, String> {
     if let Some(model_size) = HyMtModelSize::from_config_id(name) {
-        return make_local_translator(config, model_size, progress_observer);
+        return make_local_translator(
+            config,
+            model_size,
+            progress_observer,
+            preparation_cancellation,
+        );
     }
     match name {
         "chatgpt" | "claude" | "gemini" => Ok(Box::new(ResilientTranslator::new(
@@ -2219,8 +2488,14 @@ fn make_local_translator(
     config: &AppConfig,
     model_size: HyMtModelSize,
     progress_observer: Option<ModelProgressObserver>,
+    preparation_cancellation: Option<ModelPreparationCancellation>,
 ) -> Result<Box<dyn Translator>, String> {
     let translator = HyMtTranslator::new(model_size, config.hymt_device.clone(), "auto")?;
+    let translator = if let Some(cancellation) = preparation_cancellation {
+        translator.with_preparation_cancellation(cancellation)
+    } else {
+        translator
+    };
     let translator = if let Some(observer) = progress_observer {
         translator.with_progress_observer(observer)
     } else {
@@ -2307,6 +2582,30 @@ fn is_local_model_name(name: &str) -> bool {
     HyMtModelSize::from_config_id(name).is_some()
 }
 
+fn display_batch_item_limit(config: &AppConfig) -> usize {
+    if config.hymt_device == "cpu" && is_local_model_name(&config.translator) {
+        CPU_MAX_BATCH_ITEMS
+    } else {
+        MAX_BATCH_ITEMS
+    }
+}
+
+fn display_view_scope(url: &str) -> String {
+    let without_fragment = url.split('#').next().unwrap_or(url);
+    let without_query = without_fragment
+        .split('?')
+        .next()
+        .unwrap_or(without_fragment);
+    let Some(scheme_index) = without_query.find("://") else {
+        return without_query.to_string();
+    };
+    let authority_and_path = &without_query[scheme_index + 3..];
+    authority_and_path
+        .find('/')
+        .map(|path_index| authority_and_path[path_index..].to_string())
+        .unwrap_or_else(|| "/".to_string())
+}
+
 fn translator_activation_notice(name: &str, model_is_prepared: bool) -> String {
     if is_local_model_name(name) && !model_is_prepared {
         format!(
@@ -2330,12 +2629,15 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_attach_text_scripts, display_translation_is_ready, incoming_context_key,
-        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
-        run_outgoing_translation_worker, translator_activation_notice, translator_label,
-        translator_preparation_plan, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
-        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
-        WorkerResult,
+        cdp_attach_text_scripts, display_batch_item_limit, display_preparation_is_required,
+        display_translation_is_ready, display_view_scope, incoming_context_key,
+        initial_model_preparation_progress, next_worker_command, plan_dom_updates, poll_interval,
+        preparation_plan_for_active_lanes, run_outgoing_translation_worker,
+        translator_activation_notice, translator_label, translator_preparation_plan,
+        DisplayViewObservation, DisplayViewState, OutgoingTranslationBatch, OutgoingWorkerCommand,
+        PartState, RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan,
+        WorkerCommand, WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY,
+        MAX_BATCH_ITEMS,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -2524,6 +2826,37 @@ mod tests {
     }
 
     #[test]
+    fn enabling_translation_does_not_restart_the_same_in_flight_model_preparation() {
+        let config = AppConfig::default();
+        let mut status = RuntimeStatus::new(&config);
+        status.translator_state = "preparing".to_string();
+        status.configured_translator = config.translator.clone();
+
+        assert!(!display_preparation_is_required(&status, &config));
+
+        status.translator_state = "error".to_string();
+        assert!(display_preparation_is_required(&status, &config));
+
+        status.translator_state = "preparing".to_string();
+        let changed = AppConfig {
+            translator: "hymt_7b".to_string(),
+            ..config
+        };
+        assert!(display_preparation_is_required(&status, &changed));
+    }
+
+    #[test]
+    fn local_model_preparation_has_visible_progress_from_the_first_frame() {
+        let progress = initial_model_preparation_progress("hymt_1_8b").unwrap();
+
+        assert_eq!(progress.phase, "starting");
+        assert_eq!(progress.downloaded, 0);
+        assert_eq!(progress.total, 1_133_080_448);
+        assert!(progress.model.contains("Hy-MT2 1.8B"));
+        assert!(initial_model_preparation_progress("chatgpt").is_none());
+    }
+
+    #[test]
     fn translator_activation_waits_for_the_ui_ready_signal() {
         let config = AppConfig {
             enabled: true,
@@ -2607,10 +2940,15 @@ mod tests {
     #[test]
     fn newest_visible_display_batch_precedes_stale_viewport_backlog() {
         let (sender, receiver) = mpsc::channel();
-        for item_id in ["previous-viewport", "current-viewport"] {
+        for (item_id, context_scope, view_epoch) in [
+            ("previous-viewport", "/channels/server-a/channel-a", 1),
+            ("current-viewport", "/channels/server-b/channel-b", 2),
+        ] {
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
                     generation: 1,
+                    view_epoch,
+                    view_scope: context_scope.to_string(),
                     target: Language::Korean,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
@@ -2620,17 +2958,92 @@ mod tests {
                         text: item_id.to_string(),
                         displayed_text: None,
                     }],
-                    context_scope: "/channels/test/current".to_string(),
+                    context_scope: context_scope.to_string(),
                     queued_at: Instant::now(),
                 }))
                 .unwrap();
         }
 
-        let command = next_worker_command(&receiver, &mut VecDeque::new()).unwrap();
+        let mut backlog = VecDeque::new();
+        let command = next_worker_command(&receiver, &mut backlog).unwrap();
         let WorkerCommand::Translate(batch) = command else {
             panic!("display translation batch expected");
         };
         assert_eq!(batch.parts[0].item_id, "current-viewport");
+        assert!(
+            backlog.iter().all(|command| !matches!(
+                command,
+                WorkerCommand::Translate(batch)
+                    if batch.context_scope == "/channels/server-a/channel-a"
+            )),
+            "이전 화면 번역 작업은 새 화면이 도착하면 대기열에서 제거되어야 합니다"
+        );
+    }
+
+    #[test]
+    fn changed_display_view_waits_for_a_quiet_window_before_scanning_the_dom() {
+        let started = Instant::now();
+        let mut view = DisplayViewState::default();
+
+        assert_eq!(
+            view.observe("https://discord.com/channels/server-a/channel-a", started),
+            DisplayViewObservation::Initial
+        );
+        assert!(view.is_ready(started));
+
+        let changed_at = started + Duration::from_millis(10);
+        assert_eq!(
+            view.observe(
+                "https://discord.com/channels/server-b/channel-b",
+                changed_at
+            ),
+            DisplayViewObservation::Changed
+        );
+        assert!(!view.is_ready(changed_at));
+        assert!(!view.is_ready(changed_at + DISPLAY_VIEW_SETTLE_DELAY - Duration::from_millis(1)));
+        assert!(view.is_ready(changed_at + DISPLAY_VIEW_SETTLE_DELAY));
+    }
+
+    #[test]
+    fn viewport_change_marker_discards_stale_translation_without_a_new_batch() {
+        let (sender, receiver) = mpsc::channel();
+        sender
+            .send(WorkerCommand::Translate(TranslationBatch {
+                generation: 1,
+                view_epoch: 1,
+                view_scope: "/channels/server-a/channel-a".to_string(),
+                target: Language::Korean,
+                parts: vec![DomPart {
+                    kind: "message".to_string(),
+                    item_id: "previous-viewport".to_string(),
+                    context_id: None,
+                    index: 0,
+                    text: "previous-viewport".to_string(),
+                    displayed_text: None,
+                }],
+                context_scope: "/channels/server-a/channel-a".to_string(),
+                queued_at: Instant::now(),
+            }))
+            .unwrap();
+        sender
+            .send(WorkerCommand::DiscardDisplayBefore {
+                generation: 1,
+                view_epoch: 2,
+            })
+            .unwrap();
+
+        let mut backlog = VecDeque::new();
+        assert!(matches!(
+            next_worker_command(&receiver, &mut backlog).unwrap(),
+            WorkerCommand::DiscardDisplayBefore {
+                generation: 1,
+                view_epoch: 2
+            }
+        ));
+        assert!(backlog.iter().all(|command| !matches!(
+            command,
+            WorkerCommand::Translate(batch) if batch.view_epoch < 2
+        )));
     }
 
     #[test]
@@ -2640,6 +3053,8 @@ mod tests {
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
                     generation: 1,
+                    view_epoch: 1,
+                    view_scope: "/channels/test/current".to_string(),
                     target: Language::Korean,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
@@ -2671,6 +3086,34 @@ mod tests {
     }
 
     #[test]
+    fn cpu_local_model_uses_smaller_display_batches() {
+        let cpu_config = AppConfig {
+            translator: "hymt_1_8b".to_string(),
+            hymt_device: "cpu".to_string(),
+            ..Default::default()
+        };
+        let automatic_config = AppConfig {
+            hymt_device: "auto".to_string(),
+            ..cpu_config.clone()
+        };
+
+        assert_eq!(display_batch_item_limit(&cpu_config), CPU_MAX_BATCH_ITEMS);
+        assert_eq!(display_batch_item_limit(&automatic_config), MAX_BATCH_ITEMS);
+    }
+
+    #[test]
+    fn display_view_scope_ignores_origin_query_and_fragment() {
+        assert_eq!(
+            display_view_scope("https://discord.com/channels/server/channel?jump=message#fragment"),
+            "/channels/server/channel"
+        );
+        assert_eq!(
+            display_view_scope("/channels/server/channel?jump=message"),
+            "/channels/server/channel"
+        );
+    }
+
+    #[test]
     fn dom_planning_never_uses_a_rendered_translation_as_new_source() {
         let part = DomPart {
             kind: "message".to_string(),
@@ -2681,8 +3124,14 @@ mod tests {
             displayed_text: Some("안녕하세요".to_string()),
         };
         let mut pending = HashSet::new();
-        let (changes, queued) =
-            plan_dom_updates(vec![part.clone()], &HashMap::new(), &mut pending, 3);
+        let (changes, queued) = plan_dom_updates(
+            vec![part.clone()],
+            &HashMap::new(),
+            &mut pending,
+            3,
+            1,
+            MAX_BATCH_ITEMS,
+        );
         assert!(changes.is_empty());
         assert_eq!(queued.len(), 1);
         assert_eq!(queued[0].text, "Hello");
@@ -2695,7 +3144,8 @@ mod tests {
             },
         )]);
         let mut pending = HashSet::new();
-        let (changes, queued) = plan_dom_updates(vec![part], &states, &mut pending, 4);
+        let (changes, queued) =
+            plan_dom_updates(vec![part], &states, &mut pending, 4, 1, MAX_BATCH_ITEMS);
         assert!(changes.is_empty());
         assert!(queued.is_empty());
 
@@ -2708,7 +3158,8 @@ mod tests {
             displayed_text: Some("Hello".to_string()),
         };
         let mut pending = HashSet::new();
-        let (changes, queued) = plan_dom_updates(vec![restored], &states, &mut pending, 5);
+        let (changes, queued) =
+            plan_dom_updates(vec![restored], &states, &mut pending, 5, 1, MAX_BATCH_ITEMS);
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].text, "안녕하세요");
         assert!(queued.is_empty());
@@ -2736,11 +3187,44 @@ mod tests {
         });
 
         let mut pending = HashSet::new();
-        let (_, queued) = plan_dom_updates(snapshot, &HashMap::new(), &mut pending, 7);
+        let (_, queued) = plan_dom_updates(
+            snapshot,
+            &HashMap::new(),
+            &mut pending,
+            7,
+            1,
+            MAX_BATCH_ITEMS,
+        );
         assert_eq!(queued.len(), 33);
         assert!(queued
             .iter()
             .all(|part| { part.context_id.as_deref() == Some("dto-message-context-shared") }));
+    }
+
+    #[test]
+    fn dom_planning_limits_separate_messages_for_cpu_responsiveness() {
+        let snapshot = (0..10)
+            .map(|index| DomPart {
+                kind: "message".to_string(),
+                item_id: format!("dto-message-{index}"),
+                context_id: Some(format!("dto-message-context-{index}")),
+                index: 0,
+                text: format!("message {index}"),
+                displayed_text: None,
+            })
+            .collect::<Vec<_>>();
+        let mut pending = HashSet::new();
+
+        let (_, queued) = plan_dom_updates(
+            snapshot,
+            &HashMap::new(),
+            &mut pending,
+            8,
+            2,
+            CPU_MAX_BATCH_ITEMS,
+        );
+
+        assert_eq!(queued.len(), CPU_MAX_BATCH_ITEMS);
     }
 
     #[test]

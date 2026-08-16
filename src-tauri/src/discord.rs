@@ -1,6 +1,7 @@
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU64;
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -9,7 +10,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
-use crate::{cdp::CdpClient, diagnostics};
+use crate::cdp::CdpClient;
 
 const DISCORD_EXECUTABLES: [&str; 3] = ["Discord.exe", "DiscordPTB.exe", "DiscordCanary.exe"];
 const DISCORD_INSTALLS: [(&str, &str); 3] = [
@@ -19,6 +20,7 @@ const DISCORD_INSTALLS: [(&str, &str); 3] = [
 ];
 const RESTART_LEASE_FILE: &str = "accessibility-restart.lock";
 const GUARDIAN_STATE_VERSION: u32 = 2;
+static GUARDIAN_COPY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -132,86 +134,37 @@ pub fn restart_pipe(
             "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
         );
     }
-    let executable = current
-        .map(|process| process.executable)
-        .or_else(installed_executable)
-        .ok_or_else(|| "Discord 설치 경로를 찾지 못했습니다.".to_string())?;
-    let executable = executable
-        .canonicalize()
-        .map_err(|error| format!("Discord 설치 경로를 확인하지 못했습니다: {error}"))?;
-    validate_discord_executable(&executable)?;
-    diagnostics::info(
-        "discord-connection",
-        &format!(
-            "secure pipe restart started; expected_pid={expected_process_id:?}; executable={}",
-            executable.display()
-        ),
-    );
-    stop_matching_processes(&executable)?;
+    let executable = restart_executable_from(current.as_ref(), local_app_data().as_deref())?;
+    stop_installation_processes(&executable, current.as_ref())?;
 
     #[cfg(windows)]
     {
         let launched = windows_pipe_launcher::launch(&executable)?;
         let process =
             wait_for_restarted_process(&executable, launched.process_id, Duration::from_secs(15))?;
-        diagnostics::info(
-            "discord-connection",
-            &format!(
-                "Discord restarted for secure pipe; process_id={}",
-                process.process_id
-            ),
-        );
         let mut client = CdpClient::from_pipe(launched.reader, launched.writer);
-        match wait_for_pipe_ready(&mut client, Duration::from_secs(30)) {
-            Ok(()) => {
-                diagnostics::info(
-                    "discord-connection",
-                    &format!(
-                        "secure pipe ready after restart; process_id={}",
-                        process.process_id
-                    ),
-                );
-                return Ok((process, client));
-            }
-            Err(initial_error) => {
-                diagnostics::warn(
-                    "discord-connection",
-                    &format!(
-                        "initial secure pipe handshake failed; process_id={}; error={initial_error}; attempting guardian recovery without another Discord restart",
-                        process.process_id
-                    ),
-                );
-                drop(client);
-                let mut recovered = connect_guarded_pipe(&process).map_err(|recovery_error| {
-                    format_pipe_recovery_failure(&initial_error, &recovery_error)
-                })?;
-                match wait_for_pipe_ready(&mut recovered, Duration::from_secs(15)) {
-                    Ok(()) => {
-                        diagnostics::info(
-                            "discord-connection",
-                            &format!(
-                                "secure pipe recovered through guardian; process_id={}",
-                                process.process_id
-                            ),
-                        );
-                        return Ok((process, recovered));
-                    }
-                    Err(recovery_error) => {
-                        diagnostics::error(
-                            "discord-connection",
-                            &format!(
-                                "guardian secure pipe recovery failed; process_id={}; initial_error={initial_error}; recovery_error={recovery_error}",
-                                process.process_id
-                            ),
-                        );
-                        return Err(format_pipe_recovery_failure(
-                            &initial_error,
-                            &recovery_error,
-                        ));
-                    }
+        let deadline = Instant::now() + Duration::from_secs(30);
+        let mut last_error = "Discord 렌더러가 아직 준비되지 않았습니다.".to_string();
+        let mut connected = false;
+        while Instant::now() < deadline {
+            if !connected {
+                match client.connect() {
+                    Ok(()) => connected = true,
+                    Err(error) => last_error = error,
                 }
             }
+            if connected {
+                match client.evaluate("document.documentElement !== null", false) {
+                    Ok(serde_json::Value::Bool(true)) => return Ok((process, client)),
+                    Ok(_) => last_error = "Discord DOM이 아직 준비되지 않았습니다.".to_string(),
+                    Err(error) => last_error = error,
+                }
+            }
+            thread::sleep(Duration::from_millis(200));
         }
+        Err(format!(
+            "Discord를 다시 열었지만 보안 CDP 파이프가 준비되지 않았습니다. 마지막 오류: {last_error}"
+        ))
     }
 
     #[cfg(not(windows))]
@@ -242,62 +195,12 @@ pub fn connect_or_restart_pipe(
                 "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
             );
         }
-        if let Ok(mut client) = connect_guarded_pipe(&process) {
-            match wait_for_pipe_ready(&mut client, Duration::from_secs(12)) {
-                Ok(()) => {
-                    diagnostics::info(
-                        "discord-connection",
-                        &format!(
-                            "reused existing guardian pipe without Discord restart; process_id={}",
-                            process.process_id
-                        ),
-                    );
-                    return Ok((process, client));
-                }
-                Err(error) => diagnostics::warn(
-                    "discord-connection",
-                    &format!(
-                        "existing guardian pipe was not ready; process_id={}; error={error}",
-                        process.process_id
-                    ),
-                ),
-            }
+        if let Ok(client) = connect_guarded_pipe(&process) {
+            return Ok((process, client));
         }
         return restart_pipe(Some(process.process_id));
     }
     restart_pipe(expected_process_id)
-}
-
-fn wait_for_pipe_ready(client: &mut CdpClient, timeout: Duration) -> Result<(), String> {
-    let deadline = Instant::now() + timeout;
-    let mut last_error = "Discord 렌더러가 아직 준비되지 않았습니다.".to_string();
-    let mut connected = false;
-    while Instant::now() < deadline {
-        if !connected {
-            match client.connect() {
-                Ok(()) => connected = true,
-                Err(error) => last_error = error,
-            }
-        }
-        if connected {
-            match client.evaluate("document.documentElement !== null", false) {
-                Ok(serde_json::Value::Bool(true)) => return Ok(()),
-                Ok(_) => last_error = "Discord DOM이 아직 준비되지 않았습니다.".to_string(),
-                Err(error) => {
-                    last_error = error;
-                    connected = false;
-                }
-            }
-        }
-        thread::sleep(Duration::from_millis(200));
-    }
-    Err(last_error)
-}
-
-fn format_pipe_recovery_failure(initial_error: &str, recovery_error: &str) -> String {
-    format!(
-        "Discord를 다시 열었지만 보안 연결 준비가 완료되지 않았습니다. 자동 재시작은 추가로 수행하지 않았습니다. 초기 연결 오류: {initial_error}; 복구 연결 오류: {recovery_error}"
-    )
 }
 
 fn pipe_restart_lock() -> &'static Mutex<()> {
@@ -314,6 +217,18 @@ fn integration_root() -> PathBuf {
         .join("DiscordIntegration")
 }
 
+fn guardian_executable_path(
+    root: &Path,
+    owner_process_id: u32,
+    discord_process_id: u32,
+    launched_at_nanos: u128,
+    sequence: u64,
+) -> PathBuf {
+    root.join(format!(
+        "nudenyang-discord-pipe-guardian-{owner_process_id}-{discord_process_id}-{launched_at_nanos}-{sequence}.exe"
+    ))
+}
+
 fn guardian_state_path(discord_process_id: u32) -> PathBuf {
     integration_root().join(format!("cdp-pipe-guardian-{discord_process_id}.json"))
 }
@@ -327,6 +242,7 @@ fn acquire_restart_lease(timeout: Duration) -> Result<File, String> {
     loop {
         let file = match OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(&path)
@@ -379,8 +295,11 @@ fn validate_discord_executable(executable: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn stop_matching_processes(executable: &Path) -> Result<(), String> {
-    let expected = normalized_path(executable);
+fn stop_installation_processes(
+    executable: &Path,
+    current: Option<&DiscordProcess>,
+) -> Result<(), String> {
+    let current_process_id = current.map(|process| process.process_id);
     let mut system = System::new_all();
     system.refresh_processes_specifics(
         ProcessesToUpdate::All,
@@ -391,9 +310,11 @@ fn stop_matching_processes(executable: &Path) -> Result<(), String> {
         .processes()
         .values()
         .filter(|process| {
-            process
-                .exe()
-                .is_some_and(|path| normalized_path(path) == expected)
+            is_discord_name(&process.name().to_string_lossy())
+                && (current_process_id.is_some_and(|id| id == process.pid().as_u32())
+                    || process
+                        .exe()
+                        .is_some_and(|path| same_discord_installation(path, executable)))
         })
         .map(|process| process.pid())
         .collect();
@@ -413,37 +334,124 @@ fn stop_matching_processes(executable: &Path) -> Result<(), String> {
     Err("선택한 Discord 프로세스를 종료하지 못했습니다.".to_string())
 }
 
-fn installed_executable() -> Option<PathBuf> {
-    let local_app_data = env::var_os("LOCALAPPDATA").filter(|value| !value.is_empty())?;
-    installed_executable_in(Path::new(&local_app_data))
+fn local_app_data() -> Option<PathBuf> {
+    env::var_os("LOCALAPPDATA")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+}
+
+fn restart_executable_from(
+    current: Option<&DiscordProcess>,
+    local_app_data: Option<&Path>,
+) -> Result<PathBuf, String> {
+    let preferred_name = current
+        .and_then(|process| process.executable.file_name())
+        .and_then(|name| name.to_str())
+        .filter(|name| is_discord_name(name));
+    let mut candidates = Vec::new();
+    if let Some(process) = current {
+        candidates.push(process.executable.clone());
+        if let Some(replacement) = replacement_executable(&process.executable) {
+            candidates.push(replacement);
+        }
+    }
+    if let Some(local_app_data) = local_app_data {
+        if let Some(installed) = installed_executable_in_preferred(local_app_data, preferred_name) {
+            candidates.push(installed);
+        }
+    }
+
+    for candidate in candidates {
+        let Ok(canonical) = candidate.canonicalize() else {
+            continue;
+        };
+        if validate_discord_executable(&canonical).is_ok() {
+            return Ok(canonical);
+        }
+    }
+
+    Err(
+        "Discord 설치 경로를 찾지 못했습니다. Discord를 완전히 종료한 뒤 공식 설치본을 다시 실행하고 재시도하십시오."
+            .to_string(),
+    )
 }
 
 fn installed_executable_in(local_app_data: &Path) -> Option<PathBuf> {
-    for (directory, executable_name) in DISCORD_INSTALLS {
-        let root = local_app_data.join(directory);
-        let Ok(entries) = std::fs::read_dir(root) else {
-            continue;
-        };
-        let mut versions: Vec<PathBuf> = entries
-            .flatten()
-            .map(|entry| entry.path())
-            .filter(|path| {
-                path.is_dir()
-                    && path
-                        .file_name()
-                        .is_some_and(|name| name.to_string_lossy().starts_with("app-"))
-            })
-            .collect();
-        versions.sort_by(|left, right| right.file_name().cmp(&left.file_name()));
-        if let Some(found) = versions
-            .into_iter()
-            .map(|version| version.join(executable_name))
-            .find(|candidate| candidate.is_file())
-        {
-            return found.canonicalize().ok().or(Some(found));
-        }
+    installed_executable_in_preferred(local_app_data, None)
+}
+
+fn installed_executable_in_preferred(
+    local_app_data: &Path,
+    preferred_name: Option<&str>,
+) -> Option<PathBuf> {
+    let mut installs = DISCORD_INSTALLS.to_vec();
+    if let Some(preferred_name) = preferred_name {
+        installs.sort_by_key(|(_, executable_name)| {
+            !executable_name.eq_ignore_ascii_case(preferred_name)
+        });
     }
-    None
+    installs
+        .into_iter()
+        .find_map(|(directory, executable_name)| {
+            latest_executable_in(&local_app_data.join(directory), executable_name)
+        })
+}
+
+fn replacement_executable(reported: &Path) -> Option<PathBuf> {
+    let (root, executable_name) = discord_install_identity(reported)?;
+    latest_executable_in(&root, &executable_name)
+}
+
+fn latest_executable_in(root: &Path, executable_name: &str) -> Option<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return None;
+    };
+    let mut versions: Vec<PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_dir()
+                && path
+                    .file_name()
+                    .is_some_and(|name| name.to_string_lossy().starts_with("app-"))
+        })
+        .collect();
+    versions.sort_by(|left, right| right.file_name().cmp(&left.file_name()));
+    versions
+        .into_iter()
+        .map(|version| version.join(executable_name))
+        .find(|candidate| candidate.is_file())
+        .and_then(|found| found.canonicalize().ok().or(Some(found)))
+}
+
+fn discord_install_identity(path: &Path) -> Option<(PathBuf, String)> {
+    let executable_name = path.file_name()?.to_str()?;
+    let version = path.parent()?;
+    if !version
+        .file_name()
+        .is_some_and(|name| name.to_string_lossy().starts_with("app-"))
+    {
+        return None;
+    }
+    let root = version.parent()?;
+    let root_name = root.file_name()?.to_str()?;
+    DISCORD_INSTALLS
+        .iter()
+        .any(|(directory, expected_executable)| {
+            directory.eq_ignore_ascii_case(root_name)
+                && expected_executable.eq_ignore_ascii_case(executable_name)
+        })
+        .then(|| (root.to_path_buf(), executable_name.to_ascii_lowercase()))
+}
+
+fn same_discord_installation(left: &Path, right: &Path) -> bool {
+    let Some((left_root, left_name)) = discord_install_identity(left) else {
+        return false;
+    };
+    let Some((right_root, right_name)) = discord_install_identity(right) else {
+        return false;
+    };
+    left_name == right_name && normalized_path(&left_root) == normalized_path(&right_root)
 }
 
 fn wait_for_restarted_process(
@@ -515,9 +523,10 @@ fn is_main_discord_arguments(arguments: &[std::ffi::OsString]) -> bool {
 mod windows_pipe_launcher {
     use super::configure_background;
     use super::{
-        diagnostics, discord_debug_arguments, guardian_state_matches_process, guardian_state_path,
-        integration_root, is_discord_name, is_main_discord_arguments, normalized_path,
-        validate_discord_executable, DiscordProcess, PipeGuardianState, GUARDIAN_STATE_VERSION,
+        discord_debug_arguments, guardian_executable_path, guardian_state_matches_process,
+        guardian_state_path, integration_root, is_discord_name, is_main_discord_arguments,
+        normalized_path, validate_discord_executable, DiscordProcess, PipeGuardianState,
+        GUARDIAN_COPY_SEQUENCE, GUARDIAN_STATE_VERSION,
     };
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -525,8 +534,9 @@ mod windows_pipe_launcher {
     use std::os::windows::io::{AsRawHandle, FromRawHandle, IntoRawHandle};
     use std::path::Path;
     use std::process::{Command, Stdio};
+    use std::sync::atomic::Ordering;
     use std::thread;
-    use std::time::{Duration, Instant};
+    use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     use windows_sys::Win32::Foundation::{
         CloseHandle, DuplicateHandle, DUPLICATE_SAME_ACCESS, HANDLE,
@@ -541,7 +551,7 @@ mod windows_pipe_launcher {
 
     use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
-    use crate::cdp::CdpClient;
+    use crate::{cdp::CdpClient, diagnostics};
 
     pub(super) struct PipeLaunch {
         pub process_id: u32,
@@ -626,23 +636,31 @@ mod windows_pipe_launcher {
     ) -> Result<(), String> {
         let source = std::env::current_exe()
             .map_err(|error| format!("보안 파이프 가디언 경로를 찾지 못했습니다: {error}"))?;
+        let discord_executable = discord_executable.canonicalize().map_err(|error| {
+            format!("Discord 보안 파이프 실행 경로를 확인하지 못했습니다: {error}")
+        })?;
         let root = integration_root();
         std::fs::create_dir_all(&root)
             .map_err(|error| format!("보안 파이프 가디언 폴더를 만들지 못했습니다: {error}"))?;
         cleanup_stale_guardian_artifacts(&root);
         let _ = std::fs::remove_file(guardian_state_path(discord_process_id));
-        let guardian = root.join(format!(
-            "nudenyang-discord-pipe-guardian-{}.exe",
-            std::process::id()
-        ));
+        let launched_at_nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let sequence = GUARDIAN_COPY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let guardian = guardian_executable_path(
+            &root,
+            std::process::id(),
+            discord_process_id,
+            launched_at_nanos,
+            sequence,
+        );
         std::fs::copy(&source, &guardian)
             .map_err(|error| format!("보안 파이프 가디언을 준비하지 못했습니다: {error}"))?;
         let reader_copy = duplicate_inheritable_handle(reader.as_raw_handle())?;
         let writer_copy = duplicate_inheritable_handle(writer.as_raw_handle())?;
         let discord_id = discord_process_id.to_string();
-        let discord_executable = discord_executable
-            .canonicalize()
-            .map_err(|error| format!("Discord 실행 경로를 확인하지 못했습니다: {error}"))?;
         let reader_id = (reader_copy.0 as usize).to_string();
         let writer_id = (writer_copy.0 as usize).to_string();
         let guardian_process_id = spawn_process_with_handles(
@@ -667,13 +685,12 @@ mod windows_pipe_launcher {
         };
         for entry in entries.flatten() {
             let path = entry.path();
-            let is_state = path.file_name().is_some_and(|name| {
+            if path.file_name().is_some_and(|name| {
                 let name = name.to_string_lossy();
                 name.starts_with("cdp-pipe-guardian-") && name.ends_with(".json")
-            });
-            if is_state {
-                // restart_pipe has already stopped the selected Discord installation.
-                // Removing the state also tells a previous guardian to release its handles.
+            }) {
+                // Removing the state file is also the authenticated shutdown signal
+                // for an older guardian left by the Discord instance we just stopped.
                 let _ = std::fs::remove_file(path);
             }
         }
@@ -915,12 +932,12 @@ mod windows_pipe_launcher {
         if reader_handle == 0 || writer_handle == 0 {
             return Err("Discord 보안 파이프 가디언 핸들이 없습니다.".to_string());
         }
+        let discord_executable = discord_executable.canonicalize().map_err(|error| {
+            format!("Discord 보안 파이프 실행 경로를 확인하지 못했습니다: {error}")
+        })?;
+        validate_discord_executable(&discord_executable)?;
         let _reader = unsafe { File::from_raw_handle(reader_handle as HANDLE) };
         let _writer = unsafe { File::from_raw_handle(writer_handle as HANDLE) };
-        let discord_executable = discord_executable
-            .canonicalize()
-            .map_err(|error| format!("Discord 실행 경로를 확인하지 못했습니다: {error}"))?;
-        validate_discord_executable(&discord_executable)?;
         let path = guardian_state_path(discord_process_id);
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|error| {
@@ -940,18 +957,23 @@ mod windows_pipe_launcher {
         std::fs::write(&path, serialized)
             .map_err(|error| format!("Discord 보안 파이프 상태를 저장하지 못했습니다: {error}"))?;
 
-        let mut missing_since = None;
+        let mut system = System::new();
+        let mut last_matching_process = Instant::now();
         loop {
             if !path.is_file() {
                 break;
             }
-            if matching_pipe_process_exists(&discord_executable) {
-                missing_since = None;
-            } else {
-                let absent_since = missing_since.get_or_insert_with(Instant::now);
-                if absent_since.elapsed() >= Duration::from_secs(15) {
-                    break;
-                }
+            system.refresh_processes_specifics(
+                ProcessesToUpdate::All,
+                true,
+                ProcessRefreshKind::nothing()
+                    .with_exe(UpdateKind::Always)
+                    .with_cmd(UpdateKind::Always),
+            );
+            if matching_pipe_discord_exists(&system, &discord_executable) {
+                last_matching_process = Instant::now();
+            } else if last_matching_process.elapsed() >= Duration::from_secs(15) {
+                break;
             }
             thread::sleep(Duration::from_millis(500));
         }
@@ -959,8 +981,34 @@ mod windows_pipe_launcher {
         Ok(())
     }
 
+    fn matching_pipe_discord_exists(system: &System, executable: &Path) -> bool {
+        let expected = normalized_path(executable);
+        system.processes().values().any(|process| {
+            is_discord_name(&process.name().to_string_lossy())
+                && is_main_discord_arguments(process.cmd())
+                && process
+                    .exe()
+                    .is_some_and(|path| normalized_path(path) == expected)
+                && process
+                    .cmd()
+                    .iter()
+                    .any(|argument| argument == "--remote-debugging-pipe")
+        })
+    }
+
     pub(super) fn connect_guarded_pipe(process: &DiscordProcess) -> Result<CdpClient, String> {
         let state = guardian_state_for_process(process)?;
+        if state.discord_process_id != process.process_id {
+            diagnostics::info(
+                "discord-connection",
+                &format!(
+                    "guardian pipe recovered after Discord PID handoff; original_pid={}; current_pid={}; executable={}",
+                    state.discord_process_id,
+                    process.process_id,
+                    process.executable.display()
+                ),
+            );
+        }
         validate_guardian_process(&state)?;
         let guardian = unsafe { OpenProcess(PROCESS_DUP_HANDLE, 0, state.guardian_process_id) };
         if guardian.is_null() {
@@ -978,13 +1026,16 @@ mod windows_pipe_launcher {
     }
 
     fn guardian_state_for_process(process: &DiscordProcess) -> Result<PipeGuardianState, String> {
-        let preferred = guardian_state_path(process.process_id);
-        let mut candidates = vec![preferred.clone()];
+        let exact = guardian_state_path(process.process_id);
+        let mut candidates = Vec::new();
+        if exact.is_file() {
+            candidates.push(exact.clone());
+        }
         if let Ok(entries) = std::fs::read_dir(integration_root()) {
-            let mut fallback = entries
+            let mut other = entries
                 .flatten()
                 .map(|entry| entry.path())
-                .filter(|path| path != &preferred)
+                .filter(|path| path != &exact)
                 .filter(|path| {
                     path.file_name().is_some_and(|name| {
                         let name = name.to_string_lossy();
@@ -992,69 +1043,29 @@ mod windows_pipe_launcher {
                     })
                 })
                 .collect::<Vec<_>>();
-            fallback.sort_by_key(|path| {
+            other.sort_by_key(|path| {
                 std::fs::metadata(path)
                     .and_then(|metadata| metadata.modified())
                     .ok()
             });
-            fallback.reverse();
-            candidates.extend(fallback);
+            other.reverse();
+            candidates.extend(other);
         }
 
-        let mut found_state = false;
         for path in candidates {
             let Ok(contents) = std::fs::read_to_string(path) else {
                 continue;
             };
-            found_state = true;
             let Ok(state) = serde_json::from_str::<PipeGuardianState>(&contents) else {
                 continue;
             };
             if guardian_state_matches_process(&state, process)
                 && validate_guardian_process(&state).is_ok()
             {
-                if state.discord_process_id != process.process_id {
-                    diagnostics::info(
-                        "discord-connection",
-                        &format!(
-                            "reused secure pipe after Discord process handoff; original_pid={}; current_pid={}; executable={}",
-                            state.discord_process_id,
-                            process.process_id,
-                            process.executable.display()
-                        ),
-                    );
-                }
                 return Ok(state);
             }
         }
-        if found_state {
-            Err("Discord 보안 파이프 상태가 현재 Discord 설치와 일치하지 않습니다.".to_string())
-        } else {
-            Err("현재 Discord와 연결된 보안 파이프 가디언을 찾지 못했습니다.".to_string())
-        }
-    }
-
-    fn matching_pipe_process_exists(executable: &Path) -> bool {
-        let expected = normalized_path(executable);
-        let mut system = System::new();
-        system.refresh_processes_specifics(
-            ProcessesToUpdate::All,
-            true,
-            ProcessRefreshKind::nothing()
-                .with_exe(UpdateKind::Always)
-                .with_cmd(UpdateKind::Always),
-        );
-        system.processes().values().any(|process| {
-            is_discord_name(&process.name().to_string_lossy())
-                && is_main_discord_arguments(process.cmd())
-                && process
-                    .exe()
-                    .is_some_and(|path| normalized_path(path) == expected)
-                && process
-                    .cmd()
-                    .iter()
-                    .any(|argument| argument == "--remote-debugging-pipe")
-        })
+        Err("현재 Discord 설치 경로와 일치하는 보안 파이프 가디언을 찾지 못했습니다.".to_string())
     }
 
     fn validate_guardian_process(state: &PipeGuardianState) -> Result<(), String> {
@@ -1166,13 +1177,13 @@ pub fn run_pipe_guardian(
 #[cfg(test)]
 mod tests {
     use super::{
-        discord_debug_arguments, format_pipe_recovery_failure, guardian_state_matches_process,
+        discord_debug_arguments, guardian_executable_path, guardian_state_matches_process,
         installed_executable_in, is_discord_name, is_main_discord_arguments,
-        validate_discord_executable, DiscordProcess, PipeGuardianState, GUARDIAN_STATE_VERSION,
+        restart_executable_from, same_discord_installation, validate_discord_executable,
+        DiscordProcess, PipeGuardianState, GUARDIAN_STATE_VERSION,
     };
     use std::ffi::OsString;
     use std::fs;
-    use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -1181,58 +1192,6 @@ mod tests {
             discord_debug_arguments(),
             ["--force-renderer-accessibility", "--remote-debugging-pipe"]
         );
-    }
-
-    #[test]
-    fn delayed_pipe_recovery_reports_both_handshake_stages_without_requesting_another_restart() {
-        let message = format_pipe_recovery_failure("initial timeout", "guardian timeout");
-        assert!(message.contains("자동 재시작은 추가로 수행하지 않았습니다"));
-        assert!(message.contains("initial timeout"));
-        assert!(message.contains("guardian timeout"));
-    }
-
-    #[test]
-    fn guardian_session_accepts_a_replacement_discord_pid_from_the_same_installation() {
-        let state = PipeGuardianState {
-            version: GUARDIAN_STATE_VERSION,
-            guardian_process_id: 200,
-            discord_process_id: 100,
-            discord_executable: PathBuf::from(
-                r"C:\Users\tester\AppData\Local\Discord\app-1.0.9999\Discord.exe",
-            ),
-            reader_handle: 300,
-            writer_handle: 400,
-        };
-        let replacement = DiscordProcess {
-            process_id: 101,
-            executable: PathBuf::from(
-                r"C:\Users\tester\AppData\Local\Discord\app-1.0.9999\Discord.exe",
-            ),
-        };
-
-        assert!(guardian_state_matches_process(&state, &replacement));
-    }
-
-    #[test]
-    fn guardian_session_rejects_a_different_discord_installation() {
-        let state = PipeGuardianState {
-            version: GUARDIAN_STATE_VERSION,
-            guardian_process_id: 200,
-            discord_process_id: 100,
-            discord_executable: PathBuf::from(
-                r"C:\Users\tester\AppData\Local\Discord\app-1.0.9999\Discord.exe",
-            ),
-            reader_handle: 300,
-            writer_handle: 400,
-        };
-        let canary = DiscordProcess {
-            process_id: 101,
-            executable: PathBuf::from(
-                r"C:\Users\tester\AppData\Local\DiscordCanary\app-1.0.9999\DiscordCanary.exe",
-            ),
-        };
-
-        assert!(!guardian_state_matches_process(&state, &canary));
     }
 
     #[test]
@@ -1274,6 +1233,73 @@ mod tests {
     }
 
     #[test]
+    fn stale_running_version_falls_back_to_the_latest_installed_discord() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("nude-translator-discord-stale-{nonce}"));
+        let stale = root.join("Discord").join("app-1.0.0").join("Discord.exe");
+        let latest = root.join("Discord").join("app-2.0.0").join("Discord.exe");
+        fs::create_dir_all(latest.parent().unwrap()).unwrap();
+        fs::write(&latest, b"test").unwrap();
+        let current = DiscordProcess {
+            process_id: 42,
+            executable: stale,
+        };
+
+        let selected = restart_executable_from(Some(&current), Some(&root)).unwrap();
+
+        assert_eq!(selected, latest.canonicalize().unwrap());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn stale_canary_version_does_not_fall_back_to_stable_discord() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("nude-translator-canary-stale-{nonce}"));
+        let stale = root
+            .join("DiscordCanary")
+            .join("app-1.0.0")
+            .join("DiscordCanary.exe");
+        let canary = root
+            .join("DiscordCanary")
+            .join("app-2.0.0")
+            .join("DiscordCanary.exe");
+        let stable = root.join("Discord").join("app-9.0.0").join("Discord.exe");
+        for executable in [&canary, &stable] {
+            fs::create_dir_all(executable.parent().unwrap()).unwrap();
+            fs::write(executable, b"test").unwrap();
+        }
+        let current = DiscordProcess {
+            process_id: 42,
+            executable: stale,
+        };
+
+        let selected = restart_executable_from(Some(&current), Some(&root)).unwrap();
+
+        assert_eq!(selected, canary.canonicalize().unwrap());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn discord_install_family_matches_versions_but_not_release_channels() {
+        let old_stable =
+            std::path::Path::new(r"C:\Users\tester\AppData\Local\Discord\app-1.0.0\Discord.exe");
+        let new_stable =
+            std::path::Path::new(r"C:\Users\tester\AppData\Local\Discord\app-2.0.0\Discord.exe");
+        let canary = std::path::Path::new(
+            r"C:\Users\tester\AppData\Local\DiscordCanary\app-2.0.0\DiscordCanary.exe",
+        );
+
+        assert!(same_discord_installation(old_stable, new_stable));
+        assert!(!same_discord_installation(old_stable, canary));
+    }
+
+    #[test]
     fn executable_outside_version_directory_is_rejected() {
         let root = std::env::temp_dir().join(format!(
             "nude-translator-invalid-discord-{}",
@@ -1284,5 +1310,62 @@ mod tests {
         fs::write(&executable, b"test").unwrap();
         assert!(validate_discord_executable(&executable).is_err());
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn guardian_session_accepts_a_replacement_pid_from_the_same_discord_installation() {
+        let executable = std::path::PathBuf::from(
+            r"C:\Users\tester\AppData\Local\Discord\app-1.0.999\Discord.exe",
+        );
+        let state = PipeGuardianState {
+            version: GUARDIAN_STATE_VERSION,
+            guardian_process_id: 20,
+            discord_process_id: 30,
+            discord_executable: executable.clone(),
+            reader_handle: 40,
+            writer_handle: 50,
+        };
+        let replacement = DiscordProcess {
+            process_id: 31,
+            executable,
+        };
+
+        assert!(guardian_state_matches_process(&state, &replacement));
+    }
+
+    #[test]
+    fn guardian_session_rejects_a_different_discord_installation() {
+        let state = PipeGuardianState {
+            version: GUARDIAN_STATE_VERSION,
+            guardian_process_id: 20,
+            discord_process_id: 30,
+            discord_executable: std::path::PathBuf::from(
+                r"C:\Users\tester\AppData\Local\Discord\app-1.0.999\Discord.exe",
+            ),
+            reader_handle: 40,
+            writer_handle: 50,
+        };
+        let canary = DiscordProcess {
+            process_id: 31,
+            executable: std::path::PathBuf::from(
+                r"C:\Users\tester\AppData\Local\DiscordCanary\app-1.0.999\DiscordCanary.exe",
+            ),
+        };
+
+        assert!(!guardian_state_matches_process(&state, &canary));
+    }
+
+    #[test]
+    fn each_guardian_launch_uses_a_distinct_executable_path() {
+        let root =
+            std::path::Path::new(r"C:\Users\tester\AppData\Local\NudeNyang\DiscordIntegration");
+        let first = guardian_executable_path(root, 100, 200, 300, 0);
+        let second = guardian_executable_path(root, 100, 200, 301, 1);
+
+        assert_ne!(first, second);
+        assert!(first.file_name().is_some_and(|name| {
+            let name = name.to_string_lossy();
+            name.starts_with("nudenyang-discord-pipe-guardian-100-200-") && name.ends_with(".exe")
+        }));
     }
 }

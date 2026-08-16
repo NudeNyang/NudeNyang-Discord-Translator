@@ -525,6 +525,25 @@ fn translation_set_enabled(app: AppHandle, enabled: bool) -> Result<Value, Strin
 }
 
 #[tauri::command]
+fn model_preparation_cancel(
+    app: AppHandle,
+    engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
+) -> Result<AppConfig, String> {
+    let previous = config.get()?;
+    let updated = config.update(json!({
+        "enabled": false,
+        "outgoing_translation_enabled": false,
+    }))?;
+    if let Err(error) = engine.cancel_model_preparation() {
+        let _ = config.replace(previous);
+        return Err(error);
+    }
+    let _ = app.emit("settings-changed", updated.clone());
+    Ok(updated)
+}
+
+#[tauri::command]
 fn runtime_status(
     engine: State<'_, RustEngine>,
     config: State<'_, ConfigStore>,
@@ -1296,7 +1315,11 @@ fn main() {
             let discord_process_id = parse(2, "Discord 프로세스 ID")?
                 .parse::<u32>()
                 .map_err(|error| format!("Discord 프로세스 ID가 올바르지 않습니다: {error}"))?;
-            let discord_executable = std::path::PathBuf::from(parse(3, "Discord 실행 경로")?);
+            let discord_executable = std::path::PathBuf::from(
+                process_arguments
+                    .get(3)
+                    .ok_or_else(|| "Discord 실행 경로가 없습니다.".to_string())?,
+            );
             let reader_handle = parse(4, "CDP 읽기 핸들")?
                 .parse::<usize>()
                 .map_err(|error| format!("CDP 읽기 핸들이 올바르지 않습니다: {error}"))?;
@@ -1512,6 +1535,7 @@ fn main() {
             settings_reset,
             main_window_set_theme,
             translation_set_enabled,
+            model_preparation_cancel,
             runtime_status,
             update_check,
             update_availability_get,

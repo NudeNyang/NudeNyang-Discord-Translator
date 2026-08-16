@@ -1,14 +1,14 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('RGlzY29yZCDsl7DqsrAg7IOB7YOcIOyViOuCtOyZgCBXaW5kb3dzIO2VhOyImCDrn7Dtg4DsnoTsnYQg67O06rCV7ZWcIDAuNS44IOuyoO2DgA==')),
+    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('VlJBTSDsl6zsnKDrpbwg6rCQ7KeA7ZW0IOqyjOyehOqzvCDri6Trpbgg7ZSE66Gc6re4656o7J2EIOyasOyEoCDrs7TtmLjtlZjqs6AsIOuyiOyXrSDspJHri6gg7JeG7J20IEdQVeyZgCBDUFUvUkFNIOyCrOydtOulvCDslYjsoJXsoIHsnLzroZwg7KCE7ZmY7ZWY64qUIDAuNS4xMyDrsqDtg4A=')),
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'verify_llama_runtime.ps1')
-. (Join-Path $PSScriptRoot 'stage_vc_runtime.ps1')
+. (Join-Path $PSScriptRoot 'stage_msvc_runtime.ps1')
 . (Join-Path $PSScriptRoot 'release_paths.ps1')
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $SecretDirectory = Resolve-NudeNyangReleaseSecretDirectory
@@ -113,7 +113,7 @@ if (-not $SkipBuild) {
     Assert-LlamaRuntimeVerified -SourceDirectory $llamaSource
     Copy-Item -LiteralPath (Join-Path $llamaSource 'llama-server.exe') -Destination $llamaDestination -Force
     Get-ChildItem -LiteralPath $llamaSource -Filter '*.dll' | Copy-Item -Destination $llamaDestination -Force
-    Copy-VcRuntimeFiles -DestinationDirectory $llamaDestination
+    Copy-MsvcRuntime -DestinationDirectory $llamaDestination
 
     if ($IncludeDefaultModel) {
         $modelSource = Join-Path $env:LOCALAPPDATA 'LocalTools\NudeNyang Discord Translator\Cache\models\hy-mt2\1.8b\Hy-MT2-1.8B-Q4_K_M.gguf'
