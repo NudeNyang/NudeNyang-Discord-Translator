@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
+import { buildGreetingCycle, GREETING_TEXT } from "../greetings.mjs";
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "../locales.generated.mjs";
 import { detectPreferredLocale, normalizeLocale } from "../locale-utils.mjs";
 import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "../scrollbar-utils.mjs";
@@ -42,9 +43,33 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
   assert.doesNotMatch(html, /Hy-MT2/);
 });
 
-test("파란 기능 카드의 인사말은 모든 UI 언어에서 한글로 고정한다", () => {
-  assert.match(html, /class="feature-word" aria-hidden="true">안녕하세요<\/span>/);
-  assert.doesNotMatch(html, /class="feature-word"[^>]*data-i18n/);
+test("파란 기능 카드는 선택 언어와 나머지 27개 언어의 인사말을 동시에 보여준다", () => {
+  assert.match(html, /class="feature-greetings"[^>]*data-feature-greetings/);
+  for (const greeting of ["안녕하세요", "Hello", "こんにちは", "你好"]) assert.ok(html.includes(greeting));
+  assert.match(script, /buildGreetingCycle\(locale\)/);
+  assert.match(script, /updateGreetingLocale\(currentLocale\)/);
+  assert.match(script, /featureGreetings\.replaceChildren/);
+  assert.doesNotMatch(script, /GREETING_INTERVAL|greetingTimer/);
+  assert.match(css, /\.feature-greetings\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s);
+  assert.match(css, /\.feature-greeting\.is-selected\s*\{[^}]*font-size:\s*clamp\(26px, 3vw, 44px\)/s);
+  assert.match(css, /@keyframes greeting-pop/);
+  assert.doesNotMatch(script, /buildGreetingCycle\(locale\)\.slice/);
+  assert.doesNotMatch(css, /\.feature-greeting:nth-child\(n \+ 7\)/);
+  assert.doesNotMatch(html, /data-feature-greetings[^>]*data-i18n/);
+
+  for (const locale of ["ko", "en", "ja", "zh"]) {
+    assert.ok(buildGreetingCycle("fr").some((greeting) => greeting.locale === locale));
+  }
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.equal(GREETING_TEXT[locale] !== undefined, true, `${locale} 인사말이 필요합니다.`);
+    assert.equal(buildGreetingCycle(locale).length, 28, `${locale} 선택 시 28개 인사말이 모두 필요합니다.`);
+    assert.deepEqual(buildGreetingCycle(locale)[0], { locale, text: GREETING_TEXT[locale] });
+  }
+});
+
+test("로컬 AI 카드는 파란 기능 카드와 같은 세로 높이를 사용한다", () => {
+  assert.match(css, /\.feature-primary\s*\{[^}]*grid-row:\s*span 2[^}]*min-height:\s*558px/s);
+  assert.match(css, /\.feature-outgoing\s*\{[^}]*grid-row:\s*span 2[^}]*min-height:\s*558px/s);
 });
 
 test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준다", async () => {

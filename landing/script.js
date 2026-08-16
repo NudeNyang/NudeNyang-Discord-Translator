@@ -1,4 +1,5 @@
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "./locales.generated.mjs";
+import { buildGreetingCycle } from "./greetings.mjs";
 import { detectPreferredLocale, normalizeLocale } from "./locale-utils.mjs";
 import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "./scrollbar-utils.mjs";
 
@@ -17,6 +18,7 @@ const languageEmpty = document.querySelector(".language-empty");
 const supportedLanguageGrid = document.querySelector(".supported-language-grid");
 const heroVideo = document.querySelector("[data-hero-video]");
 const workflowVideo = document.querySelector("[data-scroll-autoplay]");
+const featureGreetings = document.querySelector("[data-feature-greetings]");
 const pageScrollIndicator = document.querySelector("[data-page-scroll-indicator]");
 const pageScrollThumb = pageScrollIndicator?.querySelector(".page-scroll-indicator-thumb");
 const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -26,6 +28,21 @@ const translationNodes = [...document.querySelectorAll("[data-i18n]")];
 const placeholderNodes = [...document.querySelectorAll("[data-i18n-placeholder]")];
 const PAGE_SCROLL_REVEAL_DISTANCE = 42;
 const PAGE_SCROLL_IDLE_DELAY = 700;
+function updateGreetingLocale(locale) {
+  if (!featureGreetings) return;
+  const greetings = buildGreetingCycle(locale);
+  featureGreetings.replaceChildren(
+    ...greetings.map((greeting, index) => {
+      const node = document.createElement("span");
+      node.className = `feature-greeting${index === 0 ? " is-selected" : ""}`;
+      node.textContent = greeting.text;
+      node.lang = greeting.locale;
+      node.dir = "auto";
+      node.style.setProperty("--greeting-index", index);
+      return node;
+    }),
+  );
+}
 
 function bindPageScrollIndicator() {
   if (!pageScrollIndicator || !pageScrollThumb) return;
@@ -323,6 +340,7 @@ function applyLocale(locale, { persist = true } = {}) {
   languageOptions.setAttribute("aria-label", translate("인터페이스 언어"));
   document.title = `NudeNyang Discord Translator | ${languageLabel}`;
   updateThemeControl();
+  updateGreetingLocale(currentLocale);
   renderLanguageOptions(languageSearch.value);
   updateSupportedLanguageSelection();
   if (persist) window.localStorage.setItem("landing-locale", currentLocale);
