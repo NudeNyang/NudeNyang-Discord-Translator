@@ -13,6 +13,8 @@
   --accent-strong: #2869a8;
   --accent-soft: #dcebf8;
   --accent-ink: #174c78;
+  --page-scroll-thumb: rgb(52 127 199 / 0.32);
+  --page-scroll-thumb-active: rgb(40 105 168 / 0.68);
   --shadow: 0 24px 70px rgb(38 76 112 / 0.16);
   --shadow-soft: 0 14px 40px rgb(38 76 112 / 0.1);
   --radius: 16px;
@@ -33,6 +35,8 @@
   --accent-strong: #76b8fa;
   --accent-soft: #173650;
   --accent-ink: #d7ebff;
+  --page-scroll-thumb: rgb(90 168 245 / 0.5);
+  --page-scroll-thumb-active: rgb(118 184 250 / 0.88);
   --shadow: 0 26px 74px rgb(0 0 0 / 0.38);
   --shadow-soft: 0 18px 44px rgb(0 0 0 / 0.24);
 }
@@ -52,6 +56,8 @@
     --accent-strong: #76b8fa;
     --accent-soft: #173650;
     --accent-ink: #d7ebff;
+    --page-scroll-thumb: rgb(90 168 245 / 0.5);
+    --page-scroll-thumb-active: rgb(118 184 250 / 0.88);
     --shadow: 0 26px 74px rgb(0 0 0 / 0.38);
     --shadow-soft: 0 18px 44px rgb(0 0 0 / 0.24);
   }
@@ -77,6 +83,68 @@ body {
   font-size: 16px;
   line-height: 1.6;
   text-rendering: optimizeLegibility;
+}
+
+.page-scroll-indicator {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 721px) {
+  html,
+  body {
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .page-scroll-indicator {
+    position: fixed;
+    z-index: 9;
+    top: calc(var(--header-height) + 8px);
+    right: 1px;
+    bottom: 8px;
+    display: block;
+    width: 10px;
+    overflow: hidden;
+    contain: strict;
+    opacity: 0;
+    pointer-events: none;
+    touch-action: none;
+    transition: opacity 160ms ease;
+  }
+
+  .page-scroll-indicator.is-scrollable {
+    pointer-events: auto;
+  }
+
+  .page-scroll-indicator.is-scroll-near,
+  .page-scroll-indicator.is-dragging,
+  .page-scroll-indicator:hover {
+    opacity: 1;
+  }
+
+  .page-scroll-indicator-thumb {
+    position: absolute;
+    top: 0;
+    right: 3px;
+    width: 3px;
+    min-height: 32px;
+    border-radius: 999px;
+    background: var(--page-scroll-thumb);
+    transform: translate3d(0, 0, 0);
+    transition: width 140ms ease, right 140ms ease, background-color 140ms ease;
+  }
+
+  .page-scroll-indicator:hover .page-scroll-indicator-thumb,
+  .page-scroll-indicator.is-dragging .page-scroll-indicator-thumb {
+    right: 2px;
+    width: 6px;
+    background: var(--page-scroll-thumb-active);
+  }
 }
 
 button,

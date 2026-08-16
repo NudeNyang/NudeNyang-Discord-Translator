@@ -1,5 +1,6 @@
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "./locales.generated.mjs";
 import { normalizeLocale } from "./locale-utils.mjs";
+import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "./scrollbar-utils.mjs";
 
 const root = document.documentElement;
 const themeButton = document.querySelector(".theme-toggle");
@@ -15,10 +16,103 @@ const languageOptions = document.querySelector(".language-options");
 const languageEmpty = document.querySelector(".language-empty");
 const supportedLanguageGrid = document.querySelector(".supported-language-grid");
 const heroVideo = document.querySelector("[data-hero-video]");
+const pageScrollIndicator = document.querySelector("[data-page-scroll-indicator]");
+const pageScrollThumb = pageScrollIndicator?.querySelector(".page-scroll-indicator-thumb");
 const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
 const reduceMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+const finePointerPreference = window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 721px)");
 const translationNodes = [...document.querySelectorAll("[data-i18n]")];
 const placeholderNodes = [...document.querySelectorAll("[data-i18n-placeholder]")];
+const PAGE_SCROLL_REVEAL_DISTANCE = 42;
+
+function bindPageScrollIndicator() {
+  if (!pageScrollIndicator || !pageScrollThumb) return;
+
+  let draggingPointer = null;
+  let updateFrame = 0;
+
+  const updateIndicator = () => {
+    updateFrame = 0;
+    if (!finePointerPreference.matches) {
+      pageScrollIndicator.classList.remove("is-scrollable", "is-scroll-near", "is-dragging");
+      return;
+    }
+
+    const metrics = pageScrollThumbMetrics(
+      pageScrollIndicator.clientHeight,
+      window.innerHeight,
+      root.scrollHeight,
+      window.scrollY || root.scrollTop,
+    );
+    pageScrollIndicator.classList.toggle("is-scrollable", metrics.scrollable);
+    pageScrollThumb.style.height = `${metrics.height}px`;
+    pageScrollThumb.style.transform = `translate3d(0, ${metrics.top}px, 0)`;
+    if (!metrics.scrollable) {
+      pageScrollIndicator.classList.remove("is-scroll-near", "is-dragging");
+    }
+  };
+
+  const requestIndicatorUpdate = () => {
+    if (updateFrame) return;
+    updateFrame = window.requestAnimationFrame(updateIndicator);
+  };
+
+  const scrollToPointer = (clientY) => {
+    const track = pageScrollIndicator.getBoundingClientRect();
+    const thumbHeight = pageScrollThumb.getBoundingClientRect().height;
+    const maxScroll = Math.max(0, root.scrollHeight - window.innerHeight);
+    window.scrollTo({
+      top: pageScrollTopFromPointer(clientY, track.top, track.height, thumbHeight, maxScroll),
+    });
+  };
+
+  const finishDrag = (event) => {
+    if (draggingPointer !== event.pointerId) return;
+    draggingPointer = null;
+    pageScrollIndicator.classList.remove("is-dragging");
+    if (pageScrollIndicator.hasPointerCapture(event.pointerId)) {
+      pageScrollIndicator.releasePointerCapture(event.pointerId);
+    }
+    pageScrollIndicator.classList.toggle(
+      "is-scroll-near",
+      window.innerWidth - event.clientX <= PAGE_SCROLL_REVEAL_DISTANCE,
+    );
+  };
+
+  document.addEventListener("pointermove", (event) => {
+    if (draggingPointer !== null) return;
+    const isNear = event.pointerType === "mouse"
+      && window.innerWidth - event.clientX <= PAGE_SCROLL_REVEAL_DISTANCE;
+    pageScrollIndicator.classList.toggle("is-scroll-near", isNear);
+  });
+  document.addEventListener("scroll", requestIndicatorUpdate, { passive: true });
+  window.addEventListener("resize", requestIndicatorUpdate);
+  finePointerPreference.addEventListener("change", requestIndicatorUpdate);
+
+  pageScrollIndicator.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || !pageScrollIndicator.classList.contains("is-scrollable")) return;
+    draggingPointer = event.pointerId;
+    pageScrollIndicator.classList.add("is-scroll-near", "is-dragging");
+    pageScrollIndicator.setPointerCapture(event.pointerId);
+    scrollToPointer(event.clientY);
+    event.preventDefault();
+  });
+  pageScrollIndicator.addEventListener("pointermove", (event) => {
+    if (draggingPointer === event.pointerId) scrollToPointer(event.clientY);
+  });
+  pageScrollIndicator.addEventListener("pointerup", finishDrag);
+  pageScrollIndicator.addEventListener("pointercancel", finishDrag);
+  pageScrollIndicator.addEventListener("wheel", (event) => {
+    if (!pageScrollIndicator.classList.contains("is-scrollable")) return;
+    window.scrollBy({ top: event.deltaY });
+    event.preventDefault();
+  }, { passive: false });
+
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(requestIndicatorUpdate).observe(document.body);
+  }
+  requestIndicatorUpdate();
+}
 
 function syncHeroVideoPlayback() {
   if (!heroVideo) return;
@@ -146,6 +240,7 @@ if (savedTheme === "light" || savedTheme === "dark") root.dataset.theme = savedT
 
 renderSupportedLanguages();
 applyLocale(currentLocale, { persist: false });
+bindPageScrollIndicator();
 
 themeButton.addEventListener("click", () => {
   applyTheme(resolvedTheme() === "dark" ? "light" : "dark");

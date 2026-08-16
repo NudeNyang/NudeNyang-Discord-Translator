@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "../locales.generated.mjs";
 import { normalizeLocale } from "../locale-utils.mjs";
+import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "../scrollbar-utils.mjs";
 
 const baseUrl = new URL("../", import.meta.url);
 const [html, css, script] = await Promise.all([
@@ -61,6 +62,35 @@ test("테마, 모바일 메뉴와 스크롤 공개 동작을 제공한다", () =
   assert.match(script, /landing-locale/);
   assert.match(script, /IntersectionObserver/);
   assert.match(script, /aria-expanded/);
+});
+
+test("페이지 스크롤바가 화면 비율과 위치를 정확히 반영한다", () => {
+  assert.deepEqual(pageScrollThumbMetrics(800, 400, 1600, 600), {
+    scrollable: true,
+    height: 200,
+    top: 300,
+  });
+  assert.deepEqual(pageScrollThumbMetrics(800, 900, 800, 0), {
+    scrollable: false,
+    height: 0,
+    top: 0,
+  });
+  assert.equal(pageScrollTopFromPointer(600, 100, 1000, 200, 1000), 500);
+  assert.equal(pageScrollTopFromPointer(-100, 100, 1000, 200, 1000), 0);
+  assert.equal(pageScrollTopFromPointer(2000, 100, 1000, 200, 1000), 1000);
+});
+
+test("오른쪽 끝에서만 나타나는 얇은 페이지 스크롤바를 제공한다", () => {
+  assert.match(html, /data-page-scroll-indicator/);
+  assert.match(html, /class="page-scroll-indicator-thumb"/);
+  assert.match(css, /@media \(hover: hover\) and \(pointer: fine\) and \(min-width: 721px\)/);
+  assert.match(css, /html::-webkit-scrollbar,[^}]*body::-webkit-scrollbar\s*\{[^}]*width:\s*0/s);
+  assert.match(css, /\.page-scroll-indicator-thumb\s*\{[^}]*width:\s*3px/s);
+  assert.match(css, /\.page-scroll-indicator:hover \.page-scroll-indicator-thumb,[^}]*width:\s*6px/s);
+  assert.match(script, /PAGE_SCROLL_REVEAL_DISTANCE\s*=\s*42/);
+  assert.match(script, /document\.addEventListener\("pointermove"/);
+  assert.match(script, /document\.addEventListener\("scroll"/);
+  assert.doesNotMatch(script, /window\.addEventListener\("scroll"/);
 });
 
 test("헤더 언어 선택창의 V 아이콘이 버튼 중앙에 정렬된다", () => {
