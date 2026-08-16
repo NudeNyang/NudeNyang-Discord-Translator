@@ -216,6 +216,22 @@ test("Discord 이용 안내와 공식 정책 링크를 FAQ 앞에 제공한다",
   assert.doesNotMatch(css, /\.discord-policy-links a:hover\s*\{[^}]*border-bottom/s);
 });
 
+test("FAQ는 개인정보 보호와 공식 Discord 앱 사용 방식을 설명한다", () => {
+  const privacyQuestion = "대화 내용이나 개인정보를 수집하나요?";
+  const clientQuestion = "Discord를 따로 개조하거나 플러그인을 설치해야 하나요?";
+
+  assert.ok(html.includes(privacyQuestion));
+  assert.ok(html.includes(clientQuestion));
+  assert.match(html, /별도의 운영 서버가 없으며 대화 내용, 이미지, 번역 기록과 개인정보를 수집하거나 보관하지 않습니다/);
+  assert.match(html, /공식 Discord 데스크톱 앱을 그대로 사용하면서 번역 기능을 이용할 수 있습니다/);
+  assert.doesNotMatch(html, /Discord 계정 토큰이 필요한가요\?|번역 내용이 외부로 전송되나요\?|이미지 원본도 외부 서비스에 전달되나요\?/);
+
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.ok(LANDING_LOCALES[locale]?.[privacyQuestion], `${locale} 개인정보 FAQ 번역이 필요합니다.`);
+    assert.ok(LANDING_LOCALES[locale]?.[clientQuestion], `${locale} Discord 앱 FAQ 번역이 필요합니다.`);
+  }
+});
+
 test("히어로에는 다운로드 CTA만 노출한다", () => {
   assert.match(html, /class="button primary"[^>]*>Windows Beta 다운로드<\/a>/);
   assert.doesNotMatch(html, /class="button secondary"[^>]*href="#how-it-works"/);

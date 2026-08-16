@@ -153,6 +153,10 @@ const overrides = {
     "플랫폼 조작 정책": "Platform Manipulation Policy",
     "Discord 이용 약관에 위배될 수 있나요?": "Could this violate Discord's Terms of Service?",
     "Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.": "Discord states that client modification and automation of regular user accounts are not allowed. This app is not officially approved, so it may be considered a policy violation. You are responsible for your decision to use it and the resulting consequences.",
+    "대화 내용이나 개인정보를 수집하나요?": "Does the app collect conversations or personal information?",
+    "NudeNyang Translator는 별도의 운영 서버가 없으며 대화 내용, 이미지, 번역 기록과 개인정보를 수집하거나 보관하지 않습니다. 단, 온라인 번역 엔진을 선택하면 번역에 필요한 텍스트가 해당 서비스로 직접 전달될 수 있습니다.": "NudeNyang Translator does not operate its own service servers and does not collect or retain conversations, images, translation history, or personal information. If you select an online translation engine, however, the text needed for translation may be sent directly to that service.",
+    "Discord를 따로 개조하거나 플러그인을 설치해야 하나요?": "Do I need to modify Discord or install a plugin?",
+    "아니요. 별도의 클라이언트 개조 도구나 플러그인을 설치할 필요 없이, 공식 Discord 데스크톱 앱을 그대로 사용하면서 번역 기능을 이용할 수 있습니다.": "No. You can use translation with the official Discord desktop app as it is, without installing a separate client modification tool or plugin.",
   },
   ja: {
     "이미지 속 글자까지 번역합니다.": "画像内の文字まで翻訳します。",
@@ -179,6 +183,10 @@ const overrides = {
     "플랫폼 조작 정책": "プラットフォーム操作ポリシー",
     "Discord 이용 약관에 위배될 수 있나요?": "Discordの利用規約に違反する可能性はありますか？",
     "Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.": "Discordは、クライアントの変更および通常のユーザーアカウントの自動化を認めていないと案内しています。このアプリは公式に承認されたツールではないため、ポリシー違反と判断される可能性を否定できません。利用するかどうか、およびその結果については利用者が責任を負います。",
+    "대화 내용이나 개인정보를 수집하나요?": "会話内容や個人情報を収集しますか？",
+    "NudeNyang Translator는 별도의 운영 서버가 없으며 대화 내용, 이미지, 번역 기록과 개인정보를 수집하거나 보관하지 않습니다. 단, 온라인 번역 엔진을 선택하면 번역에 필요한 텍스트가 해당 서비스로 직접 전달될 수 있습니다.": "NudeNyang Translatorは独自の運用サーバーを持たず、会話内容、画像、翻訳履歴、個人情報を収集または保存しません。ただし、オンライン翻訳エンジンを選択した場合、翻訳に必要なテキストがそのサービスへ直接送信されることがあります。",
+    "Discord를 따로 개조하거나 플러그인을 설치해야 하나요?": "Discordを改造したり、プラグインをインストールしたりする必要はありますか？",
+    "아니요. 별도의 클라이언트 개조 도구나 플러그인을 설치할 필요 없이, 공식 Discord 데스크톱 앱을 그대로 사용하면서 번역 기능을 이용할 수 있습니다.": "いいえ。別のクライアント改造ツールやプラグインをインストールせず、公式Discordデスクトップアプリをそのまま使って翻訳機能を利用できます。",
   },
   zh: {
     "이미지 속 글자까지 번역합니다.": "连图片中的文字也能翻译。",
@@ -206,6 +214,10 @@ const overrides = {
     "플랫폼 조작 정책": "平台操纵政策",
     "Discord 이용 약관에 위배될 수 있나요?": "是否可能违反 Discord 服务条款？",
     "Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.": "Discord 表示不允许修改客户端或自动操作普通用户账户。本应用并非官方批准的工具，因此不能排除被判定为违反政策的可能性。是否使用以及由此产生的结果由用户自行负责。",
+    "대화 내용이나 개인정보를 수집하나요?": "会收集对话内容或个人信息吗？",
+    "NudeNyang Translator는 별도의 운영 서버가 없으며 대화 내용, 이미지, 번역 기록과 개인정보를 수집하거나 보관하지 않습니다. 단, 온라인 번역 엔진을 선택하면 번역에 필요한 텍스트가 해당 서비스로 직접 전달될 수 있습니다.": "NudeNyang Translator 不运营自有服务服务器，也不会收集或保存对话内容、图片、翻译记录或个人信息。不过，选择在线翻译引擎后，翻译所需的文本可能会直接发送给该服务。",
+    "Discord를 따로 개조하거나 플러그인을 설치해야 하나요?": "需要另外修改 Discord 或安装插件吗？",
+    "아니요. 별도의 클라이언트 개조 도구나 플러그인을 설치할 필요 없이, 공식 Discord 데스크톱 앱을 그대로 사용하면서 번역 기능을 이용할 수 있습니다.": "不需要。无需安装额外的客户端修改工具或插件，直接使用官方 Discord 桌面应用即可使用翻译功能。",
   },
   "zh-Hant": {
     "이미지 속 글자까지 번역합니다.": "連圖片中的文字也能翻譯。",
@@ -232,6 +244,10 @@ const overrides = {
     "플랫폼 조작 정책": "平台操縱政策",
     "Discord 이용 약관에 위배될 수 있나요?": "是否可能違反 Discord 服務條款？",
     "Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.": "Discord 表示不允許修改用戶端或自動操作一般使用者帳戶。本應用程式並非官方核准的工具，因此不能排除被判定為違反政策的可能性。是否使用以及由此產生的結果由使用者自行負責。",
+    "대화 내용이나 개인정보를 수집하나요?": "會收集對話內容或個人資料嗎？",
+    "NudeNyang Translator는 별도의 운영 서버가 없으며 대화 내용, 이미지, 번역 기록과 개인정보를 수집하거나 보관하지 않습니다. 단, 온라인 번역 엔진을 선택하면 번역에 필요한 텍스트가 해당 서비스로 직접 전달될 수 있습니다.": "NudeNyang Translator 不營運自有服務伺服器，也不會收集或保存對話內容、圖片、翻譯記錄或個人資料。不過，選擇線上翻譯引擎後，翻譯所需的文字可能會直接傳送給該服務。",
+    "Discord를 따로 개조하거나 플러그인을 설치해야 하나요?": "需要另外修改 Discord 或安裝外掛嗎？",
+    "아니요. 별도의 클라이언트 개조 도구나 플러그인을 설치할 필요 없이, 공식 Discord 데스크톱 앱을 그대로 사용하면서 번역 기능을 이용할 수 있습니다.": "不需要。無須安裝額外的用戶端修改工具或外掛，直接使用官方 Discord 桌面應用程式即可使用翻譯功能。",
   },
 };
 
