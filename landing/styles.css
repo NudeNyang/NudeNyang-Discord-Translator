@@ -216,30 +216,9 @@ img {
   letter-spacing: -0.025em;
 }
 
-.brand-icon {
-  --brand-icon-size: 40px;
-  display: grid;
-  width: var(--brand-icon-size);
-  height: var(--brand-icon-size);
-  min-width: var(--brand-icon-size);
-  min-height: var(--brand-icon-size);
-  flex: 0 0 var(--brand-icon-size);
-  overflow: hidden;
-  aspect-ratio: 1 / 1;
+.brand img {
   border-radius: 10px;
-  place-items: center;
-}
-
-.brand-icon img {
-  width: 116%;
-  height: 116%;
-  max-width: none;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-}
-
-.footer-brand .brand-icon {
-  --brand-icon-size: 36px;
+  box-shadow: 0 8px 22px rgb(38 76 112 / 0.14);
 }
 
 .brand b {
@@ -1416,12 +1395,9 @@ html[dir="rtl"] .theme-toggle {
     font-size: 14px;
   }
 
-  .brand-icon {
-    --brand-icon-size: 34px;
-  }
-
-  .footer-brand .brand-icon {
-    --brand-icon-size: 34px;
+  .brand img {
+    width: 34px;
+    height: 34px;
   }
 
   .hero {

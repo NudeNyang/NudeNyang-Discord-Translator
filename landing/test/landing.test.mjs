@@ -24,12 +24,11 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
   assert.doesNotMatch(html, /<a href="#features" data-i18n>기능<\/a>/);
 });
 
-test("브랜드 아이콘은 원본의 투명 여백과 그림자 없이 표시한다", () => {
-  assert.equal((html.match(/class="brand-icon"/g) ?? []).length, 2);
-  assert.match(css, /\.brand-icon\s*\{[^}]*width:\s*var\(--brand-icon-size\);[^}]*height:\s*var\(--brand-icon-size\);[^}]*aspect-ratio:\s*1\s*\/\s*1/s);
-  assert.match(css, /\.brand-icon\s*\{[^}]*overflow:\s*hidden;[^}]*border-radius:\s*10px/s);
-  assert.match(css, /\.brand-icon img\s*\{[^}]*width:\s*116%;[^}]*height:\s*116%;[^}]*max-width:\s*none;[^}]*aspect-ratio:\s*1\s*\/\s*1;[^}]*object-fit:\s*cover/s);
-  assert.doesNotMatch(css, /\.brand img\s*\{[^}]*box-shadow:/s);
+test("브랜드 아이콘은 기존 표시 방식과 크기를 유지한다", () => {
+  assert.doesNotMatch(html, /class="brand-icon"/);
+  assert.equal((html.match(/src="\.\.\/assets\/nude-translator\.png"/g) ?? []).length, 2);
+  assert.match(css, /\.brand img\s*\{[^}]*border-radius:\s*10px;[^}]*box-shadow:\s*0 8px 22px/s);
+  assert.match(css, /@media[^]*\.brand img\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px/s);
 });
 
 test("설정 화면 6장을 한 장씩 순서대로 넘긴다", async () => {
