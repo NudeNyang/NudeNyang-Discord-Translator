@@ -549,6 +549,7 @@ summary:focus-visible {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
+  pointer-events: none;
   background: #111016;
   transform: rotate(1.2deg);
 }

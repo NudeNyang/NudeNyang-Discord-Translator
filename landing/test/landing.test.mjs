@@ -30,10 +30,12 @@ test("히어로에는 다운로드 CTA만 노출한다", () => {
 test("히어로에서 실제 번역 영상을 재생한다", async () => {
   assert.match(html, /<video\b[^>]*class="media-stage hero-media reveal"[^>]*data-media-slot="hero"[^>]*data-hero-video/s);
   assert.match(html, /<source src="\.\/assets\/hero-discord-translation\.mp4" type="video\/mp4"\s*\/>/);
-  assert.match(html, /<video\b[^>]*muted[^>]*loop[^>]*playsinline[^>]*controls/s);
+  assert.match(html, /<video\b[^>]*muted[^>]*loop[^>]*playsinline/s);
+  assert.doesNotMatch(html, /<video\b[^>]*\scontrols(?:\s|>|=)/s);
+  assert.doesNotMatch(html, /<video\b[^>]*\scontrolslist=/s);
   assert.match(html, /<video\b[^>]*preload="metadata"/s);
   assert.match(html, /<video\b[^>]*poster="\.\/assets\/hero-discord-translation-poster\.jpg"/s);
-  assert.match(css, /\.hero-media\s*\{[^}]*object-fit:\s*cover/s);
+  assert.match(css, /\.hero-media\s*\{[^}]*object-fit:\s*cover[^}]*pointer-events:\s*none/s);
   assert.match(script, /prefers-reduced-motion:\s*reduce/);
   assert.match(script, /heroVideo\.play\(\)/);
 
