@@ -244,6 +244,19 @@ test("FAQ는 개인정보 보호와 공식 Discord 앱 사용 방식을 설명�
   }
 });
 
+test("FAQ는 앱 자체와 외부 번역 서비스의 비용을 구분한다", () => {
+  const pricingQuestion = "유료인가요?";
+  const pricingAnswer = "NudeNyang Translator는 무료 오픈소스 프로그램입니다. 단, 선택한 외부 번역 서비스에 따라 별도의 구독이나 API 비용이 발생할 수 있습니다.";
+
+  assert.ok(html.includes(pricingQuestion));
+  assert.ok(html.includes(pricingAnswer));
+
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.ok(LANDING_LOCALES[locale]?.[pricingQuestion], `${locale} 비용 FAQ 질문 번역이 필요합니다.`);
+    assert.ok(LANDING_LOCALES[locale]?.[pricingAnswer], `${locale} 비용 FAQ 답변 번역이 필요합니다.`);
+  }
+});
+
 test("히어로에는 다운로드 CTA만 노출한다", () => {
   assert.match(html, /class="button primary"[^>]*>Windows Beta 다운로드<\/a>/);
   assert.doesNotMatch(html, /class="button secondary"[^>]*href="#how-it-works"/);
