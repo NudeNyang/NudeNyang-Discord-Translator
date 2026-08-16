@@ -55,8 +55,9 @@ test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준
   assert.doesNotMatch(html, /class="translation-preview-inset"/);
   assert.doesNotMatch(html, />권장 1200 × 900</);
   assert.match(css, /\.translation-preview-image[\s\S]*?border:\s*0/);
-  assert.match(css, /\.translation-preview-original[\s\S]*?top:\s*6%[\s\S]*?left:\s*3%/);
-  assert.match(css, /\.translation-preview-result[\s\S]*?right:\s*3%[\s\S]*?bottom:\s*5%/);
+  assert.match(css, /\.translation-preview\s*\{[\s\S]*?border-color:\s*#e3d2bd[\s\S]*?#fbf5ec/);
+  assert.match(css, /\.translation-preview-original[\s\S]*?top:\s*5%[\s\S]*?left:\s*7%[\s\S]*?width:\s*44%/);
+  assert.match(css, /\.translation-preview-result[\s\S]*?right:\s*7%[\s\S]*?bottom:\s*5%[\s\S]*?width:\s*44%/);
   assert.doesNotMatch(css, /\.translation-preview-result[\s\S]*?clip-path:/);
 
   const [original, result] = await Promise.all([

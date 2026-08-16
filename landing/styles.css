@@ -841,8 +841,10 @@ summary:focus-visible {
 .translation-preview {
   display: block;
   padding: 0;
+  border-color: #e3d2bd;
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--accent-soft) 72%, var(--surface-raised)), var(--surface));
+    radial-gradient(circle at 18% 14%, rgb(255 255 255 / 0.92), transparent 44%),
+    linear-gradient(145deg, #fbf5ec 0%, #f2e4d3 100%);
 }
 
 .translation-preview::before {
@@ -854,26 +856,25 @@ summary:focus-visible {
   display: block;
   height: auto;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   object-fit: contain;
-  background: #09090c;
+  background: var(--surface-raised);
 }
 
 .translation-preview-original {
-  top: 6%;
-  left: 3%;
+  top: 5%;
+  left: 7%;
   z-index: 1;
-  width: 82%;
-  opacity: 0.9;
-  box-shadow: 0 14px 34px rgb(24 54 82 / 0.12);
+  width: 44%;
+  box-shadow: 0 16px 38px rgb(24 54 82 / 0.13);
 }
 
 .translation-preview-result {
-  right: 3%;
+  right: 7%;
   bottom: 5%;
   z-index: 2;
-  width: 72%;
-  box-shadow: 0 22px 52px color-mix(in srgb, var(--accent-strong) 24%, transparent);
+  width: 44%;
+  box-shadow: 0 20px 46px color-mix(in srgb, var(--accent-strong) 18%, transparent);
 }
 
 .feature-engines {
