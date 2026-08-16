@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "../locales.generated.mjs";
-import { normalizeLocale } from "../locale-utils.mjs";
+import { detectPreferredLocale, normalizeLocale } from "../locale-utils.mjs";
 import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "../scrollbar-utils.mjs";
 
 const baseUrl = new URL("../", import.meta.url);
@@ -33,6 +33,8 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
     assert.ok(html.includes(copy), `\"${copy}\" 문구가 필요합니다.`);
   }
   assert.match(html, /로컬 AI를 사용하면 별도의 번역 API 비용 없이 PC에서 번역할 수 있습니다\./);
+  assert.match(html, /메시지와 답장은 물론, 이미지 속 글자까지 Discord 안에서 바로 번역합니다\./);
+  assert.doesNotMatch(html, /메시지와 답장은 물론, 이미지 속 글자까지 Discord 화면에서 바로 번역합니다\./);
   assert.match(html, /여러 언어가 동시에 표시되어도 메세지별 언어를 자동으로 감지해 번역합니다\./);
   assert.doesNotMatch(html, /여러 언어가 동시에 표시되는 Discord 화면에서도 메시지별 언어를 자동으로 감지해 번역합니다\./);
   assert.doesNotMatch(html, /최근 대화 언어를 감지하여 답장에 맞는 번역 방향을 제안합니다\./);
@@ -46,6 +48,16 @@ test("파란 기능 카드의 인사말은 모든 UI 언어에서 한글로 고�
 });
 
 test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준다", async () => {
+  const imageTitle = "이미지 속 글자까지 번역합니다.";
+  const imageDescription = "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.";
+  assert.ok(html.includes(imageTitle));
+  assert.ok(html.includes(imageDescription));
+  assert.doesNotMatch(html, /이미지 속 글자까지 확인합니다\./);
+  assert.doesNotMatch(html, /이미지 원본은 외부 번역 서비스로 보내지 않습니다\./);
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.ok(LANDING_LOCALES[locale]?.[imageTitle], `${locale} 이미지 번역 제목이 필요합니다.`);
+    assert.ok(LANDING_LOCALES[locale]?.[imageDescription], `${locale} 이미지 번역 설명이 필요합니다.`);
+  }
   assert.match(html, /src="\.\/assets\/image-translation-original\.png"/);
   assert.match(html, /src="\.\/assets\/image-translation-result\.png"/);
   assert.match(html, /class="translation-preview-image translation-preview-original"/);
@@ -54,8 +66,9 @@ test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준
   assert.doesNotMatch(html, /class="translation-preview-main"/);
   assert.doesNotMatch(html, /class="translation-preview-inset"/);
   assert.doesNotMatch(html, />권장 1200 × 900</);
-  assert.match(css, /\.translation-preview-image[\s\S]*?border:\s*0/);
-  assert.match(css, /\.translation-preview\s*\{[\s\S]*?border-color:\s*#e3d2bd[\s\S]*?#fbf5ec/);
+  assert.match(css, /\.translation-preview\s*\{[\s\S]*?border:\s*0[\s\S]*?background:\s*transparent/);
+  assert.match(css, /\.translation-preview-image[\s\S]*?padding:\s*8px[\s\S]*?border:\s*1px solid color-mix\(in srgb, var\(--accent\) 18%, var\(--border\)\)/);
+  assert.doesNotMatch(css, /\.translation-preview\s*\{[\s\S]*?#fbf5ec/);
   assert.match(css, /\.translation-preview-original[\s\S]*?top:\s*5%[\s\S]*?left:\s*7%[\s\S]*?width:\s*44%/);
   assert.match(css, /\.translation-preview-result[\s\S]*?right:\s*7%[\s\S]*?bottom:\s*5%[\s\S]*?width:\s*44%/);
   assert.doesNotMatch(css, /\.translation-preview-result[\s\S]*?clip-path:/);
@@ -81,12 +94,27 @@ test("Discord 이용 안내와 공식 정책 링크를 FAQ 앞에 제공한다",
   assert.match(html, />Discord 이용 약관에 위배될 수 있나요\?</);
   assert.match(html, /사용 여부와 결과에 대한 책임은 사용자에게 있습니다\./);
   assert.doesNotMatch(css, /\.discord-notice[^}]*#[0-9a-f]{3,8}/i);
+  assert.doesNotMatch(css, /\.discord-policy-links a\s*\{[^}]*border-bottom:/s);
+  assert.doesNotMatch(css, /\.discord-policy-links a:hover\s*\{[^}]*border-bottom/s);
 });
 
 test("히어로에는 다운로드 CTA만 노출한다", () => {
-  assert.match(html, /class="button primary"[^>]*>Windows 베타 다운로드<\/a>/);
+  assert.match(html, /class="button primary"[^>]*>Windows Beta 다운로드<\/a>/);
   assert.doesNotMatch(html, /class="button secondary"[^>]*href="#how-it-works"/);
   assert.doesNotMatch(html, />작동 방식 보기<\/a>/);
+});
+
+test("Beta 표기는 모든 UI 언어에서 영문으로 유지한다", () => {
+  assert.match(html, /data-i18n>Beta 다운로드<\/a>/);
+  assert.match(html, /data-i18n>Windows Beta 다운로드<\/a>/);
+  assert.doesNotMatch(html, /베타/);
+
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    const navDownload = LANDING_LOCALES[locale]?.["Beta 다운로드"];
+    const windowsDownload = LANDING_LOCALES[locale]?.["Windows Beta 다운로드"];
+    assert.ok(navDownload?.includes("Beta"), `${locale} 내비게이션에 영문 Beta 표기가 필요합니다.`);
+    assert.ok(windowsDownload?.includes("Beta"), `${locale} 다운로드 CTA에 영문 Beta 표기가 필요합니다.`);
+  }
 });
 
 test("히어로에서 실제 번역 영상을 재생한다", async () => {
@@ -143,6 +171,7 @@ test("기존 앱의 색상 토큰과 반응형 규칙을 사용한다", () => {
   assert.match(css, /@media \(max-width: 720px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /:lang\(ko\)[^{]*h2[^}]*word-break:\s*keep-all/s);
+  assert.match(css, /:lang\(ko\) \.feature-card p\s*\{[^}]*word-break:\s*keep-all/s);
   assert.match(css, /:lang\(ja\)[^{]*\{[^}]*word-break:\s*auto-phrase/s);
 });
 
@@ -196,12 +225,11 @@ test("헤더 언어 선택창의 V 아이콘이 버튼 중앙에 정렬된다", 
   assert.match(css, /\.language-trigger\[aria-expanded="true"\] \.language-trigger-chevron/);
 });
 
-test("제품 지원 범위의 위 구분선만 콘텐츠 너비 안에서 끝난다", () => {
-  assert.match(css, /\.fact-band\s*\{[^}]*border-bottom:\s*1px solid var\(--border\)/s);
-  assert.doesNotMatch(css, /\.fact-band\s*\{[^}]*border-top:/s);
-  assert.match(css, /\.fact-grid\s*\{[^}]*border-top:\s*1px solid var\(--border\)/s);
-  assert.doesNotMatch(css, /\.fact-grid\s*\{[^}]*border-bottom:/s);
+test("중복 제품 지원 범위를 제거하고 지원 언어 구분선만 남긴다", () => {
+  assert.doesNotMatch(html, /class="fact-band"/);
+  assert.doesNotMatch(css, /\.fact-band|\.fact-grid/);
   assert.match(css, /\.supported-languages\s*\{[^}]*border-top:\s*1px solid var\(--border\)/s);
+  assert.match(css, /\.supported-languages\s*\{[^}]*border-bottom:\s*1px solid var\(--border\)/s);
 });
 
 test("메인 화면에서 28개 지원 언어를 선택해 UI 언어를 바꿀 수 있다", () => {
@@ -209,6 +237,7 @@ test("메인 화면에서 28개 지원 언어를 선택해 UI 언어를 바꿀 �
   assert.match(html, /class="[^"]*supported-language-grid[^"]*"/);
   assert.doesNotMatch(html, /28개 UI 언어를 지원합니다/);
   assert.doesNotMatch(html, /언어를 선택하면 페이지 전체/);
+  assert.match(css, /\.supported-languages\s*\{[^}]*padding-block:\s*48px 88px/s);
   assert.match(css, /\.supported-languages-layout\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(script, /renderSupportedLanguages/);
   assert.match(script, /supportedLanguageGrid\.addEventListener\("click"/);
@@ -227,6 +256,17 @@ test("중국어 간체와 번체 선택값이 서로 섞이지 않는다", () =>
   assert.equal(normalizeLocale("zh-Hant"), "zh-Hant");
   assert.equal(normalizeLocale("zh-TW"), "zh-Hant");
   assert.equal(normalizeLocale("zh-HK"), "zh-Hant");
+});
+
+test("첫 방문에는 브라우저와 시스템 언어에서 가장 가까운 UI 언어를 자동 선택한다", () => {
+  assert.equal(detectPreferredLocale(["fr-CA", "en-US"]), "fr");
+  assert.equal(detectPreferredLocale(["xx-YY", "ja-JP"]), "ja");
+  assert.equal(detectPreferredLocale(["zh-HK", "en-US"]), "zh-Hant");
+  assert.equal(detectPreferredLocale([], "ko"), "ko");
+  assert.match(script, /window\.localStorage\.getItem\("landing-locale"\)/);
+  assert.match(script, /navigator\.languages/);
+  assert.match(script, /Intl\.DateTimeFormat\(\)\.resolvedOptions\(\)\.locale/);
+  assert.match(script, /detectPreferredLocale\(browserLocales\)/);
 });
 
 test("사용자 노출 문구에 금지된 대시 문자가 없다", () => {

@@ -1,5 +1,5 @@
 import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "./locales.generated.mjs";
-import { normalizeLocale } from "./locale-utils.mjs";
+import { detectPreferredLocale, normalizeLocale } from "./locale-utils.mjs";
 import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "./scrollbar-utils.mjs";
 
 const root = document.documentElement;
@@ -224,11 +224,12 @@ translationNodes.forEach((node) => {
 function initialLocale() {
   const saved = normalizeLocale(window.localStorage.getItem("landing-locale"));
   if (saved) return saved;
-  for (const locale of navigator.languages || [navigator.language]) {
-    const supported = normalizeLocale(locale);
-    if (supported) return supported;
-  }
-  return "ko";
+  const browserLocales = [
+    ...(navigator.languages || []),
+    navigator.language,
+    Intl.DateTimeFormat().resolvedOptions().locale,
+  ].filter(Boolean);
+  return detectPreferredLocale(browserLocales);
 }
 
 let currentLocale = initialLocale();

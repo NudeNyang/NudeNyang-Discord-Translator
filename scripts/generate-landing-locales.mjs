@@ -48,7 +48,7 @@ const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolve
 const protectedTerms = [
   "Discord Inc.", "NudeNyang Discord Translator", "Discord", "Windows", "Hy-MT2", "ChatGPT",
   "Claude", "Gemini", "DeepL", "self-bot", "macOS", "WebM", "MP4", "PNG", "API", "CLI",
-  "OCR", "x64", "PC",
+  "OCR", "x64", "PC", "Beta",
 ];
 const keepTogether = (value) => [...value].join("\u2060");
 const workflowTitle = "번역하려고 별도의 번역기를 켤 필요가 없습니다.";
@@ -86,13 +86,16 @@ const overrides = {
   en: {
     "기능": "Features",
     "개인정보": "Privacy",
-    "베타 다운로드": "Beta download",
+    "Beta 다운로드": "Beta download",
+    "Windows Beta 다운로드": "Download Windows Beta",
     "주요 기능": "Key features",
+    "이미지 속 글자까지 번역합니다.": "Translate text inside images.",
+    "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "Automatically detect text in photos and screenshots, then translate it into your selected language.",
     "Discord 실시간 번역": "Real-time Discord translation",
     "Discord는 그대로,": "Discord stays the same,",
     "대화는 내 언어로.": "the conversation is in my language.",
     "메시지와 채널명, 이미지 속 글자까지 Discord 화면 안에서 바로 번역합니다.": "Translate messages, channel names, and text in images directly inside Discord.",
-    "메시지와 답장은 물론, 이미지 속 글자까지 Discord 화면에서 바로 번역합니다.": "Translate messages, replies, and text in images right inside Discord.",
+    "메시지와 답장은 물론, 이미지 속 글자까지 Discord 안에서 바로 번역합니다.": "Translate messages, replies, and text in images right inside Discord.",
     "어둡게": "Dark",
     "밝게": "Light",
     "지원": "Support",
@@ -113,6 +116,8 @@ const overrides = {
     "Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.": "Discord states that client modification and automation of regular user accounts are not allowed. This app is not officially approved, so it may be considered a policy violation. You are responsible for your decision to use it and the resulting consequences.",
   },
   ja: {
+    "이미지 속 글자까지 번역합니다.": "画像内の文字まで翻訳します。",
+    "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "写真やスクリーンショットの文字を自動認識し、選択した言語に翻訳します。",
     "로컬 AI": "ローカルAI",
     "로컬 AI 선택 가능": "ローカルAIを選択可能",
     "로컬 AI 모델로 번역 비용을 줄일 수 있습니다.": "ローカルAIモデルで翻訳コストを抑えられます。",
@@ -128,6 +133,8 @@ const overrides = {
     "Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.": "Discordは、クライアントの変更および通常のユーザーアカウントの自動化を認めていないと案内しています。このアプリは公式に承認されたツールではないため、ポリシー違反と判断される可能性を否定できません。利用するかどうか、およびその結果については利用者が責任を負います。",
   },
   zh: {
+    "이미지 속 글자까지 번역합니다.": "连图片中的文字也能翻译。",
+    "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "自动识别照片和截图中的文字，并翻译成您选择的语言。",
     "로컬 AI": "本地 AI",
     "로컬 AI 선택 가능": "可选择本地 AI",
     "로컬 AI 모델로 번역 비용을 줄일 수 있습니다.": "使用本地 AI 模型降低翻译成本。",
@@ -144,6 +151,8 @@ const overrides = {
     "Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.": "Discord 表示不允许修改客户端或自动操作普通用户账户。本应用并非官方批准的工具，因此不能排除被判定为违反政策的可能性。是否使用以及由此产生的结果由用户自行负责。",
   },
   "zh-Hant": {
+    "이미지 속 글자까지 번역합니다.": "連圖片中的文字也能翻譯。",
+    "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "自動辨識照片和螢幕截圖中的文字，並翻譯成您選擇的語言。",
     "로컬 AI": "本機 AI",
     "로컬 AI 선택 가능": "可選擇本機 AI",
     "로컬 AI 모델로 번역 비용을 줄일 수 있습니다.": "使用本機 AI 模型降低翻譯成本。",

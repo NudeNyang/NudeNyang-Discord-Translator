@@ -18,3 +18,11 @@ export function normalizeLocale(locale) {
   const base = localeParts[0];
   return LANGUAGE_OPTIONS.find(([code]) => code.split("-")[0].toLowerCase() === base)?.[0] || null;
 }
+
+export function detectPreferredLocale(locales, fallback = "ko") {
+  for (const locale of locales || []) {
+    const supported = normalizeLocale(locale);
+    if (supported) return supported;
+  }
+  return normalizeLocale(fallback) || "ko";
+}

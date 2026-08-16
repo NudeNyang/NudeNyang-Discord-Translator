@@ -492,6 +492,10 @@ summary:focus-visible {
   word-break: keep-all;
 }
 
+:lang(ko) .feature-card p {
+  word-break: keep-all;
+}
+
 :lang(ja) {
   word-break: auto-phrase;
 }
@@ -586,8 +590,9 @@ summary:focus-visible {
 }
 
 .supported-languages {
-  padding-block: 48px;
+  padding-block: 48px 88px;
   border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
@@ -649,43 +654,6 @@ summary:focus-visible {
   z-index: 1;
   color: var(--accent-ink);
   background: var(--accent-soft);
-}
-
-.fact-band {
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-}
-
-.fact-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding-block: 28px;
-  border-top: 1px solid var(--border);
-}
-
-.fact-grid > div {
-  display: grid;
-  gap: 2px;
-  padding-inline: 24px;
-  border-right: 1px solid var(--border);
-}
-
-.fact-grid > div:first-child {
-  padding-left: 0;
-}
-
-.fact-grid > div:last-child {
-  padding-right: 0;
-  border-right: 0;
-}
-
-.fact-grid strong {
-  font-size: 15px;
-}
-
-.fact-grid span {
-  color: var(--muted);
-  font-size: 13px;
 }
 
 .section {
@@ -841,10 +809,8 @@ summary:focus-visible {
 .translation-preview {
   display: block;
   padding: 0;
-  border-color: #e3d2bd;
-  background:
-    radial-gradient(circle at 18% 14%, rgb(255 255 255 / 0.92), transparent 44%),
-    linear-gradient(145deg, #fbf5ec 0%, #f2e4d3 100%);
+  border: 0;
+  background: transparent;
 }
 
 .translation-preview::before {
@@ -855,8 +821,9 @@ summary:focus-visible {
   position: absolute;
   display: block;
   height: auto;
-  border: 0;
-  border-radius: 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-radius: 12px;
   object-fit: contain;
   background: var(--surface-raised);
 }
@@ -866,7 +833,7 @@ summary:focus-visible {
   left: 7%;
   z-index: 1;
   width: 44%;
-  box-shadow: 0 16px 38px rgb(24 54 82 / 0.13);
+  box-shadow: 0 16px 38px color-mix(in srgb, var(--accent-strong) 13%, transparent);
 }
 
 .translation-preview-result {
@@ -874,7 +841,7 @@ summary:focus-visible {
   bottom: 5%;
   z-index: 2;
   width: 44%;
-  box-shadow: 0 20px 46px color-mix(in srgb, var(--accent-strong) 18%, transparent);
+  box-shadow: 0 20px 46px color-mix(in srgb, var(--accent-strong) 16%, transparent);
 }
 
 .feature-engines {
@@ -1010,14 +977,12 @@ summary:focus-visible {
 }
 
 .discord-policy-links a {
-  padding-bottom: 3px;
-  border-bottom: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   color: var(--accent-strong);
   font-weight: 720;
 }
 
 .discord-policy-links a:hover {
-  border-bottom-color: var(--accent-strong);
+  color: var(--accent);
 }
 
 .faq-section {
@@ -1290,7 +1255,7 @@ html[dir="rtl"] .theme-toggle {
   }
 
   .supported-languages {
-    padding-block: 44px;
+    padding-block: 44px 64px;
   }
 
   .supported-languages-layout {
@@ -1314,23 +1279,6 @@ html[dir="rtl"] .theme-toggle {
     flex: 0 0 138px;
     min-height: 54px;
     scroll-snap-align: start;
-  }
-
-  .fact-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px 0;
-  }
-
-  .fact-grid > div,
-  .fact-grid > div:first-child,
-  .fact-grid > div:last-child {
-    padding-inline: 16px;
-    border-right: 0;
-  }
-
-  .fact-grid > div:nth-child(odd) {
-    padding-left: 0;
-    border-right: 1px solid var(--border);
   }
 
   .section,
