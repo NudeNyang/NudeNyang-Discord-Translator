@@ -46,6 +46,7 @@ use crate::translation::{
 const MAX_BATCH_ITEMS: usize = 32;
 const CPU_MAX_BATCH_ITEMS: usize = 6;
 const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
+const DISPLAY_VIEW_SETTLE_DELAY: Duration = Duration::from_millis(250);
 const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
@@ -127,17 +128,37 @@ struct PartState {
 struct DisplayViewState {
     scope: String,
     epoch: u64,
+    settle_until: Option<Instant>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DisplayViewObservation {
+    Initial,
+    Stable,
+    Changed,
 }
 
 impl DisplayViewState {
-    fn observe(&mut self, url: &str) -> bool {
+    fn observe(&mut self, url: &str, now: Instant) -> DisplayViewObservation {
         let scope = display_view_scope(url);
         if scope == self.scope {
-            return false;
+            return DisplayViewObservation::Stable;
         }
+        let initial = self.scope.is_empty();
         self.scope = scope;
         self.epoch = self.epoch.wrapping_add(1).max(1);
-        true
+        if initial {
+            self.settle_until = None;
+            DisplayViewObservation::Initial
+        } else {
+            self.settle_until = Some(now + DISPLAY_VIEW_SETTLE_DELAY);
+            DisplayViewObservation::Changed
+        }
+    }
+
+    fn is_ready(&self, now: Instant) -> bool {
+        self.settle_until
+            .is_none_or(|settle_until| now >= settle_until)
     }
 }
 
@@ -173,6 +194,10 @@ struct OutgoingTranslationBatch {
 enum WorkerCommand {
     Translate(TranslationBatch),
     TranslateImage(ImageTranslationBatch),
+    DiscardDisplayBefore {
+        generation: u64,
+        view_epoch: u64,
+    },
     Activate {
         generation: u64,
         name: String,
@@ -203,6 +228,7 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
         | WorkerCommand::Warm
         | WorkerCommand::Release
         | WorkerCommand::ClearCacheMemory
+        | WorkerCommand::DiscardDisplayBefore { .. }
         | WorkerCommand::Stop => 0,
         WorkerCommand::Translate(_) => 1,
         WorkerCommand::TranslateImage(_) => 2,
@@ -223,16 +249,21 @@ fn next_worker_command(
         .iter()
         .filter_map(|command| match command {
             WorkerCommand::Translate(batch) => Some((batch.generation, batch.view_epoch)),
+            WorkerCommand::DiscardDisplayBefore {
+                generation,
+                view_epoch,
+            } => Some((*generation, *view_epoch)),
             _ => None,
         })
         .max()
     {
-        backlog.retain(|command| {
-            !matches!(
-                command,
-                WorkerCommand::Translate(batch)
-                    if (batch.generation, batch.view_epoch) != latest_view
-            )
+        backlog.retain(|command| match command {
+            WorkerCommand::Translate(batch) => (batch.generation, batch.view_epoch) == latest_view,
+            WorkerCommand::DiscardDisplayBefore {
+                generation,
+                view_epoch,
+            } => (*generation, *view_epoch) == latest_view,
+            _ => true,
         });
     }
     let priority = backlog
@@ -903,6 +934,15 @@ fn run_controller(
                 runtime.cdp_connected = true;
                 runtime.connection_issue.clear();
             });
+            if !prepare_display_view_for_dom(
+                client.as_mut().expect("connected CDP client"),
+                &mut pending,
+                &mut display_view,
+                generation,
+                &worker_tx,
+            )? {
+                return Ok(());
+            }
             handle_invite_assist(
                 client.as_mut().expect("connected CDP client"),
                 app_handle.as_ref(),
@@ -980,7 +1020,7 @@ fn run_controller(
                 display_translation_is_ready(&config, &runtime.active_translator)
             });
             if display_ready {
-                scan_dom(
+                let display_view_ready = scan_dom(
                     client.as_mut().expect("connected CDP client"),
                     &states,
                     &mut pending,
@@ -990,17 +1030,19 @@ fn run_controller(
                     display_batch_item_limit(&config),
                     &worker_tx,
                 )?;
-                scan_images(
-                    client.as_mut().expect("connected CDP client"),
-                    &mut image_pending,
-                    generation,
-                    target,
-                    &worker_tx,
-                    &status,
-                    &config.ui_language,
-                    OcrQualityMode::from_config(&config.image_ocr_quality),
-                )?;
-                image_ui_needs_cleanup = true;
+                if display_view_ready {
+                    scan_images(
+                        client.as_mut().expect("connected CDP client"),
+                        &mut image_pending,
+                        generation,
+                        target,
+                        &worker_tx,
+                        &status,
+                        &config.ui_language,
+                        OcrQualityMode::from_config(&config.image_ocr_quality),
+                    )?;
+                    image_ui_needs_cleanup = true;
+                }
             } else if !config.enabled {
                 client
                     .as_mut()
@@ -1276,15 +1318,12 @@ fn scan_dom(
     target: Language,
     max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
     let context_scope = snapshot.url.clone();
-    if display_view.observe(&snapshot.url) {
-        pending.clear();
-        crate::diagnostics::info(
-            "translation-viewport",
-            &format!("display view changed; epoch={}", display_view.epoch),
-        );
+    if display_view.observe(&snapshot.url, Instant::now()) == DisplayViewObservation::Changed {
+        discard_stale_display_work(pending, display_view, generation, worker)?;
+        return Ok(false);
     }
     let (changes, parts) = plan_dom_updates(
         snapshot.parts,
@@ -1310,6 +1349,50 @@ fn scan_dom(
             }))
             .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
     }
+    Ok(true)
+}
+
+fn prepare_display_view_for_dom(
+    client: &mut CdpClient,
+    pending: &mut HashSet<PendingKey>,
+    display_view: &mut DisplayViewState,
+    generation: u64,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<bool, String> {
+    let now = Instant::now();
+    let current_url = client
+        .evaluate("location.href", false)?
+        .as_str()
+        .ok_or_else(|| "Discord 화면 주소를 확인하지 못했습니다.".to_string())?
+        .to_string();
+    if display_view.observe(&current_url, now) == DisplayViewObservation::Changed {
+        discard_stale_display_work(pending, display_view, generation, worker)?;
+        return Ok(false);
+    }
+    Ok(display_view.is_ready(now))
+}
+
+fn discard_stale_display_work(
+    pending: &mut HashSet<PendingKey>,
+    display_view: &DisplayViewState,
+    generation: u64,
+    worker: &mpsc::Sender<WorkerCommand>,
+) -> Result<(), String> {
+    pending.clear();
+    worker
+        .send(WorkerCommand::DiscardDisplayBefore {
+            generation,
+            view_epoch: display_view.epoch,
+        })
+        .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
+    crate::diagnostics::info(
+        "translation-viewport",
+        &format!(
+            "display view changed; epoch={}; DOM scan paused for {}ms",
+            display_view.epoch,
+            DISPLAY_VIEW_SETTLE_DELAY.as_millis()
+        ),
+    );
     Ok(())
 }
 
@@ -2130,6 +2213,7 @@ fn run_translation_worker(
                     outcome,
                 });
             }
+            WorkerCommand::DiscardDisplayBefore { .. } => {}
             WorkerCommand::Activate {
                 generation,
                 name,
@@ -2538,9 +2622,10 @@ mod tests {
         initial_model_preparation_progress, next_worker_command, plan_dom_updates, poll_interval,
         preparation_plan_for_active_lanes, run_outgoing_translation_worker,
         translator_activation_notice, translator_label, translator_preparation_plan,
-        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
-        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
-        CPU_MAX_BATCH_ITEMS, MAX_BATCH_ITEMS,
+        DisplayViewObservation, DisplayViewState, OutgoingTranslationBatch, OutgoingWorkerCommand,
+        PartState, RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan,
+        WorkerCommand, WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY,
+        MAX_BATCH_ITEMS,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -2881,6 +2966,72 @@ mod tests {
             )),
             "이전 화면 번역 작업은 새 화면이 도착하면 대기열에서 제거되어야 합니다"
         );
+    }
+
+    #[test]
+    fn changed_display_view_waits_for_a_quiet_window_before_scanning_the_dom() {
+        let started = Instant::now();
+        let mut view = DisplayViewState::default();
+
+        assert_eq!(
+            view.observe("https://discord.com/channels/server-a/channel-a", started),
+            DisplayViewObservation::Initial
+        );
+        assert!(view.is_ready(started));
+
+        let changed_at = started + Duration::from_millis(10);
+        assert_eq!(
+            view.observe(
+                "https://discord.com/channels/server-b/channel-b",
+                changed_at
+            ),
+            DisplayViewObservation::Changed
+        );
+        assert!(!view.is_ready(changed_at));
+        assert!(!view.is_ready(changed_at + DISPLAY_VIEW_SETTLE_DELAY - Duration::from_millis(1)));
+        assert!(view.is_ready(changed_at + DISPLAY_VIEW_SETTLE_DELAY));
+    }
+
+    #[test]
+    fn viewport_change_marker_discards_stale_translation_without_a_new_batch() {
+        let (sender, receiver) = mpsc::channel();
+        sender
+            .send(WorkerCommand::Translate(TranslationBatch {
+                generation: 1,
+                view_epoch: 1,
+                view_scope: "/channels/server-a/channel-a".to_string(),
+                target: Language::Korean,
+                parts: vec![DomPart {
+                    kind: "message".to_string(),
+                    item_id: "previous-viewport".to_string(),
+                    context_id: None,
+                    index: 0,
+                    text: "previous-viewport".to_string(),
+                    displayed_text: None,
+                }],
+                context_scope: "/channels/server-a/channel-a".to_string(),
+                queued_at: Instant::now(),
+            }))
+            .unwrap();
+        sender
+            .send(WorkerCommand::DiscardDisplayBefore {
+                generation: 1,
+                view_epoch: 2,
+            })
+            .unwrap();
+
+        let mut backlog = VecDeque::new();
+        assert!(matches!(
+            next_worker_command(&receiver, &mut backlog).unwrap(),
+            WorkerCommand::DiscardDisplayBefore {
+                generation: 1,
+                view_epoch: 2
+            }
+        ));
+        assert!(backlog.iter().all(|command| !matches!(
+            command,
+            WorkerCommand::Translate(batch) if batch.view_epoch < 2
+        )));
     }
 
     #[test]
