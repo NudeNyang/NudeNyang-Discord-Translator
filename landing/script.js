@@ -19,6 +19,7 @@ const supportedLanguageGrid = document.querySelector(".supported-language-grid")
 const heroVideo = document.querySelector("[data-hero-video]");
 const workflowVideo = document.querySelector("[data-scroll-autoplay]");
 const featureGreetings = document.querySelector("[data-feature-greetings]");
+const settingsCarousel = document.querySelector("[data-settings-carousel]");
 const pageScrollIndicator = document.querySelector("[data-page-scroll-indicator]");
 const pageScrollThumb = pageScrollIndicator?.querySelector(".page-scroll-indicator-thumb");
 const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -28,8 +29,56 @@ const translationNodes = [...document.querySelectorAll("[data-i18n]")];
 const placeholderNodes = [...document.querySelectorAll("[data-i18n-placeholder]")];
 const PAGE_SCROLL_REVEAL_DISTANCE = 42;
 const PAGE_SCROLL_IDLE_DELAY = 700;
+let greetingsRevealed = false;
+
+function bindSettingsCarousel() {
+  if (!settingsCarousel) return;
+
+  const cards = [...settingsCarousel.querySelectorAll("[data-settings-card]")];
+  const nextCardButton = settingsCarousel.querySelector("[data-settings-next]");
+  const dots = [...settingsCarousel.querySelectorAll("[data-settings-dot]")];
+  let activeIndex = 0;
+
+  const render = () => {
+    cards.forEach((card, index) => {
+      const isActive = index === activeIndex;
+      card.classList.toggle("is-active", isActive);
+      card.setAttribute("aria-hidden", String(!isActive));
+    });
+
+    dots.forEach((dot, index) => {
+      const isActive = index === activeIndex;
+      dot.classList.toggle("is-active", isActive);
+      if (isActive) dot.setAttribute("aria-current", "true");
+      else dot.removeAttribute("aria-current");
+    });
+
+    settingsCarousel.setAttribute("aria-label", `${activeIndex + 1} / ${cards.length}, ${cards[activeIndex].alt}`);
+  };
+
+  const show = (index) => {
+    activeIndex = (index + cards.length) % cards.length;
+    render();
+  };
+
+  nextCardButton?.addEventListener("click", () => show(activeIndex + 1));
+  dots.forEach((dot) => dot.addEventListener("click", () => show(Number(dot.dataset.settingsDot))));
+  settingsCarousel.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") show(activeIndex - 1);
+    else if (event.key === "ArrowRight") show(activeIndex + 1);
+    else if (event.key === "Home") show(0);
+    else if (event.key === "End") show(cards.length - 1);
+    else return;
+    event.preventDefault();
+  });
+
+  render();
+}
+
 function updateGreetingLocale(locale) {
   if (!featureGreetings) return;
+  const shouldReplay = greetingsRevealed && !reduceMotionPreference.matches;
+  featureGreetings.classList.remove("is-typing");
   const greetings = buildGreetingCycle(locale);
   featureGreetings.replaceChildren(
     ...greetings.map((greeting, index) => {
@@ -42,6 +91,32 @@ function updateGreetingLocale(locale) {
       return node;
     }),
   );
+  if (shouldReplay) window.requestAnimationFrame(() => featureGreetings.classList.add("is-typing"));
+}
+
+function bindGreetingReveal() {
+  if (!featureGreetings) return;
+
+  const revealGreetings = () => {
+    if (greetingsRevealed) return;
+    greetingsRevealed = true;
+    featureGreetings.classList.add("is-typing");
+  };
+
+  if (reduceMotionPreference.matches || !("IntersectionObserver" in window)) {
+    revealGreetings();
+    return;
+  }
+
+  const greetingObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry?.isIntersecting) return;
+      revealGreetings();
+      greetingObserver.disconnect();
+    },
+    { threshold: 0.38, rootMargin: "0px 0px -8% 0px" },
+  );
+  greetingObserver.observe(featureGreetings.closest(".feature-primary") || featureGreetings);
 }
 
 function bindPageScrollIndicator() {
@@ -353,6 +428,8 @@ renderSupportedLanguages();
 applyLocale(currentLocale, { persist: false });
 bindPageScrollIndicator();
 bindWorkflowVideoPlayback();
+bindGreetingReveal();
+bindSettingsCarousel();
 
 themeButton.addEventListener("click", () => {
   applyTheme(resolvedTheme() === "dark" ? "light" : "dark");

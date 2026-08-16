@@ -14,12 +14,50 @@ const [html, css, script] = await Promise.all([
 ]);
 
 test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", () => {
-  for (const id of ["main-content", "how-it-works", "features", "privacy", "discord-notice", "faq", "download"]) {
+  for (const id of ["main-content", "how-it-works", "features", "privacy", "discord-notice", "faq"]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
 
   const slots = [...html.matchAll(/data-media-slot="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings"]);
+});
+
+test("설정 화면 6장을 한 장씩 순서대로 넘긴다", async () => {
+  const settingsImages = [
+    "settings-01-translation.png",
+    "settings-02-engines.png",
+    "settings-03-image-translation.png",
+    "settings-04-storage.png",
+    "settings-05-convenience.png",
+    "settings-06-about.png",
+  ];
+
+  assert.match(html, /data-settings-carousel/);
+  assert.equal((html.match(/data-settings-card/g) ?? []).length, 6);
+  assert.equal((html.match(/data-settings-dot=/g) ?? []).length, 6);
+  assert.doesNotMatch(html, /data-settings-previous|data-settings-forward/);
+  assert.doesNotMatch(html, /data-settings-status|>1<.*>6</s);
+  assert.doesNotMatch(html, /설정 화면 사진|라이트 모드 전체 화면|권장 1600 × 1000/);
+
+  let previousPosition = -1;
+  for (const imageName of settingsImages) {
+    const imagePosition = html.indexOf(`./assets/${imageName}`);
+    assert.ok(imagePosition > previousPosition, `${imageName}이 지정한 순서로 배치되어야 합니다.`);
+    previousPosition = imagePosition;
+    const image = await stat(new URL(`../assets/${imageName}`, import.meta.url));
+    assert.ok(image.size > 100_000, `${imageName} 원본 이미지가 필요합니다.`);
+  }
+
+  assert.match(css, /\.settings-card-stack\s*\{[^}]*aspect-ratio:\s*1497\s*\/\s*1410/s);
+  assert.match(css, /\.settings-card-stack\s*\{[^}]*margin:\s*0 auto clamp\(20px, 3vw, 34px\)/s);
+  assert.match(css, /\.settings-card\s*\{[^}]*object-fit:\s*contain/s);
+  assert.match(css, /\.settings-card\s*\{[^}]*opacity:\s*0;[^}]*visibility:\s*hidden/s);
+  assert.match(css, /\.settings-card\.is-active\s*\{[^}]*opacity:\s*1;[^}]*visibility:\s*visible/s);
+  assert.match(script, /function bindSettingsCarousel\(\)/);
+  assert.match(script, /nextCardButton\?\.addEventListener\("click", \(\) => show\(activeIndex \+ 1\)\)/);
+  assert.match(script, /event\.key === "ArrowLeft"/);
+  assert.match(script, /event\.key === "ArrowRight"/);
+  assert.match(script, /bindSettingsCarousel\(\)/);
 });
 
 test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다", () => {
@@ -33,6 +71,8 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
   ]) {
     assert.ok(html.includes(copy), `\"${copy}\" 문구가 필요합니다.`);
   }
+  assert.match(css, /\.workflow-list\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /:lang\(ko\) \.workflow-list span\s*\{[^}]*word-break:\s*keep-all;[^}]*overflow-wrap:\s*break-word;/s);
   assert.match(html, /로컬 AI를 사용하면 별도의 번역 API 비용 없이 PC에서 번역할 수 있습니다\./);
   assert.match(html, /메시지와 답장은 물론, 이미지 속 글자까지 Discord 안에서 바로 번역합니다\./);
   assert.doesNotMatch(html, /메시지와 답장은 물론, 이미지 속 글자까지 Discord 화면에서 바로 번역합니다\./);
@@ -49,9 +89,15 @@ test("파란 기능 카드는 선택 언어와 나머지 27개 언어의 인사�
   assert.match(script, /buildGreetingCycle\(locale\)/);
   assert.match(script, /updateGreetingLocale\(currentLocale\)/);
   assert.match(script, /featureGreetings\.replaceChildren/);
+  assert.match(script, /function bindGreetingReveal\(\)/);
+  assert.match(script, /threshold:\s*0\.38/);
+  assert.match(script, /featureGreetings\.classList\.add\("is-typing"\)/);
   assert.doesNotMatch(script, /GREETING_INTERVAL|greetingTimer/);
   assert.match(css, /\.feature-greetings\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s);
   assert.match(css, /\.feature-greeting\.is-selected\s*\{[^}]*font-size:\s*clamp\(26px, 3vw, 44px\)/s);
+  assert.match(css, /\.feature-greetings\.is-typing \.feature-greeting\s*\{[^}]*animation-delay:\s*calc\(var\(--greeting-index, 0\) \* 54ms\)/s);
+  assert.match(css, /\.feature-greetings\.is-typing \.feature-greeting\.is-selected\s*\{[^}]*animation:\s*greeting-pop 520ms[^;]* both;/s);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.feature-greeting\s*\{[^}]*opacity:\s*1/s);
   assert.match(css, /@keyframes greeting-pop/);
   assert.doesNotMatch(script, /buildGreetingCycle\(locale\)\.slice/);
   assert.doesNotMatch(css, /\.feature-greeting:nth-child\(n \+ 7\)/);
@@ -107,6 +153,31 @@ test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준
   assert.ok(result.size > 0);
 });
 
+test("개인정보 구간은 자체 서버와 수집 여부를 명확히 설명한다", () => {
+  for (const copy of [
+    "개인정보 보호",
+    "별도의 운영 서버 없이, 내 PC에서 동작합니다.",
+    "NudeNyang Translator는 별도의 중계·저장 서버를 운영하지 않으며, 대화 내역과 개인정보를 자체 서버로 전송하거나 보관하지 않습니다.",
+    "자체 서버 없음",
+    "대화 내역을 수집하지 않음",
+    "Discord 데이터 그대로 유지",
+    "Discord 사용자 토큰과 self-bot을 사용하지 않으며 설치 파일과 서버 데이터를 수정하지 않습니다.",
+    "온라인 번역 엔진을 선택하면 번역에 필요한 텍스트가 해당 서비스로 직접 전달될 수는 있습니다.",
+  ]) {
+    assert.ok(html.includes(copy), `\"${copy}\" 문구가 필요합니다.`);
+  }
+  assert.ok(html.includes("회원가입이나 서버 연결 없이 앱이 PC에서 직접 동작합니다."));
+  assert.ok(html.includes("대화 내용, 이미지와 번역 기록을 수집하거나 보관하지 않습니다."));
+  assert.equal(html.includes("번역 기록을 NudeNyang"), false);
+  assert.equal(html.includes("NudeNyang 서버 연결"), false);
+  for (const removed of ["작동 방식과 개인정보", "필요한 범위만 연결하고", "로컬 번역", "온라인 번역", "이미지 처리"]) {
+    assert.doesNotMatch(html, new RegExp(`>${removed}<`), `\"${removed}\" 항목은 제거해야 합니다.`);
+  }
+  assert.match(css, /\.privacy-points \.privacy-note\s*\{[^}]*border-left:\s*3px solid/s);
+  assert.match(css, /\.privacy-copy\s*\{[^}]*position:\s*static/s);
+  assert.doesNotMatch(css, /\.privacy-copy\s*\{[^}]*position:\s*sticky/s);
+});
+
 test("Discord 이용 안내와 공식 정책 링크를 FAQ 앞에 제공한다", () => {
   const noticeIndex = html.indexOf('id="discord-notice"');
   const faqIndex = html.indexOf('id="faq"');
@@ -128,6 +199,21 @@ test("히어로에는 다운로드 CTA만 노출한다", () => {
   assert.match(html, /class="button primary"[^>]*>Windows Beta 다운로드<\/a>/);
   assert.doesNotMatch(html, /class="button secondary"[^>]*href="#how-it-works"/);
   assert.doesNotMatch(html, />작동 방식 보기<\/a>/);
+  assert.doesNotMatch(html, /class="download-section"/);
+  assert.doesNotMatch(html, />Discord 대화를 원하는 언어로 확인해 보십시오\.<\/h2>/);
+});
+
+test("번역 엔진 아이콘은 각 공식 사이트로 연결한다", () => {
+  for (const href of [
+    "https://openai.com/",
+    "https://www.anthropic.com/",
+    "https://gemini.google.com/",
+    "https://www.deepl.com/",
+  ]) {
+    assert.match(html, new RegExp(`<a href="${href.replaceAll(".", "\\.")}" target="_blank" rel="noopener noreferrer"`));
+  }
+  assert.equal((html.match(/aria-label="(?:OpenAI|Anthropic|Google Gemini|DeepL) 공식 사이트"/g) ?? []).length, 4);
+  assert.match(css, /\.provider-list a:hover,[\s\S]*?transform:\s*translateY\(-3px\)/);
 });
 
 test("Beta 표기는 모든 UI 언어에서 영문으로 유지한다", () => {

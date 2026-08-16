@@ -198,10 +198,18 @@
               <p data-i18n>로컬 AI부터 구독 CLI와 DeepL까지 용도에 맞게 연결할 수 있습니다.</p>
             </div>
             <div class="provider-list" aria-label="지원 번역 서비스">
-              <span><img src="../web/assets/provider-openai.svg" alt="ChatGPT" /></span>
-              <span><img src="../web/assets/provider-claude.svg" alt="Claude" /></span>
-              <span><img src="../web/assets/provider-gemini.svg" alt="Gemini" /></span>
-              <span><img src="../web/assets/provider-deepl.svg" alt="DeepL" /></span>
+              <a href="https://openai.com/" target="_blank" rel="noopener noreferrer" aria-label="OpenAI 공식 사이트">
+                <img src="../web/assets/provider-openai.svg" alt="OpenAI" />
+              </a>
+              <a href="https://www.anthropic.com/" target="_blank" rel="noopener noreferrer" aria-label="Anthropic 공식 사이트">
+                <img src="../web/assets/provider-claude.svg" alt="Claude" />
+              </a>
+              <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" aria-label="Google Gemini 공식 사이트">
+                <img src="../web/assets/provider-gemini.svg" alt="Gemini" />
+              </a>
+              <a href="https://www.deepl.com/" target="_blank" rel="noopener noreferrer" aria-label="DeepL 공식 사이트">
+                <img src="../web/assets/provider-deepl.svg" alt="DeepL" />
+              </a>
             </div>
           </article>
         </div>
@@ -210,24 +218,25 @@
       <section class="section privacy-section" id="privacy" aria-labelledby="privacy-title">
         <div class="shell privacy-layout">
           <div class="privacy-copy reveal">
-            <p class="eyebrow" data-i18n>작동 방식과 개인정보</p>
-            <h2 id="privacy-title" data-i18n>필요한 범위만 연결하고, 선택한 방식으로 번역합니다.</h2>
-            <p data-i18n>Discord 사용자 토큰과 self-bot을 사용하지 않으며 설치 파일과 서버 데이터를 수정하지 않습니다.</p>
+            <p class="eyebrow" data-i18n>개인정보 보호</p>
+            <h2 id="privacy-title" data-i18n>별도의 운영 서버 없이, 내 PC에서 동작합니다.</h2>
+            <p data-i18n>NudeNyang Translator는 별도의 중계·저장 서버를 운영하지 않으며, 대화 내역과 개인정보를 자체 서버로 전송하거나 보관하지 않습니다.</p>
           </div>
 
           <div class="privacy-points reveal">
             <article>
-              <strong data-i18n>로컬 번역</strong>
-              <p data-i18n>로컬 AI를 선택하면 번역할 텍스트를 외부 번역 서비스로 전송하지 않습니다.</p>
+              <strong data-i18n>자체 서버 없음</strong>
+              <p data-i18n>회원가입이나 서버 연결 없이 앱이 PC에서 직접 동작합니다.</p>
             </article>
             <article>
-              <strong data-i18n>온라인 번역</strong>
-              <p data-i18n>선택한 서비스에 필요한 텍스트만 전달하며 인증은 각 공식 방식으로 관리합니다.</p>
+              <strong data-i18n>대화 내역을 수집하지 않음</strong>
+              <p data-i18n>대화 내용, 이미지와 번역 기록을 수집하거나 보관하지 않습니다.</p>
             </article>
             <article>
-              <strong data-i18n>이미지 처리</strong>
-              <p data-i18n>이미지는 PC에서 인식하며 외부 서비스에는 추출된 텍스트만 전달합니다.</p>
+              <strong data-i18n>Discord 데이터 그대로 유지</strong>
+              <p data-i18n>Discord 사용자 토큰과 self-bot을 사용하지 않으며 설치 파일과 서버 데이터를 수정하지 않습니다.</p>
             </article>
+            <p class="privacy-note" data-i18n>온라인 번역 엔진을 선택하면 번역에 필요한 텍스트가 해당 서비스로 직접 전달될 수는 있습니다.</p>
           </div>
         </div>
       </section>
@@ -238,12 +247,73 @@
           <p data-i18n>받는 메시지, 보내는 메시지, 이미지 번역과 엔진 연결 상태를 한 화면에서 관리합니다.</p>
         </div>
 
-        <!-- TODO: 1600x1000 비율의 라이트 모드 설정 화면 사진으로 교체합니다. -->
-        <div class="media-stage settings-media reveal" data-media-slot="settings" role="img" aria-label="라이트 모드 설정 화면 사진을 넣을 자리">
-          <div class="media-slot-copy">
-            <strong data-i18n>설정 화면 사진</strong>
-            <span data-i18n>라이트 모드 전체 화면</span>
-            <small data-i18n>권장 1600 × 1000, PNG</small>
+        <div
+          class="media-stage settings-media reveal"
+          data-media-slot="settings"
+          data-settings-carousel
+          role="region"
+          aria-label="설정 화면 미리보기"
+        >
+          <button class="settings-card-stack" type="button" data-settings-next aria-label="다음 설정 화면 보기">
+            <img
+              class="settings-card is-active"
+              data-settings-card
+              src="./assets/settings-01-translation.png"
+              alt="받는 메시지와 보내는 메시지 번역 설정 화면"
+              loading="lazy"
+              decoding="async"
+            />
+            <img
+              class="settings-card"
+              data-settings-card
+              src="./assets/settings-02-engines.png"
+              alt="번역 엔진과 서비스 연결 설정 화면"
+              loading="lazy"
+              decoding="async"
+            />
+            <img
+              class="settings-card"
+              data-settings-card
+              src="./assets/settings-03-image-translation.png"
+              alt="이미지 번역 설정 화면"
+              loading="lazy"
+              decoding="async"
+            />
+            <img
+              class="settings-card"
+              data-settings-card
+              src="./assets/settings-04-storage.png"
+              alt="저장 공간 관리 화면"
+              loading="lazy"
+              decoding="async"
+            />
+            <img
+              class="settings-card"
+              data-settings-card
+              src="./assets/settings-05-convenience.png"
+              alt="편의 기능과 단축키 설정 화면"
+              loading="lazy"
+              decoding="async"
+            />
+            <img
+              class="settings-card"
+              data-settings-card
+              src="./assets/settings-06-about.png"
+              alt="앱 정보와 업데이트 화면"
+              loading="lazy"
+              decoding="async"
+            />
+          </button>
+
+          <div class="settings-carousel-navigation">
+            <div class="settings-carousel-dots" role="group" aria-label="설정 화면 선택">
+              <button class="is-active" type="button" data-settings-dot="0" aria-label="첫 번째 설정 화면" aria-current="true"></button>
+              <button type="button" data-settings-dot="1" aria-label="두 번째 설정 화면"></button>
+              <button type="button" data-settings-dot="2" aria-label="세 번째 설정 화면"></button>
+              <button type="button" data-settings-dot="3" aria-label="네 번째 설정 화면"></button>
+              <button type="button" data-settings-dot="4" aria-label="다섯 번째 설정 화면"></button>
+              <button type="button" data-settings-dot="5" aria-label="여섯 번째 설정 화면"></button>
+            </div>
           </div>
         </div>
       </section>
@@ -295,16 +365,6 @@
         </div>
       </section>
 
-      <section class="download-section" id="download" aria-labelledby="download-title">
-        <div class="shell download-layout reveal">
-          <img src="../assets/nude-translator.png" alt="NudeNyang Discord Translator 앱 아이콘" width="104" height="104" />
-          <div>
-            <h2 id="download-title" data-i18n>Discord 대화를 원하는 언어로 확인해 보십시오.</h2>
-            <p data-i18n>현재 Windows 10·11 x64 환경을 지원합니다.</p>
-          </div>
-          <a class="button primary" href="https://github.com/NudeNyang/NudeNyang-Translator/releases/latest" data-i18n>Windows Beta 다운로드</a>
-        </div>
-      </section>
     </main>
 
     <footer class="site-footer">
