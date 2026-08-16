@@ -89,7 +89,7 @@
           <div><strong data-i18n>Windows 10·11</strong><span data-i18n>x64 우선 지원</span></div>
           <div><strong data-i18n>실시간 번역</strong><span data-i18n>메시지와 채널명</span></div>
           <div><strong data-i18n>이미지 OCR</strong><span data-i18n>PC에서 글자 감지</span></div>
-          <div><strong data-i18n>로컬 모델</strong><span data-i18n>Hy-MT2 선택 가능</span></div>
+          <div><strong data-i18n>로컬 AI</strong><span data-i18n>로컬 AI 선택 가능</span></div>
         </div>
       </section>
 
@@ -109,9 +109,9 @@
         </div>
 
         <ol class="workflow-list reveal">
-          <li><strong data-i18n>읽기</strong><span data-i18n>받은 메시지와 채널명을 선택한 언어로 표시합니다.</span></li>
-          <li><strong data-i18n>답장하기</strong><span data-i18n>최근 대화 언어를 기준으로 입력한 메시지를 번역합니다.</span></li>
-          <li><strong data-i18n>이미지 확인</strong><span data-i18n>첨부 이미지의 글자를 인식하고 번역 결과를 합성합니다.</span></li>
+          <li><strong data-i18n>언어 자동 감지</strong><span data-i18n>최근 대화 언어를 감지하여 답장에 맞는 번역 방향을 제안합니다.</span></li>
+          <li><strong data-i18n>실시간 화면 번역</strong><span data-i18n>받은 메시지와 채널명을 Discord 화면에서 바로 번역합니다.</span></li>
+          <li><strong data-i18n>전송 메시지 통역</strong><span data-i18n>작성한 문장을 확인하고 상대방의 언어로 번역해 보냅니다.</span></li>
         </ol>
       </section>
 
@@ -124,15 +124,15 @@
         <div class="feature-grid">
           <article class="feature-card feature-primary reveal">
             <div>
-              <h3 data-i18n>Discord 화면에서 바로 읽습니다.</h3>
-              <p data-i18n>언어를 구분하여 메시지와 채널명을 번역하고, 원문과 같은 언어는 그대로 표시합니다.</p>
+              <h3 data-i18n>쓰던 Discord를 그대로 사용합니다.</h3>
+              <p data-i18n>별도의 클라이언트로 옮기지 않고 현재 Discord 데스크톱 앱에서 번역을 이어갑니다.</p>
             </div>
             <span class="feature-word" aria-hidden="true">안녕하세요</span>
           </article>
 
           <article class="feature-card feature-outgoing reveal">
-            <h3 data-i18n>보내는 메시지도 번역합니다.</h3>
-            <p data-i18n>상대방에게 보낼 문장을 확인하고 수정한 뒤 전송할 수 있습니다.</p>
+            <h3 data-i18n>로컬 AI 모델로 번역 비용을 줄일 수 있습니다.</h3>
+            <p data-i18n>로컬 AI를 사용하면 별도의 번역 API 비용 없이 PC에서 번역할 수 있습니다.</p>
           </article>
 
           <article class="feature-card feature-image reveal">
@@ -152,7 +152,7 @@
           <article class="feature-card feature-engines reveal">
             <div>
               <h3 data-i18n>원하는 번역 엔진을 선택합니다.</h3>
-              <p data-i18n>로컬 모델부터 구독 CLI와 DeepL까지 용도에 맞게 연결할 수 있습니다.</p>
+              <p data-i18n>로컬 AI부터 구독 CLI와 DeepL까지 용도에 맞게 연결할 수 있습니다.</p>
             </div>
             <div class="provider-list" aria-label="지원 번역 서비스">
               <span><img src="../web/assets/provider-openai.svg" alt="ChatGPT" /></span>
@@ -175,7 +175,7 @@
           <div class="privacy-points reveal">
             <article>
               <strong data-i18n>로컬 번역</strong>
-              <p data-i18n>Hy-MT2를 선택하면 번역할 텍스트를 외부 번역 서비스로 전송하지 않습니다.</p>
+              <p data-i18n>로컬 AI를 선택하면 번역할 텍스트를 외부 번역 서비스로 전송하지 않습니다.</p>
             </article>
             <article>
               <strong data-i18n>온라인 번역</strong>
@@ -205,12 +205,30 @@
         </div>
       </section>
 
+      <section class="discord-notice" id="discord-notice" aria-labelledby="discord-notice-title">
+        <div class="shell discord-notice-layout reveal">
+          <h2 id="discord-notice-title" data-i18n>Discord 이용 안내</h2>
+          <div class="discord-notice-copy">
+            <p data-i18n>이 앱은 사용자 토큰이나 비공식 Discord API를 사용하지 않지만, Discord가 공식으로 승인한 도구는 아닙니다. Discord 정책상 클라이언트 변경 또는 일반 사용자 계정 자동화로 판단될 경우 사용이 제한되거나 계정에 조치가 적용될 수 있습니다. 최신 정책을 확인한 뒤 사용 여부를 결정해 주십시오.</p>
+            <p class="discord-notice-responsibility" data-i18n>사용에 따른 책임은 사용자에게 있습니다.</p>
+            <div class="discord-policy-links">
+              <a href="https://discord.com/terms" target="_blank" rel="noreferrer" data-i18n>Discord 이용 약관</a>
+              <a href="https://discord.com/safety/platform-manipulation-policy-explainer-oct-2023" target="_blank" rel="noreferrer" data-i18n>플랫폼 조작 정책</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section shell faq-section" id="faq" aria-labelledby="faq-title">
         <div class="section-heading compact reveal">
           <h2 id="faq-title" data-i18n>자주 묻는 질문</h2>
         </div>
 
         <div class="faq-list reveal">
+          <details>
+            <summary data-i18n>Discord 이용 약관에 위배될 수 있나요?</summary>
+            <p data-i18n>Discord 정책은 클라이언트 변경과 일반 사용자 계정 자동화를 허용하지 않는다고 안내합니다. 이 앱은 공식 승인을 받은 도구가 아니므로 정책 위반으로 판단될 가능성을 배제할 수 없습니다. 사용 여부와 결과에 대한 책임은 사용자에게 있습니다.</p>
+          </details>
           <details>
             <summary data-i18n>Discord 계정 토큰이 필요한가요?</summary>
             <p data-i18n>필요하지 않습니다. 사용자 토큰이나 비공식 Discord API를 사용하지 않습니다.</p>

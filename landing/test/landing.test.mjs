@@ -13,12 +13,46 @@ const [html, css, script] = await Promise.all([
 ]);
 
 test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", () => {
-  for (const id of ["main-content", "how-it-works", "features", "privacy", "faq", "download"]) {
+  for (const id of ["main-content", "how-it-works", "features", "privacy", "discord-notice", "faq", "download"]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
 
   const slots = [...html.matchAll(/data-media-slot="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings"]);
+});
+
+test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다", () => {
+  for (const copy of [
+    "언어 자동 감지",
+    "실시간 화면 번역",
+    "전송 메시지 통역",
+    "쓰던 Discord를 그대로 사용합니다.",
+    "로컬 AI 모델로 번역 비용을 줄일 수 있습니다.",
+  ]) {
+    assert.ok(html.includes(copy), `\"${copy}\" 문구가 필요합니다.`);
+  }
+  assert.match(html, /로컬 AI를 사용하면 별도의 번역 API 비용 없이 PC에서 번역할 수 있습니다\./);
+  assert.doesNotMatch(html, /Hy-MT2/);
+});
+
+test("파란 기능 카드의 인사말은 모든 UI 언어에서 한글로 고정한다", () => {
+  assert.match(html, /class="feature-word" aria-hidden="true">안녕하세요<\/span>/);
+  assert.doesNotMatch(html, /class="feature-word"[^>]*data-i18n/);
+});
+
+test("Discord 이용 안내와 공식 정책 링크를 FAQ 앞에 제공한다", () => {
+  const noticeIndex = html.indexOf('id="discord-notice"');
+  const faqIndex = html.indexOf('id="faq"');
+
+  assert.ok(noticeIndex > 0, "Discord 이용 안내 구간이 필요합니다.");
+  assert.ok(noticeIndex < faqIndex, "Discord 이용 안내는 FAQ 앞에 배치해야 합니다.");
+  assert.match(html, /href="https:\/\/discord\.com\/terms"/);
+  assert.match(html, /href="https:\/\/discord\.com\/safety\/platform-manipulation-policy-explainer-oct-2023"/);
+  assert.match(html, />Discord 이용 약관</);
+  assert.match(html, />플랫폼 조작 정책</);
+  assert.match(html, />Discord 이용 약관에 위배될 수 있나요\?</);
+  assert.match(html, /사용 여부와 결과에 대한 책임은 사용자에게 있습니다\./);
+  assert.doesNotMatch(css, /\.discord-notice[^}]*#[0-9a-f]{3,8}/i);
 });
 
 test("히어로에는 다운로드 CTA만 노출한다", () => {

@@ -703,7 +703,8 @@ summary:focus-visible {
 
 .section-heading h2,
 .privacy-section h2,
-.showcase-copy h2 {
+.showcase-copy h2,
+.discord-notice h2 {
   font-size: clamp(34px, 4.2vw, 56px);
 }
 
@@ -917,6 +918,56 @@ summary:focus-visible {
 
 .settings-media {
   aspect-ratio: 8 / 5;
+}
+
+.discord-notice {
+  border-block: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent-soft) 32%, var(--bg));
+}
+
+.discord-notice-layout {
+  display: grid;
+  gap: 24px;
+  padding-block: clamp(58px, 7vw, 86px);
+}
+
+.discord-notice h2 {
+  max-width: 760px;
+  margin: 0;
+}
+
+.discord-notice-copy {
+  max-width: 820px;
+}
+
+.discord-notice-copy > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.discord-notice-copy .discord-notice-responsibility {
+  margin-top: 12px;
+  color: var(--text);
+  font-weight: 720;
+}
+
+.discord-policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  margin-top: 24px;
+}
+
+.discord-policy-links a {
+  padding-bottom: 3px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--accent-strong);
+  font-weight: 720;
+}
+
+.discord-policy-links a:hover {
+  border-bottom-color: var(--accent-strong);
 }
 
 .faq-section {
@@ -1233,7 +1284,8 @@ html[dir="rtl"] .theme-toggle {
   }
 
   .section,
-  .privacy-section {
+  .privacy-section,
+  .discord-notice-layout {
     padding-block: 82px;
   }
 
