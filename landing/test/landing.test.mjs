@@ -32,7 +32,8 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
     assert.ok(html.includes(copy), `\"${copy}\" 문구가 필요합니다.`);
   }
   assert.match(html, /로컬 AI를 사용하면 별도의 번역 API 비용 없이 PC에서 번역할 수 있습니다\./);
-  assert.match(html, /여러 언어가 동시에 표시되는 Discord 화면에서도 메시지별 언어를 자동으로 감지해 번역합니다\./);
+  assert.match(html, /여러 언어가 동시에 표시되어도 메세지별 언어를 자동으로 감지해 번역합니다\./);
+  assert.doesNotMatch(html, /여러 언어가 동시에 표시되는 Discord 화면에서도 메시지별 언어를 자동으로 감지해 번역합니다\./);
   assert.doesNotMatch(html, /최근 대화 언어를 감지하여 답장에 맞는 번역 방향을 제안합니다\./);
   assert.doesNotMatch(html, /Hy-MT2/);
 });
