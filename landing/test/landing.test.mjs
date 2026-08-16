@@ -67,9 +67,10 @@ test("파란 기능 카드는 선택 언어와 나머지 27개 언어의 인사�
   }
 });
 
-test("로컬 AI 카드는 파란 기능 카드와 같은 세로 높이를 사용한다", () => {
-  assert.match(css, /\.feature-primary\s*\{[^}]*grid-row:\s*span 2[^}]*min-height:\s*558px/s);
-  assert.match(css, /\.feature-outgoing\s*\{[^}]*grid-row:\s*span 2[^}]*min-height:\s*558px/s);
+test("로컬 AI 카드는 원래 높이를 유지하고 한국어 제목을 단어 단위로 줄바꿈한다", () => {
+  assert.match(css, /:lang\(ko\) \.feature-card h3,[\s\S]*:lang\(ko\) \.feature-card p\s*\{[^}]*word-break:\s*keep-all/s);
+  assert.doesNotMatch(css, /\.feature-outgoing\s*\{[^}]*grid-row:\s*span 2/s);
+  assert.doesNotMatch(css, /\.feature-outgoing\s*\{[^}]*min-height:\s*558px/s);
 });
 
 test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준다", async () => {

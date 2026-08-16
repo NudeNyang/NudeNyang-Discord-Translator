@@ -492,6 +492,7 @@ summary:focus-visible {
   word-break: keep-all;
 }
 
+:lang(ko) .feature-card h3,
 :lang(ko) .feature-card p {
   word-break: keep-all;
 }
@@ -837,8 +838,6 @@ summary:focus-visible {
 }
 
 .feature-outgoing {
-  grid-row: span 2;
-  min-height: 558px;
   background: var(--accent-soft);
 }
 
