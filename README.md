@@ -54,10 +54,7 @@ Python 인터프리터, `.venv`, PyInstaller, PaddleOCR 사이드카는 실행·
 
 Discord DOM 방식은 Discord가 공식 지원하는 확장 방식이 아니다. 클라이언트 업데이트로 깨질
 수 있고 정책상 위험이 생길 수 있으므로 실시간 번역은 사용자의 최초 동의 없이 자동으로
-켜지지 않는다. Discord 설치 파일과 서버 데이터는 수정하지 않는다. 정책 문구, 공개된 클라이언트
-모드 사례와 실제 사용자·개발자 반응을 나눠 살핀 내용은
-[Discord Client Modification and Practical Risk](DISCORD_POLICY.md)에 정리했으며
-[한국어판](DISCORD_POLICY.ko.md)도 함께 제공한다.
+켜지지 않는다. Discord 설치 파일과 서버 데이터는 수정하지 않는다.
 
 ## 개발 실행
 
@@ -128,7 +125,6 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
 ## 문서
 
 - [아키텍처와 안전 경계](ARCHITECTURE.md)
-- [Discord Client Modification and Practical Risk](DISCORD_POLICY.md) · [한국어](DISCORD_POLICY.ko.md)
 - [Rust/Tauri 전환 기록](TAURI_MIGRATION.md)
 - [macOS 준비 계획](MACOS.md)
 - [Hy-MT2 런타임](HYMT.md)
