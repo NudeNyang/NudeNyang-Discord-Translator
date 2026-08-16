@@ -229,6 +229,13 @@ impl AppConfig {
             object.insert("ui_language".to_string(), Value::String("auto".to_string()));
         }
         if object
+            .get("hymt_device")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "auto" | "gpu" | "cpu"))
+        {
+            object.insert("hymt_device".to_string(), Value::String("auto".to_string()));
+        }
+        if object
             .get("target_language")
             .and_then(Value::as_str)
             .is_some_and(|value| !is_supported_language_code(value))
@@ -524,6 +531,19 @@ mod tests {
         let invalid = AppConfig::from_value(json!({"image_ocr_quality": "maximum"}))
             .expect("invalid OCR quality mode should reset");
         assert_eq!(invalid.image_ocr_quality, "adaptive");
+    }
+
+    #[test]
+    fn local_model_device_accepts_protection_gpu_and_cpu_modes() {
+        for device in ["auto", "gpu", "cpu"] {
+            let config = AppConfig::from_value(json!({"hymt_device": device}))
+                .expect("supported local model device");
+            assert_eq!(config.hymt_device, device);
+        }
+
+        let invalid = AppConfig::from_value(json!({"hymt_device": "vulkan"}))
+            .expect("invalid local model device should reset");
+        assert_eq!(invalid.hymt_device, "auto");
     }
 
     #[test]

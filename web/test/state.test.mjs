@@ -202,6 +202,34 @@ test("local model preparation reports downloaded gigabytes and progress", () => 
       indeterminate: true,
     },
   );
+  assert.deepEqual(
+    modelPreparationBanner({
+      model: "Hy-MT2 1.8B Q4_K_M",
+      phase: "vram-protected",
+      downloaded: 1_133_080_448,
+      total: 1_133_080_448,
+    }),
+    {
+      title: "Hy-MT2 1.8B Q4_K_M VRAM 보호 전환 중",
+      detail: "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.",
+      progress: 1,
+      indeterminate: true,
+    },
+  );
+  assert.deepEqual(
+    modelPreparationBanner({
+      model: "Hy-MT2 1.8B Q4_K_M",
+      phase: "gpu-restored",
+      downloaded: 1_133_080_448,
+      total: 1_133_080_448,
+    }),
+    {
+      title: "Hy-MT2 1.8B Q4_K_M GPU 모드 복귀 중",
+      detail: "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.",
+      progress: 1,
+      indeterminate: true,
+    },
+  );
 
   assert.deepEqual(
     modelPreparationBanner({

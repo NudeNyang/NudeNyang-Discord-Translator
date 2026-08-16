@@ -35,6 +35,6 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "Discord 보안 파이프 재연결 시 기존 가디언과 충돌하지 않도록 개선한 0.5.12 베타",
+    "VRAM 여유를 감지해 게임과 다른 프로그램을 우선 보호하고, 번역 중단 없이 GPU와 CPU/RAM 사이를 안정적으로 전환하는 0.5.13 베타",
   );
 });

@@ -2066,6 +2066,16 @@ fn drain_worker_results(
                         if progress.phase == "cpu-fallback" {
                             runtime.local_model_device = "cpu-fallback".to_string();
                             runtime.notice = "VRAM이 부족하거나 GPU를 사용할 수 없어 CPU/RAM 전용 모드로 전환했습니다.".to_string();
+                        } else if progress.phase == "vram-protected" {
+                            runtime.local_model_device = "vram-protected".to_string();
+                            runtime.notice =
+                                "다른 프로그램을 위해 VRAM을 확보하고 CPU/RAM으로 전환했습니다."
+                                    .to_string();
+                        } else if progress.phase == "gpu-restored" {
+                            runtime.local_model_device = "auto".to_string();
+                            runtime.notice =
+                                "VRAM 여유가 안정적으로 회복되어 GPU 사용을 다시 시작합니다."
+                                    .to_string();
                         }
                         runtime.model_progress = Some(progress);
                     });
@@ -2112,7 +2122,9 @@ fn finish_activation_status(
             || config.enabled
             || config.outgoing_translation_enabled
             || config.keep_local_model_warm;
-        runtime.notice = if runtime.local_model_device == "cpu-fallback" {
+        runtime.notice = if runtime.local_model_device == "vram-protected" {
+            "다른 프로그램을 위해 VRAM을 확보하고 CPU/RAM으로 전환했습니다.".to_string()
+        } else if runtime.local_model_device == "cpu-fallback" {
             "VRAM이 부족하거나 GPU를 사용할 수 없어 CPU/RAM 전용 모드로 전환했습니다.".to_string()
         } else if runtime.active_translator == runtime.active_outgoing_translator {
             translator_activation_notice(&runtime.active_translator, model_is_prepared)

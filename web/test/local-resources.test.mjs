@@ -70,7 +70,9 @@ test("the measured 1.8B automatic profile is shown as about 1.7GB of VRAM", () =
   assert.equal((guidance.estimatedUsageBytes / GiB).toFixed(1), "1.7");
 });
 
-test("settings expose CPU and RAM-only execution with a low-memory preset", () => {
+test("settings expose automatic VRAM protection, GPU priority, and CPU-only execution", () => {
+  assert.match(script, /\["auto", "자동 보호 \(권장\)"\]/);
+  assert.match(script, /\["gpu", "GPU 우선"\]/);
   assert.match(script, /\["cpu", "CPU\/RAM 전용"\]/);
   assert.match(markup, /id="local-resource-guidance"/);
   assert.match(markup, /id="apply-low-memory-preset"/);

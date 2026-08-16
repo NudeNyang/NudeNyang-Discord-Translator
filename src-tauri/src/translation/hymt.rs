@@ -33,9 +33,14 @@ use super::Translator;
 #[cfg(windows)]
 use std::os::windows::io::AsRawHandle;
 #[cfg(windows)]
-use windows::core::PCWSTR;
+use windows::core::{Interface, PCWSTR};
 #[cfg(windows)]
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
+#[cfg(windows)]
+use windows::Win32::Graphics::Dxgi::{
+    CreateDXGIFactory1, IDXGIAdapter3, IDXGIFactory1, DXGI_ADAPTER_FLAG_SOFTWARE,
+    DXGI_MEMORY_SEGMENT_GROUP_LOCAL, DXGI_QUERY_VIDEO_MEMORY_INFO,
+};
 #[cfg(windows)]
 use windows::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
@@ -46,6 +51,12 @@ use windows::Win32::System::JobObjects::{
 const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+const VRAM_LOW_WATERMARK_BYTES: u64 = 1536 * 1024 * 1024;
+const VRAM_RECOVERY_WATERMARK_BYTES: u64 = 3 * 1024 * 1024 * 1024;
+const VRAM_PRESSURE_DURATION: Duration = Duration::from_secs(5);
+const VRAM_CPU_COOLDOWN: Duration = Duration::from_secs(120);
+const VRAM_RECOVERY_DURATION: Duration = Duration::from_secs(30);
+const VRAM_MONITOR_INTERVAL: Duration = Duration::from_secs(1);
 const PROMPT_ECHO_HINTS: [&str; 17] = [
     "zxqkeep",
     "discord chat message",
@@ -124,13 +135,99 @@ pub struct LocalModelDeleteResult {
 
 pub type ModelProgressObserver = Arc<dyn Fn(ModelPreparationProgress) + Send + Sync>;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RuntimeDevice {
+    Gpu,
+    Cpu,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum VramProtectionAction {
+    None,
+    SwitchToCpu,
+    SwitchToGpu,
+}
+
 #[derive(Default)]
+struct VramProtectionState {
+    low_vram_since: Option<Instant>,
+    recovery_since: Option<Instant>,
+    cpu_protected_until: Option<Instant>,
+    gpu_recovery_pending: bool,
+}
+
+fn evaluate_vram_protection(
+    state: &mut VramProtectionState,
+    active_device: RuntimeDevice,
+    available_vram: u64,
+    now: Instant,
+) -> VramProtectionAction {
+    match active_device {
+        RuntimeDevice::Gpu => {
+            state.recovery_since = None;
+            if available_vram >= VRAM_LOW_WATERMARK_BYTES {
+                state.low_vram_since = None;
+                return VramProtectionAction::None;
+            }
+            let low_since = state.low_vram_since.get_or_insert(now);
+            if now.saturating_duration_since(*low_since) < VRAM_PRESSURE_DURATION {
+                return VramProtectionAction::None;
+            }
+            state.low_vram_since = None;
+            state.cpu_protected_until = Some(now + VRAM_CPU_COOLDOWN);
+            state.gpu_recovery_pending = false;
+            VramProtectionAction::SwitchToCpu
+        }
+        RuntimeDevice::Cpu => {
+            state.low_vram_since = None;
+            if state.cpu_protected_until.is_some_and(|until| now < until)
+                || available_vram < VRAM_RECOVERY_WATERMARK_BYTES
+            {
+                state.recovery_since = None;
+                return VramProtectionAction::None;
+            }
+            let recovery_since = state.recovery_since.get_or_insert(now);
+            if now.saturating_duration_since(*recovery_since) < VRAM_RECOVERY_DURATION {
+                return VramProtectionAction::None;
+            }
+            state.recovery_since = None;
+            state.cpu_protected_until = None;
+            state.gpu_recovery_pending = true;
+            VramProtectionAction::SwitchToGpu
+        }
+    }
+}
+
 struct SharedModelRuntime {
     process: Option<Child>,
     #[cfg(windows)]
     process_job: Option<ProcessJob>,
     port: u16,
     clients: usize,
+    generation: u64,
+    active_device: Option<RuntimeDevice>,
+    active_requests: usize,
+    monitor_running: bool,
+    pending_vram_action: Option<VramProtectionAction>,
+    vram_protection: VramProtectionState,
+}
+
+impl Default for SharedModelRuntime {
+    fn default() -> Self {
+        Self {
+            process: None,
+            #[cfg(windows)]
+            process_job: None,
+            port: 0,
+            clients: 0,
+            generation: 0,
+            active_device: None,
+            active_requests: 0,
+            monitor_running: false,
+            pending_vram_action: None,
+            vram_protection: VramProtectionState::default(),
+        }
+    }
 }
 
 static SHARED_MODEL_RUNTIMES: LazyLock<Mutex<HashMap<String, Weak<Mutex<SharedModelRuntime>>>>> =
@@ -180,6 +277,149 @@ fn stop_shared_runtime(runtime: &mut SharedModelRuntime) {
     }
     runtime.port = 0;
     runtime.clients = 0;
+    runtime.active_device = None;
+    runtime.active_requests = 0;
+    runtime.monitor_running = false;
+    runtime.pending_vram_action = None;
+    runtime.generation = runtime.generation.wrapping_add(1);
+}
+
+#[cfg(windows)]
+fn available_dedicated_vram() -> Option<u64> {
+    let factory: IDXGIFactory1 = unsafe { CreateDXGIFactory1() }.ok()?;
+    let mut selected: Option<(usize, IDXGIAdapter3)> = None;
+    for index in 0.. {
+        let adapter = match unsafe { factory.EnumAdapters1(index) } {
+            Ok(adapter) => adapter,
+            Err(_) => break,
+        };
+        let description = unsafe { adapter.GetDesc1() }.ok()?;
+        if description.Flags & DXGI_ADAPTER_FLAG_SOFTWARE.0 as u32 != 0 {
+            continue;
+        }
+        let adapter3 = adapter.cast::<IDXGIAdapter3>().ok()?;
+        let dedicated = description.DedicatedVideoMemory;
+        if selected
+            .as_ref()
+            .is_none_or(|(current, _)| dedicated > *current)
+        {
+            selected = Some((dedicated, adapter3));
+        }
+    }
+    let (_, adapter) = selected?;
+    let mut info = DXGI_QUERY_VIDEO_MEMORY_INFO::default();
+    unsafe {
+        adapter
+            .QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &mut info)
+            .ok()?;
+    }
+    Some(info.Budget.saturating_sub(info.CurrentUsage))
+}
+
+#[cfg(not(windows))]
+fn available_dedicated_vram() -> Option<u64> {
+    None
+}
+
+fn start_vram_monitor(runtime: &Arc<Mutex<SharedModelRuntime>>, diagnostics_scope: &'static str) {
+    {
+        let mut state = runtime
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if state.monitor_running || state.active_device.is_none() {
+            return;
+        }
+        state.monitor_running = true;
+    }
+    let monitor_runtime = Arc::clone(runtime);
+    if let Err(error) = thread::Builder::new()
+        .name("nude-vram-protection".to_string())
+        .spawn(move || loop {
+            thread::sleep(VRAM_MONITOR_INTERVAL);
+            let Some(available_vram) = available_dedicated_vram() else {
+                let mut state = monitor_runtime
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                state.monitor_running = false;
+                break;
+            };
+            let mut state = monitor_runtime
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if !runtime_process_is_running(&mut state) {
+                stop_shared_runtime(&mut state);
+                break;
+            }
+            let Some(active_device) = state.active_device else {
+                state.monitor_running = false;
+                break;
+            };
+            let action = state.pending_vram_action.unwrap_or_else(|| {
+                evaluate_vram_protection(
+                    &mut state.vram_protection,
+                    active_device,
+                    available_vram,
+                    Instant::now(),
+                )
+            });
+            if action != VramProtectionAction::None && state.active_requests > 0 {
+                state.pending_vram_action = Some(action);
+                continue;
+            }
+            state.pending_vram_action = None;
+            match action {
+                VramProtectionAction::None => {}
+                VramProtectionAction::SwitchToCpu => {
+                    crate::diagnostics::info(
+                        diagnostics_scope,
+                        &format!(
+                            "VRAM protection activated; available_mib={}",
+                            available_vram / 1024 / 1024
+                        ),
+                    );
+                    stop_shared_runtime(&mut state);
+                    break;
+                }
+                VramProtectionAction::SwitchToGpu => {
+                    crate::diagnostics::info(
+                        diagnostics_scope,
+                        &format!(
+                            "VRAM recovery stable; GPU allowed; available_mib={}",
+                            available_vram / 1024 / 1024
+                        ),
+                    );
+                    stop_shared_runtime(&mut state);
+                    break;
+                }
+            }
+        })
+    {
+        let mut state = runtime
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        state.monitor_running = false;
+        crate::diagnostics::warn(
+            diagnostics_scope,
+            &format!("VRAM protection monitor unavailable: {error}"),
+        );
+    }
+}
+
+struct RuntimeRequestGuard {
+    runtime: Arc<Mutex<SharedModelRuntime>>,
+    generation: u64,
+}
+
+impl Drop for RuntimeRequestGuard {
+    fn drop(&mut self) {
+        let mut runtime = self
+            .runtime
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if runtime.generation == self.generation {
+            runtime.active_requests = runtime.active_requests.saturating_sub(1);
+        }
+    }
 }
 
 fn model_size_from_config_id(id: &str) -> Option<HyMtModelSize> {
@@ -275,6 +515,7 @@ pub struct HyMtTranslator {
     cache_namespace: String,
     runtime: Arc<Mutex<SharedModelRuntime>>,
     runtime_attached: bool,
+    runtime_generation: u64,
     progress_observer: Option<ModelProgressObserver>,
     preparation_cancellation: ModelPreparationCancellation,
     port: u16,
@@ -290,7 +531,7 @@ impl HyMtTranslator {
         let profile = model_size.profile();
         let model = profile.model;
         let device = device.into();
-        if !matches!(device.as_str(), "auto" | "cpu") {
+        if !matches!(device.as_str(), "auto" | "gpu" | "cpu") {
             return Err(format!("지원하지 않는 Hy-MT2 실행 장치입니다: {device}"));
         }
         let speech_style = speech_style.into();
@@ -317,6 +558,7 @@ impl HyMtTranslator {
             cache_namespace: profile.cache_namespace(&speech_style),
             runtime,
             runtime_attached: false,
+            runtime_generation: 0,
             progress_observer: None,
             preparation_cancellation: ModelPreparationCancellation::default(),
             port: 0,
@@ -370,11 +612,14 @@ impl HyMtTranslator {
             .runtime
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        runtime.clients = runtime.clients.saturating_sub(1);
-        if runtime.clients == 0 {
-            stop_shared_runtime(&mut runtime);
+        if runtime.generation == self.runtime_generation {
+            runtime.clients = runtime.clients.saturating_sub(1);
+            if runtime.clients == 0 {
+                stop_shared_runtime(&mut runtime);
+            }
         }
         self.runtime_attached = false;
+        self.runtime_generation = 0;
         self.port = 0;
     }
 
@@ -384,12 +629,17 @@ impl HyMtTranslator {
                 .runtime
                 .lock()
                 .unwrap_or_else(|poisoned| poisoned.into_inner());
-            if runtime_process_is_running(&mut runtime) {
+            if runtime.generation == self.runtime_generation
+                && runtime_process_is_running(&mut runtime)
+            {
                 self.port = runtime.port;
                 return Ok(());
             }
-            stop_shared_runtime(&mut runtime);
+            if runtime.generation == self.runtime_generation {
+                stop_shared_runtime(&mut runtime);
+            }
             self.runtime_attached = false;
+            self.runtime_generation = 0;
             self.port = 0;
         }
 
@@ -403,6 +653,7 @@ impl HyMtTranslator {
         if runtime_process_is_running(&mut runtime) {
             runtime.clients += 1;
             self.runtime_attached = true;
+            self.runtime_generation = runtime.generation;
             self.port = runtime.port;
             self.report_progress("ready", self.model.expected_bytes);
             return Ok(());
@@ -422,7 +673,15 @@ impl HyMtTranslator {
         runtime.port = free_tcp_port()?;
         self.port = runtime.port;
         let log_path = crate::diagnostics::log_path();
-        let attempts = startup_device_attempts(&self.device);
+        let cpu_protected = self.device == "auto"
+            && runtime
+                .vram_protection
+                .cpu_protected_until
+                .is_some_and(|until| Instant::now() < until);
+        if cpu_protected {
+            self.report_progress("vram-protected", self.model.expected_bytes);
+        }
+        let attempts = startup_device_attempts(&self.device, cpu_protected);
         let diagnostics_scope = self.model.family;
         for (index, attempt) in attempts.iter().enumerate() {
             self.preparation_cancellation.check()?;
@@ -507,6 +766,12 @@ impl HyMtTranslator {
                             &format!("GPU server exited; retrying with CPU; status={status}"),
                         );
                         self.report_progress("cpu-fallback", self.model.expected_bytes);
+                        if self.device == "auto" {
+                            runtime.vram_protection.cpu_protected_until =
+                                Some(Instant::now() + VRAM_CPU_COOLDOWN);
+                            runtime.vram_protection.recovery_since = None;
+                            runtime.vram_protection.gpu_recovery_pending = false;
+                        }
                         break;
                     }
                     return Err(format!(
@@ -522,10 +787,25 @@ impl HyMtTranslator {
                     .send()
                     .is_ok_and(|response| response.status().is_success())
                 {
+                    runtime.active_device = Some(if *attempt == "cpu" {
+                        RuntimeDevice::Cpu
+                    } else {
+                        RuntimeDevice::Gpu
+                    });
+                    runtime.generation = runtime.generation.wrapping_add(1);
                     runtime.clients += 1;
                     self.runtime_attached = true;
+                    self.runtime_generation = runtime.generation;
                     self.port = runtime.port;
+                    if *attempt != "cpu" && runtime.vram_protection.gpu_recovery_pending {
+                        runtime.vram_protection.gpu_recovery_pending = false;
+                        self.report_progress("gpu-restored", self.model.expected_bytes);
+                    }
                     self.report_progress("ready", self.model.expected_bytes);
+                    drop(runtime);
+                    if self.device == "auto" {
+                        start_vram_monitor(&runtime_handle, diagnostics_scope);
+                    }
                     return Ok(());
                 }
                 thread::sleep(Duration::from_millis(250));
@@ -545,6 +825,28 @@ impl HyMtTranslator {
             self.model.label,
             log_path.display()
         ))
+    }
+
+    fn begin_request(&mut self) -> Result<RuntimeRequestGuard, String> {
+        loop {
+            self.ensure_server()?;
+            let mut runtime = self
+                .runtime
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if runtime.generation == self.runtime_generation
+                && runtime_process_is_running(&mut runtime)
+            {
+                runtime.active_requests += 1;
+                return Ok(RuntimeRequestGuard {
+                    runtime: Arc::clone(&self.runtime),
+                    generation: runtime.generation,
+                });
+            }
+            self.runtime_attached = false;
+            self.runtime_generation = 0;
+            self.port = 0;
+        }
     }
 
     fn ensure_model(&self) -> Result<(), String> {
@@ -895,11 +1197,11 @@ fn completion_result(payload: &Value) -> Result<String, String> {
     }
 }
 
-fn startup_device_attempts(device: &str) -> Vec<&'static str> {
-    if device == "auto" {
-        vec!["auto", "cpu"]
-    } else {
-        vec!["cpu"]
+fn startup_device_attempts(device: &str, cpu_protected: bool) -> Vec<&'static str> {
+    match device {
+        "auto" if cpu_protected => vec!["cpu"],
+        "auto" | "gpu" => vec!["gpu", "cpu"],
+        _ => vec!["cpu"],
     }
 }
 
@@ -938,7 +1240,7 @@ impl Translator for HyMtTranslator {
         if source == target || text.trim().is_empty() {
             return Ok(text.to_string());
         }
-        self.ensure_server()?;
+        let _request_guard = self.begin_request()?;
         if self.profile.completion_api == LocalCompletionApi::RawCompletion {
             let style = self.speech_style.clone();
             return translate_with_translate_gemma(
@@ -2122,17 +2424,18 @@ mod tests {
         apply_conservative_semantic_repairs, clean_cross_script_language_terms,
         clean_korean_listener_question_person, clean_translation, complete_translation_with_retry,
         completion_payload, completion_result, context_size_for_attempt, detect_speech_style,
-        find_llama_server, max_output_tokens, remove_cached_model_files, repair_translation_prompt,
-        replace_ascii_word, rewrite_style_prompt, startup_device_attempts,
-        translate_gemma_completion_payload, translate_with_completion,
+        evaluate_vram_protection, find_llama_server, max_output_tokens, remove_cached_model_files,
+        repair_translation_prompt, replace_ascii_word, rewrite_style_prompt,
+        startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
         translate_with_completion_for_model, translate_with_translate_gemma,
         translation_prompt_for_model, unchanged_lowercase_source_words,
         valid_korean_word_replacement, HyMtModel, HyMtModelSize, HyMtTranslator,
-        ModelPreparationCancellation,
+        ModelPreparationCancellation, RuntimeDevice, VramProtectionAction, VramProtectionState,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::{translation_needs_repair, Translator};
     use std::sync::Arc;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn korean_repair_prompt_resolves_lowercase_name_validation_conflict() {
@@ -2925,8 +3228,114 @@ mod tests {
 
     #[test]
     fn automatic_device_retries_with_cpu_only_after_gpu_failure() {
-        assert_eq!(startup_device_attempts("auto"), vec!["auto", "cpu"]);
-        assert_eq!(startup_device_attempts("cpu"), vec!["cpu"]);
+        assert_eq!(startup_device_attempts("auto", false), vec!["gpu", "cpu"]);
+        assert_eq!(startup_device_attempts("auto", true), vec!["cpu"]);
+        assert_eq!(startup_device_attempts("gpu", false), vec!["gpu", "cpu"]);
+        assert_eq!(startup_device_attempts("cpu", false), vec!["cpu"]);
+    }
+
+    #[test]
+    fn automatic_protection_waits_for_sustained_vram_pressure() {
+        let started = Instant::now();
+        let mut state = VramProtectionState::default();
+
+        assert_eq!(
+            evaluate_vram_protection(&mut state, RuntimeDevice::Gpu, 1024 * 1024 * 1024, started,),
+            VramProtectionAction::None
+        );
+        assert_eq!(
+            evaluate_vram_protection(
+                &mut state,
+                RuntimeDevice::Gpu,
+                1024 * 1024 * 1024,
+                started + Duration::from_secs(4),
+            ),
+            VramProtectionAction::None
+        );
+        assert_eq!(
+            evaluate_vram_protection(
+                &mut state,
+                RuntimeDevice::Gpu,
+                1024 * 1024 * 1024,
+                started + Duration::from_secs(5),
+            ),
+            VramProtectionAction::SwitchToCpu
+        );
+        assert!(state.cpu_protected_until.is_some());
+    }
+
+    #[test]
+    fn automatic_protection_ignores_a_short_vram_dip() {
+        let started = Instant::now();
+        let mut state = VramProtectionState::default();
+        let low_vram = 1024 * 1024 * 1024;
+        let enough_vram = 2 * 1024 * 1024 * 1024;
+
+        assert_eq!(
+            evaluate_vram_protection(&mut state, RuntimeDevice::Gpu, low_vram, started),
+            VramProtectionAction::None
+        );
+        assert_eq!(
+            evaluate_vram_protection(
+                &mut state,
+                RuntimeDevice::Gpu,
+                enough_vram,
+                started + Duration::from_secs(4),
+            ),
+            VramProtectionAction::None
+        );
+        assert_eq!(
+            evaluate_vram_protection(
+                &mut state,
+                RuntimeDevice::Gpu,
+                low_vram,
+                started + Duration::from_secs(5),
+            ),
+            VramProtectionAction::None
+        );
+        assert_eq!(
+            evaluate_vram_protection(
+                &mut state,
+                RuntimeDevice::Gpu,
+                low_vram,
+                started + Duration::from_secs(9),
+            ),
+            VramProtectionAction::None
+        );
+    }
+
+    #[test]
+    fn automatic_protection_requires_a_stable_recovery_window() {
+        let started = Instant::now();
+        let mut state = VramProtectionState {
+            cpu_protected_until: Some(started),
+            ..VramProtectionState::default()
+        };
+        let enough_vram = 4 * 1024 * 1024 * 1024;
+
+        assert_eq!(
+            evaluate_vram_protection(&mut state, RuntimeDevice::Cpu, enough_vram, started,),
+            VramProtectionAction::None
+        );
+        assert_eq!(
+            evaluate_vram_protection(
+                &mut state,
+                RuntimeDevice::Cpu,
+                enough_vram,
+                started + Duration::from_secs(29),
+            ),
+            VramProtectionAction::None
+        );
+        assert_eq!(
+            evaluate_vram_protection(
+                &mut state,
+                RuntimeDevice::Cpu,
+                enough_vram,
+                started + Duration::from_secs(30),
+            ),
+            VramProtectionAction::SwitchToGpu
+        );
+        assert!(state.cpu_protected_until.is_none());
     }
 
     #[test]

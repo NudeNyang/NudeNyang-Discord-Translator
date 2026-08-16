@@ -68,7 +68,8 @@ const OPTIONS = {
   outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
   outgoing_target_language: [["auto", "최근 대화에서 자동 감지"], ...LANGUAGE_OPTIONS],
   hymt_device: [
-    ["auto", "자동 (GPU 우선, CPU 대체)"],
+    ["auto", "자동 보호 (권장)"],
+    ["gpu", "GPU 우선"],
     ["cpu", "CPU/RAM 전용"],
   ],
   image_ocr_quality: [
