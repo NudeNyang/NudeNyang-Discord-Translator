@@ -216,9 +216,30 @@ img {
   letter-spacing: -0.025em;
 }
 
-.brand img {
+.brand-icon {
+  --brand-icon-size: 40px;
+  display: grid;
+  width: var(--brand-icon-size);
+  height: var(--brand-icon-size);
+  min-width: var(--brand-icon-size);
+  min-height: var(--brand-icon-size);
+  flex: 0 0 var(--brand-icon-size);
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
   border-radius: 10px;
-  box-shadow: 0 8px 22px rgb(38 76 112 / 0.14);
+  place-items: center;
+}
+
+.brand-icon img {
+  width: 116%;
+  height: 116%;
+  max-width: none;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.footer-brand .brand-icon {
+  --brand-icon-size: 36px;
 }
 
 .brand b {
@@ -1013,18 +1034,23 @@ summary:focus-visible {
 
 .showcase {
   display: grid;
-  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr);
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
   gap: clamp(46px, 7vw, 86px);
   align-items: center;
+}
+
+:lang(ko) .showcase-copy h2 {
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .settings-media {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 24px;
+  gap: 16px;
   min-height: clamp(500px, 58vw, 680px);
-  padding: clamp(42px, 5vw, 66px) clamp(28px, 5vw, 60px) 24px;
+  padding: clamp(24px, 3vw, 38px) clamp(18px, 2.8vw, 32px) 20px;
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 58%),
@@ -1037,9 +1063,9 @@ summary:focus-visible {
 
 .settings-card-stack {
   position: relative;
-  width: min(82%, 610px);
+  width: min(86%, 640px);
   aspect-ratio: 1497 / 1410;
-  margin: 0 auto clamp(20px, 3vw, 34px);
+  margin: 0 auto clamp(12px, 2vw, 20px);
   padding: 0;
   border: 0;
   outline: 0;
@@ -1390,9 +1416,12 @@ html[dir="rtl"] .theme-toggle {
     font-size: 14px;
   }
 
-  .brand img {
-    width: 34px;
-    height: 34px;
+  .brand-icon {
+    --brand-icon-size: 34px;
+  }
+
+  .footer-brand .brand-icon {
+    --brand-icon-size: 34px;
   }
 
   .hero {
@@ -1452,12 +1481,12 @@ html[dir="rtl"] .theme-toggle {
 
   .settings-media {
     min-height: 390px;
-    padding: 38px 18px 20px;
+    padding: 24px 12px 18px;
   }
 
   .settings-card-stack {
-    width: 79%;
-    margin-bottom: 26px;
+    width: 88%;
+    margin-bottom: 18px;
   }
 
   .settings-carousel-navigation {

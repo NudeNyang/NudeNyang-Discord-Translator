@@ -81,6 +81,36 @@ const workflowTitleOverrides = {
   he: "אין צורך לפתוח אפליקציית תרגום נפרדת.",
   cs: "Nemusíte otevírat samostatnou překladovou aplikaci.",
 };
+const showcaseTitle = "번역 방식부터 언어까지 원하는 대로 설정하세요.";
+const showcaseTitleOverrides = {
+  en: "Customize everything from translation methods to languages.",
+  ja: "翻訳方法から言語まで、お好みに合わせて設定できます。",
+  zh: "从翻译方式到语言，都可按需设置。",
+  "zh-Hant": "從翻譯方式到語言，都可依需求設定。",
+  "pt-BR": "Personalize tudo, dos métodos de tradução aos idiomas.",
+  hi: "अनुवाद के तरीके से लेकर भाषा तक, अपनी पसंद के अनुसार सेट करें।",
+  "es-419": "Configura a tu gusto desde el método de traducción hasta el idioma.",
+  de: "Passen Sie Übersetzungsmethode und Sprache nach Ihren Wünschen an.",
+  ru: "Настройте всё по своему усмотрению: от способа перевода до языка.",
+  id: "Atur sesuai keinginan, mulai dari metode terjemahan hingga bahasa.",
+  fr: "Personnalisez tout, de la méthode de traduction à la langue.",
+  tr: "Çeviri yönteminden dile kadar her şeyi istediğiniz gibi ayarlayın.",
+  ar: "خصّص كل شيء كما تريد، من طريقة الترجمة إلى اللغة.",
+  vi: "Tùy chỉnh theo ý bạn, từ phương thức dịch đến ngôn ngữ.",
+  it: "Personalizza tutto, dal metodo di traduzione alla lingua.",
+  pl: "Dostosuj wszystko do swoich potrzeb, od metody tłumaczenia po język.",
+  uk: "Налаштуйте все на свій смак: від способу перекладу до мови.",
+  ms: "Tetapkan mengikut kehendak anda, daripada kaedah terjemahan hingga bahasa.",
+  nl: "Stel alles naar wens in, van de vertaalmethode tot de taal.",
+  th: "ตั้งค่าได้ตามต้องการ ตั้งแต่วิธีการแปลไปจนถึงภาษา",
+  fil: "Itakda ayon sa gusto mo, mula sa paraan ng pagsasalin hanggang sa wika.",
+  bn: "অনুবাদের পদ্ধতি থেকে ভাষা পর্যন্ত, নিজের পছন্দমতো সেট করুন।",
+  ur: "ترجمے کے طریقے سے لے کر زبان تک، اپنی پسند کے مطابق ترتیب دیں۔",
+  ta: "மொழிபெயர்ப்பு முறையிலிருந்து மொழி வரை, உங்கள் விருப்பப்படி அமைக்கவும்.",
+  fa: "همه‌چیز را، از روش ترجمه تا زبان، به دلخواه تنظیم کنید.",
+  he: "הגדירו כרצונכם הכול, משיטת התרגום ועד השפה.",
+  cs: "Nastavte si podle potřeby vše od způsobu překladu až po jazyk.",
+};
 
 const overrides = {
   en: {
@@ -253,7 +283,11 @@ for (const [locale] of LANGUAGE_OPTIONS) {
 
   for (const source of sourceList) {
     const existing = UI_LOCALE_COPY[locale]?.[source];
-    const override = source === workflowTitle ? workflowTitleOverrides[locale] : overrides[locale]?.[source];
+    const override = source === workflowTitle
+      ? workflowTitleOverrides[locale]
+      : source === showcaseTitle
+        ? showcaseTitleOverrides[locale]
+        : overrides[locale]?.[source];
     if (override || existing) dictionary[source] = override || existing;
     else missing.push(source);
   }

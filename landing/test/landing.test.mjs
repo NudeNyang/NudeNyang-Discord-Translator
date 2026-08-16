@@ -20,6 +20,16 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
 
   const slots = [...html.matchAll(/data-media-slot="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings"]);
+  assert.match(html, /<a href="#how-it-works" data-i18n>기능<\/a>/);
+  assert.doesNotMatch(html, /<a href="#features" data-i18n>기능<\/a>/);
+});
+
+test("브랜드 아이콘은 원본의 투명 여백과 그림자 없이 표시한다", () => {
+  assert.equal((html.match(/class="brand-icon"/g) ?? []).length, 2);
+  assert.match(css, /\.brand-icon\s*\{[^}]*width:\s*var\(--brand-icon-size\);[^}]*height:\s*var\(--brand-icon-size\);[^}]*aspect-ratio:\s*1\s*\/\s*1/s);
+  assert.match(css, /\.brand-icon\s*\{[^}]*overflow:\s*hidden;[^}]*border-radius:\s*10px/s);
+  assert.match(css, /\.brand-icon img\s*\{[^}]*width:\s*116%;[^}]*height:\s*116%;[^}]*max-width:\s*none;[^}]*aspect-ratio:\s*1\s*\/\s*1;[^}]*object-fit:\s*cover/s);
+  assert.doesNotMatch(css, /\.brand img\s*\{[^}]*box-shadow:/s);
 });
 
 test("설정 화면 6장을 한 장씩 순서대로 넘긴다", async () => {
@@ -49,7 +59,10 @@ test("설정 화면 6장을 한 장씩 순서대로 넘긴다", async () => {
   }
 
   assert.match(css, /\.settings-card-stack\s*\{[^}]*aspect-ratio:\s*1497\s*\/\s*1410/s);
-  assert.match(css, /\.settings-card-stack\s*\{[^}]*margin:\s*0 auto clamp\(20px, 3vw, 34px\)/s);
+  assert.match(css, /\.showcase\s*\{[^}]*grid-template-columns:\s*minmax\(320px, 0\.9fr\) minmax\(0, 1\.1fr\)/s);
+  assert.match(css, /:lang\(ko\) \.showcase-copy h2\s*\{[^}]*overflow-wrap:\s*normal;[^}]*word-break:\s*keep-all/s);
+  assert.match(css, /\.settings-card-stack\s*\{[^}]*width:\s*min\(86%, 640px\)/s);
+  assert.match(css, /\.settings-card-stack\s*\{[^}]*margin:\s*0 auto clamp\(12px, 2vw, 20px\)/s);
   assert.match(css, /\.settings-card\s*\{[^}]*object-fit:\s*contain/s);
   assert.match(css, /\.settings-card\s*\{[^}]*opacity:\s*0;[^}]*visibility:\s*hidden/s);
   assert.match(css, /\.settings-card\.is-active\s*\{[^}]*opacity:\s*1;[^}]*visibility:\s*visible/s);
@@ -81,6 +94,15 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
   assert.doesNotMatch(html, /최근 대화 언어를 감지하여 답장에 맞는 번역 방향을 제안합니다\./);
   assert.doesNotMatch(html, /대화에 필요한 번역을 한곳에 모았습니다\./);
   assert.doesNotMatch(html, /Hy-MT2/);
+});
+
+test("설정 소개 제목은 28개 언어로 제공한다", () => {
+  const title = "번역 방식부터 언어까지 원하는 대로 설정하세요.";
+  assert.ok(html.includes(title));
+  assert.doesNotMatch(html, /설정은 단순하게, 선택지는 분명하게 구성했습니다\./);
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.ok(LANDING_LOCALES[locale]?.[title], `${locale} 설정 소개 제목이 필요합니다.`);
+  }
 });
 
 test("파란 기능 카드는 선택 언어와 나머지 27개 언어의 인사말을 동시에 보여준다", () => {
