@@ -318,6 +318,25 @@ fn preparation_plan_for_active_lanes(
     }
 }
 
+fn display_preparation_is_required(runtime: &RuntimeStatus, config: &AppConfig) -> bool {
+    if runtime.active_translator == config.translator {
+        return false;
+    }
+    !(runtime.translator_state == "preparing" && runtime.configured_translator == config.translator)
+}
+
+fn initial_model_preparation_progress(name: &str) -> Option<ModelPreparationProgress> {
+    HyMtModelSize::from_config_id(name).map(|model_size| {
+        let model = model_size.model();
+        ModelPreparationProgress {
+            model: model.label.to_string(),
+            phase: "starting".to_string(),
+            downloaded: 0,
+            total: model.expected_bytes,
+        }
+    })
+}
+
 impl RustEngine {
     pub fn start(config: AppConfig) -> Self {
         let (control_tx, control_rx) = mpsc::channel();
@@ -459,7 +478,7 @@ fn run_controller(
                     if ui_ready && requested_preparation.any() {
                         if let Ok(runtime) = status.lock() {
                             requested_preparation.display |=
-                                runtime.active_translator != updated.translator;
+                                display_preparation_is_required(&runtime, &updated);
                             requested_preparation.outgoing |=
                                 runtime.active_outgoing_translator != updated.outgoing_translator;
                         }
@@ -534,9 +553,9 @@ fn run_controller(
                             let _ = worker_tx.send(WorkerCommand::Release);
                         }
                     } else if enabled_changed {
-                        let needs_preparation = status
-                            .lock()
-                            .is_ok_and(|runtime| runtime.active_translator != config.translator);
+                        let needs_preparation = status.lock().is_ok_and(|runtime| {
+                            display_preparation_is_required(&runtime, &config)
+                        });
                         if ui_ready && needs_preparation && !preparation_requested {
                             request_translator_preparation(
                                 &config,
@@ -606,7 +625,7 @@ fn run_controller(
                             }
                         } else {
                             let needs_preparation = status.lock().is_ok_and(|runtime| {
-                                runtime.active_translator != config.translator
+                                display_preparation_is_required(&runtime, &config)
                             });
                             if ui_ready && needs_preparation {
                                 request_translator_preparation(
@@ -2131,12 +2150,12 @@ fn request_translator_preparation(
             runtime.translator_error.clear();
         }
         runtime.local_model_device = config.hymt_device.clone();
-        runtime.model_progress = None;
         let preparing_name = if plan.display {
             &display_name
         } else {
             &outgoing_name
         };
+        runtime.model_progress = initial_model_preparation_progress(preparing_name);
         runtime.notice = format!(
             "{} 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
             translator_label(preparing_name)
@@ -2330,8 +2349,9 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_attach_text_scripts, display_translation_is_ready, incoming_context_key,
-        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
+        cdp_attach_text_scripts, display_preparation_is_required, display_translation_is_ready,
+        incoming_context_key, initial_model_preparation_progress, next_worker_command,
+        plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
         run_outgoing_translation_worker, translator_activation_notice, translator_label,
         translator_preparation_plan, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
         RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
@@ -2521,6 +2541,37 @@ mod tests {
                 outgoing: false,
             }
         );
+    }
+
+    #[test]
+    fn enabling_translation_does_not_restart_the_same_in_flight_model_preparation() {
+        let config = AppConfig::default();
+        let mut status = RuntimeStatus::new(&config);
+        status.translator_state = "preparing".to_string();
+        status.configured_translator = config.translator.clone();
+
+        assert!(!display_preparation_is_required(&status, &config));
+
+        status.translator_state = "error".to_string();
+        assert!(display_preparation_is_required(&status, &config));
+
+        status.translator_state = "preparing".to_string();
+        let changed = AppConfig {
+            translator: "hymt_7b".to_string(),
+            ..config
+        };
+        assert!(display_preparation_is_required(&status, &changed));
+    }
+
+    #[test]
+    fn local_model_preparation_has_visible_progress_from_the_first_frame() {
+        let progress = initial_model_preparation_progress("hymt_1_8b").unwrap();
+
+        assert_eq!(progress.phase, "starting");
+        assert_eq!(progress.downloaded, 0);
+        assert_eq!(progress.total, 1_133_080_448);
+        assert!(progress.model.contains("Hy-MT2 1.8B"));
+        assert!(initial_model_preparation_progress("chatgpt").is_none());
     }
 
     #[test]

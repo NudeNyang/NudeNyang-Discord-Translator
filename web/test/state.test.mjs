@@ -191,6 +191,21 @@ test("local model preparation reports downloaded gigabytes and progress", () => 
   assert.deepEqual(
     modelPreparationBanner({
       model: "Hy-MT2 1.8B Q4_K_M",
+      phase: "starting",
+      downloaded: 0,
+      total: 1_133_080_448,
+    }),
+    {
+      title: "Hy-MT2 1.8B Q4_K_M 모델 준비 시작 중",
+      detail: "모델 파일을 확인하고 필요한 다운로드를 준비하고 있습니다.",
+      progress: 0,
+      indeterminate: true,
+    },
+  );
+
+  assert.deepEqual(
+    modelPreparationBanner({
+      model: "Hy-MT2 1.8B Q4_K_M",
       phase: "downloading",
       downloaded: 536_870_912,
       total: 1_133_080_448,
