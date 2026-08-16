@@ -13,3 +13,13 @@ src-tauri/bundle-resources/runtime/*
 !src-tauri/bundle-resources/runtime/.gitkeep
 NudeNyang Discord Translator (Tauri).lnk
 Nude Translator (Tauri).lnk
+
+# Maintainer-only documentation kept in the local worktree
+/AGENTS.md
+/ARCHITECTURE.md
+/HYMT.md
+/MACOS.md
+/MULTILINGUAL.md
+/PRODUCT_LANGUAGE.md
+/PROJECT.md
+/TAURI_MIGRATION.md

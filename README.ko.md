@@ -110,7 +110,7 @@ Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemin
 - 전역 단축키, 트레이 상태 동기화, 설정창 단일 인스턴스
 - Cloudflare R2를 통한 서명된 비공개 베타 업데이트
 
-전체 언어 목록과 공급자별 매핑은 [MULTILINGUAL.md](MULTILINGUAL.md)에서 볼 수 있습니다.
+전체 언어 목록과 공급자별 안내는 [docs/LANGUAGES.md](docs/LANGUAGES.md)에서 볼 수 있습니다.
 
 ## 지원 환경
 
@@ -164,12 +164,8 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
 
 | 문서 | 내용 |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 런타임 구성, Discord 연결, 데이터 경계, OCR, 플랫폼 분리 |
-| [HYMT.md](HYMT.md) | 로컬 모델, 프롬프트, 캐시, 다운로드, 품질 검사 |
-| [MULTILINGUAL.md](MULTILINGUAL.md) | 28개 언어, 감지 규칙, 공급자 매핑, 검증 방법 |
-| [TAURI_MIGRATION.md](TAURI_MIGRATION.md) | Tauri/Rust 전환 이유와 변경 내역 |
-| [MACOS.md](MACOS.md) | macOS 지원을 위한 제약과 준비 사항 |
-| [PRODUCT_LANGUAGE.md](PRODUCT_LANGUAGE.md) | 제품 문구와 다국어 작성 기준 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 런타임 구성, Discord 연결, 데이터 경계, OCR, 플랫폼 분리 |
+| [docs/LANGUAGES.md](docs/LANGUAGES.md) | 28개 언어, 감지 방식, 공급자 지원 범위, OCR 범위 |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | 모델, 런타임, 의존성 고지 |
 
 ## 라이선스

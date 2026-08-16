@@ -114,7 +114,7 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 - Configurable global shortcuts, synchronized tray state, and a single settings window
 - Signed private-beta updates distributed through Cloudflare R2
 
-The complete language catalog and provider mappings are in [MULTILINGUAL.md](MULTILINGUAL.md).
+The complete language catalog and provider notes are in [docs/LANGUAGES.md](docs/LANGUAGES.md).
 
 ## Platform status
 
@@ -168,12 +168,8 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
 
 | Document | Contents |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime ownership, Discord connection, data boundaries, OCR, and platform separation |
-| [HYMT.md](HYMT.md) | Local models, prompts, cache namespaces, downloads, and quality checks |
-| [MULTILINGUAL.md](MULTILINGUAL.md) | The 28-language catalog, detection rules, provider mappings, and validation |
-| [TAURI_MIGRATION.md](TAURI_MIGRATION.md) | Why the application moved to Tauri/Rust and what changed |
-| [MACOS.md](MACOS.md) | Constraints and preparation for future macOS support |
-| [PRODUCT_LANGUAGE.md](PRODUCT_LANGUAGE.md) | Product copy and localization rules |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime ownership, Discord connection, data boundaries, OCR, and platform separation |
+| [docs/LANGUAGES.md](docs/LANGUAGES.md) | The 28-language catalog, detection behavior, provider coverage, and OCR scope |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Model, runtime, and dependency notices |
 
 ## License
