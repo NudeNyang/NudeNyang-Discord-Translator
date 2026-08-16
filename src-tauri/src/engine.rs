@@ -44,6 +44,7 @@ use crate::translation::{
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
+const CPU_MAX_BATCH_ITEMS: usize = 6;
 const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
 const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
@@ -51,7 +52,7 @@ const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
 const MAX_IMAGE_BASE64_BYTES: usize = (MAX_IMAGE_BYTES * 4 / 3) + 8;
 
 type Locator = (String, String, usize);
-type PendingKey = (u64, String, String, usize, String);
+type PendingKey = (u64, u64, String, String, usize, String);
 type ImagePendingKey = (u64, String);
 type OutgoingPendingKey = (u64, String);
 
@@ -122,8 +123,28 @@ struct PartState {
     translated: String,
 }
 
+#[derive(Default)]
+struct DisplayViewState {
+    scope: String,
+    epoch: u64,
+}
+
+impl DisplayViewState {
+    fn observe(&mut self, url: &str) -> bool {
+        let scope = display_view_scope(url);
+        if scope == self.scope {
+            return false;
+        }
+        self.scope = scope;
+        self.epoch = self.epoch.wrapping_add(1).max(1);
+        true
+    }
+}
+
 struct TranslationBatch {
     generation: u64,
+    view_epoch: u64,
+    view_scope: String,
     target: Language,
     parts: Vec<DomPart>,
     context_scope: String,
@@ -198,6 +219,22 @@ fn next_worker_command(
     while let Ok(command) = commands.try_recv() {
         backlog.push_back(command);
     }
+    if let Some(latest_view) = backlog
+        .iter()
+        .filter_map(|command| match command {
+            WorkerCommand::Translate(batch) => Some((batch.generation, batch.view_epoch)),
+            _ => None,
+        })
+        .max()
+    {
+        backlog.retain(|command| {
+            !matches!(
+                command,
+                WorkerCommand::Translate(batch)
+                    if (batch.generation, batch.view_epoch) != latest_view
+            )
+        });
+    }
     let priority = backlog
         .iter()
         .map(worker_command_priority)
@@ -222,6 +259,8 @@ fn next_worker_command(
 enum WorkerResult {
     Translated {
         generation: u64,
+        view_epoch: u64,
+        view_scope: String,
         target: Language,
         parts: Vec<DomPart>,
         values: Result<Vec<String>, String>,
@@ -462,6 +501,7 @@ fn run_controller(
     let mut client: Option<CdpClient> = None;
     let mut states: HashMap<Locator, PartState> = HashMap::new();
     let mut pending: HashSet<PendingKey> = HashSet::new();
+    let mut display_view = DisplayViewState::default();
     let mut image_pending: HashSet<ImagePendingKey> = HashSet::new();
     let mut outgoing_pending: HashSet<OutgoingPendingKey> = HashSet::new();
     let mut generation = 0_u64;
@@ -707,6 +747,7 @@ fn run_controller(
                     client = Some(replacement);
                     states.clear();
                     pending.clear();
+                    display_view = DisplayViewState::default();
                     image_pending.clear();
                     outgoing_pending.clear();
                     generation += 1;
@@ -838,6 +879,7 @@ fn run_controller(
             &mut client,
             &mut states,
             &mut pending,
+            &display_view,
             &mut image_pending,
             &mut outgoing_pending,
             &mut generation,
@@ -942,8 +984,10 @@ fn run_controller(
                     client.as_mut().expect("connected CDP client"),
                     &states,
                     &mut pending,
+                    &mut display_view,
                     generation,
                     target,
+                    display_batch_item_limit(&config),
                     &worker_tx,
                 )?;
                 scan_images(
@@ -1227,13 +1271,29 @@ fn scan_dom(
     client: &mut CdpClient,
     states: &HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
+    display_view: &mut DisplayViewState,
     generation: u64,
     target: Language,
+    max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
 ) -> Result<(), String> {
     let snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
     let context_scope = snapshot.url.clone();
-    let (changes, parts) = plan_dom_updates(snapshot.parts, states, pending, generation);
+    if display_view.observe(&snapshot.url) {
+        pending.clear();
+        crate::diagnostics::info(
+            "translation-viewport",
+            &format!("display view changed; epoch={}", display_view.epoch),
+        );
+    }
+    let (changes, parts) = plan_dom_updates(
+        snapshot.parts,
+        states,
+        pending,
+        generation,
+        display_view.epoch,
+        max_batch_items,
+    );
     if !changes.is_empty() {
         client.evaluate(&apply_script(&changes)?, false)?;
     }
@@ -1241,6 +1301,8 @@ fn scan_dom(
         worker
             .send(WorkerCommand::Translate(TranslationBatch {
                 generation,
+                view_epoch: display_view.epoch,
+                view_scope: display_view.scope.clone(),
                 target,
                 parts,
                 context_scope,
@@ -1256,6 +1318,8 @@ fn plan_dom_updates(
     states: &HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
     generation: u64,
+    view_epoch: u64,
+    max_batch_items: usize,
 ) -> (Vec<DomChange>, Vec<DomPart>) {
     let mut changes = Vec::new();
     let mut parts = Vec::new();
@@ -1277,6 +1341,7 @@ fn plan_dom_updates(
         }
         let pending_key = (
             generation,
+            view_epoch,
             part.kind.clone(),
             part.item_id.clone(),
             part.index,
@@ -1285,7 +1350,7 @@ fn plan_dom_updates(
         if pending.contains(&pending_key) {
             continue;
         }
-        if parts.len() >= MAX_BATCH_ITEMS {
+        if parts.len() >= max_batch_items {
             let last_context = parts.last().and_then(incoming_context_key);
             let current_context = incoming_context_key(&part);
             let extends_message_context = current_context.as_deref().is_some_and(|key| {
@@ -1689,6 +1754,7 @@ fn drain_worker_results(
     client: &mut Option<CdpClient>,
     states: &mut HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
+    display_view: &DisplayViewState,
     image_pending: &mut HashSet<ImagePendingKey>,
     outgoing_pending: &mut HashSet<OutgoingPendingKey>,
     generation: &mut u64,
@@ -1702,6 +1768,8 @@ fn drain_worker_results(
         match result {
             WorkerResult::Translated {
                 generation: result_generation,
+                view_epoch: result_view_epoch,
+                view_scope: result_view_scope,
                 target: result_target,
                 parts,
                 values,
@@ -1709,13 +1777,25 @@ fn drain_worker_results(
                 for part in &parts {
                     pending.remove(&(
                         result_generation,
+                        result_view_epoch,
                         part.kind.clone(),
                         part.item_id.clone(),
                         part.index,
                         part.text.clone(),
                     ));
                 }
-                if result_generation != *generation || result_target != target {
+                let current_view_scope = client.as_mut().and_then(|client| {
+                    client
+                        .evaluate("location.href", false)
+                        .ok()
+                        .and_then(|value| value.as_str().map(display_view_scope))
+                });
+                if result_generation != *generation
+                    || result_view_epoch != display_view.epoch
+                    || result_view_scope != display_view.scope
+                    || current_view_scope.as_deref() != Some(result_view_scope.as_str())
+                    || result_target != target
+                {
                     continue;
                 }
                 match values {
@@ -2027,6 +2107,8 @@ fn run_translation_worker(
                 );
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,
+                    view_epoch: batch.view_epoch,
+                    view_scope: batch.view_scope,
                     target: batch.target,
                     parts: batch.parts,
                     values,
@@ -2404,6 +2486,30 @@ fn is_local_model_name(name: &str) -> bool {
     HyMtModelSize::from_config_id(name).is_some()
 }
 
+fn display_batch_item_limit(config: &AppConfig) -> usize {
+    if config.hymt_device == "cpu" && is_local_model_name(&config.translator) {
+        CPU_MAX_BATCH_ITEMS
+    } else {
+        MAX_BATCH_ITEMS
+    }
+}
+
+fn display_view_scope(url: &str) -> String {
+    let without_fragment = url.split('#').next().unwrap_or(url);
+    let without_query = without_fragment
+        .split('?')
+        .next()
+        .unwrap_or(without_fragment);
+    let Some(scheme_index) = without_query.find("://") else {
+        return without_query.to_string();
+    };
+    let authority_and_path = &without_query[scheme_index + 3..];
+    authority_and_path
+        .find('/')
+        .map(|path_index| authority_and_path[path_index..].to_string())
+        .unwrap_or_else(|| "/".to_string())
+}
+
 fn translator_activation_notice(name: &str, model_is_prepared: bool) -> String {
     if is_local_model_name(name) && !model_is_prepared {
         format!(
@@ -2427,13 +2533,14 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_attach_text_scripts, display_preparation_is_required, display_translation_is_ready,
-        incoming_context_key, initial_model_preparation_progress, next_worker_command,
-        plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
-        run_outgoing_translation_worker, translator_activation_notice, translator_label,
-        translator_preparation_plan, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
-        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
-        WorkerResult,
+        cdp_attach_text_scripts, display_batch_item_limit, display_preparation_is_required,
+        display_translation_is_ready, display_view_scope, incoming_context_key,
+        initial_model_preparation_progress, next_worker_command, plan_dom_updates, poll_interval,
+        preparation_plan_for_active_lanes, run_outgoing_translation_worker,
+        translator_activation_notice, translator_label, translator_preparation_plan,
+        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
+        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
+        CPU_MAX_BATCH_ITEMS, MAX_BATCH_ITEMS,
     };
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
@@ -2736,10 +2843,15 @@ mod tests {
     #[test]
     fn newest_visible_display_batch_precedes_stale_viewport_backlog() {
         let (sender, receiver) = mpsc::channel();
-        for item_id in ["previous-viewport", "current-viewport"] {
+        for (item_id, context_scope, view_epoch) in [
+            ("previous-viewport", "/channels/server-a/channel-a", 1),
+            ("current-viewport", "/channels/server-b/channel-b", 2),
+        ] {
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
                     generation: 1,
+                    view_epoch,
+                    view_scope: context_scope.to_string(),
                     target: Language::Korean,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
@@ -2749,17 +2861,26 @@ mod tests {
                         text: item_id.to_string(),
                         displayed_text: None,
                     }],
-                    context_scope: "/channels/test/current".to_string(),
+                    context_scope: context_scope.to_string(),
                     queued_at: Instant::now(),
                 }))
                 .unwrap();
         }
 
-        let command = next_worker_command(&receiver, &mut VecDeque::new()).unwrap();
+        let mut backlog = VecDeque::new();
+        let command = next_worker_command(&receiver, &mut backlog).unwrap();
         let WorkerCommand::Translate(batch) = command else {
             panic!("display translation batch expected");
         };
         assert_eq!(batch.parts[0].item_id, "current-viewport");
+        assert!(
+            backlog.iter().all(|command| !matches!(
+                command,
+                WorkerCommand::Translate(batch)
+                    if batch.context_scope == "/channels/server-a/channel-a"
+            )),
+            "이전 화면 번역 작업은 새 화면이 도착하면 대기열에서 제거되어야 합니다"
+        );
     }
 
     #[test]
@@ -2769,6 +2890,8 @@ mod tests {
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
                     generation: 1,
+                    view_epoch: 1,
+                    view_scope: "/channels/test/current".to_string(),
                     target: Language::Korean,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
@@ -2800,6 +2923,34 @@ mod tests {
     }
 
     #[test]
+    fn cpu_local_model_uses_smaller_display_batches() {
+        let cpu_config = AppConfig {
+            translator: "hymt_1_8b".to_string(),
+            hymt_device: "cpu".to_string(),
+            ..Default::default()
+        };
+        let automatic_config = AppConfig {
+            hymt_device: "auto".to_string(),
+            ..cpu_config.clone()
+        };
+
+        assert_eq!(display_batch_item_limit(&cpu_config), CPU_MAX_BATCH_ITEMS);
+        assert_eq!(display_batch_item_limit(&automatic_config), MAX_BATCH_ITEMS);
+    }
+
+    #[test]
+    fn display_view_scope_ignores_origin_query_and_fragment() {
+        assert_eq!(
+            display_view_scope("https://discord.com/channels/server/channel?jump=message#fragment"),
+            "/channels/server/channel"
+        );
+        assert_eq!(
+            display_view_scope("/channels/server/channel?jump=message"),
+            "/channels/server/channel"
+        );
+    }
+
+    #[test]
     fn dom_planning_never_uses_a_rendered_translation_as_new_source() {
         let part = DomPart {
             kind: "message".to_string(),
@@ -2810,8 +2961,14 @@ mod tests {
             displayed_text: Some("안녕하세요".to_string()),
         };
         let mut pending = HashSet::new();
-        let (changes, queued) =
-            plan_dom_updates(vec![part.clone()], &HashMap::new(), &mut pending, 3);
+        let (changes, queued) = plan_dom_updates(
+            vec![part.clone()],
+            &HashMap::new(),
+            &mut pending,
+            3,
+            1,
+            MAX_BATCH_ITEMS,
+        );
         assert!(changes.is_empty());
         assert_eq!(queued.len(), 1);
         assert_eq!(queued[0].text, "Hello");
@@ -2824,7 +2981,8 @@ mod tests {
             },
         )]);
         let mut pending = HashSet::new();
-        let (changes, queued) = plan_dom_updates(vec![part], &states, &mut pending, 4);
+        let (changes, queued) =
+            plan_dom_updates(vec![part], &states, &mut pending, 4, 1, MAX_BATCH_ITEMS);
         assert!(changes.is_empty());
         assert!(queued.is_empty());
 
@@ -2837,7 +2995,8 @@ mod tests {
             displayed_text: Some("Hello".to_string()),
         };
         let mut pending = HashSet::new();
-        let (changes, queued) = plan_dom_updates(vec![restored], &states, &mut pending, 5);
+        let (changes, queued) =
+            plan_dom_updates(vec![restored], &states, &mut pending, 5, 1, MAX_BATCH_ITEMS);
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].text, "안녕하세요");
         assert!(queued.is_empty());
@@ -2865,11 +3024,44 @@ mod tests {
         });
 
         let mut pending = HashSet::new();
-        let (_, queued) = plan_dom_updates(snapshot, &HashMap::new(), &mut pending, 7);
+        let (_, queued) = plan_dom_updates(
+            snapshot,
+            &HashMap::new(),
+            &mut pending,
+            7,
+            1,
+            MAX_BATCH_ITEMS,
+        );
         assert_eq!(queued.len(), 33);
         assert!(queued
             .iter()
             .all(|part| { part.context_id.as_deref() == Some("dto-message-context-shared") }));
+    }
+
+    #[test]
+    fn dom_planning_limits_separate_messages_for_cpu_responsiveness() {
+        let snapshot = (0..10)
+            .map(|index| DomPart {
+                kind: "message".to_string(),
+                item_id: format!("dto-message-{index}"),
+                context_id: Some(format!("dto-message-context-{index}")),
+                index: 0,
+                text: format!("message {index}"),
+                displayed_text: None,
+            })
+            .collect::<Vec<_>>();
+        let mut pending = HashSet::new();
+
+        let (_, queued) = plan_dom_updates(
+            snapshot,
+            &HashMap::new(),
+            &mut pending,
+            8,
+            2,
+            CPU_MAX_BATCH_ITEMS,
+        );
+
+        assert_eq!(queued.len(), CPU_MAX_BATCH_ITEMS);
     }
 
     #[test]
