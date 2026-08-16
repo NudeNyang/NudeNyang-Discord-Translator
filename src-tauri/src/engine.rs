@@ -38,9 +38,9 @@ use crate::outgoing::{
 };
 use crate::text_split::split_for_discord;
 use crate::translation::{
-    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationProgress,
-    ModelProgressObserver, OriginalTranslator, ResilientTranslator, SubscriptionCliTranslator,
-    TranslationService, Translator,
+    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationCancellation,
+    ModelPreparationProgress, ModelProgressObserver, OriginalTranslator, ResilientTranslator,
+    SubscriptionCliTranslator, TranslationService, Translator,
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
@@ -109,6 +109,7 @@ pub struct RustEngine {
 enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
+    CancelModelPreparation,
     ReplaceCdp(CdpClient),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
@@ -368,6 +369,22 @@ impl RustEngine {
             .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
     }
 
+    pub fn cancel_model_preparation(&self) -> Result<(), String> {
+        if let Ok(mut status) = self.status.lock() {
+            status.enabled = false;
+            status.controller_enabled = false;
+            status.translator_state = "queued".to_string();
+            status.translator_error.clear();
+            status.model_progress = None;
+            status.notice.clear();
+        }
+        self.controls
+            .send(Control::CancelModelPreparation)
+            .map_err(|_| {
+                "Rust 번역 엔진이 종료되어 모델 다운로드를 취소하지 못했습니다.".to_string()
+            })
+    }
+
     pub fn replace_cdp(&self, client: CdpClient) -> Result<(), String> {
         self.controls
             .send(Control::ReplaceCdp(client))
@@ -449,6 +466,7 @@ fn run_controller(
     let mut outgoing_pending: HashSet<OutgoingPendingKey> = HashSet::new();
     let mut generation = 0_u64;
     let mut preparation_generation = 0_u64;
+    let mut preparation_cancellation: Option<ModelPreparationCancellation> = None;
     let mut consecutive_connection_failures = 0_u8;
     let mut connection_issue_reported = false;
     let mut image_ui_needs_cleanup = true;
@@ -523,9 +541,13 @@ fn run_controller(
                             &progress_result_tx,
                             &status,
                             &mut preparation_generation,
+                            &mut preparation_cancellation,
                         );
                         preparation_requested = true;
                     } else if runtime_changed {
+                        if let Some(cancellation) = preparation_cancellation.take() {
+                            cancellation.cancel();
+                        }
                         preparation_generation += 1;
                         if requested_preparation.display && !preparation_plan.display {
                             let _ = worker_tx.send(WorkerCommand::Release);
@@ -567,6 +589,7 @@ fn run_controller(
                                 &progress_result_tx,
                                 &status,
                                 &mut preparation_generation,
+                                &mut preparation_cancellation,
                             );
                             preparation_requested = true;
                         } else if !needs_preparation {
@@ -592,6 +615,7 @@ fn run_controller(
                                     &progress_result_tx,
                                     &status,
                                     &mut preparation_generation,
+                                    &mut preparation_cancellation,
                                 );
                             } else if !needs_preparation {
                                 let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Warm);
@@ -638,12 +662,36 @@ fn run_controller(
                                     &progress_result_tx,
                                     &status,
                                     &mut preparation_generation,
+                                    &mut preparation_cancellation,
                                 );
                             } else {
                                 let _ = worker_tx.send(WorkerCommand::Warm);
                             }
                         }
                     }
+                }
+                Control::CancelModelPreparation => {
+                    if let Some(cancellation) = preparation_cancellation.take() {
+                        cancellation.cancel();
+                    }
+                    preparation_generation += 1;
+                    config.enabled = false;
+                    config.outgoing_translation_enabled = false;
+                    restore(&mut client, &states, false);
+                    pending.clear();
+                    image_pending.clear();
+                    outgoing_pending.clear();
+                    generation += 1;
+                    let _ = worker_tx.send(WorkerCommand::Release);
+                    let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
+                    update_status(&status, |runtime| {
+                        runtime.enabled = false;
+                        runtime.controller_enabled = false;
+                        runtime.translator_state = "queued".to_string();
+                        runtime.translator_error.clear();
+                        runtime.model_progress = None;
+                        runtime.notice.clear();
+                    });
                 }
                 Control::ReplaceCdp(mut replacement) => {
                     restore(&mut client, &states, false);
@@ -694,6 +742,7 @@ fn run_controller(
                                 &progress_result_tx,
                                 &status,
                                 &mut preparation_generation,
+                                &mut preparation_cancellation,
                             );
                         } else {
                             update_status(&status, |runtime| {
@@ -2136,7 +2185,18 @@ fn request_translator_preparation(
     progress_sender: &mpsc::Sender<WorkerResult>,
     status: &Arc<Mutex<RuntimeStatus>>,
     generation: &mut u64,
+    cancellation_slot: &mut Option<ModelPreparationCancellation>,
 ) {
+    let preparation_is_active = status
+        .lock()
+        .is_ok_and(|runtime| runtime.model_progress.is_some());
+    if preparation_is_active {
+        if let Some(previous) = cancellation_slot.take() {
+            previous.cancel();
+        }
+    }
+    let cancellation = ModelPreparationCancellation::default();
+    *cancellation_slot = Some(cancellation.clone());
     *generation += 1;
     let current_generation = *generation;
     let config = config.clone();
@@ -2176,12 +2236,18 @@ fn request_translator_preparation(
                     &config,
                     &display_name,
                     Some(observer.clone()),
+                    Some(cancellation.clone()),
                 )?)
             } else {
                 None
             };
             let outgoing_translator = if plan.outgoing {
-                Some(make_translator(&config, &outgoing_name, Some(observer))?)
+                Some(make_translator(
+                    &config,
+                    &outgoing_name,
+                    Some(observer),
+                    Some(cancellation.clone()),
+                )?)
             } else {
                 None
             };
@@ -2210,9 +2276,15 @@ fn make_translator(
     config: &AppConfig,
     name: &str,
     progress_observer: Option<ModelProgressObserver>,
+    preparation_cancellation: Option<ModelPreparationCancellation>,
 ) -> Result<Box<dyn Translator>, String> {
     if let Some(model_size) = HyMtModelSize::from_config_id(name) {
-        return make_local_translator(config, model_size, progress_observer);
+        return make_local_translator(
+            config,
+            model_size,
+            progress_observer,
+            preparation_cancellation,
+        );
     }
     match name {
         "chatgpt" | "claude" | "gemini" => Ok(Box::new(ResilientTranslator::new(
@@ -2238,8 +2310,14 @@ fn make_local_translator(
     config: &AppConfig,
     model_size: HyMtModelSize,
     progress_observer: Option<ModelProgressObserver>,
+    preparation_cancellation: Option<ModelPreparationCancellation>,
 ) -> Result<Box<dyn Translator>, String> {
     let translator = HyMtTranslator::new(model_size, config.hymt_device.clone(), "auto")?;
+    let translator = if let Some(cancellation) = preparation_cancellation {
+        translator.with_preparation_cancellation(cancellation)
+    } else {
+        translator
+    };
     let translator = if let Some(observer) = progress_observer {
         translator.with_progress_observer(observer)
     } else {

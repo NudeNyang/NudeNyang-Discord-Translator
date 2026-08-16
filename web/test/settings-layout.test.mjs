@@ -334,6 +334,13 @@ test("automatic updates are announced outside the app information panel", () => 
   assert.match(script, /cancelText: "나중에"/);
 });
 
+test("local model preparation can be cancelled without discarding resumable data", () => {
+  assert.match(markup, /id="model-banner-cancel"[^>]*hidden/);
+  assert.match(script, /invoke\("model_preparation_cancel"\)/);
+  assert.match(rustMain, /fn model_preparation_cancel\(/);
+  assert.match(rustMain, /engine\.cancel_model_preparation\(\)/);
+});
+
 test("dynamic app information and runtime notices follow the interface language", () => {
   assert.match(markup, /data-i18n-key="버전"/);
   assert.match(markup, /data-i18n-key="버전을 설치할 수 있습니다/);

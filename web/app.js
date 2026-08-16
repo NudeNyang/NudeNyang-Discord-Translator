@@ -104,6 +104,7 @@ const state = {
   updatePromptedVersion: "",
   updateInstalling: false,
   modelPreparationActive: false,
+  modelPreparationCancelling: false,
   settingsScrollTimer: 0,
   captureFpsTimer: 0,
   settingsApplyRevision: 0,
@@ -164,6 +165,7 @@ const elements = {
   modelBannerDetail: document.querySelector("#model-banner-detail"),
   activityProgress: document.querySelector("#activity-progress"),
   activityProgressBar: document.querySelector("#activity-progress-bar"),
+  modelBannerCancel: document.querySelector("#model-banner-cancel"),
   updateBannerInstall: document.querySelector("#update-banner-install"),
   openDiagnosticLog: document.querySelector("#open-diagnostic-log"),
   viewLicense: document.querySelector("#view-license"),
@@ -692,6 +694,7 @@ function renderAvailableUpdate(version) {
   elements.modelBannerDetail.hidden = true;
   elements.activityProgress.hidden = true;
   elements.updateBannerInstall.hidden = false;
+  elements.modelBannerCancel.hidden = true;
   elements.updateBannerInstall.disabled = state.updateInstalling;
   setLocalizedText(elements.updateBannerInstall, state.updateInstalling ? "설치 준비 중" : "업데이트 설치");
 }
@@ -711,6 +714,8 @@ function renderModelPreparation(progress) {
   elements.updateBannerDetail.hidden = true;
   elements.modelBannerDetail.hidden = false;
   elements.updateBannerInstall.hidden = true;
+  elements.modelBannerCancel.hidden = false;
+  elements.modelBannerCancel.disabled = state.modelPreparationCancelling;
   elements.activityProgress.hidden = false;
   elements.activityProgress.dataset.indeterminate = String(banner.indeterminate);
   const percentage = Math.round(Math.min(1, Math.max(0, banner.progress)) * 100);
@@ -719,6 +724,24 @@ function renderModelPreparation(progress) {
     elements.activityProgress.removeAttribute("aria-valuenow");
   } else {
     elements.activityProgress.setAttribute("aria-valuenow", String(percentage));
+  }
+}
+
+async function cancelModelPreparation() {
+  if (state.modelPreparationCancelling || !state.modelPreparationActive) return;
+  state.modelPreparationCancelling = true;
+  elements.modelBannerCancel.disabled = true;
+  try {
+    const updated = await invoke("model_preparation_cancel");
+    state.config = normalizeConfig(updated);
+    state.pendingEnabled = null;
+    renderConfig(state.config);
+    renderModelPreparation(null);
+  } catch (error) {
+    await showError("오류", String(error));
+  } finally {
+    state.modelPreparationCancelling = false;
+    elements.modelBannerCancel.disabled = false;
   }
 }
 
@@ -1797,6 +1820,9 @@ elements.checkUpdate.addEventListener("click", () => {
 });
 elements.updateBannerInstall.addEventListener("click", () => {
   installAvailableUpdate().catch(error => showError("업데이트를 설치하지 못했습니다", String(error)));
+});
+elements.modelBannerCancel.addEventListener("click", () => {
+  cancelModelPreparation().catch(error => showError("오류", String(error)));
 });
 elements.openDiagnosticLog.addEventListener("click", () => {
   invoke("diagnostic_log_reveal").catch(error => showError("로그 파일을 열지 못했습니다", String(error)));

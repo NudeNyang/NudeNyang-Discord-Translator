@@ -525,6 +525,25 @@ fn translation_set_enabled(app: AppHandle, enabled: bool) -> Result<Value, Strin
 }
 
 #[tauri::command]
+fn model_preparation_cancel(
+    app: AppHandle,
+    engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
+) -> Result<AppConfig, String> {
+    let previous = config.get()?;
+    let updated = config.update(json!({
+        "enabled": false,
+        "outgoing_translation_enabled": false,
+    }))?;
+    if let Err(error) = engine.cancel_model_preparation() {
+        let _ = config.replace(previous);
+        return Err(error);
+    }
+    let _ = app.emit("settings-changed", updated.clone());
+    Ok(updated)
+}
+
+#[tauri::command]
 fn runtime_status(
     engine: State<'_, RustEngine>,
     config: State<'_, ConfigStore>,
@@ -1516,6 +1535,7 @@ fn main() {
             settings_reset,
             main_window_set_theme,
             translation_set_enabled,
+            model_preparation_cancel,
             runtime_status,
             update_check,
             update_availability_get,

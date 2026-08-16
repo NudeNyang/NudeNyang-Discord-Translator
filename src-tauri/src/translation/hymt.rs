@@ -5,7 +5,10 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, LazyLock, Mutex, Weak};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, LazyLock, Mutex, Weak,
+};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -73,6 +76,31 @@ pub struct ModelPreparationProgress {
     pub phase: String,
     pub downloaded: u64,
     pub total: u64,
+}
+
+const MODEL_PREPARATION_CANCELLED: &str = "로컬 모델 준비가 취소되었습니다.";
+
+#[derive(Clone, Default)]
+pub struct ModelPreparationCancellation {
+    requested: Arc<AtomicBool>,
+}
+
+impl ModelPreparationCancellation {
+    pub fn cancel(&self) {
+        self.requested.store(true, Ordering::Release);
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.requested.load(Ordering::Acquire)
+    }
+
+    fn check(&self) -> Result<(), String> {
+        if self.is_cancelled() {
+            Err(MODEL_PREPARATION_CANCELLED.to_string())
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -248,6 +276,7 @@ pub struct HyMtTranslator {
     runtime: Arc<Mutex<SharedModelRuntime>>,
     runtime_attached: bool,
     progress_observer: Option<ModelProgressObserver>,
+    preparation_cancellation: ModelPreparationCancellation,
     port: u16,
     client: Client,
 }
@@ -289,6 +318,7 @@ impl HyMtTranslator {
             runtime,
             runtime_attached: false,
             progress_observer: None,
+            preparation_cancellation: ModelPreparationCancellation::default(),
             port: 0,
             client,
         })
@@ -305,6 +335,14 @@ impl HyMtTranslator {
 
     pub fn with_progress_observer(mut self, observer: ModelProgressObserver) -> Self {
         self.progress_observer = Some(observer);
+        self
+    }
+
+    pub fn with_preparation_cancellation(
+        mut self,
+        cancellation: ModelPreparationCancellation,
+    ) -> Self {
+        self.preparation_cancellation = cancellation;
         self
     }
 
@@ -355,11 +393,13 @@ impl HyMtTranslator {
             self.port = 0;
         }
 
+        self.preparation_cancellation.check()?;
         self.report_progress("waiting", 0);
         let runtime_handle = Arc::clone(&self.runtime);
         let mut runtime = runtime_handle
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        self.preparation_cancellation.check()?;
         if runtime_process_is_running(&mut runtime) {
             runtime.clients += 1;
             self.runtime_attached = true;
@@ -369,6 +409,7 @@ impl HyMtTranslator {
         }
 
         self.ensure_model()?;
+        self.preparation_cancellation.check()?;
         self.report_progress("loading", self.model.expected_bytes);
         let executable = self
             .server_path
@@ -384,6 +425,7 @@ impl HyMtTranslator {
         let attempts = startup_device_attempts(&self.device);
         let diagnostics_scope = self.model.family;
         for (index, attempt) in attempts.iter().enumerate() {
+            self.preparation_cancellation.check()?;
             crate::diagnostics::info(diagnostics_scope, &format!("server start; mode={attempt}"));
             let context_size = self.profile.context_size(attempt);
             let mut command = Command::new(&executable);
@@ -445,6 +487,10 @@ impl HyMtTranslator {
             runtime.process = Some(child);
             let deadline = Instant::now() + self.startup_timeout;
             while Instant::now() < deadline {
+                if self.preparation_cancellation.is_cancelled() {
+                    stop_shared_runtime(&mut runtime);
+                    return Err(MODEL_PREPARATION_CANCELLED.to_string());
+                }
                 if let Some(status) = runtime
                     .process
                     .as_mut()
@@ -502,6 +548,7 @@ impl HyMtTranslator {
     }
 
     fn ensure_model(&self) -> Result<(), String> {
+        self.preparation_cancellation.check()?;
         if model_is_verified(&self.model_path, self.model)? {
             return Ok(());
         }
@@ -538,6 +585,7 @@ impl HyMtTranslator {
         }
         self.report_progress("downloading", downloaded);
         if downloaded < self.model.expected_bytes {
+            self.preparation_cancellation.check()?;
             let url = format!(
                 "https://huggingface.co/{}/resolve/main/{}?download=true",
                 self.model.repository, self.model.filename
@@ -574,6 +622,12 @@ impl HyMtTranslator {
             let mut buffer = vec![0_u8; 1024 * 1024];
             let mut last_reported = downloaded;
             loop {
+                if self.preparation_cancellation.is_cancelled() {
+                    output.flush().map_err(|error| {
+                        format!("취소한 모델 다운로드를 보존하지 못했습니다: {error}")
+                    })?;
+                    return Err(MODEL_PREPARATION_CANCELLED.to_string());
+                }
                 let count = response
                     .read(&mut buffer)
                     .map_err(|error| format!("로컬 모델을 내려받지 못했습니다: {error}"))?;
@@ -604,6 +658,7 @@ impl HyMtTranslator {
                 .flush()
                 .map_err(|error| format!("로컬 모델 파일을 마무리하지 못했습니다: {error}"))?;
         }
+        self.preparation_cancellation.check()?;
         if downloaded != self.model.expected_bytes {
             return Err(format!(
                 "로컬 모델 다운로드 크기가 일치하지 않습니다({downloaded}/{} bytes).",
@@ -612,6 +667,7 @@ impl HyMtTranslator {
         }
         self.report_progress("verifying", downloaded);
         let actual_hash = file_sha256(&partial)?;
+        self.preparation_cancellation.check()?;
         if actual_hash != self.model.expected_sha256 {
             let _ = fs::remove_file(&partial);
             return Err(
@@ -2072,6 +2128,7 @@ mod tests {
         translate_with_completion_for_model, translate_with_translate_gemma,
         translation_prompt_for_model, unchanged_lowercase_source_words,
         valid_korean_word_replacement, HyMtModel, HyMtModelSize, HyMtTranslator,
+        ModelPreparationCancellation,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::{translation_needs_repair, Translator};
@@ -2162,6 +2219,44 @@ mod tests {
         assert_eq!(std::fs::read(&model_path).unwrap(), b"abc");
         assert!(!super::partial_path(&model_path).exists());
         assert!(super::hash_marker(&model_path).exists());
+        let _ = std::fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn cancelled_model_download_keeps_partial_file_for_resume() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-cancelled-model-download-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let model_path = directory.join("model.gguf");
+        let partial_path = super::partial_path(&model_path);
+        std::fs::write(&partial_path, b"resumable-data").unwrap();
+        let cancellation = ModelPreparationCancellation::default();
+        cancellation.cancel();
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto")
+            .unwrap()
+            .with_paths(model_path, None)
+            .with_preparation_cancellation(cancellation);
+        translator.model = HyMtModel {
+            key: "test",
+            family: "test",
+            label: "Test model",
+            repository: "invalid/repository-that-must-not-be-requested",
+            filename: "model.gguf",
+            expected_bytes: 100,
+            expected_sha256: "unused",
+        };
+
+        assert_eq!(
+            translator.ensure_model().unwrap_err(),
+            super::MODEL_PREPARATION_CANCELLED
+        );
+        assert_eq!(std::fs::read(&partial_path).unwrap(), b"resumable-data");
         let _ = std::fs::remove_dir_all(directory);
     }
 
