@@ -122,6 +122,7 @@ body {
   }
 
   .page-scroll-indicator.is-scroll-near,
+  .page-scroll-indicator.is-scroll-active,
   .page-scroll-indicator.is-dragging,
   .page-scroll-indicator:hover {
     opacity: 1;

@@ -24,17 +24,21 @@ const finePointerPreference = window.matchMedia("(hover: hover) and (pointer: fi
 const translationNodes = [...document.querySelectorAll("[data-i18n]")];
 const placeholderNodes = [...document.querySelectorAll("[data-i18n-placeholder]")];
 const PAGE_SCROLL_REVEAL_DISTANCE = 42;
+const PAGE_SCROLL_IDLE_DELAY = 700;
 
 function bindPageScrollIndicator() {
   if (!pageScrollIndicator || !pageScrollThumb) return;
 
   let draggingPointer = null;
+  let scrollIdleTimer = 0;
   let updateFrame = 0;
 
   const updateIndicator = () => {
     updateFrame = 0;
     if (!finePointerPreference.matches) {
-      pageScrollIndicator.classList.remove("is-scrollable", "is-scroll-near", "is-dragging");
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = 0;
+      pageScrollIndicator.classList.remove("is-scrollable", "is-scroll-near", "is-scroll-active", "is-dragging");
       return;
     }
 
@@ -48,13 +52,24 @@ function bindPageScrollIndicator() {
     pageScrollThumb.style.height = `${metrics.height}px`;
     pageScrollThumb.style.transform = `translate3d(0, ${metrics.top}px, 0)`;
     if (!metrics.scrollable) {
-      pageScrollIndicator.classList.remove("is-scroll-near", "is-dragging");
+      pageScrollIndicator.classList.remove("is-scroll-near", "is-scroll-active", "is-dragging");
     }
   };
 
   const requestIndicatorUpdate = () => {
     if (updateFrame) return;
     updateFrame = window.requestAnimationFrame(updateIndicator);
+  };
+
+  const showIndicatorWhileScrolling = () => {
+    requestIndicatorUpdate();
+    if (!finePointerPreference.matches) return;
+    pageScrollIndicator.classList.add("is-scroll-active");
+    clearTimeout(scrollIdleTimer);
+    scrollIdleTimer = window.setTimeout(() => {
+      scrollIdleTimer = 0;
+      pageScrollIndicator.classList.remove("is-scroll-active");
+    }, PAGE_SCROLL_IDLE_DELAY);
   };
 
   const scrollToPointer = (clientY) => {
@@ -85,7 +100,8 @@ function bindPageScrollIndicator() {
       && window.innerWidth - event.clientX <= PAGE_SCROLL_REVEAL_DISTANCE;
     pageScrollIndicator.classList.toggle("is-scroll-near", isNear);
   });
-  document.addEventListener("scroll", requestIndicatorUpdate, { passive: true });
+  document.addEventListener("wheel", showIndicatorWhileScrolling, { passive: true });
+  document.addEventListener("scroll", showIndicatorWhileScrolling, { passive: true });
   window.addEventListener("resize", requestIndicatorUpdate);
   finePointerPreference.addEventListener("change", requestIndicatorUpdate);
 

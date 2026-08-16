@@ -87,8 +87,13 @@ test("오른쪽 끝에서만 나타나는 얇은 페이지 스크롤바를 제�
   assert.match(css, /html::-webkit-scrollbar,[^}]*body::-webkit-scrollbar\s*\{[^}]*width:\s*0/s);
   assert.match(css, /\.page-scroll-indicator-thumb\s*\{[^}]*width:\s*3px/s);
   assert.match(css, /\.page-scroll-indicator:hover \.page-scroll-indicator-thumb,[^}]*width:\s*6px/s);
+  assert.match(css, /\.page-scroll-indicator\.is-scroll-active/);
   assert.match(script, /PAGE_SCROLL_REVEAL_DISTANCE\s*=\s*42/);
+  assert.match(script, /PAGE_SCROLL_IDLE_DELAY\s*=\s*700/);
+  assert.match(script, /classList\.add\("is-scroll-active"\)/);
+  assert.match(script, /clearTimeout\(scrollIdleTimer\)/);
   assert.match(script, /document\.addEventListener\("pointermove"/);
+  assert.match(script, /document\.addEventListener\("wheel", showIndicatorWhileScrolling/);
   assert.match(script, /document\.addEventListener\("scroll"/);
   assert.doesNotMatch(script, /window\.addEventListener\("scroll"/);
 });
