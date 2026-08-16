@@ -838,6 +838,44 @@ summary:focus-visible {
   box-shadow: none;
 }
 
+.translation-preview {
+  display: block;
+  padding: 0;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-soft) 72%, var(--surface-raised)), var(--surface));
+}
+
+.translation-preview::before {
+  display: none;
+}
+
+.translation-preview-image {
+  position: absolute;
+  display: block;
+  height: auto;
+  border: 0;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #09090c;
+}
+
+.translation-preview-original {
+  top: 6%;
+  left: 3%;
+  z-index: 1;
+  width: 82%;
+  opacity: 0.9;
+  box-shadow: 0 14px 34px rgb(24 54 82 / 0.12);
+}
+
+.translation-preview-result {
+  right: 3%;
+  bottom: 5%;
+  z-index: 2;
+  width: 72%;
+  box-shadow: 0 22px 52px color-mix(in srgb, var(--accent-strong) 24%, transparent);
+}
+
 .feature-engines {
   display: grid;
   grid-column: 1 / -1;

@@ -127,7 +127,7 @@
       <section class="section shell" id="features" aria-labelledby="features-title">
         <div class="section-heading compact reveal">
           <p class="eyebrow" data-i18n>주요 기능</p>
-          <h2 id="features-title" data-i18n>대화에 필요한 번역을 한곳에 모았습니다.</h2>
+          <h2 id="features-title" data-i18n>메시지부터 이미지까지, 원하는 방식으로 번역합니다.</h2>
         </div>
 
         <div class="feature-grid">
@@ -149,12 +149,26 @@
               <h3 data-i18n>이미지 속 글자까지 확인합니다.</h3>
               <p data-i18n>이미지 원본은 외부 번역 서비스로 보내지 않습니다.</p>
             </div>
-            <!-- TODO: 1200x900 비율의 이미지 번역 전후 사진으로 교체합니다. -->
-            <div class="media-stage compact-media" data-media-slot="image-translation" role="img" aria-label="이미지 번역 전후 사진을 넣을 자리">
-              <div class="media-slot-copy">
-                <strong data-i18n>이미지 번역 사진</strong>
-                <small data-i18n>권장 1200 × 900</small>
-              </div>
+            <div
+              class="media-stage compact-media translation-preview"
+              data-media-slot="image-translation"
+              role="img"
+              aria-label="한글 원본 화면 위에 영어 번역 결과 화면이 포개진 모습"
+            >
+              <img
+                class="translation-preview-image translation-preview-original"
+                src="./assets/image-translation-original.png"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+              <img
+                class="translation-preview-image translation-preview-result"
+                src="./assets/image-translation-result.png"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
             </div>
           </article>
 

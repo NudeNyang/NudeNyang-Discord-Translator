@@ -26,6 +26,7 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
     "언어 자동 감지",
     "실시간 화면 번역",
     "전송 메시지 통역",
+    "메시지부터 이미지까지, 원하는 방식으로 번역합니다.",
     "쓰던 Discord를 그대로 사용합니다.",
     "로컬 AI 모델로 번역 비용을 줄일 수 있습니다.",
   ]) {
@@ -35,12 +36,35 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
   assert.match(html, /여러 언어가 동시에 표시되어도 메세지별 언어를 자동으로 감지해 번역합니다\./);
   assert.doesNotMatch(html, /여러 언어가 동시에 표시되는 Discord 화면에서도 메시지별 언어를 자동으로 감지해 번역합니다\./);
   assert.doesNotMatch(html, /최근 대화 언어를 감지하여 답장에 맞는 번역 방향을 제안합니다\./);
+  assert.doesNotMatch(html, /대화에 필요한 번역을 한곳에 모았습니다\./);
   assert.doesNotMatch(html, /Hy-MT2/);
 });
 
 test("파란 기능 카드의 인사말은 모든 UI 언어에서 한글로 고정한다", () => {
   assert.match(html, /class="feature-word" aria-hidden="true">안녕하세요<\/span>/);
   assert.doesNotMatch(html, /class="feature-word"[^>]*data-i18n/);
+});
+
+test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준다", async () => {
+  assert.match(html, /src="\.\/assets\/image-translation-original\.png"/);
+  assert.match(html, /src="\.\/assets\/image-translation-result\.png"/);
+  assert.match(html, /class="translation-preview-image translation-preview-original"/);
+  assert.match(html, /class="translation-preview-image translation-preview-result"/);
+  assert.doesNotMatch(html, /class="translation-preview-divider"/);
+  assert.doesNotMatch(html, /class="translation-preview-main"/);
+  assert.doesNotMatch(html, /class="translation-preview-inset"/);
+  assert.doesNotMatch(html, />권장 1200 × 900</);
+  assert.match(css, /\.translation-preview-image[\s\S]*?border:\s*0/);
+  assert.match(css, /\.translation-preview-original[\s\S]*?top:\s*6%[\s\S]*?left:\s*3%/);
+  assert.match(css, /\.translation-preview-result[\s\S]*?right:\s*3%[\s\S]*?bottom:\s*5%/);
+  assert.doesNotMatch(css, /\.translation-preview-result[\s\S]*?clip-path:/);
+
+  const [original, result] = await Promise.all([
+    stat(new URL("../assets/image-translation-original.png", import.meta.url)),
+    stat(new URL("../assets/image-translation-result.png", import.meta.url)),
+  ]);
+  assert.ok(original.size > 0);
+  assert.ok(result.size > 0);
 });
 
 test("Discord 이용 안내와 공식 정책 링크를 FAQ 앞에 제공한다", () => {
