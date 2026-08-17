@@ -13,6 +13,10 @@
 </p>
 
 <p align="center">
+  <a href="https://nudenyang.github.io/NudeNyang-Discord-Translator/"><strong>Official website</strong></a>
+</p>
+
+<p align="center">
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
