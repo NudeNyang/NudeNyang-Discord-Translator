@@ -1,19 +1,57 @@
-LangString un.deleteLocalModels ${LANG_ENGLISH} "Delete downloaded local AI models"
-LangString un.deleteLocalModels ${LANG_KOREAN} "다운로드한 로컬 AI 모델 삭제하기"
-LangString un.deleteLocalModels ${LANG_JAPANESE} "ダウンロードしたローカルAIモデルを削除する"
-LangString un.deleteLocalModels ${LANG_SIMPCHINESE} "删除已下载的本地 AI 模型"
-LangString un.deleteLocalModels ${LANG_TRADCHINESE} "刪除已下載的本機 AI 模型"
-LangString un.deleteLocalModels ${LANG_PORTUGUESEBR} "Excluir modelos de IA locais baixados"
-LangString un.deleteLocalModels ${LANG_SPANISHINTERNATIONAL} "Eliminar modelos de IA locales descargados"
-LangString un.deleteLocalModels ${LANG_GERMAN} "Heruntergeladene lokale KI-Modelle löschen"
-LangString un.deleteLocalModels ${LANG_RUSSIAN} "Удалить загруженные локальные модели ИИ"
-LangString un.deleteLocalModels ${LANG_FRENCH} "Supprimer les modèles d’IA locaux téléchargés"
-LangString un.deleteLocalModels ${LANG_TURKISH} "İndirilen yerel yapay zekâ modellerini sil"
-LangString un.deleteLocalModels ${LANG_ARABIC} "حذف نماذج الذكاء الاصطناعي المحلية التي تم تنزيلها"
-LangString un.deleteLocalModels ${LANG_VIETNAMESE} "Xóa các mô hình AI cục bộ đã tải xuống"
-LangString un.deleteLocalModels ${LANG_ITALIAN} "Elimina i modelli IA locali scaricati"
-LangString un.deleteLocalModels ${LANG_UKRAINIAN} "Видалити завантажені локальні моделі ШІ"
-LangString un.deleteLocalModels ${LANG_DUTCH} "Gedownloade lokale AI-modellen verwijderen"
+Var DeleteLocalModelsLabel
+
+!define NN_LANG_ARABIC 1025
+!define NN_LANG_TRADCHINESE 1028
+!define NN_LANG_GERMAN 1031
+!define NN_LANG_ENGLISH 1033
+!define NN_LANG_FRENCH 1036
+!define NN_LANG_ITALIAN 1040
+!define NN_LANG_JAPANESE 1041
+!define NN_LANG_KOREAN 1042
+!define NN_LANG_DUTCH 1043
+!define NN_LANG_PORTUGUESEBR 1046
+!define NN_LANG_RUSSIAN 1049
+!define NN_LANG_TURKISH 1055
+!define NN_LANG_UKRAINIAN 1058
+!define NN_LANG_VIETNAMESE 1066
+!define NN_LANG_SIMPCHINESE 2052
+!define NN_LANG_SPANISHINTERNATIONAL 3082
+
+Function un.ResolveDeleteLocalModelsLabel
+  StrCpy $DeleteLocalModelsLabel "Delete downloaded local AI models"
+
+  ${If} $LANGUAGE == ${NN_LANG_KOREAN}
+    StrCpy $DeleteLocalModelsLabel "다운로드한 로컬 AI 모델 삭제하기"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_JAPANESE}
+    StrCpy $DeleteLocalModelsLabel "ダウンロードしたローカルAIモデルを削除する"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_SIMPCHINESE}
+    StrCpy $DeleteLocalModelsLabel "删除已下载的本地 AI 模型"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_TRADCHINESE}
+    StrCpy $DeleteLocalModelsLabel "刪除已下載的本機 AI 模型"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_PORTUGUESEBR}
+    StrCpy $DeleteLocalModelsLabel "Excluir modelos de IA locais baixados"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_SPANISHINTERNATIONAL}
+    StrCpy $DeleteLocalModelsLabel "Eliminar modelos de IA locales descargados"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_GERMAN}
+    StrCpy $DeleteLocalModelsLabel "Heruntergeladene lokale KI-Modelle löschen"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_RUSSIAN}
+    StrCpy $DeleteLocalModelsLabel "Удалить загруженные локальные модели ИИ"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_FRENCH}
+    StrCpy $DeleteLocalModelsLabel "Supprimer les modèles d’IA locaux téléchargés"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_TURKISH}
+    StrCpy $DeleteLocalModelsLabel "İndirilen yerel yapay zekâ modellerini sil"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_ARABIC}
+    StrCpy $DeleteLocalModelsLabel "حذف نماذج الذكاء الاصطناعي المحلية التي تم تنزيلها"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_VIETNAMESE}
+    StrCpy $DeleteLocalModelsLabel "Xóa các mô hình AI cục bộ đã tải xuống"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_ITALIAN}
+    StrCpy $DeleteLocalModelsLabel "Elimina i modelli IA locali scaricati"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_UKRAINIAN}
+    StrCpy $DeleteLocalModelsLabel "Видалити завантажені локальні моделі ШІ"
+  ${ElseIf} $LANGUAGE == ${NN_LANG_DUTCH}
+    StrCpy $DeleteLocalModelsLabel "Gedownloade lokale AI-modellen verwijderen"
+  ${EndIf}
+FunctionEnd
 
 !macro NSIS_HOOK_POSTINSTALL
   IfFileExists "$LOCALAPPDATA\NudeNyang Translator\NudeNyangTranslator.log" 0 desktop_previous_shortcut
