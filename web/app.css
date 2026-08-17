@@ -1205,6 +1205,10 @@ input:focus-visible,
   background: color-mix(in srgb, var(--accent-soft) 62%, var(--surface));
 }
 
+.provider-row[data-current="true"] {
+  background: color-mix(in srgb, var(--accent-soft) 42%, var(--surface));
+}
+
 .provider-identity,
 .provider-connection,
 .provider-credential {
@@ -1215,6 +1219,32 @@ input:focus-visible,
 .provider-identity {
   gap: 11px;
   min-width: 0;
+}
+
+.provider-title-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.provider-use-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 19px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent-soft) 56%, var(--surface));
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.provider-use-badge[hidden] {
+  display: none;
 }
 
 .provider-mark {

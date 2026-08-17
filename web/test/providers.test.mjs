@@ -62,7 +62,7 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
 });
 
 test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
-  assert.match(markup, /<h3>Gemini<\/h3><p>Gemini 3\.6 Flash<\/p>/);
+  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini 3\.6 Flash<\/p>/);
   assert.match(script, /\["gemini",\s*"Gemini CLI \(권장·품질 우선\)"/);
   assert.match(providers, /Google 구독 · Antigravity CLI/);
   assert.match(subscriptionCli, /Self::Gemini => &\["agy"\]/);
@@ -71,10 +71,10 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
 });
 
 test("provider cards show the concrete model or API product without quality badges", () => {
-  assert.match(markup, /<h3>ChatGPT<\/h3><p>GPT-5\.6 Luna\/Terra<\/p>/);
-  assert.match(markup, /<h3>Claude<\/h3><p>Claude Haiku 4\.5<\/p>/);
-  assert.match(markup, /<h3>Gemini<\/h3><p>Gemini 3\.6 Flash<\/p>/);
-  assert.match(markup, /<h3>DeepL<\/h3><p>DeepL API Free \/ Pro<\/p>/);
+  assert.match(markup, /<h3>ChatGPT<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>GPT-5\.6 Luna\/Terra<\/p>/);
+  assert.match(markup, /<h3>Claude<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Claude Haiku 4\.5<\/p>/);
+  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini 3\.6 Flash<\/p>/);
+  assert.match(markup, /<h3>DeepL<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>DeepL API Free \/ Pro<\/p>/);
   assert.doesNotMatch(markup, /품질 최우선/);
   assert.match(script, /ChatGPT CLI \(권장·품질 우선\)/);
   assert.match(providers, /ChatGPT 무료 플랜 이상 · Codex CLI/);

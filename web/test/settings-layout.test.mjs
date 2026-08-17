@@ -182,9 +182,15 @@ test("language select options relocalize after the saved interface language load
 });
 
 test("display translation and outgoing interpretation present role-appropriate model choices", () => {
+  assert.match(
+    markup,
+    /받은 메시지는 빠른 로컬 모델로, 보낼 메시지는 문맥과 말투에 강한 CLI 모델로 번역하는 구성을 권장합니다\./,
+  );
   assert.match(markup, /<h3>표시 언어 번역 모델<\/h3>/);
+  assert.match(markup, /많은 메시지와 이미지를 계속 처리하므로 빠른 로컬 모델 사용을 권장합니다\./);
   assert.match(markup, /data-field="translator"/);
   assert.match(markup, /<h3>보내는 메시지 통역 모델<\/h3>/);
+  assert.match(markup, /의미와 말투를 자연스럽게 전달하도록 품질 우선 CLI 모델 사용을 권장합니다\./);
   assert.match(markup, /data-field="outgoing_translator"/);
   assert.match(markup, /id="vram-protection-note" hidden/);
   assert.match(markup, /로컬 모델은 하나만 실행됩니다\. 표시 번역과 보내는 메시지 통역의 로컬 모델 선택은 함께 변경됩니다\./);
@@ -213,8 +219,17 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(script, /TranslateGemma 4B Q4 \(실험·속도 우선\)/);
   assert.doesNotMatch(script, /로컬·간단한 문장|실험·간단한 문장/);
   assert.match(markup, /id="outgoing-model-guidance"/);
-  assert.match(markup, /보내는 메시지에는 CLI 모델을 권장합니다/);
+  assert.match(markup, /권장 품질을 사용하려면 CLI 모델 연결이 필요합니다/);
   assert.match(styles, /\.outgoing-model-guidance\s*\{[\s\S]*?margin:\s*16px 18px 18px/);
+  assert.match(
+    markup,
+    /위에서 선택한 서비스 하나만 연결하면 됩니다\. 다른 서비스는 필요할 때 연결할 수 있습니다\./,
+  );
+  assert.match(markup, /class="provider-use-badge" hidden>현재 사용<\/span>/);
+  assert.match(styles, /\.provider-row\[data-current="true"\]/);
+  assert.match(script, /badge\.hidden = !current/);
+  assert.match(script, /setLocalizedText\(badge, connected \? "현재 사용" : "선택됨"\)/);
+  assert.match(script, /action\.dataset\.mode = "connect"/);
   assert.match(script, /connectedRecommendedProvider/);
   assert.match(script, /applySettingsPatch\(\{ outgoing_translator: provider \}\)/);
   assert.ok(markup.indexOf('id="provider-connections"') < markup.indexOf('id="local-engine-settings"'));

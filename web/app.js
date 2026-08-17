@@ -189,7 +189,6 @@ const elements = {
 };
 
 const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
-const CLI_PROVIDERS = new Set(["chatgpt", "claude", "gemini"]);
 const LOCAL_TRANSLATORS = new Set(
   DISPLAY_TRANSLATOR_OPTIONS
     .filter(([, , group]) => group === "local")
@@ -350,42 +349,61 @@ function connectedRecommendedProvider() {
   return RECOMMENDED_PROVIDER_ORDER.find(providerIsConnected) || "";
 }
 
+function renderProviderUsage(selected) {
+  for (const row of elements.providerRows) {
+    const current = EXTERNAL_PROVIDERS.has(selected) && row.dataset.provider === selected;
+    const connected = current && providerIsConnected(selected);
+    const badge = row.querySelector(".provider-use-badge");
+    if (current) row.dataset.current = "true";
+    else delete row.dataset.current;
+    if (!badge) continue;
+    badge.hidden = !current;
+    if (current) setLocalizedText(badge, connected ? "현재 사용" : "선택됨");
+  }
+}
+
 function renderOutgoingModelGuidance() {
   const selected = state.selectValues.outgoing_translator || state.config.outgoing_translator;
   const action = elements.outgoingModelGuidanceAction;
   if (!selected || !elements.outgoingModelGuidance || !action) return;
 
+  renderProviderUsage(selected);
   if (elements.vramProtectionNote) {
     elements.vramProtectionNote.hidden = !LOCAL_TRANSLATORS.has(selected);
   }
   action.hidden = false;
   action.disabled = false;
   delete action.dataset.provider;
-  if (CLI_PROVIDERS.has(selected)) {
+  delete action.dataset.mode;
+  if (EXTERNAL_PROVIDERS.has(selected)) {
     elements.outgoingModelGuidance.dataset.state = "external";
-    setLocalizedText(elements.outgoingModelGuidanceTitle, "CLI 모델로 보내는 메시지를 통역합니다.");
-    setLocalizedText(elements.outgoingModelGuidanceDetail, "번역할 텍스트만 선택한 서비스로 전송됩니다. 로컬 모델보다 의미와 말투를 안정적으로 보존하는 데 적합합니다.");
-    action.hidden = true;
-    return;
-  }
-  if (selected === "deepl") {
-    elements.outgoingModelGuidance.dataset.state = "external";
-    setLocalizedText(elements.outgoingModelGuidanceTitle, "외부 번역 서비스로 보내는 메시지를 통역합니다.");
-    setLocalizedText(elements.outgoingModelGuidanceDetail, "번역할 텍스트만 DeepL로 전송됩니다.");
-    action.hidden = true;
+    if (providerIsConnected(selected)) {
+      setLocalizedText(elements.outgoingModelGuidanceTitle, "품질 우선 모델로 보내는 메시지를 통역합니다.");
+      setLocalizedText(elements.outgoingModelGuidanceDetail, "로컬 모델보다 문맥과 말투를 안정적으로 보존합니다. 번역할 메시지 텍스트만 선택한 서비스로 전송됩니다.");
+      action.hidden = true;
+    } else {
+      setLocalizedText(elements.outgoingModelGuidanceTitle, "선택한 품질 우선 모델의 계정 연결이 필요합니다.");
+      setLocalizedText(elements.outgoingModelGuidanceDetail, "계정 연결을 완료하면 문맥과 말투를 살린 권장 품질로 통역합니다. 번역할 메시지 텍스트만 전송됩니다.");
+      setLocalizedText(action, "서비스 연결");
+      action.dataset.provider = selected;
+      action.dataset.mode = "connect";
+    }
     return;
   }
 
   elements.outgoingModelGuidance.dataset.state = "local";
-  setLocalizedText(elements.outgoingModelGuidanceTitle, "보내는 메시지에는 CLI 모델을 권장합니다.");
+  setLocalizedText(elements.outgoingModelGuidanceTitle, "권장 품질을 사용하려면 CLI 모델 연결이 필요합니다.");
   const connectedProvider = connectedRecommendedProvider();
   if (connectedProvider) {
     setLocalizedText(elements.outgoingModelGuidanceDetail, "연결된 CLI 모델을 사용하면 의미와 말투를 더 안정적으로 보존할 수 있습니다.");
     setLocalizedText(action, "권장 모델 사용");
     action.dataset.provider = connectedProvider;
+    action.dataset.mode = "use";
   } else {
-    setLocalizedText(elements.outgoingModelGuidanceDetail, "로컬 모델은 짧고 단순한 문장에 적합합니다. 문맥과 말투가 중요한 메시지는 CLI 모델 사용을 권장합니다.");
-    setLocalizedText(action, "CLI 모델 연결");
+    setLocalizedText(elements.outgoingModelGuidanceDetail, "CLI 모델은 로컬 모델보다 문맥과 말투를 안정적으로 보존합니다. 번역할 메시지 텍스트만 선택한 서비스로 전송됩니다.");
+    setLocalizedText(action, "서비스 연결");
+    action.dataset.provider = "chatgpt";
+    action.dataset.mode = "connect";
   }
 }
 
@@ -1815,10 +1833,11 @@ for (const row of elements.providerRows) {
 }
 elements.outgoingModelGuidanceAction.addEventListener("click", async () => {
   const provider = elements.outgoingModelGuidanceAction.dataset.provider;
-  if (!provider) {
-    revealProviderConnection("chatgpt");
+  if (elements.outgoingModelGuidanceAction.dataset.mode === "connect") {
+    revealProviderConnection(provider || "chatgpt");
     return;
   }
+  if (!provider) return;
   elements.outgoingModelGuidanceAction.disabled = true;
   try {
     setSelectValue("outgoing_translator", provider);
