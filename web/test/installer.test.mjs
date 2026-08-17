@@ -33,7 +33,8 @@ test("the Windows uninstaller separates application data from downloaded local A
   );
   assert.match(installerTemplate, /Var DeleteLocalModelsCheckbox/);
   assert.match(installerTemplate, /Var DeleteLocalModelsCheckboxState/);
-  assert.match(installerTemplate, /\$\(un\.deleteLocalModels\)/);
+  assert.match(installerTemplate, /\$\(deleteLocalModels\)/);
+  assert.doesNotMatch(installerTemplate, /\$\(un\.deleteLocalModels\)/);
   assert.match(
     installerHooks,
     /LangString un\.deleteLocalModels \$\{LANG_KOREAN\} "다운로드한 로컬 AI 모델 삭제하기"/,
