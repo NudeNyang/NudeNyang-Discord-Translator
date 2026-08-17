@@ -7,10 +7,12 @@ import { detectPreferredLocale, normalizeLocale } from "../locale-utils.mjs";
 import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "../scrollbar-utils.mjs";
 
 const baseUrl = new URL("../", import.meta.url);
-const [html, css, script] = await Promise.all([
+const [html, css, script, readme, readmeKo] = await Promise.all([
   readFile(new URL("index.html", baseUrl), "utf8"),
   readFile(new URL("styles.css", baseUrl), "utf8"),
   readFile(new URL("script.js", baseUrl), "utf8"),
+  readFile(new URL("../README.md", baseUrl), "utf8"),
+  readFile(new URL("../README.ko.md", baseUrl), "utf8"),
 ]);
 
 test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", () => {
@@ -22,6 +24,22 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
   assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings"]);
   assert.match(html, /<a href="#how-it-works" data-i18n>기능<\/a>/);
   assert.doesNotMatch(html, /<a href="#features" data-i18n>기능<\/a>/);
+});
+
+test("GitHub README는 모자이크된 애니메이션 미리보기와 전체 영상을 제공한다", async () => {
+  const [preview, fullDemo] = await Promise.all([
+    stat(new URL("../assets/full-discord-translation-demo-preview.gif", import.meta.url)),
+    stat(new URL("../assets/full-discord-translation-demo-masked.mp4", import.meta.url)),
+  ]);
+
+  for (const document of [readme, readmeKo]) {
+    assert.match(document, /<img src="\.\/landing\/assets\/full-discord-translation-demo-preview\.gif"/);
+    assert.match(document, /full-discord-translation-demo-masked\.mp4/);
+    assert.doesNotMatch(document, /^\s*https:\/\/github\.com\/.*\.mp4\s*$/m);
+  }
+
+  assert.ok(preview.size > 100_000, "README 애니메이션 미리보기 GIF가 필요합니다.");
+  assert.ok(fullDemo.size > 1_000_000, "전체 모자이크 시연 MP4가 필요합니다.");
 });
 
 test("브랜드 아이콘은 기존 표시 방식과 크기를 유지한다", () => {
@@ -331,19 +349,19 @@ test("Beta 표기는 모든 UI 언어에서 영문으로 유지한다", () => {
 
 test("히어로에서 실제 번역 영상을 재생한다", async () => {
   assert.match(html, /<video\b[^>]*class="media-stage hero-media reveal"[^>]*data-media-slot="hero"[^>]*data-hero-video/s);
-  assert.match(html, /<source src="\.\/assets\/hero-discord-translation\.mp4" type="video\/mp4"\s*\/>/);
+  assert.match(html, /<source src="\.\/assets\/hero-discord-translation-masked\.mp4" type="video\/mp4"\s*\/>/);
   assert.match(html, /<video\b[^>]*muted[^>]*loop[^>]*playsinline/s);
   assert.doesNotMatch(html, /<video\b[^>]*\scontrols(?:\s|>|=)/s);
   assert.doesNotMatch(html, /<video\b[^>]*\scontrolslist=/s);
   assert.match(html, /<video\b[^>]*preload="metadata"/s);
-  assert.match(html, /<video\b[^>]*poster="\.\/assets\/hero-discord-translation-poster\.jpg"/s);
+  assert.match(html, /<video\b[^>]*poster="\.\/assets\/hero-discord-translation-masked-poster\.jpg"/s);
   assert.match(css, /\.hero-media\s*\{[^}]*object-fit:\s*cover[^}]*pointer-events:\s*none/s);
   assert.match(script, /prefers-reduced-motion:\s*reduce/);
   assert.match(script, /heroVideo\.play\(\)/);
 
   const [video, poster] = await Promise.all([
-    stat(new URL("../assets/hero-discord-translation.mp4", import.meta.url)),
-    stat(new URL("../assets/hero-discord-translation-poster.jpg", import.meta.url)),
+    stat(new URL("../assets/hero-discord-translation-masked.mp4", import.meta.url)),
+    stat(new URL("../assets/hero-discord-translation-masked-poster.jpg", import.meta.url)),
   ]);
   assert.ok(video.size > 1_000_000, "히어로 MP4 파일이 필요합니다.");
   assert.ok(poster.size > 10_000, "히어로 포스터 이미지가 필요합니다.");
@@ -352,9 +370,9 @@ test("히어로에서 실제 번역 영상을 재생한다", async () => {
 test("기능 소개 영상은 화면에 들어온 뒤 조작부 없이 자동 재생한다", async () => {
   const workflowOpenTag = html.match(/<video\b[^>]*class="media-stage workflow-media reveal"[^>]*data-media-slot="workflow"[^>]*data-scroll-autoplay[^>]*>/s)?.[0];
   assert.ok(workflowOpenTag, "기능 소개 video 요소가 필요합니다.");
-  assert.match(html, /<source src="\.\/assets\/workflow-discord-translation\.mp4" type="video\/mp4"\s*\/>/);
+  assert.match(html, /<source src="\.\/assets\/workflow-discord-translation-masked\.mp4" type="video\/mp4"\s*\/>/);
   assert.match(workflowOpenTag, /muted[\s\S]*playsinline[\s\S]*disablepictureinpicture/);
-  assert.match(workflowOpenTag, /preload="metadata"[\s\S]*poster="\.\/assets\/workflow-discord-translation-poster\.jpg"/);
+  assert.match(workflowOpenTag, /preload="metadata"[\s\S]*poster="\.\/assets\/workflow-discord-translation-masked-poster\.jpg"/);
   assert.match(workflowOpenTag, /tabindex="0"/);
   assert.doesNotMatch(workflowOpenTag, /\scontrols(?:\s|>|=)/);
   assert.doesNotMatch(workflowOpenTag, /\sloop(?:\s|>|=)/);
@@ -366,8 +384,8 @@ test("기능 소개 영상은 화면에 들어온 뒤 조작부 없이 자동 �
   assert.match(css, /\.workflow-media\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9[^}]*height:\s*auto[^}]*object-fit:\s*contain/s);
 
   const [video, poster] = await Promise.all([
-    stat(new URL("../assets/workflow-discord-translation.mp4", import.meta.url)),
-    stat(new URL("../assets/workflow-discord-translation-poster.jpg", import.meta.url)),
+    stat(new URL("../assets/workflow-discord-translation-masked.mp4", import.meta.url)),
+    stat(new URL("../assets/workflow-discord-translation-masked-poster.jpg", import.meta.url)),
   ]);
   assert.ok(video.size > 1_000_000, "기능 소개 MP4 파일이 필요합니다.");
   assert.ok(video.size < 30_000_000, "기능 소개 MP4는 웹 전송에 맞게 최적화해야 합니다.");

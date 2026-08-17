@@ -24,8 +24,8 @@ npm run landing:locales
 
 HTML에서 `data-media-slot`을 검색하면 교체할 위치를 확인할 수 있습니다.
 
-- `hero`: `assets/hero-discord-translation.mp4`를 사용하며, 포스터는 `assets/hero-discord-translation-poster.jpg`입니다.
-- `workflow`: 수신 번역부터 답장 전송까지의 사용 영상, 1920 × 1080
+- `hero`: `assets/hero-discord-translation-masked.mp4`를 사용하며, 포스터는 `assets/hero-discord-translation-masked-poster.jpg`입니다.
+- `workflow`: `assets/workflow-discord-translation-masked.mp4`를 사용하는 수신 번역부터 답장 전송까지의 영상, 1920 × 1080
 - `image-translation`: 이미지 번역 전후 사진, 1200 × 900
 - `settings`: 라이트 모드 설정 화면, 1600 × 1000
 
