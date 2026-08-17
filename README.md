@@ -37,7 +37,7 @@ Download the Windows 10/11 x64 installer from [GitHub Releases](https://github.c
 
 ### Quick demo
 
-https://github.com/user-attachments/assets/87bba13d-5ddc-45b1-92a9-dbf694f2e81a
+![Quick NudeNyang Discord translation demo with usernames pixelated](./landing/assets/hero-discord-translation-masked.gif)
 
 ### Full demo
 

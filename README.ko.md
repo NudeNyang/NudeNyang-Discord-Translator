@@ -33,7 +33,7 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ### 짧은 시연
 
-https://github.com/user-attachments/assets/87bba13d-5ddc-45b1-92a9-dbf694f2e81a
+![사용자 닉네임을 모자이크한 짧은 NudeNyang Discord 번역 시연](./landing/assets/hero-discord-translation-masked.gif)
 
 ### 전체 시연
 
