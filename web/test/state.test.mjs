@@ -92,6 +92,15 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.hotkeys.review_outgoing_before_send, "Alt+Enter");
   assert.equal(config.ui_language, "auto");
   assert.equal(config.image_ocr_quality, "adaptive");
+  assert.equal(config.dictionary_enabled, true);
+  assert.equal(config.dictionary_external_provider, "wiktionary");
+});
+
+test("dictionary external lookup accepts only the supported privacy choices", () => {
+  for (const provider of ["wiktionary", "none"]) {
+    assert.equal(normalizeConfig({ dictionary_external_provider: provider }).dictionary_external_provider, provider);
+  }
+  assert.equal(normalizeConfig({ dictionary_external_provider: "unknown" }).dictionary_external_provider, "wiktionary");
 });
 
 test("image OCR quality keeps only supported execution policies", () => {

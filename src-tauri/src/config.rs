@@ -71,6 +71,8 @@ pub struct AppConfig {
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
     pub outgoing_confirm_send: bool,
+    pub dictionary_enabled: bool,
+    pub dictionary_external_provider: String,
     pub show_original: bool,
     pub theme: String,
     pub ui_theme: String,
@@ -105,6 +107,8 @@ impl Default for AppConfig {
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
             outgoing_confirm_send: true,
+            dictionary_enabled: true,
+            dictionary_external_provider: "wiktionary".to_string(),
             show_original: false,
             theme: "auto".to_string(),
             ui_theme: "system".to_string(),
@@ -253,6 +257,16 @@ impl AppConfig {
             object.insert(
                 "outgoing_target_language".to_string(),
                 Value::String("auto".to_string()),
+            );
+        }
+        if object
+            .get("dictionary_external_provider")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "wiktionary" | "none"))
+        {
+            object.insert(
+                "dictionary_external_provider".to_string(),
+                Value::String("wiktionary".to_string()),
             );
         }
         if object
@@ -501,6 +515,8 @@ mod tests {
         assert_eq!(restored.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert!(restored.disabled_providers.is_empty());
         assert_eq!(restored.translation_history_retention_days, 30);
+        assert!(restored.dictionary_enabled);
+        assert_eq!(restored.dictionary_external_provider, "wiktionary");
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
@@ -531,6 +547,19 @@ mod tests {
         let invalid = AppConfig::from_value(json!({"image_ocr_quality": "maximum"}))
             .expect("invalid OCR quality mode should reset");
         assert_eq!(invalid.image_ocr_quality, "adaptive");
+    }
+
+    #[test]
+    fn dictionary_external_provider_accepts_only_supported_choices() {
+        for provider in ["wiktionary", "none"] {
+            let config = AppConfig::from_value(json!({"dictionary_external_provider": provider}))
+                .expect("supported dictionary provider");
+            assert_eq!(config.dictionary_external_provider, provider);
+        }
+
+        let invalid = AppConfig::from_value(json!({"dictionary_external_provider": "unknown"}))
+            .expect("invalid dictionary provider should reset");
+        assert_eq!(invalid.dictionary_external_provider, "wiktionary");
     }
 
     #[test]

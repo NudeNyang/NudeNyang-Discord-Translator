@@ -84,6 +84,10 @@ const OPTIONS = {
     ["dark", "다크"],
   ],
   ui_language: [["auto", "Auto (System)", "", "System language"], ...LANGUAGE_OPTIONS],
+  dictionary_external_provider: [
+    ["wiktionary", "Wiktionary (기본 브라우저)"],
+    ["none", "사용 안 함"],
+  ],
   translation_history_retention_days: [
     [0, "사용 안 함"],
     [7, "7일 보관"],
@@ -122,6 +126,10 @@ const state = {
   providerOperation: "",
   storageStatus: null,
   systemMemory: null,
+  dictionaryLoaded: false,
+  dictionaryLoading: false,
+  dictionaryStatus: null,
+  dictionaryPersonalEntries: [],
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
@@ -132,6 +140,17 @@ const elements = {
   enabled: document.querySelector("#enabled"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
+  dictionaryEnabled: document.querySelector("#dictionary-enabled"),
+  dictionarySourceLanguage: document.querySelector("#dictionary-source-language"),
+  dictionaryTargetLanguage: document.querySelector("#dictionary-target-language"),
+  dictionarySourceTerm: document.querySelector("#dictionary-source-term"),
+  dictionaryTargetTerm: document.querySelector("#dictionary-target-term"),
+  dictionaryNote: document.querySelector("#dictionary-note"),
+  dictionaryPersonalSave: document.querySelector("#dictionary-personal-save"),
+  dictionaryPersonalList: document.querySelector("#dictionary-personal-list"),
+  dictionaryPackList: document.querySelector("#dictionary-pack-list"),
+  dictionaryOpenFolder: document.querySelector("#dictionary-open-folder"),
+  dictionaryStorageSummary: document.querySelector("#dictionary-storage-summary"),
   autostart: document.querySelector("#autostart"),
   outgoingAutoHelp: document.querySelector("#outgoing-auto-help"),
   translationShortcutHint: document.querySelector("#translation-shortcut-hint"),
@@ -466,6 +485,184 @@ function revealProviderConnection(provider) {
   window.setTimeout(() => delete row.dataset.highlight, 1800);
 }
 
+function dictionaryLanguageLabel(code) {
+  return LANGUAGE_OPTIONS.find(([value]) => value === code)?.[1] || code;
+}
+
+function populateDictionaryLanguageSelects() {
+  for (const select of [elements.dictionarySourceLanguage, elements.dictionaryTargetLanguage]) {
+    if (!select || select.options.length) continue;
+    for (const [value, label] of LANGUAGE_OPTIONS) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      select.append(option);
+    }
+  }
+  elements.dictionarySourceLanguage.value = "en";
+  elements.dictionaryTargetLanguage.value = state.config.target_language || "ko";
+}
+
+function renderDictionaryPersonalEntries() {
+  const container = elements.dictionaryPersonalList;
+  if (!container) return;
+  container.replaceChildren();
+  if (!state.dictionaryPersonalEntries.length) {
+    const empty = document.createElement("p");
+    empty.className = "dictionary-empty";
+    setLocalizedText(empty, "저장된 개인 용어가 없습니다.");
+    container.append(empty);
+    return;
+  }
+  for (const entry of state.dictionaryPersonalEntries) {
+    const row = document.createElement("article");
+    row.className = "dictionary-personal-row";
+    const copy = document.createElement("div");
+    const terms = document.createElement("strong");
+    const meta = document.createElement("span");
+    const remove = document.createElement("button");
+    terms.textContent = `${entry.sourceTerm}  →  ${entry.targetTerm}`;
+    meta.textContent = `${dictionaryLanguageLabel(entry.sourceLanguage)} · ${dictionaryLanguageLabel(entry.targetLanguage)}${entry.note ? ` · ${entry.note}` : ""}`;
+    remove.type = "button";
+    remove.className = "button secondary dictionary-row-action";
+    setLocalizedText(remove, "삭제");
+    remove.addEventListener("click", async () => {
+      remove.disabled = true;
+      try {
+        await invoke("dictionary_personal_delete", { id: entry.id });
+        state.dictionaryPersonalEntries = state.dictionaryPersonalEntries.filter(item => item.id !== entry.id);
+        renderDictionaryPersonalEntries();
+        setLocalizedText(elements.saveStatus, "개인 사전 용어를 삭제했습니다.");
+        await refreshDictionaryStatus();
+      } catch (error) {
+        remove.disabled = false;
+        await showError("개인 사전 용어를 삭제하지 못했습니다", String(error));
+      }
+    });
+    copy.append(terms, meta);
+    row.append(copy, remove);
+    container.append(row);
+  }
+}
+
+function renderDictionaryPacks() {
+  const container = elements.dictionaryPackList;
+  const status = state.dictionaryStatus;
+  if (!container || !status) return;
+  container.replaceChildren();
+  const bundled = status.packs.filter(pack => pack.availability === "bundled");
+  const planned = status.packs.filter(pack => pack.availability !== "bundled");
+  for (const pack of bundled) {
+    const row = document.createElement("article");
+    row.className = "dictionary-pack-row";
+    const identity = document.createElement("div");
+    const title = document.createElement("strong");
+    const detail = document.createElement("span");
+    const stateBadge = document.createElement("span");
+    const action = document.createElement("button");
+    title.textContent = dictionaryLanguageLabel(pack.language);
+    detail.textContent = pack.installed
+      ? `${pack.entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} · ${pack.license}`
+      : `${pack.title} · ${pack.license}`;
+    stateBadge.className = `dictionary-pack-state${pack.installed ? " installed" : ""}`;
+    setLocalizedText(stateBadge, pack.installed ? "설치됨" : "내장팩");
+    action.type = "button";
+    action.className = "button secondary dictionary-row-action";
+    setLocalizedText(action, pack.installed ? "삭제" : "설치");
+    action.addEventListener("click", async () => {
+      action.disabled = true;
+      try {
+        if (pack.installed) await invoke("dictionary_pack_remove", { language: pack.language });
+        else await invoke("dictionary_pack_install", { language: pack.language });
+        await loadDictionaryData(true);
+        setLocalizedText(elements.saveStatus, pack.installed ? "사전팩을 삭제했습니다." : "사전팩을 설치했습니다.");
+      } catch (error) {
+        action.disabled = false;
+        await showError("사전팩 상태를 변경하지 못했습니다", String(error));
+      }
+    });
+    identity.append(title, detail);
+    row.append(identity, stateBadge, action);
+    container.append(row);
+  }
+  if (planned.length) {
+    const expansion = document.createElement("article");
+    const copy = document.createElement("div");
+    const title = document.createElement("strong");
+    const detail = document.createElement("span");
+    const badge = document.createElement("span");
+    expansion.className = "dictionary-pack-row dictionary-expansion-row";
+    setLocalizedText(title, "다음 언어팩");
+    detail.textContent = planned.map(pack => dictionaryLanguageLabel(pack.language)).join(" · ");
+    badge.className = "dictionary-pack-state planned";
+    badge.textContent = `${planned.length}/28`;
+    copy.append(title, detail);
+    expansion.append(copy, badge);
+    container.append(expansion);
+  }
+  const language = currentUiLanguage();
+  elements.dictionaryStorageSummary.textContent = `${translateCopy(language, "사전팩")} ${status.installedPackCount} · ${translateCopy(language, "개인 용어")} ${status.personalEntryCount} · ${formatStorageSize(status.databaseBytes)}`;
+}
+
+async function refreshDictionaryStatus() {
+  state.dictionaryStatus = await invoke("dictionary_status_get");
+  renderDictionaryPacks();
+}
+
+async function loadDictionaryData(force = false) {
+  if (state.dictionaryLoading || (state.dictionaryLoaded && !force)) return;
+  state.dictionaryLoading = true;
+  try {
+    const [status, entries] = await Promise.all([
+      invoke("dictionary_status_get"),
+      invoke("dictionary_personal_list"),
+    ]);
+    state.dictionaryStatus = status;
+    state.dictionaryPersonalEntries = entries;
+    state.dictionaryLoaded = true;
+    renderDictionaryPacks();
+    renderDictionaryPersonalEntries();
+  } catch (error) {
+    setLocalizedError(elements.dictionaryStorageSummary, error);
+  } finally {
+    state.dictionaryLoading = false;
+  }
+}
+
+async function saveDictionaryPersonalEntry() {
+  const sourceTerm = elements.dictionarySourceTerm.value.trim();
+  const targetTerm = elements.dictionaryTargetTerm.value.trim();
+  if (!sourceTerm || !targetTerm) {
+    throw new Error("원문 용어와 표시할 용어를 모두 입력하십시오.");
+  }
+  elements.dictionaryPersonalSave.disabled = true;
+  try {
+    await invoke("dictionary_personal_upsert", {
+      entry: {
+        id: 0,
+        sourceLanguage: elements.dictionarySourceLanguage.value,
+        targetLanguage: elements.dictionaryTargetLanguage.value,
+        sourceTerm,
+        targetTerm,
+        note: elements.dictionaryNote.value.trim(),
+        scope: "global",
+        scopeValue: "",
+        caseSensitive: false,
+        wholeWord: true,
+        createdAt: 0,
+        updatedAt: 0,
+      },
+    });
+    elements.dictionarySourceTerm.value = "";
+    elements.dictionaryTargetTerm.value = "";
+    elements.dictionaryNote.value = "";
+    await loadDictionaryData(true);
+    setLocalizedText(elements.saveStatus, "개인 사전에 저장했습니다.");
+  } finally {
+    elements.dictionaryPersonalSave.disabled = false;
+  }
+}
+
 function activateSettingsPanel(panel) {
   const target = document.querySelector(`[data-settings-view="${panel}"]`);
   if (!target) return;
@@ -482,6 +679,7 @@ function activateSettingsPanel(panel) {
   }
   elements.settingsScroll.scrollTop = 0;
   closeAllSelects();
+  if (panel === "dictionary") loadDictionaryData().catch(() => {});
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -1367,6 +1565,10 @@ function renderConfig(config) {
     "확인",
     "즉시",
   );
+  setSwitch(elements.dictionaryEnabled, state.config.dictionary_enabled, "켜짐", "꺼짐");
+  if (!state.dictionaryLoaded && !elements.dictionarySourceTerm.value && !elements.dictionaryTargetTerm.value) {
+    elements.dictionaryTargetLanguage.value = state.config.target_language;
+  }
   setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "켜짐", "꺼짐");
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
@@ -1704,6 +1906,7 @@ async function initializeSettingsUi() {
 }
 
 document.querySelectorAll(".custom-select").forEach(renderSelect);
+populateDictionaryLanguageSelects();
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });
@@ -1714,6 +1917,27 @@ elements.outgoingTranslation.addEventListener("click", async () => {
     await setOutgoingTranslationEnabled(enabled);
   } catch (error) {
     await showError("전송 메시지 통역 상태를 변경하지 못했습니다", String(error));
+  }
+});
+elements.dictionaryEnabled.addEventListener("click", async () => {
+  const enabled = elements.dictionaryEnabled.getAttribute("aria-checked") !== "true";
+  setSwitch(elements.dictionaryEnabled, enabled, "켜짐", "꺼짐");
+  try {
+    await applySettingsPatch({ dictionary_enabled: enabled });
+  } catch (error) {
+    setSwitch(elements.dictionaryEnabled, state.config.dictionary_enabled, "켜짐", "꺼짐");
+    await showError("사전 사용 설정을 변경하지 못했습니다", String(error));
+  }
+});
+elements.dictionaryPersonalSave.addEventListener("click", () => {
+  saveDictionaryPersonalEntry().catch(error => showError("개인 사전에 저장하지 못했습니다", String(error)));
+});
+elements.dictionaryOpenFolder.addEventListener("click", async () => {
+  try {
+    await invoke("dictionary_storage_folder_open");
+    setLocalizedText(elements.saveStatus, "사전 데이터 폴더를 열었습니다.");
+  } catch (error) {
+    await showError("사전 데이터 폴더를 열지 못했습니다", String(error));
   }
 });
 elements.outgoingConfirmSend.addEventListener("click", () => {

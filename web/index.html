@@ -48,6 +48,9 @@
             <button class="settings-nav-item" type="button" data-settings-panel="image">
               <span class="settings-nav-icon" data-icon="photo" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg></span><span>이미지 번역</span>
             </button>
+            <button class="settings-nav-item" type="button" data-settings-panel="dictionary">
+              <span class="settings-nav-icon" data-icon="book" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M4 19.5a2.5 2.5 0 0 1 2.5 -2.5h13.5"/><path d="M6.5 2h13.5v20h-13.5a2.5 2.5 0 0 1 -2.5 -2.5v-15a2.5 2.5 0 0 1 2.5 -2.5"/><path d="M8 7h8"/><path d="M8 11h5"/></svg></span><span>사전</span>
+            </button>
             <button class="settings-nav-item" type="button" data-settings-panel="convenience">
               <span class="settings-nav-icon" data-icon="adjustments-horizontal" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 6l8 0M16 6l4 0M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 12l2 0M10 12l10 0M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 18l11 0M19 18l1 0"/></svg></span><span>편의 기능</span>
             </button>
@@ -216,6 +219,49 @@
                   <div class="information-row"><strong>자동 처리</strong><span>빠른 모델로 먼저 인식하고 불확실한 영역만 고품질 모델로 다시 확인합니다.</span></div>
                   <div class="information-row"><strong>고품질 모델</strong><span>약 70MB이며 처음 필요할 때 다운로드합니다. 5분 동안 사용하지 않으면 메모리에서 해제됩니다.</span></div>
                 </article>
+              </section>
+
+              <section class="settings-view" data-settings-view="dictionary" aria-labelledby="dictionary-heading" hidden>
+                <div class="panel-heading"><h2 id="dictionary-heading">사전</h2><p>Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.</p></div>
+                <article class="settings-card dictionary-feature-card">
+                  <div class="dictionary-feature-mark" aria-hidden="true"><span>Aa</span><i></i><i></i></div>
+                  <div class="feature-copy">
+                    <span class="feature-badge">선택형 사전</span>
+                    <h3>메시지 안에서 바로 뜻 확인</h3>
+                    <p>Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.</p>
+                  </div>
+                </article>
+                <article class="settings-card">
+                  <div class="setting-row compact-row first-row">
+                    <div class="setting-copy"><h3>선택형 사전 사용</h3><p>번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.</p></div>
+                    <button class="switch" id="dictionary-enabled" type="button" role="switch" aria-checked="true"><span></span><b>켜짐</b></button>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>외부 사전 연결</h3><p>더 자세한 정보가 필요할 때 기본 브라우저로 엽니다. 선택한 단어는 해당 사이트에 전달됩니다.</p></div>
+                    <div class="custom-select" data-field="dictionary_external_provider"></div>
+                  </div>
+                </article>
+
+                <section aria-labelledby="personal-dictionary-heading">
+                  <div class="panel-subheading"><h3 id="personal-dictionary-heading">개인 사전</h3><p>제품명, 고유명사와 자주 쓰는 표현의 표시 방식을 직접 지정합니다.</p></div>
+                  <article class="settings-card dictionary-personal-card">
+                    <div class="dictionary-editor">
+                      <label><span>원문 언어</span><select id="dictionary-source-language" class="dictionary-language-select"></select></label>
+                      <label><span>대상 언어</span><select id="dictionary-target-language" class="dictionary-language-select"></select></label>
+                      <label><span>원문 용어</span><input id="dictionary-source-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" /></label>
+                      <label><span>표시할 용어</span><input id="dictionary-target-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" /></label>
+                      <label class="dictionary-note-field"><span>메모 (선택)</span><input id="dictionary-note" class="text-field dictionary-text-field" type="text" maxlength="500" autocomplete="off" /></label>
+                      <button class="button primary dictionary-save" id="dictionary-personal-save" type="button">용어 추가</button>
+                    </div>
+                    <div id="dictionary-personal-list" class="dictionary-personal-list" aria-live="polite"><p class="dictionary-empty">개인 사전을 확인하고 있습니다.</p></div>
+                  </article>
+                </section>
+
+                <section aria-labelledby="dictionary-packs-heading">
+                  <div class="panel-subheading dictionary-pack-heading"><div><h3 id="dictionary-packs-heading">오프라인 사전팩</h3><p>한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.</p></div><button class="button secondary" id="dictionary-open-folder" type="button">데이터 폴더</button></div>
+                  <div id="dictionary-pack-list" class="dictionary-pack-list" aria-live="polite"><p class="dictionary-empty">사전팩 상태를 확인하고 있습니다.</p></div>
+                  <p class="section-note" id="dictionary-storage-summary">사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.</p>
+                </section>
               </section>
 
               <section class="settings-view" data-settings-view="convenience" aria-labelledby="convenience-heading" hidden>

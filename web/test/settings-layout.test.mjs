@@ -56,8 +56,8 @@ test("the installer migrates legacy shortcuts to the NudeNyang Discord Translato
   assert.match(installerHooks, /Delete "\$SMPROGRAMS\\Nude Translator\.lnk"/);
 });
 
-test("settings use six uniform navigation categories", () => {
-  for (const panel of ["translation", "engine", "storage", "image", "convenience", "about"]) {
+test("settings use seven uniform navigation categories", () => {
+  for (const panel of ["translation", "engine", "storage", "image", "dictionary", "convenience", "about"]) {
     assert.match(markup, new RegExp(`data-settings-panel="${panel}"`));
     assert.match(markup, new RegExp(`data-settings-view="${panel}"`));
   }
@@ -65,9 +65,10 @@ test("settings use six uniform navigation categories", () => {
   assert.match(markup, /<span>번역 엔진<\/span>/);
   assert.match(markup, /<span>저장 공간<\/span>/);
   assert.match(markup, /<span>이미지 번역<\/span>/);
+  assert.match(markup, /<span>사전<\/span>/);
   assert.match(markup, /<span>편의 기능<\/span>/);
   assert.match(markup, /<span>앱 정보<\/span>/);
-  for (const icon of ["language", "cpu", "photo", "adjustments-horizontal", "database", "info-circle"]) {
+  for (const icon of ["language", "cpu", "photo", "book", "adjustments-horizontal", "database", "info-circle"]) {
     assert.match(markup, new RegExp(`class="settings-nav-icon" data-icon="${icon}" aria-hidden="true"`));
   }
   assert.match(styles, /\.settings-nav-item\.active \.settings-nav-icon\s*\{[\s\S]*?background:\s*var\(--accent\)/);
@@ -348,6 +349,16 @@ test("automatic updates are announced outside the app information panel", () => 
   assert.match(script, /showAvailableUpdate\(result\.version, \{ prompt: silent \}\)/);
   assert.match(script, /title: "새 업데이트가 있습니다"/);
   assert.match(script, /cancelText: "나중에"/);
+});
+
+test("dictionary settings expose local packs, personal terms, and an optional external handoff", () => {
+  assert.match(markup, /id="dictionary-enabled"/);
+  assert.match(markup, /data-field="dictionary_external_provider"/);
+  assert.match(markup, /id="dictionary-personal-list"/);
+  assert.match(markup, /id="dictionary-pack-list"/);
+  assert.match(script, /dictionary_personal_upsert/);
+  assert.match(script, /dictionary_pack_install/);
+  assert.match(script, /dictionary_storage_folder_open/);
 });
 
 test("the settings window title shows only the product name", () => {

@@ -14,6 +14,11 @@ use tauri_plugin_opener::OpenerExt;
 use crate::cache::{CacheCleanupResult, TranslationCache};
 use crate::cdp::CdpClient;
 use crate::config::{default_config_path, AppConfig, ConfigStore};
+use crate::dictionary::{DictionaryStore, PersonalDictionaryEntry};
+use crate::dictionary_ui::{
+    apply_dictionary_error_script, apply_dictionary_result_script, apply_dictionary_saved_script,
+    dictionary_ui_script, parse_dictionary_requests, DICTIONARY_CLEANUP_SCRIPT,
+};
 use crate::dom::{
     apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
     INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
@@ -25,7 +30,7 @@ use crate::image_translation::{
     ImageTranslationProcessor,
 };
 use crate::invite_assist::{invite_assist_script, parse_invite_open_request};
-use crate::language::Language;
+use crate::language::{detect_language, is_supported_language_code, Language};
 use crate::ocr::OcrQualityMode;
 use crate::outgoing::{
     apply_outgoing_detected_script, apply_outgoing_error_script, apply_outgoing_review_script,
@@ -82,7 +87,9 @@ impl RuntimeStatus {
     fn new(config: &AppConfig) -> Self {
         Self {
             enabled: config.enabled,
-            controller_enabled: config.enabled || config.outgoing_translation_enabled,
+            controller_enabled: config.enabled
+                || config.outgoing_translation_enabled
+                || config.dictionary_enabled,
             cdp_connected: false,
             connection_issue: String::new(),
             discord_process_id: None,
@@ -525,6 +532,7 @@ fn run_controller(
         .ok();
     let (preparation_tx, preparation_rx) = mpsc::channel();
     let outgoing_original_store = TranslationCache::open_default().ok();
+    let dictionary_store = DictionaryStore::open_default().ok();
     let mut outgoing_channel_languages = outgoing_original_store
         .as_ref()
         .and_then(|store| store.outgoing_channel_languages().ok())
@@ -542,6 +550,7 @@ fn run_controller(
     let mut connection_issue_reported = false;
     let mut image_ui_needs_cleanup = true;
     let mut outgoing_ui_needs_cleanup = true;
+    let mut dictionary_ui_needs_cleanup = true;
     let mut app_handle: Option<AppHandle> = None;
     let mut ui_ready = false;
     let mut stopped = false;
@@ -576,6 +585,8 @@ fn run_controller(
                     let enabled_changed = updated.enabled != config.enabled;
                     let outgoing_changed =
                         updated.outgoing_translation_enabled != config.outgoing_translation_enabled;
+                    let dictionary_changed =
+                        updated.dictionary_enabled != config.dictionary_enabled;
                     let warm_changed =
                         updated.keep_local_model_warm != config.keep_local_model_warm;
                     if target_changed || runtime_changed || image_ocr_quality_changed {
@@ -595,8 +606,9 @@ fn run_controller(
                     }
                     update_status(&status, |runtime| {
                         runtime.enabled = config.enabled;
-                        runtime.controller_enabled =
-                            config.enabled || config.outgoing_translation_enabled;
+                        runtime.controller_enabled = config.enabled
+                            || config.outgoing_translation_enabled
+                            || config.dictionary_enabled;
                         runtime.target_language = config.target_language.clone();
                         runtime.configured_translator = config.translator.clone();
                         runtime.configured_outgoing_translator = config.outgoing_translator.clone();
@@ -695,14 +707,18 @@ fn run_controller(
                             let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                         }
                     }
+                    if dictionary_changed {
+                        dictionary_ui_needs_cleanup = true;
+                    }
                 }
                 Control::SetEnabled(enabled) => {
                     if config.enabled != enabled {
                         config.enabled = enabled;
                         update_status(&status, |runtime| {
                             runtime.enabled = enabled;
-                            runtime.controller_enabled =
-                                enabled || config.outgoing_translation_enabled;
+                            runtime.controller_enabled = enabled
+                                || config.outgoing_translation_enabled
+                                || config.dictionary_enabled;
                             if !enabled {
                                 runtime.connection_issue.clear();
                             }
@@ -757,7 +773,7 @@ fn run_controller(
                     let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                     update_status(&status, |runtime| {
                         runtime.enabled = false;
-                        runtime.controller_enabled = false;
+                        runtime.controller_enabled = config.dictionary_enabled;
                         runtime.translator_state = "queued".to_string();
                         runtime.translator_error.clear();
                         runtime.model_progress = None;
@@ -784,6 +800,7 @@ fn run_controller(
                     generation += 1;
                     image_ui_needs_cleanup = true;
                     outgoing_ui_needs_cleanup = true;
+                    dictionary_ui_needs_cleanup = true;
                     consecutive_connection_failures = 0;
                     connection_issue_reported = false;
                 }
@@ -948,6 +965,21 @@ fn run_controller(
                 app_handle.as_ref(),
                 &config.ui_language,
             )?;
+            if config.dictionary_enabled {
+                scan_dictionary(
+                    client.as_mut().expect("connected CDP client"),
+                    dictionary_store.as_ref(),
+                    app_handle.as_ref(),
+                    &config,
+                )?;
+                dictionary_ui_needs_cleanup = true;
+            } else if dictionary_ui_needs_cleanup {
+                client
+                    .as_mut()
+                    .expect("connected CDP client")
+                    .evaluate(DICTIONARY_CLEANUP_SCRIPT, false)?;
+                dictionary_ui_needs_cleanup = false;
+            }
             ensure_outgoing_originals(
                 client.as_mut().expect("connected CDP client"),
                 outgoing_original_store.as_ref(),
@@ -1060,7 +1092,9 @@ fn run_controller(
         })();
         if let Err(error) = result {
             if !had_client
-                && (config.enabled || config.outgoing_translation_enabled)
+                && (config.enabled
+                    || config.outgoing_translation_enabled
+                    || config.dictionary_enabled)
                 && !connection_issue_reported
             {
                 consecutive_connection_failures += 1;
@@ -1077,6 +1111,7 @@ fn run_controller(
             }
             image_ui_needs_cleanup = true;
             outgoing_ui_needs_cleanup = true;
+            dictionary_ui_needs_cleanup = true;
             update_status(&status, |runtime| runtime.cdp_connected = false);
         }
 
@@ -1098,6 +1133,7 @@ fn run_controller(
     restore(&mut client, &states, false);
     if let Some(client) = client.as_mut() {
         let _ = client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+        let _ = client.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
     }
     let _ = worker_tx.send(WorkerCommand::Stop);
     let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Stop);
@@ -1110,6 +1146,97 @@ fn run_controller(
     if let Some(mut client) = client {
         client.close();
     }
+}
+
+fn scan_dictionary(
+    client: &mut CdpClient,
+    store: Option<&DictionaryStore>,
+    app: Option<&AppHandle>,
+    config: &AppConfig,
+) -> Result<(), String> {
+    let value = client.evaluate(
+        &dictionary_ui_script(
+            config.dictionary_enabled,
+            &config.ui_language,
+            &config.target_language,
+            config.dictionary_external_provider != "none",
+        ),
+        false,
+    )?;
+    for request in parse_dictionary_requests(value)?.into_iter().take(4) {
+        let outcome = match request.action.as_str() {
+            "lookup" => store
+                .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
+                .and_then(|store| {
+                    let source_language = is_supported_language_code(&request.source_language)
+                        .then_some(request.source_language.as_str());
+                    let target_language = if is_supported_language_code(&request.target_language) {
+                        request.target_language.as_str()
+                    } else {
+                        config.target_language.as_str()
+                    };
+                    store.lookup(&request.query, source_language, target_language)
+                })
+                .and_then(|result| apply_dictionary_result_script(&request.id, &result)),
+            "save" => store
+                .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
+                .and_then(|store| {
+                    let detected = detect_language(&request.query).language;
+                    let source_language = if is_supported_language_code(&request.source_language) {
+                        request.source_language.clone()
+                    } else if detected != Language::Unknown {
+                        detected.code().to_string()
+                    } else {
+                        return Err(
+                            "개인 사전에 저장할 원문 언어를 확인하지 못했습니다.".to_string()
+                        );
+                    };
+                    let target_language = if is_supported_language_code(&request.target_language) {
+                        request.target_language.clone()
+                    } else {
+                        config.target_language.clone()
+                    };
+                    store.upsert_personal(PersonalDictionaryEntry {
+                        id: 0,
+                        source_language,
+                        target_language,
+                        source_term: request.query.clone(),
+                        target_term: request.target_term.clone(),
+                        note: request.note.clone(),
+                        scope: "global".to_string(),
+                        scope_value: String::new(),
+                        case_sensitive: false,
+                        whole_word: true,
+                        created_at: 0.0,
+                        updated_at: 0.0,
+                    })?;
+                    apply_dictionary_saved_script(&request.id)
+                }),
+            "open" => {
+                if config.dictionary_external_provider == "none" {
+                    Ok(String::new())
+                } else {
+                    open_external_dictionary(app, &request.query).map(|()| String::new())
+                }
+            }
+            _ => Err("알 수 없는 사전 요청입니다.".to_string()),
+        };
+        let script = outcome.or_else(|error| apply_dictionary_error_script(&request.id, &error))?;
+        if !script.is_empty() {
+            client.evaluate(&script, false)?;
+        }
+    }
+    Ok(())
+}
+
+fn open_external_dictionary(app: Option<&AppHandle>, query: &str) -> Result<(), String> {
+    let app = app.ok_or_else(|| "기본 브라우저를 열 준비가 되지 않았습니다.".to_string())?;
+    let mut url = url::Url::parse("https://en.wiktionary.org/w/index.php")
+        .map_err(|error| format!("외부 사전 주소를 만들지 못했습니다: {error}"))?;
+    url.query_pairs_mut().append_pair("search", query.trim());
+    app.opener()
+        .open_url(url.as_str(), None::<&str>)
+        .map_err(|error| format!("기본 브라우저에서 외부 사전을 열지 못했습니다: {error}"))
 }
 
 fn handle_invite_assist(

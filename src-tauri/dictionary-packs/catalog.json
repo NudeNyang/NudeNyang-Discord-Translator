@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "coveragePolicy": {
+    "bundledMinimumEntries": 4,
+    "requiredGlossLanguages": ["en"],
+    "allowedPartsOfSpeech": ["noun", "verb", "adjective", "adverb", "other"]
+  },
+  "languages": [
+    {"code":"ko","tier":1,"availability":"bundled","source":"NudeNyang starter dictionary","license":"GPL-3.0-only"},
+    {"code":"en","tier":1,"availability":"bundled","source":"NudeNyang starter dictionary","license":"GPL-3.0-only"},
+    {"code":"ja","tier":1,"availability":"bundled","source":"NudeNyang starter dictionary","license":"GPL-3.0-only"},
+    {"code":"zh","tier":1,"availability":"bundled","source":"NudeNyang starter dictionary","license":"GPL-3.0-only"},
+    {"code":"zh-Hant","tier":1,"availability":"bundled","source":"NudeNyang starter dictionary","license":"GPL-3.0-only"},
+    {"code":"pt-BR","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"hi","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"es-419","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"de","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"ru","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"id","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"fr","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"tr","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"ar","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"vi","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"it","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"pl","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"uk","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"ms","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"nl","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"th","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"fil","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"bn","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"ur","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"ta","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"fa","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"he","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"},
+    {"code":"cs","tier":3,"availability":"planned","source":"Wiktionary-derived pack candidate","license":"review-required"}
+  ]
+}

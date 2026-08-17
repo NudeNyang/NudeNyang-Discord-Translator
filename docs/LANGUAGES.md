@@ -25,6 +25,8 @@ Legacy or provider-specific aliases are normalized before storage. For example, 
 
 The interface language and the translation target are independent. Changing the interface does not change detection candidates or the selected translation provider. `UI Language` and `Auto (System)` remain in English so users can recover from an incorrect automatic interface choice.
 
+The selection dictionary uses the same 28-code catalog. Project-authored starter packs currently cover Korean, English, Japanese, Simplified Chinese, and Traditional Chinese. The other 23 entries represent an expansion and validation path, not completed dictionary-data support. See [DICTIONARY.md](DICTIONARY.md).
+
 ## Detection behavior
 
 Detection favors an unknown result over a confident-looking mistake.

@@ -1,0 +1,43 @@
+# 선택형 사전 설계
+
+## 제품 범위
+
+사전은 번역 엔진과 분리된 로컬 기능이다. Discord 메시지에서 120자 이하의 텍스트를 선택하면 `Aa`
+도구가 나타나고, 사용자가 눌렀을 때만 조회한다. 결과에는 표제어, 읽기·발음, 품사, 뜻, 예문,
+출처와 라이선스를 표시한다. 운영체제 `speechSynthesis`로 발음을 들을 수 있으며 별도 음성 파일은
+내려받지 않는다.
+
+내장 조회와 개인 사전은 PC 안에서 끝난다. `Wiktionary에서 더 보기`를 선택한 경우에만 선택한
+단어가 기본 브라우저의 Wiktionary 검색 주소로 전달된다. 외부 사전 연결은 설정에서 끌 수 있다.
+
+## 1~3차 구현
+
+1. **1차 사용 경험**: 선택 도구, 사전 팝오버, 발음, 개인 사전 저장, 외부 Wiktionary 연결을 제공한다.
+2. **2차 오프라인팩**: 한국어·영어·일본어·중국어 간체·중국어 번체의 프로젝트 작성 스타터팩을
+   제공한다. 팩과 개인 용어는 번역 기록과 분리된 `dictionary.db` SQLite 파일에 저장한다.
+3. **3차 확장 체계**: 공통 28개 언어 카탈로그, JSONL 변환기, 출처·라이선스 필수 입력, 표제어
+   중복·품사·뜻·최소 항목 수 검증을 제공한다. 나머지 23개 언어는 데이터 라이선스 검토와 사람의
+   품질 평가를 통과하기 전까지 `planned`로 표시한다.
+
+스타터팩은 실제 사전의 문구를 복제하지 않고 이 프로젝트에서 새로 작성한 작은 기능 검증 데이터다.
+따라서 앱과 같은 `GPL-3.0-only`로 배포한다.
+
+## 팩 형식과 품질 게이트
+
+`src-tauri/dictionary-packs/starter.json`의 팩에는 `id`, BCP 47 `language`, 날짜 기반 `version`,
+`sourceName`, `sourceUrl`, `license`, `entries`가 필요하다. 각 항목은 표제어, 읽기, 제한된 품사,
+언어별 뜻과 예문을 가진다. `npm run test:dictionaries`는 28개 카탈로그 순서, 내장팩 대응, 중복,
+영어 뜻, 길이와 최소 항목 수를 검사한다.
+
+Wiktextract JSONL 후보는 다음처럼 변환할 수 있다. 변환기는 `review-required` 라이선스를 거부하며,
+실제 재배포 가능한 라이선스와 출처가 확정된 경우에만 결과 파일을 만든다.
+
+```powershell
+npm run dictionary:build -- --input input.jsonl --output pack.json --language de `
+  --source-name "Wiktionary via kaikki.org" --source-url "https://kaikki.org/dictionary/" `
+  --license "CC-BY-SA-4.0 AND GFDL-1.1-or-later" --version 2026.08.18.1
+```
+
+Wiktionary 텍스트는 CC BY-SA 4.0과 GFDL의 고지·저작자 표시·동일조건 의무가 있고, 항목에 포함된
+외부 예문·음성은 별도 조건일 수 있다. 따라서 자동 변환 결과를 앱에 넣기 전 출처별 귀속 목록,
+원문 접근 경로, 변경 표시와 예문·미디어 제외 정책을 별도로 검토해야 한다.

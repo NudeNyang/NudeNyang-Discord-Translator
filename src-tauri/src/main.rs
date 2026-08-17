@@ -6,6 +6,8 @@ pub mod cdp;
 mod config;
 mod credentials;
 pub mod diagnostics;
+pub mod dictionary;
+pub mod dictionary_ui;
 mod discord;
 mod discord_startup;
 pub mod dom;
@@ -417,6 +419,74 @@ fn settings_get(config: State<'_, ConfigStore>) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
+async fn dictionary_status_get() -> Result<dictionary::DictionaryStatus, String> {
+    tauri::async_runtime::spawn_blocking(|| dictionary::DictionaryStore::open_default()?.status())
+        .await
+        .map_err(|error| format!("사전 상태 확인 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_list() -> Result<Vec<dictionary::PersonalDictionaryEntry>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        dictionary::DictionaryStore::open_default()?.personal_entries()
+    })
+    .await
+    .map_err(|error| format!("개인 사전 목록 조회 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_upsert(
+    entry: dictionary::PersonalDictionaryEntry,
+) -> Result<dictionary::PersonalDictionaryEntry, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.upsert_personal(entry)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 저장 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_delete(id: i64) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.delete_personal(id)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 삭제 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_pack_install(
+    language: String,
+) -> Result<dictionary::DictionaryPackStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.install_bundled_pack(&language)
+    })
+    .await
+    .map_err(|error| format!("사전팩 설치 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_pack_remove(language: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.remove_pack(&language)
+    })
+    .await
+    .map_err(|error| format!("사전팩 삭제 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+fn dictionary_storage_folder_open(app: AppHandle) -> Result<String, String> {
+    let path = dictionary::dictionary_storage_root();
+    std::fs::create_dir_all(&path)
+        .map_err(|error| format!("사전 데이터 폴더를 만들지 못했습니다: {error}"))?;
+    let display_path = path.to_string_lossy().into_owned();
+    app.opener()
+        .open_path(display_path.clone(), None::<&str>)
+        .map_err(|error| format!("사전 데이터 폴더를 열지 못했습니다: {error}"))?;
+    Ok(display_path)
+}
+
+#[tauri::command]
 fn main_window_set_theme(
     app: AppHandle,
     theme: String,
@@ -556,7 +626,11 @@ fn runtime_status(
         object.insert("enabled".to_string(), Value::Bool(current_config.enabled));
         object.insert(
             "controllerEnabled".to_string(),
-            Value::Bool(current_config.enabled || current_config.outgoing_translation_enabled),
+            Value::Bool(
+                current_config.enabled
+                    || current_config.outgoing_translation_enabled
+                    || current_config.dictionary_enabled,
+            ),
         );
         object.insert(
             "outgoingTranslationEnabled".to_string(),
@@ -1531,6 +1605,13 @@ fn main() {
             engine_ui_ready,
             shortcut_capture_set_active,
             settings_get,
+            dictionary_status_get,
+            dictionary_personal_list,
+            dictionary_personal_upsert,
+            dictionary_personal_delete,
+            dictionary_pack_install,
+            dictionary_pack_remove,
+            dictionary_storage_folder_open,
             settings_update,
             settings_reset,
             main_window_set_theme,

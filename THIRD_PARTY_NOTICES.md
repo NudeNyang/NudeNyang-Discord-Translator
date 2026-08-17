@@ -34,3 +34,20 @@ DeepL은 모델이나 SDK를 번들하지 않고 사용자가 제공한 API 키�
 
 TranslateGemma is provided under and subject to the Gemma Terms of Use found at
 <https://ai.google.dev/gemma/terms>.
+
+## 사전 데이터와 외부 연결
+
+현재 내장된 한·영·일·중 스타터 사전은 기능 검증을 위해 이 프로젝트에서 직접 작성했으며 제3자
+사전 데이터를 포함하지 않는다. 스타터 데이터에는 앱과 같은 `GPL-3.0-only`가 적용된다.
+
+외부 사전 버튼은 라이브러리나 데이터를 번들하지 않고 사용자가 선택한 단어의 Wiktionary 검색
+페이지를 기본 브라우저로 연다. 사용자는 Wiktionary의 이용 약관과 개인정보처리방침을 따른다.
+
+`scripts/build-dictionary-pack.mjs`는 향후 Wiktextract/kaikki.org 후보 데이터를 내부 팩 형식으로
+변환하기 위한 도구일 뿐, 해당 데이터를 현재 배포물에 포함하지 않는다. Wiktionary 및 kaikki.org
+추출 데이터는 CC BY-SA 4.0과 GFDL 조건으로 제공되며 귀속, 원문 링크, 변경 표시와 동일조건 의무가
+있다. 외부 출처 예문과 음성에는 다른 조건이 적용될 수 있다. 이 데이터를 포함하는 릴리스는
+데이터셋별 검토와 필요한 라이선스 원문·귀속 파일을 추가한 뒤에만 만들 수 있다.
+
+- Wiktionary copyright: <https://en.wiktionary.org/wiki/Wiktionary:Copyrights>
+- kaikki.org machine-readable dictionaries: <https://kaikki.org/dictionary/>

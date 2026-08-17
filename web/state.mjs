@@ -5,6 +5,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   outgoing_translation_enabled: false,
   outgoing_target_language: "auto",
   outgoing_confirm_send: true,
+  dictionary_enabled: true,
+  dictionary_external_provider: "wiktionary",
   target_language: "ko",
   translator: "hymt_1_8b",
   outgoing_translator: "hymt_1_8b",
@@ -79,6 +81,11 @@ export function normalizeConfig(value = {}) {
   const imageOcrQuality = ["fast", "adaptive", "quality"].includes(value.image_ocr_quality)
     ? value.image_ocr_quality
     : DEFAULT_CONFIG.image_ocr_quality;
+  const dictionaryExternalProvider = ["wiktionary", "none"].includes(
+    value.dictionary_external_provider,
+  )
+    ? value.dictionary_external_provider
+    : DEFAULT_CONFIG.dictionary_external_provider;
   return {
     ...DEFAULT_CONFIG,
     ...value,
@@ -87,6 +94,7 @@ export function normalizeConfig(value = {}) {
     ui_language: uiLanguage,
     translation_history_retention_days: retentionDays,
     image_ocr_quality: imageOcrQuality,
+    dictionary_external_provider: dictionaryExternalProvider,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),

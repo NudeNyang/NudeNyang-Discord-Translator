@@ -121,6 +121,7 @@ Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemin
 - Hy-MT2 1.8B·7B 로컬 모델과 실험용 TranslateGemma 4B
 - 선택형 ChatGPT·Claude·Gemini·DeepL 연동과 테스트용 Mock 엔진
 - 적응형 PP-OCR 인식, 원본/번역 전환을 갖춘 로컬 이미지 번역
+- 발음·개인 용어·선택형 Wiktionary 연결과 로컬 스타터팩을 갖춘 메시지 사전
 - 엔진·언어·프롬프트·말투·렌더러 버전별 메모리 및 SQLite 캐시
 - GPU 가속을 쓸 수 없을 때 메모리 점유를 줄인 CPU 모드로 자동 전환
 - 전역 단축키, 트레이 상태 동기화, 설정창 단일 인스턴스
@@ -184,6 +185,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 런타임 구성, Discord 연결, 데이터 경계, OCR, 플랫폼 분리 |
 | [docs/LANGUAGES.md](docs/LANGUAGES.md) | 28개 언어, 감지 방식, 공급자 지원 범위, OCR 범위 |
+| [DICTIONARY.md](DICTIONARY.md) | 선택형 조회, 오프라인팩, 개인 용어, 28개 언어 확장과 데이터 라이선스 경계 |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | 모델, 런타임, 의존성 고지 |
 
 ## 라이선스

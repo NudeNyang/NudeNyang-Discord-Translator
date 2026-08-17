@@ -17,6 +17,8 @@ NudeNyang Discord Translator is a Tauri 2 desktop application with a Rust core. 
 | Credentials | `src-tauri/src/credentials.rs` |
 | Memory and SQLite caches | `src-tauri/src/cache.rs` |
 | OCR and image composition | `src-tauri/src/ocr.rs`, `image_translation.rs` |
+| Selection dictionary UI and requests | `src-tauri/src/dictionary_ui.rs`, `engine.rs` |
+| Offline packs and personal dictionary SQLite | `src-tauri/src/dictionary.rs` |
 | Updates | `src-tauri/src/updater.rs` |
 
 Engine work runs outside the UI thread. Incoming and outgoing translation can use different providers. When a provider changes, the engine advances its generation and ignores late results from the previous generation.

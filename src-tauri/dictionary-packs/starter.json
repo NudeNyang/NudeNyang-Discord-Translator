@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "packs": [
+    {
+      "id": "nudenyang-starter-en",
+      "language": "en",
+      "version": "2026.08.18.1",
+      "title": "English starter dictionary",
+      "sourceName": "NudeNyang starter dictionary",
+      "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
+      "license": "GPL-3.0-only",
+      "entries": [
+        {"headword":"future","reading":"/ˈfjuːtʃər/","partOfSpeech":"noun","glosses":{"ko":"현재 이후의 시간 또는 앞으로 일어날 일.","en":"The time or events that come after the present."},"examples":{"ko":"우리는 더 나은 미래를 계획하고 있습니다.","en":"We are planning for a better future."}},
+        {"headword":"server","reading":"/ˈsɜːrvər/","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members."},"examples":{"ko":"친구의 서버에 참가했습니다.","en":"I joined my friend's server."}},
+        {"headword":"translate","reading":"/trænsˈleɪt/","partOfSpeech":"verb","glosses":{"ko":"말이나 글을 다른 언어로 옮기다.","en":"To express speech or writing in another language."},"examples":{"ko":"이 메시지를 한국어로 번역해 주세요.","en":"Please translate this message into Korean."}},
+        {"headword":"message","reading":"/ˈmesɪdʒ/","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"A piece of written or spoken information sent to someone."},"examples":{"ko":"새 메시지를 받았습니다.","en":"I received a new message."}}
+      ]
+    },
+    {
+      "id": "nudenyang-starter-ko",
+      "language": "ko",
+      "version": "2026.08.18.1",
+      "title": "한국어 스타터 사전",
+      "sourceName": "누드냥 스타터 사전",
+      "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
+      "license": "GPL-3.0-only",
+      "entries": [
+        {"headword":"미래","reading":"[미ː래]","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come."},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future."}},
+        {"headword":"서버","reading":"[서버]","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members."},"examples":{"ko":"새 서버를 만들었습니다.","en":"I created a new server."}},
+        {"headword":"번역","reading":"[버녁]","partOfSpeech":"noun","glosses":{"ko":"말이나 글을 다른 언어의 말이나 글로 옮김.","en":"The act of expressing speech or writing in another language."},"examples":{"ko":"메시지 번역을 켰습니다.","en":"I turned on message translation."}},
+        {"headword":"메시지","reading":"[메시지]","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone."},"examples":{"ko":"메시지를 확인했습니다.","en":"I checked the message."}}
+      ]
+    },
+    {
+      "id": "nudenyang-starter-ja",
+      "language": "ja",
+      "version": "2026.08.18.1",
+      "title": "日本語スターター辞書",
+      "sourceName": "NudeNyang starter dictionary",
+      "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
+      "license": "GPL-3.0-only",
+      "entries": [
+        {"headword":"未来","reading":"みらい","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come.","ja":"これから来る時、またはこれから起こること。"},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future.","ja":"未来に備えます。"}},
+        {"headword":"サーバー","reading":"サーバー","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members.","ja":"Discordで複数のチャンネルとメンバーが集まる場所。"},"examples":{"ko":"새 서버에 참가했습니다.","en":"I joined a new server.","ja":"新しいサーバーに参加しました。"}},
+        {"headword":"翻訳","reading":"ほんやく","partOfSpeech":"noun","glosses":{"ko":"말이나 글을 다른 언어로 옮김.","en":"The act of expressing speech or writing in another language.","ja":"話や文章を別の言語に置き換えること。"},"examples":{"ko":"메시지를 번역합니다.","en":"I translate the message.","ja":"メッセージを翻訳します。"}},
+        {"headword":"メッセージ","reading":"メッセージ","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone.","ja":"相手に送る文章や情報。"},"examples":{"ko":"메시지를 받았습니다.","en":"I received a message.","ja":"メッセージを受け取りました。"}}
+      ]
+    },
+    {
+      "id": "nudenyang-starter-zh",
+      "language": "zh",
+      "version": "2026.08.18.1",
+      "title": "简体中文入门词典",
+      "sourceName": "NudeNyang starter dictionary",
+      "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
+      "license": "GPL-3.0-only",
+      "entries": [
+        {"headword":"未来","reading":"wèilái","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come.","zh":"将要到来的时间或将要发生的事情。"},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future.","zh":"我们为未来做准备。"}},
+        {"headword":"服务器","reading":"fúwùqì","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members.","zh":"Discord 中包含频道和成员的空间。"},"examples":{"ko":"서버에 참가했습니다.","en":"I joined the server.","zh":"我加入了服务器。"}},
+        {"headword":"翻译","reading":"fānyì","partOfSpeech":"verb","glosses":{"ko":"말이나 글을 다른 언어로 옮기다.","en":"To express speech or writing in another language.","zh":"把语言或文字转换成另一种语言。"},"examples":{"ko":"메시지를 번역합니다.","en":"I translate the message.","zh":"我翻译这条消息。"}},
+        {"headword":"消息","reading":"xiāoxi","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone.","zh":"发送给他人的文字或信息。"},"examples":{"ko":"새 메시지를 받았습니다.","en":"I received a new message.","zh":"我收到了一条新消息。"}}
+      ]
+    },
+    {
+      "id": "nudenyang-starter-zh-Hant",
+      "language": "zh-Hant",
+      "version": "2026.08.18.1",
+      "title": "繁體中文入門詞典",
+      "sourceName": "NudeNyang starter dictionary",
+      "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
+      "license": "GPL-3.0-only",
+      "entries": [
+        {"headword":"未來","reading":"wèilái","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come.","zh-Hant":"將要到來的時間或將要發生的事情。"},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future.","zh-Hant":"我們為未來做準備。"}},
+        {"headword":"伺服器","reading":"sìfúqì","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members.","zh-Hant":"Discord 中包含頻道和成員的空間。"},"examples":{"ko":"서버에 참가했습니다.","en":"I joined the server.","zh-Hant":"我加入了伺服器。"}},
+        {"headword":"翻譯","reading":"fānyì","partOfSpeech":"verb","glosses":{"ko":"말이나 글을 다른 언어로 옮기다.","en":"To express speech or writing in another language.","zh-Hant":"把語言或文字轉換成另一種語言。"},"examples":{"ko":"메시지를 번역합니다.","en":"I translate the message.","zh-Hant":"我翻譯這則訊息。"}},
+        {"headword":"訊息","reading":"xùnxí","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone.","zh-Hant":"傳送給他人的文字或資訊。"},"examples":{"ko":"새 메시지를 받았습니다.","en":"I received a new message.","zh-Hant":"我收到了一則新訊息。"}}
+      ]
+    }
+  ]
+}
