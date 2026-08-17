@@ -47,6 +47,15 @@ test("GitHub README는 짧은 GIF 다음에 전체 시연 영상을 제공한다
   assert.ok(fullDemo.size > quickDemoGif.size, "전체 시연 영상은 짧은 GIF보다 커야 합니다.");
 });
 
+test("GitHub README 로고는 공개 랜딩 자산에서 안정적으로 불러온다", () => {
+  const logoUrl = "https://nudenyang.github.io/NudeNyang-Discord-Translator/assets/nude-translator.png";
+
+  for (const document of [readme, readmeKo]) {
+    assert.match(document, new RegExp(`<img src="${logoUrl.replaceAll(".", "\\.")}"`));
+    assert.doesNotMatch(document, /<img src="web\/app-icon\.png"/);
+  }
+});
+
 test("브랜드 아이콘은 기존 표시 방식과 크기를 유지한다", () => {
   assert.doesNotMatch(html, /class="brand-icon"/);
   assert.equal((html.match(/src="\.\/assets\/nude-translator\.png"/g) ?? []).length, 2);

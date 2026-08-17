@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="web/app-icon.png" width="104" alt="NudeNyang Discord Translator icon">
+  <img src="https://nudenyang.github.io/NudeNyang-Discord-Translator/assets/nude-translator.png" width="104" alt="NudeNyang Discord Translator icon">
 </p>
 
 <h1 align="center">NudeNyang Discord Translator</h1>
