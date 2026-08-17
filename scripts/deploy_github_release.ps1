@@ -14,6 +14,7 @@ if (-not $Version) {
 if (-not $ReleaseNotesPath) {
     $ReleaseNotesPath = Join-Path $ProjectRoot "docs\releases\$Version.md"
 }
+$DisplayVersion = $Version -replace '-beta$', ' Beta'
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
 $InstallerName = "NudeNyangDiscordTranslator-$Version-Windows-x64-Setup.exe"
 $InstallerPath = Join-Path $ReleaseDirectory $InstallerName
@@ -46,7 +47,7 @@ try {
         $ManifestPath `
         $ChecksumPath `
         --repo $Repository `
-        --title "NudeNyang Discord Translator $Version - Open Beta" `
+        --title "$DisplayVersion · NudeNyang Discord Translator" `
         --notes-file $ReleaseNotesPath `
         --latest `
         --target main

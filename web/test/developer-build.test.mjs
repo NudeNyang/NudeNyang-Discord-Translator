@@ -58,6 +58,7 @@ test("GitHub Open Beta artifacts include a signed manifest and become the latest
   assert.match(githubPackaging, /SHA256SUMS\.txt/);
   assert.match(githubPackaging, /Get-FileHash[^\r\n]+SHA256/);
   assert.match(githubDeployment, /gh release create/);
+  assert.match(githubDeployment, /--title "\$DisplayVersion · NudeNyang Discord Translator"/);
   assert.match(githubDeployment, /--latest/);
   assert.doesNotMatch(githubDeployment, /--prerelease/);
   assert.match(githubDeployment, /SHA256SUMS\.txt/);
