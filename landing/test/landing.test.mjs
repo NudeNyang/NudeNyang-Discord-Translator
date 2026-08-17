@@ -26,9 +26,22 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
 
 test("브랜드 아이콘은 기존 표시 방식과 크기를 유지한다", () => {
   assert.doesNotMatch(html, /class="brand-icon"/);
-  assert.equal((html.match(/src="\.\.\/assets\/nude-translator\.png"/g) ?? []).length, 2);
+  assert.equal((html.match(/src="\.\/assets\/nude-translator\.png"/g) ?? []).length, 2);
+  assert.match(html, /<link rel="icon" href="\.\/assets\/nude-translator\.png" \/>/);
   assert.match(css, /\.brand img\s*\{[^}]*border-radius:\s*10px;[^}]*box-shadow:\s*0 8px 22px/s);
   assert.match(css, /@media[^]*\.brand img\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px/s);
+});
+
+test("배포되는 landing 디렉터리 안의 자산만 참조한다", async () => {
+  assert.doesNotMatch(html, /(?:src|href)="\.\.\//);
+
+  const localAssets = [...html.matchAll(/(?:src|href)="\.\/assets\/([^"]+)"/g)].map((match) => match[1]);
+  assert.ok(localAssets.length > 0, "랜딩 페이지에 로컬 자산이 필요합니다.");
+
+  for (const assetName of new Set(localAssets)) {
+    const asset = await stat(new URL(`../assets/${assetName}`, import.meta.url));
+    assert.ok(asset.size > 0, `${assetName} 파일이 landing/assets 안에 필요합니다.`);
+  }
 });
 
 test("설정 화면 6장을 한 장씩 순서대로 넘긴다", async () => {
