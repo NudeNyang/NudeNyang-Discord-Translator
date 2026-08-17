@@ -38,3 +38,7 @@ HTML에서 `data-media-slot`을 검색하면 교체할 위치를 확인할 수 �
 - 다운로드 링크가 공개 배포 주소를 가리키는지 확인합니다.
 - 영상에는 개인 계정, 서버명과 메시지 내용이 노출되지 않도록 처리합니다.
 - 공유 미리보기 이미지는 `assets/social-thumbnail.png`이며 Open Graph와 Twitter 메타 태그에 연결되어 있습니다.
+
+## 방문 통계
+
+랜딩 페이지는 Cloudflare Web Analytics 비콘을 사용해 페이지 조회수, 유입 경로, 접속 국가와 기기 정보를 집계합니다. 개인 방문자를 식별하는 용도로 사용하지 않으며, 통계는 Cloudflare 대시보드의 **Analytics & Logs → Web Analytics**에서 확인합니다.

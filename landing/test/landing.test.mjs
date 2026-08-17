@@ -73,6 +73,14 @@ test("공유 미리보기는 지정한 랜딩 썸네일을 사용한다", async 
   assert.ok(thumbnail.size > 1_000_000, "지정한 원본 랜딩 썸네일이 필요합니다.");
 });
 
+test("Cloudflare Web Analytics 비콘을 한 번만 로드한다", () => {
+  const beaconUrl = "https://static.cloudflareinsights.com/beacon.min.js";
+
+  assert.equal((html.match(new RegExp(beaconUrl.replaceAll(".", "\\."), "g")) ?? []).length, 1);
+  assert.match(html, /data-cf-beacon='\{"token":"[0-9a-f]{32}"\}'/);
+  assert.ok(html.indexOf(beaconUrl) < html.indexOf("</body>"));
+});
+
 test("배포되는 landing 디렉터리 안의 자산만 참조한다", async () => {
   assert.doesNotMatch(html, /(?:src|href)="\.\.\//);
 
