@@ -48,7 +48,7 @@ try {
         --repo $Repository `
         --title "NudeNyang Discord Translator $Version - Open Beta" `
         --notes-file $ReleaseNotesPath `
-        --prerelease `
+        --latest `
         --target main
     if ($LASTEXITCODE -ne 0) { throw 'GitHub 오픈 베타 릴리스를 게시하지 못했습니다.' }
 }
