@@ -13,6 +13,7 @@
   --accent-strong: #2869a8;
   --accent-soft: #dcebf8;
   --accent-ink: #174c78;
+  --provider-icon-surface: #f7fbff;
   --page-scroll-thumb: rgb(52 127 199 / 0.32);
   --page-scroll-thumb-active: rgb(40 105 168 / 0.68);
   --shadow: 0 24px 70px rgb(38 76 112 / 0.16);
@@ -938,7 +939,7 @@ summary:focus-visible {
   height: 58px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: var(--surface-raised);
+  background: var(--provider-icon-surface);
   box-shadow: 0 8px 20px rgb(38 76 112 / 0.1);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }

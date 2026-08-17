@@ -32,6 +32,24 @@ test("브랜드 아이콘은 기존 표시 방식과 크기를 유지한다", ()
   assert.match(css, /@media[^]*\.brand img\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px/s);
 });
 
+test("브랜드 링크는 문서 맨 위로 정확히 이동한다", () => {
+  assert.equal((html.match(/href="#top"/g) ?? []).length, 2);
+  assert.match(script, /function bindTopLinks\(\)/);
+  assert.match(script, /document\.querySelectorAll\('a\[href="#top"\]'\)/);
+  assert.match(script, /window\.scrollTo\(\{\s*top:\s*0,\s*left:\s*0,/s);
+  assert.match(script, /behavior:\s*reduceMotionPreference\.matches \? "auto" : "smooth"/);
+  assert.match(script, /bindTopLinks\(\)/);
+});
+
+test("공유 미리보기는 지정한 랜딩 썸네일을 사용한다", async () => {
+  const thumbnailUrl = "https://nudenyang.github.io/NudeNyang-Discord-Translator/assets/social-thumbnail.png";
+  assert.match(html, new RegExp(`<meta property="og:image" content="${thumbnailUrl.replaceAll(".", "\\.")}"\\s*/?>`));
+  assert.match(html, /<meta name="twitter:card" content="summary_large_image"\s*\/?>/);
+  assert.match(html, new RegExp(`<meta name="twitter:image" content="${thumbnailUrl.replaceAll(".", "\\.")}"\\s*/?>`));
+  const thumbnail = await stat(new URL("../assets/social-thumbnail.png", import.meta.url));
+  assert.ok(thumbnail.size > 1_000_000, "지정한 원본 랜딩 썸네일이 필요합니다.");
+});
+
 test("배포되는 landing 디렉터리 안의 자산만 참조한다", async () => {
   assert.doesNotMatch(html, /(?:src|href)="\.\.\//);
 
@@ -293,6 +311,8 @@ test("번역 엔진 아이콘은 각 공식 사이트로 연결한다", () => {
     assert.match(html, new RegExp(`<a href="${href.replaceAll(".", "\\.")}" target="_blank" rel="noopener noreferrer"`));
   }
   assert.equal((html.match(/aria-label="(?:OpenAI|Anthropic|Google Gemini|DeepL) 공식 사이트"/g) ?? []).length, 4);
+  assert.match(css, /--provider-icon-surface:\s*#f7fbff;/);
+  assert.match(css, /\.provider-list a\s*\{[^}]*background:\s*var\(--provider-icon-surface\)/s);
   assert.match(css, /\.provider-list a:hover,[\s\S]*?transform:\s*translateY\(-3px\)/);
 });
 

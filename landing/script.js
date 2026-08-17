@@ -31,6 +31,20 @@ const PAGE_SCROLL_REVEAL_DISTANCE = 42;
 const PAGE_SCROLL_IDLE_DELAY = 700;
 let greetingsRevealed = false;
 
+function bindTopLinks() {
+  document.querySelectorAll('a[href="#top"]').forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: reduceMotionPreference.matches ? "auto" : "smooth",
+      });
+    });
+  });
+}
+
 function bindSettingsCarousel() {
   if (!settingsCarousel) return;
 
@@ -426,6 +440,7 @@ if (savedTheme === "light" || savedTheme === "dark") root.dataset.theme = savedT
 
 renderSupportedLanguages();
 applyLocale(currentLocale, { persist: false });
+bindTopLinks();
 bindPageScrollIndicator();
 bindWorkflowVideoPlayback();
 bindGreetingReveal();
