@@ -67,8 +67,8 @@ test("설정 화면 6장을 한 장씩 순서대로 넘긴다", async () => {
     "settings-01-translation.png",
     "settings-02-engines.png",
     "settings-03-image-translation.png",
-    "settings-04-storage.png",
     "settings-05-convenience.png",
+    "settings-04-storage.png",
     "settings-06-about.png",
   ];
 

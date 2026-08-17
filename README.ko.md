@@ -31,10 +31,10 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ## 동작 화면
 
-https://github.com/user-attachments/assets/ca870b61-7b9c-489c-af42-ae66805f6bd5
+https://github.com/NudeNyang/NudeNyang-Discord-Translator/raw/refs/heads/main/landing/assets/full-discord-translation-demo.mp4
 
 <p align="center">
-  <a href="https://github.com/NudeNyang/NudeNyang-Discord-Translator/raw/refs/heads/main/landing/assets/full-discord-translation-demo.mp4">전체 시연 · MP4 · 41.3 MB</a>
+  <a href="https://github.com/NudeNyang/NudeNyang-Discord-Translator/raw/refs/heads/main/landing/assets/full-discord-translation-demo.mp4">전체 시연 · MP4 · 17.5 MB</a>
 </p>
 
 ## 동작 원리

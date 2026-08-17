@@ -35,10 +35,10 @@ Download the Windows 10/11 x64 installer from [GitHub Releases](https://github.c
 
 ## See it in action
 
-https://github.com/user-attachments/assets/ca870b61-7b9c-489c-af42-ae66805f6bd5
+https://github.com/NudeNyang/NudeNyang-Discord-Translator/raw/refs/heads/main/landing/assets/full-discord-translation-demo.mp4
 
 <p align="center">
-  <a href="https://github.com/NudeNyang/NudeNyang-Discord-Translator/raw/refs/heads/main/landing/assets/full-discord-translation-demo.mp4">Full demo · MP4 · 41.3 MB</a>
+  <a href="https://github.com/NudeNyang/NudeNyang-Discord-Translator/raw/refs/heads/main/landing/assets/full-discord-translation-demo.mp4">Full demo · MP4 · 17.5 MB</a>
 </p>
 
 ## How it works
