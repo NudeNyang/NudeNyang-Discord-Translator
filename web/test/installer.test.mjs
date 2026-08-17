@@ -33,7 +33,11 @@ test("the Windows uninstaller separates application data from downloaded local A
   );
   assert.match(installerTemplate, /Var DeleteLocalModelsCheckbox/);
   assert.match(installerTemplate, /Var DeleteLocalModelsCheckboxState/);
-  assert.match(installerTemplate, /\$\(deleteLocalModels\)/);
+  assert.match(installerTemplate, /\$\(un\.deleteLocalModels\)/);
+  assert.match(
+    installerHooks,
+    /LangString un\.deleteLocalModels \$\{LANG_KOREAN\} "다운로드한 로컬 AI 모델 삭제하기"/,
+  );
   assert.match(
     installerTemplate,
     /SendMessage \$DeleteLocalModelsCheckbox \$\{BM_GETCHECK\} 0 0 \$DeleteLocalModelsCheckboxState/,
@@ -71,6 +75,12 @@ test("the Windows installer follows the system language and allows a manual choi
   const nsis = tauriConfig.bundle.windows.nsis;
 
   assert.equal(nsis.displayLanguageSelector, true);
+  assert.match(installerTemplate, /!define MUI_LANGDLL_ALWAYSSHOW/);
+  assert.ok(
+    installerTemplate.indexOf("!define MUI_LANGDLL_ALWAYSSHOW") <
+      installerTemplate.indexOf("!insertmacro MUI_LANGDLL_DISPLAY"),
+    "the always-show option must be defined before opening the language selector",
+  );
   assert.equal(nsis.languages[0], "English");
   for (const language of [
     "Korean",
