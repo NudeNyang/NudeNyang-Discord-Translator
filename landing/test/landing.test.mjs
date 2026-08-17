@@ -26,16 +26,24 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
   assert.doesNotMatch(html, /<a href="#features" data-i18n>기능<\/a>/);
 });
 
-test("GitHub README는 모자이크된 1080p 첨부 영상과 전체 영상을 제공한다", async () => {
-  const fullDemo = await stat(new URL("../assets/full-discord-translation-demo-masked.mp4", import.meta.url));
+test("GitHub README는 짧은 시연 다음에 전체 시연을 제공한다", async () => {
+  const [quickDemo, fullDemo] = await Promise.all([
+    stat(new URL("../assets/hero-discord-translation-masked.mp4", import.meta.url)),
+    stat(new URL("../assets/workflow-discord-translation-masked.mp4", import.meta.url)),
+  ]);
+  const expectedVideos = [
+    "https://github.com/user-attachments/assets/87bba13d-5ddc-45b1-92a9-dbf694f2e81a",
+    "https://github.com/user-attachments/assets/7b6a5900-8ebb-4d89-8466-e7c077826714",
+  ];
 
   for (const document of [readme, readmeKo]) {
-    assert.match(document, /^https:\/\/github\.com\/user-attachments\/assets\/[0-9a-f-]+$/m);
-    assert.match(document, /full-discord-translation-demo-masked\.mp4/);
-    assert.doesNotMatch(document, /full-discord-translation-demo-preview\.gif/);
+    const videos = document.match(/^https:\/\/github\.com\/user-attachments\/assets\/[0-9a-f-]+$/gm) ?? [];
+    assert.deepEqual(videos, expectedVideos);
+    assert.doesNotMatch(document, /Play full demo|전체 시연 재생|full-discord-translation-demo-masked\.mp4/);
   }
 
-  assert.ok(fullDemo.size > 1_000_000, "전체 모자이크 시연 MP4가 필요합니다.");
+  assert.ok(quickDemo.size > 1_000_000, "짧은 모자이크 시연 MP4가 필요합니다.");
+  assert.ok(fullDemo.size > quickDemo.size, "전체 시연은 짧은 시연보다 길어야 합니다.");
 });
 
 test("브랜드 아이콘은 기존 표시 방식과 크기를 유지한다", () => {
