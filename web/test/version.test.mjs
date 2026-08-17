@@ -8,12 +8,12 @@ const tauriConfig = JSON.parse(readFileSync(new URL("../../src-tauri/tauri.conf.
 const cargoToml = readFileSync(new URL("../../src-tauri/Cargo.toml", import.meta.url), "utf8");
 const cargoLock = readFileSync(new URL("../../src-tauri/Cargo.lock", import.meta.url), "utf8");
 
-test("application version is consistently set to 0.5.17-beta", () => {
-  const expected = "0.5.17-beta";
+test("application version is consistently set to 0.5.18-beta", () => {
+  const expected = "0.5.18-beta";
   assert.equal(packageJson.version, expected);
   assert.equal(packageLock.version, expected);
   assert.equal(packageLock.packages[""].version, expected);
   assert.equal(tauriConfig.version, expected);
-  assert.match(cargoToml, /version = "0\.5\.17-beta"/);
-  assert.match(cargoLock, /name = "nude-translator-tauri"\s+version = "0\.5\.17-beta"/);
+  assert.match(cargoToml, /version = "0\.5\.18-beta"/);
+  assert.match(cargoLock, /name = "nude-translator-tauri"\s+version = "0\.5\.18-beta"/);
 });

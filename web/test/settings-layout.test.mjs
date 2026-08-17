@@ -4,6 +4,7 @@ import test from "node:test";
 
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const i18nSource = readFileSync(new URL("../i18n.mjs", import.meta.url), "utf8");
 const rustMain = readFileSync(new URL("../../src-tauri/src/main.rs", import.meta.url), "utf8");
 const tauriConfig = readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8");
 const packageManifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
@@ -40,10 +41,10 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.17-beta");
-  assert.match(tauriConfig, /"version": "0\.5\.17-beta"/);
-  assert.match(cargoManifest, /^version = "0\.5\.17-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.17 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.18-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.18-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.18-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.18 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 
@@ -347,6 +348,13 @@ test("automatic updates are announced outside the app information panel", () => 
   assert.match(script, /showAvailableUpdate\(result\.version, \{ prompt: silent \}\)/);
   assert.match(script, /title: "새 업데이트가 있습니다"/);
   assert.match(script, /cancelText: "나중에"/);
+});
+
+test("the settings window title shows only the product name", () => {
+  assert.match(markup, /<title>NudeNyang Discord Translator<\/title>/);
+  assert.doesNotMatch(tauriConfig, /NudeNyang Discord Translator 설정/);
+  assert.match(i18nSource, /document\.title = "NudeNyang Discord Translator"/);
+  assert.doesNotMatch(i18nSource, /document\.title = language === "ko"/);
 });
 
 test("local model preparation can be cancelled without discarding resumable data", () => {

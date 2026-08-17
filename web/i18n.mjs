@@ -934,9 +934,7 @@ export function applyStaticTranslations(root, language) {
   language = resolveUiLanguage(language);
   document.documentElement.lang = language === "zh" ? "zh-CN" : language === "zh-Hant" ? "zh-TW" : language;
   document.documentElement.dir = "ltr";
-  document.title = language === "ko"
-    ? "NudeNyang Discord Translator 설정"
-    : `NudeNyang Discord Translator · ${translateCopy(language, "설정")}`;
+  document.title = "NudeNyang Discord Translator";
   const elements = root.querySelectorAll("h1, h2, h3, p, span, strong, b, button, small");
   for (const element of elements) {
     if (element.children.length > 0) continue;
