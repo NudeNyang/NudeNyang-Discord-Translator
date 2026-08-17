@@ -26,19 +26,15 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
   assert.doesNotMatch(html, /<a href="#features" data-i18n>기능<\/a>/);
 });
 
-test("GitHub README는 모자이크된 애니메이션 미리보기와 전체 영상을 제공한다", async () => {
-  const [preview, fullDemo] = await Promise.all([
-    stat(new URL("../assets/full-discord-translation-demo-preview.gif", import.meta.url)),
-    stat(new URL("../assets/full-discord-translation-demo-masked.mp4", import.meta.url)),
-  ]);
+test("GitHub README는 모자이크된 1080p 첨부 영상과 전체 영상을 제공한다", async () => {
+  const fullDemo = await stat(new URL("../assets/full-discord-translation-demo-masked.mp4", import.meta.url));
 
   for (const document of [readme, readmeKo]) {
-    assert.match(document, /<img src="\.\/landing\/assets\/full-discord-translation-demo-preview\.gif"/);
+    assert.match(document, /^https:\/\/github\.com\/user-attachments\/assets\/[0-9a-f-]+$/m);
     assert.match(document, /full-discord-translation-demo-masked\.mp4/);
-    assert.doesNotMatch(document, /^\s*https:\/\/github\.com\/.*\.mp4\s*$/m);
+    assert.doesNotMatch(document, /full-discord-translation-demo-preview\.gif/);
   }
 
-  assert.ok(preview.size > 100_000, "README 애니메이션 미리보기 GIF가 필요합니다.");
   assert.ok(fullDemo.size > 1_000_000, "전체 모자이크 시연 MP4가 필요합니다.");
 });
 
