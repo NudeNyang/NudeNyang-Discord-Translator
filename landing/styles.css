@@ -1241,6 +1241,7 @@ summary:focus-visible {
 
 .site-footer nav {
   display: flex;
+  align-items: center;
   gap: 24px;
   color: var(--muted);
   font-size: 14px;
@@ -1249,6 +1250,31 @@ summary:focus-visible {
 
 .site-footer nav a:hover {
   color: var(--text);
+}
+
+.footer-icon-link {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  margin-block: -8px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.footer-icon-link:hover,
+.footer-icon-link:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.footer-icon-link img {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
 }
 
 .legal {

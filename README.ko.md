@@ -12,6 +12,8 @@
   <a href="https://nudenyang.github.io/NudeNyang-Discord-Translator/"><strong>공식 웹사이트</strong></a>
 </p>
 
+<p align="center">프로젝트를 응원하고 싶다면 선택 사항으로 <a href="https://nudenyang.booth.pm/items/8726877">BOOTH 후원판</a>을 이용할 수 있습니다.</p>
+
 <p align="center">
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">

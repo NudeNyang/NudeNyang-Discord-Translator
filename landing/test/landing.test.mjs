@@ -64,6 +64,22 @@ test("브랜드 링크는 문서 맨 위로 정확히 이동한다", () => {
   assert.match(script, /bindTopLinks\(\)/);
 });
 
+test("BOOTH 후원판은 랜딩 아이콘과 선택적인 README 안내로 연결한다", () => {
+  const boothUrl = "https://nudenyang.booth.pm/items/8726877";
+
+  assert.match(
+    html,
+    new RegExp(`<a class="footer-icon-link" href="${boothUrl.replaceAll(".", "\\.")}" target="_blank" rel="noopener noreferrer" aria-label="BOOTH Support Edition"`),
+  );
+  assert.match(html, /<img src="https:\/\/booth\.pm\/static-images\/pwa\/icon_size_180\.png" alt="" width="22" height="22"/);
+  assert.match(css, /\.footer-icon-link\s*\{[^}]*display:\s*inline-grid;[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+  assert.match(css, /\.footer-icon-link:hover,[\s\S]*?transform:\s*translateY\(-2px\)/);
+
+  assert.match(readme, new RegExp(`optional supporter edition[^\n]+${boothUrl.replaceAll(".", "\\.")}`, "i"));
+  assert.match(readmeKo, new RegExp(`프로젝트를 응원하고 싶다면[^\n]+${boothUrl.replaceAll(".", "\\.")}`));
+  assert.doesNotMatch(readmeKo, /반드시|필수 후원|구매해 주세요/);
+});
+
 test("공유 미리보기는 지정한 랜딩 썸네일을 사용한다", async () => {
   const thumbnailUrl = "https://nudenyang.github.io/NudeNyang-Discord-Translator/assets/social-thumbnail.png";
   assert.match(html, new RegExp(`<meta property="og:image" content="${thumbnailUrl.replaceAll(".", "\\.")}"\\s*/?>`));
