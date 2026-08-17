@@ -136,15 +136,15 @@ test("Antigravity first sign-in opens a visible terminal and is detected automat
 
 test("normal child processes stay in the background without console flashes", () => {
   assert.match(subscriptionCli, /fn process_command[\s\S]*?configure_hidden\(&mut command\)/);
+  assert.match(subscriptionCli, /fn node_wrapper_target/);
+  assert.match(subscriptionCli, /if let Some\(\(node, script\)\) = node_wrapper_target\(executable\)/);
   assert.match(subscriptionCli, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
-  assert.match(subscriptionCli, /const SW_HIDE: u16 = 0/);
-  assert.match(subscriptionCli, /\.show_window\(SW_HIDE\)/);
   assert.match(discord, /configure_background\(&mut command\)/);
   assert.match(discord, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
-  assert.match(discord, /const SW_HIDE: u16 = 0/);
-  assert.match(discord, /\.show_window\(SW_HIDE\)/);
-  assert.match(hymt, /const SW_HIDE: u16 = 0/);
-  assert.match(hymt, /\.show_window\(SW_HIDE\)/);
+  assert.match(hymt, /\.creation_flags\(CREATE_NO_WINDOW\)/);
+  assert.doesNotMatch(subscriptionCli, /\.show_window\(/);
+  assert.doesNotMatch(discord, /\.show_window\(/);
+  assert.doesNotMatch(hymt, /\.show_window\(/);
 });
 
 test("the private Discord pipe inherits only its two anonymous pipe handles", () => {

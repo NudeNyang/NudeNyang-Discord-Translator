@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 $TauriConfigPath = Join-Path $ProjectRoot 'src-tauri\tauri.conf.json'
-$TauriConfig = Get-Content -Raw -LiteralPath $TauriConfigPath | ConvertFrom-Json
+$TauriConfig = [IO.File]::ReadAllText($TauriConfigPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
 $Version = [string]$TauriConfig.version
 $Tag = "v$Version"
 $UpdateEndpoint = "https://raw.githubusercontent.com/$Repository/main/updates/beta/latest.json"
@@ -19,7 +19,7 @@ if (-not $ReleaseNotesPath) {
 if (-not (Test-Path -LiteralPath $ReleaseNotesPath)) {
     throw "GitHub 릴리스 노트가 없습니다: $ReleaseNotesPath"
 }
-$ReleaseNotes = (Get-Content -Raw -LiteralPath $ReleaseNotesPath).Trim()
+$ReleaseNotes = ([IO.File]::ReadAllText($ReleaseNotesPath, [Text.Encoding]::UTF8)).Trim()
 if (-not $ReleaseNotes) {
     throw "GitHub 릴리스 노트가 비어 있습니다: $ReleaseNotesPath"
 }
@@ -55,7 +55,7 @@ $Manifest = [ordered]@{
     pub_date = [DateTime]::UtcNow.ToString('o')
     platforms = [ordered]@{
         'windows-x86_64' = [ordered]@{
-            signature = (Get-Content -Raw -LiteralPath $SignaturePath).Trim()
+            signature = ([IO.File]::ReadAllText($SignaturePath, [Text.Encoding]::UTF8)).Trim()
             url = $ArtifactUrl
         }
     }

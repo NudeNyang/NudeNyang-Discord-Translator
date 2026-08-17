@@ -3024,6 +3024,12 @@ fn process_command(executable: &Path, arguments: &[String]) -> Command {
             .and_then(|value| value.to_str())
             .unwrap_or_default();
         if extension.eq_ignore_ascii_case("cmd") || extension.eq_ignore_ascii_case("bat") {
+            if let Some((node, script)) = node_wrapper_target(executable) {
+                let mut command = Command::new(node);
+                command.arg(script).args(arguments);
+                configure_hidden(&mut command);
+                return command;
+            }
             let mut command = Command::new("cmd.exe");
             command
                 .args(["/d", "/s", "/c", "call"])
@@ -3040,6 +3046,28 @@ fn process_command(executable: &Path, arguments: &[String]) -> Command {
     command.args(arguments);
     configure_hidden(&mut command);
     command
+}
+
+#[cfg(windows)]
+fn node_wrapper_target(executable: &Path) -> Option<(PathBuf, PathBuf)> {
+    let contents = fs::read_to_string(executable).ok()?;
+    let script_capture = Regex::new(r#"(?i)%dp0%\\([^"\r\n]+?\.js)"#)
+        .ok()?
+        .captures(&contents)?
+        .get(1)?
+        .as_str();
+    let wrapper_directory = executable.parent()?;
+    let script = wrapper_directory.join(script_capture);
+    if !script.is_file() {
+        return None;
+    }
+    let bundled_node = wrapper_directory.join("node.exe");
+    let node = if bundled_node.is_file() {
+        bundled_node
+    } else {
+        find_executable("node")?
+    };
+    Some((node, script))
 }
 
 fn decode_process_output(bytes: &[u8]) -> String {
@@ -3071,10 +3099,7 @@ fn decode_process_output(bytes: &[u8]) -> String {
 fn configure_hidden(command: &mut Command) {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    const SW_HIDE: u16 = 0;
-    command
-        .creation_flags(CREATE_NO_WINDOW)
-        .show_window(SW_HIDE);
+    command.creation_flags(CREATE_NO_WINDOW);
 }
 
 #[cfg(windows)]
@@ -3103,8 +3128,8 @@ mod tests {
         acp_error_message, agy_invocation_arguments, claude_plan_connected,
         configure_gemini_plan_auth_at, decode_payload, decode_process_output,
         find_winget_package_executable, gemini_invocation_arguments,
-        gemini_plan_auth_configured_at, is_node_backed_command, parse_node_major,
-        prepend_directory_to_environment_path, read_capped_output,
+        gemini_plan_auth_configured_at, is_node_backed_command, node_wrapper_target,
+        parse_node_major, prepend_directory_to_environment_path, read_capped_output,
         repair_incomplete_gemini_plan_auth_at, run_process, subscription_environment,
         translation_prompt, validated_translations, wait_for_antigravity_connection,
         write_acp_request, SubscriptionCliTranslator, SubscriptionProvider,
@@ -3171,6 +3196,33 @@ mod tests {
         assert!(is_node_backed_command(std::path::Path::new("codex.cmd")));
         assert!(is_node_backed_command(std::path::Path::new("codex.bat")));
         assert!(!is_node_backed_command(std::path::Path::new("codex.exe")));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn resolves_npm_node_wrappers_without_starting_cmd() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude-translator-node-wrapper-{}",
+            std::process::id()
+        ));
+        let script = directory.join("node_modules/@openai/codex/bin/codex.js");
+        std::fs::create_dir_all(script.parent().unwrap()).unwrap();
+        std::fs::write(&script, b"").unwrap();
+        std::fs::write(directory.join("node.exe"), b"").unwrap();
+        let wrapper = directory.join("codex.cmd");
+        std::fs::write(
+            &wrapper,
+            r#"@echo off
+"%dp0%\node.exe" "%dp0%\node_modules\@openai\codex\bin\codex.js" %*
+"#,
+        )
+        .unwrap();
+
+        let resolved = node_wrapper_target(&wrapper).unwrap();
+
+        assert_eq!(resolved.0, directory.join("node.exe"));
+        assert_eq!(resolved.1, script);
+        let _ = std::fs::remove_dir_all(directory);
     }
 
     #[cfg(windows)]

@@ -7,7 +7,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = (Resolve-Path (Split-Path -Parent $PSScriptRoot)).Path
 if (-not $Version) {
-    $TauriConfig = Get-Content -Raw -LiteralPath (Join-Path $ProjectRoot 'src-tauri\tauri.conf.json') | ConvertFrom-Json
+    $TauriConfigPath = Join-Path $ProjectRoot 'src-tauri\tauri.conf.json'
+    $TauriConfig = [IO.File]::ReadAllText($TauriConfigPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
     $Version = [string]$TauriConfig.version
 }
 if (-not $ReleaseNotesPath) {
@@ -45,7 +46,7 @@ try {
         $ManifestPath `
         $ChecksumPath `
         --repo $Repository `
-        --title "NudeNyang Discord Translator $Version - First Open Beta" `
+        --title "NudeNyang Discord Translator $Version - Open Beta" `
         --notes-file $ReleaseNotesPath `
         --prerelease `
         --target main

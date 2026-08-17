@@ -62,3 +62,10 @@ test("GitHub Open Beta artifacts include a signed manifest and checksum", () => 
   assert.match(githubDeployment, /SHA256SUMS\.txt/);
   assert.doesNotMatch(githubDeployment, /--verify-tag/);
 });
+
+test("GitHub release packaging reads Korean metadata explicitly as UTF-8", () => {
+  assert.match(githubPackaging, /ReadAllText\(\$ReleaseNotesPath, \[Text\.Encoding\]::UTF8\)/);
+  assert.match(githubPackaging, /ReadAllText\(\$TauriConfigPath, \[Text\.Encoding\]::UTF8\)/);
+  assert.match(githubDeployment, /ReadAllText\(\$TauriConfigPath, \[Text\.Encoding\]::UTF8\)/);
+  assert.doesNotMatch(githubPackaging, /Get-Content -Raw -LiteralPath \$ReleaseNotesPath/);
+});
