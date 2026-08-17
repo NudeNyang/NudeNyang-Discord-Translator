@@ -25,6 +25,10 @@ const msvcRuntimeStager = readFileSync(
   new URL("../../scripts/stage_msvc_runtime.ps1", import.meta.url),
   "utf8",
 );
+const windowsVariantPackager = readFileSync(
+  new URL("../../scripts/package_windows_variants.ps1", import.meta.url),
+  "utf8",
+);
 
 test("the Windows uninstaller separates application data from downloaded local AI models", () => {
   assert.equal(
@@ -78,6 +82,12 @@ test("the Windows uninstaller uses the NudeNyang Discord Translator icon", () =>
     tauriConfig.bundle.windows.nsis.uninstallerIcon,
     "../assets/nude-translator.ico",
   );
+});
+
+test("the Windows installer publishes under the NudeNyang name", () => {
+  assert.equal(tauriConfig.bundle.publisher, "NudeNyang");
+  assert.match(installerTemplate, /!define MANUFACTURER "\{\{manufacturer\}\}"/);
+  assert.match(installerTemplate, /WriteRegStr SHCTX "\$\{UNINSTKEY\}" "Publisher" "\$\{MANUFACTURER\}"/);
 });
 
 test("the Windows installer follows the system language and allows a manual choice", () => {
@@ -162,4 +172,15 @@ test("Windows packages carry the complete signed MSVC runtime beside llama-serve
   }
   assert.match(msvcRuntimeStager, /Get-AuthenticodeSignature/);
   assert.match(msvcRuntimeStager, /Microsoft Corporation/);
+  assert.match(msvcRuntimeStager, /ValidateSet\('x64', 'arm64'\)/);
+  assert.match(windowsVariantPackager, /x86_64-pc-windows-msvc/);
+  assert.match(windowsVariantPackager, /aarch64-pc-windows-msvc/);
+  assert.match(windowsVariantPackager, /Windows-\$Architecture-Portable\.zip/);
+  assert.match(windowsVariantPackager, /Windows-\$Architecture-Setup\.exe/);
+  assert.match(windowsVariantPackager, /Get-PeMachine/);
+  assert.match(windowsVariantPackager, /Copy-MsvcRuntime[\s\S]+-Architecture \$Architecture/);
+  assert.match(windowsVariantPackager, /Resolve-ClangDirectory/);
+  assert.match(windowsVariantPackager, /Program Files[\\\\]LLVM[\\\\]bin/);
+  assert.match(windowsVariantPackager, /Microsoft\.VisualStudio\.Component\.VC\.Tools\.ARM64/);
+  assert.match(windowsVariantPackager, /x64_arm64/);
 });

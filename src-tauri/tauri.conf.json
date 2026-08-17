@@ -39,6 +39,7 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "NudeNyang",
     "targets": ["nsis"],
     "createUpdaterArtifacts": true,
     "resources": {

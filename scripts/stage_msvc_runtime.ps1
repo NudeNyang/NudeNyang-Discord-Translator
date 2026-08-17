@@ -26,10 +26,15 @@ function Test-MsvcRuntimeDirectory {
 }
 
 function Resolve-MsvcRuntimeSource {
+    param(
+        [ValidateSet('x64', 'arm64')]
+        [string]$Architecture = 'x64'
+    )
+
     $candidates = [Collections.Generic.List[string]]::new()
     if ($env:VCToolsRedistDir) {
-        $candidates.Add((Join-Path $env:VCToolsRedistDir 'x64\Microsoft.VC143.CRT'))
-        $candidates.Add((Join-Path $env:VCToolsRedistDir 'x64\Microsoft.VC145.CRT'))
+        $candidates.Add((Join-Path $env:VCToolsRedistDir "$Architecture\Microsoft.VC143.CRT"))
+        $candidates.Add((Join-Path $env:VCToolsRedistDir "$Architecture\Microsoft.VC145.CRT"))
     }
 
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
@@ -43,20 +48,22 @@ function Resolve-MsvcRuntimeSource {
             Get-ChildItem -LiteralPath $redistRoot -Directory |
                 Sort-Object Name -Descending |
                 ForEach-Object {
-                    Get-ChildItem -LiteralPath (Join-Path $_.FullName 'x64') -Directory -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue |
+                    Get-ChildItem -LiteralPath (Join-Path $_.FullName $Architecture) -Directory -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue |
                         ForEach-Object { $candidates.Add($_.FullName) }
                 }
         }
     }
 
-    $candidates.Add((Join-Path $env:WINDIR 'System32'))
+    if ($Architecture -eq 'x64') {
+        $candidates.Add((Join-Path $env:WINDIR 'System32'))
+    }
     foreach ($candidate in $candidates | Select-Object -Unique) {
         if (Test-MsvcRuntimeDirectory -Path $candidate) {
             return $candidate
         }
     }
 
-    throw '패키징에 필요한 Microsoft Visual C++ x64 런타임을 찾지 못했습니다. Visual Studio Build Tools의 Desktop development with C++ 구성요소를 설치하십시오.'
+    throw "패키징에 필요한 Microsoft Visual C++ $Architecture 런타임을 찾지 못했습니다. Visual Studio Build Tools의 C++ $Architecture 구성요소를 설치하십시오."
 }
 
 function Assert-MsvcRuntimeSigned {
@@ -76,9 +83,13 @@ function Assert-MsvcRuntimeSigned {
 }
 
 function Copy-MsvcRuntime {
-    param([Parameter(Mandatory)][string]$DestinationDirectory)
+    param(
+        [Parameter(Mandatory)][string]$DestinationDirectory,
+        [ValidateSet('x64', 'arm64')]
+        [string]$Architecture = 'x64'
+    )
 
-    $source = Resolve-MsvcRuntimeSource
+    $source = Resolve-MsvcRuntimeSource -Architecture $Architecture
     Assert-MsvcRuntimeSigned -Directory $source
     New-Item -ItemType Directory -Path $DestinationDirectory -Force | Out-Null
     foreach ($file in $MsvcRuntimeFiles) {
@@ -86,5 +97,5 @@ function Copy-MsvcRuntime {
     }
     Assert-MsvcRuntimeSigned -Directory $DestinationDirectory
     $version = (Get-Item -LiteralPath (Join-Path $DestinationDirectory 'msvcp140.dll')).VersionInfo.FileVersion
-    Write-Host "Microsoft Visual C++ 앱 로컬 런타임 포함 완료: $version"
+    Write-Host "Microsoft Visual C++ $Architecture 앱 로컬 런타임 포함 완료: $version"
 }

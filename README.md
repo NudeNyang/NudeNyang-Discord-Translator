@@ -31,7 +31,7 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 ## Download the Open Beta
 
-Download the Windows 10/11 x64 installer from [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases). This is an open beta rather than a finished stable release, so verify important translations against the original text.
+Download the current Windows installer from [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases). This is an open beta rather than a finished stable release, so verify important translations against the original text.
 
 ## See it in action
 
@@ -130,9 +130,16 @@ The complete language catalog and provider notes are in [docs/LANGUAGES.md](docs
 
 | Platform | Status |
 |---|---|
-| Windows 10/11 x64 | Current development and distribution target |
+| Windows 10/11 x64 | Primary development and distribution target |
+| Windows 11 ARM64 | Native local packaging supported; device testing is more limited than x64 |
 | macOS Apple Silicon | Shared Rust core and resource layout prepared; not supported yet |
 | macOS Intel | Not planned |
+
+Windows x64 and ARM64 installer and portable artifacts can be created locally with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package_windows_variants.ps1
+```
 
 ## Development
 
