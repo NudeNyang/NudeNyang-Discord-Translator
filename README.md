@@ -33,6 +33,10 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 Download the current Windows installer from [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases). This is an open beta rather than a finished stable release, so verify important translations against the original text.
 
+- `x64` is for most Intel and AMD Windows PCs; `ARM64` is for Windows on ARM.
+- `Setup` installs the app; `Portable` runs after extracting the ZIP.
+- The updater `.sig` accompanies the x64 Setup used by automatic updates. All four Windows packages are listed in `SHA256SUMS.txt`.
+
 ## See it in action
 
 ### Quick demo

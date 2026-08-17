@@ -57,6 +57,11 @@ test("R2 bridge builds a public updater without embedding the private beta token
 test("GitHub Open Beta artifacts include a signed manifest and become the latest release", () => {
   assert.match(githubPackaging, /SHA256SUMS\.txt/);
   assert.match(githubPackaging, /Get-FileHash[^\r\n]+SHA256/);
+  assert.match(githubPackaging, /NudeNyang-Translator-\$Version-x64-Setup\.exe/);
+  assert.match(githubPackaging, /NudeNyang-Translator-\$Version-x64-Portable\.zip/);
+  assert.match(githubPackaging, /NudeNyang-Translator-\$Version-ARM64-Setup\.exe/);
+  assert.match(githubPackaging, /NudeNyang-Translator-\$Version-ARM64-Portable\.zip/);
+  assert.match(githubDeployment, /\$WindowsPackagePaths/);
   assert.match(githubDeployment, /gh release create/);
   assert.match(githubDeployment, /--title "\$DisplayVersion"/);
   assert.match(githubDeployment, /--latest/);

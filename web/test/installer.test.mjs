@@ -175,8 +175,15 @@ test("Windows packages carry the complete signed MSVC runtime beside llama-serve
   assert.match(msvcRuntimeStager, /ValidateSet\('x64', 'arm64'\)/);
   assert.match(windowsVariantPackager, /x86_64-pc-windows-msvc/);
   assert.match(windowsVariantPackager, /aarch64-pc-windows-msvc/);
-  assert.match(windowsVariantPackager, /Windows-\$Architecture-Portable\.zip/);
-  assert.match(windowsVariantPackager, /Windows-\$Architecture-Setup\.exe/);
+  assert.match(
+    windowsVariantPackager,
+    /NudeNyang-Translator-\$Version-\$releaseArchitecture-Portable\.zip/,
+  );
+  assert.match(
+    windowsVariantPackager,
+    /NudeNyang-Translator-\$Version-\$releaseArchitecture-Setup\.exe/,
+  );
+  assert.match(windowsVariantPackager, /'ARM64'/);
   assert.match(windowsVariantPackager, /Get-PeMachine/);
   assert.match(windowsVariantPackager, /Copy-MsvcRuntime[\s\S]+-Architecture \$Architecture/);
   assert.match(windowsVariantPackager, /Resolve-ClangDirectory/);

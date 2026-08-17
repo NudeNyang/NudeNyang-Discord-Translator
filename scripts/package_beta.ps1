@@ -165,7 +165,7 @@ if (-not (Test-Path -LiteralPath $Signature)) {
 
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
 New-Item -ItemType Directory -Path $ReleaseDirectory -Force | Out-Null
-$InstallerName = "NudeNyangDiscordTranslator-$Version-Windows-x64-Setup.exe"
+$InstallerName = "NudeNyang-Translator-$Version-x64-Setup.exe"
 $ReleaseInstaller = Join-Path $ReleaseDirectory $InstallerName
 Copy-Item -LiteralPath $Installer.FullName -Destination $ReleaseInstaller -Force
 Copy-Item -LiteralPath $Signature -Destination "$ReleaseInstaller.sig" -Force

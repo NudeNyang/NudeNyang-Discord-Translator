@@ -39,7 +39,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
-$InstallerName = "NudeNyangDiscordTranslator-$Version-Windows-x64-Setup.exe"
+$InstallerName = "NudeNyang-Translator-$Version-x64-Setup.exe"
 $InstallerPath = Join-Path $ReleaseDirectory $InstallerName
 $SignaturePath = "$InstallerPath.sig"
 foreach ($requiredPath in @($InstallerPath, $SignaturePath)) {
@@ -68,10 +68,10 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $TrackedManifestPath) -Fo
 [IO.File]::WriteAllText($ReleaseManifestPath, $ManifestJson, [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText($TrackedManifestPath, $ManifestJson, [Text.UTF8Encoding]::new($false))
 $WindowsPackageNames = @(
-    "NudeNyangDiscordTranslator-$Version-Windows-x64-Setup.exe",
-    "NudeNyangDiscordTranslator-$Version-Windows-x64-Portable.zip",
-    "NudeNyangDiscordTranslator-$Version-Windows-arm64-Setup.exe",
-    "NudeNyangDiscordTranslator-$Version-Windows-arm64-Portable.zip"
+    "NudeNyang-Translator-$Version-x64-Setup.exe",
+    "NudeNyang-Translator-$Version-x64-Portable.zip",
+    "NudeNyang-Translator-$Version-ARM64-Setup.exe",
+    "NudeNyang-Translator-$Version-ARM64-Portable.zip"
 )
 $ChecksumLines = foreach ($packageName in $WindowsPackageNames) {
     $packagePath = Join-Path $ReleaseDirectory $packageName

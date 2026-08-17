@@ -29,6 +29,10 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases)에서 Windows 10/11 x64 설치 파일을 받을 수 있습니다. 오픈 베타는 완성된 정식판이 아니므로 중요한 대화에서는 번역 결과를 원문과 함께 확인해 주세요.
 
+- `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
+- `Setup`은 설치형이며, `Portable`은 ZIP 압축을 풀고 바로 실행하는 무설치형입니다.
+- 자동 업데이트가 사용하는 x64 설치형에는 `.sig`가 함께 제공됩니다. 네 가지 Windows 패키지의 무결성은 `SHA256SUMS.txt`에서 확인할 수 있습니다.
+
 ## 동작 화면
 
 ### 짧은 시연

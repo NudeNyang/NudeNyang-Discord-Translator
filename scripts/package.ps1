@@ -82,7 +82,7 @@ foreach ($model in $Models) {
 }
 
 New-Item -ItemType Directory -Force $ReleaseDirectory | Out-Null
-$Archive = Join-Path $ReleaseDirectory 'NudeNyangDiscordTranslator-Windows-x64.zip'
+$Archive = Join-Path $ReleaseDirectory 'NudeNyang-Translator-x64.zip'
 Remove-Item -LiteralPath $Archive -Force -ErrorAction SilentlyContinue
 & tar.exe -a -c -f $Archive -C $DistDirectory .
 if ($LASTEXITCODE -ne 0) {

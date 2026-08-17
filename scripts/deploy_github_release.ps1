@@ -16,12 +16,18 @@ if (-not $ReleaseNotesPath) {
 }
 $DisplayVersion = $Version -replace '-beta$', ' Beta'
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
-$InstallerName = "NudeNyangDiscordTranslator-$Version-Windows-x64-Setup.exe"
+$InstallerName = "NudeNyang-Translator-$Version-x64-Setup.exe"
 $InstallerPath = Join-Path $ReleaseDirectory $InstallerName
 $SignaturePath = "$InstallerPath.sig"
+$WindowsPackagePaths = @(
+    $InstallerPath,
+    (Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-x64-Portable.zip"),
+    (Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-ARM64-Setup.exe"),
+    (Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-ARM64-Portable.zip")
+)
 $ManifestPath = Join-Path $ReleaseDirectory 'latest.json'
 $ChecksumPath = Join-Path $ReleaseDirectory 'SHA256SUMS.txt'
-foreach ($requiredPath in @($ReleaseNotesPath, $InstallerPath, $SignaturePath, $ManifestPath, $ChecksumPath)) {
+foreach ($requiredPath in @($ReleaseNotesPath, $SignaturePath, $ManifestPath, $ChecksumPath) + $WindowsPackagePaths) {
     if (-not (Test-Path -LiteralPath $requiredPath)) {
         throw "GitHub 릴리스에 필요한 파일이 없습니다: $requiredPath"
     }
@@ -42,7 +48,7 @@ try {
     }
 
     gh release create "v$Version" `
-        $InstallerPath `
+        $WindowsPackagePaths `
         $SignaturePath `
         $ManifestPath `
         $ChecksumPath `

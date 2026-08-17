@@ -181,7 +181,8 @@ function New-PortablePackage {
         [Parameter(Mandatory)][string]$BuiltExecutable
     )
 
-    $portableDirectory = Join-Path $DistRoot "NudeNyangDiscordTranslator-Windows-$Architecture-Portable"
+    $releaseArchitecture = if ($Architecture -eq 'arm64') { 'ARM64' } else { 'x64' }
+    $portableDirectory = Join-Path $DistRoot "NudeNyang-Translator-$releaseArchitecture-Portable"
     Clear-DirectoryContents -Path $portableDirectory
     Copy-Item -LiteralPath $BuiltExecutable -Destination (Join-Path $portableDirectory 'NudeNyangDiscordTranslator.exe') -Force
     Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE') -Destination (Join-Path $portableDirectory 'LICENSE.txt') -Force
@@ -201,7 +202,7 @@ NudeNyang Discord Translator $Version ($Architecture portable)
     [IO.File]::WriteAllText((Join-Path $portableDirectory 'PORTABLE.txt'), $notice, [Text.UTF8Encoding]::new($false))
 
     New-Item -ItemType Directory -Path $ReleaseDirectory -Force | Out-Null
-    $archive = Join-Path $ReleaseDirectory "NudeNyangDiscordTranslator-$Version-Windows-$Architecture-Portable.zip"
+    $archive = Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-$releaseArchitecture-Portable.zip"
     Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
     & tar.exe -a -c -f $archive -C $portableDirectory .
     if ($LASTEXITCODE -ne 0) {
@@ -224,7 +225,8 @@ function Copy-InstallerPackage {
         throw "NSIS 설치 파일을 찾지 못했습니다: $bundleDirectory"
     }
     New-Item -ItemType Directory -Path $ReleaseDirectory -Force | Out-Null
-    $target = Join-Path $ReleaseDirectory "NudeNyangDiscordTranslator-$Version-Windows-$Architecture-Setup.exe"
+    $releaseArchitecture = if ($Architecture -eq 'arm64') { 'ARM64' } else { 'x64' }
+    $target = Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-$releaseArchitecture-Setup.exe"
     Copy-Item -LiteralPath $installer.FullName -Destination $target -Force
     return $target
 }
