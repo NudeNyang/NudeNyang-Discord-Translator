@@ -26,9 +26,14 @@ static GUARDIAN_COPY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 #[cfg(windows)]
+const SW_HIDE: u16 = 0;
+
+#[cfg(windows)]
 fn configure_background(command: &mut std::process::Command) {
     use std::os::windows::process::CommandExt;
-    command.creation_flags(CREATE_NO_WINDOW);
+    command
+        .creation_flags(CREATE_NO_WINDOW)
+        .show_window(SW_HIDE);
 }
 
 #[cfg(not(windows))]

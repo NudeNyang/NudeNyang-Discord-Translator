@@ -54,6 +54,7 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
+        "template": "./windows/installer.nsi",
         "installerHooks": "./windows/hooks.nsh",
         "installerIcon": "../assets/nude-translator.ico",
         "headerImage": "../assets/installer/header-light.bmp",

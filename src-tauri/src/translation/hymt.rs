@@ -51,6 +51,8 @@ use windows::Win32::System::JobObjects::{
 const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+#[cfg(windows)]
+const SW_HIDE: u16 = 0;
 const VRAM_LOW_WATERMARK_BYTES: u64 = 1536 * 1024 * 1024;
 const VRAM_RECOVERY_WATERMARK_BYTES: u64 = 3 * 1024 * 1024 * 1024;
 const VRAM_PRESSURE_DURATION: Duration = Duration::from_secs(5);
@@ -721,7 +723,9 @@ impl HyMtTranslator {
             #[cfg(windows)]
             {
                 use std::os::windows::process::CommandExt;
-                command.creation_flags(CREATE_NO_WINDOW);
+                command
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .show_window(SW_HIDE);
             }
             let mut child = command.spawn().map_err(|error| {
                 format!(

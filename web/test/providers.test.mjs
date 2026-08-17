@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [markup, styles, script, rustMain, credentials, config, providers, subscriptionCli, discord, trayMarkup, trayScript] = await Promise.all([
+const [markup, styles, script, rustMain, credentials, config, providers, subscriptionCli, discord, hymt, trayMarkup, trayScript] = await Promise.all([
   readFile(new URL("../index.html", import.meta.url), "utf8"),
   readFile(new URL("../app.css", import.meta.url), "utf8"),
   readFile(new URL("../app.js", import.meta.url), "utf8"),
@@ -12,6 +12,7 @@ const [markup, styles, script, rustMain, credentials, config, providers, subscri
   readFile(new URL("../../src-tauri/src/providers.rs", import.meta.url), "utf8"),
   readFile(new URL("../../src-tauri/src/translation/subscription_cli.rs", import.meta.url), "utf8"),
   readFile(new URL("../../src-tauri/src/discord.rs", import.meta.url), "utf8"),
+  readFile(new URL("../../src-tauri/src/translation/hymt.rs", import.meta.url), "utf8"),
   readFile(new URL("../tray.html", import.meta.url), "utf8"),
   readFile(new URL("../tray.js", import.meta.url), "utf8"),
 ]);
@@ -136,8 +137,14 @@ test("Antigravity first sign-in opens a visible terminal and is detected automat
 test("normal child processes stay in the background without console flashes", () => {
   assert.match(subscriptionCli, /fn process_command[\s\S]*?configure_hidden\(&mut command\)/);
   assert.match(subscriptionCli, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
+  assert.match(subscriptionCli, /const SW_HIDE: u16 = 0/);
+  assert.match(subscriptionCli, /\.show_window\(SW_HIDE\)/);
   assert.match(discord, /configure_background\(&mut command\)/);
   assert.match(discord, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
+  assert.match(discord, /const SW_HIDE: u16 = 0/);
+  assert.match(discord, /\.show_window\(SW_HIDE\)/);
+  assert.match(hymt, /const SW_HIDE: u16 = 0/);
+  assert.match(hymt, /\.show_window\(SW_HIDE\)/);
 });
 
 test("the private Discord pipe inherits only its two anonymous pipe handles", () => {

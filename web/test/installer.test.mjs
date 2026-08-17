@@ -6,6 +6,10 @@ const installerHooks = readFileSync(
   new URL("../../src-tauri/windows/hooks.nsh", import.meta.url),
   "utf8",
 );
+const installerTemplate = readFileSync(
+  new URL("../../src-tauri/windows/installer.nsi", import.meta.url),
+  "utf8",
+);
 const tauriConfig = JSON.parse(
   readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
 );
@@ -22,17 +26,34 @@ const msvcRuntimeStager = readFileSync(
   "utf8",
 );
 
-test("the Windows uninstaller removes every app-owned data store when requested", () => {
+test("the Windows uninstaller separates application data from downloaded local AI models", () => {
+  assert.equal(
+    tauriConfig.bundle.windows.nsis.template,
+    "./windows/installer.nsi",
+  );
+  assert.match(installerTemplate, /Var DeleteLocalModelsCheckbox/);
+  assert.match(installerTemplate, /Var DeleteLocalModelsCheckboxState/);
+  assert.match(installerTemplate, /\$\(deleteLocalModels\)/);
+  assert.match(
+    installerTemplate,
+    /SendMessage \$DeleteLocalModelsCheckbox \$\{BM_GETCHECK\} 0 0 \$DeleteLocalModelsCheckboxState/,
+  );
   assert.match(installerHooks, /\$DeleteAppDataCheckboxState = 1/);
+  assert.match(installerHooks, /\$DeleteLocalModelsCheckboxState = 1/);
   assert.match(installerHooks, /\$UpdateMode <> 1/);
   assert.match(
     installerHooks,
-    /RMDir \/r "\$LOCALAPPDATA\\LocalTools\\NudeNyang Discord Translator"/,
+    /RMDir \/r "\$LOCALAPPDATA\\LocalTools\\NudeNyang Discord Translator\\Cache\\models"/,
   );
   assert.match(
     installerHooks,
-    /RMDir \/r "\$LOCALAPPDATA\\LocalTools\\DiscordTranslateOverlay"/,
+    /RMDir \/r "\$LOCALAPPDATA\\LocalTools\\NudeNyang Discord Translator\\Cache\\ocr-rust"/,
   );
+  assert.doesNotMatch(
+    installerHooks,
+    /RMDir \/r "\$LOCALAPPDATA\\LocalTools\\NudeNyang Discord Translator"/,
+  );
+  assert.match(installerHooks, /Delete "\$LOCALAPPDATA\\LocalTools\\NudeNyang Discord Translator\\settings\.json"/);
   assert.match(installerHooks, /RMDir \/r "\$LOCALAPPDATA\\NudeNyang Discord Translator"/);
   assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.NudeNyang Discord Translator/);
   assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.NudeNyang Translator/);
