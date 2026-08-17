@@ -47,7 +47,7 @@ try {
         $ManifestPath `
         $ChecksumPath `
         --repo $Repository `
-        --title "$DisplayVersion · NudeNyang Discord Translator" `
+        --title "$DisplayVersion" `
         --notes-file $ReleaseNotesPath `
         --latest `
         --target main
