@@ -55,6 +55,29 @@
       "nsis": {
         "installMode": "currentUser",
         "installerHooks": "./windows/hooks.nsh",
+        "installerIcon": "../assets/nude-translator.ico",
+        "headerImage": "../assets/installer/header-light.bmp",
+        "sidebarImage": "../assets/installer/sidebar-light.bmp",
+        "uninstallerHeaderImage": "../assets/installer/header-light.bmp",
+        "languages": [
+          "English",
+          "Korean",
+          "Japanese",
+          "SimpChinese",
+          "TradChinese",
+          "PortugueseBR",
+          "SpanishInternational",
+          "German",
+          "Russian",
+          "French",
+          "Turkish",
+          "Arabic",
+          "Vietnamese",
+          "Italian",
+          "Ukrainian",
+          "Dutch"
+        ],
+        "displayLanguageSelector": true,
         "uninstallerIcon": "../assets/nude-translator.ico"
       }
     }

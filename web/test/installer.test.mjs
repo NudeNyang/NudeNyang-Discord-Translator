@@ -46,6 +46,57 @@ test("the Windows uninstaller uses the NudeNyang Discord Translator icon", () =>
   );
 });
 
+test("the Windows installer follows the system language and allows a manual choice", () => {
+  const nsis = tauriConfig.bundle.windows.nsis;
+
+  assert.equal(nsis.displayLanguageSelector, true);
+  assert.equal(nsis.languages[0], "English");
+  for (const language of [
+    "Korean",
+    "Japanese",
+    "SimpChinese",
+    "TradChinese",
+    "PortugueseBR",
+    "SpanishInternational",
+    "German",
+    "Russian",
+    "French",
+  ]) {
+    assert.ok(nsis.languages.includes(language), `${language} must be selectable`);
+  }
+});
+
+test("the Windows installer uses the light NudeNyang artwork", () => {
+  const nsis = tauriConfig.bundle.windows.nsis;
+
+  assert.equal(nsis.installerIcon, "../assets/nude-translator.ico");
+  assert.equal(nsis.headerImage, "../assets/installer/header-light.bmp");
+  assert.equal(nsis.sidebarImage, "../assets/installer/sidebar-light.bmp");
+  assert.equal(
+    nsis.uninstallerHeaderImage,
+    "../assets/installer/header-light.bmp",
+  );
+
+  const readBitmapSize = (relativePath) => {
+    const bitmap = readFileSync(new URL(relativePath, import.meta.url));
+    assert.equal(bitmap.subarray(0, 2).toString("ascii"), "BM");
+    return {
+      width: bitmap.readInt32LE(18),
+      height: bitmap.readInt32LE(22),
+      bitsPerPixel: bitmap.readUInt16LE(28),
+    };
+  };
+
+  assert.deepEqual(
+    readBitmapSize("../../assets/installer/header-light.bmp"),
+    { width: 150, height: 57, bitsPerPixel: 24 },
+  );
+  assert.deepEqual(
+    readBitmapSize("../../assets/installer/sidebar-light.bmp"),
+    { width: 164, height: 314, bitsPerPixel: 24 },
+  );
+});
+
 test("Windows packages carry the complete signed MSVC runtime beside llama-server", () => {
   for (const packager of [betaPackager, portablePackager]) {
     assert.match(packager, /stage_msvc_runtime\.ps1/);
