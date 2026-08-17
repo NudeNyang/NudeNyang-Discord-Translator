@@ -141,6 +141,9 @@ Windows x64 and ARM64 installer and portable artifacts can be created locally wi
 powershell -ExecutionPolicy Bypass -File .\scripts\package_windows_variants.ps1
 ```
 
+Every Windows release must build, verify, and publish all four artifacts together: x64 installer,
+x64 portable ZIP, ARM64 installer, and ARM64 portable ZIP.
+
 ## Development
 
 You need Rust stable, Node.js/npm, and a Windows WebView2 build environment.

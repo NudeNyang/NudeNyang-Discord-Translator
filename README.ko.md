@@ -162,7 +162,10 @@ powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
 
 오픈 베타는 Tauri 업데이트 서명을 적용한 NSIS 설치 파일과 GitHub Releases를 사용합니다. 업데이트 서명은 설치 파일의 무결성을 검증하지만 Microsoft Authenticode 코드 서명과는 별개입니다. 업데이트 서명 키는 저장소가 아닌 `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`에 보관합니다. 0.5.14는 기존 비공개 베타 설치본을 공개 GitHub 업데이트 채널로 옮기는 일회성 Cloudflare R2 연결 버전입니다.
 
+앞으로 Windows 릴리스는 x64 설치형, x64 포터블, ARM64 설치형, ARM64 포터블을 항상 함께 빌드하고 검증한 뒤 게시합니다.
+
 ```powershell
+powershell -ExecutionPolicy Bypass -File scripts/package_windows_variants.ps1
 powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```

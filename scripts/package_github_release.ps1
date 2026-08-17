@@ -67,8 +67,22 @@ $TrackedManifestPath = Join-Path $ProjectRoot 'updates\beta\latest.json'
 New-Item -ItemType Directory -Path (Split-Path -Parent $TrackedManifestPath) -Force | Out-Null
 [IO.File]::WriteAllText($ReleaseManifestPath, $ManifestJson, [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText($TrackedManifestPath, $ManifestJson, [Text.UTF8Encoding]::new($false))
-$Checksum = "{0}  {1}`n" -f ((Get-FileHash -LiteralPath $InstallerPath -Algorithm SHA256).Hash.ToLowerInvariant()), $InstallerName
-[IO.File]::WriteAllText($ChecksumPath, $Checksum, [Text.UTF8Encoding]::new($false))
+$WindowsPackageNames = @(
+    "NudeNyangDiscordTranslator-$Version-Windows-x64-Setup.exe",
+    "NudeNyangDiscordTranslator-$Version-Windows-x64-Portable.zip",
+    "NudeNyangDiscordTranslator-$Version-Windows-arm64-Setup.exe",
+    "NudeNyangDiscordTranslator-$Version-Windows-arm64-Portable.zip"
+)
+$ChecksumLines = foreach ($packageName in $WindowsPackageNames) {
+    $packagePath = Join-Path $ReleaseDirectory $packageName
+    if (Test-Path -LiteralPath $packagePath) {
+        "{0}  {1}" -f ((Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()), $packageName
+    }
+}
+if ($ChecksumLines.Count -eq 0) {
+    throw "SHA-256 체크섬을 생성할 Windows 패키지가 없습니다: $ReleaseDirectory"
+}
+[IO.File]::WriteAllText($ChecksumPath, (($ChecksumLines -join "`n") + "`n"), [Text.UTF8Encoding]::new($false))
 
 Write-Host "GitHub 오픈 베타 설치 파일: $InstallerPath"
 Write-Host "GitHub 업데이트 매니페스트: $TrackedManifestPath"
