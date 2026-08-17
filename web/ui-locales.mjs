@@ -182,7 +182,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "版本",
     "자동 업데이트": "自動更新",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "自動檢查新版本，並在有可用版本時通知你。",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "正在檢查私人測試版更新...",
     "현재 베타 버전이 최신입니다.": "目前的測試版已是最新版本。",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "已開始安裝更新。應用程式即將重新啟動。",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "正在驗證更新簽章並安裝...",
@@ -426,7 +425,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "目前的翻譯已完成。正在釋放 VRAM 供其他程式使用，並重新準備為 CPU/RAM 模式。",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "VRAM 可用空間已維持穩定。正在重新準備為 GPU 模式。",
     "{model} VRAM 보호 전환 중": "正在將 {model} 切換至 VRAM 保護模式",
-    "{model} GPU 모드 복귀 중": "正在將 {model} 恢復為 GPU 模式"
+    "{model} GPU 모드 복귀 중": "正在將 {model} 恢復為 GPU 模式",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "正在檢查 Open Beta 更新..."
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -610,7 +610,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Versão",
     "자동 업데이트": "Atualizações automáticas",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Verifique automaticamente se há novas versões e avise quando uma estiver disponível.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Verificando atualizações da versão beta privada...",
     "현재 베타 버전이 최신입니다.": "A versão beta atual está atualizada.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "A instalação da atualização foi iniciada. O app será reiniciado em breve.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Verificando a assinatura da atualização e instalando...",
@@ -854,7 +853,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "A tradução atual foi concluída. Liberando VRAM para outros programas e preparando novamente no modo CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "A disponibilidade de VRAM permaneceu estável. Preparando novamente no modo GPU.",
     "{model} VRAM 보호 전환 중": "Alternando {model} para o modo de proteção de VRAM",
-    "{model} GPU 모드 복귀 중": "Retornando {model} ao modo GPU"
+    "{model} GPU 모드 복귀 중": "Retornando {model} ao modo GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Verificando atualizações da versão beta aberta..."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1038,7 +1038,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "संस्करण",
     "자동 업데이트": "स्वचालित अपडेट",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "नए संस्करण स्वतः जाँचें और उपलब्ध होने पर सूचित करें।",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "निजी बीटा अपडेट जाँचे जा रहे हैं...",
     "현재 베타 버전이 최신입니다.": "मौजूदा बीटा संस्करण नवीनतम है।",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "अपडेट इंस्टॉलेशन शुरू हो गया है। ऐप शीघ्र रीस्टार्ट होगा।",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "अपडेट हस्ताक्षर सत्यापित करके इंस्टॉल किया जा रहा है...",
@@ -1282,7 +1281,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "मौजूदा अनुवाद पूरा हो गया है। अन्य प्रोग्रामों के लिए VRAM खाली की जा रही है और CPU/RAM मोड में फिर से तैयारी हो रही है।",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "VRAM की उपलब्धता स्थिर बनी हुई है। GPU मोड में फिर से तैयारी हो रही है।",
     "{model} VRAM 보호 전환 중": "{model} को VRAM सुरक्षा मोड में स्विच किया जा रहा है",
-    "{model} GPU 모드 복귀 중": "{model} को GPU मोड में वापस लाया जा रहा है"
+    "{model} GPU 모드 복귀 중": "{model} को GPU मोड में वापस लाया जा रहा है",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "ओपन बीटा अपडेट की जाँच की जा रही है..."
   },
   "es-419": {
     "설정": "Configuración",
@@ -1466,7 +1466,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Versión",
     "자동 업데이트": "Actualizaciones automáticas",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Busca nuevas versiones automáticamente y te avisa cuando hay una disponible.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Buscando actualizaciones beta privadas...",
     "현재 베타 버전이 최신입니다.": "La versión beta actual está al día.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Comenzó la instalación de la actualización. La app se reiniciará pronto.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Verificando la firma de la actualización e instalando...",
@@ -1710,7 +1709,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "La traducción actual finalizó. Liberando VRAM para otros programas y preparando nuevamente el modo CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "La disponibilidad de VRAM se ha mantenido estable. Preparando nuevamente el modo GPU.",
     "{model} VRAM 보호 전환 중": "Cambiando {model} al modo de protección de VRAM",
-    "{model} GPU 모드 복귀 중": "Devolviendo {model} al modo GPU"
+    "{model} GPU 모드 복귀 중": "Devolviendo {model} al modo GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Buscando actualizaciones de la beta abierta..."
   },
   "de": {
     "설정": "Einstellungen",
@@ -1894,7 +1894,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Version",
     "자동 업데이트": "Automatische Updates",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Automatisch nach neuen Versionen suchen und dich benachrichtigen, sobald eine verfügbar ist.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Private Beta-Updates werden gesucht...",
     "현재 베타 버전이 최신입니다.": "Die aktuelle Beta-Version ist auf dem neuesten Stand.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Die Update-Installation wurde gestartet. Die App wird in Kürze neu gestartet.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Update-Signatur wird geprüft und das Update installiert...",
@@ -2138,7 +2137,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Die aktuelle Übersetzung ist abgeschlossen. VRAM wird für andere Programme freigegeben und der CPU/RAM-Modus wird neu vorbereitet.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Die VRAM-Verfügbarkeit ist wieder stabil. Der GPU-Modus wird neu vorbereitet.",
     "{model} VRAM 보호 전환 중": "{model} wird in den VRAM-Schutzmodus versetzt",
-    "{model} GPU 모드 복귀 중": "{model} kehrt in den GPU-Modus zurück"
+    "{model} GPU 모드 복귀 중": "{model} kehrt in den GPU-Modus zurück",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Suche nach Open-Beta-Updates..."
   },
   "ru": {
     "설정": "Настройки",
@@ -2322,7 +2322,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Версия",
     "자동 업데이트": "Автоматические обновления",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Автоматически проверять наличие новых версий и уведомлять, когда они доступны.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Проверка обновлений закрытой бета-версии...",
     "현재 베타 버전이 최신입니다.": "Установлена последняя бета-версия.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Установка обновления началась. Приложение скоро перезапустится.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Проверка подписи обновления и установка...",
@@ -2566,7 +2565,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Текущий перевод завершён. VRAM освобождается для других программ, выполняется повторная подготовка в режиме CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Объём свободной VRAM остаётся стабильным. Выполняется повторная подготовка в режиме GPU.",
     "{model} VRAM 보호 전환 중": "Переключение {model} в режим защиты VRAM",
-    "{model} GPU 모드 복귀 중": "Возврат {model} в режим GPU"
+    "{model} GPU 모드 복귀 중": "Возврат {model} в режим GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Проверка обновлений открытой бета-версии..."
   },
   "id": {
     "설정": "Pengaturan",
@@ -2750,7 +2750,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Versi",
     "자동 업데이트": "Pembaruan otomatis",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Periksa versi baru secara otomatis dan beri tahu jika tersedia.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Memeriksa pembaruan beta privat...",
     "현재 베타 버전이 최신입니다.": "Versi beta saat ini sudah terbaru.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Instalasi pembaruan telah dimulai. Aplikasi akan segera dimulai ulang.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Memverifikasi tanda tangan pembaruan dan menginstal...",
@@ -2994,7 +2993,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Terjemahan saat ini selesai. Mengosongkan VRAM untuk program lain dan menyiapkan kembali mode CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Ketersediaan VRAM tetap stabil. Menyiapkan kembali mode GPU.",
     "{model} VRAM 보호 전환 중": "Mengalihkan {model} ke mode perlindungan VRAM",
-    "{model} GPU 모드 복귀 중": "Mengembalikan {model} ke mode GPU"
+    "{model} GPU 모드 복귀 중": "Mengembalikan {model} ke mode GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Memeriksa pembaruan Open Beta..."
   },
   "fr": {
     "설정": "Paramètres",
@@ -3178,7 +3178,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Version",
     "자동 업데이트": "Mises à jour automatiques",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Recherchez automatiquement les nouvelles versions et recevez une notification lorsqu’une version est disponible.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Recherche de mises à jour bêta privées...",
     "현재 베타 버전이 최신입니다.": "La version bêta actuelle est à jour.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "L’installation de la mise à jour a commencé. L’application redémarrera sous peu.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Vérification de la signature de la mise à jour et installation...",
@@ -3422,7 +3421,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "La traduction en cours est terminée. Libération de la VRAM pour d’autres programmes et nouvelle préparation en mode CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "La disponibilité de la VRAM est restée stable. Nouvelle préparation en mode GPU.",
     "{model} VRAM 보호 전환 중": "Passage de {model} en mode de protection de la VRAM",
-    "{model} GPU 모드 복귀 중": "Retour de {model} en mode GPU"
+    "{model} GPU 모드 복귀 중": "Retour de {model} en mode GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Recherche des mises à jour de la bêta ouverte..."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -3606,7 +3606,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Sürüm",
     "자동 업데이트": "Otomatik güncellemeler",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Yeni sürümleri otomatik olarak kontrol eder ve kullanılabilir olduğunda bildirir.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Özel beta güncellemeleri kontrol ediliyor...",
     "현재 베타 버전이 최신입니다.": "Mevcut beta sürümü güncel.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Güncelleme kurulumu başladı. Uygulama kısa süre içinde yeniden başlatılacak.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Güncelleme imzası doğrulanıyor ve yükleniyor...",
@@ -3850,7 +3849,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Mevcut çeviri tamamlandı. Diğer programlar için VRAM boşaltılıyor ve CPU/RAM modunda yeniden hazırlanılıyor.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "VRAM kullanılabilirliği kararlı biçimde düzeldi. GPU modunda yeniden hazırlanılıyor.",
     "{model} VRAM 보호 전환 중": "{model}, VRAM koruma moduna geçiriliyor",
-    "{model} GPU 모드 복귀 중": "{model}, GPU moduna döndürülüyor"
+    "{model} GPU 모드 복귀 중": "{model}, GPU moduna döndürülüyor",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Açık Beta güncellemeleri kontrol ediliyor..."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4034,7 +4034,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "الإصدار",
     "자동 업데이트": "التحديثات التلقائية",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "البحث تلقائيًا عن الإصدارات الجديدة وإشعارك عند توفر أحدها.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "جارٍ البحث عن تحديثات الإصدار التجريبي الخاص...",
     "현재 베타 버전이 최신입니다.": "الإصدار التجريبي الحالي محدّث.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "بدأ تثبيت التحديث. سيُعاد تشغيل التطبيق قريبًا.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "جارٍ التحقق من توقيع التحديث وتثبيته...",
@@ -4278,7 +4277,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "اكتملت الترجمة الحالية. جارٍ تحرير VRAM للبرامج الأخرى وإعادة الاستعداد في وضع CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "ظل توفر VRAM مستقرًا. جارٍ إعادة الاستعداد في وضع GPU.",
     "{model} VRAM 보호 전환 중": "جارٍ تحويل {model} إلى وضع حماية VRAM",
-    "{model} GPU 모드 복귀 중": "جارٍ إعادة {model} إلى وضع GPU"
+    "{model} GPU 모드 복귀 중": "جارٍ إعادة {model} إلى وضع GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "جارٍ التحقق من تحديثات الإصدار التجريبي المفتوح..."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -4462,7 +4462,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Phiên bản",
     "자동 업데이트": "Tự động cập nhật",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Tự động kiểm tra phiên bản mới và thông báo khi có bản mới.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Đang kiểm tra bản cập nhật beta riêng tư...",
     "현재 베타 버전이 최신입니다.": "Phiên bản beta hiện tại đã là mới nhất.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Đã bắt đầu cài đặt bản cập nhật. Ứng dụng sẽ sớm khởi động lại.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Đang xác minh chữ ký bản cập nhật và cài đặt...",
@@ -4706,7 +4705,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Bản dịch hiện tại đã hoàn tất. Đang giải phóng VRAM cho các chương trình khác và chuẩn bị lại ở chế độ CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Dung lượng VRAM trống đã duy trì ổn định. Đang chuẩn bị lại ở chế độ GPU.",
     "{model} VRAM 보호 전환 중": "Đang chuyển {model} sang chế độ bảo vệ VRAM",
-    "{model} GPU 모드 복귀 중": "Đang đưa {model} trở lại chế độ GPU"
+    "{model} GPU 모드 복귀 중": "Đang đưa {model} trở lại chế độ GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Đang kiểm tra bản cập nhật Open Beta..."
   },
   "it": {
     "설정": "Impostazioni",
@@ -4890,7 +4890,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Versione",
     "자동 업데이트": "Aggiornamenti automatici",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Controlla automaticamente la disponibilità di nuove versioni e avvisami quando ne è disponibile una.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Controllo degli aggiornamenti beta privati...",
     "현재 베타 버전이 최신입니다.": "La versione beta attuale è aggiornata.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "L'installazione dell'aggiornamento è iniziata. L'app si riavvierà a breve.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Verifica della firma dell'aggiornamento e installazione...",
@@ -5134,7 +5133,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "La traduzione corrente è completa. Liberazione della VRAM per altri programmi e nuova preparazione in modalità CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "La disponibilità della VRAM è rimasta stabile. Nuova preparazione in modalità GPU.",
     "{model} VRAM 보호 전환 중": "Passaggio di {model} alla modalità di protezione della VRAM",
-    "{model} GPU 모드 복귀 중": "Ritorno di {model} alla modalità GPU"
+    "{model} GPU 모드 복귀 중": "Ritorno di {model} alla modalità GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Controllo degli aggiornamenti Open Beta..."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -5318,7 +5318,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Wersja",
     "자동 업데이트": "Automatyczne aktualizacje",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Automatycznie sprawdzaj dostępność nowych wersji i powiadamiaj o nich.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Sprawdzanie aktualizacji prywatnej wersji beta...",
     "현재 베타 버전이 최신입니다.": "Obecna wersja beta jest aktualna.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Rozpoczęto instalowanie aktualizacji. Aplikacja wkrótce uruchomi się ponownie.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Weryfikowanie podpisu aktualizacji i instalowanie...",
@@ -5562,7 +5561,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Bieżące tłumaczenie zostało ukończone. Zwalnianie VRAM dla innych programów i ponowne przygotowywanie w trybie CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Dostępność VRAM pozostaje stabilna. Ponowne przygotowywanie w trybie GPU.",
     "{model} VRAM 보호 전환 중": "Przełączanie {model} w tryb ochrony VRAM",
-    "{model} GPU 모드 복귀 중": "Przywracanie {model} do trybu GPU"
+    "{model} GPU 모드 복귀 중": "Przywracanie {model} do trybu GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Sprawdzanie aktualizacji Open Beta..."
   },
   "uk": {
     "설정": "Налаштування",
@@ -5746,7 +5746,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Версія",
     "자동 업데이트": "Автоматичні оновлення",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Автоматично перевіряти наявність нових версій і сповіщати, коли доступне оновлення.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Перевірка оновлень приватної бета-версії...",
     "현재 베타 버전이 최신입니다.": "Поточна бета-версія актуальна.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Встановлення оновлення розпочато. Програма незабаром перезапуститься.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Перевірка підпису оновлення та встановлення...",
@@ -5990,7 +5989,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Поточний переклад завершено. Звільнення VRAM для інших програм і повторна підготовка в режимі CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Обсяг вільної VRAM залишається стабільним. Повторна підготовка в режимі GPU.",
     "{model} VRAM 보호 전환 중": "Перемикання {model} у режим захисту VRAM",
-    "{model} GPU 모드 복귀 중": "Повернення {model} у режим GPU"
+    "{model} GPU 모드 복귀 중": "Повернення {model} у режим GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Перевірка оновлень відкритої бета-версії..."
   },
   "ms": {
     "설정": "Tetapan",
@@ -6174,7 +6174,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Versi",
     "자동 업데이트": "Kemas kini automatik",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Semak versi baharu secara automatik dan maklumkan apabila tersedia.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Memeriksa kemas kini beta peribadi...",
     "현재 베타 버전이 최신입니다.": "Versi beta semasa adalah terkini.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Pemasangan kemas kini telah bermula. Aplikasi akan dimulakan semula sebentar lagi.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Mengesahkan tandatangan kemas kini dan memasang...",
@@ -6418,7 +6417,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Terjemahan semasa selesai. Mengosongkan VRAM untuk program lain dan membuat persediaan semula dalam mod CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Ketersediaan VRAM kekal stabil. Membuat persediaan semula dalam mod GPU.",
     "{model} VRAM 보호 전환 중": "Menukar {model} kepada mod perlindungan VRAM",
-    "{model} GPU 모드 복귀 중": "Mengembalikan {model} kepada mod GPU"
+    "{model} GPU 모드 복귀 중": "Mengembalikan {model} kepada mod GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Sedang menyemak kemas kini Open Beta..."
   },
   "nl": {
     "설정": "Instellingen",
@@ -6602,7 +6602,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Versie",
     "자동 업데이트": "Automatische updates",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Controleer automatisch op nieuwe versies en meld wanneer er een beschikbaar is.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Controleren op privé-bèta-updates...",
     "현재 베타 버전이 최신입니다.": "De huidige bètaversie is up-to-date.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "De installatie van de update is gestart. De app wordt zo opnieuw gestart.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "De handtekening van de update verifiëren en installeren...",
@@ -6846,7 +6845,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "De huidige vertaling is voltooid. VRAM wordt vrijgemaakt voor andere programma's en de CPU/RAM-modus wordt opnieuw voorbereid.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Er blijft voldoende VRAM beschikbaar. De GPU-modus wordt opnieuw voorbereid.",
     "{model} VRAM 보호 전환 중": "{model} overschakelen naar VRAM-beschermingsmodus",
-    "{model} GPU 모드 복귀 중": "{model} terugzetten naar GPU-modus"
+    "{model} GPU 모드 복귀 중": "{model} terugzetten naar GPU-modus",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Controleren op Open Beta-updates..."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -7056,7 +7056,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "เวอร์ชัน",
     "자동 업데이트": "อัปเดตอัตโนมัติ",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "ตรวจหาเวอร์ชันใหม่โดยอัตโนมัติและแจ้งเมื่อพร้อมใช้งาน",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "กำลังตรวจหาการอัปเดตเบต้าส่วนตัว...",
     "현재 베타 버전이 최신입니다.": "เวอร์ชันเบต้าปัจจุบันเป็นเวอร์ชันล่าสุดแล้ว",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "เริ่มติดตั้งการอัปเดตแล้ว แอปจะเริ่มใหม่ในอีกสักครู่",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "กำลังตรวจสอบลายเซ็นการอัปเดตและติดตั้ง...",
@@ -7274,7 +7273,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "การแปลปัจจุบันเสร็จแล้ว กำลังคืน VRAM ให้โปรแกรมอื่นและเตรียมทำงานอีกครั้งในโหมด CPU/RAM",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "VRAM มีพื้นที่ว่างอย่างต่อเนื่อง กำลังเตรียมทำงานอีกครั้งในโหมด GPU",
     "{model} VRAM 보호 전환 중": "กำลังเปลี่ยน {model} เป็นโหมดป้องกัน VRAM",
-    "{model} GPU 모드 복귀 중": "กำลังเปลี่ยน {model} กลับเป็นโหมด GPU"
+    "{model} GPU 모드 복귀 중": "กำลังเปลี่ยน {model} กลับเป็นโหมด GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "กำลังตรวจสอบการอัปเดต Open Beta..."
   },
   "fil": {
     "설정": "Mga Setting",
@@ -7484,7 +7484,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Bersyon",
     "자동 업데이트": "Mga awtomatikong update",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Awtomatikong tingnan kung may bagong bersyon at abisuhan ka kapag mayroon.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Sinusuri ang mga update sa pribadong beta...",
     "현재 베타 버전이 최신입니다.": "Napapanahon ang kasalukuyang bersyon ng beta.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Nagsimula na ang pag-install ng update. Magre-restart ang app maya-maya.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Sinusuri ang lagda ng update at ini-install...",
@@ -7702,7 +7701,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Tapos na ang kasalukuyang pagsasalin. Nagbabakante ng VRAM para sa ibang mga program at muling naghahanda sa CPU/RAM mode.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Nanatiling sapat at matatag ang VRAM. Muling naghahanda sa GPU mode.",
     "{model} VRAM 보호 전환 중": "Inililipat ang {model} sa VRAM protection mode",
-    "{model} GPU 모드 복귀 중": "Ibinabalik ang {model} sa GPU mode"
+    "{model} GPU 모드 복귀 중": "Ibinabalik ang {model} sa GPU mode",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Tinitingnan ang mga update sa Open Beta..."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -7912,7 +7912,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "সংস্করণ",
     "자동 업데이트": "স্বয়ংক্রিয় আপডেট",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "নতুন সংস্করণ স্বয়ংক্রিয়ভাবে দেখুন এবং উপলভ্য হলে জানান।",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "প্রাইভেট বিটা আপডেট দেখা হচ্ছে...",
     "현재 베타 버전이 최신입니다.": "বর্তমান বিটা সংস্করণটি হালনাগাদ।",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "আপডেট ইনস্টল শুরু হয়েছে। অ্যাপটি শিগগিরই আবার চালু হবে।",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "আপডেটের স্বাক্ষর যাচাই করে ইনস্টল করা হচ্ছে...",
@@ -8130,7 +8129,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "বর্তমান অনুবাদ সম্পন্ন হয়েছে। অন্যান্য প্রোগ্রামের জন্য VRAM খালি করে CPU/RAM মোডে আবার প্রস্তুত হচ্ছে।",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "VRAM-এর প্রাপ্যতা স্থিতিশীল রয়েছে। GPU মোডে আবার প্রস্তুত হচ্ছে।",
     "{model} VRAM 보호 전환 중": "{model}-কে VRAM সুরক্ষা মোডে নেওয়া হচ্ছে",
-    "{model} GPU 모드 복귀 중": "{model}-কে GPU মোডে ফিরিয়ে নেওয়া হচ্ছে"
+    "{model} GPU 모드 복귀 중": "{model}-কে GPU মোডে ফিরিয়ে নেওয়া হচ্ছে",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "ওপেন বেটা আপডেট খোঁজা হচ্ছে..."
   },
   "ur": {
     "설정": "ترتیبات",
@@ -8340,7 +8340,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "ورژن",
     "자동 업데이트": "خودکار اپ ڈیٹس",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "نئے ورژنز خودکار طور پر چیک کریں اور دستیاب ہونے پر اطلاع دیں۔",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "نجی بیٹا اپ ڈیٹس چیک کی جا رہی ہیں...",
     "현재 베타 버전이 최신입니다.": "موجودہ بیٹا ورژن تازہ ترین ہے۔",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "اپ ڈیٹ کی انسٹالیشن شروع ہو گئی ہے۔ ایپ جلد دوبارہ چلے گی۔",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "اپ ڈیٹ کے دستخط کی تصدیق اور انسٹالیشن جاری ہے...",
@@ -8558,7 +8557,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "موجودہ ترجمہ مکمل ہو گیا ہے۔ دوسرے پروگراموں کے لیے VRAM خالی کی جا رہی ہے اور CPU/RAM موڈ میں دوبارہ تیاری ہو رہی ہے۔",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "VRAM کی دستیابی مسلسل مستحکم رہی ہے۔ GPU موڈ میں دوبارہ تیاری ہو رہی ہے۔",
     "{model} VRAM 보호 전환 중": "{model} کو VRAM تحفظ موڈ پر منتقل کیا جا رہا ہے",
-    "{model} GPU 모드 복귀 중": "{model} کو GPU موڈ پر واپس لایا جا رہا ہے"
+    "{model} GPU 모드 복귀 중": "{model} کو GPU موڈ پر واپس لایا جا رہا ہے",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "اوپن بیٹا اپ ڈیٹس کی جانچ ہو رہی ہے..."
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -8768,7 +8768,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "பதிப்பு",
     "자동 업데이트": "தானியங்கு புதுப்பிப்புகள்",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "புதிய பதிப்புகளைத் தானாகச் சரிபார்த்து, ஒன்று கிடைக்கும்போது அறிவிக்கவும்.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "தனிப்பட்ட பீட்டா புதுப்பிப்புகள் சரிபார்க்கப்படுகின்றன...",
     "현재 베타 버전이 최신입니다.": "தற்போதைய பீட்டா பதிப்பு புதுப்பித்த நிலையில் உள்ளது.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "புதுப்பிப்பு நிறுவல் தொடங்கியது. செயலி விரைவில் மறுதொடக்கம் செய்யப்படும்.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "புதுப்பிப்பின் கையொப்பம் சரிபார்க்கப்பட்டு நிறுவப்படுகிறது...",
@@ -8986,7 +8985,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "தற்போதைய மொழிபெயர்ப்பு முடிந்தது. பிற நிரல்களுக்காக VRAM-ஐ விடுவித்து, CPU/RAM பயன்முறையில் மீண்டும் தயாராகிறது.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "VRAM தொடர்ந்து நிலையாகக் கிடைக்கிறது. GPU பயன்முறையில் மீண்டும் தயாராகிறது.",
     "{model} VRAM 보호 전환 중": "{model}-ஐ VRAM பாதுகாப்புப் பயன்முறைக்கு மாற்றுகிறது",
-    "{model} GPU 모드 복귀 중": "{model}-ஐ GPU பயன்முறைக்குத் திருப்புகிறது"
+    "{model} GPU 모드 복귀 중": "{model}-ஐ GPU பயன்முறைக்குத் திருப்புகிறது",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "திறந்த பீட்டா புதுப்பிப்புகளைச் சரிபார்க்கிறது..."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -9196,7 +9196,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "نسخه",
     "자동 업데이트": "به‌روزرسانی خودکار",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "نسخه‌های جدید را به‌طور خودکار بررسی و در صورت موجود بودن اطلاع‌رسانی کنید.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "در حال بررسی به‌روزرسانی‌های بتای خصوصی...",
     "현재 베타 버전이 최신입니다.": "نسخه بتای فعلی به‌روز است.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "نصب به‌روزرسانی آغاز شد. برنامه به‌زودی دوباره اجرا می‌شود.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "در حال تأیید امضای به‌روزرسانی و نصب...",
@@ -9414,7 +9413,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "ترجمهٔ فعلی کامل شد. در حال آزادسازی VRAM برای برنامه‌های دیگر و آماده‌سازی مجدد در حالت CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "فضای VRAM به‌طور پایدار در دسترس مانده است. در حال آماده‌سازی مجدد در حالت GPU.",
     "{model} VRAM 보호 전환 중": "در حال انتقال {model} به حالت محافظت از VRAM",
-    "{model} GPU 모드 복귀 중": "در حال بازگرداندن {model} به حالت GPU"
+    "{model} GPU 모드 복귀 중": "در حال بازگرداندن {model} به حالت GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "در حال بررسی به‌روزرسانی‌های نسخه بتای عمومی..."
   },
   "he": {
     "설정": "הגדרות",
@@ -9624,7 +9624,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "גרסה",
     "자동 업데이트": "עדכונים אוטומטיים",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "בדיקה אוטומטית של גרסאות חדשות והודעה כשאחת זמינה.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "בודק עדכוני בטא פרטית...",
     "현재 베타 버전이 최신입니다.": "גרסת הבטא הנוכחית עדכנית.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "התקנת העדכון החלה. היישום יופעל מחדש בקרוב.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "מאמת את חתימת העדכון ומתקין...",
@@ -9842,7 +9841,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "התרגום הנוכחי הושלם. ה-VRAM משתחרר לטובת תוכנות אחרות ומתבצעת הכנה מחדש במצב CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "זמינות ה-VRAM נשארה יציבה. מתבצעת הכנה מחדש במצב GPU.",
     "{model} VRAM 보호 전환 중": "מעביר את {model} למצב הגנת VRAM",
-    "{model} GPU 모드 복귀 중": "מחזיר את {model} למצב GPU"
+    "{model} GPU 모드 복귀 중": "מחזיר את {model} למצב GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "בודק אם קיימים עדכונים לגרסת הבטא הפתוחה..."
   },
   "cs": {
     "설정": "Nastavení",
@@ -10052,7 +10052,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "버전": "Verze",
     "자동 업데이트": "Automatické aktualizace",
     "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": "Automaticky vyhledávat nové verze a upozornit, když je některá dostupná.",
-    "비공개 베타 업데이트를 확인하고 있습니다...": "Kontrola aktualizací soukromé beta verze...",
     "현재 베타 버전이 최신입니다.": "Aktuální beta verze je nejnovější.",
     "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": "Instalace aktualizace byla zahájena. Aplikace se za chvíli restartuje.",
     "업데이트 서명을 확인하고 설치하고 있습니다...": "Ověřování podpisu aktualizace a instalace...",
@@ -10270,6 +10269,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "현재 번역을 마쳤습니다. 다른 프로그램을 위해 VRAM을 비우고 CPU/RAM 모드로 다시 준비하고 있습니다.": "Aktuální překlad je dokončen. Uvolňuje se VRAM pro jiné programy a znovu se připravuje režim CPU/RAM.",
     "VRAM 여유가 안정적으로 회복되어 GPU 모드로 다시 준비하고 있습니다.": "Dostupnost VRAM zůstává stabilní. Znovu se připravuje režim GPU.",
     "{model} VRAM 보호 전환 중": "Přepínání modelu {model} do režimu ochrany VRAM",
-    "{model} GPU 모드 복귀 중": "Návrat modelu {model} do režimu GPU"
+    "{model} GPU 모드 복귀 중": "Návrat modelu {model} do režimu GPU",
+    "오픈 베타 업데이트를 확인하고 있습니다...": "Kontrola aktualizací otevřené betaverze..."
   }
 });

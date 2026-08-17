@@ -691,7 +691,7 @@ async function checkForUpdates(silent = false) {
   }
   state.updateCheckActive = true;
   elements.checkUpdate.disabled = true;
-  if (!silent) setLocalizedText(elements.updateStatus, "비공개 베타 업데이트를 확인하고 있습니다...");
+  if (!silent) setLocalizedText(elements.updateStatus, "오픈 베타 업데이트를 확인하고 있습니다...");
   try {
     const result = await invoke("update_check");
     if (result.available) {

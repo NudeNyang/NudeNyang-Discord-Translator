@@ -259,6 +259,11 @@ test("FAQ는 앱 자체와 외부 번역 서비스의 비용을 구분한다", (
 
 test("히어로에는 다운로드 CTA만 노출한다", () => {
   assert.match(html, /class="button primary"[^>]*>Windows Beta 다운로드<\/a>/);
+  assert.equal(
+    (html.match(/href="https:\/\/github\.com\/NudeNyang\/NudeNyang-Discord-Translator\/releases"/g) ?? []).length,
+    2,
+  );
+  assert.doesNotMatch(html, /NudeNyang-Translator\/releases/);
   assert.doesNotMatch(html, /class="button secondary"[^>]*href="#how-it-works"/);
   assert.doesNotMatch(html, />작동 방식 보기<\/a>/);
   assert.doesNotMatch(html, /class="download-section"/);

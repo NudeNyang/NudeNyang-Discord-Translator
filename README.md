@@ -25,6 +25,10 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 > [!IMPORTANT]
 > This is an unofficial beta. Discord does not provide a supported client-extension API for this integration, so a Discord update can break it and using it may carry policy risk. Live translation stays off until the user accepts that notice.
 
+## Download the Open Beta
+
+Download the Windows 10/11 x64 installer from [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases). This is an open beta rather than a finished stable release, so verify important translations against the original text.
+
 ## See it in action
 
 https://github.com/user-attachments/assets/ca870b61-7b9c-489c-af42-ae66805f6bd5
@@ -112,7 +116,7 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 - Memory and SQLite caching separated by engine, language, prompt, register, and renderer version
 - Automatic GPU fallback to a RAM-conscious CPU mode when acceleration is unavailable
 - Configurable global shortcuts, synchronized tray state, and a single settings window
-- Signed private-beta updates distributed through Cloudflare R2
+- Signed Open Beta updates distributed through GitHub Releases
 
 The complete language catalog and provider notes are in [docs/LANGUAGES.md](docs/LANGUAGES.md).
 
@@ -146,7 +150,7 @@ cargo build --release
 ```
 
 <details>
-<summary>Windows packaging and private-beta deployment</summary>
+<summary>Windows packaging and Open Beta deployment</summary>
 
 The normal ZIP contains the Tauri/Rust app, llama.cpp, the Microsoft Visual C++ app-local runtime, and Hy-MT2 1.8B. Add `-IncludeLargeModel` to package the 7B model as well.
 
@@ -154,12 +158,11 @@ The normal ZIP contains the Tauri/Rust app, llama.cpp, the Microsoft Visual C++ 
 powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
 ```
 
-Private beta builds use a signed NSIS installer and Cloudflare R2. Signing keys, beta tokens, and invite links stay outside the repository under `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`.
+Open Beta builds use a Tauri updater-signed NSIS installer and GitHub Releases. The updater signature verifies artifact integrity but is separate from Microsoft Authenticode code signing. The updater signing key stays outside the repository under `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`. Version 0.5.14 is a one-time Cloudflare R2 bridge that moves existing private-beta installations to the public GitHub update channel.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/setup_beta_r2.ps1
-powershell -ExecutionPolicy Bypass -File scripts/package_beta.ps1
-powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
+powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
+powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
 </details>

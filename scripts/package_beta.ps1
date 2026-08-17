@@ -1,7 +1,8 @@
 param(
     [string]$UpdateEndpoint = $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT,
     [string]$BetaToken = $env:NUDE_TRANSLATOR_BETA_TOKEN,
-    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('VlJBTSDsl6zsnKDrpbwg6rCQ7KeA7ZW0IOqyjOyehOqzvCDri6Trpbgg7ZSE66Gc6re4656o7J2EIOyasOyEoCDrs7TtmLjtlZjqs6AsIOuyiOyXrSDspJHri6gg7JeG7J20IEdQVeyZgCBDUFUvUkFNIOyCrOydtOulvCDslYjsoJXsoIHsnLzroZwg7KCE7ZmY7ZWY64qUIDAuNS4xMyDrsqDtg4A=')),
+    [string]$ReleaseNotes = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('6riw7KG0IOu5hOqzteqwnCDrsqDtg4Ag7IKs7Jqp7J6Q66W8IEdpdEh1YiDsmKTtlIgg67Kg7YOAIOyXheuNsOydtO2KuCDssYTrhJDroZwg7JWI7KCE7ZWY6rKMIOyXsOqysO2VmOuKlCAwLjUuMTQg7KCE7ZmYIOuyhOyghA==')),
+    [switch]$PublicUpdater,
     [switch]$IncludeDefaultModel,
     [switch]$SkipBuild
 )
@@ -26,13 +27,13 @@ $Version = [string]$TauriConfig.version
 if (-not $UpdateEndpoint -and (Test-Path -LiteralPath $EndpointFile)) {
     $UpdateEndpoint = (Get-Content -Raw -LiteralPath $EndpointFile).Trim()
 }
-if (-not $BetaToken -and (Test-Path -LiteralPath $TokenFile)) {
+if (-not $PublicUpdater -and -not $BetaToken -and (Test-Path -LiteralPath $TokenFile)) {
     $BetaToken = (Get-Content -Raw -LiteralPath $TokenFile).Trim()
 }
 if (-not $UpdateEndpoint -or $UpdateEndpoint -notmatch '^https://') {
     throw 'HTTPS 업데이트 서버 주소가 없습니다. scripts/setup_beta_r2.ps1을 먼저 실행하십시오.'
 }
-if (-not $BetaToken -or $BetaToken.Length -lt 32) {
+if (-not $PublicUpdater -and (-not $BetaToken -or $BetaToken.Length -lt 32)) {
     throw '32자 이상의 베타 업데이트 토큰이 없습니다. scripts/setup_beta_r2.ps1을 먼저 실행하십시오.'
 }
 if (-not (Test-Path -LiteralPath $PrivateKey)) {
@@ -129,7 +130,12 @@ if (-not $SkipBuild) {
     $env:TAURI_SIGNING_PRIVATE_KEY_PATH = $PrivateKey
     $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $PrivateKeyPassword
     $env:NUDE_TRANSLATOR_UPDATE_ENDPOINT = $UpdateEndpoint
-    $env:NUDE_TRANSLATOR_BETA_TOKEN = $BetaToken
+    if ($PublicUpdater) {
+        Remove-Item Env:NUDE_TRANSLATOR_BETA_TOKEN -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:NUDE_TRANSLATOR_BETA_TOKEN = $BetaToken
+    }
     Push-Location $ProjectRoot
     try {
         npm run tauri -- build --bundles nsis
@@ -186,3 +192,4 @@ Write-Host "베타 설치 파일: $ReleaseInstaller"
 Write-Host "업데이트 매니페스트: $ManifestPath"
 Write-Host "설치 파일 크기: $SizeMb MB"
 Write-Host "Hy-MT2 모델 포함: $($IncludeDefaultModel.IsPresent)"
+Write-Host "공개 업데이트 채널: $($PublicUpdater.IsPresent)"

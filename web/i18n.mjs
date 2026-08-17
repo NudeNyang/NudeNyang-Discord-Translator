@@ -227,7 +227,7 @@ export const COPY = Object.freeze({
   "버전": ["Version", "バージョン", "版本"],
   "자동 업데이트": ["Automatic updates", "自動更新", "自动更新"],
   "새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.": ["Automatically check for new versions and notify you when one is available.", "新しいバージョンを自動的に確認し、利用可能になったらお知らせします。", "自动检查新版本，并在可用时通知你。"],
-  "비공개 베타 업데이트를 확인하고 있습니다...": ["Checking for private beta updates...", "非公開ベータ版のアップデートを確認しています…", "正在检查私有测试版更新…"],
+  "오픈 베타 업데이트를 확인하고 있습니다...": ["Checking for Open Beta updates...", "オープンベータ版のアップデートを確認しています…", "正在检查公开测试版更新…"],
   "현재 베타 버전이 최신입니다.": ["The current beta version is up to date.", "現在のベータ版は最新です。", "当前测试版已是最新版本。"],
   "업데이트 설치를 시작했습니다. 앱이 곧 다시 실행됩니다.": ["Update installation has started. The app will restart shortly.", "アップデートのインストールを開始しました。アプリはまもなく再起動します。", "已开始安装更新，应用即将重启。"],
   "업데이트 서명을 확인하고 설치하고 있습니다...": ["Verifying the update signature and installing...", "アップデートの署名を確認してインストールしています…", "正在验证更新签名并安装…"],

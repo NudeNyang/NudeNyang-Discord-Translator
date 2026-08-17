@@ -10,6 +10,14 @@ const releasePaths = readFileSync(
   new URL("../../scripts/release_paths.ps1", import.meta.url),
   "utf8",
 );
+const githubPackaging = readFileSync(
+  new URL("../../scripts/package_github_release.ps1", import.meta.url),
+  "utf8",
+);
+const githubDeployment = readFileSync(
+  new URL("../../scripts/deploy_github_release.ps1", import.meta.url),
+  "utf8",
+);
 
 test("beta packaging updates the renamed developer executable", () => {
   assert.match(betaPackaging, /Sync-DeveloperBuild/);
@@ -35,6 +43,22 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
   assert.ok(encoded, "release notes must use an ASCII-safe UTF-8 representation");
   assert.equal(
     Buffer.from(encoded, "base64").toString("utf8"),
-    "VRAM 여유를 감지해 게임과 다른 프로그램을 우선 보호하고, 번역 중단 없이 GPU와 CPU/RAM 사이를 안정적으로 전환하는 0.5.13 베타",
+    "기존 비공개 베타 사용자를 GitHub 오픈 베타 업데이트 채널로 안전하게 연결하는 0.5.14 전환 버전",
   );
+});
+
+test("R2 bridge builds a public updater without embedding the private beta token", () => {
+  assert.match(betaPackaging, /\[switch\]\$PublicUpdater/);
+  assert.match(betaPackaging, /if \(\$PublicUpdater\)[\s\S]*Remove-Item Env:NUDE_TRANSLATOR_BETA_TOKEN/);
+  assert.match(githubPackaging, /raw\.githubusercontent\.com\/\$Repository\/main\/updates\/beta\/latest\.json/);
+  assert.match(githubPackaging, /'-PublicUpdater'/);
+});
+
+test("GitHub Open Beta artifacts include a signed manifest and checksum", () => {
+  assert.match(githubPackaging, /SHA256SUMS\.txt/);
+  assert.match(githubPackaging, /Get-FileHash[^\r\n]+SHA256/);
+  assert.match(githubDeployment, /gh release create/);
+  assert.match(githubDeployment, /--prerelease/);
+  assert.match(githubDeployment, /SHA256SUMS\.txt/);
+  assert.doesNotMatch(githubDeployment, /--verify-tag/);
 });

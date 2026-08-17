@@ -21,6 +21,10 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 > [!IMPORTANT]
 > 이 프로그램은 비공식 베타입니다. Discord가 지원하는 클라이언트 확장 방식이 아니므로 업데이트 뒤에 동작이 깨질 수 있고 정책상 위험도 있습니다. 실시간 번역은 사용자가 이 내용을 확인하고 동의하기 전에는 켜지지 않습니다.
 
+## 오픈 베타 다운로드
+
+[GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases)에서 Windows 10/11 x64 설치 파일을 받을 수 있습니다. 오픈 베타는 완성된 정식판이 아니므로 중요한 대화에서는 번역 결과를 원문과 함께 확인해 주세요.
+
 ## 동작 화면
 
 https://github.com/user-attachments/assets/ca870b61-7b9c-489c-af42-ae66805f6bd5
@@ -108,7 +112,7 @@ Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemin
 - 엔진·언어·프롬프트·말투·렌더러 버전별 메모리 및 SQLite 캐시
 - GPU 가속을 쓸 수 없을 때 메모리 점유를 줄인 CPU 모드로 자동 전환
 - 전역 단축키, 트레이 상태 동기화, 설정창 단일 인스턴스
-- Cloudflare R2를 통한 서명된 비공개 베타 업데이트
+- GitHub Releases를 통한 서명된 오픈 베타 업데이트
 
 전체 언어 목록과 공급자별 안내는 [docs/LANGUAGES.md](docs/LANGUAGES.md)에서 볼 수 있습니다.
 
@@ -142,7 +146,7 @@ cargo build --release
 ```
 
 <details>
-<summary>Windows 패키징과 비공개 베타 배포</summary>
+<summary>Windows 패키징과 오픈 베타 배포</summary>
 
 일반 ZIP에는 Tauri/Rust 앱, llama.cpp, Microsoft Visual C++ 앱 로컬 런타임, Hy-MT2 1.8B가 들어갑니다. 7B 모델까지 묶으려면 `-IncludeLargeModel`을 추가합니다.
 
@@ -150,12 +154,11 @@ cargo build --release
 powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
 ```
 
-비공개 베타는 서명된 NSIS 설치 파일과 Cloudflare R2를 사용합니다. 서명 키, 베타 토큰, 초대 링크는 저장소가 아닌 `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`에 보관합니다.
+오픈 베타는 Tauri 업데이트 서명을 적용한 NSIS 설치 파일과 GitHub Releases를 사용합니다. 업데이트 서명은 설치 파일의 무결성을 검증하지만 Microsoft Authenticode 코드 서명과는 별개입니다. 업데이트 서명 키는 저장소가 아닌 `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`에 보관합니다. 0.5.14는 기존 비공개 베타 설치본을 공개 GitHub 업데이트 채널로 옮기는 일회성 Cloudflare R2 연결 버전입니다.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/setup_beta_r2.ps1
-powershell -ExecutionPolicy Bypass -File scripts/package_beta.ps1
-powershell -ExecutionPolicy Bypass -File scripts/deploy_beta_release.ps1
+powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
+powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
 </details>
