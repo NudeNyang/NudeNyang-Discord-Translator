@@ -115,6 +115,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-panel .nt-dict-entry-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:7px;margin-bottom:6px}
       #nt-dictionary-panel .nt-dict-entry-title strong{font-size:17px;line-height:1.3;letter-spacing:-.015em}
       #nt-dictionary-panel .nt-dict-entry-title span{color:var(--text-muted,#949ba4);font-size:12px}
+      #nt-dictionary-panel .nt-dict-entry-title .nt-dict-entry-listen{width:28px;height:28px;margin-inline-start:auto;align-self:center;border-radius:8px;font-size:11px;line-height:1}
       #nt-dictionary-panel .nt-dict-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:7px}
       #nt-dictionary-panel .nt-dict-pos,#nt-dictionary-panel .nt-dict-origin{display:inline-flex;padding:2px 7px;border-radius:6px;background:var(--background-modifier-accent,#ffffff12);color:var(--text-muted,#b5bac1);font-size:11px;font-weight:700}
       #nt-dictionary-panel .nt-dict-origin.automatic{background:color-mix(in srgb,var(--brand-500,#5865f2) 14%,var(--background-modifier-accent,#ffffff12));color:color-mix(in srgb,var(--brand-300,#949cf7) 84%,var(--text-normal,#f2f3f5))}
@@ -330,6 +331,11 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
         const entryTitle = make('div','nt-dict-entry-title');
         entryTitle.append(make('strong','',entry.headword));
         if (entry.reading) entryTitle.append(make('span','',entry.reading));
+        const entryPronounceLabel=`${copy('pronounce')}: ${entry.headword}`;
+        const entryListen=make('button','nt-dict-icon-button nt-dict-entry-listen','▶'); entryListen.type='button';
+        entryListen.setAttribute('aria-label',entryPronounceLabel); entryListen.title=entryPronounceLabel;
+        entryListen.addEventListener('click',()=>speak(entry.headword,entry.language || result?.sourceLanguage));
+        entryTitle.append(entryListen);
         item.append(entryTitle);
       }
       const meta = make('div','nt-dict-meta');
@@ -576,6 +582,15 @@ mod tests {
         assert!(script.contains("setPointerCapture"));
         assert!(!script
             .contains("document.addEventListener('scroll',()=>{closeSelection();closePanel();}"));
+    }
+
+    #[test]
+    fn segmented_entries_have_individual_pronunciation_controls() {
+        let script = dictionary_ui_script(true, "ko", "ko", true);
+
+        assert!(script.contains("nt-dict-entry-listen"));
+        assert!(script.contains("speak(entry.headword,entry.language || result?.sourceLanguage)"));
+        assert!(script.contains("`${copy('pronounce')}: ${entry.headword}`"));
     }
 
     #[test]
