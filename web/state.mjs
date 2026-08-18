@@ -122,6 +122,18 @@ export function shouldPromptRestart(status, flags) {
   );
 }
 
+export function manualDiscordRestartAvailability(status = {}, flags = {}) {
+  const recoveryRequired = Boolean(
+    flags.manualRestartRequired ||
+      (flags.restartAttempted && status.connectionIssue),
+  );
+  const visible = Boolean(recoveryRequired && !status.cdpConnected);
+  return {
+    visible,
+    disabled: visible && Boolean(flags.repairActive || flags.promptActive),
+  };
+}
+
 export function providerOperationAvailability(activeProvider, requestedProvider) {
   const active = String(activeProvider || "");
   return {

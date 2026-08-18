@@ -25,6 +25,39 @@ test("the user-facing product name is NudeNyang Discord Translator", () => {
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });
 
+test("cancelled or failed automatic recovery exposes a quiet manual Discord restart action", () => {
+  assert.match(markup, /id="discord-restart-manual"[^>]*hidden[^>]*>[\s\S]*?class="engine-restart-icon"[\s\S]*?<span>Discord 재시작<\/span>[\s\S]*?<\/button>/);
+  assert.match(markup, /class="engine-restart-icon"[^>]*data-icon="rotate-ccw"[^>]*>[\s\S]*?M3 12a9 9 0 1 0 9-9[\s\S]*?M3 3v5h5/);
+  assert.match(script, /manualDiscordRestartAvailability/);
+  assert.match(script, /invoke\("discord_restart", \{[\s\S]*?expectedProcessId:/);
+  assert.match(script, /title: "Discord를 다시 시작하시겠습니까\?"/);
+  assert.match(script, /dataset\.state = state\.repairActive \? "working" : "idle"/);
+  assert.match(script, /setAttribute\("aria-busy", String\(state\.repairActive\)\)/);
+  assert.match(script, /if \(!confirmed\) \{\s*state\.restartAttempted = true;\s*state\.manualRestartRequired = true;/);
+  assert.match(script, /catch \(error\) \{[\s\S]*?state\.manualRestartRequired = true;[\s\S]*?Discord 자동 재시작 실패/);
+  assert.match(styles, /\.engine-actions\s*\{[^}]*display:\s*flex;[^}]*gap:\s*7px;/s);
+  assert.match(styles, /\.engine-state\s*\{[^}]*gap:\s*9px;[^}]*min-height:\s*38px;[^}]*padding:\s*0 15px;[^}]*border-radius:\s*999px;[^}]*font-size:\s*13px;/s);
+  assert.match(styles, /\.button\.secondary\.engine-restart-button\s*\{[^}]*min-height:\s*38px;[^}]*gap:\s*7px;[^}]*padding:\s*0 12px;[^}]*border-radius:\s*999px;[^}]*border-color:\s*var\(--border\);[^}]*color:\s*var\(--muted\);[^}]*font-size:\s*13px;/s);
+  assert.match(styles, /\.button\.secondary\.engine-restart-button\[hidden\]\s*\{[^}]*display:\s*none;/s);
+  assert.match(styles, /\.engine-restart-icon\s*\{[^}]*width:\s*16px;[^}]*stroke-width:\s*2;/s);
+  assert.match(styles, /\.engine-restart-button\[data-state="working"\] \.engine-restart-icon\s*\{[^}]*animation:\s*engine-restart-spin/s);
+  assert.match(rustMain, /let display_was_enabled = client\.status\(\)\?\.enabled;/);
+  assert.match(rustMain, /client\.set_enabled\(display_was_enabled\)/);
+});
+
+test("the manual Discord restart label uses one language-appropriate typeface", () => {
+  assert.match(styles, /--engine-action-font:\s*"Segoe UI Variable", "Segoe UI", sans-serif;/);
+  assert.match(styles, /:root:lang\(ko\)\s*\{[^}]*--engine-action-font:\s*"Noto Sans KR", "Malgun Gothic", sans-serif;/s);
+  assert.match(styles, /:root:lang\(ja\)\s*\{[^}]*--engine-action-font:\s*"Noto Sans JP", "Yu Gothic UI", "Meiryo UI", sans-serif;/s);
+  assert.match(styles, /:root:lang\(zh-CN\)\s*\{[^}]*--engine-action-font:\s*"Microsoft YaHei UI", "Microsoft YaHei", sans-serif;/s);
+  assert.match(styles, /:root:lang\(zh-TW\)\s*\{[^}]*--engine-action-font:\s*"Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif;/s);
+  assert.match(styles, /:root:is\(:lang\(hi\), :lang\(bn\), :lang\(ta\), :lang\(ur\)\)\s*\{[^}]*--engine-action-font:\s*"Nirmala UI", "Segoe UI", sans-serif;/s);
+  assert.match(styles, /:root:lang\(th\)\s*\{[^}]*--engine-action-font:\s*"Leelawadee UI", "Segoe UI", sans-serif;/s);
+  assert.match(styles, /:root:is\(:lang\(ar\), :lang\(fa\), :lang\(he\)\)\s*\{[^}]*--engine-action-font:\s*"Segoe UI", Tahoma, sans-serif;/s);
+  assert.match(styles, /\.engine-state\s*\{[^}]*font-family:\s*var\(--engine-action-font\);[^}]*font-weight:\s*500;/s);
+  assert.match(styles, /\.button\.secondary\.engine-restart-button\s*\{[^}]*font-family:\s*var\(--engine-action-font\);[^}]*font-weight:\s*500;/s);
+});
+
 test("translation language options keep the shared layout while RTL entries align right", () => {
   assert.match(styles, /\.select-option\s*\{[^}]*text-align:\s*start;/s);
   for (const language of ["ar", "ur", "fa", "he"]) {

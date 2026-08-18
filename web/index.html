@@ -14,9 +14,15 @@
           <h1>설정</h1>
           <p>Discord 메시지·이미지 번역과 앱 동작을 설정합니다.</p>
         </div>
-        <div class="engine-state" id="engine-state" data-state="loading">
-          <span class="state-dot" aria-hidden="true"></span>
-          <span id="engine-state-label">엔진 연결 중</span>
+        <div class="engine-actions">
+          <div class="engine-state" id="engine-state" data-state="loading">
+            <span class="state-dot" aria-hidden="true"></span>
+            <span id="engine-state-label">엔진 연결 중</span>
+          </div>
+          <button class="button secondary engine-restart-button" id="discord-restart-manual" type="button" data-state="idle" aria-busy="false" hidden>
+            <svg class="engine-restart-icon" data-icon="rotate-ccw" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0 -6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <span>Discord 재시작</span>
+          </button>
         </div>
       </header>
 
@@ -138,19 +144,19 @@
                   <div class="panel-subheading"><h3 id="connections-heading">CLI 및 번역 서비스 연결</h3><p>위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.</p></div>
                   <div class="settings-card provider-list">
                     <article class="provider-row" data-provider="chatgpt">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-openai.svg" alt="" /></span><div><div class="provider-title-line"><h3>ChatGPT</h3><span class="provider-use-badge" hidden>현재 사용</span></div><p>GPT-5.6 Luna/Terra</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-openai.svg" alt="" /></span><div><div class="provider-title-line"><h3>ChatGPT</h3><span class="provider-use-badge" hidden>현재 사용</span></div></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Codex CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action provider-icon-button" type="button" aria-label="연결" data-tooltip="연결"><svg class="provider-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg></button><button class="button secondary provider-disconnect provider-icon-button" type="button" aria-label="연결 해제" data-tooltip="연결 해제" hidden><svg class="provider-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 22v-2"/><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/><path d="M20 17h2"/><path d="M2 7h2"/><path d="M7 2v2"/></svg></button></div>
                     </article>
                     <article class="provider-row" data-provider="claude">
-                      <div class="provider-identity"><span class="provider-mark provider-mark-claude" aria-hidden="true"><img src="./assets/provider-claude.svg" alt="" /></span><div><div class="provider-title-line"><h3>Claude</h3><span class="provider-use-badge" hidden>현재 사용</span></div><p>Claude Haiku 4.5</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark provider-mark-claude" aria-hidden="true"><img src="./assets/provider-claude.svg" alt="" /></span><div><div class="provider-title-line"><h3>Claude</h3><span class="provider-use-badge" hidden>현재 사용</span></div></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Claude Code와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action provider-icon-button" type="button" aria-label="연결" data-tooltip="연결"><svg class="provider-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg></button><button class="button secondary provider-disconnect provider-icon-button" type="button" aria-label="연결 해제" data-tooltip="연결 해제" hidden><svg class="provider-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 22v-2"/><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/><path d="M20 17h2"/><path d="M2 7h2"/><path d="M7 2v2"/></svg></button></div>
                     </article>
                     <article class="provider-row" data-provider="gemini">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-gemini.svg" alt="" /></span><div><div class="provider-title-line"><h3>Gemini</h3><span class="provider-use-badge" hidden>현재 사용</span></div><p>Gemini 3.6 Flash</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-gemini.svg" alt="" /></span><div><div class="provider-title-line"><h3>Gemini</h3><span class="provider-use-badge" hidden>현재 사용</span></div></div></div>
                       <div class="provider-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>Antigravity CLI와 로그인 상태를 확인하고 있습니다.</span></div><button class="button secondary provider-action provider-icon-button" type="button" aria-label="연결" data-tooltip="연결"><svg class="provider-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg></button><button class="button secondary provider-disconnect provider-icon-button" type="button" aria-label="연결 해제" data-tooltip="연결 해제" hidden><svg class="provider-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 22v-2"/><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/><path d="M20 17h2"/><path d="M2 7h2"/><path d="M7 2v2"/></svg></button></div>
                     </article>
                     <article class="provider-row" data-provider="deepl">
-                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-deepl.svg" alt="" /></span><div><div class="provider-title-line"><h3>DeepL</h3><span class="provider-use-badge" hidden>현재 사용</span></div><p>DeepL API Free / Pro</p></div></div>
+                      <div class="provider-identity"><span class="provider-mark" aria-hidden="true"><img src="./assets/provider-deepl.svg" alt="" /></span><div><div class="provider-title-line"><h3>DeepL</h3><span class="provider-use-badge" hidden>현재 사용</span></div></div></div>
                       <div class="provider-connection provider-credential-connection"><div class="provider-status" data-state="loading"><strong>확인 중</strong><span>저장된 API 키를 확인하고 있습니다.</span></div><div class="provider-credential"><input class="text-field provider-secret" type="password" autocomplete="off" spellcheck="false" placeholder="새 API 키 입력 시 변경" aria-label="DeepL API 키" /><button class="button secondary provider-disconnect provider-icon-button" type="button" aria-label="연결 해제" data-tooltip="연결 해제" hidden><svg class="provider-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 22v-2"/><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/><path d="M20 17h2"/><path d="M2 7h2"/><path d="M7 2v2"/></svg></button></div></div>
                     </article>
                   </div>

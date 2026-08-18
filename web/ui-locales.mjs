@@ -483,7 +483,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "在選取內容中找到的詞彙",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "在 Discord 訊息中大致選取一個單字或短語，然後按下 Aa。字典會拆分相符的詞彙，並查找其意思和發音。個人詞彙和已安裝的字典包只會在這台 PC 上搜尋。",
     "문맥상 우선 표시": "在此語境中優先顯示",
-    "다른 뜻": "其他意思"
+    "다른 뜻": "其他意思",
+    "Claude Haiku (최신)": "Claude Haiku（最新）",
+    "Discord 수동 재시작 실패": "Discord 手動重新啟動失敗",
+    "Discord를 다시 시작하시겠습니까?": "要重新啟動 Discord 嗎？",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "重新啟動 Discord 可能會捨棄你正在輸入的訊息，或結束進行中的通話。\n\n請重新啟動 Discord，以重新準備連線。",
+    "Discord 재시작": "重新啟動 Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low（最新）"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -968,7 +974,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Expressões encontradas na seleção",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecione aproximadamente uma palavra ou frase curta em uma mensagem do Discord e pressione Aa. O dicionário separa as expressões correspondentes e encontra seus significados e pronúncias. Os termos pessoais e pacotes instalados são pesquisados apenas neste PC.",
     "문맥상 우선 표시": "Exibido primeiro neste contexto",
-    "다른 뜻": "Outros significados"
+    "다른 뜻": "Outros significados",
+    "Claude Haiku (최신)": "Claude Haiku (mais recente)",
+    "Discord 수동 재시작 실패": "Falha ao reiniciar o Discord manualmente",
+    "Discord를 다시 시작하시겠습니까?": "Reiniciar o Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Reiniciar o Discord pode descartar uma mensagem que você está digitando ou encerrar uma chamada ativa.\n\nReinicie o Discord para preparar a conexão novamente.",
+    "Discord 재시작": "Reiniciar o Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (mais recente)"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1453,7 +1465,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "चयनित टेक्स्ट में मिली अभिव्यक्तियाँ",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord संदेश में किसी शब्द या छोटे वाक्यांश को मोटे तौर पर चुनें और Aa दबाएँ। शब्दकोश मेल खाती अभिव्यक्तियों को अलग करके उनके अर्थ और उच्चारण खोजता है। व्यक्तिगत शब्द और इंस्टॉल किए गए पैक केवल इस PC पर खोजे जाते हैं।",
     "문맥상 우선 표시": "इस संदर्भ में पहले दिखाया गया",
-    "다른 뜻": "अन्य अर्थ"
+    "다른 뜻": "अन्य अर्थ",
+    "Claude Haiku (최신)": "Claude Haiku (नवीनतम)",
+    "Discord 수동 재시작 실패": "Discord को मैन्युअल रूप से पुनः शुरू करना विफल रहा",
+    "Discord를 다시 시작하시겠습니까?": "Discord को पुनः शुरू करें?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord को पुनः शुरू करने से आपका टाइप किया जा रहा संदेश मिट सकता है या जारी कॉल समाप्त हो सकती है।\n\nकनेक्शन को फिर से तैयार करने के लिए Discord को पुनः शुरू करें।",
+    "Discord 재시작": "Discord को पुनः शुरू करें",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (नवीनतम)"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1938,7 +1956,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Expresiones encontradas en la selección",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecciona aproximadamente una palabra o frase corta en un mensaje de Discord y presiona Aa. El diccionario separa las expresiones coincidentes y busca sus significados y pronunciaciones. Los términos personales y los paquetes instalados se consultan únicamente en esta PC.",
     "문맥상 우선 표시": "Se muestra primero en este contexto",
-    "다른 뜻": "Otros significados"
+    "다른 뜻": "Otros significados",
+    "Claude Haiku (최신)": "Claude Haiku (más reciente)",
+    "Discord 수동 재시작 실패": "Error al reiniciar Discord manualmente",
+    "Discord를 다시 시작하시겠습니까?": "¿Reiniciar Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Reiniciar Discord puede descartar un mensaje que estés escribiendo o finalizar una llamada activa.\n\nReinicia Discord para volver a preparar la conexión.",
+    "Discord 재시작": "Reiniciar Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (más reciente)"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2423,7 +2447,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "In der Auswahl gefundene Ausdrücke",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Wähle ein Wort oder eine kurze Wortgruppe in einer Discord-Nachricht grob aus und drücke Aa. Das Wörterbuch zerlegt passende Ausdrücke und sucht ihre Bedeutungen und Aussprachen. Persönliche Begriffe und installierte Pakete werden nur auf diesem PC durchsucht.",
     "문맥상 우선 표시": "In diesem Kontext zuerst angezeigt",
-    "다른 뜻": "Andere Bedeutungen"
+    "다른 뜻": "Andere Bedeutungen",
+    "Claude Haiku (최신)": "Claude Haiku (neueste Version)",
+    "Discord 수동 재시작 실패": "Manueller Neustart von Discord fehlgeschlagen",
+    "Discord를 다시 시작하시겠습니까?": "Discord neu starten?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Beim Neustart von Discord kann eine gerade verfasste Nachricht verloren gehen oder ein aktiver Anruf beendet werden.\n\nStarte Discord neu, um die Verbindung erneut vorzubereiten.",
+    "Discord 재시작": "Discord neu starten",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (neueste Version)"
   },
   "ru": {
     "설정": "Настройки",
@@ -2908,7 +2938,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Выражения, найденные в выделенном тексте",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Выделите слово или короткую фразу в сообщении Discord и нажмите Aa. Словарь разделит найденные выражения и покажет их значения и произношение. Личные термины и установленные пакеты ищутся только на этом ПК.",
     "문맥상 우선 표시": "Показывается первым в этом контексте",
-    "다른 뜻": "Другие значения"
+    "다른 뜻": "Другие значения",
+    "Claude Haiku (최신)": "Claude Haiku (последняя версия)",
+    "Discord 수동 재시작 실패": "Не удалось перезапустить Discord вручную",
+    "Discord를 다시 시작하시겠습니까?": "Перезапустить Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "При перезапуске Discord набираемое сообщение может быть потеряно, а активный звонок — завершён.\n\nПерезапустите Discord, чтобы заново подготовить подключение.",
+    "Discord 재시작": "Перезапустить Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (последняя версия)"
   },
   "id": {
     "설정": "Pengaturan",
@@ -3393,7 +3429,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Ungkapan yang ditemukan dalam pilihan",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih kata atau frasa pendek secara kasar dalam pesan Discord, lalu tekan Aa. Kamus akan memisahkan ungkapan yang cocok serta mencari arti dan pelafalannya. Istilah pribadi dan paket yang terpasang hanya dicari di PC ini.",
     "문맥상 우선 표시": "Ditampilkan pertama untuk konteks ini",
-    "다른 뜻": "Arti lainnya"
+    "다른 뜻": "Arti lainnya",
+    "Claude Haiku (최신)": "Claude Haiku (terbaru)",
+    "Discord 수동 재시작 실패": "Gagal memulai ulang Discord secara manual",
+    "Discord를 다시 시작하시겠습니까?": "Mulai ulang Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Memulai ulang Discord dapat menghapus pesan yang sedang Anda ketik atau mengakhiri panggilan aktif.\n\nMulai ulang Discord untuk menyiapkan kembali koneksi.",
+    "Discord 재시작": "Mulai Ulang Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (terbaru)"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3878,7 +3920,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Expressions trouvées dans la sélection",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Sélectionnez approximativement un mot ou une courte expression dans un message Discord, puis appuyez sur Aa. Le dictionnaire découpe les expressions correspondantes et recherche leur sens et leur prononciation. Les termes personnels et les packs installés sont recherchés uniquement sur ce PC.",
     "문맥상 우선 표시": "Affiché en premier dans ce contexte",
-    "다른 뜻": "Autres significations"
+    "다른 뜻": "Autres significations",
+    "Claude Haiku (최신)": "Claude Haiku (dernier)",
+    "Discord 수동 재시작 실패": "Échec du redémarrage manuel de Discord",
+    "Discord를 다시 시작하시겠습니까?": "Redémarrer Discord ?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Le redémarrage de Discord peut supprimer un message en cours de rédaction ou mettre fin à un appel actif.\n\nRedémarrez Discord pour préparer à nouveau la connexion.",
+    "Discord 재시작": "Redémarrer Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (dernière version)"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4363,7 +4411,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Seçimde bulunan ifadeler",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord mesajında bir kelimeyi veya kısa ifadeyi kabaca seçip Aa düğmesine basın. Sözlük, eşleşen ifadeleri ayırarak anlamlarını ve telaffuzlarını bulur. Kişisel terimler ve yüklü paketler yalnızca bu PC'de aranır.",
     "문맥상 우선 표시": "Bu bağlamda önce gösterilir",
-    "다른 뜻": "Diğer anlamlar"
+    "다른 뜻": "Diğer anlamlar",
+    "Claude Haiku (최신)": "Claude Haiku (en son)",
+    "Discord 수동 재시작 실패": "Discord manuel olarak yeniden başlatılamadı",
+    "Discord를 다시 시작하시겠습니까?": "Discord yeniden başlatılsın mı?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord'u yeniden başlatmak, yazmakta olduğunuz mesajı silebilir veya etkin bir aramayı sonlandırabilir.\n\nBağlantıyı yeniden hazırlamak için Discord'u yeniden başlatın.",
+    "Discord 재시작": "Discord'u Yeniden Başlat",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (en yeni)"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4848,7 +4902,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "التعبيرات الموجودة في النص المحدد",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "حدّد تقريبًا كلمة أو عبارة قصيرة في رسالة Discord، ثم اضغط على Aa. يقسّم القاموس التعبيرات المطابقة ويبحث عن معانيها وطريقة نطقها. لا يُبحث في المصطلحات الشخصية والحزم المثبتة إلا على هذا الكمبيوتر.",
     "문맥상 우선 표시": "يُعرض أولًا في هذا السياق",
-    "다른 뜻": "معانٍ أخرى"
+    "다른 뜻": "معانٍ أخرى",
+    "Claude Haiku (최신)": "Claude Haiku (الأحدث)",
+    "Discord 수동 재시작 실패": "فشلت إعادة تشغيل Discord يدويًا",
+    "Discord를 다시 시작하시겠습니까?": "هل تريد إعادة تشغيل Discord؟",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "قد تؤدي إعادة تشغيل Discord إلى فقدان رسالة تكتبها أو إنهاء مكالمة جارية.\n\nأعد تشغيل Discord لإعداد الاتصال مجددًا.",
+    "Discord 재시작": "إعادة تشغيل Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (الأحدث)"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5333,7 +5393,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Các cụm từ tìm thấy trong phần đã chọn",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Chọn tương đối một từ hoặc cụm từ ngắn trong tin nhắn Discord rồi nhấn Aa. Từ điển sẽ tách các cụm từ phù hợp và tìm nghĩa cùng cách phát âm. Thuật ngữ cá nhân và các gói đã cài đặt chỉ được tra cứu trên PC này.",
     "문맥상 우선 표시": "Hiển thị trước trong ngữ cảnh này",
-    "다른 뜻": "Các nghĩa khác"
+    "다른 뜻": "Các nghĩa khác",
+    "Claude Haiku (최신)": "Claude Haiku (mới nhất)",
+    "Discord 수동 재시작 실패": "Không thể khởi động lại Discord theo cách thủ công",
+    "Discord를 다시 시작하시겠습니까?": "Khởi động lại Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Việc khởi động lại Discord có thể làm mất tin nhắn bạn đang soạn hoặc kết thúc cuộc gọi đang diễn ra.\n\nHãy khởi động lại Discord để chuẩn bị lại kết nối.",
+    "Discord 재시작": "Khởi động lại Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (mới nhất)"
   },
   "it": {
     "설정": "Impostazioni",
@@ -5818,7 +5884,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Espressioni trovate nella selezione",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Seleziona approssimativamente una parola o una breve frase in un messaggio Discord e premi Aa. Il dizionario separa le espressioni corrispondenti e ne trova significati e pronunce. I termini personali e i pacchetti installati vengono cercati solo su questo PC.",
     "문맥상 우선 표시": "Mostrato per primo in questo contesto",
-    "다른 뜻": "Altri significati"
+    "다른 뜻": "Altri significati",
+    "Claude Haiku (최신)": "Claude Haiku (più recente)",
+    "Discord 수동 재시작 실패": "Riavvio manuale di Discord non riuscito",
+    "Discord를 다시 시작하시겠습니까?": "Riavviare Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Il riavvio di Discord potrebbe eliminare un messaggio che stai scrivendo o terminare una chiamata attiva.\n\nRiavvia Discord per preparare nuovamente la connessione.",
+    "Discord 재시작": "Riavvia Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (più recente)"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6303,7 +6375,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Wyrażenia znalezione w zaznaczonym tekście",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Zaznacz w przybliżeniu słowo lub krótki zwrot w wiadomości Discord i naciśnij Aa. Słownik dzieli pasujące wyrażenia oraz wyszukuje ich znaczenia i wymowę. Terminy osobiste i zainstalowane pakiety są przeszukiwane tylko na tym komputerze.",
     "문맥상 우선 표시": "Wyświetlane jako pierwsze w tym kontekście",
-    "다른 뜻": "Inne znaczenia"
+    "다른 뜻": "Inne znaczenia",
+    "Claude Haiku (최신)": "Claude Haiku (najnowszy)",
+    "Discord 수동 재시작 실패": "Nie udało się ręcznie uruchomić ponownie Discord",
+    "Discord를 다시 시작하시겠습니까?": "Uruchomić ponownie Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Ponowne uruchomienie Discord może spowodować utratę wpisywanej wiadomości lub zakończyć aktywne połączenie.\n\nUruchom ponownie Discord, aby ponownie przygotować połączenie.",
+    "Discord 재시작": "Uruchom ponownie Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (najnowszy)"
   },
   "uk": {
     "설정": "Налаштування",
@@ -6788,7 +6866,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Вирази, знайдені у виділеному фрагменті",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Приблизно виділіть слово або коротку фразу в повідомленні Discord і натисніть Aa. Словник розділить відповідні вирази та знайде їхні значення й вимову. Пошук особистих термінів і встановлених пакетів виконується лише на цьому ПК.",
     "문맥상 우선 표시": "Показано першим у цьому контексті",
-    "다른 뜻": "Інші значення"
+    "다른 뜻": "Інші значення",
+    "Claude Haiku (최신)": "Claude Haiku (найновіша)",
+    "Discord 수동 재시작 실패": "Не вдалося перезапустити Discord вручну",
+    "Discord를 다시 시작하시겠습니까?": "Перезапустити Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Перезапуск Discord може призвести до втрати повідомлення, яке ви вводите, або завершити активний дзвінок.\n\nПерезапустіть Discord, щоб повторно підготувати з’єднання.",
+    "Discord 재시작": "Перезапустити Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (найновіша)"
   },
   "ms": {
     "설정": "Tetapan",
@@ -7273,7 +7357,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Ungkapan yang ditemui dalam pilihan",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih secara kasar perkataan atau frasa pendek dalam mesej Discord, kemudian tekan Aa. Kamus memisahkan ungkapan yang sepadan serta mencari makna dan sebutannya. Istilah peribadi dan pek yang dipasang hanya dicari pada PC ini.",
     "문맥상 우선 표시": "Dipaparkan dahulu untuk konteks ini",
-    "다른 뜻": "Maksud lain"
+    "다른 뜻": "Maksud lain",
+    "Claude Haiku (최신)": "Claude Haiku (terkini)",
+    "Discord 수동 재시작 실패": "Gagal memulakan semula Discord secara manual",
+    "Discord를 다시 시작하시겠습니까?": "Mulakan semula Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Memulakan semula Discord mungkin akan membuang mesej yang sedang anda taip atau menamatkan panggilan aktif.\n\nMulakan semula Discord untuk menyediakan sambungan sekali lagi.",
+    "Discord 재시작": "Mulakan semula Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (terkini)"
   },
   "nl": {
     "설정": "Instellingen",
@@ -7758,7 +7848,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Uitdrukkingen gevonden in de selectie",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecteer globaal een woord of korte zin in een Discord-bericht en druk op Aa. Het woordenboek splitst overeenkomende uitdrukkingen en zoekt hun betekenissen en uitspraken op. Persoonlijke termen en geïnstalleerde pakketten worden alleen op deze pc doorzocht.",
     "문맥상 우선 표시": "Eerst getoond in deze context",
-    "다른 뜻": "Andere betekenissen"
+    "다른 뜻": "Andere betekenissen",
+    "Claude Haiku (최신)": "Claude Haiku (nieuwste)",
+    "Discord 수동 재시작 실패": "Handmatig opnieuw starten van Discord mislukt",
+    "Discord를 다시 시작하시겠습니까?": "Discord opnieuw starten?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Als je Discord opnieuw start, kan een bericht dat je aan het typen bent verloren gaan of een actief gesprek worden beëindigd.\n\nStart Discord opnieuw om de verbinding opnieuw voor te bereiden.",
+    "Discord 재시작": "Discord opnieuw starten",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (nieuwste)"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8243,7 +8339,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "สำนวนที่พบในข้อความที่เลือก",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "เลือกคำหรือวลีสั้นๆ ในข้อความ Discord โดยคร่าวๆ แล้วกด Aa พจนานุกรมจะแยกสำนวนที่ตรงกันและค้นหาความหมายกับการออกเสียง โดยจะค้นหาคำศัพท์ส่วนตัวและชุดพจนานุกรมที่ติดตั้งไว้เฉพาะใน PC เครื่องนี้เท่านั้น",
     "문맥상 우선 표시": "แสดงเป็นอันดับแรกสำหรับบริบทนี้",
-    "다른 뜻": "ความหมายอื่น"
+    "다른 뜻": "ความหมายอื่น",
+    "Claude Haiku (최신)": "Claude Haiku (ล่าสุด)",
+    "Discord 수동 재시작 실패": "การรีสตาร์ต Discord ด้วยตนเองล้มเหลว",
+    "Discord를 다시 시작하시겠습니까?": "รีสตาร์ต Discord หรือไม่?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "การรีสตาร์ต Discord อาจทำให้ข้อความที่กำลังพิมพ์อยู่หายไปหรือยุติสายที่กำลังสนทนา\n\nรีสตาร์ต Discord เพื่อเตรียมการเชื่อมต่ออีกครั้ง",
+    "Discord 재시작": "รีสตาร์ต Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (ล่าสุด)"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8728,7 +8830,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Mga ekspresyong nakita sa napili",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pumili ng salita o maikling parirala sa isang mensahe sa Discord at pindutin ang Aa. Hinahati ng diksyunaryo ang mga katugmang ekspresyon at hinahanap ang mga kahulugan at pagbigkas ng mga ito. Sa PC na ito lamang hinahanap ang mga personal na termino at naka-install na pack.",
     "문맥상 우선 표시": "Unang ipinapakita para sa kontekstong ito",
-    "다른 뜻": "Iba pang mga kahulugan"
+    "다른 뜻": "Iba pang mga kahulugan",
+    "Claude Haiku (최신)": "Claude Haiku (pinakabago)",
+    "Discord 수동 재시작 실패": "Nabigo ang manu-manong pag-restart ng Discord",
+    "Discord를 다시 시작하시겠습니까?": "I-restart ang Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Maaaring mawala ang mensaheng tina-type mo o matapos ang kasalukuyang tawag kapag ni-restart ang Discord.\n\nI-restart ang Discord para ihanda muli ang koneksyon.",
+    "Discord 재시작": "I-restart ang Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (pinakabago)"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -9213,7 +9321,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "নির্বাচিত অংশে পাওয়া অভিব্যক্তি",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord মেসেজে কোনো শব্দ বা ছোট বাক্যাংশ মোটামুটি নির্বাচন করে Aa চাপুন। অভিধানটি মিলে যাওয়া অভিব্যক্তিগুলো আলাদা করে সেগুলোর অর্থ ও উচ্চারণ খুঁজে দেয়। ব্যক্তিগত পরিভাষা ও ইনস্টল করা প্যাকগুলো শুধু এই PC-তেই খোঁজা হয়।",
     "문맥상 우선 표시": "এই প্রসঙ্গে প্রথমে দেখানো হয়েছে",
-    "다른 뜻": "অন্যান্য অর্থ"
+    "다른 뜻": "অন্যান্য অর্থ",
+    "Claude Haiku (최신)": "Claude Haiku (সর্বশেষ)",
+    "Discord 수동 재시작 실패": "Discord ম্যানুয়ালি পুনরায় চালু করা যায়নি",
+    "Discord를 다시 시작하시겠습니까?": "Discord পুনরায় চালু করবেন?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord পুনরায় চালু করলে আপনার লেখা চলমান কোনো বার্তা মুছে যেতে পারে বা সক্রিয় কল শেষ হয়ে যেতে পারে।\n\nসংযোগটি আবার প্রস্তুত করতে Discord পুনরায় চালু করুন।",
+    "Discord 재시작": "Discord পুনরায় চালু করুন",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (সর্বশেষ)"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9698,7 +9812,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "انتخاب کردہ متن میں ملنے والی عبارات",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord پیغام میں کسی لفظ یا مختصر فقرے کو تقریباً منتخب کر کے Aa دبائیں۔ لغت مماثل عبارات کو الگ کر کے ان کے معانی اور تلفظ تلاش کرتی ہے۔ ذاتی اصطلاحات اور انسٹال کردہ پیکس صرف اسی PC پر تلاش کیے جاتے ہیں۔",
     "문맥상 우선 표시": "اس سیاق کے لیے پہلے دکھایا گیا",
-    "다른 뜻": "دیگر معانی"
+    "다른 뜻": "دیگر معانی",
+    "Claude Haiku (최신)": "Claude Haiku (تازہ ترین)",
+    "Discord 수동 재시작 실패": "Discord کو دستی طور پر دوبارہ شروع کرنا ناکام ہو گیا",
+    "Discord를 다시 시작하시겠습니까?": "Discord کو دوبارہ شروع کریں؟",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord کو دوبارہ شروع کرنے سے آپ کا زیرِ تحریر پیغام ضائع یا جاری کال ختم ہو سکتی ہے۔\n\nکنکشن کو دوبارہ تیار کرنے کے لیے Discord کو دوبارہ شروع کریں۔",
+    "Discord 재시작": "Discord کو دوبارہ شروع کریں",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (تازہ ترین)"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -10183,7 +10303,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "தேர்வில் கண்டறியப்பட்ட சொற்றொடர்கள்",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord செய்தியில் ஒரு சொல்லையோ குறுகிய சொற்றொடரையோ தோராயமாகத் தேர்ந்தெடுத்து Aa-ஐ அழுத்தவும். பொருந்தும் சொற்றொடர்களை அகராதி பிரித்து, அவற்றின் பொருள்களையும் உச்சரிப்புகளையும் கண்டறியும். தனிப்பட்ட சொற்களும் நிறுவப்பட்ட அகராதித் தொகுப்புகளும் இந்த PC-யில் மட்டுமே தேடப்படும்.",
     "문맥상 우선 표시": "இந்தச் சூழலுக்கு முதலில் காட்டப்படும்",
-    "다른 뜻": "பிற அர்த்தங்கள்"
+    "다른 뜻": "பிற அர்த்தங்கள்",
+    "Claude Haiku (최신)": "Claude Haiku (சமீபத்தியது)",
+    "Discord 수동 재시작 실패": "Discord-ஐ கைமுறையாக மறுதொடக்கம் செய்ய முடியவில்லை",
+    "Discord를 다시 시작하시겠습니까?": "Discord-ஐ மறுதொடக்கம் செய்யவா?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord-ஐ மறுதொடக்கம் செய்தால் நீங்கள் தட்டச்சு செய்துகொண்டிருக்கும் செய்தி அழியலாம் அல்லது செயலில் உள்ள அழைப்பு முடிவடையலாம்.\n\nஇணைப்பை மீண்டும் தயார்படுத்த Discord-ஐ மறுதொடக்கம் செய்யவும்.",
+    "Discord 재시작": "Discord-ஐ மறுதொடக்கம் செய்",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (சமீபத்தியது)"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10668,7 +10794,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "عبارت‌های یافت‌شده در متن انتخاب‌شده",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "یک واژه یا عبارت کوتاه را در پیام Discord به‌طور تقریبی انتخاب کنید و Aa را فشار دهید. فرهنگ‌نامه عبارت‌های منطبق را تفکیک می‌کند و معنی و تلفظ آن‌ها را می‌یابد. اصطلاحات شخصی و بسته‌های نصب‌شده فقط در همین رایانه جست‌وجو می‌شوند.",
     "문맥상 우선 표시": "برای این زمینه ابتدا نمایش داده می‌شود",
-    "다른 뜻": "معانی دیگر"
+    "다른 뜻": "معانی دیگر",
+    "Claude Haiku (최신)": "Claude Haiku (جدیدترین)",
+    "Discord 수동 재시작 실패": "راه‌اندازی مجدد دستی Discord ناموفق بود",
+    "Discord를 다시 시작하시겠습니까?": "Discord راه‌اندازی مجدد شود؟",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "راه‌اندازی مجدد Discord ممکن است پیام در حال تایپ را حذف کند یا به تماس فعال پایان دهد.\n\nبرای آماده‌سازی دوبارهٔ اتصال، Discord را راه‌اندازی مجدد کنید.",
+    "Discord 재시작": "راه‌اندازی مجدد Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (جدیدترین)"
   },
   "he": {
     "설정": "הגדרות",
@@ -11153,7 +11285,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "ביטויים שנמצאו בבחירה",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "יש לבחור בקירוב מילה או צירוף מילים קצר בהודעת Discord וללחוץ על Aa. המילון מפצל ביטויים תואמים ומוצא את המשמעויות וההגיות שלהם. חיפוש במונחים אישיים ובחבילות מותקנות מתבצע רק במחשב זה.",
     "문맥상 우선 표시": "מוצג ראשון בהקשר הזה",
-    "다른 뜻": "משמעויות אחרות"
+    "다른 뜻": "משמעויות אחרות",
+    "Claude Haiku (최신)": "Claude Haiku (העדכני ביותר)",
+    "Discord 수동 재시작 실패": "ההפעלה מחדש הידנית של Discord נכשלה",
+    "Discord를 다시 시작하시겠습니까?": "להפעיל מחדש את Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "הפעלה מחדש של Discord עלולה למחוק הודעה שכתבת או לסיים שיחה פעילה.\n\nיש להפעיל מחדש את Discord כדי להכין שוב את החיבור.",
+    "Discord 재시작": "הפעלת Discord מחדש",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (העדכני ביותר)"
   },
   "cs": {
     "설정": "Nastavení",
@@ -11638,6 +11776,12 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위에서 찾은 표현": "Výrazy nalezené ve výběru",
     "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Přibližně označ slovo nebo krátkou frázi ve zprávě na Discordu a stiskni Aa. Slovník rozdělí odpovídající výrazy a vyhledá jejich významy a výslovnost. Osobní termíny a nainstalované balíčky se prohledávají pouze na tomto PC.",
     "문맥상 우선 표시": "V tomto kontextu zobrazeno jako první",
-    "다른 뜻": "Další významy"
+    "다른 뜻": "Další významy",
+    "Claude Haiku (최신)": "Claude Haiku (nejnovější)",
+    "Discord 수동 재시작 실패": "Ruční restartování aplikace Discord se nezdařilo",
+    "Discord를 다시 시작하시겠습니까?": "Restartovat Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Restartováním aplikace Discord můžete přijít o rozepsanou zprávu nebo ukončit probíhající hovor.\n\nRestartujte Discord, aby se připojení znovu připravilo.",
+    "Discord 재시작": "Restartovat Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (nejnovější)"
   }
 });

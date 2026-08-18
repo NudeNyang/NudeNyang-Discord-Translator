@@ -62,7 +62,7 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
 });
 
 test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
-  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini 3\.6 Flash<\/p>/);
+  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><\/div><\/div>/);
   assert.match(script, /\["gemini",\s*"Gemini CLI \(권장·품질 우선\)"/);
   assert.match(providers, /Google 구독 · Antigravity CLI/);
   assert.match(subscriptionCli, /Self::Gemini => &\["agy"\]/);
@@ -70,11 +70,11 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
   assert.match(subscriptionCli, /"--mode"\.to_string\(\)[\s\S]*?"plan"\.to_string\(\)/);
 });
 
-test("provider cards show the concrete model or API product without quality badges", () => {
-  assert.match(markup, /<h3>ChatGPT<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>GPT-5\.6 Luna\/Terra<\/p>/);
-  assert.match(markup, /<h3>Claude<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Claude Haiku 4\.5<\/p>/);
-  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini 3\.6 Flash<\/p>/);
-  assert.match(markup, /<h3>DeepL<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>DeepL API Free \/ Pro<\/p>/);
+test("provider cards keep stable service names instead of volatile model labels", () => {
+  for (const provider of ["ChatGPT", "Claude", "Gemini", "DeepL"]) {
+    assert.match(markup, new RegExp(`<h3>${provider}<\\/h3><span class="provider-use-badge" hidden>현재 사용<\\/span><\\/div><\\/div><\\/div>`));
+  }
+  assert.doesNotMatch(markup, /GPT-5\.6 Luna\/Terra|Claude Haiku|Gemini Flash Low|DeepL API Free \/ Pro/);
   assert.doesNotMatch(markup, /품질 최우선/);
   assert.match(script, /ChatGPT CLI \(권장·품질 우선\)/);
   assert.match(providers, /ChatGPT 무료 플랜 이상 · Codex CLI/);
@@ -85,14 +85,20 @@ test("provider cards show the concrete model or API product without quality badg
   assert.match(subscriptionCli, /gpt-5\.6-luna/);
   assert.match(subscriptionCli, /gpt-5\.6-terra/);
   assert.match(subscriptionCli, /"method": "model\/list"/);
-  assert.match(subscriptionCli, /claude-haiku-4-5-20251001/);
-  assert.match(subscriptionCli, /"flash"/);
+  assert.match(subscriptionCli, /CLAUDE_TRANSLATION_MODEL: &str = "haiku"/);
+  assert.match(subscriptionCli, /select_antigravity_flash_model/);
+  assert.match(subscriptionCli, /strip_suffix\("-flash-low"\)/);
   assert.match(subscriptionCli, /ClaudeStreamServer/);
   assert.match(subscriptionCli, /--conversation/);
   for (const tier of [/ChatGPT Plus\/Pro/, /Claude Pro\/Max/, /Gemini Pro\/Ultra/]) {
     assert.doesNotMatch(script, tier);
     assert.doesNotMatch(trayMarkup, tier);
   }
+});
+
+test("connected provider status does not expose an internal model identifier", () => {
+  assert.match(subscriptionCli, /"Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다\."\s*\.to_string\(\)/);
+  assert.doesNotMatch(subscriptionCli, /연결되어 있습니다\. \(\{model\}\)/);
 });
 
 test("provider cards use bundled brand icons instead of letter placeholders", () => {

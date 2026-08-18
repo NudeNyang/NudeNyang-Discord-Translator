@@ -144,6 +144,8 @@ export const COPY = Object.freeze({
   "ChatGPT CLI (권장·품질 우선)": ["ChatGPT CLI (recommended · quality first)", "ChatGPT CLI（推奨・品質優先）", "ChatGPT CLI（推荐 · 质量优先）"],
   "Claude CLI (권장·품질 우선)": ["Claude CLI (recommended · quality first)", "Claude CLI（推奨・品質優先）", "Claude CLI（推荐 · 质量优先）"],
   "Gemini CLI (권장·품질 우선)": ["Gemini CLI (recommended · quality first)", "Gemini CLI（推奨・品質優先）", "Gemini CLI（推荐 · 质量优先）"],
+  "Claude Haiku (최신)": ["Claude Haiku (latest)", "Claude Haiku（最新）", "Claude Haiku（最新）"],
+  "Gemini Flash Low (최신)": ["Gemini Flash Low (latest)", "Gemini Flash Low（最新）", "Gemini Flash Low（最新）"],
   "Hy-MT2 1.8B Q4 (로컬·속도 우선)": ["Hy-MT2 1.8B Q4 (local · speed first)", "Hy-MT2 1.8B Q4（ローカル・速度優先）", "Hy-MT2 1.8B Q4（本地 · 速度优先）"],
   "Hy-MT2 7B Q4 (로컬·속도 우선)": ["Hy-MT2 7B Q4 (local · speed first)", "Hy-MT2 7B Q4（ローカル・速度優先）", "Hy-MT2 7B Q4（本地 · 速度优先）"],
   "TranslateGemma 4B Q4 (실험·속도 우선)": ["TranslateGemma 4B Q4 (experimental · speed first)", "TranslateGemma 4B Q4（実験・速度優先）", "TranslateGemma 4B Q4（实验 · 速度优先）"],
@@ -322,6 +324,7 @@ export const COPY = Object.freeze({
   "전송 메시지 통역 상태를 변경하지 못했습니다": ["Could not change outgoing interpretation state", "送信メッセージ通訳の状態を変更できませんでした", "无法更改发送消息翻译状态"],
   "Discord 연결 실패": ["Discord connection failed", "Discordへの接続に失敗しました", "Discord 连接失败"],
   "Discord 자동 재시작 실패": ["Discord automatic restart failed", "Discordの自動再起動に失敗しました", "Discord 自动重启失败"],
+  "Discord 수동 재시작 실패": ["Discord manual restart failed", "Discordの手動再起動に失敗しました", "Discord 手动重启失败"],
   "전송 전 확인 설정을 적용하지 못했습니다": ["Could not apply the review-before-send setting", "送信前確認の設定を適用できませんでした", "无法应用发送前确认设置"],
   "로컬 모델 예열 설정을 적용하지 못했습니다": ["Could not apply the local model warm-up setting", "ローカルモデル常駐の設定を適用できませんでした", "无法应用本地模型预热设置"],
   "단축키를 적용하지 못했습니다": ["Could not apply the shortcut", "ショートカットを適用できませんでした", "无法应用快捷键"],
@@ -341,6 +344,9 @@ export const COPY = Object.freeze({
   "확인하고 준비": ["Confirm and prepare", "確認して準備", "确认并准备"],
   "이번 번역 실행에서 자동 재시작을 이미 한 번 시도했습니다. Discord를 직접 종료한 후 다시 실행하십시오.": ["An automatic restart has already been attempted during this translation session. Close Discord completely and start it again.", "今回の翻訳実行では自動再起動をすでに一度試しました。Discordを完全に終了してから、もう一度起動してください。", "本次翻译运行中已尝试过一次自动重启。请完全退出 Discord 后重新启动。"],
   "Discord 접근성 모드를 준비합니다": ["Preparing Discord accessibility mode", "Discordのアクセシビリティモードを準備しています", "正在准备 Discord 辅助功能模式"],
+  "Discord를 다시 시작하시겠습니까?": ["Restart Discord?", "Discordを再起動しますか？", "要重启 Discord 吗？"],
+  "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": ["Restarting Discord may discard a message you are typing or end an active call.\n\nRestart Discord to prepare the connection again.", "Discordを再起動すると、入力中のメッセージが失われたり、通話が終了したりする場合があります。\n\n接続を再準備するには、Discordを再起動してください。", "重启 Discord 可能会丢失正在输入的消息或结束通话。\n\n要重新准备连接，请重启 Discord。"],
+  "Discord 재시작": ["Restart Discord", "Discordを再起動", "重启 Discord"],
   "지금 재시작": ["Restart now", "今すぐ再起動", "立即重启"],
   "Discord 재시작 중": ["Restarting Discord", "Discordを再起動中", "正在重启 Discord"],
   "설치 중": ["Installing", "インストール中", "正在安装"],
@@ -511,6 +517,9 @@ export const DYNAMIC_TEMPLATE_COPY = Object.freeze({
 });
 
 const LANGUAGE_INDEX = Object.freeze({ en: 0, ja: 1, zh: 2 });
+const COPY_ALIASES = Object.freeze({
+  "Discord 번역 연결을 준비합니다": "Discord 접근성 모드를 준비합니다",
+});
 const SUPPORTED_UI_LANGUAGES = Object.freeze([
   "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "hi", "es-419", "de", "ru",
   "id", "fr", "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl",
@@ -540,10 +549,11 @@ export function translateCopy(language, korean) {
   language = resolveUiLanguage(language);
   if (korean === "UI Language" || korean === "Auto (System)") return korean;
   if (language === "ko") return korean;
+  const sourceKey = COPY_ALIASES[korean] || korean;
   const index = LANGUAGE_INDEX[language];
-  const source = COPY[korean] || DYNAMIC_TEMPLATE_COPY[korean];
+  const source = COPY[sourceKey] || DYNAMIC_TEMPLATE_COPY[sourceKey];
   if (index !== undefined) return source?.[index] || source?.[0] || korean;
-  return UI_LOCALE_COPY[language]?.[korean] || source?.[0] || korean;
+  return UI_LOCALE_COPY[language]?.[sourceKey] || source?.[0] || korean;
 }
 
 export const DYNAMIC_COPY = Object.freeze([
@@ -858,6 +868,14 @@ export const DYNAMIC_COPY = Object.freeze([
       zh: progress => `正在安装 ${progress}%`,
     },
   },
+  {
+    pattern: /^Discord 디버그 렌더러에 연결할 수 없습니다\.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다\.\n\n(\d+)초 후 Discord를 자동으로 다시 시작합니다\.$/,
+    render: {
+      en: seconds => `Discord is not running in accessibility-compatible mode yet.\nA message you are typing may be discarded or a call may end.\n\nDiscord will restart once for the initial transition in ${seconds} seconds.`,
+      ja: seconds => `Discordはまだアクセシビリティ互換モードで動作していません。\n入力中のメッセージが消えたり、通話が終了したりする場合があります。\n\n初回切り替えのため、${seconds}秒後にDiscordを一度再起動します。`,
+      zh: seconds => `Discord 尚未以辅助功能兼容模式运行。\n正在输入的消息可能会丢失，通话也可能会结束。\n\nDiscord 将在 ${seconds} 秒后为首次切换重启一次。`,
+    },
+  },
 ]);
 
 const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
@@ -922,6 +940,10 @@ const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
     { error: translateUserFacingError(language, error) },
   ],
   ([progress]) => ["설치 중 {progress}%", { progress }],
+  ([seconds]) => [
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.",
+    { seconds },
+  ],
 ]);
 
 function interpolateDynamicTemplate(template, values) {

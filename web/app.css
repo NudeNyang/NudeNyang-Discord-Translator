@@ -19,6 +19,35 @@
   --shadow: 0 18px 50px rgb(38 76 112 / 0.14);
   --radius-card: 14px;
   --radius-control: 8px;
+  --engine-action-font: "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+
+:root:lang(ko) {
+  --engine-action-font: "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+:root:lang(ja) {
+  --engine-action-font: "Noto Sans JP", "Yu Gothic UI", "Meiryo UI", sans-serif;
+}
+
+:root:lang(zh-CN) {
+  --engine-action-font: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+
+:root:lang(zh-TW) {
+  --engine-action-font: "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif;
+}
+
+:root:is(:lang(hi), :lang(bn), :lang(ta), :lang(ur)) {
+  --engine-action-font: "Nirmala UI", "Segoe UI", sans-serif;
+}
+
+:root:lang(th) {
+  --engine-action-font: "Leelawadee UI", "Segoe UI", sans-serif;
+}
+
+:root:is(:lang(ar), :lang(fa), :lang(he)) {
+  --engine-action-font: "Segoe UI", Tahoma, sans-serif;
 }
 
 :root[data-theme="dark"] {
@@ -227,17 +256,26 @@ select:focus-visible,
   color: var(--muted);
 }
 
+.engine-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
 .engine-state {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 32px;
-  padding: 0 11px;
+  gap: 9px;
+  min-height: 38px;
+  padding: 0 15px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface-toned);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  font-family: var(--engine-action-font);
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -254,6 +292,55 @@ select:focus-visible,
 
 .engine-state[data-state="error"] .state-dot {
   background: var(--danger);
+}
+
+.button.secondary.engine-restart-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 38px;
+  gap: 7px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border-color: var(--border);
+  color: var(--muted);
+  background: var(--surface-toned);
+  font-size: 13px;
+  font-family: var(--engine-action-font);
+  font-weight: 500;
+  line-height: 1;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, transform 90ms ease;
+  white-space: nowrap;
+}
+
+.button.secondary.engine-restart-button[hidden] {
+  display: none;
+}
+
+.button.secondary.engine-restart-button:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: var(--surface-hover);
+}
+
+.engine-restart-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.engine-restart-button[data-state="working"] .engine-restart-icon {
+  animation: engine-restart-spin 760ms linear infinite;
+}
+
+@keyframes engine-restart-spin {
+  to { transform: rotate(360deg); }
 }
 
 .app-header + form,
@@ -1976,9 +2063,11 @@ select:focus-visible,
     width: 100%;
   }
 
-  .engine-state {
+  .engine-actions {
     grid-column: 1 / -1;
     justify-self: start;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .setting-row {
@@ -2053,5 +2142,9 @@ select:focus-visible,
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .engine-restart-button[data-state="working"] .engine-restart-icon {
+    animation: none;
   }
 }

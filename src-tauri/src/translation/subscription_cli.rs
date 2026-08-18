@@ -21,9 +21,7 @@ const PROMPT_VERSION: &str = "subscription-cli-tone-and-punctuation-v2";
 const CODEX_PREFERRED_MODEL: &str = "gpt-5.6-luna";
 const CODEX_FREE_MODEL: &str = "gpt-5.6-terra";
 const CODEX_TRANSLATION_EFFORT: &str = "low";
-const CLAUDE_TRANSLATION_MODEL: &str = "claude-haiku-4-5-20251001";
-const AGY_TRANSLATION_MODEL: &str = "flash";
-const AGY_TRANSLATION_EFFORT: &str = "low";
+const CLAUDE_TRANSLATION_MODEL: &str = "haiku";
 const PERSISTENT_SESSION_TURN_LIMIT: u32 = 32;
 const MAX_CLI_STDOUT_BYTES: usize = 8 * 1024 * 1024;
 const MAX_CLI_STDERR_BYTES: usize = 2 * 1024 * 1024;
@@ -215,7 +213,7 @@ impl SubscriptionProvider {
     fn model_cache_key(self) -> &'static str {
         match self {
             Self::ChatGpt => "gpt-5.6-plan-auto-low",
-            Self::Claude => "claude-haiku-4-5-20251001",
+            Self::Claude => "claude-haiku-latest",
             Self::Gemini => "gemini-flash-low",
         }
     }
@@ -275,6 +273,7 @@ pub struct SubscriptionCliTranslator {
     prepared: bool,
     codex_server: Option<CodexAppServer>,
     claude_server: Option<ClaudeStreamServer>,
+    agy_model: Option<String>,
     agy_conversation_id: Option<String>,
     agy_session_turns: u32,
     completed_requests: u64,
@@ -306,6 +305,7 @@ impl SubscriptionCliTranslator {
             prepared: false,
             codex_server: None,
             claude_server: None,
+            agy_model: None,
             agy_conversation_id: None,
             agy_session_turns: 0,
             completed_requests: 0,
@@ -497,9 +497,13 @@ impl SubscriptionCliTranslator {
             }
             Implementation::Agy | Implementation::Gemini => {
                 let arguments = if implementation == Implementation::Agy {
+                    let model = self.agy_model.as_deref().ok_or_else(|| {
+                        "Antigravity CLI의 번역 모델이 준비되지 않았습니다.".to_string()
+                    })?;
                     agy_invocation_arguments(
                         prompt,
                         &schema,
+                        model,
                         self.timeout.as_secs(),
                         self.agy_conversation_id.as_deref(),
                     )
@@ -684,6 +688,7 @@ fn claude_once_arguments(schema: &Value) -> Vec<String> {
 fn agy_invocation_arguments(
     prompt: &str,
     schema: &Value,
+    model: &str,
     timeout_seconds: u64,
     conversation_id: Option<&str>,
 ) -> Vec<String> {
@@ -699,9 +704,7 @@ fn agy_invocation_arguments(
         "--json-schema".to_string(),
         schema.to_string(),
         "--model".to_string(),
-        AGY_TRANSLATION_MODEL.to_string(),
-        "--effort".to_string(),
-        AGY_TRANSLATION_EFFORT.to_string(),
+        model.to_string(),
         "--print-timeout".to_string(),
         format!("{}s", timeout_seconds.max(15)),
     ];
@@ -710,6 +713,86 @@ fn agy_invocation_arguments(
         arguments.push(conversation_id.to_string());
     }
     arguments
+}
+
+fn antigravity_flash_low_version(model: &str) -> Option<Vec<u32>> {
+    model
+        .strip_prefix("gemini-")?
+        .strip_suffix("-flash-low")?
+        .split('.')
+        .map(str::parse::<u32>)
+        .collect::<Result<Vec<_>, _>>()
+        .ok()
+}
+
+fn select_antigravity_flash_model(raw: &str) -> Option<String> {
+    let cleaned = decode_process_output(raw.as_bytes());
+    let mut models = Vec::new();
+    if let Ok(payload) = decode_payload(&cleaned) {
+        if let Some(entries) = payload
+            .pointer("/command/data/models")
+            .and_then(Value::as_array)
+        {
+            models.extend(
+                entries.iter().filter_map(|entry| {
+                    entry.get("id").and_then(Value::as_str).map(str::to_string)
+                }),
+            );
+        }
+    }
+    if models.is_empty() {
+        models.extend(cleaned.lines().filter_map(|line| {
+            let model = line.split_whitespace().next()?;
+            antigravity_flash_low_version(model).map(|_| model.to_string())
+        }));
+    }
+    models
+        .into_iter()
+        .filter_map(|model| antigravity_flash_low_version(&model).map(|version| (version, model)))
+        .max_by(|left, right| left.0.cmp(&right.0))
+        .map(|(_, model)| model)
+}
+
+fn resolve_antigravity_translation_model(
+    executable: &Path,
+    workspace: &Path,
+    environment: &HashMap<String, String>,
+) -> Result<String, String> {
+    let json_arguments = [
+        "--output-format".to_string(),
+        "json".to_string(),
+        "models".to_string(),
+    ];
+    let json_output = run_process(
+        executable,
+        &json_arguments,
+        None,
+        workspace,
+        environment,
+        Duration::from_secs(15),
+    )?;
+    let output = if json_output.status.success() {
+        json_output
+    } else {
+        run_process(
+            executable,
+            &["models".to_string()],
+            None,
+            workspace,
+            environment,
+            Duration::from_secs(15),
+        )?
+    };
+    if !output.status.success() {
+        return Err(
+            "Google Antigravity 플랜 계정 연결이 필요합니다. 설정의 번역 서비스 연결에서 Gemini 연결을 진행하십시오."
+                .to_string(),
+        );
+    }
+    select_antigravity_flash_model(&decode_process_output(&output.stdout)).ok_or_else(|| {
+        "Antigravity CLI에서 사용할 수 있는 Gemini Flash Low 모델을 찾지 못했습니다. Antigravity CLI를 업데이트한 뒤 다시 시도하십시오."
+            .to_string()
+    })
 }
 
 fn invoke_claude_once(
@@ -779,23 +862,22 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
             })
         }
         Implementation::Agy => {
-            let output = run_process(
+            let model = resolve_antigravity_translation_model(
                 &executable,
-                &["models".to_string()],
-                None,
                 &translator.workspace_dir()?,
                 &subscription_environment(),
-                Duration::from_secs(15),
-            )?;
-            let connected = output.status.success();
+            );
+            let (connected, detail) = match model {
+                Ok(_) => (
+                    true,
+                    "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다.".to_string(),
+                ),
+                Err(error) => (false, error),
+            };
             Ok(CliConnectionProbe {
                 installed: true,
                 connected,
-                detail: if connected {
-                    "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다.".to_string()
-                } else {
-                    "Google Antigravity CLI는 설치되어 있지만 로그인이 필요합니다.".to_string()
-                },
+                detail,
             })
         }
         Implementation::Gemini => {
@@ -1743,20 +1825,11 @@ impl Translator for SubscriptionCliTranslator {
                 );
             }
         } else if implementation == Implementation::Agy {
-            let output = run_process(
+            self.agy_model = Some(resolve_antigravity_translation_model(
                 &executable,
-                &["models".to_string()],
-                None,
                 &workspace,
                 &environment,
-                Duration::from_secs(15),
-            )?;
-            if !output.status.success() {
-                return Err(
-                    "Google Antigravity 플랜 계정 연결이 필요합니다. 설정의 번역 서비스 연결에서 Gemini 연결을 진행하십시오."
-                        .to_string(),
-                );
-            }
+            )?);
         } else if implementation == Implementation::Gemini && !gemini_plan_auth_configured() {
             return Err(
                 "Gemini 플랜 계정 연결이 불완전합니다. 설정의 번역 서비스 연결에서 Gemini 연결을 다시 진행하십시오."
@@ -3130,9 +3203,10 @@ mod tests {
         find_winget_package_executable, gemini_invocation_arguments,
         gemini_plan_auth_configured_at, is_node_backed_command, node_wrapper_target,
         parse_node_major, prepend_directory_to_environment_path, read_capped_output,
-        repair_incomplete_gemini_plan_auth_at, run_process, subscription_environment,
-        translation_prompt, validated_translations, wait_for_antigravity_connection,
-        write_acp_request, SubscriptionCliTranslator, SubscriptionProvider,
+        repair_incomplete_gemini_plan_auth_at, run_process, select_antigravity_flash_model,
+        subscription_environment, translation_prompt, validated_translations,
+        wait_for_antigravity_connection, write_acp_request, SubscriptionCliTranslator,
+        SubscriptionProvider,
     };
 
     #[cfg(windows)]
@@ -3291,7 +3365,8 @@ mod tests {
     #[test]
     fn antigravity_translation_uses_plan_mode_and_structured_output() {
         let schema = serde_json::json!({"type":"object"});
-        let arguments = agy_invocation_arguments("translate this", &schema, 45, None);
+        let arguments =
+            agy_invocation_arguments("translate this", &schema, "gemini-3.7-flash-low", 45, None);
         assert!(arguments
             .windows(2)
             .any(|pair| pair == ["-p", "translate this"]));
@@ -3304,24 +3379,51 @@ mod tests {
         assert!(arguments
             .windows(2)
             .any(|pair| pair[0] == "--json-schema" && pair[1] == schema.to_string()));
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair == ["--model", "gemini-3.7-flash-low"]));
+        assert!(!arguments.iter().any(|argument| argument == "--effort"));
     }
 
     #[test]
-    fn subscription_profiles_pin_latency_optimized_models() {
+    fn subscription_profiles_use_future_safe_latency_optimized_models() {
         assert_eq!(super::CODEX_PREFERRED_MODEL, "gpt-5.6-luna");
         assert_eq!(super::CODEX_FREE_MODEL, "gpt-5.6-terra");
         assert_eq!(super::CODEX_TRANSLATION_EFFORT, "low");
-        assert_eq!(super::CLAUDE_TRANSLATION_MODEL, "claude-haiku-4-5-20251001");
-        assert_eq!(super::AGY_TRANSLATION_MODEL, "flash");
-        assert_eq!(super::AGY_TRANSLATION_EFFORT, "low");
+        assert_eq!(super::CLAUDE_TRANSLATION_MODEL, "haiku");
 
         let schema = serde_json::json!({"type":"object"});
-        let agy = agy_invocation_arguments("translate this", &schema, 45, Some("session-1"));
-        assert!(agy.windows(2).any(|pair| pair == ["--model", "flash"]));
-        assert!(agy.windows(2).any(|pair| pair == ["--effort", "low"]));
+        let agy = agy_invocation_arguments(
+            "translate this",
+            &schema,
+            "gemini-3.7-flash-low",
+            45,
+            Some("session-1"),
+        );
         assert!(agy
             .windows(2)
             .any(|pair| pair == ["--conversation", "session-1"]));
+    }
+
+    #[test]
+    fn antigravity_selects_the_newest_available_flash_low_slug() {
+        let payload = json!({
+            "command": {
+                "name": "models",
+                "data": {
+                    "models": [
+                        {"id": "gemini-3.7-flash-high", "label": "Gemini 3.7 Flash (High)"},
+                        {"id": "gemini-3.7-flash-low", "label": "Gemini 3.7 Flash (Low)"},
+                        {"id": "gemini-3.6-flash-low", "label": "Gemini 3.6 Flash (Low)"}
+                    ]
+                }
+            }
+        });
+
+        assert_eq!(
+            select_antigravity_flash_model(&payload.to_string()),
+            Some("gemini-3.7-flash-low".to_string())
+        );
     }
 
     #[test]

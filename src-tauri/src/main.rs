@@ -1056,6 +1056,7 @@ async fn discord_restart(
     expected_process_id: Option<u32>,
 ) -> Result<Value, String> {
     let client = engine.inner().clone();
+    let display_was_enabled = client.status()?.enabled;
     let _ = client.set_enabled(false);
     let restart_result = tauri::async_runtime::spawn_blocking(move || {
         discord::connect_or_restart_pipe(expected_process_id)
@@ -1065,12 +1066,13 @@ async fn discord_restart(
     let (process, cdp) = match restart_result {
         Ok(result) => result,
         Err(error) => {
-            let _ = client.set_enabled(true);
+            let _ = client.set_enabled(display_was_enabled);
             return Err(error);
         }
     };
-    client.replace_cdp(cdp)?;
-    let _ = client.set_enabled(true);
+    let replace_result = client.replace_cdp(cdp);
+    let _ = client.set_enabled(display_was_enabled);
+    replace_result?;
     Ok(json!({"connected": true, "process": process}))
 }
 
