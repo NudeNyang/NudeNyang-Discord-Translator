@@ -868,11 +868,9 @@ pub fn probe_subscription_connection(provider: &str) -> Result<CliConnectionProb
                 &subscription_environment(),
             );
             let (connected, detail) = match model {
-                Ok(model) => (
+                Ok(_) => (
                     true,
-                    format!(
-                        "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다. ({model})"
-                    ),
+                    "Gemini가 Google Antigravity 플랜 계정으로 연결되어 있습니다.".to_string(),
                 ),
                 Err(error) => (false, error),
             };
