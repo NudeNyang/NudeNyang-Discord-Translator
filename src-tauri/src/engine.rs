@@ -14,7 +14,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::cache::{CacheCleanupResult, TranslationCache};
 use crate::cdp::CdpClient;
 use crate::config::{default_config_path, AppConfig, ConfigStore};
-use crate::dictionary::{DictionaryStore, PersonalDictionaryEntry};
+use crate::dictionary::{DictionaryLookupResult, DictionaryStore, PersonalDictionaryEntry};
 use crate::dictionary_ui::{
     apply_dictionary_error_script, apply_dictionary_result_script, apply_dictionary_saved_script,
     dictionary_ui_script, parse_dictionary_requests, DICTIONARY_CLEANUP_SCRIPT,
@@ -198,9 +198,17 @@ struct OutgoingTranslationBatch {
     queued_at: Instant,
 }
 
+struct DictionaryLocalizationBatch {
+    request_id: String,
+    target: Language,
+    result: DictionaryLookupResult,
+    queued_at: Instant,
+}
+
 enum WorkerCommand {
     Translate(TranslationBatch),
     TranslateImage(ImageTranslationBatch),
+    LocalizeDictionary(DictionaryLocalizationBatch),
     DiscardDisplayBefore {
         generation: u64,
         view_epoch: u64,
@@ -237,7 +245,7 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
         | WorkerCommand::ClearCacheMemory
         | WorkerCommand::DiscardDisplayBefore { .. }
         | WorkerCommand::Stop => 0,
-        WorkerCommand::Translate(_) => 1,
+        WorkerCommand::LocalizeDictionary(_) | WorkerCommand::Translate(_) => 1,
         WorkerCommand::TranslateImage(_) => 2,
     }
 }
@@ -316,6 +324,10 @@ enum WorkerResult {
         value: Result<String, String>,
         send_immediately: bool,
     },
+    DictionaryLocalized {
+        request_id: String,
+        result: DictionaryLookupResult,
+    },
     DisplayActivated {
         generation: u64,
         name: String,
@@ -389,7 +401,10 @@ fn preparation_plan_for_active_lanes(
     plan: TranslatorPreparationPlan,
 ) -> TranslatorPreparationPlan {
     TranslatorPreparationPlan {
-        display: plan.display && (config.enabled || !is_local_model_name(&config.translator)),
+        display: plan.display
+            && (config.enabled
+                || config.dictionary_enabled
+                || !is_local_model_name(&config.translator)),
         outgoing: plan.outgoing
             && (config.outgoing_translation_enabled
                 || !is_local_model_name(&config.outgoing_translator)),
@@ -640,7 +655,7 @@ fn run_controller(
                         }
                     } else if warm_changed {
                         if !config.keep_local_model_warm {
-                            if !config.enabled {
+                            if !config.enabled && !config.dictionary_enabled {
                                 let _ = worker_tx.send(WorkerCommand::Release);
                             }
                             if !config.outgoing_translation_enabled {
@@ -654,7 +669,7 @@ fn run_controller(
                         pending.clear();
                         image_pending.clear();
                         generation += 1;
-                        if !config.keep_local_model_warm {
+                        if !config.keep_local_model_warm && !config.dictionary_enabled {
                             let _ = worker_tx.send(WorkerCommand::Release);
                         }
                     } else if enabled_changed {
@@ -709,6 +724,29 @@ fn run_controller(
                     }
                     if dictionary_changed {
                         dictionary_ui_needs_cleanup = true;
+                        if config.dictionary_enabled {
+                            let needs_preparation = status.lock().is_ok_and(|runtime| {
+                                display_preparation_is_required(&runtime, &config)
+                            });
+                            if ui_ready && needs_preparation && !preparation_requested {
+                                request_translator_preparation(
+                                    &config,
+                                    TranslatorPreparationPlan {
+                                        display: true,
+                                        outgoing: false,
+                                    },
+                                    &preparation_tx,
+                                    &progress_result_tx,
+                                    &status,
+                                    &mut preparation_generation,
+                                    &mut preparation_cancellation,
+                                );
+                            } else if !needs_preparation {
+                                let _ = worker_tx.send(WorkerCommand::Warm);
+                            }
+                        } else if !config.enabled && !config.keep_local_model_warm {
+                            let _ = worker_tx.send(WorkerCommand::Release);
+                        }
                     }
                 }
                 Control::SetEnabled(enabled) => {
@@ -935,6 +973,7 @@ fn run_controller(
             target,
             &config,
             &status,
+            dictionary_store.as_ref(),
         );
 
         let had_client = client.is_some();
@@ -966,11 +1005,16 @@ fn run_controller(
                 &config.ui_language,
             )?;
             if config.dictionary_enabled {
+                let dictionary_translation_ready = status
+                    .lock()
+                    .is_ok_and(|runtime| runtime.active_translator == config.translator);
                 scan_dictionary(
                     client.as_mut().expect("connected CDP client"),
                     dictionary_store.as_ref(),
                     app_handle.as_ref(),
                     &config,
+                    &worker_tx,
+                    dictionary_translation_ready,
                 )?;
                 dictionary_ui_needs_cleanup = true;
             } else if dictionary_ui_needs_cleanup {
@@ -1153,6 +1197,8 @@ fn scan_dictionary(
     store: Option<&DictionaryStore>,
     app: Option<&AppHandle>,
     config: &AppConfig,
+    worker: &mpsc::Sender<WorkerCommand>,
+    translation_ready: bool,
 ) -> Result<(), String> {
     let value = client.evaluate(
         &dictionary_ui_script(
@@ -1175,9 +1221,34 @@ fn scan_dictionary(
                     } else {
                         config.target_language.as_str()
                     };
-                    store.lookup(&request.query, source_language, target_language)
+                    let result = store.lookup(&request.query, source_language, target_language)?;
+                    let target = Language::try_from(result.target_language.as_str())
+                        .unwrap_or(Language::English);
+                    if result.needs_localization() && translation_ready {
+                        worker
+                            .send(WorkerCommand::LocalizeDictionary(
+                                DictionaryLocalizationBatch {
+                                    request_id: request.id.clone(),
+                                    target,
+                                    result,
+                                    queued_at: Instant::now(),
+                                },
+                            ))
+                            .map_err(|_| {
+                                "Rust 사전 뜻 번역 작업 스레드가 종료되었습니다.".to_string()
+                            })?;
+                        Ok(None)
+                    } else {
+                        Ok(Some(result))
+                    }
                 })
-                .and_then(|result| apply_dictionary_result_script(&request.id, &result)),
+                .and_then(|result| {
+                    result
+                        .as_ref()
+                        .map(|result| apply_dictionary_result_script(&request.id, result))
+                        .transpose()
+                        .map(|script| script.unwrap_or_default())
+                }),
             "save" => store
                 .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
                 .and_then(|store| {
@@ -1972,6 +2043,7 @@ fn drain_worker_results(
     target: Language,
     config: &AppConfig,
     status: &Arc<Mutex<RuntimeStatus>>,
+    dictionary_store: Option<&DictionaryStore>,
 ) {
     let mut changes = Vec::new();
     while let Ok(result) = results.try_recv() {
@@ -2127,6 +2199,22 @@ fn drain_worker_results(
                     }
                 }
             }
+            WorkerResult::DictionaryLocalized { request_id, result } => {
+                if let Some(store) = dictionary_store {
+                    if let Err(error) = store.cache_localized_result(&result) {
+                        crate::diagnostics::warn("dictionary", &error);
+                    }
+                }
+                let Some(client) = client.as_mut() else {
+                    continue;
+                };
+                match apply_dictionary_result_script(&request_id, &result) {
+                    Ok(script) => {
+                        let _ = client.evaluate(&script, false);
+                    }
+                    Err(error) => crate::diagnostics::warn("dictionary", &error),
+                }
+            }
             WorkerResult::DisplayActivated {
                 generation: activated_generation,
                 name,
@@ -2234,7 +2322,9 @@ fn finish_activation_status(
     let mut release = false;
     update_status(status, |runtime| {
         let display_ready = runtime.active_translator == runtime.configured_translator
-            || (!config.enabled && is_local_model_name(&runtime.configured_translator));
+            || (!config.enabled
+                && !config.dictionary_enabled
+                && is_local_model_name(&runtime.configured_translator));
         let outgoing_ready = runtime.active_outgoing_translator
             == runtime.configured_outgoing_translator
             || (!config.outgoing_translation_enabled
@@ -2247,6 +2337,7 @@ fn finish_activation_status(
         runtime.model_progress = None;
         let model_is_prepared = !is_local_model_name(&runtime.active_translator)
             || config.enabled
+            || config.dictionary_enabled
             || config.outgoing_translation_enabled
             || config.keep_local_model_warm;
         runtime.notice = if runtime.local_model_device == "vram-protected" {
@@ -2265,6 +2356,7 @@ fn finish_activation_status(
         release = (is_local_model_name(&runtime.active_translator)
             || is_local_model_name(&runtime.active_outgoing_translator))
             && !config.enabled
+            && !config.dictionary_enabled
             && !config.outgoing_translation_enabled
             && !config.keep_local_model_warm;
     });
@@ -2352,6 +2444,24 @@ fn run_translation_worker(
                     outcome,
                 });
             }
+            WorkerCommand::LocalizeDictionary(batch) => {
+                log_worker_queue(
+                    "dictionary",
+                    batch.queued_at,
+                    batch.result.entries.len(),
+                    batch
+                        .result
+                        .entries
+                        .iter()
+                        .map(|entry| entry.definition.chars().count())
+                        .sum(),
+                );
+                let result = localize_dictionary_result(&mut service, batch.result, batch.target);
+                let _ = results.send(WorkerResult::DictionaryLocalized {
+                    request_id: batch.request_id,
+                    result,
+                });
+            }
             WorkerCommand::DiscardDisplayBefore { .. } => {}
             WorkerCommand::Activate {
                 generation,
@@ -2389,6 +2499,37 @@ fn run_translation_worker(
             WorkerCommand::Stop => break,
         }
     }
+}
+
+fn localize_dictionary_result(
+    service: &mut TranslationService,
+    mut result: DictionaryLookupResult,
+    target: Language,
+) -> DictionaryLookupResult {
+    for entry in &mut result.entries {
+        if entry.definition.is_empty()
+            || entry.definition_origin != "original"
+            || entry.definition_language == result.target_language
+        {
+            continue;
+        }
+        match service.translate(&entry.definition, target) {
+            Ok(translated)
+                if !translated.trim().is_empty()
+                    && translated.trim() != entry.definition.trim() =>
+            {
+                entry.definition = translated.trim().to_string();
+                entry.definition_language = result.target_language.clone();
+                entry.definition_origin = "automatic".to_string();
+            }
+            Ok(_) => {}
+            Err(error) => crate::diagnostics::warn(
+                "dictionary",
+                &format!("dictionary gloss translation failed: {error}"),
+            ),
+        }
+    }
+    result
 }
 
 fn incoming_context_key(part: &DomPart) -> Option<String> {
@@ -2758,21 +2899,24 @@ mod tests {
     use super::{
         cdp_attach_text_scripts, display_batch_item_limit, display_preparation_is_required,
         display_translation_is_ready, display_view_scope, incoming_context_key,
-        initial_model_preparation_progress, next_worker_command, plan_dom_updates, poll_interval,
-        preparation_plan_for_active_lanes, run_outgoing_translation_worker,
-        translator_activation_notice, translator_label, translator_preparation_plan,
-        DisplayViewObservation, DisplayViewState, OutgoingTranslationBatch, OutgoingWorkerCommand,
-        PartState, RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan,
-        WorkerCommand, WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY,
-        MAX_BATCH_ITEMS,
+        initial_model_preparation_progress, localize_dictionary_result, next_worker_command,
+        plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
+        run_outgoing_translation_worker, translator_activation_notice, translator_label,
+        translator_preparation_plan, DisplayViewObservation, DisplayViewState,
+        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
+        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
+        CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
     };
+    use crate::cache::TranslationCache;
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
+    use crate::dictionary::{DictionaryEntry, DictionaryLookupResult};
     use crate::dom::{
         apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
         INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
     use crate::language::{detect_explicit_language, Language};
+    use crate::translation::{MockTranslator, TranslationService};
     use std::collections::{HashMap, HashSet, VecDeque};
     use std::sync::mpsc;
     use std::thread;
@@ -2785,6 +2929,51 @@ mod tests {
         assert_eq!(status.engine, "rust-native");
         assert_eq!(status.configured_translator, "hymt_1_8b");
         assert_eq!(status.active_translator, "original");
+    }
+
+    #[test]
+    fn dictionary_gloss_localization_marks_the_translation_and_keeps_the_original() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-localization-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let result = DictionaryLookupResult {
+            query: "future".to_string(),
+            source_language: "en".to_string(),
+            target_language: "ja".to_string(),
+            entries: vec![DictionaryEntry {
+                entry_id: 1,
+                headword: "future".to_string(),
+                language: "en".to_string(),
+                reading: String::new(),
+                part_of_speech: "noun".to_string(),
+                definition: "The time after the present.".to_string(),
+                definition_language: "en".to_string(),
+                definition_origin: "original".to_string(),
+                original_definition: "The time after the present.".to_string(),
+                original_definition_language: "en".to_string(),
+                example: String::new(),
+                source_name: "Test".to_string(),
+                source_url: String::new(),
+                license: "Test".to_string(),
+            }],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(&mut service, result, Language::Japanese);
+        assert_eq!(
+            localized.entries[0].definition,
+            "[ja] The time after the present."
+        );
+        assert_eq!(localized.entries[0].definition_language, "ja");
+        assert_eq!(localized.entries[0].definition_origin, "automatic");
+        assert_eq!(
+            localized.entries[0].original_definition,
+            "The time after the present."
+        );
     }
 
     #[test]
@@ -2921,6 +3110,7 @@ mod tests {
     fn inactive_local_lanes_are_deferred_until_the_feature_uses_them() {
         let display_inactive = AppConfig {
             enabled: false,
+            dictionary_enabled: false,
             outgoing_translation_enabled: true,
             translator: "hymt_1_8b".to_string(),
             outgoing_translator: "chatgpt".to_string(),
@@ -2932,6 +3122,21 @@ mod tests {
             TranslatorPreparationPlan {
                 display: false,
                 outgoing: true,
+            }
+        );
+
+        let dictionary_active = AppConfig {
+            enabled: false,
+            dictionary_enabled: true,
+            outgoing_translation_enabled: false,
+            translator: "hymt_1_8b".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            preparation_plan_for_active_lanes(&dictionary_active, TranslatorPreparationPlan::all()),
+            TranslatorPreparationPlan {
+                display: true,
+                outgoing: false,
             }
         );
 
@@ -3019,6 +3224,7 @@ mod tests {
     fn ui_ready_prepares_only_the_enabled_lane_when_the_other_lane_is_local() {
         let config = AppConfig {
             enabled: false,
+            dictionary_enabled: false,
             outgoing_translation_enabled: true,
             translator: "hymt_1_8b".to_string(),
             outgoing_translator: "mock".to_string(),

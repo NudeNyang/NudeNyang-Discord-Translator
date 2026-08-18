@@ -34,14 +34,19 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     return supportedUiLanguages.find(code => normalized === code.toLowerCase() || normalized.startsWith(`${code.toLowerCase()}-`)) || 'en';
   }
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
+  const definitionLanguage = uiLanguage;
   const copies = Object.assign({
-    ko:{lookup:'사전에서 찾기',dictionary:'사전',close:'닫기',loading:'뜻을 찾고 있습니다.',empty:'설치된 사전에서 이 단어를 찾지 못했습니다.',failed:'사전을 조회하지 못했습니다.',pronounce:'발음 듣기',external:'Wiktionary에서 더 보기',personal:'개인 사전',addPersonal:'개인 사전에 추가',targetTerm:'표시할 뜻 또는 번역어',note:'메모 (선택)',save:'저장',saved:'개인 사전에 저장했습니다.',cancel:'취소',source:'출처',noun:'명사',verb:'동사',adjective:'형용사',adverb:'부사',other:'기타'},
-    en:{lookup:'Look up in dictionary',dictionary:'Dictionary',close:'Close',loading:'Looking up the word.',empty:'The word was not found in installed dictionaries.',failed:'The dictionary could not be searched.',pronounce:'Listen to pronunciation',external:'View more on Wiktionary',personal:'Personal dictionary',addPersonal:'Add to personal dictionary',targetTerm:'Meaning or translation to display',note:'Note (optional)',save:'Save',saved:'Saved to the personal dictionary.',cancel:'Cancel',source:'Source',noun:'Noun',verb:'Verb',adjective:'Adjective',adverb:'Adverb',other:'Other'},
-    ja:{lookup:'辞書で調べる',dictionary:'辞書',close:'閉じる',loading:'意味を調べています。',empty:'インストール済みの辞書にこの単語はありません。',failed:'辞書を検索できませんでした。',pronounce:'発音を聞く',external:'Wiktionaryで詳しく見る',personal:'個人辞書',addPersonal:'個人辞書に追加',targetTerm:'表示する意味または訳語',note:'メモ（任意）',save:'保存',saved:'個人辞書に保存しました。',cancel:'キャンセル',source:'出典',noun:'名詞',verb:'動詞',adjective:'形容詞',adverb:'副詞',other:'その他'},
-    zh:{lookup:'在词典中查找',dictionary:'词典',close:'关闭',loading:'正在查找释义。',empty:'已安装的词典中没有这个词。',failed:'无法查询词典。',pronounce:'听发音',external:'在 Wiktionary 中查看更多',personal:'个人词典',addPersonal:'添加到个人词典',targetTerm:'要显示的释义或译词',note:'备注（可选）',save:'保存',saved:'已保存到个人词典。',cancel:'取消',source:'来源',noun:'名词',verb:'动词',adjective:'形容词',adverb:'副词',other:'其他'}
+    ko:{lookup:'사전에서 찾기',dictionary:'사전',close:'닫기',loading:'뜻을 찾고 있습니다.',empty:'설치된 사전에서 이 단어를 찾지 못했습니다.',failed:'사전을 조회하지 못했습니다.',pronounce:'발음 듣기',external:'Wiktionary에서 더 보기',personal:'개인 사전',addPersonal:'개인 사전에 추가',targetTerm:'표시할 뜻 또는 번역어',note:'메모 (선택)',save:'저장',saved:'개인 사전에 저장했습니다.',cancel:'취소',source:'출처',automaticTranslation:'자동 번역',originalMeaning:'원문 뜻',noun:'명사',verb:'동사',adjective:'형용사',adverb:'부사',other:'기타'},
+    en:{lookup:'Look up in dictionary',dictionary:'Dictionary',close:'Close',loading:'Looking up the word.',empty:'The word was not found in installed dictionaries.',failed:'The dictionary could not be searched.',pronounce:'Listen to pronunciation',external:'View more on Wiktionary',personal:'Personal dictionary',addPersonal:'Add to personal dictionary',targetTerm:'Meaning or translation to display',note:'Note (optional)',save:'Save',saved:'Saved to the personal dictionary.',cancel:'Cancel',source:'Source',automaticTranslation:'Automatic translation',originalMeaning:'Original meaning',noun:'Noun',verb:'Verb',adjective:'Adjective',adverb:'Adverb',other:'Other'},
+    ja:{lookup:'辞書で調べる',dictionary:'辞書',close:'閉じる',loading:'意味を調べています。',empty:'インストール済みの辞書にこの単語はありません。',failed:'辞書を検索できませんでした。',pronounce:'発音を聞く',external:'Wiktionaryで詳しく見る',personal:'個人辞書',addPersonal:'個人辞書に追加',targetTerm:'表示する意味または訳語',note:'メモ（任意）',save:'保存',saved:'個人辞書に保存しました。',cancel:'キャンセル',source:'出典',automaticTranslation:'自動翻訳',originalMeaning:'原文の意味',noun:'名詞',verb:'動詞',adjective:'形容詞',adverb:'副詞',other:'その他'},
+    zh:{lookup:'在词典中查找',dictionary:'词典',close:'关闭',loading:'正在查找释义。',empty:'已安装的词典中没有这个词。',failed:'无法查询词典。',pronounce:'听发音',external:'在 Wiktionary 中查看更多',personal:'个人词典',addPersonal:'添加到个人词典',targetTerm:'要显示的释义或译词',note:'备注（可选）',save:'保存',saved:'已保存到个人词典。',cancel:'取消',source:'来源',automaticTranslation:'自动翻译',originalMeaning:'原文释义',noun:'名词',verb:'动词',adjective:'形容词',adverb:'副词',other:'其他'}
   }, __GENERATED_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-dictionary-ui-v1';
+  const languageName = code => {
+    try { return new Intl.DisplayNames([uiLanguage],{type:'language'}).of(code) || code; }
+    catch { return code || ''; }
+  };
+  const version = 'rust-dictionary-ui-v2';
   if (!enabled) {
     window.__ntDictionaryAbort?.abort();
     document.getElementById('nt-dictionary-selection')?.remove();
@@ -98,8 +103,13 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-panel .nt-dict-personal strong{display:block;margin-top:3px;font-size:16px}
       #nt-dictionary-panel .nt-dict-entry{padding:15px 0;border-bottom:1px solid var(--background-modifier-accent,#ffffff12)}
       #nt-dictionary-panel .nt-dict-entry:last-of-type{border-bottom:0}
-      #nt-dictionary-panel .nt-dict-pos{display:inline-flex;margin-bottom:7px;padding:2px 7px;border-radius:6px;background:var(--background-modifier-accent,#ffffff12);color:var(--text-muted,#b5bac1);font-size:11px;font-weight:700}
+      #nt-dictionary-panel .nt-dict-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:7px}
+      #nt-dictionary-panel .nt-dict-pos,#nt-dictionary-panel .nt-dict-origin{display:inline-flex;padding:2px 7px;border-radius:6px;background:var(--background-modifier-accent,#ffffff12);color:var(--text-muted,#b5bac1);font-size:11px;font-weight:700}
+      #nt-dictionary-panel .nt-dict-origin.automatic{background:color-mix(in srgb,var(--brand-500,#5865f2) 14%,var(--background-modifier-accent,#ffffff12));color:color-mix(in srgb,var(--brand-300,#949cf7) 84%,var(--text-normal,#f2f3f5))}
       #nt-dictionary-panel .nt-dict-definition{margin:0;color:var(--text-normal,#f2f3f5);font-size:14px;line-height:1.58}
+      #nt-dictionary-panel .nt-dict-original{margin-top:9px;color:var(--text-muted,#949ba4);font-size:12px}
+      #nt-dictionary-panel .nt-dict-original summary{width:max-content;max-width:100%;cursor:pointer;font-weight:650}
+      #nt-dictionary-panel .nt-dict-original p{margin:6px 0 0;padding-left:11px;border-left:2px solid var(--background-modifier-accent,#ffffff1f);line-height:1.55}
       #nt-dictionary-panel .nt-dict-example{margin:9px 0 0;padding-left:11px;border-left:2px solid var(--background-modifier-accent,#ffffff1f);color:var(--text-muted,#b5bac1);font-size:13px}
       #nt-dictionary-panel .nt-dict-source{display:block;margin-top:9px}
       #nt-dictionary-panel .nt-dict-actions{display:flex;flex-wrap:wrap;gap:7px;padding-top:14px}
@@ -215,7 +225,16 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     }
     for (const entry of result?.entries || []) {
       const item = make('article','nt-dict-entry');
-      item.append(make('span','nt-dict-pos',copy(entry.partOfSpeech || 'other')),make('p','nt-dict-definition',entry.definition));
+      const meta = make('div','nt-dict-meta');
+      meta.append(make('span','nt-dict-pos',copy(entry.partOfSpeech || 'other')));
+      if (entry.definitionOrigin === 'automatic') meta.append(make('span','nt-dict-origin automatic',copy('automaticTranslation')));
+      else if (entry.definitionLanguage && entry.definitionLanguage !== definitionLanguage) meta.append(make('span','nt-dict-origin',`${languageName(entry.definitionLanguage)} · ${copy('originalMeaning')}`));
+      item.append(meta,make('p','nt-dict-definition',entry.definition));
+      if (entry.definitionOrigin === 'automatic' && entry.originalDefinition && entry.originalDefinition !== entry.definition) {
+        const original = make('details','nt-dict-original');
+        original.append(make('summary','',`${languageName(entry.originalDefinitionLanguage)} · ${copy('originalMeaning')}`),make('p','',entry.originalDefinition));
+        item.append(original);
+      }
       if (entry.example) item.append(make('p','nt-dict-example',entry.example));
       item.append(make('small','nt-dict-source',`${copy('source')}: ${entry.sourceName} (${entry.license})`)); body.append(item);
     }
@@ -236,7 +255,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
         event.preventDefault();
         if (!target.value.trim()) return;
         save.disabled=true;
-        const saveId=queue({action:'save',query:result?.query || '',sourceLanguage:result?.sourceLanguage || '',targetLanguage:targetLanguage,targetTerm:target.value.trim(),note:note.value.trim()});
+        const saveId=queue({action:'save',query:result?.query || '',sourceLanguage:result?.sourceLanguage || '',targetLanguage:definitionLanguage,targetTerm:target.value.trim(),note:note.value.trim()});
         form.dataset.saveId=saveId;
       });
       actions.after(form); target.focus();
@@ -271,7 +290,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       const query=selectionButton.dataset.query || ''; if(!query) return;
       const anchor={left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height};
       loadingBody(query); panel.dataset.query=query; panel.dataset.anchor=JSON.stringify(anchor); positionPanel(anchor);
-      panel.dataset.requestId=queue({action:'lookup',query,sourceLanguage:'',targetLanguage}); closeSelection();
+      panel.dataset.requestId=queue({action:'lookup',query,sourceLanguage:'',targetLanguage:definitionLanguage}); closeSelection();
     },{signal});
   }
   return window.__ntDictionaryRequests.splice(0);
@@ -311,6 +330,8 @@ pub fn dictionary_ui_script(
         ("saved", "개인 사전에 저장했습니다."),
         ("cancel", "취소"),
         ("source", "출처"),
+        ("automaticTranslation", "자동 번역"),
+        ("originalMeaning", "원문 뜻"),
         ("noun", "명사"),
         ("verb", "동사"),
         ("adjective", "형용사"),
@@ -401,6 +422,9 @@ mod tests {
         assert!(script.contains("nt-dictionary-selection"));
         assert!(script.contains("speechSynthesis"));
         assert!(script.contains("textContent"));
+        assert!(script.contains("targetLanguage:definitionLanguage"));
+        assert!(script.contains("entry.definitionOrigin === 'automatic'"));
+        assert!(script.contains("nt-dict-original"));
         assert!(!script.contains("innerHTML"));
     }
 

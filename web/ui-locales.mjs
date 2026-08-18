@@ -475,7 +475,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "實用語言包",
     "실용팩 설치": "安裝實用語言包",
     "실용팩 설치됨": "實用語言包已安裝",
-    "설치 중 {progress}%": "正在安裝 {progress}%"
+    "설치 중 {progress}%": "正在安裝 {progress}%",
+    "자동 번역": "自動翻譯",
+    "원문 뜻": "原文含義",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "若介面語言沒有可用的釋義，已設定的翻譯模型會自動翻譯。選用外部模型時，字典中的原文釋義可能會傳送至該服務。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -952,7 +955,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Pacote prático",
     "실용팩 설치": "Instalar pacote prático",
     "실용팩 설치됨": "Pacote prático instalado",
-    "설치 중 {progress}%": "Instalando {progress}%"
+    "설치 중 {progress}%": "Instalando {progress}%",
+    "자동 번역": "Tradução automática",
+    "원문 뜻": "Significado original",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se não houver um significado disponível no idioma da interface, o modelo de tradução configurado fará a tradução automaticamente. Quando um modelo externo estiver selecionado, o significado original do dicionário poderá ser enviado a esse serviço."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1429,7 +1435,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "व्यावहारिक पैक",
     "실용팩 설치": "व्यावहारिक पैक इंस्टॉल करें",
     "실용팩 설치됨": "व्यावहारिक पैक इंस्टॉल हो गया",
-    "설치 중 {progress}%": "इंस्टॉल हो रहा है {progress}%"
+    "설치 중 {progress}%": "इंस्टॉल हो रहा है {progress}%",
+    "자동 번역": "स्वचालित अनुवाद",
+    "원문 뜻": "मूल अर्थ",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "यदि इंटरफ़ेस की भाषा में अर्थ उपलब्ध नहीं है, तो कॉन्फ़िगर किया गया अनुवाद मॉडल उसका स्वचालित रूप से अनुवाद करता है। बाहरी मॉडल चुने जाने पर, शब्दकोश का मूल अर्थ उस सेवा को भेजा जा सकता है।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1906,7 +1915,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Paquete práctico",
     "실용팩 설치": "Instalar paquete práctico",
     "실용팩 설치됨": "Paquete práctico instalado",
-    "설치 중 {progress}%": "Instalando: {progress}%"
+    "설치 중 {progress}%": "Instalando: {progress}%",
+    "자동 번역": "Traducción automática",
+    "원문 뜻": "Significado original",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si no hay un significado disponible en el idioma de la interfaz, el modelo de traducción configurado lo traduce automáticamente. Si se selecciona un modelo externo, el significado original del diccionario puede enviarse a ese servicio."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2383,7 +2395,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Praxispaket",
     "실용팩 설치": "Praxispaket installieren",
     "실용팩 설치됨": "Praxispaket installiert",
-    "설치 중 {progress}%": "Installation läuft: {progress} %"
+    "설치 중 {progress}%": "Installation läuft: {progress} %",
+    "자동 번역": "Automatische Übersetzung",
+    "원문 뜻": "Ursprüngliche Bedeutung",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Wenn keine Bedeutung in der Sprache der Benutzeroberfläche verfügbar ist, übersetzt das konfigurierte Übersetzungsmodell sie automatisch. Wenn ein externes Modell ausgewählt ist, kann die ursprüngliche Wörterbuchbedeutung an diesen Dienst gesendet werden."
   },
   "ru": {
     "설정": "Настройки",
@@ -2860,7 +2875,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Практический пакет",
     "실용팩 설치": "Установить практический пакет",
     "실용팩 설치됨": "Практический пакет установлен",
-    "설치 중 {progress}%": "Установка: {progress}%"
+    "설치 중 {progress}%": "Установка: {progress}%",
+    "자동 번역": "Автоматический перевод",
+    "원문 뜻": "Исходное значение",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Если значение недоступно на языке интерфейса, настроенная модель перевода автоматически переведёт его. При выборе внешней модели исходное словарное значение может быть отправлено соответствующему сервису."
   },
   "id": {
     "설정": "Pengaturan",
@@ -3337,7 +3355,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Paket praktis",
     "실용팩 설치": "Instal paket praktis",
     "실용팩 설치됨": "Paket praktis terinstal",
-    "설치 중 {progress}%": "Menginstal {progress}%"
+    "설치 중 {progress}%": "Menginstal {progress}%",
+    "자동 번역": "Terjemahan otomatis",
+    "원문 뜻": "Makna asli",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika makna tidak tersedia dalam bahasa antarmuka, model terjemahan yang dikonfigurasi akan menerjemahkannya secara otomatis. Jika model eksternal dipilih, makna asli dari kamus dapat dikirim ke layanan tersebut."
   },
   "fr": {
     "설정": "Paramètres",
@@ -3814,7 +3835,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Pack pratique",
     "실용팩 설치": "Installer le pack pratique",
     "실용팩 설치됨": "Pack pratique installé",
-    "설치 중 {progress}%": "Installation en cours… {progress} %"
+    "설치 중 {progress}%": "Installation en cours… {progress} %",
+    "자동 번역": "Traduction automatique",
+    "원문 뜻": "Sens original",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si un sens n’est pas disponible dans la langue de l’interface, le modèle de traduction configuré le traduit automatiquement. Lorsqu’un modèle externe est sélectionné, le sens original du dictionnaire peut être envoyé à ce service."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4291,7 +4315,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Pratik paket",
     "실용팩 설치": "Pratik paketi yükle",
     "실용팩 설치됨": "Pratik paket yüklendi",
-    "설치 중 {progress}%": "Yükleniyor %{progress}"
+    "설치 중 {progress}%": "Yükleniyor %{progress}",
+    "자동 번역": "Otomatik çeviri",
+    "원문 뜻": "Orijinal anlam",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Arayüz dilinde bir anlam mevcut değilse, yapılandırılan çeviri modeli bunu otomatik olarak çevirir. Harici bir model seçildiğinde, sözlükteki orijinal anlam bu hizmete gönderilebilir."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4768,7 +4795,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "حزمة عملية",
     "실용팩 설치": "تثبيت الحزمة العملية",
     "실용팩 설치됨": "تم تثبيت الحزمة العملية",
-    "설치 중 {progress}%": "جارٍ التثبيت {progress}%"
+    "설치 중 {progress}%": "جارٍ التثبيت {progress}%",
+    "자동 번역": "الترجمة التلقائية",
+    "원문 뜻": "المعنى الأصلي",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "إذا لم يتوفر المعنى بلغة الواجهة، فسيترجمه نموذج الترجمة المُعَدّ تلقائيًا. عند اختيار نموذج خارجي، قد يُرسل المعنى الأصلي من القاموس إلى تلك الخدمة."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5245,7 +5275,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Gói thực dụng",
     "실용팩 설치": "Cài đặt gói thực dụng",
     "실용팩 설치됨": "Đã cài đặt gói thực dụng",
-    "설치 중 {progress}%": "Đang cài đặt {progress}%"
+    "설치 중 {progress}%": "Đang cài đặt {progress}%",
+    "자동 번역": "Dịch tự động",
+    "원문 뜻": "Nghĩa gốc",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Nếu không có nghĩa bằng ngôn ngữ giao diện, mô hình dịch đã cấu hình sẽ tự động dịch nghĩa đó. Khi chọn mô hình bên ngoài, nghĩa gốc trong từ điển có thể được gửi đến dịch vụ đó."
   },
   "it": {
     "설정": "Impostazioni",
@@ -5722,7 +5755,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Pacchetto pratico",
     "실용팩 설치": "Installa il pacchetto pratico",
     "실용팩 설치됨": "Pacchetto pratico installato",
-    "설치 중 {progress}%": "Installazione {progress}%"
+    "설치 중 {progress}%": "Installazione {progress}%",
+    "자동 번역": "Traduzione automatica",
+    "원문 뜻": "Significato originale",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se non è disponibile un significato nella lingua dell'interfaccia, il modello di traduzione configurato lo traduce automaticamente. Se è selezionato un modello esterno, il significato originale del dizionario potrebbe essere inviato a tale servizio."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6199,7 +6235,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Pakiet praktyczny",
     "실용팩 설치": "Zainstaluj pakiet praktyczny",
     "실용팩 설치됨": "Pakiet praktyczny zainstalowany",
-    "설치 중 {progress}%": "Instalowanie: {progress}%"
+    "설치 중 {progress}%": "Instalowanie: {progress}%",
+    "자동 번역": "Tłumaczenie automatyczne",
+    "원문 뜻": "Oryginalne znaczenie",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jeśli znaczenie nie jest dostępne w języku interfejsu, skonfigurowany model tłumaczeniowy przetłumaczy je automatycznie. W przypadku wybrania modelu zewnętrznego oryginalne znaczenie słownikowe może zostać wysłane do tej usługi."
   },
   "uk": {
     "설정": "Налаштування",
@@ -6676,7 +6715,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Практичний пакет",
     "실용팩 설치": "Установити практичний пакет",
     "실용팩 설치됨": "Практичний пакет установлено",
-    "설치 중 {progress}%": "Установлення: {progress}%"
+    "설치 중 {progress}%": "Установлення: {progress}%",
+    "자동 번역": "Автоматичний переклад",
+    "원문 뜻": "Оригінальне значення",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Якщо значення мовою інтерфейсу недоступне, налаштована модель перекладу перекладає його автоматично. Якщо вибрано зовнішню модель, оригінальне словникове значення може бути надіслано цьому сервісу."
   },
   "ms": {
     "설정": "Tetapan",
@@ -7153,7 +7195,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Pek praktikal",
     "실용팩 설치": "Pasang pek praktikal",
     "실용팩 설치됨": "Pek praktikal telah dipasang",
-    "설치 중 {progress}%": "Sedang memasang {progress}%"
+    "설치 중 {progress}%": "Sedang memasang {progress}%",
+    "자동 번역": "Terjemahan automatik",
+    "원문 뜻": "Maksud asal",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika maksud tidak tersedia dalam bahasa antara muka, model terjemahan yang dikonfigurasi akan menterjemahkannya secara automatik. Apabila model luaran dipilih, maksud asal dalam kamus mungkin dihantar kepada perkhidmatan tersebut."
   },
   "nl": {
     "설정": "Instellingen",
@@ -7630,7 +7675,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Praktisch pakket",
     "실용팩 설치": "Praktisch pakket installeren",
     "실용팩 설치됨": "Praktisch pakket geïnstalleerd",
-    "설치 중 {progress}%": "Bezig met installeren: {progress}%"
+    "설치 중 {progress}%": "Bezig met installeren: {progress}%",
+    "자동 번역": "Automatische vertaling",
+    "원문 뜻": "Oorspronkelijke betekenis",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Als er geen betekenis beschikbaar is in de interfacetaal, vertaalt het ingestelde vertaalmodel deze automatisch. Als een extern model is geselecteerd, kan de oorspronkelijke betekenis uit het woordenboek naar die service worden verzonden."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8107,7 +8155,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "แพ็กใช้งาน",
     "실용팩 설치": "ติดตั้งแพ็กใช้งาน",
     "실용팩 설치됨": "ติดตั้งแพ็กใช้งานแล้ว",
-    "설치 중 {progress}%": "กำลังติดตั้ง {progress}%"
+    "설치 중 {progress}%": "กำลังติดตั้ง {progress}%",
+    "자동 번역": "การแปลอัตโนมัติ",
+    "원문 뜻": "ความหมายต้นฉบับ",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "หากไม่มีความหมายในภาษาของอินเทอร์เฟซ โมเดลแปลภาษาที่กำหนดไว้จะแปลให้โดยอัตโนมัติ เมื่อเลือกโมเดลภายนอก ความหมายต้นฉบับจากพจนานุกรมอาจถูกส่งไปยังบริการนั้น"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8584,7 +8635,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Praktikal na pack",
     "실용팩 설치": "I-install ang praktikal na pack",
     "실용팩 설치됨": "Naka-install na ang praktikal na pack",
-    "설치 중 {progress}%": "Ini-install {progress}%"
+    "설치 중 {progress}%": "Ini-install {progress}%",
+    "자동 번역": "Awtomatikong pagsasalin",
+    "원문 뜻": "Orihinal na kahulugan",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Kung walang kahulugan sa wika ng interface, awtomatiko itong isasalin ng naka-configure na modelo ng pagsasalin. Kapag pumili ng panlabas na modelo, maaaring ipadala sa serbisyong iyon ang orihinal na kahulugan mula sa diksyunaryo."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -9061,7 +9115,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "ব্যবহারিক প্যাক",
     "실용팩 설치": "ব্যবহারিক প্যাক ইনস্টল করুন",
     "실용팩 설치됨": "ব্যবহারিক প্যাক ইনস্টল করা হয়েছে",
-    "설치 중 {progress}%": "ইনস্টল হচ্ছে {progress}%"
+    "설치 중 {progress}%": "ইনস্টল হচ্ছে {progress}%",
+    "자동 번역": "স্বয়ংক্রিয় অনুবাদ",
+    "원문 뜻": "মূল অর্থ",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "ইন্টারফেসের ভাষায় কোনো অর্থ পাওয়া না গেলে, কনফিগার করা অনুবাদ মডেল সেটি স্বয়ংক্রিয়ভাবে অনুবাদ করে। কোনো বাহ্যিক মডেল বেছে নিলে, অভিধানের মূল অর্থ সেই পরিষেবায় পাঠানো হতে পারে।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9538,7 +9595,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "عملی پیک",
     "실용팩 설치": "عملی پیک انسٹال کریں",
     "실용팩 설치됨": "عملی پیک انسٹال ہو گیا",
-    "설치 중 {progress}%": "انسٹال ہو رہا ہے {progress}%"
+    "설치 중 {progress}%": "انسٹال ہو رہا ہے {progress}%",
+    "자동 번역": "خودکار ترجمہ",
+    "원문 뜻": "اصل معنی",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر انٹرفیس کی زبان میں معنی دستیاب نہ ہوں، تو ترتیب دیا گیا ترجمہ ماڈل خودکار طور پر ان کا ترجمہ کرتا ہے۔ بیرونی ماڈل منتخب ہونے کی صورت میں لغت کے اصل معنی اس سروس کو بھیجے جا سکتے ہیں۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -10015,7 +10075,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "நடைமுறைப் பொதி",
     "실용팩 설치": "நடைமுறைப் பொதியை நிறுவு",
     "실용팩 설치됨": "நடைமுறைப் பொதி நிறுவப்பட்டது",
-    "설치 중 {progress}%": "நிறுவுகிறது {progress}%"
+    "설치 중 {progress}%": "நிறுவுகிறது {progress}%",
+    "자동 번역": "தானியங்கி மொழிபெயர்ப்பு",
+    "원문 뜻": "அசல் பொருள்",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "இடைமுக மொழியில் பொருள் கிடைக்கவில்லை என்றால், உள்ளமைக்கப்பட்ட மொழிபெயர்ப்பு மாதிரி அதைத் தானாக மொழிபெயர்க்கும். வெளிப்புற மாதிரி தேர்ந்தெடுக்கப்பட்டால், அகராதியின் அசல் பொருள் அந்தச் சேவைக்கு அனுப்பப்படலாம்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10492,7 +10555,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "بسته کاربردی",
     "실용팩 설치": "نصب بسته کاربردی",
     "실용팩 설치됨": "بسته کاربردی نصب شد",
-    "설치 중 {progress}%": "در حال نصب {progress}٪"
+    "설치 중 {progress}%": "در حال نصب {progress}٪",
+    "자동 번역": "ترجمهٔ خودکار",
+    "원문 뜻": "معنی اصلی",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر معنی به زبان رابط موجود نباشد، مدل ترجمهٔ پیکربندی‌شده آن را به‌طور خودکار ترجمه می‌کند. اگر مدلی خارجی انتخاب شده باشد، ممکن است معنی اصلی واژه‌نامه به آن سرویس ارسال شود."
   },
   "he": {
     "설정": "הגדרות",
@@ -10969,7 +11035,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "חבילה שימושית",
     "실용팩 설치": "התקנת חבילה שימושית",
     "실용팩 설치됨": "החבילה השימושית הותקנה",
-    "설치 중 {progress}%": "מתקין {progress}%"
+    "설치 중 {progress}%": "מתקין {progress}%",
+    "자동 번역": "תרגום אוטומטי",
+    "원문 뜻": "המשמעות המקורית",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "אם אין משמעות זמינה בשפת הממשק, מודל התרגום שהוגדר יתרגם אותה אוטומטית. אם נבחר מודל חיצוני, המשמעות המקורית מהמילון עשויה להישלח לשירות זה."
   },
   "cs": {
     "설정": "Nastavení",
@@ -11446,6 +11515,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "실용팩": "Praktický balíček",
     "실용팩 설치": "Nainstalovat praktický balíček",
     "실용팩 설치됨": "Praktický balíček nainstalován",
-    "설치 중 {progress}%": "Instalace {progress} %"
+    "설치 중 {progress}%": "Instalace {progress} %",
+    "자동 번역": "Automatický překlad",
+    "원문 뜻": "Původní význam",
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Pokud význam není v jazyce rozhraní dostupný, nakonfigurovaný překladový model jej automaticky přeloží. Je-li vybrán externí model, původní slovníkový význam může být odeslán dané službě."
   }
 });

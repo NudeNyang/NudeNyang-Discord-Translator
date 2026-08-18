@@ -89,11 +89,17 @@ struct StarterEntry {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DictionaryEntry {
+    #[serde(skip)]
+    pub entry_id: i64,
     pub headword: String,
     pub language: String,
     pub reading: String,
     pub part_of_speech: String,
     pub definition: String,
+    pub definition_language: String,
+    pub definition_origin: String,
+    pub original_definition: String,
+    pub original_definition_language: String,
     pub example: String,
     pub source_name: String,
     pub source_url: String,
@@ -108,6 +114,16 @@ pub struct DictionaryLookupResult {
     pub target_language: String,
     pub entries: Vec<DictionaryEntry>,
     pub personal_entries: Vec<PersonalDictionaryEntry>,
+}
+
+impl DictionaryLookupResult {
+    pub fn needs_localization(&self) -> bool {
+        self.entries.iter().any(|entry| {
+            !entry.definition.is_empty()
+                && entry.definition_origin == "original"
+                && entry.definition_language != self.target_language
+        })
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -235,13 +251,23 @@ impl DictionaryStore {
             .map_err(|_| "사전 저장소 잠금을 열지 못했습니다.".to_string())?;
         let mut statement = connection
             .prepare(
-                "SELECT e.headword, e.language, e.reading, e.part_of_speech, \
-                        COALESCE(g_target.text, g_en.text, g_any.text, ''), \
+                "SELECT e.id, e.headword, e.language, e.reading, e.part_of_speech, \
+                        COALESCE(g_target.text, g_cached.text, g_en.text, g_any.text, ''), \
+                        CASE WHEN g_target.text IS NOT NULL THEN ?1 \
+                             WHEN g_cached.text IS NOT NULL THEN ?1 \
+                             WHEN g_en.text IS NOT NULL THEN 'en' \
+                             ELSE COALESCE(g_any.locale, '') END, \
+                        CASE WHEN g_target.text IS NOT NULL THEN 'native' \
+                             WHEN g_cached.text IS NOT NULL THEN 'automatic' \
+                             ELSE 'original' END, \
+                        COALESCE(g_en.text, g_any.text, ''), \
+                        CASE WHEN g_en.text IS NOT NULL THEN 'en' ELSE COALESCE(g_any.locale, '') END, \
                         COALESCE(x_target.text, x_en.text, x_any.text, ''), \
                         p.source_name, p.source_url, p.license \
                  FROM dictionary_entries e \
                  JOIN dictionary_packs p ON p.id=e.pack_id \
                  LEFT JOIN dictionary_text g_target ON g_target.entry_id=e.id AND g_target.kind='gloss' AND g_target.locale=?1 \
+                 LEFT JOIN dictionary_localized_text g_cached ON g_cached.entry_id=e.id AND g_cached.locale=?1 \
                  LEFT JOIN dictionary_text g_en ON g_en.entry_id=e.id AND g_en.kind='gloss' AND g_en.locale='en' \
                  LEFT JOIN dictionary_text g_any ON g_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='gloss' ORDER BY locale LIMIT 1) \
                  LEFT JOIN dictionary_text x_target ON x_target.entry_id=e.id AND x_target.kind='example' AND x_target.locale=?1 \
@@ -254,15 +280,20 @@ impl DictionaryStore {
         let entries = statement
             .query_map(params![target_language, normalized, detected], |row| {
                 Ok(DictionaryEntry {
-                    headword: row.get(0)?,
-                    language: row.get(1)?,
-                    reading: row.get(2)?,
-                    part_of_speech: row.get(3)?,
-                    definition: row.get(4)?,
-                    example: row.get(5)?,
-                    source_name: row.get(6)?,
-                    source_url: row.get(7)?,
-                    license: row.get(8)?,
+                    entry_id: row.get(0)?,
+                    headword: row.get(1)?,
+                    language: row.get(2)?,
+                    reading: row.get(3)?,
+                    part_of_speech: row.get(4)?,
+                    definition: row.get(5)?,
+                    definition_language: row.get(6)?,
+                    definition_origin: row.get(7)?,
+                    original_definition: row.get(8)?,
+                    original_definition_language: row.get(9)?,
+                    example: row.get(10)?,
+                    source_name: row.get(11)?,
+                    source_url: row.get(12)?,
+                    license: row.get(13)?,
                 })
             })
             .map_err(|error| format!("사전을 조회하지 못했습니다: {error}"))?
@@ -296,6 +327,43 @@ impl DictionaryStore {
             entries,
             personal_entries,
         })
+    }
+
+    pub fn cache_localized_result(&self, result: &DictionaryLookupResult) -> Result<(), String> {
+        if !is_supported_language_code(&result.target_language) {
+            return Err("사전 뜻의 대상 언어가 올바르지 않습니다.".to_string());
+        }
+        let mut connection = self
+            .connection
+            .lock()
+            .map_err(|_| "사전 저장소 잠금을 열지 못했습니다.".to_string())?;
+        let transaction = connection
+            .transaction()
+            .map_err(|error| format!("사전 뜻 캐시 저장을 시작하지 못했습니다: {error}"))?;
+        for entry in result
+            .entries
+            .iter()
+            .filter(|entry| entry.entry_id > 0 && entry.definition_origin == "automatic")
+        {
+            transaction
+                .execute(
+                    "INSERT INTO dictionary_localized_text \
+                     (entry_id, locale, source_locale, text, updated_at) VALUES (?1, ?2, ?3, ?4, ?5) \
+                     ON CONFLICT(entry_id, locale) DO UPDATE SET \
+                       source_locale=excluded.source_locale, text=excluded.text, updated_at=excluded.updated_at",
+                    params![
+                        entry.entry_id,
+                        result.target_language,
+                        entry.original_definition_language,
+                        entry.definition,
+                        now_seconds()
+                    ],
+                )
+                .map_err(|error| format!("자동 번역한 사전 뜻을 저장하지 못했습니다: {error}"))?;
+        }
+        transaction
+            .commit()
+            .map_err(|error| format!("자동 번역한 사전 뜻 저장을 완료하지 못했습니다: {error}"))
     }
 
     pub fn personal_entries(&self) -> Result<Vec<PersonalDictionaryEntry>, String> {
@@ -776,6 +844,10 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
          CREATE TABLE IF NOT EXISTS dictionary_text ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, entry_id INTEGER NOT NULL REFERENCES dictionary_entries(id) ON DELETE CASCADE, \
            kind TEXT NOT NULL, locale TEXT NOT NULL, text TEXT NOT NULL, UNIQUE(entry_id, kind, locale)); \
+         CREATE TABLE IF NOT EXISTS dictionary_localized_text ( \
+           entry_id INTEGER NOT NULL REFERENCES dictionary_entries(id) ON DELETE CASCADE, \
+           locale TEXT NOT NULL, source_locale TEXT NOT NULL, text TEXT NOT NULL, updated_at REAL NOT NULL, \
+           PRIMARY KEY(entry_id, locale)); \
          CREATE TABLE IF NOT EXISTS personal_dictionary ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, source_language TEXT NOT NULL, target_language TEXT NOT NULL, \
            source_term TEXT NOT NULL, normalized_source_term TEXT NOT NULL, target_term TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', \
@@ -910,6 +982,9 @@ mod tests {
             result.entries[0].definition,
             "현재 이후의 시간 또는 앞으로 일어날 일."
         );
+        assert_eq!(result.entries[0].definition_language, "ko");
+        assert_eq!(result.entries[0].definition_origin, "native");
+        assert!(!result.needs_localization());
         assert_eq!(store.status().unwrap().installed_pack_count, 1);
         let installed = store
             .pack_catalog()
@@ -920,6 +995,34 @@ mod tests {
         assert!(installed.installed);
         assert_eq!(installed.availability, "practical");
         assert_eq!(installed.edition, "mini");
+    }
+
+    #[test]
+    fn automatic_definition_overlay_preserves_and_reuses_the_original_gloss() {
+        let store = temporary_store("localized-overlay");
+        let mut result = store.lookup("future", Some("en"), "ja").unwrap();
+        assert!(result.needs_localization());
+        assert_eq!(result.entries[0].definition_language, "en");
+        assert_eq!(result.entries[0].definition_origin, "original");
+        assert_eq!(
+            result.entries[0].original_definition,
+            "The time or events that come after the present."
+        );
+
+        result.entries[0].definition = "現在より後の時間、またはこれから起こる出来事。".to_string();
+        result.entries[0].definition_language = "ja".to_string();
+        result.entries[0].definition_origin = "automatic".to_string();
+        store.cache_localized_result(&result).unwrap();
+
+        let cached = store.lookup("future", Some("en"), "ja").unwrap();
+        assert_eq!(
+            cached.entries[0].definition,
+            "現在より後の時間、またはこれから起こる出来事。"
+        );
+        assert_eq!(cached.entries[0].definition_language, "ja");
+        assert_eq!(cached.entries[0].definition_origin, "automatic");
+        assert_eq!(cached.entries[0].original_definition_language, "en");
+        assert!(!cached.needs_localization());
     }
 
     #[test]

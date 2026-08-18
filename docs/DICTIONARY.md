@@ -1,8 +1,20 @@
 # Selection dictionary
 
-The dictionary is a local feature independent from message translation. Selecting up to 120 characters in a Discord message reveals an `Aa` action. Lookup starts only after the user activates it. Results may include a headword, reading, part of speech, definition, example, source, license, and operating-system speech synthesis.
+The dictionary can be enabled independently from message translation. Selecting up to 120 characters in a Discord message reveals an `Aa` action. Lookup starts only after the user activates it. Results may include a headword, reading, part of speech, definition, example, source, license, and operating-system speech synthesis.
 
-Installed packs and personal terms stay on the device in a dedicated `dictionary.db` SQLite file. The selected word leaves the device only when the user chooses the external Wiktionary action, which can be disabled in settings.
+Installed packs and personal terms stay on the device in a dedicated `dictionary.db` SQLite file. The selected word leaves the device only when the user chooses the external Wiktionary action, which can be disabled in settings. When a pack has no definition in the interface language, the app may send the pack's original definition to the configured translation model. This transfer is disclosed in settings and the result is marked as an automatic translation.
+
+## Definition locale and fallback order
+
+The interface language, not the message display-translation language, selects the preferred definition locale. This means a Korean interface requests Korean definitions, a Japanese interface requests Japanese definitions, and a Chinese interface requests Chinese definitions regardless of the current Discord translation direction.
+
+Lookup uses the following order for each entry:
+
+1. A human-authored definition in the interface language from the installed pack.
+2. A previously cached automatic translation for that entry and interface language.
+3. The pack's English definition, or its first available original definition.
+
+When only step 3 is available and the configured translation model is ready, the definition is translated in the existing translation worker. Successful results are stored as a localized overlay in `dictionary_localized_text`, while the source dictionary rows remain unchanged. The popup labels the result as an automatic translation and keeps the original definition behind an expandable disclosure. If translation is unavailable or fails, the popup displays the original definition with its language instead of failing the lookup.
 
 ## Pack policy
 

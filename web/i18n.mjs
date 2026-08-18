@@ -3,7 +3,10 @@ import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 export const COPY = Object.freeze({
   "설정": ["Settings", "設定", "设置"],
   "사전": ["Dictionary", "辞書", "词典"],
+  "자동 번역": ["Automatic translation", "自動翻訳", "自动翻译"],
+  "원문 뜻": ["Original meaning", "原文の意味", "原文释义"],
   "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": ["Look up words selected in Discord and manage personal terms and offline dictionary packs.", "Discordで選択した単語の意味を確認し、個人用語とオフライン辞書パックを管理します。", "查询在 Discord 中选择的单词，并管理个人术语和离线词典包。"],
+  "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": ["If a meaning is unavailable in the interface language, the configured translation model translates it automatically. When an external model is selected, the original dictionary meaning may be sent to that service.", "インターフェース言語の意味がない場合は、設定した翻訳モデルで自動翻訳します。外部モデルを選択している場合、辞書の原文の意味がそのサービスに送信されることがあります。", "如果没有界面语言的释义，将使用已配置的翻译模型自动翻译。选择外部模型时，词典的原文释义可能会发送到相应服务。"],
   "선택형 사전": ["Selection dictionary", "選択辞書", "划词词典"],
   "메시지 안에서 바로 뜻 확인": ["Look up meanings inside messages", "メッセージ内ですぐに意味を確認", "直接在消息中查询释义"],
   "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": ["Select a word in a Discord message and press Aa to view its meaning, part of speech, examples, and pronunciation. Personal terms and installed packs are searched only on this PC.", "Discordのメッセージで単語を選択してAaボタンを押すと、意味、品詞、例文、発音を確認できます。個人用語とインストール済み辞書パックはPC内だけで検索します。", "在 Discord 消息中选择单词并按 Aa，即可查看释义、词性、例句和发音。个人术语和已安装词典包仅在本机查询。"],
