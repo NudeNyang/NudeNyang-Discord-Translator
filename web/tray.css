@@ -188,7 +188,7 @@ button:focus-visible {
 
 .bottom-group {
   padding-top: 6px;
-  padding-bottom: 0;
+  padding-bottom: 4px;
 }
 
 .update-group[hidden],
