@@ -1381,6 +1381,22 @@ fn install_antigravity_cli() -> Result<CliConnectionProbe, String> {
 }
 
 #[cfg(windows)]
+fn winget_package_arguments(action: &str, package_id: &str) -> Vec<String> {
+    vec![
+        action.to_string(),
+        "--id".to_string(),
+        package_id.to_string(),
+        "--exact".to_string(),
+        "--source".to_string(),
+        "winget".to_string(),
+        "--silent".to_string(),
+        "--accept-package-agreements".to_string(),
+        "--accept-source-agreements".to_string(),
+        "--disable-interactivity".to_string(),
+    ]
+}
+
+#[cfg(windows)]
 fn install_winget_cli(
     provider: SubscriptionProvider,
     package_id: &str,
@@ -1401,18 +1417,10 @@ fn install_winget_cli(
     } else {
         "install"
     };
+    let arguments = winget_package_arguments(action, package_id);
     let output = run_process(
         &winget,
-        &[
-            action.to_string(),
-            "--id".to_string(),
-            package_id.to_string(),
-            "--exact".to_string(),
-            "--silent".to_string(),
-            "--accept-package-agreements".to_string(),
-            "--accept-source-agreements".to_string(),
-            "--disable-interactivity".to_string(),
-        ],
+        &arguments,
         None,
         &std::env::temp_dir(),
         &subscription_environment(),
@@ -1583,18 +1591,10 @@ fn install_node_runtime() -> Result<(), String> {
     } else {
         "install"
     };
+    let arguments = winget_package_arguments(action, "OpenJS.NodeJS.LTS");
     let output = run_process(
         &winget,
-        &[
-            action.to_string(),
-            "--id".to_string(),
-            "OpenJS.NodeJS.LTS".to_string(),
-            "--exact".to_string(),
-            "--silent".to_string(),
-            "--accept-package-agreements".to_string(),
-            "--accept-source-agreements".to_string(),
-            "--disable-interactivity".to_string(),
-        ],
+        &arguments,
         None,
         &std::env::temp_dir(),
         &subscription_environment(),
@@ -3205,9 +3205,19 @@ mod tests {
         parse_node_major, prepend_directory_to_environment_path, read_capped_output,
         repair_incomplete_gemini_plan_auth_at, run_process, select_antigravity_flash_model,
         subscription_environment, translation_prompt, validated_translations,
-        wait_for_antigravity_connection, write_acp_request, SubscriptionCliTranslator,
-        SubscriptionProvider,
+        wait_for_antigravity_connection, winget_package_arguments, write_acp_request,
+        SubscriptionCliTranslator, SubscriptionProvider,
     };
+
+    #[cfg(windows)]
+    #[test]
+    fn winget_install_targets_the_community_repository() {
+        let arguments = winget_package_arguments("install", "OpenJS.NodeJS.LTS");
+
+        assert!(arguments
+            .windows(2)
+            .any(|pair| pair == ["--source", "winget"]));
+    }
 
     #[cfg(windows)]
     #[test]

@@ -184,6 +184,8 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 런타임 구성, Discord 연결, 데이터 경계, OCR, 플랫폼 분리 |
 | [docs/LANGUAGES.md](docs/LANGUAGES.md) | 28개 언어, 감지 방식, 공급자 지원 범위, OCR 범위 |
+| [PRIVACY.md](PRIVACY.md) | 로컬 데이터 처리와 선택형 외부 서비스 전송 범위 |
+| [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | 릴리스 출처, 서명 역할과 검증 정책 |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | 모델, 런타임, 의존성 고지 |
 
 ## 라이선스
