@@ -8,7 +8,7 @@ The project is preparing an application for the SignPath Foundation open-source 
 
 After acceptance, official signed releases will include the following acknowledgement:
 
-> Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+> Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
 
 ## Team roles
 
