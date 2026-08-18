@@ -1214,20 +1214,21 @@ fn scan_dictionary(
             "lookup" => store
                 .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
                 .and_then(|store| {
-                    let contextual_language = detect_language(&request.context).language;
-                    let source_language = if is_supported_language_code(&request.source_language) {
-                        Some(request.source_language.as_str())
-                    } else if contextual_language != Language::Unknown {
-                        Some(contextual_language.code())
-                    } else {
-                        None
-                    };
+                    let source_language = dictionary_source_language(
+                        &request.source_language,
+                        &request.query,
+                        &request.context,
+                    );
                     let target_language = if is_supported_language_code(&request.target_language) {
                         request.target_language.as_str()
                     } else {
                         config.target_language.as_str()
                     };
-                    let result = store.lookup(&request.query, source_language, target_language)?;
+                    let result = store.lookup(
+                        &request.query,
+                        source_language.as_deref(),
+                        target_language,
+                    )?;
                     let target = Language::try_from(result.target_language.as_str())
                         .unwrap_or(Language::English);
                     if result.needs_localization() && translation_ready {
@@ -1304,6 +1305,22 @@ fn scan_dictionary(
         }
     }
     Ok(())
+}
+
+fn dictionary_source_language(
+    explicit_language: &str,
+    query: &str,
+    context: &str,
+) -> Option<String> {
+    if is_supported_language_code(explicit_language) {
+        return Some(explicit_language.to_string());
+    }
+    let selected_language = detect_language(query).language;
+    if selected_language != Language::Unknown {
+        return Some(selected_language.code().to_string());
+    }
+    let contextual_language = detect_language(context).language;
+    (contextual_language != Language::Unknown).then(|| contextual_language.code().to_string())
 }
 
 fn open_external_dictionary(app: Option<&AppHandle>, query: &str) -> Result<(), String> {
@@ -2903,10 +2920,10 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_attach_text_scripts, display_batch_item_limit, display_preparation_is_required,
-        display_translation_is_ready, display_view_scope, incoming_context_key,
-        initial_model_preparation_progress, localize_dictionary_result, next_worker_command,
-        plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
+        cdp_attach_text_scripts, dictionary_source_language, display_batch_item_limit,
+        display_preparation_is_required, display_translation_is_ready, display_view_scope,
+        incoming_context_key, initial_model_preparation_progress, localize_dictionary_result,
+        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
         run_outgoing_translation_worker, translator_activation_notice, translator_label,
         translator_preparation_plan, DisplayViewObservation, DisplayViewState,
         OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
@@ -2935,6 +2952,16 @@ mod tests {
         assert_eq!(status.engine, "rust-native");
         assert_eq!(status.configured_translator, "hymt_1_8b");
         assert_eq!(status.active_translator, "original");
+    }
+
+    #[test]
+    fn dictionary_lookup_prefers_selected_japanese_over_unrelated_context() {
+        let language = dictionary_source_language(
+            "",
+            "方針変更、またはプレイヤーからの通報などの影響により、",
+            "關於突然轉為非公開的說明，並收到了官方警告通知。",
+        );
+        assert_eq!(language.as_deref(), Some("ja"));
     }
 
     #[test]

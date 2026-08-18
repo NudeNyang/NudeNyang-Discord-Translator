@@ -176,13 +176,16 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     if (!selection || selection.isCollapsed || selection.rangeCount !== 1) return null;
     const range = selection.getRangeAt(0);
     const node = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
-    const root = node?.closest?.('[id^="message-content-"],[data-dto-message-id],[data-dto-root-id]');
+    const root = node?.closest?.('[id^="message-content-"]') || node?.closest?.('[data-dto-message-id]') || node?.closest?.('[data-dto-root-id]');
     if (!root || root.closest('[contenteditable="true"]') || root.closest('#nt-dictionary-panel')) return null;
     const query = selection.toString().trim().replace(/\s+/g,' ');
     if (!query || [...query].length > 120) return null;
     const rect = range.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
-    const context = String(root.textContent || '').trim().replace(/\s+/g,' ').slice(0,240);
+    const beforeRange=range.cloneRange(); beforeRange.selectNodeContents(root); beforeRange.setEnd(range.startContainer,range.startOffset);
+    const afterRange=range.cloneRange(); afterRange.selectNodeContents(root); afterRange.setStart(range.endContainer,range.endOffset);
+    const beforeText=beforeRange.toString(); const afterText=afterRange.toString();
+    const context=`${[...beforeText].slice(-60).join('')} ${query} ${[...afterText].slice(0,60).join('')}`.trim().replace(/\s+/g,' ').slice(0,240);
     return {query,rect,context};
   };
   const showSelection = () => {
@@ -444,6 +447,8 @@ mod tests {
         assert!(script.contains("nt-dict-original"));
         assert!(script.contains("result?.segmented"));
         assert!(script.contains("context:selectionButton.dataset.context"));
+        assert!(script.contains("[...beforeText].slice(-60)"));
+        assert!(script.contains("[...afterText].slice(0,60)"));
         assert!(!script.contains("innerHTML"));
     }
 

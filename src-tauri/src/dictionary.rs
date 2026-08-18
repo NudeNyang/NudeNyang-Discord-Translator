@@ -1316,5 +1316,34 @@ mod tests {
             .collect::<Vec<_>>();
         assert!(headwords.contains(&"非難"));
         assert!(headwords.contains(&"禁止"));
+
+        let time_phrase = store.lookup("日本時間", Some("ja"), "ko").unwrap();
+        assert!(time_phrase.segmented);
+        let time_headwords = time_phrase
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        assert!(time_headwords.contains(&"日本"));
+        assert!(time_headwords.contains(&"時間"));
+
+        let notice_phrase = store
+            .lookup(
+                "方針変更、またはプレイヤーからの通報などの影響により、",
+                Some("ja"),
+                "ko",
+            )
+            .unwrap();
+        assert!(notice_phrase.segmented);
+        let notice_headwords = notice_phrase
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        assert!(notice_headwords.contains(&"方針"));
+        assert!(notice_headwords.contains(&"変更"));
+        assert!(notice_headwords.contains(&"プレイヤー"));
+        assert!(notice_headwords.contains(&"通報"));
+        assert!(notice_headwords.contains(&"影響"));
     }
 }
