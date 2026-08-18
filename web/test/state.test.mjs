@@ -17,32 +17,39 @@ import {
   translatorRuntimeLabel,
 } from "../state.mjs";
 
-test("manual Discord restart is available only while an active controller is disconnected", () => {
+test("manual Discord restart appears only after automatic recovery is cancelled or fails", () => {
   assert.deepEqual(
     manualDiscordRestartAvailability(
       { controllerEnabled: true, cdpConnected: false },
-      { repairActive: false, promptActive: false },
-    ),
-    { visible: true, disabled: false },
-  );
-  assert.deepEqual(
-    manualDiscordRestartAvailability(
-      { controllerEnabled: true, cdpConnected: false },
-      { repairActive: true, promptActive: false },
-    ),
-    { visible: true, disabled: true },
-  );
-  assert.deepEqual(
-    manualDiscordRestartAvailability(
-      { controllerEnabled: true, cdpConnected: true },
-      { repairActive: false, promptActive: false },
+      { repairActive: false, promptActive: false, manualRestartRequired: false },
     ),
     { visible: false, disabled: false },
   );
   assert.deepEqual(
     manualDiscordRestartAvailability(
+      { controllerEnabled: true, cdpConnected: false },
+      { repairActive: false, promptActive: false, manualRestartRequired: true },
+    ),
+    { visible: true, disabled: false },
+  );
+  assert.deepEqual(
+    manualDiscordRestartAvailability(
       { controllerEnabled: false, cdpConnected: false },
-      { repairActive: false, promptActive: false },
+      { repairActive: true, promptActive: false, manualRestartRequired: true },
+    ),
+    { visible: true, disabled: true },
+  );
+  assert.deepEqual(
+    manualDiscordRestartAvailability(
+      { controllerEnabled: true, cdpConnected: false, connectionIssue: "restart failed" },
+      { repairActive: false, promptActive: false, restartAttempted: true },
+    ),
+    { visible: true, disabled: false },
+  );
+  assert.deepEqual(
+    manualDiscordRestartAvailability(
+      { controllerEnabled: true, cdpConnected: true, connectionIssue: "stale" },
+      { repairActive: false, promptActive: false, manualRestartRequired: true },
     ),
     { visible: false, disabled: false },
   );

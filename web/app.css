@@ -261,7 +261,7 @@ input:focus-visible,
   background: var(--danger);
 }
 
-.button.engine-restart-button {
+.button.secondary.engine-restart-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,19 +269,24 @@ input:focus-visible,
   min-height: 32px;
   gap: 6px;
   padding: 0 10px;
-  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
-  color: var(--accent-strong);
-  background: color-mix(in srgb, var(--accent-soft) 82%, var(--surface));
+  border-color: var(--border);
+  color: var(--muted);
+  background: var(--surface-toned);
   font-size: 12px;
+  font-weight: 500;
   line-height: 1;
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease, transform 90ms ease;
   white-space: nowrap;
 }
 
-.button.engine-restart-button:not(:disabled):hover {
+.button.secondary.engine-restart-button[hidden] {
+  display: none;
+}
+
+.button.secondary.engine-restart-button:not(:disabled):hover {
   border-color: var(--accent);
   color: var(--accent-strong);
-  background: color-mix(in srgb, var(--accent-soft) 68%, var(--surface-hover));
+  background: var(--surface-hover);
 }
 
 .engine-restart-icon {

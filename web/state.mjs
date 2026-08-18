@@ -115,9 +115,11 @@ export function shouldPromptRestart(status, flags) {
 }
 
 export function manualDiscordRestartAvailability(status = {}, flags = {}) {
-  const visible = Boolean(
-    (status.controllerEnabled ?? status.enabled) && !status.cdpConnected,
+  const recoveryRequired = Boolean(
+    flags.manualRestartRequired ||
+      (flags.restartAttempted && status.connectionIssue),
   );
+  const visible = Boolean(recoveryRequired && !status.cdpConnected);
   return {
     visible,
     disabled: visible && Boolean(flags.repairActive || flags.promptActive),
