@@ -147,17 +147,18 @@ test("translation model can be changed inside the tray menu", () => {
 
 test("tray window size hugs each menu view without clipping option lists", () => {
   const trayWindow = tauriConfig.app.windows.find(window => window.label === "tray-menu");
-  assert.equal(trayWindow.height, 362);
+  assert.equal(trayWindow.height, 370);
   assert.match(trayStyles, /\.language-view \.menu-row\.compact \{\s*min-height: 37px;/);
   assert.match(trayStyles, /\.model-view \.menu-row\.compact \{\s*min-height: 37px;/);
-  assert.match(trayStyles, /\.bottom-group \{[^}]*padding-bottom: 0;/s);
-  assert.match(trayScript, /main: 362/);
+  assert.match(trayStyles, /\.bottom-group \{[^}]*padding-bottom: 4px;/s);
+  assert.match(trayScript, /main: 370/);
   assert.match(trayScript, /language: 520/);
   assert.match(trayStyles, /\.language-view \{[^}]*overflow-y: auto;/s);
   assert.match(trayScript, /model: 427/);
   assert.match(trayScript, /VIEW_HEIGHTS\.main \+ \(availableUpdateVersion \? UPDATE_ROW_HEIGHT : 0\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.language\)/);
   assert.match(trayScript, /resizeTray\(VIEW_HEIGHTS\.model\)/);
+  assert.match(trayScript, /listen\("tray-menu-opened", \(\) => \{\s*lastTraySize = "";/s);
   assert.match(rustShell, /fn tray_menu_set_size/);
 });
 

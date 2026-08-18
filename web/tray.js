@@ -21,7 +21,7 @@ const TRANSLATOR_LABELS = Object.freeze({
 });
 
 const VIEW_HEIGHTS = Object.freeze({
-  main: 362,
+  main: 370,
   language: 520,
   model: 427,
 });
@@ -348,6 +348,7 @@ document.addEventListener("keydown", event => {
 
 if (listen) {
   listen("tray-menu-opened", () => {
+    lastTraySize = "";
     showMainView();
     refresh();
     refreshUpdateAvailability();
