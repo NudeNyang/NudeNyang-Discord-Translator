@@ -19,6 +19,35 @@
   --shadow: 0 18px 50px rgb(38 76 112 / 0.14);
   --radius-card: 14px;
   --radius-control: 8px;
+  --engine-action-font: "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+
+:root:lang(ko) {
+  --engine-action-font: "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+:root:lang(ja) {
+  --engine-action-font: "Noto Sans JP", "Yu Gothic UI", "Meiryo UI", sans-serif;
+}
+
+:root:lang(zh-CN) {
+  --engine-action-font: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+
+:root:lang(zh-TW) {
+  --engine-action-font: "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif;
+}
+
+:root:is(:lang(hi), :lang(bn), :lang(ta), :lang(ur)) {
+  --engine-action-font: "Nirmala UI", "Segoe UI", sans-serif;
+}
+
+:root:lang(th) {
+  --engine-action-font: "Leelawadee UI", "Segoe UI", sans-serif;
+}
+
+:root:is(:lang(ar), :lang(fa), :lang(he)) {
+  --engine-action-font: "Segoe UI", Tahoma, sans-serif;
 }
 
 :root[data-theme="dark"] {
@@ -229,20 +258,20 @@ input:focus-visible,
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 7px;
 }
 
 .engine-state {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 32px;
-  padding: 0 11px;
+  gap: 9px;
+  min-height: 38px;
+  padding: 0 15px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface-toned);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -266,13 +295,15 @@ input:focus-visible,
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: 32px;
-  gap: 6px;
-  padding: 0 10px;
+  min-height: 38px;
+  gap: 7px;
+  padding: 0 12px;
+  border-radius: 999px;
   border-color: var(--border);
   color: var(--muted);
   background: var(--surface-toned);
-  font-size: 12px;
+  font-size: 13px;
+  font-family: var(--engine-action-font);
   font-weight: 500;
   line-height: 1;
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease, transform 90ms ease;
