@@ -84,6 +84,25 @@ impl TranslationService {
             .ok_or_else(|| "번역 엔진이 결과를 반환하지 않았습니다.".to_string())
     }
 
+    pub fn translate_with_source(
+        &mut self,
+        text: &str,
+        source: Language,
+        target: Language,
+    ) -> Result<String, String> {
+        if source == Language::Unknown {
+            return self.translate(text, target);
+        }
+        if source == target {
+            return Ok(text.to_string());
+        }
+        let protected = protect_text(text);
+        if !protected.has_translatable_text() {
+            return Ok(text.to_string());
+        }
+        self.translate_known_source(text, &protected, source, target)
+    }
+
     pub fn translate_for_discord(
         &mut self,
         text: &str,

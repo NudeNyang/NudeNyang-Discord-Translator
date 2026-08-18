@@ -2544,7 +2544,9 @@ fn localize_dictionary_result(
         {
             continue;
         }
-        match service.translate(&entry.definition, target) {
+        let source =
+            Language::try_from(entry.definition_language.as_str()).unwrap_or(Language::Unknown);
+        match service.translate_with_source(&entry.definition, source, target) {
             Ok(translated)
                 if !translated.trim().is_empty()
                     && translated.trim() != entry.definition.trim() =>
@@ -3026,6 +3028,45 @@ mod tests {
             localized.entries[0].original_definition,
             "The time after the present."
         );
+    }
+
+    #[test]
+    fn dictionary_gloss_localization_translates_short_known_english_meanings() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-short-localization-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let result = DictionaryLookupResult {
+            query: "日本時間".to_string(),
+            source_language: "ja".to_string(),
+            target_language: "ko".to_string(),
+            segmented: true,
+            entries: vec![DictionaryEntry {
+                entry_id: 1,
+                headword: "時間".to_string(),
+                language: "ja".to_string(),
+                reading: "じかん".to_string(),
+                part_of_speech: "noun".to_string(),
+                definition: "time".to_string(),
+                definition_language: "en".to_string(),
+                definition_origin: "original".to_string(),
+                original_definition: "time".to_string(),
+                original_definition_language: "en".to_string(),
+                example: String::new(),
+                source_name: "JMdict".to_string(),
+                source_url: String::new(),
+                license: "CC-BY-SA-4.0".to_string(),
+            }],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(&mut service, result, Language::Korean);
+        assert_eq!(localized.entries[0].definition, "[ko] time");
+        assert_eq!(localized.entries[0].definition_language, "ko");
+        assert_eq!(localized.entries[0].definition_origin, "automatic");
     }
 
     #[test]
