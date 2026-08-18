@@ -23,6 +23,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
   const requestedUiLanguage = __UI_LANGUAGE__;
   const targetLanguage = __TARGET_LANGUAGE__;
   const externalEnabled = __EXTERNAL_ENABLED__;
+  const DICTIONARY_SCROLL_REVEAL_DISTANCE = 24;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
   const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl','th','fil','bn','ur','ta','fa','he','cs'];
   function resolveUiLanguage(value) {
@@ -82,8 +83,15 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-selection:hover{border-color:var(--brand-500,#5865f2);transform:translateY(-1px)}
       #nt-dictionary-selection:active{transform:scale(.97)}
       #nt-dictionary-selection:focus-visible,#nt-dictionary-panel button:focus-visible,#nt-dictionary-panel input:focus-visible{outline:2px solid var(--brand-500,#5865f2);outline-offset:2px}
-      #nt-dictionary-panel{position:fixed;z-index:2147483645;display:none;width:min(420px,calc(100vw - 24px));max-height:min(610px,calc(100vh - 24px));overflow:auto;border:1px solid color-mix(in srgb,var(--background-modifier-accent,#ffffff1a) 88%,transparent);border-radius:16px;background:color-mix(in srgb,var(--background-floating,#1e2329) 97%,transparent);box-shadow:0 24px 70px rgba(0,0,0,.44),inset 0 1px rgba(255,255,255,.08);color:var(--text-normal,#f2f3f5);font:400 14px/1.5 var(--font-primary,"Segoe UI",sans-serif);overscroll-behavior:contain;backdrop-filter:blur(22px) saturate(125%)}
+      #nt-dictionary-panel{position:fixed;z-index:2147483645;display:none;width:min(420px,calc(100vw - 24px));max-height:min(610px,calc(100vh - 24px));overflow:hidden;border:1px solid color-mix(in srgb,var(--background-modifier-accent,#ffffff1a) 88%,transparent);border-radius:16px;background:color-mix(in srgb,var(--background-floating,#1e2329) 97%,transparent);box-shadow:0 24px 70px rgba(0,0,0,.44),inset 0 1px rgba(255,255,255,.08);color:var(--text-normal,#f2f3f5);font:400 14px/1.5 var(--font-primary,"Segoe UI",sans-serif);backdrop-filter:blur(22px) saturate(125%)}
       #nt-dictionary-panel *{box-sizing:border-box}
+      #nt-dictionary-panel .nt-dict-scroll{width:100%;max-height:min(610px,calc(100vh - 24px));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+      #nt-dictionary-panel .nt-dict-scroll::-webkit-scrollbar{width:0;height:0}
+      #nt-dictionary-panel .nt-dict-scroll-indicator{position:absolute;z-index:5;top:8px;inset-inline-end:2px;bottom:8px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
+      #nt-dictionary-panel .nt-dict-scroll-indicator:not(.scrollable){pointer-events:none}
+      #nt-dictionary-panel .nt-dict-scroll-indicator.nt-scrolling,#nt-dictionary-panel .nt-dict-scroll-indicator.nt-scroll-near,#nt-dictionary-panel .nt-dict-scroll-indicator.nt-scroll-dragging,#nt-dictionary-panel .nt-dict-scroll-indicator:hover{opacity:1}
+      #nt-dictionary-panel .nt-dict-scroll-thumb{position:absolute;top:0;inset-inline-end:3px;width:3px;min-height:32px;border-radius:3px;background:color-mix(in srgb,var(--brand-500,#5865f2) 58%,var(--text-muted,#949ba4));opacity:.5;transition:width 140ms ease,inset-inline-end 140ms ease,opacity 140ms ease}
+      #nt-dictionary-panel .nt-dict-scroll-indicator:hover .nt-dict-scroll-thumb,#nt-dictionary-panel .nt-dict-scroll-indicator.nt-scroll-dragging .nt-dict-scroll-thumb{inset-inline-end:2px;width:6px;opacity:.95}
       #nt-dictionary-panel .nt-dict-head{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;gap:10px;padding:17px 18px 13px;background:linear-gradient(180deg,color-mix(in srgb,var(--background-floating,#1e2329) 100%,transparent) 76%,color-mix(in srgb,var(--background-floating,#1e2329) 88%,transparent));border-bottom:1px solid var(--background-modifier-accent,#ffffff14)}
       #nt-dictionary-panel .nt-dict-title{min-width:0;flex:1}
       #nt-dictionary-panel .nt-dict-title small{display:block;color:var(--text-muted,#949ba4);font-size:11px;font-weight:650;letter-spacing:.04em}
@@ -154,12 +162,94 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     document.body.appendChild(panel);
   }
 
+  const clearPanelScroll = () => {
+    panel.__ntDictionaryScrollCleanup?.();
+    delete panel.__ntDictionaryScrollCleanup;
+  };
+  const bindPanelScrollIndicator = (scroll, indicator, thumb) => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    let draggingPointer = null;
+    let hideTimer = 0;
+
+    const update = () => {
+      const trackHeight = indicator.clientHeight;
+      const maxScroll = Math.max(0,scroll.scrollHeight-scroll.clientHeight);
+      const scrollable = panel.style.display !== 'none' && maxScroll > 1 && trackHeight > 0;
+      indicator.classList.toggle('scrollable',scrollable);
+      if (!scrollable) {
+        indicator.classList.remove('nt-scroll-near','nt-scrolling','nt-scroll-dragging');
+        thumb.style.height='0px'; thumb.style.transform='translateY(0)';
+        return;
+      }
+      const thumbHeight=Math.max(32,Math.round((scroll.clientHeight/scroll.scrollHeight)*trackHeight));
+      const thumbTravel=Math.max(0,trackHeight-thumbHeight);
+      const thumbTop=maxScroll>0 ? Math.round((scroll.scrollTop/maxScroll)*thumbTravel) : 0;
+      thumb.style.height=`${thumbHeight}px`; thumb.style.transform=`translateY(${thumbTop}px)`;
+    };
+    const scheduleUpdate = () => requestAnimationFrame(update);
+    const revealWhileScrolling = () => {
+      update(); indicator.classList.add('nt-scrolling'); clearTimeout(hideTimer);
+      hideTimer=setTimeout(()=>indicator.classList.remove('nt-scrolling'),550);
+    };
+    const updateProximity = event => {
+      if (draggingPointer !== null) return;
+      if (!indicator.classList.contains('scrollable')) { indicator.classList.remove('nt-scroll-near'); return; }
+      const bounds=indicator.getBoundingClientRect();
+      const distanceX=Math.max(bounds.left-event.clientX,0,event.clientX-bounds.right);
+      const distanceY=Math.max(bounds.top-event.clientY,0,event.clientY-bounds.bottom);
+      indicator.classList.toggle('nt-scroll-near',Math.hypot(distanceX,distanceY)<=DICTIONARY_SCROLL_REVEAL_DISTANCE);
+    };
+    const scrollToPointer = clientY => {
+      const track=indicator.getBoundingClientRect(); const thumbHeight=thumb.getBoundingClientRect().height;
+      const thumbTravel=Math.max(0,track.height-thumbHeight); const maxScroll=Math.max(0,scroll.scrollHeight-scroll.clientHeight);
+      if (thumbTravel<=0 || maxScroll<=0) return;
+      const thumbTop=Math.min(thumbTravel,Math.max(0,clientY-track.top-thumbHeight/2));
+      scroll.scrollTop=(thumbTop/thumbTravel)*maxScroll;
+    };
+    const finishDrag = event => {
+      if (draggingPointer !== event.pointerId) return;
+      draggingPointer=null; indicator.classList.remove('nt-scroll-dragging');
+      if (indicator.hasPointerCapture(event.pointerId)) indicator.releasePointerCapture(event.pointerId);
+      updateProximity(event);
+    };
+
+    scroll.addEventListener('scroll',revealWhileScrolling,{passive:true,signal});
+    scroll.addEventListener('pointermove',updateProximity,{signal});
+    scroll.addEventListener('pointerleave',()=>{if(draggingPointer===null) indicator.classList.remove('nt-scroll-near');},{signal});
+    indicator.addEventListener('pointerdown',event=>{
+      if(event.button!==0 || !indicator.classList.contains('scrollable')) return;
+      draggingPointer=event.pointerId; indicator.classList.add('nt-scroll-near','nt-scroll-dragging');
+      indicator.setPointerCapture(event.pointerId); scrollToPointer(event.clientY); event.preventDefault(); event.stopPropagation();
+    },{signal});
+    indicator.addEventListener('pointermove',event=>{if(draggingPointer===event.pointerId) scrollToPointer(event.clientY);},{signal});
+    indicator.addEventListener('pointerup',finishDrag,{signal});
+    indicator.addEventListener('pointercancel',finishDrag,{signal});
+    indicator.addEventListener('wheel',event=>{
+      if(!indicator.classList.contains('scrollable')) return;
+      scroll.scrollTop+=event.deltaY; event.preventDefault(); event.stopPropagation();
+    },{passive:false,signal});
+    const resizeObserver='ResizeObserver' in window ? new ResizeObserver(scheduleUpdate) : null;
+    for(const child of scroll.children) resizeObserver?.observe(child);
+    scheduleUpdate();
+    return () => { controller.abort(); resizeObserver?.disconnect(); clearTimeout(hideTimer); };
+  };
+  const mountPanelContent = (...children) => {
+    clearPanelScroll();
+    const scroll=make('div','nt-dict-scroll'); scroll.append(...children);
+    const indicator=make('div','nt-dict-scroll-indicator'); indicator.setAttribute('aria-hidden','true');
+    const thumb=make('span','nt-dict-scroll-thumb'); indicator.append(thumb);
+    panel.replaceChildren(scroll,indicator);
+    panel.__ntDictionaryScrollCleanup=bindPanelScrollIndicator(scroll,indicator,thumb);
+    return scroll;
+  };
+
   const queue = request => {
     const id = `dictionary-${Date.now()}-${++window.__ntDictionarySequence}`;
     window.__ntDictionaryRequests.push({id,...request});
     return id;
   };
-  const closePanel = () => { panel.style.display = 'none'; panel.replaceChildren(); };
+  const closePanel = () => { clearPanelScroll(); panel.style.display = 'none'; panel.replaceChildren(); };
   const closeSelection = () => { selectionButton.style.display = 'none'; };
   const positionPanel = rect => {
     panel.style.display = 'block';
@@ -208,7 +298,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     const body = make('div','nt-dict-body');
     const skeleton = make('div','nt-dict-skeleton'); skeleton.setAttribute('aria-label',copy('loading'));
     skeleton.append(make('i'),make('i'),make('i'));
-    body.append(skeleton); panel.append(head,body);
+    body.append(skeleton); mountPanelContent(head,body);
   };
   const speak = (text, language) => {
     if (!('speechSynthesis' in window)) return;
@@ -278,7 +368,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       actions.after(form); target.focus();
     });
     if (externalEnabled) actions.append(external);
-    actions.append(add); body.append(actions); panel.append(head,body);
+    actions.append(add); body.append(actions); mountPanelContent(head,body);
     positionPanel(JSON.parse(panel.dataset.anchor || '{"left":12,"right":12,"top":12,"bottom":12,"width":0,"height":0}'));
   };
   window.__ntDictionaryApply = (requestId,payload,error='') => {
@@ -297,7 +387,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     document.addEventListener('pointerup',event=>{ if(event.button===0 && !event.target.closest?.('#nt-dictionary-selection,#nt-dictionary-panel')) setTimeout(showSelection,0); },{capture:true,signal});
     document.addEventListener('keyup',event=>{ if(event.key.startsWith('Arrow') || event.key==='Shift') setTimeout(showSelection,0); },{signal});
     document.addEventListener('pointerdown',event=>{ if(!event.target.closest?.('#nt-dictionary-selection,#nt-dictionary-panel')) closePanel(); },{capture:true,signal});
-    document.addEventListener('scroll',()=>{closeSelection();closePanel();},{capture:true,passive:true,signal});
+    document.addEventListener('scroll',event=>{closeSelection();if (!panel.contains(event.target)) closePanel();},{capture:true,passive:true,signal});
     window.addEventListener('resize',()=>{closeSelection();closePanel();},{signal});
     document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeSelection();closePanel();}},{signal});
     selectionButton.addEventListener('pointerdown',event=>event.preventDefault(),{signal});
@@ -472,6 +562,20 @@ mod tests {
             dictionary_ui_version("const context = 'old';"),
             dictionary_ui_version("const context = 'selection-local';")
         );
+    }
+
+    #[test]
+    fn controller_keeps_internal_scroll_open_and_uses_the_overlay_indicator() {
+        let script = dictionary_ui_script(true, "ko", "ko", true);
+
+        assert!(script.contains("if (!panel.contains(event.target)) closePanel();"));
+        assert!(script.contains("nt-dict-scroll-indicator"));
+        assert!(script.contains("nt-dict-scroll-thumb"));
+        assert!(script.contains("scrollbar-width:none"));
+        assert!(script.contains("DICTIONARY_SCROLL_REVEAL_DISTANCE"));
+        assert!(script.contains("setPointerCapture"));
+        assert!(!script
+            .contains("document.addEventListener('scroll',()=>{closeSelection();closePanel();}"));
     }
 
     #[test]
