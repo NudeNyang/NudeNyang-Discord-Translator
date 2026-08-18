@@ -456,13 +456,38 @@ async fn dictionary_personal_delete(id: i64) -> Result<bool, String> {
 
 #[tauri::command]
 async fn dictionary_pack_install(
+    app: AppHandle,
     language: String,
 ) -> Result<dictionary::DictionaryPackStatus, String> {
+    let progress_app = app.clone();
+    let progress_language = language.clone();
+    let install_language = language.clone();
+    let _ = app.emit(
+        "dictionary-pack-progress",
+        serde_json::json!({"language": language.clone(), "phase": "preparing", "processed": 0, "total": 0}),
+    );
     tauri::async_runtime::spawn_blocking(move || {
-        dictionary::DictionaryStore::open_default()?.install_bundled_pack(&language)
+        let store = dictionary::DictionaryStore::open_default()?;
+        store.install_bundled_pack_with_progress(&install_language, |processed, total| {
+            let _ = progress_app.emit(
+                "dictionary-pack-progress",
+                serde_json::json!({
+                    "language": progress_language.clone(),
+                    "phase": "installing",
+                    "processed": processed,
+                    "total": total,
+                }),
+            );
+        })
     })
     .await
     .map_err(|error| format!("사전팩 설치 작업을 기다리지 못했습니다: {error}"))?
+    .inspect(|_| {
+        let _ = app.emit(
+            "dictionary-pack-progress",
+            serde_json::json!({"language": language.clone(), "phase": "complete"}),
+        );
+    })
 }
 
 #[tauri::command]

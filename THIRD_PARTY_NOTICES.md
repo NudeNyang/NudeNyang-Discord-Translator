@@ -37,17 +37,31 @@ TranslateGemma is provided under and subject to the Gemma Terms of Use found at
 
 ## 사전 데이터와 외부 연결
 
-현재 내장된 한·영·일·중 스타터 사전은 기능 검증을 위해 이 프로젝트에서 직접 작성했으며 제3자
-사전 데이터를 포함하지 않는다. 스타터 데이터에는 앱과 같은 `GPL-3.0-only`가 적용된다.
+한·영·일·중 미니팩은 기능 검증을 위해 이 프로젝트에서 직접 작성했으며 앱과 같은
+`GPL-3.0-only`가 적용된다.
+
+한국어·영어·중국어 실용팩은 한국어 Wiktionary의 2026-08-04 덤프를 Wiktextract/kaikki.org로
+추출한 2026년 8월 데이터를 필터링하고 내부 형식으로 변환한 것이다. 원문 항목은 CC BY-SA 4.0과
+GFDL 1.1 이상으로 이중 라이선스되며, 변환팩에는 원본과 동일한 조건이 적용된다. 이 프로젝트는
+예문, 음성, 이미지와 별도 라이선스가 표시된 미디어를 포함하지 않는다.
+
+- Source: <https://kaikki.org/kowiktionary/rawdata.html>
+- Wiktionary copyright and contributor attribution: <https://ko.wiktionary.org/wiki/위키낱말사전:저작권>
+- CC BY-SA 4.0: <https://creativecommons.org/licenses/by-sa/4.0/legalcode>
+- GFDL 1.1 or later: <https://www.gnu.org/licenses/fdl-1.3.html>
+
+일본어 실용팩은 Electronic Dictionary Research and Development Group(EDRDG)의 JMdict를
+`jmdict-simplified` common-word release `3.6.2+20260817122448`에서 필터링하고 내부 형식으로
+변환한 것이다. JMdict와 이 파생 데이터는 CC BY-SA 4.0으로 제공된다. Copyright is held by
+James William BREEN and the Electronic Dictionary Research and Development Group.
+
+- JMdict project: <https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project>
+- EDRDG licence statement: <https://www.edrdg.org/edrdg/licence.html>
+- Conversion source: <https://github.com/scriptin/jmdict-simplified/releases/tag/3.6.2%2B20260817122448>
+
+두 실용팩 계열 모두 단어, 뜻, 품사와 읽기를 선별·정규화하고 NudeNyang 사전팩 JSON 구조로
+재배열한 변경본이다. 원본 출처는 각 조회 결과와 설정의 라이선스 화면에도 표시한다. JMdict
+배포 조건에 따라 일본어 데이터는 정기적으로, 최소 월 1회 최신 릴리스를 검토하고 갱신한다.
 
 외부 사전 버튼은 라이브러리나 데이터를 번들하지 않고 사용자가 선택한 단어의 Wiktionary 검색
 페이지를 기본 브라우저로 연다. 사용자는 Wiktionary의 이용 약관과 개인정보처리방침을 따른다.
-
-`scripts/build-dictionary-pack.mjs`는 향후 Wiktextract/kaikki.org 후보 데이터를 내부 팩 형식으로
-변환하기 위한 도구일 뿐, 해당 데이터를 현재 배포물에 포함하지 않는다. Wiktionary 및 kaikki.org
-추출 데이터는 CC BY-SA 4.0과 GFDL 조건으로 제공되며 귀속, 원문 링크, 변경 표시와 동일조건 의무가
-있다. 외부 출처 예문과 음성에는 다른 조건이 적용될 수 있다. 이 데이터를 포함하는 릴리스는
-데이터셋별 검토와 필요한 라이선스 원문·귀속 파일을 추가한 뒤에만 만들 수 있다.
-
-- Wiktionary copyright: <https://en.wiktionary.org/wiki/Wiktionary:Copyrights>
-- kaikki.org machine-readable dictionaries: <https://kaikki.org/dictionary/>

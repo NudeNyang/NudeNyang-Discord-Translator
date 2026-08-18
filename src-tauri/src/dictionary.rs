@@ -1,17 +1,28 @@
 use std::collections::HashMap;
 use std::env;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use flate2::read::GzDecoder;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::language::{detect_language, is_supported_language_code, Language, LANGUAGE_MENU_ORDER};
 
 const STARTER_PACKS_JSON: &str = include_str!("../dictionary-packs/starter.json");
+const PACK_CATALOG_JSON: &str = include_str!("../dictionary-packs/catalog.json");
+const PRACTICAL_EN_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/en.json.gz");
+const PRACTICAL_JA_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/ja.json.gz");
+const PRACTICAL_KO_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/ko.json.gz");
+const PRACTICAL_ZH_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/zh.json.gz");
+const PRACTICAL_ZH_HANT_GZIP: &[u8] =
+    include_bytes!("../dictionary-packs/practical/zh-Hant.json.gz");
 const PACK_SCHEMA_VERSION: u32 = 1;
+const CATALOG_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -30,7 +41,37 @@ struct StarterPack {
     source_name: String,
     source_url: String,
     license: String,
+    #[serde(default = "default_mini_edition")]
+    edition: String,
     entries: Vec<StarterEntry>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PackCatalog {
+    schema_version: u32,
+    languages: Vec<PackCatalogLanguage>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PackCatalogLanguage {
+    code: String,
+    availability: String,
+    #[serde(default)]
+    version: String,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    entry_count: u64,
+    #[serde(default)]
+    compressed_bytes: u64,
+    #[serde(default)]
+    sha256: String,
+    source: String,
+    #[serde(default)]
+    source_url: String,
+    license: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -103,8 +144,13 @@ pub struct DictionaryPackStatus {
     pub version: String,
     pub title: String,
     pub availability: String,
+    pub edition: String,
     pub installed: bool,
     pub entry_count: u64,
+    pub available_entry_count: u64,
+    pub compressed_bytes: u64,
+    pub sha256: String,
+    pub source_name: String,
     pub license: String,
     pub source_url: String,
 }
@@ -360,16 +406,27 @@ impl DictionaryStore {
     }
 
     pub fn install_bundled_pack(&self, language: &str) -> Result<DictionaryPackStatus, String> {
+        self.install_bundled_pack_with_progress(language, |_, _| {})
+    }
+
+    pub fn install_bundled_pack_with_progress<F>(
+        &self,
+        language: &str,
+        progress: F,
+    ) -> Result<DictionaryPackStatus, String>
+    where
+        F: FnMut(u64, u64),
+    {
         if !is_supported_language_code(language) {
             return Err("설치할 사전팩의 언어가 올바르지 않습니다.".to_string());
         }
-        let catalog = starter_catalog()?;
+        let catalog = practical_catalog(language)?;
         let pack = catalog
             .packs
             .iter()
             .find(|pack| pack.language == language)
-            .ok_or_else(|| "이 언어의 스타터 사전팩은 아직 준비되지 않았습니다.".to_string())?;
-        self.install_pack(pack)?;
+            .ok_or_else(|| "이 언어의 실용 사전팩은 아직 준비되지 않았습니다.".to_string())?;
+        self.install_pack_with_progress(pack, progress)?;
         self.pack_status(language)?
             .ok_or_else(|| "설치한 사전팩 상태를 확인하지 못했습니다.".to_string())
     }
@@ -429,43 +486,44 @@ impl DictionaryStore {
     }
 
     pub fn pack_catalog(&self) -> Result<Vec<DictionaryPackStatus>, String> {
-        let starters = starter_catalog()?;
+        let catalog = pack_catalog()?;
         let mut result = Vec::with_capacity(LANGUAGE_MENU_ORDER.len());
         for language in LANGUAGE_MENU_ORDER {
             let code = language.code();
-            let bundled = starters.packs.iter().find(|pack| pack.language == code);
+            let offered = catalog.languages.iter().find(|pack| pack.code == code);
             let installed = self.pack_status(code)?.map(|mut pack| {
-                pack.availability = if bundled.is_some() {
-                    "bundled"
-                } else {
-                    "installed"
+                if let Some(offered) = offered {
+                    pack.availability.clone_from(&offered.availability);
+                    pack.available_entry_count = offered.entry_count;
+                    pack.compressed_bytes = offered.compressed_bytes;
+                    pack.sha256.clone_from(&offered.sha256);
                 }
-                .to_string();
                 pack
             });
             result.push(installed.unwrap_or_else(|| {
                 DictionaryPackStatus {
-                    id: bundled
-                        .map(|pack| pack.id.clone())
-                        .unwrap_or_else(|| format!("wiktionary-{code}")),
+                    id: format!("nudenyang-{code}-practical"),
                     language: code.to_string(),
                     language_name: language.english_name().to_string(),
-                    version: bundled.map(|pack| pack.version.clone()).unwrap_or_default(),
-                    title: bundled
+                    version: offered.map(|pack| pack.version.clone()).unwrap_or_default(),
+                    title: offered
+                        .filter(|pack| !pack.title.is_empty())
                         .map(|pack| pack.title.clone())
                         .unwrap_or_else(|| format!("{} dictionary pack", language.english_name())),
-                    availability: if bundled.is_some() {
-                        "bundled"
-                    } else {
-                        "planned"
-                    }
-                    .to_string(),
+                    availability: offered
+                        .map(|pack| pack.availability.clone())
+                        .unwrap_or_else(|| "planned".to_string()),
+                    edition: "none".to_string(),
                     installed: false,
                     entry_count: 0,
-                    license: bundled
+                    available_entry_count: offered.map(|pack| pack.entry_count).unwrap_or(0),
+                    compressed_bytes: offered.map(|pack| pack.compressed_bytes).unwrap_or(0),
+                    sha256: offered.map(|pack| pack.sha256.clone()).unwrap_or_default(),
+                    source_name: offered.map(|pack| pack.source.clone()).unwrap_or_default(),
+                    license: offered
                         .map(|pack| pack.license.clone())
                         .unwrap_or_else(|| "CC BY-SA / GFDL source review required".to_string()),
-                    source_url: bundled
+                    source_url: offered
                         .map(|pack| pack.source_url.clone())
                         .unwrap_or_else(|| "https://kaikki.org/dictionary/".to_string()),
                 }
@@ -481,7 +539,7 @@ impl DictionaryStore {
             .map_err(|_| "사전팩 저장소 잠금을 열지 못했습니다.".to_string())?;
         connection
             .query_row(
-                "SELECT id, language, version, title, entry_count, license, source_url \
+                "SELECT id, language, version, title, entry_count, license, source_url, edition, source_name \
                  FROM dictionary_packs WHERE language=?1",
                 params![language],
                 |row| {
@@ -496,8 +554,13 @@ impl DictionaryStore {
                         version: row.get(2)?,
                         title: row.get(3)?,
                         availability: "installed".to_string(),
+                        edition: row.get(7)?,
                         installed: true,
                         entry_count: row.get(4)?,
+                        available_entry_count: row.get(4)?,
+                        compressed_bytes: 0,
+                        sha256: String::new(),
+                        source_name: row.get(8)?,
                         license: row.get(5)?,
                         source_url: row.get(6)?,
                     })
@@ -519,6 +582,17 @@ impl DictionaryStore {
     }
 
     fn install_pack(&self, pack: &StarterPack) -> Result<(), String> {
+        self.install_pack_with_progress(pack, |_, _| {})
+    }
+
+    fn install_pack_with_progress<F>(
+        &self,
+        pack: &StarterPack,
+        mut progress: F,
+    ) -> Result<(), String>
+    where
+        F: FnMut(u64, u64),
+    {
         if !is_supported_language_code(&pack.language) {
             return Err(format!(
                 "지원하지 않는 사전팩 언어입니다: {}",
@@ -551,13 +625,15 @@ impl DictionaryStore {
             .map_err(|error| format!("이전 사전팩을 정리하지 못했습니다: {error}"))?;
         transaction
             .execute(
-                "INSERT INTO dictionary_packs (id, language, version, title, source_name, source_url, license, entry_count, installed_at) \
-                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
+                "INSERT INTO dictionary_packs (id, language, version, title, source_name, source_url, license, edition, entry_count, installed_at) \
+                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
                 params![pack.id, pack.language, pack.version, pack.title, pack.source_name,
-                    pack.source_url, pack.license, pack.entries.len() as u64, now_seconds()],
+                    pack.source_url, pack.license, pack.edition, pack.entries.len() as u64, now_seconds()],
             )
             .map_err(|error| format!("사전팩 정보를 저장하지 못했습니다: {error}"))?;
-        for entry in &pack.entries {
+        let total = pack.entries.len() as u64;
+        progress(0, total);
+        for (index, entry) in pack.entries.iter().enumerate() {
             transaction
                 .execute(
                     "INSERT INTO dictionary_entries (pack_id, language, headword, normalized_headword, reading, part_of_speech) \
@@ -578,6 +654,10 @@ impl DictionaryStore {
                     params![entry_id, locale, text],
                 ).map_err(|error| format!("사전 예문을 저장하지 못했습니다: {error}"))?;
             }
+            let processed = index as u64 + 1;
+            if processed == total || processed.is_multiple_of(500) {
+                progress(processed, total);
+            }
         }
         transaction
             .commit()
@@ -593,6 +673,73 @@ fn starter_catalog() -> Result<StarterCatalog, String> {
             "지원하지 않는 사전팩 형식입니다: {}",
             catalog.schema_version
         ));
+    }
+    Ok(catalog)
+}
+
+fn pack_catalog() -> Result<PackCatalog, String> {
+    let catalog: PackCatalog = serde_json::from_str(PACK_CATALOG_JSON)
+        .map_err(|error| format!("사전팩 카탈로그를 읽지 못했습니다: {error}"))?;
+    if catalog.schema_version != CATALOG_SCHEMA_VERSION {
+        return Err(format!(
+            "지원하지 않는 사전팩 카탈로그 형식입니다: {}",
+            catalog.schema_version
+        ));
+    }
+    Ok(catalog)
+}
+
+fn practical_pack_bytes(language: &str) -> Option<&'static [u8]> {
+    match language {
+        "en" => Some(PRACTICAL_EN_GZIP),
+        "ja" => Some(PRACTICAL_JA_GZIP),
+        "ko" => Some(PRACTICAL_KO_GZIP),
+        "zh" => Some(PRACTICAL_ZH_GZIP),
+        "zh-Hant" => Some(PRACTICAL_ZH_HANT_GZIP),
+        _ => None,
+    }
+}
+
+fn practical_catalog(language: &str) -> Result<StarterCatalog, String> {
+    let bytes = practical_pack_bytes(language)
+        .ok_or_else(|| "이 언어의 실용 사전팩은 아직 준비되지 않았습니다.".to_string())?;
+    let manifest = pack_catalog()?;
+    let offered = manifest
+        .languages
+        .iter()
+        .find(|pack| pack.code == language && pack.availability == "practical")
+        .ok_or_else(|| "사전팩 배포 정보를 찾지 못했습니다.".to_string())?;
+    if bytes.len() as u64 != offered.compressed_bytes {
+        return Err(format!(
+            "사전팩 압축 크기가 일치하지 않습니다({}/{} bytes).",
+            bytes.len(),
+            offered.compressed_bytes
+        ));
+    }
+    let digest = format!("{:x}", Sha256::digest(bytes));
+    if !digest.eq_ignore_ascii_case(&offered.sha256) {
+        return Err("사전팩 무결성 확인에 실패했습니다.".to_string());
+    }
+    let mut decoder = GzDecoder::new(bytes);
+    let mut json = Vec::new();
+    decoder
+        .read_to_end(&mut json)
+        .map_err(|error| format!("사전팩 압축을 풀지 못했습니다: {error}"))?;
+    let catalog: StarterCatalog = serde_json::from_slice(&json)
+        .map_err(|error| format!("실용 사전팩을 읽지 못했습니다: {error}"))?;
+    if catalog.schema_version != PACK_SCHEMA_VERSION {
+        return Err(format!(
+            "지원하지 않는 실용 사전팩 형식입니다: {}",
+            catalog.schema_version
+        ));
+    }
+    let pack = catalog
+        .packs
+        .iter()
+        .find(|pack| pack.language == language)
+        .ok_or_else(|| "실용 사전팩의 언어 정보가 올바르지 않습니다.".to_string())?;
+    if pack.edition != "practical" || pack.entries.len() as u64 != offered.entry_count {
+        return Err("실용 사전팩의 항목 수 또는 등급 정보가 올바르지 않습니다.".to_string());
     }
     Ok(catalog)
 }
@@ -620,7 +767,7 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
          CREATE TABLE IF NOT EXISTS dictionary_packs ( \
            id TEXT PRIMARY KEY, language TEXT NOT NULL UNIQUE, version TEXT NOT NULL, title TEXT NOT NULL, \
            source_name TEXT NOT NULL, source_url TEXT NOT NULL, license TEXT NOT NULL, \
-           entry_count INTEGER NOT NULL, installed_at REAL NOT NULL); \
+           edition TEXT NOT NULL DEFAULT 'mini', entry_count INTEGER NOT NULL, installed_at REAL NOT NULL); \
          CREATE TABLE IF NOT EXISTS dictionary_entries ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, pack_id TEXT NOT NULL REFERENCES dictionary_packs(id) ON DELETE CASCADE, \
            language TEXT NOT NULL, headword TEXT NOT NULL, normalized_headword TEXT NOT NULL, \
@@ -637,7 +784,25 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
            UNIQUE(source_language, target_language, normalized_source_term, scope, scope_value)); \
          CREATE INDEX IF NOT EXISTS idx_personal_dictionary_lookup \
            ON personal_dictionary(normalized_source_term, source_language, target_language);"
-    ).map_err(|error| format!("사전 저장소 테이블을 만들지 못했습니다: {error}"))
+    ).map_err(|error| format!("사전 저장소 테이블을 만들지 못했습니다: {error}"))?;
+    let has_edition = connection
+        .prepare("PRAGMA table_info(dictionary_packs)")
+        .and_then(|mut statement| {
+            let columns = statement
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(columns.iter().any(|column| column == "edition"))
+        })
+        .map_err(|error| format!("사전팩 저장소 형식을 확인하지 못했습니다: {error}"))?;
+    if !has_edition {
+        connection
+            .execute(
+                "ALTER TABLE dictionary_packs ADD COLUMN edition TEXT NOT NULL DEFAULT 'mini'",
+                [],
+            )
+            .map_err(|error| format!("사전팩 저장소 형식을 갱신하지 못했습니다: {error}"))?;
+    }
+    Ok(())
 }
 
 fn validate_term(value: &str, label: &str) -> Result<String, String> {
@@ -668,6 +833,9 @@ fn normalize_term(value: &str) -> String {
 
 fn default_scope() -> String {
     "global".to_string()
+}
+fn default_mini_edition() -> String {
+    "mini".to_string()
 }
 fn default_true() -> bool {
     true
@@ -750,7 +918,8 @@ mod tests {
             .find(|pack| pack.language == "en")
             .unwrap();
         assert!(installed.installed);
-        assert_eq!(installed.availability, "bundled");
+        assert_eq!(installed.availability, "practical");
+        assert_eq!(installed.edition, "mini");
     }
 
     #[test]
@@ -786,9 +955,35 @@ mod tests {
         assert_eq!(
             catalog
                 .iter()
-                .filter(|pack| pack.availability == "bundled")
+                .filter(|pack| pack.availability == "practical")
                 .count(),
             5
         );
+    }
+
+    #[test]
+    fn japanese_practical_pack_covers_the_reported_selection() {
+        let catalog = super::practical_catalog("ja").unwrap();
+        let pack = &catalog.packs[0];
+        assert_eq!(pack.edition, "practical");
+        assert!(pack.entries.iter().any(|entry| entry.headword == "調べ"));
+        assert!(pack.entries.len() >= 50_000);
+    }
+
+    #[test]
+    fn japanese_practical_pack_installs_and_finds_the_reported_selection() {
+        let store = temporary_store("japanese-practical");
+        let status = store.install_bundled_pack("ja").unwrap();
+        assert_eq!(status.edition, "practical");
+        assert!(status.entry_count >= 50_000);
+
+        let result = store.lookup("調べ", Some("ja"), "ko").unwrap();
+        let entry = result
+            .entries
+            .iter()
+            .find(|entry| entry.headword == "調べ")
+            .expect("調べ should be available after installing the Japanese practical pack");
+        assert_eq!(entry.reading, "しらべ");
+        assert!(!entry.definition.is_empty());
     }
 }

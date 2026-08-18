@@ -23,11 +23,17 @@ export const COPY = Object.freeze({
   "개인 사전을 확인하고 있습니다.": ["Checking the personal dictionary.", "個人辞書を確認しています。", "正在检查个人词典。"],
   "저장된 개인 용어가 없습니다.": ["No personal terms have been saved.", "保存された個人用語はありません。", "尚未保存个人术语。"],
   "오프라인 사전팩": ["Offline dictionary packs", "オフライン辞書パック", "离线词典包"],
-  "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": ["Install Korean, English, Japanese, and Chinese starter packs and extend the same format to 28 languages.", "韓国語・英語・日本語・中国語の基本パックをインストールでき、同じ形式で28言語へ拡張します。", "可安装韩语、英语、日语和中文基础包，并以相同格式扩展到 28 种语言。"],
+  "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": ["Korean, English, Japanese, and Chinese practical packs are included in compressed form. Only selected packs are installed in the local database.", "韓国語・英語・日本語・中国語の実用辞書は圧縮状態でアプリに含まれ、選択した辞書だけをローカルDBにインストールします。", "韩语、英语、日语和中文实用词典以压缩形式包含在应用中，仅将所选词典安装到本地数据库。"],
   "데이터 폴더": ["Data folder", "データフォルダー", "数据文件夹"],
   "사전팩 상태를 확인하고 있습니다.": ["Checking dictionary pack status.", "辞書パックの状態を確認しています。", "正在检查词典包状态。"],
   "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": ["Dictionary data is stored in an app-specific SQLite file.", "辞書データはアプリ専用のSQLiteファイルに保存されます。", "词典数据存储在应用专用的 SQLite 文件中。"],
   "내장팩": ["Built-in pack", "内蔵パック", "内置包"],
+  "미니팩": ["Mini pack", "ミニ辞書", "迷你词典"],
+  "실용팩": ["Practical pack", "実用辞書", "实用词典"],
+  "실용팩 설치": ["Install practical pack", "実用辞書をインストール", "安装实用词典"],
+  "실용팩 설치됨": ["Practical pack installed", "実用辞書インストール済み", "实用词典已安装"],
+  "설치 준비 중": ["Preparing installation", "インストールを準備中", "正在准备安装"],
+  "설치 중 {progress}%": ["Installing {progress}%", "インストール中 {progress}%", "正在安装 {progress}%"],
   "설치됨": ["Installed", "インストール済み", "已安装"],
   "다음 언어팩": ["Upcoming language packs", "今後の言語パック", "后续语言包"],
   "개인 사전 용어를 삭제하지 못했습니다": ["Could not delete the personal dictionary term", "個人辞書の用語を削除できませんでした", "无法删除个人词典术语"],
@@ -836,6 +842,14 @@ export const DYNAMIC_COPY = Object.freeze([
       zh: (kind, error) => `${kind === "업데이트 확인 실패" ? "检查更新失败" : "安装更新失败"}：${translateUserFacingError("zh", error)}`,
     },
   },
+  {
+    pattern: /^설치 중 (\d+)%$/,
+    render: {
+      en: progress => `Installing ${progress}%`,
+      ja: progress => `インストール中 ${progress}%`,
+      zh: progress => `正在安装 ${progress}%`,
+    },
+  },
 ]);
 
 const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
@@ -899,6 +913,7 @@ const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
     `${kind}: {error}`,
     { error: translateUserFacingError(language, error) },
   ],
+  ([progress]) => ["설치 중 {progress}%", { progress }],
 ]);
 
 function interpolateDynamicTemplate(template, values) {

@@ -130,6 +130,7 @@ const state = {
   dictionaryLoading: false,
   dictionaryStatus: null,
   dictionaryPersonalEntries: [],
+  dictionaryPackProgress: new Map(),
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
@@ -550,9 +551,9 @@ function renderDictionaryPacks() {
   const status = state.dictionaryStatus;
   if (!container || !status) return;
   container.replaceChildren();
-  const bundled = status.packs.filter(pack => pack.availability === "bundled");
-  const planned = status.packs.filter(pack => pack.availability !== "bundled");
-  for (const pack of bundled) {
+  const practical = status.packs.filter(pack => pack.availability === "practical");
+  const planned = status.packs.filter(pack => pack.availability !== "practical");
+  for (const pack of practical) {
     const row = document.createElement("article");
     row.className = "dictionary-pack-row";
     const identity = document.createElement("div");
@@ -561,22 +562,33 @@ function renderDictionaryPacks() {
     const stateBadge = document.createElement("span");
     const action = document.createElement("button");
     title.textContent = dictionaryLanguageLabel(pack.language);
-    detail.textContent = pack.installed
-      ? `${pack.entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} · ${pack.license}`
-      : `${pack.title} · ${pack.license}`;
-    stateBadge.className = `dictionary-pack-state${pack.installed ? " installed" : ""}`;
-    setLocalizedText(stateBadge, pack.installed ? "설치됨" : "내장팩");
+    const progress = state.dictionaryPackProgress.get(pack.language);
+    const installedPractical = pack.installed && pack.edition === "practical";
+    const entryCount = pack.availableEntryCount || pack.entryCount;
+    detail.textContent = `${entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} / ${formatStorageSize(pack.compressedBytes)} / ${pack.sourceName}`;
+    stateBadge.className = `dictionary-pack-state${installedPractical ? " installed" : ""}`;
+    if (progress?.phase === "preparing") {
+      setLocalizedText(stateBadge, "설치 준비 중");
+    } else if (progress?.phase === "installing") {
+      const percent = progress.total > 0 ? Math.min(100, Math.round(progress.processed / progress.total * 100)) : 0;
+      setLocalizedText(stateBadge, `설치 중 ${percent}%`);
+    } else {
+      setLocalizedText(stateBadge, installedPractical ? "실용팩 설치됨" : pack.edition === "mini" ? "미니팩" : "실용팩");
+    }
     action.type = "button";
     action.className = "button secondary dictionary-row-action";
-    setLocalizedText(action, pack.installed ? "삭제" : "설치");
+    action.disabled = Boolean(progress);
+    setLocalizedText(action, installedPractical ? "삭제" : "실용팩 설치");
     action.addEventListener("click", async () => {
       action.disabled = true;
       try {
-        if (pack.installed) await invoke("dictionary_pack_remove", { language: pack.language });
+        if (installedPractical) await invoke("dictionary_pack_remove", { language: pack.language });
         else await invoke("dictionary_pack_install", { language: pack.language });
         await loadDictionaryData(true);
-        setLocalizedText(elements.saveStatus, pack.installed ? "사전팩을 삭제했습니다." : "사전팩을 설치했습니다.");
+        setLocalizedText(elements.saveStatus, installedPractical ? "사전팩을 삭제했습니다." : "사전팩을 설치했습니다.");
       } catch (error) {
+        state.dictionaryPackProgress.delete(pack.language);
+        renderDictionaryPacks();
         action.disabled = false;
         await showError("사전팩 상태를 변경하지 못했습니다", String(error));
       }
@@ -2162,6 +2174,13 @@ if (tauriListen) {
   });
   tauriListen("update-download-finished", () => {
     setLocalizedText(elements.updateStatus, "업데이트 서명을 확인하고 설치하고 있습니다...");
+  });
+  tauriListen("dictionary-pack-progress", event => {
+    const progress = event.payload || {};
+    if (!progress.language) return;
+    if (progress.phase === "complete") state.dictionaryPackProgress.delete(progress.language);
+    else state.dictionaryPackProgress.set(progress.language, progress);
+    renderDictionaryPacks();
   });
 }
 

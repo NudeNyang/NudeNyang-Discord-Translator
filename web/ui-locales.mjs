@@ -450,7 +450,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "正在檢查個人字典。",
     "저장된 개인 용어가 없습니다.": "尚未儲存任何個人詞彙。",
     "오프라인 사전팩": "離線字典套件",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "安裝韓文、英文、日文和中文入門套件，並以相同格式擴充至 28 種語言。",
     "데이터 폴더": "資料資料夾",
     "사전팩 상태를 확인하고 있습니다.": "正在檢查字典套件狀態。",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "字典資料儲存在應用程式專用的 SQLite 檔案中。",
@@ -470,7 +469,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "請同時輸入來源詞彙和顯示詞彙。",
     "사전팩": "字典套件",
     "개인 용어": "個人詞彙",
-    "항목": "筆"
+    "항목": "筆",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "韓文、英文、日文及中文實用語言包皆以壓縮形式內建。只有選取的語言包會安裝至本機資料庫。",
+    "미니팩": "迷你語言包",
+    "실용팩": "實用語言包",
+    "실용팩 설치": "安裝實用語言包",
+    "실용팩 설치됨": "實用語言包已安裝",
+    "설치 중 {progress}%": "正在安裝 {progress}%"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -922,7 +927,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Verificando o dicionário pessoal.",
     "저장된 개인 용어가 없습니다.": "Nenhum termo pessoal foi salvo.",
     "오프라인 사전팩": "Pacotes de dicionário offline",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Instale os pacotes iniciais de coreano, inglês, japonês e chinês e amplie o mesmo formato para 28 idiomas.",
     "데이터 폴더": "Pasta de dados",
     "사전팩 상태를 확인하고 있습니다.": "Verificando o status dos pacotes de dicionário.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Os dados do dicionário são armazenados em um arquivo SQLite exclusivo do aplicativo.",
@@ -942,7 +946,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Insira o termo de origem e o termo de exibição.",
     "사전팩": "Pacotes de dicionário",
     "개인 용어": "Termos pessoais",
-    "항목": "entradas"
+    "항목": "entradas",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Os pacotes práticos de coreano, inglês, japonês e chinês estão incluídos em formato compactado. Apenas os pacotes selecionados são instalados no banco de dados local.",
+    "미니팩": "Pacote mini",
+    "실용팩": "Pacote prático",
+    "실용팩 설치": "Instalar pacote prático",
+    "실용팩 설치됨": "Pacote prático instalado",
+    "설치 중 {progress}%": "Instalando {progress}%"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1394,7 +1404,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "निजी शब्दकोश जाँचा जा रहा है।",
     "저장된 개인 용어가 없습니다.": "कोई निजी शब्द सहेजा नहीं गया है।",
     "오프라인 사전팩": "ऑफ़लाइन शब्दकोश पैक",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "कोरियाई, अंग्रेज़ी, जापानी और चीनी स्टार्टर पैक इंस्टॉल करें और इसी प्रारूप को 28 भाषाओं तक बढ़ाएँ।",
     "데이터 폴더": "डेटा फ़ोल्डर",
     "사전팩 상태를 확인하고 있습니다.": "शब्दकोश पैक की स्थिति जाँची जा रही है।",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "शब्दकोश डेटा ऐप-विशिष्ट SQLite फ़ाइल में संग्रहीत होता है।",
@@ -1414,7 +1423,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "स्रोत शब्द और दिखाया जाने वाला शब्द, दोनों दर्ज करें।",
     "사전팩": "शब्दकोश पैक",
     "개인 용어": "निजी शब्द",
-    "항목": "प्रविष्टियाँ"
+    "항목": "प्रविष्टियाँ",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "कोरियाई, अंग्रेज़ी, जापानी और चीनी व्यावहारिक पैक संपीड़ित रूप में शामिल हैं। केवल चुने गए पैक स्थानीय डेटाबेस में इंस्टॉल किए जाते हैं।",
+    "미니팩": "मिनी पैक",
+    "실용팩": "व्यावहारिक पैक",
+    "실용팩 설치": "व्यावहारिक पैक इंस्टॉल करें",
+    "실용팩 설치됨": "व्यावहारिक पैक इंस्टॉल हो गया",
+    "설치 중 {progress}%": "इंस्टॉल हो रहा है {progress}%"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1866,7 +1881,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Comprobando el diccionario personal.",
     "저장된 개인 용어가 없습니다.": "No hay términos personales guardados.",
     "오프라인 사전팩": "Paquetes de diccionarios sin conexión",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Instala paquetes iniciales de coreano, inglés, japonés y chino, y amplía el mismo formato a 28 idiomas.",
     "데이터 폴더": "Carpeta de datos",
     "사전팩 상태를 확인하고 있습니다.": "Comprobando el estado de los paquetes de diccionarios.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Los datos del diccionario se almacenan en un archivo SQLite específico de la aplicación.",
@@ -1886,7 +1900,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Ingresa tanto el término de origen como el término para mostrar.",
     "사전팩": "Paquetes de diccionarios",
     "개인 용어": "Términos personales",
-    "항목": "entradas"
+    "항목": "entradas",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Los paquetes prácticos de coreano, inglés, japonés y chino vienen incluidos en formato comprimido. Solo los paquetes seleccionados se instalan en la base de datos local.",
+    "미니팩": "Paquete mini",
+    "실용팩": "Paquete práctico",
+    "실용팩 설치": "Instalar paquete práctico",
+    "실용팩 설치됨": "Paquete práctico instalado",
+    "설치 중 {progress}%": "Instalando: {progress}%"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2338,7 +2358,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Persönliches Wörterbuch wird geprüft.",
     "저장된 개인 용어가 없습니다.": "Es wurden noch keine persönlichen Begriffe gespeichert.",
     "오프라인 사전팩": "Offline-Wörterbuchpakete",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Installiere Starterpakete für Koreanisch, Englisch, Japanisch und Chinesisch und erweitere das gleiche Format auf 28 Sprachen.",
     "데이터 폴더": "Datenordner",
     "사전팩 상태를 확인하고 있습니다.": "Status der Wörterbuchpakete wird geprüft.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Wörterbuchdaten werden in einer app-spezifischen SQLite-Datei gespeichert.",
@@ -2358,7 +2377,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Bitte Quell- und Anzeigebegriff eingeben.",
     "사전팩": "Wörterbuchpakete",
     "개인 용어": "Persönliche Begriffe",
-    "항목": "Einträge"
+    "항목": "Einträge",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Die Praxispakete für Koreanisch, Englisch, Japanisch und Chinesisch sind in komprimierter Form enthalten. Nur ausgewählte Pakete werden in der lokalen Datenbank installiert.",
+    "미니팩": "Minipaket",
+    "실용팩": "Praxispaket",
+    "실용팩 설치": "Praxispaket installieren",
+    "실용팩 설치됨": "Praxispaket installiert",
+    "설치 중 {progress}%": "Installation läuft: {progress} %"
   },
   "ru": {
     "설정": "Настройки",
@@ -2810,7 +2835,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Проверка личного словаря.",
     "저장된 개인 용어가 없습니다.": "Нет сохранённых личных терминов.",
     "오프라인 사전팩": "Офлайн-пакеты словарей",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Установите стартовые пакеты корейского, английского, японского и китайского языков и расширьте этот формат до 28 языков.",
     "데이터 폴더": "Папка данных",
     "사전팩 상태를 확인하고 있습니다.": "Проверка состояния пакетов словарей.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Данные словаря хранятся в отдельном файле SQLite приложения.",
@@ -2830,7 +2854,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Введите исходный и отображаемый термины.",
     "사전팩": "Пакеты словарей",
     "개인 용어": "Личные термины",
-    "항목": "записей"
+    "항목": "записей",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Практические пакеты для корейского, английского, японского и китайского языков включены в сжатом виде. В локальную базу данных устанавливаются только выбранные пакеты.",
+    "미니팩": "Мини-пакет",
+    "실용팩": "Практический пакет",
+    "실용팩 설치": "Установить практический пакет",
+    "실용팩 설치됨": "Практический пакет установлен",
+    "설치 중 {progress}%": "Установка: {progress}%"
   },
   "id": {
     "설정": "Pengaturan",
@@ -3282,7 +3312,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Memeriksa kamus pribadi.",
     "저장된 개인 용어가 없습니다.": "Belum ada istilah pribadi yang disimpan.",
     "오프라인 사전팩": "Paket kamus offline",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Instal paket awal bahasa Korea, Inggris, Jepang, dan Tionghoa, lalu perluas format yang sama ke 28 bahasa.",
     "데이터 폴더": "Folder data",
     "사전팩 상태를 확인하고 있습니다.": "Memeriksa status paket kamus.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Data kamus disimpan dalam file SQLite khusus aplikasi.",
@@ -3302,7 +3331,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Masukkan istilah sumber dan istilah tampilan.",
     "사전팩": "Paket kamus",
     "개인 용어": "Istilah pribadi",
-    "항목": "entri"
+    "항목": "entri",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Paket praktis bahasa Korea, Inggris, Jepang, dan Mandarin disertakan dalam bentuk terkompresi. Hanya paket yang dipilih yang diinstal di database lokal.",
+    "미니팩": "Paket mini",
+    "실용팩": "Paket praktis",
+    "실용팩 설치": "Instal paket praktis",
+    "실용팩 설치됨": "Paket praktis terinstal",
+    "설치 중 {progress}%": "Menginstal {progress}%"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3754,7 +3789,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Vérification du dictionnaire personnel.",
     "저장된 개인 용어가 없습니다.": "Aucun terme personnel n’a été enregistré.",
     "오프라인 사전팩": "Packs de dictionnaires hors ligne",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Installez les packs de démarrage coréen, anglais, japonais et chinois, puis étendez ce même format à 28 langues.",
     "데이터 폴더": "Dossier de données",
     "사전팩 상태를 확인하고 있습니다.": "Vérification de l’état des packs de dictionnaires.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Les données du dictionnaire sont stockées dans un fichier SQLite propre à l’application.",
@@ -3774,7 +3808,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Saisissez le terme source et le terme à afficher.",
     "사전팩": "Packs de dictionnaires",
     "개인 용어": "Termes personnels",
-    "항목": "entrées"
+    "항목": "entrées",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Les packs pratiques coréen, anglais, japonais et chinois sont inclus sous forme compressée. Seuls les packs sélectionnés sont installés dans la base de données locale.",
+    "미니팩": "Mini-pack",
+    "실용팩": "Pack pratique",
+    "실용팩 설치": "Installer le pack pratique",
+    "실용팩 설치됨": "Pack pratique installé",
+    "설치 중 {progress}%": "Installation en cours… {progress} %"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4226,7 +4266,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Kişisel sözlük kontrol ediliyor.",
     "저장된 개인 용어가 없습니다.": "Kaydedilmiş kişisel terim yok.",
     "오프라인 사전팩": "Çevrimdışı sözlük paketleri",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Korece, İngilizce, Japonca ve Çince başlangıç paketlerini yükleyin ve aynı formatı 28 dile genişletin.",
     "데이터 폴더": "Veri klasörü",
     "사전팩 상태를 확인하고 있습니다.": "Sözlük paketi durumu kontrol ediliyor.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Sözlük verileri uygulamaya özel bir SQLite dosyasında saklanır.",
@@ -4246,7 +4285,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Hem kaynak terimi hem de görüntülenecek terimi girin.",
     "사전팩": "Sözlük paketleri",
     "개인 용어": "Kişisel terimler",
-    "항목": "kayıt"
+    "항목": "kayıt",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Korece, İngilizce, Japonca ve Çince pratik paketler sıkıştırılmış olarak sunulur. Yalnızca seçilen paketler yerel veritabanına yüklenir.",
+    "미니팩": "Mini paket",
+    "실용팩": "Pratik paket",
+    "실용팩 설치": "Pratik paketi yükle",
+    "실용팩 설치됨": "Pratik paket yüklendi",
+    "설치 중 {progress}%": "Yükleniyor %{progress}"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4698,7 +4743,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "جارٍ التحقق من القاموس الشخصي.",
     "저장된 개인 용어가 없습니다.": "لا توجد مصطلحات شخصية محفوظة.",
     "오프라인 사전팩": "حزم القواميس غير المتصلة",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "ثبّت حزم البداية للكورية والإنجليزية واليابانية والصينية، ووسّع التنسيق نفسه ليشمل 28 لغة.",
     "데이터 폴더": "مجلد البيانات",
     "사전팩 상태를 확인하고 있습니다.": "جارٍ التحقق من حالة حزم القواميس.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "تُخزّن بيانات القاموس في ملف SQLite خاص بالتطبيق.",
@@ -4718,7 +4762,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "أدخل مصطلح المصدر والمصطلح المعروض كليهما.",
     "사전팩": "حزم القواميس",
     "개인 용어": "مصطلحات شخصية",
-    "항목": "إدخالات"
+    "항목": "إدخالات",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "حِزم اللغات الكورية والإنجليزية واليابانية والصينية العملية مضمنة بصيغة مضغوطة. لا تُثبَّت في قاعدة البيانات المحلية إلا الحِزم المحددة.",
+    "미니팩": "حزمة مصغرة",
+    "실용팩": "حزمة عملية",
+    "실용팩 설치": "تثبيت الحزمة العملية",
+    "실용팩 설치됨": "تم تثبيت الحزمة العملية",
+    "설치 중 {progress}%": "جارٍ التثبيت {progress}%"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5170,7 +5220,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Đang kiểm tra từ điển cá nhân.",
     "저장된 개인 용어가 없습니다.": "Chưa lưu thuật ngữ cá nhân nào.",
     "오프라인 사전팩": "Gói từ điển ngoại tuyến",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Cài đặt các gói khởi đầu tiếng Hàn, Anh, Nhật và Trung, đồng thời mở rộng cùng định dạng này cho 28 ngôn ngữ.",
     "데이터 폴더": "Thư mục dữ liệu",
     "사전팩 상태를 확인하고 있습니다.": "Đang kiểm tra trạng thái gói từ điển.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Dữ liệu từ điển được lưu trong một tệp SQLite dành riêng cho ứng dụng.",
@@ -5190,7 +5239,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Nhập cả thuật ngữ nguồn và thuật ngữ hiển thị.",
     "사전팩": "Gói từ điển",
     "개인 용어": "Thuật ngữ cá nhân",
-    "항목": "mục"
+    "항목": "mục",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Các gói thực dụng tiếng Hàn, Anh, Nhật và Trung được tích hợp ở dạng nén. Chỉ các gói đã chọn mới được cài đặt vào cơ sở dữ liệu cục bộ.",
+    "미니팩": "Gói mini",
+    "실용팩": "Gói thực dụng",
+    "실용팩 설치": "Cài đặt gói thực dụng",
+    "실용팩 설치됨": "Đã cài đặt gói thực dụng",
+    "설치 중 {progress}%": "Đang cài đặt {progress}%"
   },
   "it": {
     "설정": "Impostazioni",
@@ -5642,7 +5697,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Verifica del dizionario personale in corso.",
     "저장된 개인 용어가 없습니다.": "Non è stato salvato alcun termine personale.",
     "오프라인 사전팩": "Pacchetti dizionario offline",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Installa i pacchetti iniziali per coreano, inglese, giapponese e cinese ed estendi lo stesso formato a 28 lingue.",
     "데이터 폴더": "Cartella dati",
     "사전팩 상태를 확인하고 있습니다.": "Verifica dello stato dei pacchetti dizionario in corso.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "I dati del dizionario sono archiviati in un file SQLite specifico dell'app.",
@@ -5662,7 +5716,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Inserisci sia il termine di origine sia il termine da visualizzare.",
     "사전팩": "Pacchetti dizionario",
     "개인 용어": "Termini personali",
-    "항목": "voci"
+    "항목": "voci",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "I pacchetti pratici per coreano, inglese, giapponese e cinese sono inclusi in formato compresso. Solo i pacchetti selezionati vengono installati nel database locale.",
+    "미니팩": "Pacchetto mini",
+    "실용팩": "Pacchetto pratico",
+    "실용팩 설치": "Installa il pacchetto pratico",
+    "실용팩 설치됨": "Pacchetto pratico installato",
+    "설치 중 {progress}%": "Installazione {progress}%"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6114,7 +6174,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Sprawdzanie słownika osobistego.",
     "저장된 개인 용어가 없습니다.": "Nie zapisano żadnych własnych terminów.",
     "오프라인 사전팩": "Pakiety słowników offline",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Zainstaluj pakiety startowe dla języka koreańskiego, angielskiego, japońskiego i chińskiego oraz rozszerz ten sam format na 28 języków.",
     "데이터 폴더": "Folder danych",
     "사전팩 상태를 확인하고 있습니다.": "Sprawdzanie stanu pakietów słowników.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Dane słownika są przechowywane w pliku SQLite przeznaczonym dla tej aplikacji.",
@@ -6134,7 +6193,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Wprowadź termin źródłowy i wyświetlany termin.",
     "사전팩": "Pakiety słowników",
     "개인 용어": "Własne terminy",
-    "항목": "wpisy"
+    "항목": "wpisy",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Praktyczne pakiety dla języka koreańskiego, angielskiego, japońskiego i chińskiego są dołączone w postaci skompresowanej. W lokalnej bazie danych instalowane są tylko wybrane pakiety.",
+    "미니팩": "Minipakiet",
+    "실용팩": "Pakiet praktyczny",
+    "실용팩 설치": "Zainstaluj pakiet praktyczny",
+    "실용팩 설치됨": "Pakiet praktyczny zainstalowany",
+    "설치 중 {progress}%": "Instalowanie: {progress}%"
   },
   "uk": {
     "설정": "Налаштування",
@@ -6586,7 +6651,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Перевірка особистого словника.",
     "저장된 개인 용어가 없습니다.": "Особистих термінів ще не збережено.",
     "오프라인 사전팩": "Офлайн-пакети словників",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Установіть базові пакети корейської, англійської, японської та китайської мов і розширте цей формат до 28 мов.",
     "데이터 폴더": "Папка даних",
     "사전팩 상태를 확인하고 있습니다.": "Перевірка стану пакетів словників.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Дані словника зберігаються у файлі SQLite, призначеному для цієї програми.",
@@ -6606,7 +6670,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Введіть термін оригіналу й термін для відображення.",
     "사전팩": "Пакети словників",
     "개인 용어": "Особисті терміни",
-    "항목": "записів"
+    "항목": "записів",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Практичні пакети для корейської, англійської, японської та китайської мов включено у стисненому вигляді. У локальну базу даних установлюються лише вибрані пакети.",
+    "미니팩": "Мініпакет",
+    "실용팩": "Практичний пакет",
+    "실용팩 설치": "Установити практичний пакет",
+    "실용팩 설치됨": "Практичний пакет установлено",
+    "설치 중 {progress}%": "Установлення: {progress}%"
   },
   "ms": {
     "설정": "Tetapan",
@@ -7058,7 +7128,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Sedang menyemak kamus peribadi.",
     "저장된 개인 용어가 없습니다.": "Tiada istilah peribadi yang disimpan.",
     "오프라인 사전팩": "Pek kamus luar talian",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Pasang pek permulaan bahasa Korea, Inggeris, Jepun dan Cina serta kembangkan format yang sama kepada 28 bahasa.",
     "데이터 폴더": "Folder data",
     "사전팩 상태를 확인하고 있습니다.": "Sedang menyemak status pek kamus.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Data kamus disimpan dalam fail SQLite khusus aplikasi.",
@@ -7078,7 +7147,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Masukkan istilah sumber dan istilah paparan.",
     "사전팩": "Pek kamus",
     "개인 용어": "Istilah peribadi",
-    "항목": "entri"
+    "항목": "entri",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Pek praktikal bahasa Korea, Inggeris, Jepun dan Cina disertakan dalam bentuk termampat. Hanya pek yang dipilih dipasang dalam pangkalan data setempat.",
+    "미니팩": "Pek mini",
+    "실용팩": "Pek praktikal",
+    "실용팩 설치": "Pasang pek praktikal",
+    "실용팩 설치됨": "Pek praktikal telah dipasang",
+    "설치 중 {progress}%": "Sedang memasang {progress}%"
   },
   "nl": {
     "설정": "Instellingen",
@@ -7530,7 +7605,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Persoonlijk woordenboek controleren.",
     "저장된 개인 용어가 없습니다.": "Er zijn geen persoonlijke termen opgeslagen.",
     "오프라인 사전팩": "Offline woordenboekpakketten",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Installeer startpakketten voor Koreaans, Engels, Japans en Chinees en breid dezelfde indeling uit naar 28 talen.",
     "데이터 폴더": "Gegevensmap",
     "사전팩 상태를 확인하고 있습니다.": "Status van woordenboekpakketten controleren.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Woordenboekgegevens worden opgeslagen in een app-specifiek SQLite-bestand.",
@@ -7550,7 +7624,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Voer zowel de bronterm als de weergaveterm in.",
     "사전팩": "Woordenboekpakketten",
     "개인 용어": "Persoonlijke termen",
-    "항목": "vermeldingen"
+    "항목": "vermeldingen",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Praktische pakketten voor Koreaans, Engels, Japans en Chinees zijn in gecomprimeerde vorm inbegrepen. Alleen geselecteerde pakketten worden in de lokale database geïnstalleerd.",
+    "미니팩": "Minipakket",
+    "실용팩": "Praktisch pakket",
+    "실용팩 설치": "Praktisch pakket installeren",
+    "실용팩 설치됨": "Praktisch pakket geïnstalleerd",
+    "설치 중 {progress}%": "Bezig met installeren: {progress}%"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8002,7 +8082,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "กำลังตรวจสอบพจนานุกรมส่วนตัว",
     "저장된 개인 용어가 없습니다.": "ยังไม่มีคำศัพท์ส่วนตัวที่บันทึกไว้",
     "오프라인 사전팩": "ชุดพจนานุกรมออฟไลน์",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "ติดตั้งชุดเริ่มต้นภาษาเกาหลี อังกฤษ ญี่ปุ่น และจีน และขยายรูปแบบเดียวกันให้รองรับ 28 ภาษา",
     "데이터 폴더": "โฟลเดอร์ข้อมูล",
     "사전팩 상태를 확인하고 있습니다.": "กำลังตรวจสอบสถานะชุดพจนานุกรม",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "ข้อมูลพจนานุกรมจัดเก็บไว้ในไฟล์ SQLite เฉพาะของแอป",
@@ -8022,7 +8101,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "กรอกทั้งคำศัพท์ต้นฉบับและคำศัพท์ที่แสดง",
     "사전팩": "ชุดพจนานุกรม",
     "개인 용어": "คำศัพท์ส่วนตัว",
-    "항목": "รายการ"
+    "항목": "รายการ",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "แพ็กคำศัพท์ใช้งานภาษาเกาหลี อังกฤษ ญี่ปุ่น และจีนรวมมาในรูปแบบบีบอัด โดยจะติดตั้งเฉพาะแพ็กที่เลือกลงในฐานข้อมูลภายในเครื่อง",
+    "미니팩": "แพ็กมินิ",
+    "실용팩": "แพ็กใช้งาน",
+    "실용팩 설치": "ติดตั้งแพ็กใช้งาน",
+    "실용팩 설치됨": "ติดตั้งแพ็กใช้งานแล้ว",
+    "설치 중 {progress}%": "กำลังติดตั้ง {progress}%"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8474,7 +8559,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Sinusuri ang personal na diksyunaryo.",
     "저장된 개인 용어가 없습니다.": "Wala pang naka-save na personal na termino.",
     "오프라인 사전팩": "Mga offline na pakete ng diksyunaryo",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Mag-install ng mga panimulang pakete para sa Korean, English, Japanese, at Chinese, at palawakin ang parehong format sa 28 wika.",
     "데이터 폴더": "Folder ng data",
     "사전팩 상태를 확인하고 있습니다.": "Sinusuri ang katayuan ng pakete ng diksyunaryo.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Nakaimbak ang data ng diksyunaryo sa isang SQLite file na nakalaan sa app.",
@@ -8494,7 +8578,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Ilagay ang pinagmulan na termino at ang terminong ipapakita.",
     "사전팩": "Mga pakete ng diksyunaryo",
     "개인 용어": "Mga personal na termino",
-    "항목": "mga tala"
+    "항목": "mga tala",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Kasama sa naka-compress na anyo ang mga praktikal na pack para sa Korean, English, Japanese, at Chinese. Ang mga piniling pack lang ang ini-install sa lokal na database.",
+    "미니팩": "Mini pack",
+    "실용팩": "Praktikal na pack",
+    "실용팩 설치": "I-install ang praktikal na pack",
+    "실용팩 설치됨": "Naka-install na ang praktikal na pack",
+    "설치 중 {progress}%": "Ini-install {progress}%"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -8946,7 +9036,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "ব্যক্তিগত অভিধান পরীক্ষা করা হচ্ছে।",
     "저장된 개인 용어가 없습니다.": "কোনো ব্যক্তিগত পরিভাষা সংরক্ষিত নেই।",
     "오프라인 사전팩": "অফলাইন অভিধান প্যাক",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "কোরীয়, ইংরেজি, জাপানি ও চীনা স্টার্টার প্যাক ইনস্টল করুন এবং একই ফরম্যাটে আরও 28টি ভাষা যোগ করুন।",
     "데이터 폴더": "ডেটা ফোল্ডার",
     "사전팩 상태를 확인하고 있습니다.": "অভিধান প্যাকের অবস্থা পরীক্ষা করা হচ্ছে।",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "অভিধানের ডেটা অ্যাপ-নির্দিষ্ট SQLite ফাইলে সংরক্ষণ করা হয়।",
@@ -8966,7 +9055,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "উৎস পরিভাষা ও প্রদর্শিত পরিভাষা দুটিই লিখুন।",
     "사전팩": "অভিধান প্যাক",
     "개인 용어": "ব্যক্তিগত পরিভাষা",
-    "항목": "এন্ট্রি"
+    "항목": "এন্ট্রি",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "কোরিয়ান, ইংরেজি, জাপানি ও চীনা ব্যবহারিক প্যাকগুলো সংকুচিত আকারে অন্তর্ভুক্ত আছে। শুধু নির্বাচিত প্যাকগুলোই লোকাল ডেটাবেসে ইনস্টল করা হয়।",
+    "미니팩": "মিনি প্যাক",
+    "실용팩": "ব্যবহারিক প্যাক",
+    "실용팩 설치": "ব্যবহারিক প্যাক ইনস্টল করুন",
+    "실용팩 설치됨": "ব্যবহারিক প্যাক ইনস্টল করা হয়েছে",
+    "설치 중 {progress}%": "ইনস্টল হচ্ছে {progress}%"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9418,7 +9513,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "ذاتی لغت چیک کی جا رہی ہے۔",
     "저장된 개인 용어가 없습니다.": "کوئی ذاتی اصطلاح محفوظ نہیں ہے۔",
     "오프라인 사전팩": "آف لائن لغت پیکس",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "کوریائی، انگریزی، جاپانی اور چینی ابتدائی پیکس انسٹال کریں اور اسی فارمیٹ کو 28 زبانوں تک توسیع دیں۔",
     "데이터 폴더": "ڈیٹا فولڈر",
     "사전팩 상태를 확인하고 있습니다.": "لغت پیک کی حالت چیک کی جا رہی ہے۔",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "لغت کا ڈیٹا ایپ کی مخصوص SQLite فائل میں محفوظ ہوتا ہے۔",
@@ -9438,7 +9532,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "ماخذ اصطلاح اور دکھائی جانے والی اصطلاح دونوں درج کریں۔",
     "사전팩": "لغت پیکس",
     "개인 용어": "ذاتی اصطلاحات",
-    "항목": "اندراجات"
+    "항목": "اندراجات",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "کوریائی، انگریزی، جاپانی اور چینی زبانوں کے عملی پیک کمپریس شدہ شکل میں شامل ہیں۔ صرف منتخب پیک مقامی ڈیٹا بیس میں انسٹال کیے جاتے ہیں۔",
+    "미니팩": "منی پیک",
+    "실용팩": "عملی پیک",
+    "실용팩 설치": "عملی پیک انسٹال کریں",
+    "실용팩 설치됨": "عملی پیک انسٹال ہو گیا",
+    "설치 중 {progress}%": "انسٹال ہو رہا ہے {progress}%"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -9890,7 +9990,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "தனிப்பட்ட அகராதி சரிபார்க்கப்படுகிறது.",
     "저장된 개인 용어가 없습니다.": "தனிப்பட்ட சொற்கள் எதுவும் சேமிக்கப்படவில்லை.",
     "오프라인 사전팩": "ஆஃப்லைன் அகராதித் தொகுப்புகள்",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "கொரிய, ஆங்கில, ஜப்பானிய மற்றும் சீன தொடக்கத் தொகுப்புகளை நிறுவி, இதே வடிவமைப்பை 28 மொழிகளுக்கு விரிவாக்கவும்.",
     "데이터 폴더": "தரவுக் கோப்புறை",
     "사전팩 상태를 확인하고 있습니다.": "அகராதித் தொகுப்பின் நிலை சரிபார்க்கப்படுகிறது.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "அகராதித் தரவு செயலிக்கான தனிப்பட்ட SQLite கோப்பில் சேமிக்கப்படுகிறது.",
@@ -9910,7 +10009,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "மூலச் சொல் மற்றும் காட்ட வேண்டிய சொல் இரண்டையும் உள்ளிடவும்.",
     "사전팩": "அகராதித் தொகுப்புகள்",
     "개인 용어": "தனிப்பட்ட சொற்கள்",
-    "항목": "பதிவுகள்"
+    "항목": "பதிவுகள்",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "கொரியன், ஆங்கிலம், ஜப்பானியம் மற்றும் சீன மொழிகளுக்கான நடைமுறைப் பொதிகள் சுருக்கப்பட்ட வடிவில் சேர்க்கப்பட்டுள்ளன. தேர்ந்தெடுக்கப்பட்ட பொதிகள் மட்டுமே உள்ளகத் தரவுத்தளத்தில் நிறுவப்படும்.",
+    "미니팩": "சிறு பொதி",
+    "실용팩": "நடைமுறைப் பொதி",
+    "실용팩 설치": "நடைமுறைப் பொதியை நிறுவு",
+    "실용팩 설치됨": "நடைமுறைப் பொதி நிறுவப்பட்டது",
+    "설치 중 {progress}%": "நிறுவுகிறது {progress}%"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10362,7 +10467,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "در حال بررسی فرهنگ لغت شخصی.",
     "저장된 개인 용어가 없습니다.": "هیچ اصطلاح شخصی ذخیره نشده است.",
     "오프라인 사전팩": "بسته‌های فرهنگ لغت آفلاین",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "بسته‌های آغازین کره‌ای، انگلیسی، ژاپنی و چینی را نصب کنید و با همین قالب، آن را به ۲۸ زبان گسترش دهید.",
     "데이터 폴더": "پوشه داده‌ها",
     "사전팩 상태를 확인하고 있습니다.": "در حال بررسی وضعیت بسته‌های فرهنگ لغت.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "داده‌های فرهنگ لغت در یک فایل SQLite اختصاصی برنامه ذخیره می‌شوند.",
@@ -10382,7 +10486,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "هم اصطلاح مبدأ و هم اصطلاح نمایشی را وارد کنید.",
     "사전팩": "بسته‌های فرهنگ لغت",
     "개인 용어": "اصطلاحات شخصی",
-    "항목": "مدخل"
+    "항목": "مدخل",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "بسته‌های کاربردی کره‌ای، انگلیسی، ژاپنی و چینی به‌صورت فشرده در برنامه گنجانده شده‌اند. فقط بسته‌های انتخاب‌شده در پایگاه داده محلی نصب می‌شوند.",
+    "미니팩": "بسته کوچک",
+    "실용팩": "بسته کاربردی",
+    "실용팩 설치": "نصب بسته کاربردی",
+    "실용팩 설치됨": "بسته کاربردی نصب شد",
+    "설치 중 {progress}%": "در حال نصب {progress}٪"
   },
   "he": {
     "설정": "הגדרות",
@@ -10834,7 +10944,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "המילון האישי נבדק.",
     "저장된 개인 용어가 없습니다.": "לא נשמרו מונחים אישיים.",
     "오프라인 사전팩": "חבילות מילון לא מקוונות",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "התקינו חבילות בסיס לקוריאנית, אנגלית, יפנית וסינית, והרחיבו את אותו הפורמט ל-28 שפות.",
     "데이터 폴더": "תיקיית נתונים",
     "사전팩 상태를 확인하고 있습니다.": "מצב חבילות המילון נבדק.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "נתוני המילון נשמרים בקובץ SQLite ייעודי לאפליקציה.",
@@ -10854,7 +10963,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "הזינו גם את מונח המקור וגם את המונח לתצוגה.",
     "사전팩": "חבילות מילון",
     "개인 용어": "מונחים אישיים",
-    "항목": "רשומות"
+    "항목": "רשומות",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "חבילות שימושיות לקוריאנית, אנגלית, יפנית וסינית כלולות בצורה דחוסה. רק החבילות שנבחרו מותקנות במסד הנתונים המקומי.",
+    "미니팩": "חבילה מוקטנת",
+    "실용팩": "חבילה שימושית",
+    "실용팩 설치": "התקנת חבילה שימושית",
+    "실용팩 설치됨": "החבילה השימושית הותקנה",
+    "설치 중 {progress}%": "מתקין {progress}%"
   },
   "cs": {
     "설정": "Nastavení",
@@ -11306,7 +11421,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "개인 사전을 확인하고 있습니다.": "Kontrola osobního slovníku.",
     "저장된 개인 용어가 없습니다.": "Nejsou uloženy žádné osobní termíny.",
     "오프라인 사전팩": "Offline slovníkové balíčky",
-    "한·영·일·중 기본팩을 설치할 수 있으며, 같은 형식으로 28개 언어를 확장합니다.": "Nainstalujte základní balíčky pro korejštinu, angličtinu, japonštinu a čínštinu a rozšiřte stejný formát na 28 jazyků.",
     "데이터 폴더": "Datová složka",
     "사전팩 상태를 확인하고 있습니다.": "Kontrola stavu slovníkových balíčků.",
     "사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.": "Slovníková data jsou uložena v souboru SQLite určeném pro tuto aplikaci.",
@@ -11326,6 +11440,12 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 용어와 표시할 용어를 모두 입력하십시오.": "Zadejte zdrojový i zobrazovaný termín.",
     "사전팩": "Slovníkové balíčky",
     "개인 용어": "Osobní termíny",
-    "항목": "položek"
+    "항목": "položek",
+    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Praktické balíčky pro korejštinu, angličtinu, japonštinu a čínštinu jsou součástí aplikace v komprimované podobě. Do místní databáze se nainstalují pouze vybrané balíčky.",
+    "미니팩": "Mini balíček",
+    "실용팩": "Praktický balíček",
+    "실용팩 설치": "Nainstalovat praktický balíček",
+    "실용팩 설치됨": "Praktický balíček nainstalován",
+    "설치 중 {progress}%": "Instalace {progress} %"
   }
 });

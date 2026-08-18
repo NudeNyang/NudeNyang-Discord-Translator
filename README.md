@@ -125,7 +125,7 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 - Hy-MT2 1.8B and 7B local models, plus experimental TranslateGemma 4B
 - Optional ChatGPT, Claude, Gemini, DeepL, and a mock provider for testing
 - Local image translation with adaptive PP-OCR recognition and original/translated toggling
-- Selection dictionary with speech, personal terms, optional Wiktionary handoff, and local starter packs
+- Selection dictionary with speech, personal terms, optional Wiktionary handoff, and install-on-demand practical packs
 - Memory and SQLite caching separated by engine, language, prompt, register, and renderer version
 - Automatic GPU fallback to a RAM-conscious CPU mode when acceleration is unavailable
 - Configurable global shortcuts, synchronized tray state, and a single settings window

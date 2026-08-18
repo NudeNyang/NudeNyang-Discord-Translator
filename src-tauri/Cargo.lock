@@ -3271,6 +3271,7 @@ dependencies = [
  "ab_glyph",
  "base64 0.22.1",
  "encoding_rs",
+ "flate2",
  "fs2",
  "image",
  "imageproc",

@@ -335,6 +335,7 @@ test("every dynamic runtime message has a non-English generated-locale rendering
     "업데이트 다운로드 중 52%",
     "업데이트 확인 실패: 내부 오류",
     "업데이트 설치 실패: 내부 오류",
+    "설치 중 52%",
   ];
   for (const entry of DYNAMIC_COPY) {
     assert.ok(samples.some(sample => entry.pattern.test(sample)), `missing sample for ${entry.pattern}`);

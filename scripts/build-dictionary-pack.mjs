@@ -1,6 +1,7 @@
 import { createReadStream, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
+import { createGunzip, gzipSync } from "node:zlib";
 
 import { SUPPORTED_TARGET_LANGUAGES } from "../web/languages.mjs";
 
@@ -14,6 +15,10 @@ const { values } = parseArgs({
     license: { type: "string" },
     version: { type: "string" },
     "minimum-entries": { type: "string", default: "100" },
+    "gloss-language": { type: "string", default: "en" },
+    "source-language": { type: "string" },
+    title: { type: "string" },
+    compact: { type: "boolean", default: false },
   },
 });
 
@@ -29,6 +34,7 @@ if (values.license === "review-required") {
 
 const catalog = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-packs/catalog.json", import.meta.url), "utf8"));
 const allowedPartsOfSpeech = new Set(catalog.coveragePolicy.allowedPartsOfSpeech);
+const sourceLanguage = values["source-language"] || values.language;
 const entries = [];
 const seen = new Set();
 let rejected = 0;
@@ -46,8 +52,11 @@ function firstText(values) {
   return values.map(value => String(value || "").trim()).find(Boolean) || "";
 }
 
+const source = createReadStream(values.input);
+const input = values.input.toLowerCase().endsWith(".gz") ? source.pipe(createGunzip()) : source;
+input.setEncoding("utf8");
 const lines = createInterface({
-  input: createReadStream(values.input, { encoding: "utf8" }),
+  input,
   crlfDelay: Infinity,
 });
 for await (const line of lines) {
@@ -60,24 +69,29 @@ for await (const line of lines) {
     continue;
   }
   const rowLanguage = String(row.lang_code || row.language_code || row.lang || "");
-  if (rowLanguage && rowLanguage !== values.language) continue;
+  if (rowLanguage && rowLanguage !== sourceLanguage) continue;
   const headword = String(row.word || row.headword || "").normalize("NFKC").trim();
   const normalized = headword.toLocaleLowerCase(values.language);
   if (!headword || headword.length > 120 || seen.has(normalized)) continue;
   const sense = Array.isArray(row.senses) ? row.senses.find(item => firstText(item?.glosses)) : null;
-  const definition = firstText(sense?.glosses || row.glosses);
+  const definition = (sense?.glosses || row.glosses || [])
+    .map(value => String(value || "").trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join("; ");
   if (!definition || definition.length > 600) {
     rejected += 1;
     continue;
   }
-  const example = firstText(sense?.examples?.map(item => item?.text) || row.examples);
   const reading = firstText(row.sounds?.map(sound => sound?.ipa || sound?.zh_pron || sound?.other));
   entries.push({
     headword,
     reading: reading.slice(0, 160),
     partOfSpeech: partOfSpeech(row.pos),
-    glosses: { en: definition },
-    examples: example ? { en: example.slice(0, 600) } : {},
+    glosses: { [values["gloss-language"]]: definition },
+    // Wiktionary examples can quote separately licensed works. Practical packs
+    // intentionally keep only headwords, readings, parts of speech, and glosses.
+    examples: {},
   });
   seen.add(normalized);
 }
@@ -94,12 +108,18 @@ const pack = {
     id: `nudenyang-${values.language}-${values.version}`,
     language: values.language,
     version: values.version,
-    title: `${values.language} offline dictionary`,
+    title: values.title || `${values.language} practical dictionary`,
     sourceName: values["source-name"],
     sourceUrl: values["source-url"],
     license: values.license,
+    edition: "practical",
     entries,
   }],
 };
-writeFileSync(values.output, `${JSON.stringify(pack, null, 2)}\n`, "utf8");
+const serialized = `${JSON.stringify(pack, null, values.compact ? 0 : 2)}\n`;
+if (values.output.toLowerCase().endsWith(".gz")) {
+  writeFileSync(values.output, gzipSync(serialized, { level: 9 }));
+} else {
+  writeFileSync(values.output, serialized, "utf8");
+}
 console.log(`Built ${values.output}: ${entries.length} entries accepted · ${rejected} malformed or incomplete rows rejected`);
