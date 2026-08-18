@@ -21,9 +21,7 @@ $InstallerPath = Join-Path $ReleaseDirectory $InstallerName
 $SignaturePath = "$InstallerPath.sig"
 $WindowsPackagePaths = @(
     $InstallerPath,
-    (Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-x64-Portable.zip"),
-    (Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-ARM64-Setup.exe"),
-    (Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-ARM64-Portable.zip")
+    (Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-ARM64-Setup.exe")
 )
 $ManifestPath = Join-Path $ReleaseDirectory 'latest.json'
 $ChecksumPath = Join-Path $ReleaseDirectory 'SHA256SUMS.txt'
