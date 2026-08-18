@@ -27,6 +27,7 @@ test("the user-facing product name is NudeNyang Discord Translator", () => {
 
 test("cancelled or failed automatic recovery exposes a quiet manual Discord restart action", () => {
   assert.match(markup, /id="discord-restart-manual"[^>]*hidden[^>]*>[\s\S]*?class="engine-restart-icon"[\s\S]*?<span>Discord 재시작<\/span>[\s\S]*?<\/button>/);
+  assert.match(markup, /class="engine-restart-icon"[^>]*data-icon="rotate-ccw"[^>]*>[\s\S]*?M3 12a9 9 0 1 0 9-9[\s\S]*?M3 3v5h5/);
   assert.match(script, /manualDiscordRestartAvailability/);
   assert.match(script, /invoke\("discord_restart", \{[\s\S]*?expectedProcessId:/);
   assert.match(script, /title: "Discord를 다시 시작하시겠습니까\?"/);
