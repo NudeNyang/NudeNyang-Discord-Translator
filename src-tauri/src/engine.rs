@@ -1214,8 +1214,14 @@ fn scan_dictionary(
             "lookup" => store
                 .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
                 .and_then(|store| {
-                    let source_language = is_supported_language_code(&request.source_language)
-                        .then_some(request.source_language.as_str());
+                    let contextual_language = detect_language(&request.context).language;
+                    let source_language = if is_supported_language_code(&request.source_language) {
+                        Some(request.source_language.as_str())
+                    } else if contextual_language != Language::Unknown {
+                        Some(contextual_language.code())
+                    } else {
+                        None
+                    };
                     let target_language = if is_supported_language_code(&request.target_language) {
                         request.target_language.as_str()
                     } else {
@@ -2944,6 +2950,7 @@ mod tests {
             query: "future".to_string(),
             source_language: "en".to_string(),
             target_language: "ja".to_string(),
+            segmented: false,
             entries: vec![DictionaryEntry {
                 entry_id: 1,
                 headword: "future".to_string(),

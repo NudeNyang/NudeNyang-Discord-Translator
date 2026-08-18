@@ -433,7 +433,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "查詢在 Discord 中選取的單字，並管理個人詞彙與離線字典套件。",
     "선택형 사전": "選取查詢字典",
     "메시지 안에서 바로 뜻 확인": "直接在訊息中查詢含義",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "在 Discord 訊息中選取單字，然後按下 Aa，即可查看含義、詞性、例句和發音。個人詞彙和已安裝的套件只會在此電腦上查詢。",
     "선택형 사전 사용": "使用選取查詢字典",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "即使翻譯功能已關閉，仍可獨立使用字典。",
     "외부 사전 연결": "外部字典",
@@ -478,7 +477,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "正在安裝 {progress}%",
     "자동 번역": "自動翻譯",
     "원문 뜻": "原文含義",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "若介面語言沒有可用的釋義，已設定的翻譯模型會自動翻譯。選用外部模型時，字典中的原文釋義可能會傳送至該服務。"
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "若介面語言沒有可用的釋義，已設定的翻譯模型會自動翻譯。選用外部模型時，字典中的原文釋義可能會傳送至該服務。",
+    "선택한 범위의 뜻을 찾고 있습니다.": "正在查詢選取內容。",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "已安裝的字典中找不到相符的詞彙。",
+    "선택한 범위에서 찾은 표현": "在選取內容中找到的詞彙",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "在 Discord 訊息中大致選取一個單字或短語，然後按下 Aa。字典會拆分相符的詞彙，並查找其意思和發音。個人詞彙和已安裝的字典包只會在這台 PC 上搜尋。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -913,7 +916,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Consulte palavras selecionadas no Discord e gerencie termos pessoais e pacotes de dicionário offline.",
     "선택형 사전": "Dicionário por seleção",
     "메시지 안에서 바로 뜻 확인": "Consulte significados nas mensagens",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecione uma palavra em uma mensagem do Discord e pressione Aa para ver o significado, a classe gramatical, exemplos e a pronúncia. Os termos pessoais e os pacotes instalados são pesquisados apenas neste PC.",
     "선택형 사전 사용": "Usar dicionário por seleção",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "O dicionário funciona de forma independente mesmo quando a tradução está desativada.",
     "외부 사전 연결": "Dicionário externo",
@@ -958,7 +960,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Instalando {progress}%",
     "자동 번역": "Tradução automática",
     "원문 뜻": "Significado original",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se não houver um significado disponível no idioma da interface, o modelo de tradução configurado fará a tradução automaticamente. Quando um modelo externo estiver selecionado, o significado original do dicionário poderá ser enviado a esse serviço."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se não houver um significado disponível no idioma da interface, o modelo de tradução configurado fará a tradução automaticamente. Quando um modelo externo estiver selecionado, o significado original do dicionário poderá ser enviado a esse serviço.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Procurando a seleção.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nenhuma expressão correspondente foi encontrada nos dicionários instalados.",
+    "선택한 범위에서 찾은 표현": "Expressões encontradas na seleção",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecione aproximadamente uma palavra ou frase curta em uma mensagem do Discord e pressione Aa. O dicionário separa as expressões correspondentes e encontra seus significados e pronúncias. Os termos pessoais e pacotes instalados são pesquisados apenas neste PC."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1393,7 +1399,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Discord में चुने गए शब्द खोजें और निजी शब्दों व ऑफ़लाइन शब्दकोश पैक को प्रबंधित करें।",
     "선택형 사전": "चयन शब्दकोश",
     "메시지 안에서 바로 뜻 확인": "संदेशों में ही अर्थ देखें",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord संदेश में कोई शब्द चुनें और उसका अर्थ, शब्द-भेद, उदाहरण और उच्चारण देखने के लिए Aa दबाएँ। निजी शब्द और इंस्टॉल किए गए पैक केवल इस PC पर खोजे जाते हैं।",
     "선택형 사전 사용": "चयन शब्दकोश का उपयोग करें",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "अनुवाद बंद होने पर भी शब्दकोश स्वतंत्र रूप से काम करता है।",
     "외부 사전 연결": "बाहरी शब्दकोश",
@@ -1438,7 +1443,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "इंस्टॉल हो रहा है {progress}%",
     "자동 번역": "स्वचालित अनुवाद",
     "원문 뜻": "मूल अर्थ",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "यदि इंटरफ़ेस की भाषा में अर्थ उपलब्ध नहीं है, तो कॉन्फ़िगर किया गया अनुवाद मॉडल उसका स्वचालित रूप से अनुवाद करता है। बाहरी मॉडल चुने जाने पर, शब्दकोश का मूल अर्थ उस सेवा को भेजा जा सकता है।"
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "यदि इंटरफ़ेस की भाषा में अर्थ उपलब्ध नहीं है, तो कॉन्फ़िगर किया गया अनुवाद मॉडल उसका स्वचालित रूप से अनुवाद करता है। बाहरी मॉडल चुने जाने पर, शब्दकोश का मूल अर्थ उस सेवा को भेजा जा सकता है।",
+    "선택한 범위의 뜻을 찾고 있습니다.": "चयनित टेक्स्ट खोजा जा रहा है।",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "इंस्टॉल किए गए शब्दकोशों में कोई मेल खाती अभिव्यक्ति नहीं मिली।",
+    "선택한 범위에서 찾은 표현": "चयनित टेक्स्ट में मिली अभिव्यक्तियाँ",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord संदेश में किसी शब्द या छोटे वाक्यांश को मोटे तौर पर चुनें और Aa दबाएँ। शब्दकोश मेल खाती अभिव्यक्तियों को अलग करके उनके अर्थ और उच्चारण खोजता है। व्यक्तिगत शब्द और इंस्टॉल किए गए पैक केवल इस PC पर खोजे जाते हैं।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1873,7 +1882,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Busca palabras seleccionadas en Discord y administra términos personales y paquetes de diccionarios sin conexión.",
     "선택형 사전": "Diccionario de selección",
     "메시지 안에서 바로 뜻 확인": "Consulta significados dentro de los mensajes",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecciona una palabra en un mensaje de Discord y presiona Aa para ver su significado, categoría gramatical, ejemplos y pronunciación. Los términos personales y los paquetes instalados se consultan solo en esta PC.",
     "선택형 사전 사용": "Usar diccionario de selección",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "El diccionario funciona de forma independiente incluso cuando la traducción está desactivada.",
     "외부 사전 연결": "Diccionario externo",
@@ -1918,7 +1926,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Instalando: {progress}%",
     "자동 번역": "Traducción automática",
     "원문 뜻": "Significado original",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si no hay un significado disponible en el idioma de la interfaz, el modelo de traducción configurado lo traduce automáticamente. Si se selecciona un modelo externo, el significado original del diccionario puede enviarse a ese servicio."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si no hay un significado disponible en el idioma de la interfaz, el modelo de traducción configurado lo traduce automáticamente. Si se selecciona un modelo externo, el significado original del diccionario puede enviarse a ese servicio.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Buscando la selección.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "No se encontró ninguna expresión coincidente en los diccionarios instalados.",
+    "선택한 범위에서 찾은 표현": "Expresiones encontradas en la selección",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecciona aproximadamente una palabra o frase corta en un mensaje de Discord y presiona Aa. El diccionario separa las expresiones coincidentes y busca sus significados y pronunciaciones. Los términos personales y los paquetes instalados se consultan únicamente en esta PC."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2353,7 +2365,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "In Discord ausgewählte Wörter nachschlagen und persönliche Begriffe sowie Offline-Wörterbuchpakete verwalten.",
     "선택형 사전": "Auswahlwörterbuch",
     "메시지 안에서 바로 뜻 확인": "Bedeutungen direkt in Nachrichten nachschlagen",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Wähle ein Wort in einer Discord-Nachricht aus und drücke Aa, um Bedeutung, Wortart, Beispiele und Aussprache anzuzeigen. Persönliche Begriffe und installierte Pakete werden nur auf diesem PC durchsucht.",
     "선택형 사전 사용": "Auswahlwörterbuch verwenden",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Das Wörterbuch funktioniert unabhängig, auch wenn die Übersetzung deaktiviert ist.",
     "외부 사전 연결": "Externes Wörterbuch",
@@ -2398,7 +2409,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Installation läuft: {progress} %",
     "자동 번역": "Automatische Übersetzung",
     "원문 뜻": "Ursprüngliche Bedeutung",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Wenn keine Bedeutung in der Sprache der Benutzeroberfläche verfügbar ist, übersetzt das konfigurierte Übersetzungsmodell sie automatisch. Wenn ein externes Modell ausgewählt ist, kann die ursprüngliche Wörterbuchbedeutung an diesen Dienst gesendet werden."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Wenn keine Bedeutung in der Sprache der Benutzeroberfläche verfügbar ist, übersetzt das konfigurierte Übersetzungsmodell sie automatisch. Wenn ein externes Modell ausgewählt ist, kann die ursprüngliche Wörterbuchbedeutung an diesen Dienst gesendet werden.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Auswahl wird nachgeschlagen.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "In den installierten Wörterbüchern wurde kein passender Ausdruck gefunden.",
+    "선택한 범위에서 찾은 표현": "In der Auswahl gefundene Ausdrücke",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Wähle ein Wort oder eine kurze Wortgruppe in einer Discord-Nachricht grob aus und drücke Aa. Das Wörterbuch zerlegt passende Ausdrücke und sucht ihre Bedeutungen und Aussprachen. Persönliche Begriffe und installierte Pakete werden nur auf diesem PC durchsucht."
   },
   "ru": {
     "설정": "Настройки",
@@ -2833,7 +2848,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Ищите слова, выделенные в Discord, и управляйте личными терминами и офлайн-пакетами словарей.",
     "선택형 사전": "Словарь для выделенного текста",
     "메시지 안에서 바로 뜻 확인": "Поиск значений прямо в сообщениях",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Выделите слово в сообщении Discord и нажмите Aa, чтобы увидеть его значение, часть речи, примеры и произношение. Поиск по личным терминам и установленным пакетам выполняется только на этом ПК.",
     "선택형 사전 사용": "Использовать словарь для выделенного текста",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Словарь работает независимо, даже если перевод отключён.",
     "외부 사전 연결": "Внешний словарь",
@@ -2878,7 +2892,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Установка: {progress}%",
     "자동 번역": "Автоматический перевод",
     "원문 뜻": "Исходное значение",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Если значение недоступно на языке интерфейса, настроенная модель перевода автоматически переведёт его. При выборе внешней модели исходное словарное значение может быть отправлено соответствующему сервису."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Если значение недоступно на языке интерфейса, настроенная модель перевода автоматически переведёт его. При выборе внешней модели исходное словарное значение может быть отправлено соответствующему сервису.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Поиск выделенного текста.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "В установленных словарях совпадений не найдено.",
+    "선택한 범위에서 찾은 표현": "Выражения, найденные в выделенном тексте",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Выделите слово или короткую фразу в сообщении Discord и нажмите Aa. Словарь разделит найденные выражения и покажет их значения и произношение. Личные термины и установленные пакеты ищутся только на этом ПК."
   },
   "id": {
     "설정": "Pengaturan",
@@ -3313,7 +3331,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Cari arti kata yang dipilih di Discord dan kelola istilah pribadi serta paket kamus offline.",
     "선택형 사전": "Kamus pilihan",
     "메시지 안에서 바로 뜻 확인": "Cari arti langsung di dalam pesan",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih kata dalam pesan Discord lalu tekan Aa untuk melihat arti, kelas kata, contoh, dan pelafalannya. Istilah pribadi dan paket yang terinstal hanya dicari di PC ini.",
     "선택형 사전 사용": "Gunakan kamus pilihan",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Kamus tetap berfungsi secara mandiri meski terjemahan dinonaktifkan.",
     "외부 사전 연결": "Kamus eksternal",
@@ -3358,7 +3375,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Menginstal {progress}%",
     "자동 번역": "Terjemahan otomatis",
     "원문 뜻": "Makna asli",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika makna tidak tersedia dalam bahasa antarmuka, model terjemahan yang dikonfigurasi akan menerjemahkannya secara otomatis. Jika model eksternal dipilih, makna asli dari kamus dapat dikirim ke layanan tersebut."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika makna tidak tersedia dalam bahasa antarmuka, model terjemahan yang dikonfigurasi akan menerjemahkannya secara otomatis. Jika model eksternal dipilih, makna asli dari kamus dapat dikirim ke layanan tersebut.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Mencari arti pilihan.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Tidak ditemukan ungkapan yang cocok dalam kamus yang terpasang.",
+    "선택한 범위에서 찾은 표현": "Ungkapan yang ditemukan dalam pilihan",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih kata atau frasa pendek secara kasar dalam pesan Discord, lalu tekan Aa. Kamus akan memisahkan ungkapan yang cocok serta mencari arti dan pelafalannya. Istilah pribadi dan paket yang terpasang hanya dicari di PC ini."
   },
   "fr": {
     "설정": "Paramètres",
@@ -3793,7 +3814,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Recherchez les mots sélectionnés dans Discord et gérez vos termes personnels et vos packs de dictionnaires hors ligne.",
     "선택형 사전": "Dictionnaire sur sélection",
     "메시지 안에서 바로 뜻 확인": "Rechercher le sens dans les messages",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Sélectionnez un mot dans un message Discord, puis appuyez sur Aa pour afficher sa définition, sa catégorie grammaticale, des exemples et sa prononciation. Les termes personnels et les packs installés sont recherchés uniquement sur ce PC.",
     "선택형 사전 사용": "Utiliser le dictionnaire sur sélection",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Le dictionnaire fonctionne indépendamment, même lorsque la traduction est désactivée.",
     "외부 사전 연결": "Dictionnaire externe",
@@ -3838,7 +3858,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Installation en cours… {progress} %",
     "자동 번역": "Traduction automatique",
     "원문 뜻": "Sens original",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si un sens n’est pas disponible dans la langue de l’interface, le modèle de traduction configuré le traduit automatiquement. Lorsqu’un modèle externe est sélectionné, le sens original du dictionnaire peut être envoyé à ce service."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si un sens n’est pas disponible dans la langue de l’interface, le modèle de traduction configuré le traduit automatiquement. Lorsqu’un modèle externe est sélectionné, le sens original du dictionnaire peut être envoyé à ce service.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Recherche de la sélection.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Aucune expression correspondante n’a été trouvée dans les dictionnaires installés.",
+    "선택한 범위에서 찾은 표현": "Expressions trouvées dans la sélection",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Sélectionnez approximativement un mot ou une courte expression dans un message Discord, puis appuyez sur Aa. Le dictionnaire découpe les expressions correspondantes et recherche leur sens et leur prononciation. Les termes personnels et les packs installés sont recherchés uniquement sur ce PC."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4273,7 +4297,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Discord'da seçilen sözcükleri arayın, kişisel terimleri ve çevrimdışı sözlük paketlerini yönetin.",
     "선택형 사전": "Seçim sözlüğü",
     "메시지 안에서 바로 뜻 확인": "Mesajların içinde anlamları arayın",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Bir Discord mesajında bir sözcük seçip Aa düğmesine basarak anlamını, sözcük türünü, örnekleri ve telaffuzunu görüntüleyin. Kişisel terimler ve yüklü paketler yalnızca bu PC'de aranır.",
     "선택형 사전 사용": "Seçim sözlüğünü kullan",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Çeviri kapalıyken bile sözlük bağımsız olarak çalışır.",
     "외부 사전 연결": "Harici sözlük",
@@ -4318,7 +4341,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Yükleniyor %{progress}",
     "자동 번역": "Otomatik çeviri",
     "원문 뜻": "Orijinal anlam",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Arayüz dilinde bir anlam mevcut değilse, yapılandırılan çeviri modeli bunu otomatik olarak çevirir. Harici bir model seçildiğinde, sözlükteki orijinal anlam bu hizmete gönderilebilir."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Arayüz dilinde bir anlam mevcut değilse, yapılandırılan çeviri modeli bunu otomatik olarak çevirir. Harici bir model seçildiğinde, sözlükteki orijinal anlam bu hizmete gönderilebilir.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Seçim aranıyor.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Yüklü sözlüklerde eşleşen bir ifade bulunamadı.",
+    "선택한 범위에서 찾은 표현": "Seçimde bulunan ifadeler",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord mesajında bir kelimeyi veya kısa ifadeyi kabaca seçip Aa düğmesine basın. Sözlük, eşleşen ifadeleri ayırarak anlamlarını ve telaffuzlarını bulur. Kişisel terimler ve yüklü paketler yalnızca bu PC'de aranır."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4753,7 +4780,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "ابحث عن الكلمات المحددة في Discord وأدِر المصطلحات الشخصية وحزم القواميس غير المتصلة.",
     "선택형 사전": "قاموس التحديد",
     "메시지 안에서 바로 뜻 확인": "ابحث عن المعاني داخل الرسائل",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "حدد كلمة في رسالة Discord واضغط على Aa لعرض معناها ونوعها النحوي وأمثلتها ونطقها. لا يُبحث في المصطلحات الشخصية والحزم المثبتة إلا على هذا الكمبيوتر.",
     "선택형 사전 사용": "استخدام قاموس التحديد",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "يعمل القاموس بشكل مستقل حتى عند إيقاف الترجمة.",
     "외부 사전 연결": "قاموس خارجي",
@@ -4798,7 +4824,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "جارٍ التثبيت {progress}%",
     "자동 번역": "الترجمة التلقائية",
     "원문 뜻": "المعنى الأصلي",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "إذا لم يتوفر المعنى بلغة الواجهة، فسيترجمه نموذج الترجمة المُعَدّ تلقائيًا. عند اختيار نموذج خارجي، قد يُرسل المعنى الأصلي من القاموس إلى تلك الخدمة."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "إذا لم يتوفر المعنى بلغة الواجهة، فسيترجمه نموذج الترجمة المُعَدّ تلقائيًا. عند اختيار نموذج خارجي، قد يُرسل المعنى الأصلي من القاموس إلى تلك الخدمة.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "جارٍ البحث عن النص المحدد.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "لم يُعثر على تعبير مطابق في القواميس المثبتة.",
+    "선택한 범위에서 찾은 표현": "التعبيرات الموجودة في النص المحدد",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "حدّد تقريبًا كلمة أو عبارة قصيرة في رسالة Discord، ثم اضغط على Aa. يقسّم القاموس التعبيرات المطابقة ويبحث عن معانيها وطريقة نطقها. لا يُبحث في المصطلحات الشخصية والحزم المثبتة إلا على هذا الكمبيوتر."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5233,7 +5263,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Tra cứu các từ đã chọn trong Discord, đồng thời quản lý thuật ngữ cá nhân và các gói từ điển ngoại tuyến.",
     "선택형 사전": "Từ điển tra từ đã chọn",
     "메시지 안에서 바로 뜻 확인": "Tra nghĩa ngay trong tin nhắn",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Chọn một từ trong tin nhắn Discord rồi nhấn Aa để xem nghĩa, từ loại, ví dụ và cách phát âm. Thuật ngữ cá nhân và các gói đã cài đặt chỉ được tra cứu trên PC này.",
     "선택형 사전 사용": "Dùng từ điển tra từ đã chọn",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Từ điển hoạt động độc lập ngay cả khi tính năng dịch bị tắt.",
     "외부 사전 연결": "Từ điển bên ngoài",
@@ -5278,7 +5307,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Đang cài đặt {progress}%",
     "자동 번역": "Dịch tự động",
     "원문 뜻": "Nghĩa gốc",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Nếu không có nghĩa bằng ngôn ngữ giao diện, mô hình dịch đã cấu hình sẽ tự động dịch nghĩa đó. Khi chọn mô hình bên ngoài, nghĩa gốc trong từ điển có thể được gửi đến dịch vụ đó."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Nếu không có nghĩa bằng ngôn ngữ giao diện, mô hình dịch đã cấu hình sẽ tự động dịch nghĩa đó. Khi chọn mô hình bên ngoài, nghĩa gốc trong từ điển có thể được gửi đến dịch vụ đó.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Đang tra cứu phần đã chọn.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Không tìm thấy cụm từ phù hợp trong các từ điển đã cài đặt.",
+    "선택한 범위에서 찾은 표현": "Các cụm từ tìm thấy trong phần đã chọn",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Chọn tương đối một từ hoặc cụm từ ngắn trong tin nhắn Discord rồi nhấn Aa. Từ điển sẽ tách các cụm từ phù hợp và tìm nghĩa cùng cách phát âm. Thuật ngữ cá nhân và các gói đã cài đặt chỉ được tra cứu trên PC này."
   },
   "it": {
     "설정": "Impostazioni",
@@ -5713,7 +5746,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Cerca le parole selezionate in Discord e gestisci i termini personali e i pacchetti dizionario offline.",
     "선택형 사전": "Dizionario di selezione",
     "메시지 안에서 바로 뜻 확인": "Cerca i significati nei messaggi",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Seleziona una parola in un messaggio Discord e premi Aa per visualizzarne il significato, la categoria grammaticale, gli esempi e la pronuncia. I termini personali e i pacchetti installati vengono cercati solo su questo PC.",
     "선택형 사전 사용": "Usa il dizionario di selezione",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Il dizionario funziona autonomamente anche quando la traduzione è disattivata.",
     "외부 사전 연결": "Dizionario esterno",
@@ -5758,7 +5790,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Installazione {progress}%",
     "자동 번역": "Traduzione automatica",
     "원문 뜻": "Significato originale",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se non è disponibile un significato nella lingua dell'interfaccia, il modello di traduzione configurato lo traduce automaticamente. Se è selezionato un modello esterno, il significato originale del dizionario potrebbe essere inviato a tale servizio."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se non è disponibile un significato nella lingua dell'interfaccia, il modello di traduzione configurato lo traduce automaticamente. Se è selezionato un modello esterno, il significato originale del dizionario potrebbe essere inviato a tale servizio.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Ricerca della selezione.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nessuna espressione corrispondente trovata nei dizionari installati.",
+    "선택한 범위에서 찾은 표현": "Espressioni trovate nella selezione",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Seleziona approssimativamente una parola o una breve frase in un messaggio Discord e premi Aa. Il dizionario separa le espressioni corrispondenti e ne trova significati e pronunce. I termini personali e i pacchetti installati vengono cercati solo su questo PC."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6193,7 +6229,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Wyszukuj słowa zaznaczone w Discord i zarządzaj własnymi terminami oraz pakietami słowników offline.",
     "선택형 사전": "Słownik zaznaczenia",
     "메시지 안에서 바로 뜻 확인": "Sprawdzaj znaczenia bezpośrednio w wiadomościach",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Zaznacz słowo w wiadomości Discord i naciśnij Aa, aby zobaczyć jego znaczenie, część mowy, przykłady i wymowę. Własne terminy i zainstalowane pakiety są przeszukiwane wyłącznie na tym komputerze.",
     "선택형 사전 사용": "Używaj słownika zaznaczenia",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Słownik działa niezależnie, nawet gdy tłumaczenie jest wyłączone.",
     "외부 사전 연결": "Słownik zewnętrzny",
@@ -6238,7 +6273,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Instalowanie: {progress}%",
     "자동 번역": "Tłumaczenie automatyczne",
     "원문 뜻": "Oryginalne znaczenie",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jeśli znaczenie nie jest dostępne w języku interfejsu, skonfigurowany model tłumaczeniowy przetłumaczy je automatycznie. W przypadku wybrania modelu zewnętrznego oryginalne znaczenie słownikowe może zostać wysłane do tej usługi."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jeśli znaczenie nie jest dostępne w języku interfejsu, skonfigurowany model tłumaczeniowy przetłumaczy je automatycznie. W przypadku wybrania modelu zewnętrznego oryginalne znaczenie słownikowe może zostać wysłane do tej usługi.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Wyszukiwanie zaznaczonego tekstu.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nie znaleziono pasującego wyrażenia w zainstalowanych słownikach.",
+    "선택한 범위에서 찾은 표현": "Wyrażenia znalezione w zaznaczonym tekście",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Zaznacz w przybliżeniu słowo lub krótki zwrot w wiadomości Discord i naciśnij Aa. Słownik dzieli pasujące wyrażenia oraz wyszukuje ich znaczenia i wymowę. Terminy osobiste i zainstalowane pakiety są przeszukiwane tylko na tym komputerze."
   },
   "uk": {
     "설정": "Налаштування",
@@ -6673,7 +6712,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Шукайте слова, вибрані в Discord, і керуйте особистими термінами та офлайн-пакетами словників.",
     "선택형 사전": "Словник для виділеного",
     "메시지 안에서 바로 뜻 확인": "Перегляд значень безпосередньо в повідомленнях",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Виберіть слово в повідомленні Discord і натисніть Aa, щоб переглянути його значення, частину мови, приклади та вимову. Пошук особистих термінів і встановлених пакетів виконується лише на цьому ПК.",
     "선택형 사전 사용": "Використовувати словник для виділеного",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Словник працює незалежно, навіть коли переклад вимкнено.",
     "외부 사전 연결": "Зовнішній словник",
@@ -6718,7 +6756,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Установлення: {progress}%",
     "자동 번역": "Автоматичний переклад",
     "원문 뜻": "Оригінальне значення",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Якщо значення мовою інтерфейсу недоступне, налаштована модель перекладу перекладає його автоматично. Якщо вибрано зовнішню модель, оригінальне словникове значення може бути надіслано цьому сервісу."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Якщо значення мовою інтерфейсу недоступне, налаштована модель перекладу перекладає його автоматично. Якщо вибрано зовнішню модель, оригінальне словникове значення може бути надіслано цьому сервісу.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Пошук виділеного фрагмента.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "У встановлених словниках не знайдено відповідного виразу.",
+    "선택한 범위에서 찾은 표현": "Вирази, знайдені у виділеному фрагменті",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Приблизно виділіть слово або коротку фразу в повідомленні Discord і натисніть Aa. Словник розділить відповідні вирази та знайде їхні значення й вимову. Пошук особистих термінів і встановлених пакетів виконується лише на цьому ПК."
   },
   "ms": {
     "설정": "Tetapan",
@@ -7153,7 +7195,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Cari perkataan yang dipilih dalam Discord dan urus istilah peribadi serta pek kamus luar talian.",
     "선택형 사전": "Kamus pilihan",
     "메시지 안에서 바로 뜻 확인": "Cari makna dalam mesej",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih perkataan dalam mesej Discord dan tekan Aa untuk melihat makna, golongan kata, contoh dan sebutannya. Istilah peribadi dan pek yang dipasang hanya dicari pada PC ini.",
     "선택형 사전 사용": "Gunakan kamus pilihan",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Kamus berfungsi secara berasingan walaupun terjemahan dimatikan.",
     "외부 사전 연결": "Kamus luaran",
@@ -7198,7 +7239,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Sedang memasang {progress}%",
     "자동 번역": "Terjemahan automatik",
     "원문 뜻": "Maksud asal",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika maksud tidak tersedia dalam bahasa antara muka, model terjemahan yang dikonfigurasi akan menterjemahkannya secara automatik. Apabila model luaran dipilih, maksud asal dalam kamus mungkin dihantar kepada perkhidmatan tersebut."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika maksud tidak tersedia dalam bahasa antara muka, model terjemahan yang dikonfigurasi akan menterjemahkannya secara automatik. Apabila model luaran dipilih, maksud asal dalam kamus mungkin dihantar kepada perkhidmatan tersebut.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Mencari pilihan.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Tiada ungkapan sepadan ditemui dalam kamus yang dipasang.",
+    "선택한 범위에서 찾은 표현": "Ungkapan yang ditemui dalam pilihan",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih secara kasar perkataan atau frasa pendek dalam mesej Discord, kemudian tekan Aa. Kamus memisahkan ungkapan yang sepadan serta mencari makna dan sebutannya. Istilah peribadi dan pek yang dipasang hanya dicari pada PC ini."
   },
   "nl": {
     "설정": "Instellingen",
@@ -7633,7 +7678,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Zoek in Discord geselecteerde woorden op en beheer persoonlijke termen en offline woordenboekpakketten.",
     "선택형 사전": "Selectiewoordenboek",
     "메시지 안에서 바로 뜻 확인": "Zoek betekenissen op in berichten",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecteer een woord in een Discord-bericht en druk op Aa om de betekenis, woordsoort, voorbeelden en uitspraak te bekijken. Persoonlijke termen en geïnstalleerde pakketten worden alleen op deze pc doorzocht.",
     "선택형 사전 사용": "Selectiewoordenboek gebruiken",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Het woordenboek werkt onafhankelijk, zelfs als vertaling is uitgeschakeld.",
     "외부 사전 연결": "Extern woordenboek",
@@ -7678,7 +7722,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Bezig met installeren: {progress}%",
     "자동 번역": "Automatische vertaling",
     "원문 뜻": "Oorspronkelijke betekenis",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Als er geen betekenis beschikbaar is in de interfacetaal, vertaalt het ingestelde vertaalmodel deze automatisch. Als een extern model is geselecteerd, kan de oorspronkelijke betekenis uit het woordenboek naar die service worden verzonden."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Als er geen betekenis beschikbaar is in de interfacetaal, vertaalt het ingestelde vertaalmodel deze automatisch. Als een extern model is geselecteerd, kan de oorspronkelijke betekenis uit het woordenboek naar die service worden verzonden.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "De selectie wordt opgezocht.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Geen overeenkomende uitdrukking gevonden in de geïnstalleerde woordenboeken.",
+    "선택한 범위에서 찾은 표현": "Uitdrukkingen gevonden in de selectie",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecteer globaal een woord of korte zin in een Discord-bericht en druk op Aa. Het woordenboek splitst overeenkomende uitdrukkingen en zoekt hun betekenissen en uitspraken op. Persoonlijke termen en geïnstalleerde pakketten worden alleen op deze pc doorzocht."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8113,7 +8161,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "ค้นหาคำที่เลือกใน Discord และจัดการคำศัพท์ส่วนตัวกับชุดพจนานุกรมออฟไลน์",
     "선택형 사전": "พจนานุกรมสำหรับข้อความที่เลือก",
     "메시지 안에서 바로 뜻 확인": "ค้นหาความหมายภายในข้อความ",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "เลือกคำในข้อความ Discord แล้วกด Aa เพื่อดูความหมาย ชนิดของคำ ตัวอย่าง และการออกเสียง ระบบจะค้นหาคำศัพท์ส่วนตัวและชุดพจนานุกรมที่ติดตั้งไว้เฉพาะใน PC เครื่องนี้เท่านั้น",
     "선택형 사전 사용": "ใช้พจนานุกรมสำหรับข้อความที่เลือก",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "พจนานุกรมทำงานแยกได้แม้ปิดการแปลอยู่",
     "외부 사전 연결": "พจนานุกรมภายนอก",
@@ -8158,7 +8205,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "กำลังติดตั้ง {progress}%",
     "자동 번역": "การแปลอัตโนมัติ",
     "원문 뜻": "ความหมายต้นฉบับ",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "หากไม่มีความหมายในภาษาของอินเทอร์เฟซ โมเดลแปลภาษาที่กำหนดไว้จะแปลให้โดยอัตโนมัติ เมื่อเลือกโมเดลภายนอก ความหมายต้นฉบับจากพจนานุกรมอาจถูกส่งไปยังบริการนั้น"
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "หากไม่มีความหมายในภาษาของอินเทอร์เฟซ โมเดลแปลภาษาที่กำหนดไว้จะแปลให้โดยอัตโนมัติ เมื่อเลือกโมเดลภายนอก ความหมายต้นฉบับจากพจนานุกรมอาจถูกส่งไปยังบริการนั้น",
+    "선택한 범위의 뜻을 찾고 있습니다.": "กำลังค้นหาข้อความที่เลือก",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "ไม่พบสำนวนที่ตรงกันในพจนานุกรมที่ติดตั้งไว้",
+    "선택한 범위에서 찾은 표현": "สำนวนที่พบในข้อความที่เลือก",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "เลือกคำหรือวลีสั้นๆ ในข้อความ Discord โดยคร่าวๆ แล้วกด Aa พจนานุกรมจะแยกสำนวนที่ตรงกันและค้นหาความหมายกับการออกเสียง โดยจะค้นหาคำศัพท์ส่วนตัวและชุดพจนานุกรมที่ติดตั้งไว้เฉพาะใน PC เครื่องนี้เท่านั้น"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8593,7 +8644,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Maghanap ng mga salitang pinili sa Discord at pamahalaan ang mga personal na termino at offline na pakete ng diksyunaryo.",
     "선택형 사전": "Diksyonaryo para sa pinili",
     "메시지 안에서 바로 뜻 확인": "Hanapin ang mga kahulugan sa loob ng mga mensahe",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pumili ng salita sa isang mensahe sa Discord at pindutin ang Aa para makita ang kahulugan, bahagi ng pananalita, mga halimbawa, at pagbigkas nito. Sa PC na ito lang hinahanap ang mga personal na termino at naka-install na pakete.",
     "선택형 사전 사용": "Gamitin ang diksyunaryo para sa pinili",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Gumagana nang hiwalay ang diksyunaryo kahit naka-off ang pagsasalin.",
     "외부 사전 연결": "Panlabas na diksyunaryo",
@@ -8638,7 +8688,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Ini-install {progress}%",
     "자동 번역": "Awtomatikong pagsasalin",
     "원문 뜻": "Orihinal na kahulugan",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Kung walang kahulugan sa wika ng interface, awtomatiko itong isasalin ng naka-configure na modelo ng pagsasalin. Kapag pumili ng panlabas na modelo, maaaring ipadala sa serbisyong iyon ang orihinal na kahulugan mula sa diksyunaryo."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Kung walang kahulugan sa wika ng interface, awtomatiko itong isasalin ng naka-configure na modelo ng pagsasalin. Kapag pumili ng panlabas na modelo, maaaring ipadala sa serbisyong iyon ang orihinal na kahulugan mula sa diksyunaryo.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Hinahanap ang napili.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Walang nakitang katugmang ekspresyon sa mga naka-install na diksyunaryo.",
+    "선택한 범위에서 찾은 표현": "Mga ekspresyong nakita sa napili",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pumili ng salita o maikling parirala sa isang mensahe sa Discord at pindutin ang Aa. Hinahati ng diksyunaryo ang mga katugmang ekspresyon at hinahanap ang mga kahulugan at pagbigkas ng mga ito. Sa PC na ito lamang hinahanap ang mga personal na termino at naka-install na pack."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -9073,7 +9127,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Discord-এ নির্বাচিত শব্দের অর্থ খুঁজুন এবং ব্যক্তিগত পরিভাষা ও অফলাইন অভিধান প্যাক পরিচালনা করুন।",
     "선택형 사전": "নির্বাচিত শব্দের অভিধান",
     "메시지 안에서 바로 뜻 확인": "বার্তার মধ্যেই অর্থ খুঁজুন",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord বার্তায় একটি শব্দ নির্বাচন করে Aa চাপুন। এর অর্থ, পদ, উদাহরণ ও উচ্চারণ দেখতে পাবেন। ব্যক্তিগত পরিভাষা ও ইনস্টল করা প্যাকগুলো শুধু এই PC-তেই অনুসন্ধান করা হয়।",
     "선택형 사전 사용": "নির্বাচিত শব্দের অভিধান ব্যবহার করুন",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "অনুবাদ বন্ধ থাকলেও অভিধানটি স্বতন্ত্রভাবে কাজ করে।",
     "외부 사전 연결": "বাহ্যিক অভিধান",
@@ -9118,7 +9171,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "ইনস্টল হচ্ছে {progress}%",
     "자동 번역": "স্বয়ংক্রিয় অনুবাদ",
     "원문 뜻": "মূল অর্থ",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "ইন্টারফেসের ভাষায় কোনো অর্থ পাওয়া না গেলে, কনফিগার করা অনুবাদ মডেল সেটি স্বয়ংক্রিয়ভাবে অনুবাদ করে। কোনো বাহ্যিক মডেল বেছে নিলে, অভিধানের মূল অর্থ সেই পরিষেবায় পাঠানো হতে পারে।"
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "ইন্টারফেসের ভাষায় কোনো অর্থ পাওয়া না গেলে, কনফিগার করা অনুবাদ মডেল সেটি স্বয়ংক্রিয়ভাবে অনুবাদ করে। কোনো বাহ্যিক মডেল বেছে নিলে, অভিধানের মূল অর্থ সেই পরিষেবায় পাঠানো হতে পারে।",
+    "선택한 범위의 뜻을 찾고 있습니다.": "নির্বাচিত অংশটি খোঁজা হচ্ছে।",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "ইনস্টল করা অভিধানগুলোতে কোনো মিলে যাওয়া অভিব্যক্তি পাওয়া যায়নি।",
+    "선택한 범위에서 찾은 표현": "নির্বাচিত অংশে পাওয়া অভিব্যক্তি",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord মেসেজে কোনো শব্দ বা ছোট বাক্যাংশ মোটামুটি নির্বাচন করে Aa চাপুন। অভিধানটি মিলে যাওয়া অভিব্যক্তিগুলো আলাদা করে সেগুলোর অর্থ ও উচ্চারণ খুঁজে দেয়। ব্যক্তিগত পরিভাষা ও ইনস্টল করা প্যাকগুলো শুধু এই PC-তেই খোঁজা হয়।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9553,7 +9610,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Discord میں منتخب الفاظ کے معنی دیکھیں اور ذاتی اصطلاحات اور آف لائن لغت پیکس کا نظم کریں۔",
     "선택형 사전": "انتخابی لغت",
     "메시지 안에서 바로 뜻 확인": "پیغامات کے اندر ہی معنی دیکھیں",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord پیغام میں کوئی لفظ منتخب کریں اور Aa بٹن دبا کر اس کے معنی، جزوِ کلام، مثالیں اور تلفظ دیکھیں۔ ذاتی اصطلاحات اور انسٹال شدہ پیکس صرف اسی PC پر تلاش کیے جاتے ہیں۔",
     "선택형 사전 사용": "انتخابی لغت استعمال کریں",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "ترجمہ بند ہونے پر بھی لغت آزادانہ کام کرتی ہے۔",
     "외부 사전 연결": "بیرونی لغت",
@@ -9598,7 +9654,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "انسٹال ہو رہا ہے {progress}%",
     "자동 번역": "خودکار ترجمہ",
     "원문 뜻": "اصل معنی",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر انٹرفیس کی زبان میں معنی دستیاب نہ ہوں، تو ترتیب دیا گیا ترجمہ ماڈل خودکار طور پر ان کا ترجمہ کرتا ہے۔ بیرونی ماڈل منتخب ہونے کی صورت میں لغت کے اصل معنی اس سروس کو بھیجے جا سکتے ہیں۔"
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر انٹرفیس کی زبان میں معنی دستیاب نہ ہوں، تو ترتیب دیا گیا ترجمہ ماڈل خودکار طور پر ان کا ترجمہ کرتا ہے۔ بیرونی ماڈل منتخب ہونے کی صورت میں لغت کے اصل معنی اس سروس کو بھیجے جا سکتے ہیں۔",
+    "선택한 범위의 뜻을 찾고 있습니다.": "انتخاب کردہ متن تلاش کیا جا رہا ہے۔",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "انسٹال کردہ لغات میں کوئی مماثل عبارت نہیں ملی۔",
+    "선택한 범위에서 찾은 표현": "انتخاب کردہ متن میں ملنے والی عبارات",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord پیغام میں کسی لفظ یا مختصر فقرے کو تقریباً منتخب کر کے Aa دبائیں۔ لغت مماثل عبارات کو الگ کر کے ان کے معانی اور تلفظ تلاش کرتی ہے۔ ذاتی اصطلاحات اور انسٹال کردہ پیکس صرف اسی PC پر تلاش کیے جاتے ہیں۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -10033,7 +10093,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Discord-இல் தேர்ந்தெடுத்த சொற்களின் பொருளைப் பார்த்து, தனிப்பட்ட சொற்களையும் ஆஃப்லைன் அகராதித் தொகுப்புகளையும் நிர்வகிக்கவும்.",
     "선택형 사전": "தேர்வு அகராதி",
     "메시지 안에서 바로 뜻 확인": "செய்திகளிலேயே பொருளைப் பார்க்கவும்",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord செய்தியில் ஒரு சொல்லைத் தேர்ந்தெடுத்து, அதன் பொருள், சொல் வகை, எடுத்துக்காட்டுகள் மற்றும் உச்சரிப்பைக் காண Aa-ஐ அழுத்தவும். தனிப்பட்ட சொற்களும் நிறுவப்பட்ட தொகுப்புகளும் இந்த PC-இல் மட்டுமே தேடப்படும்.",
     "선택형 사전 사용": "தேர்வு அகராதியைப் பயன்படுத்து",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "மொழிபெயர்ப்பு முடக்கப்பட்டிருந்தாலும் அகராதி தனியாக இயங்கும்.",
     "외부 사전 연결": "வெளிப்புற அகராதி",
@@ -10078,7 +10137,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "நிறுவுகிறது {progress}%",
     "자동 번역": "தானியங்கி மொழிபெயர்ப்பு",
     "원문 뜻": "அசல் பொருள்",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "இடைமுக மொழியில் பொருள் கிடைக்கவில்லை என்றால், உள்ளமைக்கப்பட்ட மொழிபெயர்ப்பு மாதிரி அதைத் தானாக மொழிபெயர்க்கும். வெளிப்புற மாதிரி தேர்ந்தெடுக்கப்பட்டால், அகராதியின் அசல் பொருள் அந்தச் சேவைக்கு அனுப்பப்படலாம்."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "இடைமுக மொழியில் பொருள் கிடைக்கவில்லை என்றால், உள்ளமைக்கப்பட்ட மொழிபெயர்ப்பு மாதிரி அதைத் தானாக மொழிபெயர்க்கும். வெளிப்புற மாதிரி தேர்ந்தெடுக்கப்பட்டால், அகராதியின் அசல் பொருள் அந்தச் சேவைக்கு அனுப்பப்படலாம்.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "தேர்வைத் தேடுகிறது.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "நிறுவப்பட்ட அகராதிகளில் பொருந்தும் சொற்றொடர் எதுவும் கிடைக்கவில்லை.",
+    "선택한 범위에서 찾은 표현": "தேர்வில் கண்டறியப்பட்ட சொற்றொடர்கள்",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord செய்தியில் ஒரு சொல்லையோ குறுகிய சொற்றொடரையோ தோராயமாகத் தேர்ந்தெடுத்து Aa-ஐ அழுத்தவும். பொருந்தும் சொற்றொடர்களை அகராதி பிரித்து, அவற்றின் பொருள்களையும் உச்சரிப்புகளையும் கண்டறியும். தனிப்பட்ட சொற்களும் நிறுவப்பட்ட அகராதித் தொகுப்புகளும் இந்த PC-யில் மட்டுமே தேடப்படும்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10513,7 +10576,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "معنی واژه‌های انتخاب‌شده در Discord را جستجو و اصطلاحات شخصی و بسته‌های فرهنگ لغت آفلاین را مدیریت کنید.",
     "선택형 사전": "فرهنگ لغت انتخابی",
     "메시지 안에서 바로 뜻 확인": "جستجوی معنی درون پیام‌ها",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "واژه‌ای را در پیام Discord انتخاب کنید و دکمه Aa را فشار دهید تا معنی، نقش دستوری، مثال‌ها و تلفظ آن را ببینید. اصطلاحات شخصی و بسته‌های نصب‌شده فقط در این رایانه جستجو می‌شوند.",
     "선택형 사전 사용": "استفاده از فرهنگ لغت انتخابی",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "فرهنگ لغت حتی وقتی ترجمه خاموش است، مستقل کار می‌کند.",
     "외부 사전 연결": "فرهنگ لغت خارجی",
@@ -10558,7 +10620,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "در حال نصب {progress}٪",
     "자동 번역": "ترجمهٔ خودکار",
     "원문 뜻": "معنی اصلی",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر معنی به زبان رابط موجود نباشد، مدل ترجمهٔ پیکربندی‌شده آن را به‌طور خودکار ترجمه می‌کند. اگر مدلی خارجی انتخاب شده باشد، ممکن است معنی اصلی واژه‌نامه به آن سرویس ارسال شود."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر معنی به زبان رابط موجود نباشد، مدل ترجمهٔ پیکربندی‌شده آن را به‌طور خودکار ترجمه می‌کند. اگر مدلی خارجی انتخاب شده باشد، ممکن است معنی اصلی واژه‌نامه به آن سرویس ارسال شود.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "در حال جست‌وجوی متن انتخاب‌شده.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "هیچ عبارت منطبقی در فرهنگ‌نامه‌های نصب‌شده یافت نشد.",
+    "선택한 범위에서 찾은 표현": "عبارت‌های یافت‌شده در متن انتخاب‌شده",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "یک واژه یا عبارت کوتاه را در پیام Discord به‌طور تقریبی انتخاب کنید و Aa را فشار دهید. فرهنگ‌نامه عبارت‌های منطبق را تفکیک می‌کند و معنی و تلفظ آن‌ها را می‌یابد. اصطلاحات شخصی و بسته‌های نصب‌شده فقط در همین رایانه جست‌وجو می‌شوند."
   },
   "he": {
     "설정": "הגדרות",
@@ -10993,7 +11059,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "חפשו מילים שנבחרו ב-Discord ונהלו מונחים אישיים וחבילות מילון לא מקוונות.",
     "선택형 사전": "מילון לבחירה",
     "메시지 안에서 바로 뜻 확인": "חיפוש משמעויות בתוך הודעות",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "בחרו מילה בהודעת Discord ולחצו על Aa כדי לראות את המשמעות, חלק הדיבר, דוגמאות וההגייה. החיפוש במונחים אישיים ובחבילות מותקנות מתבצע רק במחשב הזה.",
     "선택형 사전 사용": "השתמשו במילון לבחירה",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "המילון פועל באופן עצמאי גם כשהתרגום כבוי.",
     "외부 사전 연결": "מילון חיצוני",
@@ -11038,7 +11103,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "מתקין {progress}%",
     "자동 번역": "תרגום אוטומטי",
     "원문 뜻": "המשמעות המקורית",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "אם אין משמעות זמינה בשפת הממשק, מודל התרגום שהוגדר יתרגם אותה אוטומטית. אם נבחר מודל חיצוני, המשמעות המקורית מהמילון עשויה להישלח לשירות זה."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "אם אין משמעות זמינה בשפת הממשק, מודל התרגום שהוגדר יתרגם אותה אוטומטית. אם נבחר מודל חיצוני, המשמעות המקורית מהמילון עשויה להישלח לשירות זה.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "מחפש את הבחירה.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "לא נמצא ביטוי תואם במילונים המותקנים.",
+    "선택한 범위에서 찾은 표현": "ביטויים שנמצאו בבחירה",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "יש לבחור בקירוב מילה או צירוף מילים קצר בהודעת Discord וללחוץ על Aa. המילון מפצל ביטויים תואמים ומוצא את המשמעויות וההגיות שלהם. חיפוש במונחים אישיים ובחבילות מותקנות מתבצע רק במחשב זה."
   },
   "cs": {
     "설정": "Nastavení",
@@ -11473,7 +11542,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": "Vyhledávejte slova vybraná v Discord a spravujte osobní termíny a offline slovníkové balíčky.",
     "선택형 사전": "Slovník pro výběr",
     "메시지 안에서 바로 뜻 확인": "Vyhledávat významy přímo ve zprávách",
-    "Discord 메시지에서 단어를 선택한 뒤 Aa 버튼을 누르면 뜻, 품사, 예문과 발음을 확인합니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Vyberte slovo ve zprávě Discord a stisknutím Aa zobrazte jeho význam, slovní druh, příklady a výslovnost. Osobní termíny a nainstalované balíčky se vyhledávají pouze v tomto počítači.",
     "선택형 사전 사용": "Používat slovník pro výběr",
     "번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.": "Slovník funguje nezávisle, i když je překlad vypnutý.",
     "외부 사전 연결": "Externí slovník",
@@ -11518,6 +11586,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "설치 중 {progress}%": "Instalace {progress} %",
     "자동 번역": "Automatický překlad",
     "원문 뜻": "Původní význam",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Pokud význam není v jazyce rozhraní dostupný, nakonfigurovaný překladový model jej automaticky přeloží. Je-li vybrán externí model, původní slovníkový význam může být odeslán dané službě."
+    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Pokud význam není v jazyce rozhraní dostupný, nakonfigurovaný překladový model jej automaticky přeloží. Je-li vybrán externí model, původní slovníkový význam může být odeslán dané službě.",
+    "선택한 범위의 뜻을 찾고 있습니다.": "Vyhledávání výrazu ve výběru.",
+    "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "V nainstalovaných slovnících nebyl nalezen žádný odpovídající výraz.",
+    "선택한 범위에서 찾은 표현": "Výrazy nalezené ve výběru",
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Přibližně označ slovo nebo krátkou frázi ve zprávě na Discordu a stiskni Aa. Slovník rozdělí odpovídající výrazy a vyhledá jejich významy a výslovnost. Osobní termíny a nainstalované balíčky se prohledávají pouze na tomto PC."
   }
 });

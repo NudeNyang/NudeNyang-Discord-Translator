@@ -16,6 +16,12 @@ Lookup uses the following order for each entry:
 
 When only step 3 is available and the configured translation model is ready, the definition is translated in the existing translation worker. Successful results are stored as a localized overlay in `dictionary_localized_text`, while the source dictionary rows remain unchanged. The popup labels the result as an automatic translation and keeps the original definition behind an expandable disclosure. If translation is unavailable or fails, the popup displays the original definition with its language instead of failing the lookup.
 
+## Rough selection and phrase segmentation
+
+Users do not need to know the exact dictionary boundary before selecting text. The app first attempts an exact lookup. When that misses, it checks shorter expressions inside the selection and returns a left-to-right, longest-match segmentation with up to eight distinct terms. Space-delimited languages keep word boundaries, while Korean, Japanese, Chinese, and Thai also support compact expressions without spaces. For example, a rough selection of `非難禁止` can resolve to separate `非難` and `禁止` entries when the combined expression is not a headword.
+
+The popup keeps the original selection as its title, labels segmented results as expressions found inside the selection, and gives each matched headword and reading its own heading. Up to 240 characters of surrounding message text are used locally for language detection so Han-only selections can still prefer Japanese or Chinese packs from context. This context is not included in external dictionary or definition-translation requests.
+
 ## Pack policy
 
 The app keeps a four-entry project-authored mini pack for each core language so a first lookup can explain the feature without a setup step. Five practical packs are bundled as gzip resources and expanded into SQLite only when the user selects **Install practical pack**:

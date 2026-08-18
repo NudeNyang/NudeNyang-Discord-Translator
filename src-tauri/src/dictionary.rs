@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -112,6 +112,7 @@ pub struct DictionaryLookupResult {
     pub query: String,
     pub source_language: String,
     pub target_language: String,
+    pub segmented: bool,
     pub entries: Vec<DictionaryEntry>,
     pub personal_entries: Vec<PersonalDictionaryEntry>,
 }
@@ -249,81 +250,29 @@ impl DictionaryStore {
             .connection
             .lock()
             .map_err(|_| "사전 저장소 잠금을 열지 못했습니다.".to_string())?;
-        let mut statement = connection
-            .prepare(
-                "SELECT e.id, e.headword, e.language, e.reading, e.part_of_speech, \
-                        COALESCE(g_target.text, g_cached.text, g_en.text, g_any.text, ''), \
-                        CASE WHEN g_target.text IS NOT NULL THEN ?1 \
-                             WHEN g_cached.text IS NOT NULL THEN ?1 \
-                             WHEN g_en.text IS NOT NULL THEN 'en' \
-                             ELSE COALESCE(g_any.locale, '') END, \
-                        CASE WHEN g_target.text IS NOT NULL THEN 'native' \
-                             WHEN g_cached.text IS NOT NULL THEN 'automatic' \
-                             ELSE 'original' END, \
-                        COALESCE(g_en.text, g_any.text, ''), \
-                        CASE WHEN g_en.text IS NOT NULL THEN 'en' ELSE COALESCE(g_any.locale, '') END, \
-                        COALESCE(x_target.text, x_en.text, x_any.text, ''), \
-                        p.source_name, p.source_url, p.license \
-                 FROM dictionary_entries e \
-                 JOIN dictionary_packs p ON p.id=e.pack_id \
-                 LEFT JOIN dictionary_text g_target ON g_target.entry_id=e.id AND g_target.kind='gloss' AND g_target.locale=?1 \
-                 LEFT JOIN dictionary_localized_text g_cached ON g_cached.entry_id=e.id AND g_cached.locale=?1 \
-                 LEFT JOIN dictionary_text g_en ON g_en.entry_id=e.id AND g_en.kind='gloss' AND g_en.locale='en' \
-                 LEFT JOIN dictionary_text g_any ON g_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='gloss' ORDER BY locale LIMIT 1) \
-                 LEFT JOIN dictionary_text x_target ON x_target.entry_id=e.id AND x_target.kind='example' AND x_target.locale=?1 \
-                 LEFT JOIN dictionary_text x_en ON x_en.entry_id=e.id AND x_en.kind='example' AND x_en.locale='en' \
-                 LEFT JOIN dictionary_text x_any ON x_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='example' ORDER BY locale LIMIT 1) \
-                 WHERE e.normalized_headword=?2 AND (?3='' OR e.language=?3) \
-                 ORDER BY CASE WHEN e.language=?3 THEN 0 ELSE 1 END, e.id LIMIT 12",
-            )
-            .map_err(|error| format!("사전 조회를 준비하지 못했습니다: {error}"))?;
-        let entries = statement
-            .query_map(params![target_language, normalized, detected], |row| {
-                Ok(DictionaryEntry {
-                    entry_id: row.get(0)?,
-                    headword: row.get(1)?,
-                    language: row.get(2)?,
-                    reading: row.get(3)?,
-                    part_of_speech: row.get(4)?,
-                    definition: row.get(5)?,
-                    definition_language: row.get(6)?,
-                    definition_origin: row.get(7)?,
-                    original_definition: row.get(8)?,
-                    original_definition_language: row.get(9)?,
-                    example: row.get(10)?,
-                    source_name: row.get(11)?,
-                    source_url: row.get(12)?,
-                    license: row.get(13)?,
-                })
-            })
-            .map_err(|error| format!("사전을 조회하지 못했습니다: {error}"))?
-            .map(|row| row.map_err(|error| format!("사전 항목을 읽지 못했습니다: {error}")))
-            .collect::<Result<Vec<_>, _>>()?;
-        drop(statement);
+        let exact_terms = vec![normalized.clone()];
+        let mut entries =
+            lookup_dictionary_terms(&connection, target_language, &detected, &exact_terms, 12)?;
+        let mut personal_entries =
+            lookup_personal_terms(&connection, target_language, &detected, &exact_terms, 12)?;
+        let mut segmented = false;
 
-        let mut personal_statement = connection
-            .prepare(
-                "SELECT id, source_language, target_language, source_term, target_term, note, \
-                        scope, scope_value, case_sensitive, whole_word, created_at, updated_at \
-                 FROM personal_dictionary \
-                 WHERE normalized_source_term=?1 AND (?2='' OR source_language=?2) \
-                   AND (target_language=?3 OR target_language='*') \
-                 ORDER BY updated_at DESC LIMIT 12",
-            )
-            .map_err(|error| format!("개인 사전 조회를 준비하지 못했습니다: {error}"))?;
-        let personal_entries = personal_statement
-            .query_map(
-                params![normalize_term(&query), detected, target_language],
-                personal_from_row,
-            )
-            .map_err(|error| format!("개인 사전을 조회하지 못했습니다: {error}"))?
-            .map(|row| row.map_err(|error| format!("개인 사전 항목을 읽지 못했습니다: {error}")))
-            .collect::<Result<Vec<_>, _>>()?;
+        if entries.is_empty() && personal_entries.is_empty() {
+            let terms = segment_lookup_terms(&connection, &normalized, &detected, target_language)?;
+            if !terms.is_empty() {
+                entries =
+                    lookup_dictionary_terms(&connection, target_language, &detected, &terms, 4)?;
+                personal_entries =
+                    lookup_personal_terms(&connection, target_language, &detected, &terms, 4)?;
+                segmented = !(entries.is_empty() && personal_entries.is_empty());
+            }
+        }
 
         Ok(DictionaryLookupResult {
             query,
             source_language: detected,
             target_language: target_language.to_string(),
+            segmented,
             entries,
             personal_entries,
         })
@@ -733,6 +682,263 @@ impl DictionaryStore {
     }
 }
 
+#[derive(Clone, Debug)]
+struct LookupSpan {
+    term: String,
+    start: usize,
+    end: usize,
+}
+
+fn lookup_dictionary_terms(
+    connection: &Connection,
+    target_language: &str,
+    detected_language: &str,
+    terms: &[String],
+    per_term_limit: usize,
+) -> Result<Vec<DictionaryEntry>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT e.id, e.headword, e.language, e.reading, e.part_of_speech, \
+                    COALESCE(g_target.text, g_cached.text, g_en.text, g_any.text, ''), \
+                    CASE WHEN g_target.text IS NOT NULL THEN ?1 \
+                         WHEN g_cached.text IS NOT NULL THEN ?1 \
+                         WHEN g_en.text IS NOT NULL THEN 'en' \
+                         ELSE COALESCE(g_any.locale, '') END, \
+                    CASE WHEN g_target.text IS NOT NULL THEN 'native' \
+                         WHEN g_cached.text IS NOT NULL THEN 'automatic' \
+                         ELSE 'original' END, \
+                    COALESCE(g_en.text, g_any.text, ''), \
+                    CASE WHEN g_en.text IS NOT NULL THEN 'en' ELSE COALESCE(g_any.locale, '') END, \
+                    COALESCE(x_target.text, x_en.text, x_any.text, ''), \
+                    p.source_name, p.source_url, p.license \
+             FROM dictionary_entries e \
+             JOIN dictionary_packs p ON p.id=e.pack_id \
+             LEFT JOIN dictionary_text g_target ON g_target.entry_id=e.id AND g_target.kind='gloss' AND g_target.locale=?1 \
+             LEFT JOIN dictionary_localized_text g_cached ON g_cached.entry_id=e.id AND g_cached.locale=?1 \
+             LEFT JOIN dictionary_text g_en ON g_en.entry_id=e.id AND g_en.kind='gloss' AND g_en.locale='en' \
+             LEFT JOIN dictionary_text g_any ON g_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='gloss' ORDER BY locale LIMIT 1) \
+             LEFT JOIN dictionary_text x_target ON x_target.entry_id=e.id AND x_target.kind='example' AND x_target.locale=?1 \
+             LEFT JOIN dictionary_text x_en ON x_en.entry_id=e.id AND x_en.kind='example' AND x_en.locale='en' \
+             LEFT JOIN dictionary_text x_any ON x_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='example' ORDER BY locale LIMIT 1) \
+             WHERE e.normalized_headword=?2 AND (?3='' OR e.language=?3) \
+             ORDER BY CASE WHEN e.language=?3 THEN 0 ELSE 1 END, e.id LIMIT ?4",
+        )
+        .map_err(|error| format!("사전 조회를 준비하지 못했습니다: {error}"))?;
+    let total_limit = per_term_limit.saturating_mul(terms.len()).min(16);
+    let mut entries = Vec::new();
+    for term in terms {
+        let rows = statement
+            .query_map(
+                params![
+                    target_language,
+                    term,
+                    detected_language,
+                    per_term_limit as i64
+                ],
+                dictionary_from_row,
+            )
+            .map_err(|error| format!("사전을 조회하지 못했습니다: {error}"))?;
+        for row in rows {
+            entries.push(row.map_err(|error| format!("사전 항목을 읽지 못했습니다: {error}"))?);
+            if entries.len() >= total_limit {
+                return Ok(entries);
+            }
+        }
+    }
+    Ok(entries)
+}
+
+fn lookup_personal_terms(
+    connection: &Connection,
+    target_language: &str,
+    detected_language: &str,
+    terms: &[String],
+    per_term_limit: usize,
+) -> Result<Vec<PersonalDictionaryEntry>, String> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, source_language, target_language, source_term, target_term, note, \
+                    scope, scope_value, case_sensitive, whole_word, created_at, updated_at \
+             FROM personal_dictionary \
+             WHERE normalized_source_term=?1 AND (?2='' OR source_language=?2) \
+               AND (target_language=?3 OR target_language='*') \
+             ORDER BY updated_at DESC LIMIT ?4",
+        )
+        .map_err(|error| format!("개인 사전 조회를 준비하지 못했습니다: {error}"))?;
+    let total_limit = per_term_limit.saturating_mul(terms.len()).min(16);
+    let mut entries = Vec::new();
+    for term in terms {
+        let rows = statement
+            .query_map(
+                params![
+                    term,
+                    detected_language,
+                    target_language,
+                    per_term_limit as i64
+                ],
+                personal_from_row,
+            )
+            .map_err(|error| format!("개인 사전을 조회하지 못했습니다: {error}"))?;
+        for row in rows {
+            entries
+                .push(row.map_err(|error| format!("개인 사전 항목을 읽지 못했습니다: {error}"))?);
+            if entries.len() >= total_limit {
+                return Ok(entries);
+            }
+        }
+    }
+    Ok(entries)
+}
+
+fn segment_lookup_terms(
+    connection: &Connection,
+    normalized_query: &str,
+    detected_language: &str,
+    target_language: &str,
+) -> Result<Vec<String>, String> {
+    let spans = lookup_spans(normalized_query, detected_language);
+    if spans.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut dictionary_exists = connection
+        .prepare(
+            "SELECT 1 FROM dictionary_entries \
+             WHERE normalized_headword=?1 AND (?2='' OR language=?2) LIMIT 1",
+        )
+        .map_err(|error| format!("사전 표현 분해를 준비하지 못했습니다: {error}"))?;
+    let mut personal_exists = connection
+        .prepare(
+            "SELECT 1 FROM personal_dictionary \
+             WHERE normalized_source_term=?1 AND (?2='' OR source_language=?2) \
+               AND (target_language=?3 OR target_language='*') LIMIT 1",
+        )
+        .map_err(|error| format!("개인 사전 표현 분해를 준비하지 못했습니다: {error}"))?;
+    let mut available = HashSet::new();
+    let mut checked = HashSet::new();
+    for span in &spans {
+        if !checked.insert(span.term.clone()) {
+            continue;
+        }
+        let in_dictionary = dictionary_exists
+            .query_row(params![span.term, detected_language], |_| Ok(()))
+            .optional()
+            .map_err(|error| format!("사전 표현을 확인하지 못했습니다: {error}"))?
+            .is_some();
+        let in_personal = if in_dictionary {
+            false
+        } else {
+            personal_exists
+                .query_row(
+                    params![span.term, detected_language, target_language],
+                    |_| Ok(()),
+                )
+                .optional()
+                .map_err(|error| format!("개인 사전 표현을 확인하지 못했습니다: {error}"))?
+                .is_some()
+        };
+        if in_dictionary || in_personal {
+            available.insert(span.term.clone());
+        }
+    }
+
+    let mut matched = spans
+        .into_iter()
+        .filter(|span| available.contains(&span.term))
+        .collect::<Vec<_>>();
+    matched.sort_by(|left, right| {
+        left.start
+            .cmp(&right.start)
+            .then_with(|| (right.end - right.start).cmp(&(left.end - left.start)))
+    });
+
+    let mut cursor = 0;
+    let mut terms = Vec::new();
+    let mut returned = HashSet::new();
+    while terms.len() < 8 {
+        let Some(next_start) = matched
+            .iter()
+            .filter(|span| span.start >= cursor)
+            .map(|span| span.start)
+            .min()
+        else {
+            break;
+        };
+        let Some(best) = matched
+            .iter()
+            .filter(|span| span.start == next_start)
+            .max_by_key(|span| span.end - span.start)
+        else {
+            break;
+        };
+        cursor = best.end;
+        if returned.insert(best.term.clone()) {
+            terms.push(best.term.clone());
+        }
+    }
+    Ok(terms)
+}
+
+fn lookup_spans(normalized_query: &str, detected_language: &str) -> Vec<LookupSpan> {
+    let chars = normalized_query.chars().collect::<Vec<_>>();
+    let compact = matches!(detected_language, "ja" | "ko" | "th" | "zh" | "zh-Hant")
+        || chars.iter().copied().any(is_compact_dictionary_character);
+    let mut spans = Vec::new();
+    for start in 0..chars.len() {
+        if !chars[start].is_alphanumeric()
+            || (!compact && start > 0 && chars[start - 1].is_alphanumeric())
+        {
+            continue;
+        }
+        let max_end = (start + 24).min(chars.len());
+        for end in (start + 2)..=max_end {
+            if !chars[end - 1].is_alphanumeric()
+                || (!compact && end < chars.len() && chars[end].is_alphanumeric())
+            {
+                continue;
+            }
+            spans.push(LookupSpan {
+                term: chars[start..end].iter().collect(),
+                start,
+                end,
+            });
+        }
+    }
+    spans
+}
+
+fn is_compact_dictionary_character(character: char) -> bool {
+    matches!(
+        character as u32,
+        0x0E00..=0x0E7F
+            | 0x3040..=0x30FF
+            | 0x3400..=0x4DBF
+            | 0x4E00..=0x9FFF
+            | 0xAC00..=0xD7AF
+            | 0xF900..=0xFAFF
+            | 0x20000..=0x2FA1F
+    )
+}
+
+fn dictionary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<DictionaryEntry> {
+    Ok(DictionaryEntry {
+        entry_id: row.get(0)?,
+        headword: row.get(1)?,
+        language: row.get(2)?,
+        reading: row.get(3)?,
+        part_of_speech: row.get(4)?,
+        definition: row.get(5)?,
+        definition_language: row.get(6)?,
+        definition_origin: row.get(7)?,
+        original_definition: row.get(8)?,
+        original_definition_language: row.get(9)?,
+        example: row.get(10)?,
+        source_name: row.get(11)?,
+        source_url: row.get(12)?,
+        license: row.get(13)?,
+    })
+}
+
 fn starter_catalog() -> Result<StarterCatalog, String> {
     let catalog: StarterCatalog = serde_json::from_str(STARTER_PACKS_JSON)
         .map_err(|error| format!("내장 사전팩을 읽지 못했습니다: {error}"))?;
@@ -984,6 +1190,7 @@ mod tests {
         );
         assert_eq!(result.entries[0].definition_language, "ko");
         assert_eq!(result.entries[0].definition_origin, "native");
+        assert!(!result.segmented);
         assert!(!result.needs_localization());
         assert_eq!(store.status().unwrap().installed_pack_count, 1);
         let installed = store
@@ -995,6 +1202,17 @@ mod tests {
         assert!(installed.installed);
         assert_eq!(installed.availability, "practical");
         assert_eq!(installed.edition, "mini");
+
+        let phrase = store.lookup("future server", Some("en"), "ko").unwrap();
+        assert!(phrase.segmented);
+        assert_eq!(
+            phrase
+                .entries
+                .iter()
+                .map(|entry| entry.headword.as_str())
+                .collect::<Vec<_>>(),
+            vec!["future", "server"]
+        );
     }
 
     #[test]
@@ -1088,5 +1306,15 @@ mod tests {
             .expect("調べ should be available after installing the Japanese practical pack");
         assert_eq!(entry.reading, "しらべ");
         assert!(!entry.definition.is_empty());
+
+        let phrase = store.lookup("非難禁止", Some("ja"), "ko").unwrap();
+        assert!(phrase.segmented);
+        let headwords = phrase
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        assert!(headwords.contains(&"非難"));
+        assert!(headwords.contains(&"禁止"));
     }
 }
