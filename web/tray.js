@@ -21,11 +21,10 @@ const TRANSLATOR_LABELS = Object.freeze({
 });
 
 const VIEW_HEIGHTS = Object.freeze({
-  main: 370,
+  main: 390,
   language: 520,
   model: 427,
 });
-const UPDATE_ROW_HEIGHT = 58;
 const COMPACT_TRAY_LANGUAGES = new Set(["ko", "ja", "zh", "zh-Hant"]);
 
 document.querySelector("#language-view").innerHTML = `
@@ -43,6 +42,8 @@ document.querySelector("#language-view").innerHTML = `
 `;
 
 const elements = {
+  trayPanel: document.querySelector(".tray-panel"),
+  brandRow: document.querySelector(".brand-row"),
   engineSummary: document.querySelector("#engine-summary"),
   translationIndicator: document.querySelector("#translation-indicator"),
   translationState: document.querySelector("#translation-state"),
@@ -117,12 +118,34 @@ function preferredTrayWidth() {
   return Math.min(390, Math.max(300, Math.ceil(required)));
 }
 
+function cssPixels(value) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function preferredMainTrayHeight() {
+  const bodyStyle = getComputedStyle(document.body);
+  const panelStyle = getComputedStyle(elements.trayPanel);
+  const frameHeight =
+    cssPixels(bodyStyle.paddingTop) +
+    cssPixels(bodyStyle.paddingBottom) +
+    cssPixels(panelStyle.borderTopWidth) +
+    cssPixels(panelStyle.borderBottomWidth);
+  const contentHeight =
+    elements.brandRow.getBoundingClientRect().height +
+    elements.mainMenu.scrollHeight;
+  return Math.max(
+    VIEW_HEIGHTS.main,
+    Math.ceil(contentHeight + frameHeight + 2),
+  );
+}
+
 function showMainView() {
   elements.mainMenu.hidden = false;
   elements.languageView.hidden = true;
   elements.modelView.hidden = true;
   setTrayText(elements.openLabel, "열기");
-  resizeTray(VIEW_HEIGHTS.main + (availableUpdateVersion ? UPDATE_ROW_HEIGHT : 0));
+  resizeTray(preferredMainTrayHeight());
 }
 
 function renderUpdateAvailability(update) {
@@ -132,7 +155,7 @@ function renderUpdateAvailability(update) {
   elements.installUpdate.hidden = !available;
   elements.updateVersion.textContent = availableUpdateVersion;
   if (!elements.mainMenu.hidden) {
-    resizeTray(VIEW_HEIGHTS.main + (available ? UPDATE_ROW_HEIGHT : 0));
+    resizeTray(preferredMainTrayHeight());
   }
 }
 
@@ -241,7 +264,7 @@ function renderStatus(status, config) {
   updateTranslatorSelection(translator);
   resizeTray(elements.mainMenu.hidden
     ? elements.languageView.hidden ? VIEW_HEIGHTS.model : VIEW_HEIGHTS.language
-    : VIEW_HEIGHTS.main + (availableUpdateVersion ? UPDATE_ROW_HEIGHT : 0));
+    : preferredMainTrayHeight());
 }
 
 async function refresh() {
