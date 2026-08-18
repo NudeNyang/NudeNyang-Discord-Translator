@@ -22,19 +22,21 @@ Users do not need to know the exact dictionary boundary before selecting text. T
 
 The popup keeps the original selection as its title, labels segmented results as expressions found inside the selection, and gives each matched headword and reading its own heading. The header can speak the full selection, while every segmented headword has its own operating-system speech-synthesis control using that entry's source language. Source-language detection prefers a reliable signal in the selected text itself. For ambiguous Han-only selections, up to 240 characters immediately around the selection are used locally so Japanese or Chinese packs can still be chosen from nearby context without an unrelated language elsewhere in a multilingual message overriding the result. This context is not included in external dictionary or definition-translation requests.
 
+When a matched headword has several distinct senses, the lookup keeps every source-authored definition instead of collapsing the headword to its first sense. The surrounding selection context is scored locally against those immutable definitions. Lexical overlap and unrestricted general definitions are preferred; historical and archaic senses are demoted unless the context contains matching domain cues. The highest-scoring sense is labelled as shown first for the context, while the remaining source senses stay available under **Other meanings**. The ranker never generates or rewrites a definition, so a ranking error cannot replace the dictionary source text with a model-created meaning.
+
 ## Pack policy
 
 The app keeps a four-entry project-authored mini pack for each core language so a first lookup can explain the feature without a setup step. Five practical packs are bundled as gzip resources and expanded into SQLite only when the user selects **Install practical pack**:
 
-| Language | Headwords | Compressed | Definitions |
-|---|---:|---:|---|
-| Korean | 68,220 | 1,618,273 bytes | Korean |
-| English | 15,288 | 405,918 bytes | Korean |
-| Japanese | 50,638 | 791,235 bytes | English |
-| Simplified Chinese | 15,916 | 244,665 bytes | Korean |
-| Traditional Chinese | 15,916 | 244,672 bytes | Korean |
+| Language | Headwords | Meaning entries | Compressed | Definitions |
+|---|---:|---:|---:|---|
+| Korean | 68,220 | 77,269 | 1,911,630 bytes | Korean |
+| English | 15,288 | 15,288 | 405,918 bytes | Korean |
+| Japanese | 50,638 | 50,638 | 791,235 bytes | English |
+| Simplified Chinese | 15,916 | 15,916 | 244,665 bytes | Korean |
+| Traditional Chinese | 15,916 | 15,916 | 244,672 bytes | Korean |
 
-The five compressed resources total 3,304,763 bytes. Installation verifies the catalog size and SHA-256 digest before decompression, replaces only the selected language pack in a transaction, and reports progress to the settings UI. Removing a practical pack reclaims its SQLite entries; the mini pack can be installed lazily again on the next lookup.
+The five compressed resources total 3,598,120 bytes. Installation verifies the catalog size and SHA-256 digest before decompression, replaces only the selected language pack in a transaction, and reports progress to the settings UI. Removing a practical pack reclaims its SQLite entries; the mini pack can be installed lazily again on the next lookup.
 
 The shared catalog still covers all 28 product languages. The remaining 23 languages stay marked as planned until their source, attribution, pack size, and human quality review are complete. A future remote catalog can use the same metadata and pack format without changing lookup storage.
 
@@ -44,4 +46,4 @@ Korean, English, and Chinese practical packs are filtered and normalized from th
 
 JMdict's licence requires a regular update procedure, with monthly updates given as the example for dictionary services. Practical packs therefore carry a dated version and source digest and must be reviewed and rebuilt at least monthly while they are distributed. Source and licence acknowledgements are shown in lookup results and the app's licence screen and are also included in `THIRD_PARTY_NOTICES.md`.
 
-Run `npm run test:dictionaries` to validate catalog ordering, compressed sizes and hashes, pack metadata, unique headwords, supported parts of speech, definition limits, practical coverage, and the reported `調べ` regression. `npm run dictionary:build -- ...` converts reviewed Wiktextract-style JSONL. `node scripts/build-jmdict-pack.mjs -- ...` converts the JMdict simplified common-word JSON.
+Run `npm run test:dictionaries` to validate catalog ordering, compressed sizes and hashes, pack metadata, distinct senses per headword, supported parts of speech, definition limits, practical coverage, and the reported `調べ` and `정신` regressions. `npm run dictionary:build -- ...` converts reviewed Wiktextract-style JSONL and preserves up to twelve distinct senses per normalized headword. `node scripts/build-jmdict-pack.mjs -- ...` converts the JMdict simplified common-word JSON.

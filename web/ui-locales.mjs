@@ -481,7 +481,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "正在查詢選取內容。",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "已安裝的字典中找不到相符的詞彙。",
     "선택한 범위에서 찾은 표현": "在選取內容中找到的詞彙",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "在 Discord 訊息中大致選取一個單字或短語，然後按下 Aa。字典會拆分相符的詞彙，並查找其意思和發音。個人詞彙和已安裝的字典包只會在這台 PC 上搜尋。"
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "在 Discord 訊息中大致選取一個單字或短語，然後按下 Aa。字典會拆分相符的詞彙，並查找其意思和發音。個人詞彙和已安裝的字典包只會在這台 PC 上搜尋。",
+    "문맥상 우선 표시": "在此語境中優先顯示",
+    "다른 뜻": "其他意思"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -964,7 +966,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Procurando a seleção.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nenhuma expressão correspondente foi encontrada nos dicionários instalados.",
     "선택한 범위에서 찾은 표현": "Expressões encontradas na seleção",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecione aproximadamente uma palavra ou frase curta em uma mensagem do Discord e pressione Aa. O dicionário separa as expressões correspondentes e encontra seus significados e pronúncias. Os termos pessoais e pacotes instalados são pesquisados apenas neste PC."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecione aproximadamente uma palavra ou frase curta em uma mensagem do Discord e pressione Aa. O dicionário separa as expressões correspondentes e encontra seus significados e pronúncias. Os termos pessoais e pacotes instalados são pesquisados apenas neste PC.",
+    "문맥상 우선 표시": "Exibido primeiro neste contexto",
+    "다른 뜻": "Outros significados"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1447,7 +1451,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "चयनित टेक्स्ट खोजा जा रहा है।",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "इंस्टॉल किए गए शब्दकोशों में कोई मेल खाती अभिव्यक्ति नहीं मिली।",
     "선택한 범위에서 찾은 표현": "चयनित टेक्स्ट में मिली अभिव्यक्तियाँ",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord संदेश में किसी शब्द या छोटे वाक्यांश को मोटे तौर पर चुनें और Aa दबाएँ। शब्दकोश मेल खाती अभिव्यक्तियों को अलग करके उनके अर्थ और उच्चारण खोजता है। व्यक्तिगत शब्द और इंस्टॉल किए गए पैक केवल इस PC पर खोजे जाते हैं।"
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord संदेश में किसी शब्द या छोटे वाक्यांश को मोटे तौर पर चुनें और Aa दबाएँ। शब्दकोश मेल खाती अभिव्यक्तियों को अलग करके उनके अर्थ और उच्चारण खोजता है। व्यक्तिगत शब्द और इंस्टॉल किए गए पैक केवल इस PC पर खोजे जाते हैं।",
+    "문맥상 우선 표시": "इस संदर्भ में पहले दिखाया गया",
+    "다른 뜻": "अन्य अर्थ"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1930,7 +1936,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Buscando la selección.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "No se encontró ninguna expresión coincidente en los diccionarios instalados.",
     "선택한 범위에서 찾은 표현": "Expresiones encontradas en la selección",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecciona aproximadamente una palabra o frase corta en un mensaje de Discord y presiona Aa. El diccionario separa las expresiones coincidentes y busca sus significados y pronunciaciones. Los términos personales y los paquetes instalados se consultan únicamente en esta PC."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecciona aproximadamente una palabra o frase corta en un mensaje de Discord y presiona Aa. El diccionario separa las expresiones coincidentes y busca sus significados y pronunciaciones. Los términos personales y los paquetes instalados se consultan únicamente en esta PC.",
+    "문맥상 우선 표시": "Se muestra primero en este contexto",
+    "다른 뜻": "Otros significados"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2413,7 +2421,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Auswahl wird nachgeschlagen.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "In den installierten Wörterbüchern wurde kein passender Ausdruck gefunden.",
     "선택한 범위에서 찾은 표현": "In der Auswahl gefundene Ausdrücke",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Wähle ein Wort oder eine kurze Wortgruppe in einer Discord-Nachricht grob aus und drücke Aa. Das Wörterbuch zerlegt passende Ausdrücke und sucht ihre Bedeutungen und Aussprachen. Persönliche Begriffe und installierte Pakete werden nur auf diesem PC durchsucht."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Wähle ein Wort oder eine kurze Wortgruppe in einer Discord-Nachricht grob aus und drücke Aa. Das Wörterbuch zerlegt passende Ausdrücke und sucht ihre Bedeutungen und Aussprachen. Persönliche Begriffe und installierte Pakete werden nur auf diesem PC durchsucht.",
+    "문맥상 우선 표시": "In diesem Kontext zuerst angezeigt",
+    "다른 뜻": "Andere Bedeutungen"
   },
   "ru": {
     "설정": "Настройки",
@@ -2896,7 +2906,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Поиск выделенного текста.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "В установленных словарях совпадений не найдено.",
     "선택한 범위에서 찾은 표현": "Выражения, найденные в выделенном тексте",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Выделите слово или короткую фразу в сообщении Discord и нажмите Aa. Словарь разделит найденные выражения и покажет их значения и произношение. Личные термины и установленные пакеты ищутся только на этом ПК."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Выделите слово или короткую фразу в сообщении Discord и нажмите Aa. Словарь разделит найденные выражения и покажет их значения и произношение. Личные термины и установленные пакеты ищутся только на этом ПК.",
+    "문맥상 우선 표시": "Показывается первым в этом контексте",
+    "다른 뜻": "Другие значения"
   },
   "id": {
     "설정": "Pengaturan",
@@ -3379,7 +3391,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Mencari arti pilihan.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Tidak ditemukan ungkapan yang cocok dalam kamus yang terpasang.",
     "선택한 범위에서 찾은 표현": "Ungkapan yang ditemukan dalam pilihan",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih kata atau frasa pendek secara kasar dalam pesan Discord, lalu tekan Aa. Kamus akan memisahkan ungkapan yang cocok serta mencari arti dan pelafalannya. Istilah pribadi dan paket yang terpasang hanya dicari di PC ini."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih kata atau frasa pendek secara kasar dalam pesan Discord, lalu tekan Aa. Kamus akan memisahkan ungkapan yang cocok serta mencari arti dan pelafalannya. Istilah pribadi dan paket yang terpasang hanya dicari di PC ini.",
+    "문맥상 우선 표시": "Ditampilkan pertama untuk konteks ini",
+    "다른 뜻": "Arti lainnya"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3862,7 +3876,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Recherche de la sélection.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Aucune expression correspondante n’a été trouvée dans les dictionnaires installés.",
     "선택한 범위에서 찾은 표현": "Expressions trouvées dans la sélection",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Sélectionnez approximativement un mot ou une courte expression dans un message Discord, puis appuyez sur Aa. Le dictionnaire découpe les expressions correspondantes et recherche leur sens et leur prononciation. Les termes personnels et les packs installés sont recherchés uniquement sur ce PC."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Sélectionnez approximativement un mot ou une courte expression dans un message Discord, puis appuyez sur Aa. Le dictionnaire découpe les expressions correspondantes et recherche leur sens et leur prononciation. Les termes personnels et les packs installés sont recherchés uniquement sur ce PC.",
+    "문맥상 우선 표시": "Affiché en premier dans ce contexte",
+    "다른 뜻": "Autres significations"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4345,7 +4361,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Seçim aranıyor.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Yüklü sözlüklerde eşleşen bir ifade bulunamadı.",
     "선택한 범위에서 찾은 표현": "Seçimde bulunan ifadeler",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord mesajında bir kelimeyi veya kısa ifadeyi kabaca seçip Aa düğmesine basın. Sözlük, eşleşen ifadeleri ayırarak anlamlarını ve telaffuzlarını bulur. Kişisel terimler ve yüklü paketler yalnızca bu PC'de aranır."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord mesajında bir kelimeyi veya kısa ifadeyi kabaca seçip Aa düğmesine basın. Sözlük, eşleşen ifadeleri ayırarak anlamlarını ve telaffuzlarını bulur. Kişisel terimler ve yüklü paketler yalnızca bu PC'de aranır.",
+    "문맥상 우선 표시": "Bu bağlamda önce gösterilir",
+    "다른 뜻": "Diğer anlamlar"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4828,7 +4846,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "جارٍ البحث عن النص المحدد.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "لم يُعثر على تعبير مطابق في القواميس المثبتة.",
     "선택한 범위에서 찾은 표현": "التعبيرات الموجودة في النص المحدد",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "حدّد تقريبًا كلمة أو عبارة قصيرة في رسالة Discord، ثم اضغط على Aa. يقسّم القاموس التعبيرات المطابقة ويبحث عن معانيها وطريقة نطقها. لا يُبحث في المصطلحات الشخصية والحزم المثبتة إلا على هذا الكمبيوتر."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "حدّد تقريبًا كلمة أو عبارة قصيرة في رسالة Discord، ثم اضغط على Aa. يقسّم القاموس التعبيرات المطابقة ويبحث عن معانيها وطريقة نطقها. لا يُبحث في المصطلحات الشخصية والحزم المثبتة إلا على هذا الكمبيوتر.",
+    "문맥상 우선 표시": "يُعرض أولًا في هذا السياق",
+    "다른 뜻": "معانٍ أخرى"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5311,7 +5331,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Đang tra cứu phần đã chọn.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Không tìm thấy cụm từ phù hợp trong các từ điển đã cài đặt.",
     "선택한 범위에서 찾은 표현": "Các cụm từ tìm thấy trong phần đã chọn",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Chọn tương đối một từ hoặc cụm từ ngắn trong tin nhắn Discord rồi nhấn Aa. Từ điển sẽ tách các cụm từ phù hợp và tìm nghĩa cùng cách phát âm. Thuật ngữ cá nhân và các gói đã cài đặt chỉ được tra cứu trên PC này."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Chọn tương đối một từ hoặc cụm từ ngắn trong tin nhắn Discord rồi nhấn Aa. Từ điển sẽ tách các cụm từ phù hợp và tìm nghĩa cùng cách phát âm. Thuật ngữ cá nhân và các gói đã cài đặt chỉ được tra cứu trên PC này.",
+    "문맥상 우선 표시": "Hiển thị trước trong ngữ cảnh này",
+    "다른 뜻": "Các nghĩa khác"
   },
   "it": {
     "설정": "Impostazioni",
@@ -5794,7 +5816,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Ricerca della selezione.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nessuna espressione corrispondente trovata nei dizionari installati.",
     "선택한 범위에서 찾은 표현": "Espressioni trovate nella selezione",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Seleziona approssimativamente una parola o una breve frase in un messaggio Discord e premi Aa. Il dizionario separa le espressioni corrispondenti e ne trova significati e pronunce. I termini personali e i pacchetti installati vengono cercati solo su questo PC."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Seleziona approssimativamente una parola o una breve frase in un messaggio Discord e premi Aa. Il dizionario separa le espressioni corrispondenti e ne trova significati e pronunce. I termini personali e i pacchetti installati vengono cercati solo su questo PC.",
+    "문맥상 우선 표시": "Mostrato per primo in questo contesto",
+    "다른 뜻": "Altri significati"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6277,7 +6301,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Wyszukiwanie zaznaczonego tekstu.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nie znaleziono pasującego wyrażenia w zainstalowanych słownikach.",
     "선택한 범위에서 찾은 표현": "Wyrażenia znalezione w zaznaczonym tekście",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Zaznacz w przybliżeniu słowo lub krótki zwrot w wiadomości Discord i naciśnij Aa. Słownik dzieli pasujące wyrażenia oraz wyszukuje ich znaczenia i wymowę. Terminy osobiste i zainstalowane pakiety są przeszukiwane tylko na tym komputerze."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Zaznacz w przybliżeniu słowo lub krótki zwrot w wiadomości Discord i naciśnij Aa. Słownik dzieli pasujące wyrażenia oraz wyszukuje ich znaczenia i wymowę. Terminy osobiste i zainstalowane pakiety są przeszukiwane tylko na tym komputerze.",
+    "문맥상 우선 표시": "Wyświetlane jako pierwsze w tym kontekście",
+    "다른 뜻": "Inne znaczenia"
   },
   "uk": {
     "설정": "Налаштування",
@@ -6760,7 +6786,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Пошук виділеного фрагмента.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "У встановлених словниках не знайдено відповідного виразу.",
     "선택한 범위에서 찾은 표현": "Вирази, знайдені у виділеному фрагменті",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Приблизно виділіть слово або коротку фразу в повідомленні Discord і натисніть Aa. Словник розділить відповідні вирази та знайде їхні значення й вимову. Пошук особистих термінів і встановлених пакетів виконується лише на цьому ПК."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Приблизно виділіть слово або коротку фразу в повідомленні Discord і натисніть Aa. Словник розділить відповідні вирази та знайде їхні значення й вимову. Пошук особистих термінів і встановлених пакетів виконується лише на цьому ПК.",
+    "문맥상 우선 표시": "Показано першим у цьому контексті",
+    "다른 뜻": "Інші значення"
   },
   "ms": {
     "설정": "Tetapan",
@@ -7243,7 +7271,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Mencari pilihan.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Tiada ungkapan sepadan ditemui dalam kamus yang dipasang.",
     "선택한 범위에서 찾은 표현": "Ungkapan yang ditemui dalam pilihan",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih secara kasar perkataan atau frasa pendek dalam mesej Discord, kemudian tekan Aa. Kamus memisahkan ungkapan yang sepadan serta mencari makna dan sebutannya. Istilah peribadi dan pek yang dipasang hanya dicari pada PC ini."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pilih secara kasar perkataan atau frasa pendek dalam mesej Discord, kemudian tekan Aa. Kamus memisahkan ungkapan yang sepadan serta mencari makna dan sebutannya. Istilah peribadi dan pek yang dipasang hanya dicari pada PC ini.",
+    "문맥상 우선 표시": "Dipaparkan dahulu untuk konteks ini",
+    "다른 뜻": "Maksud lain"
   },
   "nl": {
     "설정": "Instellingen",
@@ -7726,7 +7756,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "De selectie wordt opgezocht.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Geen overeenkomende uitdrukking gevonden in de geïnstalleerde woordenboeken.",
     "선택한 범위에서 찾은 표현": "Uitdrukkingen gevonden in de selectie",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecteer globaal een woord of korte zin in een Discord-bericht en druk op Aa. Het woordenboek splitst overeenkomende uitdrukkingen en zoekt hun betekenissen en uitspraken op. Persoonlijke termen en geïnstalleerde pakketten worden alleen op deze pc doorzocht."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Selecteer globaal een woord of korte zin in een Discord-bericht en druk op Aa. Het woordenboek splitst overeenkomende uitdrukkingen en zoekt hun betekenissen en uitspraken op. Persoonlijke termen en geïnstalleerde pakketten worden alleen op deze pc doorzocht.",
+    "문맥상 우선 표시": "Eerst getoond in deze context",
+    "다른 뜻": "Andere betekenissen"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8209,7 +8241,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "กำลังค้นหาข้อความที่เลือก",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "ไม่พบสำนวนที่ตรงกันในพจนานุกรมที่ติดตั้งไว้",
     "선택한 범위에서 찾은 표현": "สำนวนที่พบในข้อความที่เลือก",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "เลือกคำหรือวลีสั้นๆ ในข้อความ Discord โดยคร่าวๆ แล้วกด Aa พจนานุกรมจะแยกสำนวนที่ตรงกันและค้นหาความหมายกับการออกเสียง โดยจะค้นหาคำศัพท์ส่วนตัวและชุดพจนานุกรมที่ติดตั้งไว้เฉพาะใน PC เครื่องนี้เท่านั้น"
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "เลือกคำหรือวลีสั้นๆ ในข้อความ Discord โดยคร่าวๆ แล้วกด Aa พจนานุกรมจะแยกสำนวนที่ตรงกันและค้นหาความหมายกับการออกเสียง โดยจะค้นหาคำศัพท์ส่วนตัวและชุดพจนานุกรมที่ติดตั้งไว้เฉพาะใน PC เครื่องนี้เท่านั้น",
+    "문맥상 우선 표시": "แสดงเป็นอันดับแรกสำหรับบริบทนี้",
+    "다른 뜻": "ความหมายอื่น"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8692,7 +8726,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Hinahanap ang napili.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Walang nakitang katugmang ekspresyon sa mga naka-install na diksyunaryo.",
     "선택한 범위에서 찾은 표현": "Mga ekspresyong nakita sa napili",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pumili ng salita o maikling parirala sa isang mensahe sa Discord at pindutin ang Aa. Hinahati ng diksyunaryo ang mga katugmang ekspresyon at hinahanap ang mga kahulugan at pagbigkas ng mga ito. Sa PC na ito lamang hinahanap ang mga personal na termino at naka-install na pack."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Pumili ng salita o maikling parirala sa isang mensahe sa Discord at pindutin ang Aa. Hinahati ng diksyunaryo ang mga katugmang ekspresyon at hinahanap ang mga kahulugan at pagbigkas ng mga ito. Sa PC na ito lamang hinahanap ang mga personal na termino at naka-install na pack.",
+    "문맥상 우선 표시": "Unang ipinapakita para sa kontekstong ito",
+    "다른 뜻": "Iba pang mga kahulugan"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -9175,7 +9211,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "নির্বাচিত অংশটি খোঁজা হচ্ছে।",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "ইনস্টল করা অভিধানগুলোতে কোনো মিলে যাওয়া অভিব্যক্তি পাওয়া যায়নি।",
     "선택한 범위에서 찾은 표현": "নির্বাচিত অংশে পাওয়া অভিব্যক্তি",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord মেসেজে কোনো শব্দ বা ছোট বাক্যাংশ মোটামুটি নির্বাচন করে Aa চাপুন। অভিধানটি মিলে যাওয়া অভিব্যক্তিগুলো আলাদা করে সেগুলোর অর্থ ও উচ্চারণ খুঁজে দেয়। ব্যক্তিগত পরিভাষা ও ইনস্টল করা প্যাকগুলো শুধু এই PC-তেই খোঁজা হয়।"
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord মেসেজে কোনো শব্দ বা ছোট বাক্যাংশ মোটামুটি নির্বাচন করে Aa চাপুন। অভিধানটি মিলে যাওয়া অভিব্যক্তিগুলো আলাদা করে সেগুলোর অর্থ ও উচ্চারণ খুঁজে দেয়। ব্যক্তিগত পরিভাষা ও ইনস্টল করা প্যাকগুলো শুধু এই PC-তেই খোঁজা হয়।",
+    "문맥상 우선 표시": "এই প্রসঙ্গে প্রথমে দেখানো হয়েছে",
+    "다른 뜻": "অন্যান্য অর্থ"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9658,7 +9696,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "انتخاب کردہ متن تلاش کیا جا رہا ہے۔",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "انسٹال کردہ لغات میں کوئی مماثل عبارت نہیں ملی۔",
     "선택한 범위에서 찾은 표현": "انتخاب کردہ متن میں ملنے والی عبارات",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord پیغام میں کسی لفظ یا مختصر فقرے کو تقریباً منتخب کر کے Aa دبائیں۔ لغت مماثل عبارات کو الگ کر کے ان کے معانی اور تلفظ تلاش کرتی ہے۔ ذاتی اصطلاحات اور انسٹال کردہ پیکس صرف اسی PC پر تلاش کیے جاتے ہیں۔"
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord پیغام میں کسی لفظ یا مختصر فقرے کو تقریباً منتخب کر کے Aa دبائیں۔ لغت مماثل عبارات کو الگ کر کے ان کے معانی اور تلفظ تلاش کرتی ہے۔ ذاتی اصطلاحات اور انسٹال کردہ پیکس صرف اسی PC پر تلاش کیے جاتے ہیں۔",
+    "문맥상 우선 표시": "اس سیاق کے لیے پہلے دکھایا گیا",
+    "다른 뜻": "دیگر معانی"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -10141,7 +10181,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "தேர்வைத் தேடுகிறது.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "நிறுவப்பட்ட அகராதிகளில் பொருந்தும் சொற்றொடர் எதுவும் கிடைக்கவில்லை.",
     "선택한 범위에서 찾은 표현": "தேர்வில் கண்டறியப்பட்ட சொற்றொடர்கள்",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord செய்தியில் ஒரு சொல்லையோ குறுகிய சொற்றொடரையோ தோராயமாகத் தேர்ந்தெடுத்து Aa-ஐ அழுத்தவும். பொருந்தும் சொற்றொடர்களை அகராதி பிரித்து, அவற்றின் பொருள்களையும் உச்சரிப்புகளையும் கண்டறியும். தனிப்பட்ட சொற்களும் நிறுவப்பட்ட அகராதித் தொகுப்புகளும் இந்த PC-யில் மட்டுமே தேடப்படும்."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Discord செய்தியில் ஒரு சொல்லையோ குறுகிய சொற்றொடரையோ தோராயமாகத் தேர்ந்தெடுத்து Aa-ஐ அழுத்தவும். பொருந்தும் சொற்றொடர்களை அகராதி பிரித்து, அவற்றின் பொருள்களையும் உச்சரிப்புகளையும் கண்டறியும். தனிப்பட்ட சொற்களும் நிறுவப்பட்ட அகராதித் தொகுப்புகளும் இந்த PC-யில் மட்டுமே தேடப்படும்.",
+    "문맥상 우선 표시": "இந்தச் சூழலுக்கு முதலில் காட்டப்படும்",
+    "다른 뜻": "பிற அர்த்தங்கள்"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10624,7 +10666,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "در حال جست‌وجوی متن انتخاب‌شده.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "هیچ عبارت منطبقی در فرهنگ‌نامه‌های نصب‌شده یافت نشد.",
     "선택한 범위에서 찾은 표현": "عبارت‌های یافت‌شده در متن انتخاب‌شده",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "یک واژه یا عبارت کوتاه را در پیام Discord به‌طور تقریبی انتخاب کنید و Aa را فشار دهید. فرهنگ‌نامه عبارت‌های منطبق را تفکیک می‌کند و معنی و تلفظ آن‌ها را می‌یابد. اصطلاحات شخصی و بسته‌های نصب‌شده فقط در همین رایانه جست‌وجو می‌شوند."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "یک واژه یا عبارت کوتاه را در پیام Discord به‌طور تقریبی انتخاب کنید و Aa را فشار دهید. فرهنگ‌نامه عبارت‌های منطبق را تفکیک می‌کند و معنی و تلفظ آن‌ها را می‌یابد. اصطلاحات شخصی و بسته‌های نصب‌شده فقط در همین رایانه جست‌وجو می‌شوند.",
+    "문맥상 우선 표시": "برای این زمینه ابتدا نمایش داده می‌شود",
+    "다른 뜻": "معانی دیگر"
   },
   "he": {
     "설정": "הגדרות",
@@ -11107,7 +11151,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "מחפש את הבחירה.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "לא נמצא ביטוי תואם במילונים המותקנים.",
     "선택한 범위에서 찾은 표현": "ביטויים שנמצאו בבחירה",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "יש לבחור בקירוב מילה או צירוף מילים קצר בהודעת Discord וללחוץ על Aa. המילון מפצל ביטויים תואמים ומוצא את המשמעויות וההגיות שלהם. חיפוש במונחים אישיים ובחבילות מותקנות מתבצע רק במחשב זה."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "יש לבחור בקירוב מילה או צירוף מילים קצר בהודעת Discord וללחוץ על Aa. המילון מפצל ביטויים תואמים ומוצא את המשמעויות וההגיות שלהם. חיפוש במונחים אישיים ובחבילות מותקנות מתבצע רק במחשב זה.",
+    "문맥상 우선 표시": "מוצג ראשון בהקשר הזה",
+    "다른 뜻": "משמעויות אחרות"
   },
   "cs": {
     "설정": "Nastavení",
@@ -11590,6 +11636,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "선택한 범위의 뜻을 찾고 있습니다.": "Vyhledávání výrazu ve výběru.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "V nainstalovaných slovnících nebyl nalezen žádný odpovídající výraz.",
     "선택한 범위에서 찾은 표현": "Výrazy nalezené ve výběru",
-    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Přibližně označ slovo nebo krátkou frázi ve zprávě na Discordu a stiskni Aa. Slovník rozdělí odpovídající výrazy a vyhledá jejich významy a výslovnost. Osobní termíny a nainstalované balíčky se prohledávají pouze na tomto PC."
+    "Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.": "Přibližně označ slovo nebo krátkou frázi ve zprávě na Discordu a stiskni Aa. Slovník rozdělí odpovídající výrazy a vyhledá jejich významy a výslovnost. Osobní termíny a nainstalované balíčky se prohledávají pouze na tomto PC.",
+    "문맥상 우선 표시": "V tomto kontextu zobrazeno jako první",
+    "다른 뜻": "Další významy"
   }
 });

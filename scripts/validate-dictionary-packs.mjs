@@ -70,12 +70,18 @@ for (const metadata of catalog.languages.filter(language => language.availabilit
   assert.equal(pack.entries.length, metadata.entryCount, `${metadata.code}: entry count mismatch`);
   assert.ok(metadata.title && metadata.source && metadata.sourceUrl && metadata.license, `${metadata.code}: catalog attribution is incomplete`);
   assert.match(metadata.version, /^\d{4}\.\d{2}\.\d{2}\.\d+$/, `${metadata.code}: invalid practical version`);
-  const normalizedHeadwords = new Set();
+  const glossesByHeadword = new Map();
   for (const entry of pack.entries) {
     const normalized = String(entry.headword || "").normalize("NFKC").toLocaleLowerCase(metadata.code);
     assert.ok(normalized && normalized.length <= 120, `${metadata.code}: invalid practical headword`);
-    assert.ok(!normalizedHeadwords.has(normalized), `${metadata.code}/${entry.headword}: duplicate practical headword`);
-    normalizedHeadwords.add(normalized);
+    const glossKey = JSON.stringify(entry.glosses || {});
+    const knownGlosses = glossesByHeadword.get(normalized) || new Set();
+    assert.ok(!knownGlosses.has(glossKey), `${metadata.code}/${entry.headword}: duplicate practical sense`);
+    knownGlosses.add(glossKey);
+    glossesByHeadword.set(normalized, knownGlosses);
+    if (entry.senseRank !== undefined) {
+      assert.ok(Number.isSafeInteger(entry.senseRank) && entry.senseRank >= 0, `${metadata.code}/${entry.headword}: invalid sense rank`);
+    }
     assert.ok(
       catalog.coveragePolicy.allowedPartsOfSpeech.includes(entry.partOfSpeech),
       `${metadata.code}/${entry.headword}: unsupported practical part of speech`,
@@ -91,6 +97,12 @@ for (const metadata of catalog.languages.filter(language => language.availabilit
 
 const japanese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/ja.json.gz", import.meta.url))));
 assert.ok(japanese.packs[0].entries.some(entry => entry.headword === "調べ"), "Japanese practical pack must cover 調べ");
+
+const korean = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/ko.json.gz", import.meta.url))));
+const mindSenses = korean.packs[0].entries.filter(entry => entry.headword === "정신");
+assert.ok(mindSenses.length >= 5, "Korean practical pack must preserve homonymous 정신 senses");
+assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("마음")), "정신 must preserve its common mind sense");
+assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("(역사)")), "정신 must preserve its historical senses as alternatives");
 
 console.log(`Dictionary catalog: ${catalog.languages.length}/28 languages`);
 console.log(`Bundled starter packs: ${starter.packs.length} packs · ${starter.packs.reduce((sum, pack) => sum + pack.entries.length, 0)} entries`);

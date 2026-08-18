@@ -1224,8 +1224,9 @@ fn scan_dictionary(
                     } else {
                         config.target_language.as_str()
                     };
-                    let result = store.lookup(
+                    let result = store.lookup_with_context(
                         &request.query,
+                        &request.context,
                         source_language.as_deref(),
                         target_language,
                     )?;
@@ -3004,6 +3005,8 @@ mod tests {
                 language: "en".to_string(),
                 reading: String::new(),
                 part_of_speech: "noun".to_string(),
+                sense_rank: 0,
+                context_recommended: false,
                 definition: "The time after the present.".to_string(),
                 definition_language: "en".to_string(),
                 definition_origin: "original".to_string(),
@@ -3050,6 +3053,8 @@ mod tests {
                 language: "ja".to_string(),
                 reading: "じかん".to_string(),
                 part_of_speech: "noun".to_string(),
+                sense_rank: 0,
+                context_recommended: false,
                 definition: "time".to_string(),
                 definition_language: "en".to_string(),
                 definition_origin: "original".to_string(),

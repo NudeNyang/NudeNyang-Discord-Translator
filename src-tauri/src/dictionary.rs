@@ -81,6 +81,8 @@ struct StarterEntry {
     #[serde(default)]
     reading: String,
     part_of_speech: String,
+    #[serde(default)]
+    sense_rank: i64,
     glosses: HashMap<String, String>,
     #[serde(default)]
     examples: HashMap<String, String>,
@@ -95,6 +97,9 @@ pub struct DictionaryEntry {
     pub language: String,
     pub reading: String,
     pub part_of_speech: String,
+    #[serde(skip)]
+    pub sense_rank: i64,
+    pub context_recommended: bool,
     pub definition: String,
     pub definition_language: String,
     pub definition_origin: String,
@@ -222,6 +227,16 @@ impl DictionaryStore {
         source_language: Option<&str>,
         target_language: &str,
     ) -> Result<DictionaryLookupResult, String> {
+        self.lookup_with_context(query, "", source_language, target_language)
+    }
+
+    pub fn lookup_with_context(
+        &self,
+        query: &str,
+        context: &str,
+        source_language: Option<&str>,
+        target_language: &str,
+    ) -> Result<DictionaryLookupResult, String> {
         let query = validate_term(query, "조회할 단어")?;
         let requested_language = source_language
             .filter(|value| is_supported_language_code(value))
@@ -261,12 +276,13 @@ impl DictionaryStore {
             let terms = segment_lookup_terms(&connection, &normalized, &detected, target_language)?;
             if !terms.is_empty() {
                 entries =
-                    lookup_dictionary_terms(&connection, target_language, &detected, &terms, 4)?;
+                    lookup_dictionary_terms(&connection, target_language, &detected, &terms, 12)?;
                 personal_entries =
                     lookup_personal_terms(&connection, target_language, &detected, &terms, 4)?;
                 segmented = !(entries.is_empty() && personal_entries.is_empty());
             }
         }
+        rank_entries_for_context(&mut entries, context);
 
         Ok(DictionaryLookupResult {
             query,
@@ -588,7 +604,22 @@ impl DictionaryStore {
     }
 
     fn install_starter_pack_if_available(&self, language: &str) -> Result<(), String> {
-        if self.pack_status(language)?.is_some() {
+        if let Some(installed) = self.pack_status(language)? {
+            if installed.edition == "practical" {
+                let offered = pack_catalog()?
+                    .languages
+                    .into_iter()
+                    .find(|pack| pack.code == language && pack.availability == "practical");
+                if offered.is_some_and(|pack| {
+                    !pack.version.is_empty() && pack.version != installed.version
+                }) {
+                    let catalog = practical_catalog(language)?;
+                    if let Some(pack) = catalog.packs.iter().find(|pack| pack.language == language)
+                    {
+                        self.install_pack(pack)?;
+                    }
+                }
+            }
             return Ok(());
         }
         let catalog = starter_catalog()?;
@@ -653,9 +684,9 @@ impl DictionaryStore {
         for (index, entry) in pack.entries.iter().enumerate() {
             transaction
                 .execute(
-                    "INSERT INTO dictionary_entries (pack_id, language, headword, normalized_headword, reading, part_of_speech) \
-                     VALUES (?1,?2,?3,?4,?5,?6)",
-                    params![pack.id, pack.language, entry.headword, normalize_term(&entry.headword), entry.reading, entry.part_of_speech],
+                    "INSERT INTO dictionary_entries (pack_id, language, headword, normalized_headword, reading, part_of_speech, sense_rank) \
+                     VALUES (?1,?2,?3,?4,?5,?6,?7)",
+                    params![pack.id, pack.language, entry.headword, normalize_term(&entry.headword), entry.reading, entry.part_of_speech, entry.sense_rank],
                 )
                 .map_err(|error| format!("사전 항목을 저장하지 못했습니다: {error}"))?;
             let entry_id = transaction.last_insert_rowid();
@@ -710,7 +741,7 @@ fn lookup_dictionary_terms(
                     COALESCE(g_en.text, g_any.text, ''), \
                     CASE WHEN g_en.text IS NOT NULL THEN 'en' ELSE COALESCE(g_any.locale, '') END, \
                     COALESCE(x_target.text, x_en.text, x_any.text, ''), \
-                    p.source_name, p.source_url, p.license \
+                    p.source_name, p.source_url, p.license, e.sense_rank \
              FROM dictionary_entries e \
              JOIN dictionary_packs p ON p.id=e.pack_id \
              LEFT JOIN dictionary_text g_target ON g_target.entry_id=e.id AND g_target.kind='gloss' AND g_target.locale=?1 \
@@ -721,10 +752,10 @@ fn lookup_dictionary_terms(
              LEFT JOIN dictionary_text x_en ON x_en.entry_id=e.id AND x_en.kind='example' AND x_en.locale='en' \
              LEFT JOIN dictionary_text x_any ON x_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='example' ORDER BY locale LIMIT 1) \
              WHERE e.normalized_headword=?2 AND (?3='' OR e.language=?3) \
-             ORDER BY CASE WHEN e.language=?3 THEN 0 ELSE 1 END, e.id LIMIT ?4",
+             ORDER BY CASE WHEN e.language=?3 THEN 0 ELSE 1 END, e.sense_rank, e.id LIMIT ?4",
         )
         .map_err(|error| format!("사전 조회를 준비하지 못했습니다: {error}"))?;
-    let total_limit = per_term_limit.saturating_mul(terms.len()).min(16);
+    let total_limit = per_term_limit.saturating_mul(terms.len()).min(96);
     let mut entries = Vec::new();
     for term in terms {
         let rows = statement
@@ -927,6 +958,8 @@ fn dictionary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<DictionaryEn
         language: row.get(2)?,
         reading: row.get(3)?,
         part_of_speech: row.get(4)?,
+        sense_rank: row.get(14)?,
+        context_recommended: false,
         definition: row.get(5)?,
         definition_language: row.get(6)?,
         definition_origin: row.get(7)?,
@@ -937,6 +970,87 @@ fn dictionary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<DictionaryEn
         source_url: row.get(12)?,
         license: row.get(13)?,
     })
+}
+
+fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
+    let normalized_context = normalize_term(context);
+    let mut groups: Vec<Vec<DictionaryEntry>> = Vec::new();
+    for entry in entries.drain(..) {
+        let key = (entry.language.as_str(), normalize_term(&entry.headword));
+        if let Some(group) = groups.iter_mut().find(|group| {
+            group.first().is_some_and(|first| {
+                first.language == key.0 && normalize_term(&first.headword) == key.1
+            })
+        }) {
+            group.push(entry);
+        } else {
+            groups.push(vec![entry]);
+        }
+    }
+    for group in &mut groups {
+        group.sort_by(|left, right| {
+            contextual_sense_score(right, &normalized_context)
+                .cmp(&contextual_sense_score(left, &normalized_context))
+                .then_with(|| left.sense_rank.cmp(&right.sense_rank))
+                .then_with(|| left.entry_id.cmp(&right.entry_id))
+        });
+        if group.len() > 1 && !normalized_context.is_empty() {
+            group[0].context_recommended = true;
+        }
+    }
+    entries.extend(groups.into_iter().flatten());
+}
+
+fn contextual_sense_score(entry: &DictionaryEntry, context: &str) -> i32 {
+    let definition = if entry.original_definition.is_empty() {
+        &entry.definition
+    } else {
+        &entry.original_definition
+    };
+    let normalized_definition = normalize_term(definition);
+    let mut score = normalized_definition.chars().count().min(80) as i32 / 4;
+    for token in normalized_definition
+        .split(|character: char| !character.is_alphanumeric())
+        .filter(|token| token.chars().count() >= 2)
+    {
+        if context.contains(token) {
+            score += 12;
+        }
+    }
+    let historical = [
+        "(역사)",
+        "역사적",
+        "historical",
+        "history",
+        "歴史",
+        "历史",
+        "歷史",
+    ]
+    .iter()
+    .any(|marker| normalized_definition.contains(marker));
+    let dated = [
+        "(고어)", "옛말", "폐어", "archaic", "obsolete", "dated", "古語", "古语", "廢語", "废语",
+    ]
+    .iter()
+    .any(|marker| normalized_definition.contains(marker));
+    if historical {
+        let historical_context = [
+            "역사", "왕", "왕조", "궁궐", "조선", "신하", "histor", "dynasty", "court", "歴史",
+            "王朝", "宮廷", "历史", "歷史", "王朝", "宫廷",
+        ]
+        .iter()
+        .any(|cue| context.contains(cue));
+        score -= if historical_context { 10 } else { 80 };
+    }
+    if dated {
+        let dated_context = [
+            "고어", "옛말", "어원", "archaic", "obsolete", "古語", "古语",
+        ]
+        .iter()
+        .any(|cue| context.contains(cue));
+        score -= if dated_context { 10 } else { 60 };
+    }
+    score
 }
 
 fn starter_catalog() -> Result<StarterCatalog, String> {
@@ -1045,7 +1159,8 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
          CREATE TABLE IF NOT EXISTS dictionary_entries ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, pack_id TEXT NOT NULL REFERENCES dictionary_packs(id) ON DELETE CASCADE, \
            language TEXT NOT NULL, headword TEXT NOT NULL, normalized_headword TEXT NOT NULL, \
-           reading TEXT NOT NULL DEFAULT '', part_of_speech TEXT NOT NULL DEFAULT 'other'); \
+           reading TEXT NOT NULL DEFAULT '', part_of_speech TEXT NOT NULL DEFAULT 'other', \
+           sense_rank INTEGER NOT NULL DEFAULT 0); \
          CREATE INDEX IF NOT EXISTS idx_dictionary_lookup ON dictionary_entries(normalized_headword, language); \
          CREATE TABLE IF NOT EXISTS dictionary_text ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, entry_id INTEGER NOT NULL REFERENCES dictionary_entries(id) ON DELETE CASCADE, \
@@ -1079,6 +1194,23 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
                 [],
             )
             .map_err(|error| format!("사전팩 저장소 형식을 갱신하지 못했습니다: {error}"))?;
+    }
+    let has_sense_rank = connection
+        .prepare("PRAGMA table_info(dictionary_entries)")
+        .and_then(|mut statement| {
+            let columns = statement
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(columns.iter().any(|column| column == "sense_rank"))
+        })
+        .map_err(|error| format!("사전 항목 저장소 형식을 확인하지 못했습니다: {error}"))?;
+    if !has_sense_rank {
+        connection
+            .execute(
+                "ALTER TABLE dictionary_entries ADD COLUMN sense_rank INTEGER NOT NULL DEFAULT 0",
+                [],
+            )
+            .map_err(|error| format!("사전 항목 저장소 형식을 갱신하지 못했습니다: {error}"))?;
     }
     Ok(())
 }
@@ -1168,7 +1300,9 @@ fn now_seconds() -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{DictionaryStore, PersonalDictionaryEntry};
+    use std::collections::HashMap;
+
+    use super::{DictionaryStore, PersonalDictionaryEntry, StarterEntry, StarterPack};
 
     fn temporary_store(name: &str) -> DictionaryStore {
         let path = std::env::temp_dir().join(format!(
@@ -1177,6 +1311,17 @@ mod tests {
         ));
         let _ = std::fs::remove_file(&path);
         DictionaryStore::open(path).unwrap()
+    }
+
+    fn test_sense(headword: &str, definition: &str, sense_rank: i64) -> StarterEntry {
+        StarterEntry {
+            headword: headword.to_string(),
+            reading: "[t͡ɕʌ̹ŋɕʰin]".to_string(),
+            part_of_speech: "noun".to_string(),
+            sense_rank,
+            glosses: HashMap::from([("ko".to_string(), definition.to_string())]),
+            examples: HashMap::new(),
+        }
     }
 
     #[test]
@@ -1241,6 +1386,59 @@ mod tests {
         assert_eq!(cached.entries[0].definition_origin, "automatic");
         assert_eq!(cached.entries[0].original_definition_language, "en");
         assert!(!cached.needs_localization());
+    }
+
+    #[test]
+    fn homonymous_senses_are_preserved_and_ranked_without_rewriting_definitions() {
+        let store = temporary_store("contextual-senses");
+        store
+            .install_pack(&StarterPack {
+                id: "test-ko-contextual-senses".to_string(),
+                language: "ko".to_string(),
+                version: "2026.08.18.1".to_string(),
+                title: "문맥 사전 테스트".to_string(),
+                source_name: "Test".to_string(),
+                source_url: "https://example.com".to_string(),
+                license: "Test".to_string(),
+                edition: "mini".to_string(),
+                entries: vec![
+                    test_sense("정신", "(역사) 궁궐 안에서 벼슬하는 신하.", 0),
+                    test_sense("정신", "어떤 일에 앞장서는 것.", 1),
+                    test_sense(
+                        "정신",
+                        "사람의 느낌, 마음 따위를 아우러 이르는 말. 또는 생각하고 판단하는 능력. 또는 마음 자세나 상태.",
+                        2,
+                    ),
+                ],
+            })
+            .unwrap();
+
+        let conversational = store
+            .lookup_with_context(
+                "조금씩 정신이 드는 중",
+                "조금씩 정신이 드는 중",
+                Some("ko"),
+                "ko",
+            )
+            .unwrap();
+        assert!(conversational.segmented);
+        assert_eq!(conversational.entries.len(), 3);
+        assert!(conversational.entries[0].definition.contains("마음"));
+        assert!(conversational.entries[0].context_recommended);
+        assert!(conversational
+            .entries
+            .iter()
+            .any(|entry| entry.definition.contains("궁궐")));
+
+        let historical = store
+            .lookup_with_context(
+                "정신",
+                "조선 궁궐의 신하를 가리키는 역사 용어",
+                Some("ko"),
+                "ko",
+            )
+            .unwrap();
+        assert!(historical.entries[0].definition.contains("궁궐"));
     }
 
     #[test]
@@ -1345,5 +1543,42 @@ mod tests {
         assert!(notice_headwords.contains(&"プレイヤー"));
         assert!(notice_headwords.contains(&"通報"));
         assert!(notice_headwords.contains(&"影響"));
+    }
+
+    #[test]
+    fn korean_practical_pack_preserves_and_ranks_the_reported_mind_senses() {
+        let catalog = super::practical_catalog("ko").unwrap();
+        let senses = catalog.packs[0]
+            .entries
+            .iter()
+            .filter(|entry| entry.headword == "정신")
+            .collect::<Vec<_>>();
+        assert_eq!(senses.len(), 6);
+        assert!(senses
+            .iter()
+            .any(|entry| entry.glosses["ko"].contains("마음")));
+
+        let store = temporary_store("korean-practical-context");
+        store.install_bundled_pack("ko").unwrap();
+        let result = store
+            .lookup_with_context(
+                "조금씩 정신이 드는 중",
+                "조금씩 정신이 드는 중",
+                Some("ko"),
+                "ko",
+            )
+            .unwrap();
+        let mind_senses = result
+            .entries
+            .iter()
+            .filter(|entry| entry.headword == "정신")
+            .collect::<Vec<_>>();
+        assert_eq!(mind_senses.len(), 6);
+        assert!(mind_senses[0].definition.contains("마음"));
+        assert!(mind_senses[0].context_recommended);
+        assert!(mind_senses
+            .iter()
+            .skip(1)
+            .any(|entry| entry.definition.contains("(역사)")));
     }
 }

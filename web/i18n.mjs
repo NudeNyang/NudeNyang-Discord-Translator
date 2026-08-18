@@ -8,6 +8,8 @@ export const COPY = Object.freeze({
   "선택한 범위의 뜻을 찾고 있습니다.": ["Looking up the selection.", "選択範囲の意味を調べています。", "正在查询所选内容。"],
   "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": ["No matching expression was found in installed dictionaries.", "インストール済みの辞書に一致する表現はありません。", "已安装的词典中没有匹配的词语。"],
   "선택한 범위에서 찾은 표현": ["Expressions found in the selection", "選択範囲で見つかった表現", "在所选范围内找到的词语"],
+  "문맥상 우선 표시": ["Shown first for this context", "文脈に合わせて優先表示", "按当前语境优先显示"],
+  "다른 뜻": ["Other meanings", "別の意味", "其他释义"],
   "Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.": ["Look up words selected in Discord and manage personal terms and offline dictionary packs.", "Discordで選択した単語の意味を確認し、個人用語とオフライン辞書パックを管理します。", "查询在 Discord 中选择的单词，并管理个人术语和离线词典包。"],
   "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": ["If a meaning is unavailable in the interface language, the configured translation model translates it automatically. When an external model is selected, the original dictionary meaning may be sent to that service.", "インターフェース言語の意味がない場合は、設定した翻訳モデルで自動翻訳します。外部モデルを選択している場合、辞書の原文の意味がそのサービスに送信されることがあります。", "如果没有界面语言的释义，将使用已配置的翻译模型自动翻译。选择外部模型时，词典的原文释义可能会发送到相应服务。"],
   "선택형 사전": ["Selection dictionary", "選択辞書", "划词词典"],

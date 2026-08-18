@@ -36,7 +36,8 @@ const catalog = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-packs/c
 const allowedPartsOfSpeech = new Set(catalog.coveragePolicy.allowedPartsOfSpeech);
 const sourceLanguage = values["source-language"] || values.language;
 const entries = [];
-const seen = new Set();
+const definitionsByHeadword = new Map();
+const MAX_SENSES_PER_HEADWORD = 12;
 let rejected = 0;
 
 function partOfSpeech(value) {
@@ -72,28 +73,36 @@ for await (const line of lines) {
   if (rowLanguage && rowLanguage !== sourceLanguage) continue;
   const headword = String(row.word || row.headword || "").normalize("NFKC").trim();
   const normalized = headword.toLocaleLowerCase(values.language);
-  if (!headword || headword.length > 120 || seen.has(normalized)) continue;
-  const sense = Array.isArray(row.senses) ? row.senses.find(item => firstText(item?.glosses)) : null;
-  const definition = (sense?.glosses || row.glosses || [])
-    .map(value => String(value || "").trim())
-    .filter(Boolean)
-    .slice(0, 3)
-    .join("; ");
-  if (!definition || definition.length > 600) {
-    rejected += 1;
-    continue;
-  }
+  if (!headword || headword.length > 120) continue;
   const reading = firstText(row.sounds?.map(sound => sound?.ipa || sound?.zh_pron || sound?.other));
-  entries.push({
-    headword,
-    reading: reading.slice(0, 160),
-    partOfSpeech: partOfSpeech(row.pos),
-    glosses: { [values["gloss-language"]]: definition },
-    // Wiktionary examples can quote separately licensed works. Practical packs
-    // intentionally keep only headwords, readings, parts of speech, and glosses.
-    examples: {},
-  });
-  seen.add(normalized);
+  const senses = Array.isArray(row.senses) && row.senses.length ? row.senses : [{ glosses: row.glosses || [] }];
+  const definitions = definitionsByHeadword.get(normalized) || new Set();
+  for (const sense of senses) {
+    if (definitions.size >= MAX_SENSES_PER_HEADWORD) break;
+    const definition = (sense?.glosses || [])
+      .map(value => String(value || "").trim())
+      .filter(Boolean)
+      .slice(0, 3)
+      .join("; ");
+    if (!definition || definition.length > 600) {
+      rejected += 1;
+      continue;
+    }
+    const definitionKey = definition.normalize("NFKC").toLocaleLowerCase(values["gloss-language"]);
+    if (definitions.has(definitionKey)) continue;
+    entries.push({
+      headword,
+      reading: reading.slice(0, 160),
+      partOfSpeech: partOfSpeech(row.pos),
+      senseRank: definitions.size,
+      glosses: { [values["gloss-language"]]: definition },
+      // Wiktionary examples can quote separately licensed works. Practical packs
+      // intentionally keep only headwords, readings, parts of speech, and glosses.
+      examples: {},
+    });
+    definitions.add(definitionKey);
+  }
+  if (definitions.size) definitionsByHeadword.set(normalized, definitions);
 }
 
 const minimumEntries = Number.parseInt(values["minimum-entries"], 10);
@@ -122,4 +131,4 @@ if (values.output.toLowerCase().endsWith(".gz")) {
 } else {
   writeFileSync(values.output, serialized, "utf8");
 }
-console.log(`Built ${values.output}: ${entries.length} entries accepted · ${rejected} malformed or incomplete rows rejected`);
+console.log(`Built ${values.output}: ${entries.length} senses across ${definitionsByHeadword.size} headwords accepted · ${rejected} malformed or incomplete senses rejected`);
