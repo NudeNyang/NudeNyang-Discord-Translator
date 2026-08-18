@@ -30,7 +30,7 @@ use crate::image_translation::{
     ImageTranslationProcessor,
 };
 use crate::invite_assist::{invite_assist_script, parse_invite_open_request};
-use crate::language::{detect_language, is_supported_language_code, Language};
+use crate::language::{detect_language, is_han_only, is_supported_language_code, Language};
 use crate::ocr::OcrQualityMode;
 use crate::outgoing::{
     apply_outgoing_detected_script, apply_outgoing_error_script, apply_outgoing_review_script,
@@ -1316,10 +1316,18 @@ fn dictionary_source_language(
         return Some(explicit_language.to_string());
     }
     let selected_language = detect_language(query).language;
+    let contextual_language = detect_language(context).language;
+    if is_han_only(query)
+        && matches!(
+            contextual_language,
+            Language::Japanese | Language::ChineseSimplified | Language::ChineseTraditional
+        )
+    {
+        return Some(contextual_language.code().to_string());
+    }
     if selected_language != Language::Unknown {
         return Some(selected_language.code().to_string());
     }
-    let contextual_language = detect_language(context).language;
     (contextual_language != Language::Unknown).then(|| contextual_language.code().to_string())
 }
 
@@ -2960,6 +2968,16 @@ mod tests {
             "",
             "方針変更、またはプレイヤーからの通報などの影響により、",
             "關於突然轉為非公開的說明，並收到了官方警告通知。",
+        );
+        assert_eq!(language.as_deref(), Some("ja"));
+    }
+
+    #[test]
+    fn dictionary_lookup_uses_nearby_japanese_for_ambiguous_han_selection() {
+        let language = dictionary_source_language(
+            "",
+            "日本時間",
+            "日本時間3/17の午後にSuRroomはシステムによって自動的に変更されました。",
         );
         assert_eq!(language.as_deref(), Some("ja"));
     }

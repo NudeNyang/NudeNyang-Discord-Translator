@@ -46,7 +46,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     try { return new Intl.DisplayNames([uiLanguage],{type:'language'}).of(code) || code; }
     catch { return code || ''; }
   };
-  const version = 'rust-dictionary-ui-v3';
+  const version = __CONTROLLER_VERSION__;
   if (!enabled) {
     window.__ntDictionaryAbort?.abort();
     document.getElementById('nt-dictionary-selection')?.remove();
@@ -356,7 +356,7 @@ pub fn dictionary_ui_script(
         ("adverb", "부사"),
         ("other", "기타"),
     ]);
-    DICTIONARY_UI_SCRIPT
+    let script = DICTIONARY_UI_SCRIPT
         .replace("__ENABLED__", if enabled { "true" } else { "false" })
         .replace(
             "__EXTERNAL_ENABLED__",
@@ -373,7 +373,19 @@ pub fn dictionary_ui_script(
         .replace(
             "__GENERATED_COPIES__",
             &serde_json::to_string(&copies).unwrap(),
-        )
+        );
+    let version = serde_json::to_string(&dictionary_ui_version(&script)).unwrap();
+    script.replace("__CONTROLLER_VERSION__", &version)
+}
+
+fn dictionary_ui_version(script: &str) -> String {
+    const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x100000001b3;
+
+    let fingerprint = script.bytes().fold(FNV_OFFSET_BASIS, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(FNV_PRIME)
+    });
+    format!("rust-dictionary-ui-{fingerprint:016x}")
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -434,7 +446,7 @@ pub fn apply_dictionary_error_script(request_id: &str, error: &str) -> Result<St
 mod tests {
     use serde_json::json;
 
-    use super::{dictionary_ui_script, parse_dictionary_requests};
+    use super::{dictionary_ui_script, dictionary_ui_version, parse_dictionary_requests};
 
     #[test]
     fn controller_uses_selection_toolbar_and_safe_text_content() {
@@ -449,7 +461,17 @@ mod tests {
         assert!(script.contains("context:selectionButton.dataset.context"));
         assert!(script.contains("[...beforeText].slice(-60)"));
         assert!(script.contains("[...afterText].slice(0,60)"));
+        assert!(!script.contains("__CONTROLLER_VERSION__"));
+        assert!(!script.contains("rust-dictionary-ui-v3"));
         assert!(!script.contains("innerHTML"));
+    }
+
+    #[test]
+    fn controller_version_changes_with_injected_script_content() {
+        assert_ne!(
+            dictionary_ui_version("const context = 'old';"),
+            dictionary_ui_version("const context = 'selection-local';")
+        );
     }
 
     #[test]
