@@ -197,6 +197,8 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime ownership, Discord connection, data boundaries, OCR, and platform separation |
 | [docs/LANGUAGES.md](docs/LANGUAGES.md) | The 28-language catalog, detection behavior, provider coverage, and OCR scope |
 | [docs/DICTIONARY.md](docs/DICTIONARY.md) | Selection lookup, offline packs, personal terms, expansion gates, and data licensing boundaries |
+| [PRIVACY.md](PRIVACY.md) | Local data handling and optional external-provider transfers |
+| [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | Release provenance, signing roles, and verification policy |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Model, runtime, and dependency notices |
 
 ## License
