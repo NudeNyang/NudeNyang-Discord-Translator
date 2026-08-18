@@ -2,6 +2,7 @@ import {
   discordConnectionLabel,
   localModelResourceGuidance,
   localModelStorageDisplay,
+  manualDiscordRestartAvailability,
   modelPreparationBanner,
   normalizeConfig,
   providerOperationAvailability,
@@ -146,6 +147,7 @@ const elements = {
   saveStatus: document.querySelector("#save-status"),
   engineState: document.querySelector("#engine-state"),
   engineStateLabel: document.querySelector("#engine-state-label"),
+  discordRestartManual: document.querySelector("#discord-restart-manual"),
   modalLayer: document.querySelector("#modal-layer"),
   modalTitle: document.querySelector("#modal-title"),
   modalMessage: document.querySelector("#modal-message"),
@@ -1540,9 +1542,16 @@ function updateEngineState(status) {
   elements.engineStateLabel.textContent = ready && modelLabel
     ? `${connectionLabel} · ${modelLabel}`
     : connectionLabel;
+  renderManualDiscordRestart(status);
   state.config.enabled = enabledState.enabled;
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   if (status.notice) setLocalizedBackendText(elements.saveStatus, status.notice);
+}
+
+function renderManualDiscordRestart(status = state.runtime) {
+  const availability = manualDiscordRestartAvailability(status, state);
+  elements.discordRestartManual.hidden = !availability.visible;
+  elements.discordRestartManual.disabled = availability.disabled;
 }
 
 function localizeRuntimeLabel(label, language) {
@@ -1610,6 +1619,38 @@ async function handleRestartRequired(status) {
   } finally {
     state.repairActive = false;
     state.promptActive = false;
+  }
+}
+
+async function restartDiscordManually() {
+  if (state.promptActive || state.repairActive) return;
+  state.promptActive = true;
+  renderManualDiscordRestart();
+  try {
+    const status = state.runtime || await invoke("runtime_status");
+    if (status.cdpConnected) return;
+    const confirmed = await showModal({
+      title: "Discord를 다시 시작하시겠습니까?",
+      message: "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.",
+      acceptText: "Discord 재시작",
+    });
+    if (!confirmed) return;
+
+    state.restartAttempted = true;
+    state.repairActive = true;
+    renderManualDiscordRestart(status);
+    elements.engineState.dataset.state = "loading";
+    setLocalizedText(elements.engineStateLabel, "Discord 재시작 중");
+    await invoke("discord_restart", {
+      expectedProcessId: status.discordProcessId,
+    });
+    await pollRuntime();
+  } catch (error) {
+    await showError("Discord 수동 재시작 실패", String(error));
+  } finally {
+    state.repairActive = false;
+    state.promptActive = false;
+    renderManualDiscordRestart();
   }
 }
 
@@ -1708,6 +1749,7 @@ document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });
 elements.enabled.addEventListener("click", toggleTranslation);
+elements.discordRestartManual.addEventListener("click", restartDiscordManually);
 elements.outgoingTranslation.addEventListener("click", async () => {
   const enabled = elements.outgoingTranslation.getAttribute("aria-checked") !== "true";
   try {

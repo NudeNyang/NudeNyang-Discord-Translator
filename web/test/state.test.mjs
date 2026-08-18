@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   discordConnectionLabel,
   localModelStorageDisplay,
+  manualDiscordRestartAvailability,
   modelPreparationBanner,
   normalizeConfig,
   providerOperationAvailability,
@@ -15,6 +16,37 @@ import {
   SUPPORTED_TARGET_LANGUAGES,
   translatorRuntimeLabel,
 } from "../state.mjs";
+
+test("manual Discord restart is available only while an active controller is disconnected", () => {
+  assert.deepEqual(
+    manualDiscordRestartAvailability(
+      { controllerEnabled: true, cdpConnected: false },
+      { repairActive: false, promptActive: false },
+    ),
+    { visible: true, disabled: false },
+  );
+  assert.deepEqual(
+    manualDiscordRestartAvailability(
+      { controllerEnabled: true, cdpConnected: false },
+      { repairActive: true, promptActive: false },
+    ),
+    { visible: true, disabled: true },
+  );
+  assert.deepEqual(
+    manualDiscordRestartAvailability(
+      { controllerEnabled: true, cdpConnected: true },
+      { repairActive: false, promptActive: false },
+    ),
+    { visible: false, disabled: false },
+  );
+  assert.deepEqual(
+    manualDiscordRestartAvailability(
+      { controllerEnabled: false, cdpConnected: false },
+      { repairActive: false, promptActive: false },
+    ),
+    { visible: false, disabled: false },
+  );
+});
 
 test("provider connection operations lock every provider row until completion", () => {
   assert.deepEqual(providerOperationAvailability("", "chatgpt"), {

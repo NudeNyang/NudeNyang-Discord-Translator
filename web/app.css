@@ -225,6 +225,13 @@ input:focus-visible,
   color: var(--muted);
 }
 
+.engine-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .engine-state {
   display: inline-flex;
   align-items: center;
@@ -252,6 +259,12 @@ input:focus-visible,
 
 .engine-state[data-state="error"] .state-dot {
   background: var(--danger);
+}
+
+.engine-restart-button {
+  min-height: 32px;
+  padding: 0 11px;
+  white-space: nowrap;
 }
 
 .app-header + form,
@@ -1764,9 +1777,11 @@ input:focus-visible,
     width: 100%;
   }
 
-  .engine-state {
+  .engine-actions {
     grid-column: 1 / -1;
     justify-self: start;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .setting-row {

@@ -25,6 +25,16 @@ test("the user-facing product name is NudeNyang Discord Translator", () => {
   assert.doesNotMatch(tauriConfig, /Nude Translator/);
 });
 
+test("a disconnected active controller exposes a manual Discord restart action", () => {
+  assert.match(markup, /id="discord-restart-manual"[^>]*hidden[^>]*>Discord 재시작<\/button>/);
+  assert.match(script, /manualDiscordRestartAvailability/);
+  assert.match(script, /invoke\("discord_restart", \{[\s\S]*?expectedProcessId:/);
+  assert.match(script, /title: "Discord를 다시 시작하시겠습니까\?"/);
+  assert.match(styles, /\.engine-actions\s*\{[^}]*display:\s*flex;/s);
+  assert.match(rustMain, /let display_was_enabled = client\.status\(\)\?\.enabled;/);
+  assert.match(rustMain, /client\.set_enabled\(display_was_enabled\)/);
+});
+
 test("translation language options keep the shared layout while RTL entries align right", () => {
   assert.match(styles, /\.select-option\s*\{[^}]*text-align:\s*start;/s);
   for (const language of ["ar", "ur", "fa", "he"]) {
@@ -41,10 +51,10 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.19-beta");
-  assert.match(tauriConfig, /"version": "0\.5\.19-beta"/);
-  assert.match(cargoManifest, /^version = "0\.5\.19-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.19 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.20-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.20-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.20-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.20 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 

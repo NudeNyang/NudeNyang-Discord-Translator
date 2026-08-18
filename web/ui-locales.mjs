@@ -428,7 +428,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "連接服務",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "只需連接上方選擇的服務。其他服務可在需要時再連接。",
     "현재 사용": "使用中",
-    "선택됨": "已選取"
+    "선택됨": "已選取",
+    "Claude Haiku (최신)": "Claude Haiku（最新）",
+    "Discord 수동 재시작 실패": "Discord 手動重新啟動失敗",
+    "Discord를 다시 시작하시겠습니까?": "要重新啟動 Discord 嗎？",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "重新啟動 Discord 可能會捨棄你正在輸入的訊息，或結束進行中的通話。\n\n請重新啟動 Discord，以重新準備連線。",
+    "Discord 재시작": "重新啟動 Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low（最新）"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -858,7 +864,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Conectar serviço",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Conecte apenas o serviço selecionado acima. Os outros serviços podem ser conectados mais tarde, quando necessário.",
     "현재 사용": "Em uso",
-    "선택됨": "Selecionado"
+    "선택됨": "Selecionado",
+    "Claude Haiku (최신)": "Claude Haiku (mais recente)",
+    "Discord 수동 재시작 실패": "Falha ao reiniciar o Discord manualmente",
+    "Discord를 다시 시작하시겠습니까?": "Reiniciar o Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Reiniciar o Discord pode descartar uma mensagem que você está digitando ou encerrar uma chamada ativa.\n\nReinicie o Discord para preparar a conexão novamente.",
+    "Discord 재시작": "Reiniciar o Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (mais recente)"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1288,7 +1300,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "सेवा कनेक्ट करें",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "केवल ऊपर चयनित सेवा को कनेक्ट करें। ज़रूरत पड़ने पर अन्य सेवाएँ बाद में कनेक्ट की जा सकती हैं।",
     "현재 사용": "उपयोग में",
-    "선택됨": "चयनित"
+    "선택됨": "चयनित",
+    "Claude Haiku (최신)": "Claude Haiku (नवीनतम)",
+    "Discord 수동 재시작 실패": "Discord को मैन्युअल रूप से पुनः शुरू करना विफल रहा",
+    "Discord를 다시 시작하시겠습니까?": "Discord को पुनः शुरू करें?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord को पुनः शुरू करने से आपका टाइप किया जा रहा संदेश मिट सकता है या जारी कॉल समाप्त हो सकती है।\n\nकनेक्शन को फिर से तैयार करने के लिए Discord को पुनः शुरू करें।",
+    "Discord 재시작": "Discord को पुनः शुरू करें",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (नवीनतम)"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1718,7 +1736,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Conectar servicio",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Conecta solo el servicio seleccionado arriba. Puedes conectar otros servicios más adelante cuando los necesites.",
     "현재 사용": "En uso",
-    "선택됨": "Seleccionado"
+    "선택됨": "Seleccionado",
+    "Claude Haiku (최신)": "Claude Haiku (más reciente)",
+    "Discord 수동 재시작 실패": "Error al reiniciar Discord manualmente",
+    "Discord를 다시 시작하시겠습니까?": "¿Reiniciar Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Reiniciar Discord puede descartar un mensaje que estés escribiendo o finalizar una llamada activa.\n\nReinicia Discord para volver a preparar la conexión.",
+    "Discord 재시작": "Reiniciar Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (más reciente)"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2148,7 +2172,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Dienst verbinden",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Verbinde nur den oben ausgewählten Dienst. Andere Dienste können später bei Bedarf verbunden werden.",
     "현재 사용": "In Verwendung",
-    "선택됨": "Ausgewählt"
+    "선택됨": "Ausgewählt",
+    "Claude Haiku (최신)": "Claude Haiku (neueste Version)",
+    "Discord 수동 재시작 실패": "Manueller Neustart von Discord fehlgeschlagen",
+    "Discord를 다시 시작하시겠습니까?": "Discord neu starten?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Beim Neustart von Discord kann eine gerade verfasste Nachricht verloren gehen oder ein aktiver Anruf beendet werden.\n\nStarte Discord neu, um die Verbindung erneut vorzubereiten.",
+    "Discord 재시작": "Discord neu starten",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (neueste Version)"
   },
   "ru": {
     "설정": "Настройки",
@@ -2578,7 +2608,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Подключить сервис",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Подключи только выбранный выше сервис. Остальные сервисы можно подключить позже при необходимости.",
     "현재 사용": "Используется",
-    "선택됨": "Выбрано"
+    "선택됨": "Выбрано",
+    "Claude Haiku (최신)": "Claude Haiku (последняя версия)",
+    "Discord 수동 재시작 실패": "Не удалось перезапустить Discord вручную",
+    "Discord를 다시 시작하시겠습니까?": "Перезапустить Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "При перезапуске Discord набираемое сообщение может быть потеряно, а активный звонок — завершён.\n\nПерезапустите Discord, чтобы заново подготовить подключение.",
+    "Discord 재시작": "Перезапустить Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (последняя версия)"
   },
   "id": {
     "설정": "Pengaturan",
@@ -3008,7 +3044,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Hubungkan layanan",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Hubungkan hanya layanan yang dipilih di atas. Layanan lain dapat dihubungkan nanti saat diperlukan.",
     "현재 사용": "Sedang digunakan",
-    "선택됨": "Dipilih"
+    "선택됨": "Dipilih",
+    "Claude Haiku (최신)": "Claude Haiku (terbaru)",
+    "Discord 수동 재시작 실패": "Gagal memulai ulang Discord secara manual",
+    "Discord를 다시 시작하시겠습니까?": "Mulai ulang Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Memulai ulang Discord dapat menghapus pesan yang sedang Anda ketik atau mengakhiri panggilan aktif.\n\nMulai ulang Discord untuk menyiapkan kembali koneksi.",
+    "Discord 재시작": "Mulai Ulang Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (terbaru)"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3438,7 +3480,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Connecter le service",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Connectez uniquement le service sélectionné ci-dessus. Les autres services pourront être connectés ultérieurement si nécessaire.",
     "현재 사용": "Utilisé",
-    "선택됨": "Sélectionné"
+    "선택됨": "Sélectionné",
+    "Claude Haiku (최신)": "Claude Haiku (dernier)",
+    "Discord 수동 재시작 실패": "Échec du redémarrage manuel de Discord",
+    "Discord를 다시 시작하시겠습니까?": "Redémarrer Discord ?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Le redémarrage de Discord peut supprimer un message en cours de rédaction ou mettre fin à un appel actif.\n\nRedémarrez Discord pour préparer à nouveau la connexion.",
+    "Discord 재시작": "Redémarrer Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (dernière version)"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -3868,7 +3916,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Hizmeti bağla",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Yalnızca yukarıda seçilen hizmeti bağlayın. Diğer hizmetleri gerektiğinde daha sonra bağlayabilirsiniz.",
     "현재 사용": "Kullanımda",
-    "선택됨": "Seçildi"
+    "선택됨": "Seçildi",
+    "Claude Haiku (최신)": "Claude Haiku (en son)",
+    "Discord 수동 재시작 실패": "Discord manuel olarak yeniden başlatılamadı",
+    "Discord를 다시 시작하시겠습니까?": "Discord yeniden başlatılsın mı?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord'u yeniden başlatmak, yazmakta olduğunuz mesajı silebilir veya etkin bir aramayı sonlandırabilir.\n\nBağlantıyı yeniden hazırlamak için Discord'u yeniden başlatın.",
+    "Discord 재시작": "Discord'u Yeniden Başlat",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (en yeni)"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4298,7 +4352,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "ربط الخدمة",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "اربط فقط الخدمة المحددة أعلاه. يمكن ربط الخدمات الأخرى لاحقًا عند الحاجة.",
     "현재 사용": "قيد الاستخدام",
-    "선택됨": "محدد"
+    "선택됨": "محدد",
+    "Claude Haiku (최신)": "Claude Haiku (الأحدث)",
+    "Discord 수동 재시작 실패": "فشلت إعادة تشغيل Discord يدويًا",
+    "Discord를 다시 시작하시겠습니까?": "هل تريد إعادة تشغيل Discord؟",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "قد تؤدي إعادة تشغيل Discord إلى فقدان رسالة تكتبها أو إنهاء مكالمة جارية.\n\nأعد تشغيل Discord لإعداد الاتصال مجددًا.",
+    "Discord 재시작": "إعادة تشغيل Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (الأحدث)"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -4728,7 +4788,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Kết nối dịch vụ",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Chỉ cần kết nối dịch vụ đã chọn ở trên. Các dịch vụ khác có thể được kết nối sau khi cần.",
     "현재 사용": "Đang sử dụng",
-    "선택됨": "Đã chọn"
+    "선택됨": "Đã chọn",
+    "Claude Haiku (최신)": "Claude Haiku (mới nhất)",
+    "Discord 수동 재시작 실패": "Không thể khởi động lại Discord theo cách thủ công",
+    "Discord를 다시 시작하시겠습니까?": "Khởi động lại Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Việc khởi động lại Discord có thể làm mất tin nhắn bạn đang soạn hoặc kết thúc cuộc gọi đang diễn ra.\n\nHãy khởi động lại Discord để chuẩn bị lại kết nối.",
+    "Discord 재시작": "Khởi động lại Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (mới nhất)"
   },
   "it": {
     "설정": "Impostazioni",
@@ -5158,7 +5224,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Collega servizio",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Collega solo il servizio selezionato sopra. Gli altri servizi possono essere collegati in seguito, quando necessario.",
     "현재 사용": "In uso",
-    "선택됨": "Selezionato"
+    "선택됨": "Selezionato",
+    "Claude Haiku (최신)": "Claude Haiku (più recente)",
+    "Discord 수동 재시작 실패": "Riavvio manuale di Discord non riuscito",
+    "Discord를 다시 시작하시겠습니까?": "Riavviare Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Il riavvio di Discord potrebbe eliminare un messaggio che stai scrivendo o terminare una chiamata attiva.\n\nRiavvia Discord per preparare nuovamente la connessione.",
+    "Discord 재시작": "Riavvia Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (più recente)"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -5588,7 +5660,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Połącz usługę",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Połącz tylko usługę wybraną powyżej. Pozostałe usługi możesz połączyć później, gdy będą potrzebne.",
     "현재 사용": "W użyciu",
-    "선택됨": "Wybrano"
+    "선택됨": "Wybrano",
+    "Claude Haiku (최신)": "Claude Haiku (najnowszy)",
+    "Discord 수동 재시작 실패": "Nie udało się ręcznie uruchomić ponownie Discord",
+    "Discord를 다시 시작하시겠습니까?": "Uruchomić ponownie Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Ponowne uruchomienie Discord może spowodować utratę wpisywanej wiadomości lub zakończyć aktywne połączenie.\n\nUruchom ponownie Discord, aby ponownie przygotować połączenie.",
+    "Discord 재시작": "Uruchom ponownie Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (najnowszy)"
   },
   "uk": {
     "설정": "Налаштування",
@@ -6018,7 +6096,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Підключити сервіс",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Підключи лише вибраний вище сервіс. Інші сервіси можна підключити пізніше за потреби.",
     "현재 사용": "Використовується",
-    "선택됨": "Вибрано"
+    "선택됨": "Вибрано",
+    "Claude Haiku (최신)": "Claude Haiku (найновіша)",
+    "Discord 수동 재시작 실패": "Не вдалося перезапустити Discord вручну",
+    "Discord를 다시 시작하시겠습니까?": "Перезапустити Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Перезапуск Discord може призвести до втрати повідомлення, яке ви вводите, або завершити активний дзвінок.\n\nПерезапустіть Discord, щоб повторно підготувати з’єднання.",
+    "Discord 재시작": "Перезапустити Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (найновіша)"
   },
   "ms": {
     "설정": "Tetapan",
@@ -6448,7 +6532,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Sambungkan perkhidmatan",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Sambungkan hanya perkhidmatan yang dipilih di atas. Perkhidmatan lain boleh disambungkan kemudian apabila diperlukan.",
     "현재 사용": "Sedang digunakan",
-    "선택됨": "Dipilih"
+    "선택됨": "Dipilih",
+    "Claude Haiku (최신)": "Claude Haiku (terkini)",
+    "Discord 수동 재시작 실패": "Gagal memulakan semula Discord secara manual",
+    "Discord를 다시 시작하시겠습니까?": "Mulakan semula Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Memulakan semula Discord mungkin akan membuang mesej yang sedang anda taip atau menamatkan panggilan aktif.\n\nMulakan semula Discord untuk menyediakan sambungan sekali lagi.",
+    "Discord 재시작": "Mulakan semula Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (terkini)"
   },
   "nl": {
     "설정": "Instellingen",
@@ -6878,7 +6968,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Service koppelen",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Koppel alleen de hierboven geselecteerde service. Andere services kun je later koppelen wanneer dat nodig is.",
     "현재 사용": "In gebruik",
-    "선택됨": "Geselecteerd"
+    "선택됨": "Geselecteerd",
+    "Claude Haiku (최신)": "Claude Haiku (nieuwste)",
+    "Discord 수동 재시작 실패": "Handmatig opnieuw starten van Discord mislukt",
+    "Discord를 다시 시작하시겠습니까?": "Discord opnieuw starten?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Als je Discord opnieuw start, kan een bericht dat je aan het typen bent verloren gaan of een actief gesprek worden beëindigd.\n\nStart Discord opnieuw om de verbinding opnieuw voor te bereiden.",
+    "Discord 재시작": "Discord opnieuw starten",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (nieuwste)"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -7308,7 +7404,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "เชื่อมต่อบริการ",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "เชื่อมต่อเฉพาะบริการที่เลือกไว้ด้านบน ส่วนบริการอื่นสามารถเชื่อมต่อภายหลังได้เมื่อต้องการ",
     "현재 사용": "กำลังใช้งาน",
-    "선택됨": "เลือกแล้ว"
+    "선택됨": "เลือกแล้ว",
+    "Claude Haiku (최신)": "Claude Haiku (ล่าสุด)",
+    "Discord 수동 재시작 실패": "การรีสตาร์ต Discord ด้วยตนเองล้มเหลว",
+    "Discord를 다시 시작하시겠습니까?": "รีสตาร์ต Discord หรือไม่?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "การรีสตาร์ต Discord อาจทำให้ข้อความที่กำลังพิมพ์อยู่หายไปหรือยุติสายที่กำลังสนทนา\n\nรีสตาร์ต Discord เพื่อเตรียมการเชื่อมต่ออีกครั้ง",
+    "Discord 재시작": "รีสตาร์ต Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (ล่าสุด)"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -7738,7 +7840,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Ikonekta ang serbisyo",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Ikonekta lang ang serbisyong pinili sa itaas. Maaaring ikonekta sa ibang pagkakataon ang iba pang serbisyo kapag kailangan.",
     "현재 사용": "Ginagamit",
-    "선택됨": "Napili"
+    "선택됨": "Napili",
+    "Claude Haiku (최신)": "Claude Haiku (pinakabago)",
+    "Discord 수동 재시작 실패": "Nabigo ang manu-manong pag-restart ng Discord",
+    "Discord를 다시 시작하시겠습니까?": "I-restart ang Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Maaaring mawala ang mensaheng tina-type mo o matapos ang kasalukuyang tawag kapag ni-restart ang Discord.\n\nI-restart ang Discord para ihanda muli ang koneksyon.",
+    "Discord 재시작": "I-restart ang Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (pinakabago)"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -8168,7 +8276,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "সার্ভিস সংযুক্ত করুন",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "শুধু উপরে নির্বাচিত সার্ভিসটি সংযুক্ত করুন। প্রয়োজন হলে অন্য সার্ভিসগুলো পরে সংযুক্ত করা যাবে।",
     "현재 사용": "ব্যবহৃত হচ্ছে",
-    "선택됨": "নির্বাচিত"
+    "선택됨": "নির্বাচিত",
+    "Claude Haiku (최신)": "Claude Haiku (সর্বশেষ)",
+    "Discord 수동 재시작 실패": "Discord ম্যানুয়ালি পুনরায় চালু করা যায়নি",
+    "Discord를 다시 시작하시겠습니까?": "Discord পুনরায় চালু করবেন?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord পুনরায় চালু করলে আপনার লেখা চলমান কোনো বার্তা মুছে যেতে পারে বা সক্রিয় কল শেষ হয়ে যেতে পারে।\n\nসংযোগটি আবার প্রস্তুত করতে Discord পুনরায় চালু করুন।",
+    "Discord 재시작": "Discord পুনরায় চালু করুন",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (সর্বশেষ)"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -8598,7 +8712,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "سروس منسلک کریں",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "صرف اوپر منتخب کردہ سروس منسلک کریں۔ ضرورت پڑنے پر دیگر سروسز بعد میں منسلک کی جا سکتی ہیں۔",
     "현재 사용": "زیرِ استعمال",
-    "선택됨": "منتخب شدہ"
+    "선택됨": "منتخب شدہ",
+    "Claude Haiku (최신)": "Claude Haiku (تازہ ترین)",
+    "Discord 수동 재시작 실패": "Discord کو دستی طور پر دوبارہ شروع کرنا ناکام ہو گیا",
+    "Discord를 다시 시작하시겠습니까?": "Discord کو دوبارہ شروع کریں؟",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord کو دوبارہ شروع کرنے سے آپ کا زیرِ تحریر پیغام ضائع یا جاری کال ختم ہو سکتی ہے۔\n\nکنکشن کو دوبارہ تیار کرنے کے لیے Discord کو دوبارہ شروع کریں۔",
+    "Discord 재시작": "Discord کو دوبارہ شروع کریں",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (تازہ ترین)"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -9028,7 +9148,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "சேவையை இணைக்கவும்",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "மேலே தேர்ந்தெடுத்த சேவையை மட்டும் இணைத்தால் போதும். மற்ற சேவைகளைத் தேவைப்படும்போது பின்னர் இணைக்கலாம்.",
     "현재 사용": "பயன்பாட்டில் உள்ளது",
-    "선택됨": "தேர்ந்தெடுக்கப்பட்டது"
+    "선택됨": "தேர்ந்தெடுக்கப்பட்டது",
+    "Claude Haiku (최신)": "Claude Haiku (சமீபத்தியது)",
+    "Discord 수동 재시작 실패": "Discord-ஐ கைமுறையாக மறுதொடக்கம் செய்ய முடியவில்லை",
+    "Discord를 다시 시작하시겠습니까?": "Discord-ஐ மறுதொடக்கம் செய்யவா?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord-ஐ மறுதொடக்கம் செய்தால் நீங்கள் தட்டச்சு செய்துகொண்டிருக்கும் செய்தி அழியலாம் அல்லது செயலில் உள்ள அழைப்பு முடிவடையலாம்.\n\nஇணைப்பை மீண்டும் தயார்படுத்த Discord-ஐ மறுதொடக்கம் செய்யவும்.",
+    "Discord 재시작": "Discord-ஐ மறுதொடக்கம் செய்",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (சமீபத்தியது)"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -9458,7 +9584,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "اتصال سرویس",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "فقط سرویس انتخاب‌شده در بالا را متصل کنید. سرویس‌های دیگر را می‌توان بعداً در صورت نیاز متصل کرد.",
     "현재 사용": "در حال استفاده",
-    "선택됨": "انتخاب‌شده"
+    "선택됨": "انتخاب‌شده",
+    "Claude Haiku (최신)": "Claude Haiku (جدیدترین)",
+    "Discord 수동 재시작 실패": "راه‌اندازی مجدد دستی Discord ناموفق بود",
+    "Discord를 다시 시작하시겠습니까?": "Discord راه‌اندازی مجدد شود؟",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "راه‌اندازی مجدد Discord ممکن است پیام در حال تایپ را حذف کند یا به تماس فعال پایان دهد.\n\nبرای آماده‌سازی دوبارهٔ اتصال، Discord را راه‌اندازی مجدد کنید.",
+    "Discord 재시작": "راه‌اندازی مجدد Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (جدیدترین)"
   },
   "he": {
     "설정": "הגדרות",
@@ -9888,7 +10020,13 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "חיבור שירות",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "יש לחבר רק את השירות שנבחר למעלה. ניתן לחבר שירותים אחרים מאוחר יותר לפי הצורך.",
     "현재 사용": "בשימוש",
-    "선택됨": "נבחר"
+    "선택됨": "נבחר",
+    "Claude Haiku (최신)": "Claude Haiku (העדכני ביותר)",
+    "Discord 수동 재시작 실패": "ההפעלה מחדש הידנית של Discord נכשלה",
+    "Discord를 다시 시작하시겠습니까?": "להפעיל מחדש את Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "הפעלה מחדש של Discord עלולה למחוק הודעה שכתבת או לסיים שיחה פעילה.\n\nיש להפעיל מחדש את Discord כדי להכין שוב את החיבור.",
+    "Discord 재시작": "הפעלת Discord מחדש",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (העדכני ביותר)"
   },
   "cs": {
     "설정": "Nastavení",
@@ -10318,6 +10456,12 @@ export const UI_LOCALE_COPY = Object.freeze({
     "서비스 연결": "Připojit službu",
     "위에서 선택한 서비스 하나만 연결하면 됩니다. 다른 서비스는 필요할 때 연결할 수 있습니다.": "Připojte pouze službu vybranou výše. Ostatní služby můžete připojit později podle potřeby.",
     "현재 사용": "Používá se",
-    "선택됨": "Vybráno"
+    "선택됨": "Vybráno",
+    "Claude Haiku (최신)": "Claude Haiku (nejnovější)",
+    "Discord 수동 재시작 실패": "Ruční restartování aplikace Discord se nezdařilo",
+    "Discord를 다시 시작하시겠습니까?": "Restartovat Discord?",
+    "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Restartováním aplikace Discord můžete přijít o rozepsanou zprávu nebo ukončit probíhající hovor.\n\nRestartujte Discord, aby se připojení znovu připravilo.",
+    "Discord 재시작": "Restartovat Discord",
+    "Gemini Flash Low (최신)": "Gemini Flash Low (nejnovější)"
   }
 });

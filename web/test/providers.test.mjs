@@ -62,7 +62,7 @@ test("missing subscription CLIs use the in-app automatic installer", () => {
 });
 
 test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
-  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini 3\.6 Flash<\/p>/);
+  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini Flash Low \(최신\)<\/p>/);
   assert.match(script, /\["gemini",\s*"Gemini CLI \(권장·품질 우선\)"/);
   assert.match(providers, /Google 구독 · Antigravity CLI/);
   assert.match(subscriptionCli, /Self::Gemini => &\["agy"\]/);
@@ -72,8 +72,8 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
 
 test("provider cards show the concrete model or API product without quality badges", () => {
   assert.match(markup, /<h3>ChatGPT<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>GPT-5\.6 Luna\/Terra<\/p>/);
-  assert.match(markup, /<h3>Claude<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Claude Haiku 4\.5<\/p>/);
-  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini 3\.6 Flash<\/p>/);
+  assert.match(markup, /<h3>Claude<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Claude Haiku \(최신\)<\/p>/);
+  assert.match(markup, /<h3>Gemini<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>Gemini Flash Low \(최신\)<\/p>/);
   assert.match(markup, /<h3>DeepL<\/h3><span class="provider-use-badge" hidden>현재 사용<\/span><\/div><p>DeepL API Free \/ Pro<\/p>/);
   assert.doesNotMatch(markup, /품질 최우선/);
   assert.match(script, /ChatGPT CLI \(권장·품질 우선\)/);
@@ -85,8 +85,9 @@ test("provider cards show the concrete model or API product without quality badg
   assert.match(subscriptionCli, /gpt-5\.6-luna/);
   assert.match(subscriptionCli, /gpt-5\.6-terra/);
   assert.match(subscriptionCli, /"method": "model\/list"/);
-  assert.match(subscriptionCli, /claude-haiku-4-5-20251001/);
-  assert.match(subscriptionCli, /"flash"/);
+  assert.match(subscriptionCli, /CLAUDE_TRANSLATION_MODEL: &str = "haiku"/);
+  assert.match(subscriptionCli, /select_antigravity_flash_model/);
+  assert.match(subscriptionCli, /strip_suffix\("-flash-low"\)/);
   assert.match(subscriptionCli, /ClaudeStreamServer/);
   assert.match(subscriptionCli, /--conversation/);
   for (const tier of [/ChatGPT Plus\/Pro/, /Claude Pro\/Max/, /Gemini Pro\/Ultra/]) {
