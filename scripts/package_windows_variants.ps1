@@ -15,8 +15,7 @@ $TauriConfigPath = Join-Path $TauriDirectory 'tauri.conf.json'
 $TauriConfig = Get-Content -Raw -LiteralPath $TauriConfigPath | ConvertFrom-Json
 $Version = [string]$TauriConfig.version
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
-$DistRoot = Join-Path $ProjectRoot 'dist'
-$DeveloperDirectory = Join-Path $DistRoot 'NudeNyangDiscordTranslator'
+$DeveloperDirectory = Join-Path $ProjectRoot 'dist\NudeNyangDiscordTranslator'
 $DeveloperExecutable = Join-Path $DeveloperDirectory 'NudeNyangDiscordTranslator.exe'
 $VsWhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 $PublicUpdateEndpoint = 'https://raw.githubusercontent.com/NudeNyang/NudeNyang-Discord-Translator/main/updates/beta/latest.json'
@@ -175,42 +174,6 @@ function Stage-NativeRuntime {
     Assert-PeArchitecture -Path (Join-Path $llamaDestination 'llama-server.exe') -ExpectedMachine $expected -Architecture $Architecture
 }
 
-function New-PortablePackage {
-    param(
-        [Parameter(Mandatory)][string]$Architecture,
-        [Parameter(Mandatory)][string]$BuiltExecutable
-    )
-
-    $releaseArchitecture = if ($Architecture -eq 'arm64') { 'ARM64' } else { 'x64' }
-    $portableDirectory = Join-Path $DistRoot "NudeNyang-Translator-$releaseArchitecture-Portable"
-    Clear-DirectoryContents -Path $portableDirectory
-    Copy-Item -LiteralPath $BuiltExecutable -Destination (Join-Path $portableDirectory 'NudeNyangDiscordTranslator.exe') -Force
-    Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE') -Destination (Join-Path $portableDirectory 'LICENSE.txt') -Force
-    Copy-Item -LiteralPath (Join-Path $ProjectRoot 'THIRD_PARTY_NOTICES.md') -Destination $portableDirectory -Force
-    Copy-Item -LiteralPath (Join-Path $ProjectRoot 'licenses') -Destination $portableDirectory -Recurse -Force
-    $portableRuntime = Join-Path $portableDirectory 'runtime'
-    New-Item -ItemType Directory -Path $portableRuntime -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $StagingRuntime 'llama') -Destination (Join-Path $portableRuntime 'llama') -Recurse -Force
-
-    $notice = @"
-NudeNyang Discord Translator $Version ($Architecture portable)
-
-설치 없이 NudeNyangDiscordTranslator.exe를 실행할 수 있습니다.
-설정, 번역 기록, 내려받은 로컬 모델은 설치형과 동일하게 Windows 사용자 데이터 폴더에 저장됩니다.
-로컬 번역 모델은 처음 사용할 때 내려받습니다.
-"@
-    [IO.File]::WriteAllText((Join-Path $portableDirectory 'PORTABLE.txt'), $notice, [Text.UTF8Encoding]::new($false))
-
-    New-Item -ItemType Directory -Path $ReleaseDirectory -Force | Out-Null
-    $archive = Join-Path $ReleaseDirectory "NudeNyang-Translator-$Version-$releaseArchitecture-Portable.zip"
-    Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
-    & tar.exe -a -c -f $archive -C $portableDirectory .
-    if ($LASTEXITCODE -ne 0) {
-        throw "포터블 ZIP 생성에 실패했습니다(exit code: $LASTEXITCODE)."
-    }
-    return $archive
-}
-
 function Copy-InstallerPackage {
     param(
         [Parameter(Mandatory)][string]$Architecture,
@@ -293,7 +256,6 @@ try {
         }
         Assert-PeArchitecture -Path $builtExecutable -ExpectedMachine ([int]$metadata.PeMachine) -Architecture $architecture
         $artifacts.Add((Copy-InstallerPackage -Architecture $architecture -RustTarget $rustTarget))
-        $artifacts.Add((New-PortablePackage -Architecture $architecture -BuiltExecutable $builtExecutable))
 
         if ($architecture -eq 'x64') {
             New-Item -ItemType Directory -Path $DeveloperDirectory -Force | Out-Null

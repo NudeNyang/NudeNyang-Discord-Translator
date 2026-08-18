@@ -69,9 +69,7 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $TrackedManifestPath) -Fo
 [IO.File]::WriteAllText($TrackedManifestPath, $ManifestJson, [Text.UTF8Encoding]::new($false))
 $WindowsPackageNames = @(
     "NudeNyang-Translator-$Version-x64-Setup.exe",
-    "NudeNyang-Translator-$Version-x64-Portable.zip",
-    "NudeNyang-Translator-$Version-ARM64-Setup.exe",
-    "NudeNyang-Translator-$Version-ARM64-Portable.zip"
+    "NudeNyang-Translator-$Version-ARM64-Setup.exe"
 )
 $ChecksumLines = foreach ($packageName in $WindowsPackageNames) {
     $packagePath = Join-Path $ReleaseDirectory $packageName

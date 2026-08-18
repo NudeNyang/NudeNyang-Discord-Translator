@@ -36,8 +36,8 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 Download the current Windows installer from [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases). This is an open beta rather than a finished stable release, so verify important translations against the original text.
 
 - `x64` is for most Intel and AMD Windows PCs; `ARM64` is for Windows on ARM.
-- `Setup` installs the app; `Portable` runs after extracting the ZIP.
-- The updater `.sig` accompanies the x64 Setup used by automatic updates. All four Windows packages are listed in `SHA256SUMS.txt`.
+- Public releases provide x64 and ARM64 installers only. Portable packages are no longer distributed because they do not support automatic updates.
+- The updater `.sig` accompanies the x64 Setup used by automatic updates. Windows installer checksums are listed in `SHA256SUMS.txt`.
 
 ## See it in action
 
@@ -141,14 +141,14 @@ The complete language catalog and provider notes are in [docs/LANGUAGES.md](docs
 | macOS Apple Silicon | Shared Rust core and resource layout prepared; not supported yet |
 | macOS Intel | Not planned |
 
-Windows x64 and ARM64 installer and portable artifacts can be created locally with:
+Windows x64 and ARM64 installer artifacts can be created locally with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\package_windows_variants.ps1
 ```
 
-Every Windows release must build, verify, and publish all four artifacts together: x64 installer,
-x64 portable ZIP, ARM64 installer, and ARM64 portable ZIP.
+Every Windows release must build, verify, and publish the x64 and ARM64 installers together.
+Portable packages are excluded from public releases because they do not support automatic updates.
 
 ## Development
 

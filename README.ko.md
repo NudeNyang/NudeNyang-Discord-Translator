@@ -32,8 +32,8 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases)에서 Windows 10/11 x64 설치 파일을 받을 수 있습니다. 오픈 베타는 완성된 정식판이 아니므로 중요한 대화에서는 번역 결과를 원문과 함께 확인해 주세요.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
-- `Setup`은 설치형이며, `Portable`은 ZIP 압축을 풀고 바로 실행하는 무설치형입니다.
-- 자동 업데이트가 사용하는 x64 설치형에는 `.sig`가 함께 제공됩니다. 네 가지 Windows 패키지의 무결성은 `SHA256SUMS.txt`에서 확인할 수 있습니다.
+- 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
+- 자동 업데이트가 사용하는 x64 설치형에는 `.sig`가 함께 제공됩니다. Windows 설치 파일의 무결성은 `SHA256SUMS.txt`에서 확인할 수 있습니다.
 
 ## 동작 화면
 
@@ -168,7 +168,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
 
 오픈 베타는 Tauri 업데이트 서명을 적용한 NSIS 설치 파일과 GitHub Releases를 사용합니다. 업데이트 서명은 설치 파일의 무결성을 검증하지만 Microsoft Authenticode 코드 서명과는 별개입니다. 업데이트 서명 키는 저장소가 아닌 `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`에 보관합니다. 0.5.14는 기존 비공개 베타 설치본을 공개 GitHub 업데이트 채널로 옮기는 일회성 Cloudflare R2 연결 버전입니다.
 
-앞으로 Windows 릴리스는 x64 설치형, x64 포터블, ARM64 설치형, ARM64 포터블을 항상 함께 빌드하고 검증한 뒤 게시합니다.
+앞으로 Windows 릴리스는 x64 설치형과 ARM64 설치형을 함께 빌드하고 검증한 뒤 게시합니다. 포터블판은 자동 업데이트를 지원하지 않아 공개 릴리스에서 제외합니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/package_windows_variants.ps1

@@ -175,10 +175,7 @@ test("Windows packages carry the complete signed MSVC runtime beside llama-serve
   assert.match(msvcRuntimeStager, /ValidateSet\('x64', 'arm64'\)/);
   assert.match(windowsVariantPackager, /x86_64-pc-windows-msvc/);
   assert.match(windowsVariantPackager, /aarch64-pc-windows-msvc/);
-  assert.match(
-    windowsVariantPackager,
-    /NudeNyang-Translator-\$Version-\$releaseArchitecture-Portable\.zip/,
-  );
+  assert.doesNotMatch(windowsVariantPackager, /Portable\.zip/);
   assert.match(
     windowsVariantPackager,
     /NudeNyang-Translator-\$Version-\$releaseArchitecture-Setup\.exe/,
