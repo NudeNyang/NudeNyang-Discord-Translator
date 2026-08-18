@@ -54,6 +54,7 @@ test("the manual Discord restart label uses one language-appropriate typeface", 
   assert.match(styles, /:root:is\(:lang\(hi\), :lang\(bn\), :lang\(ta\), :lang\(ur\)\)\s*\{[^}]*--engine-action-font:\s*"Nirmala UI", "Segoe UI", sans-serif;/s);
   assert.match(styles, /:root:lang\(th\)\s*\{[^}]*--engine-action-font:\s*"Leelawadee UI", "Segoe UI", sans-serif;/s);
   assert.match(styles, /:root:is\(:lang\(ar\), :lang\(fa\), :lang\(he\)\)\s*\{[^}]*--engine-action-font:\s*"Segoe UI", Tahoma, sans-serif;/s);
+  assert.match(styles, /\.engine-state\s*\{[^}]*font-family:\s*var\(--engine-action-font\);[^}]*font-weight:\s*500;/s);
   assert.match(styles, /\.button\.secondary\.engine-restart-button\s*\{[^}]*font-family:\s*var\(--engine-action-font\);[^}]*font-weight:\s*500;/s);
 });
 

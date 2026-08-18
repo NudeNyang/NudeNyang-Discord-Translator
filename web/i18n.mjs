@@ -461,6 +461,9 @@ export const DYNAMIC_TEMPLATE_COPY = Object.freeze({
 });
 
 const LANGUAGE_INDEX = Object.freeze({ en: 0, ja: 1, zh: 2 });
+const COPY_ALIASES = Object.freeze({
+  "Discord 번역 연결을 준비합니다": "Discord 접근성 모드를 준비합니다",
+});
 const SUPPORTED_UI_LANGUAGES = Object.freeze([
   "ko", "en", "ja", "zh", "zh-Hant", "pt-BR", "hi", "es-419", "de", "ru",
   "id", "fr", "tr", "ar", "vi", "it", "pl", "uk", "ms", "nl",
@@ -490,10 +493,11 @@ export function translateCopy(language, korean) {
   language = resolveUiLanguage(language);
   if (korean === "UI Language" || korean === "Auto (System)") return korean;
   if (language === "ko") return korean;
+  const sourceKey = COPY_ALIASES[korean] || korean;
   const index = LANGUAGE_INDEX[language];
-  const source = COPY[korean] || DYNAMIC_TEMPLATE_COPY[korean];
+  const source = COPY[sourceKey] || DYNAMIC_TEMPLATE_COPY[sourceKey];
   if (index !== undefined) return source?.[index] || source?.[0] || korean;
-  return UI_LOCALE_COPY[language]?.[korean] || source?.[0] || korean;
+  return UI_LOCALE_COPY[language]?.[sourceKey] || source?.[0] || korean;
 }
 
 export const DYNAMIC_COPY = Object.freeze([
@@ -800,6 +804,14 @@ export const DYNAMIC_COPY = Object.freeze([
       zh: (kind, error) => `${kind === "업데이트 확인 실패" ? "检查更新失败" : "安装更新失败"}：${translateUserFacingError("zh", error)}`,
     },
   },
+  {
+    pattern: /^Discord 디버그 렌더러에 연결할 수 없습니다\.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다\.\n\n(\d+)초 후 Discord를 자동으로 다시 시작합니다\.$/,
+    render: {
+      en: seconds => `Discord is not running in accessibility-compatible mode yet.\nA message you are typing may be discarded or a call may end.\n\nDiscord will restart once for the initial transition in ${seconds} seconds.`,
+      ja: seconds => `Discordはまだアクセシビリティ互換モードで動作していません。\n入力中のメッセージが消えたり、通話が終了したりする場合があります。\n\n初回切り替えのため、${seconds}秒後にDiscordを一度再起動します。`,
+      zh: seconds => `Discord 尚未以辅助功能兼容模式运行。\n正在输入的消息可能会丢失，通话也可能会结束。\n\nDiscord 将在 ${seconds} 秒后为首次切换重启一次。`,
+    },
+  },
 ]);
 
 const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
@@ -862,6 +874,10 @@ const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
   ([kind, error], language) => [
     `${kind}: {error}`,
     { error: translateUserFacingError(language, error) },
+  ],
+  ([seconds]) => [
+    "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.",
+    { seconds },
   ],
 ]);
 

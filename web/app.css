@@ -272,6 +272,8 @@ input:focus-visible,
   background: var(--surface-toned);
   color: var(--muted);
   font-size: 13px;
+  font-family: var(--engine-action-font);
+  font-weight: 500;
   white-space: nowrap;
 }
 

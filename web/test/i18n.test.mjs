@@ -12,6 +12,7 @@ import {
 } from "../i18n.mjs";
 import { UI_LOCALE_COPY } from "../ui-locales.mjs";
 import { SUPPORTED_TARGET_LANGUAGES } from "../languages.mjs";
+import { restartCountdownMessage } from "../state.mjs";
 import { readFile } from "node:fs/promises";
 
 const appScript = await readFile(new URL("../app.js", import.meta.url), "utf8");
@@ -288,9 +289,21 @@ test("restart countdown and generic errors stay in every selected interface lang
   }
 });
 
+test("automatic Discord restart modal uses localized copy in every interface language", () => {
+  const title = "Discord 번역 연결을 준비합니다";
+  const message = restartCountdownMessage(15);
+
+  assert.match(appScript, /title: "Discord 번역 연결을 준비합니다"/);
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(language => language !== "ko")) {
+    assert.doesNotMatch(translateDynamicCopy(language, title), /[가-힣]/, `${language}: title`);
+    assert.doesNotMatch(translateDynamicCopy(language, message), /[가-힣]/, `${language}: message`);
+  }
+});
+
 test("every dynamic runtime message has a non-English generated-locale rendering", () => {
   const samples = [
     "7초 후 Discord를 자동으로 다시 시작합니다.",
+    restartCountdownMessage(9),
     "이미지에서 3개 글자 영역을 번역했습니다.",
     "표시 번역은 Hy-MT2 1.8B, 실시간 통역은 Claude을 사용합니다.",
     "Hy-MT2 7B 준비를 백그라운드에서 시작했습니다. 완료 전까지 현재 모델로 계속 번역합니다.",
