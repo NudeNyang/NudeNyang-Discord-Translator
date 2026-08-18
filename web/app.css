@@ -261,10 +261,46 @@ input:focus-visible,
   background: var(--danger);
 }
 
-.engine-restart-button {
+.button.engine-restart-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
   min-height: 32px;
-  padding: 0 11px;
+  gap: 6px;
+  padding: 0 10px;
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent-soft) 82%, var(--surface));
+  font-size: 12px;
+  line-height: 1;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, transform 90ms ease;
   white-space: nowrap;
+}
+
+.button.engine-restart-button:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent-soft) 68%, var(--surface-hover));
+}
+
+.engine-restart-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.engine-restart-button[data-state="working"] .engine-restart-icon {
+  animation: engine-restart-spin 760ms linear infinite;
+}
+
+@keyframes engine-restart-spin {
+  to { transform: rotate(360deg); }
 }
 
 .app-header + form,
@@ -1842,5 +1878,9 @@ input:focus-visible,
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .engine-restart-button[data-state="working"] .engine-restart-icon {
+    animation: none;
   }
 }

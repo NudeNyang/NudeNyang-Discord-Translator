@@ -26,11 +26,16 @@ test("the user-facing product name is NudeNyang Discord Translator", () => {
 });
 
 test("a disconnected active controller exposes a manual Discord restart action", () => {
-  assert.match(markup, /id="discord-restart-manual"[^>]*hidden[^>]*>Discord 재시작<\/button>/);
+  assert.match(markup, /id="discord-restart-manual"[^>]*hidden[^>]*>[\s\S]*?class="engine-restart-icon"[\s\S]*?<span>Discord 재시작<\/span>[\s\S]*?<\/button>/);
   assert.match(script, /manualDiscordRestartAvailability/);
   assert.match(script, /invoke\("discord_restart", \{[\s\S]*?expectedProcessId:/);
   assert.match(script, /title: "Discord를 다시 시작하시겠습니까\?"/);
+  assert.match(script, /dataset\.state = state\.repairActive \? "working" : "idle"/);
+  assert.match(script, /setAttribute\("aria-busy", String\(state\.repairActive\)\)/);
   assert.match(styles, /\.engine-actions\s*\{[^}]*display:\s*flex;/s);
+  assert.match(styles, /\.button\.engine-restart-button\s*\{[^}]*min-height:\s*32px;[^}]*gap:\s*6px;/s);
+  assert.match(styles, /\.engine-restart-icon\s*\{[^}]*width:\s*16px;[^}]*stroke-width:\s*2;/s);
+  assert.match(styles, /\.engine-restart-button\[data-state="working"\] \.engine-restart-icon\s*\{[^}]*animation:\s*engine-restart-spin/s);
   assert.match(rustMain, /let display_was_enabled = client\.status\(\)\?\.enabled;/);
   assert.match(rustMain, /client\.set_enabled\(display_was_enabled\)/);
 });

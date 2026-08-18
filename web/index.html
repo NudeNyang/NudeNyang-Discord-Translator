@@ -19,7 +19,10 @@
             <span class="state-dot" aria-hidden="true"></span>
             <span id="engine-state-label">엔진 연결 중</span>
           </div>
-          <button class="button secondary engine-restart-button" id="discord-restart-manual" type="button" hidden>Discord 재시작</button>
+          <button class="button secondary engine-restart-button" id="discord-restart-manual" type="button" data-state="idle" aria-busy="false" hidden>
+            <svg class="engine-restart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2M4 5v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"/></svg>
+            <span>Discord 재시작</span>
+          </button>
         </div>
       </header>
 

@@ -1552,6 +1552,8 @@ function renderManualDiscordRestart(status = state.runtime) {
   const availability = manualDiscordRestartAvailability(status, state);
   elements.discordRestartManual.hidden = !availability.visible;
   elements.discordRestartManual.disabled = availability.disabled;
+  elements.discordRestartManual.dataset.state = state.repairActive ? "working" : "idle";
+  elements.discordRestartManual.setAttribute("aria-busy", String(state.repairActive));
 }
 
 function localizeRuntimeLabel(label, language) {
