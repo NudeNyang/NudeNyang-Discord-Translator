@@ -949,6 +949,8 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("embedContainerSelector"));
         assert!(SNAPSHOT_SCRIPT.contains("article[class*=\"embed_\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"embedFull_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"embedAuthorName_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"embedDescription_\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("embedRoots.add(outerEmbedRoot(root))"));
         assert!(SNAPSHOT_SCRIPT.contains("parts('embed', id, root, true)"));
         assert!(RESTORE_TEXT_SCRIPT.contains("eligibleTextNodes(root, change.kind === 'embed')"));
