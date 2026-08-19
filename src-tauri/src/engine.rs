@@ -2894,10 +2894,10 @@ fn translator_label(name: &str) -> &str {
         return model_size.runtime_label();
     }
     match name {
-        "chatgpt" => "GPT-5.6 Luna/Terra · 품질 최우선 (Codex CLI)",
-        "claude" => "Claude · 품질 최우선 (Claude Code)",
-        "gemini" => "Gemini · 품질 최우선 (Antigravity CLI)",
-        "deepl" => "DeepL API",
+        "chatgpt" => "ChatGPT 품질 우선 (Codex CLI)",
+        "claude" => "Claude 품질 우선 (Claude Code)",
+        "gemini" => "Gemini 품질 우선 (Antigravity CLI)",
+        "deepl" => "DeepL 품질 우선 (API)",
         "mock" => "Mock 테스트",
         _ => "원문 표시",
     }
@@ -3186,12 +3186,17 @@ mod tests {
     fn capture_rate_is_bounded_and_labels_cover_real_backends() {
         assert_eq!(poll_interval(0), Duration::from_millis(500));
         assert_eq!(poll_interval(100), Duration::from_millis(50));
-        assert!(translator_label("chatgpt").contains("Codex"));
-        assert!(translator_label("chatgpt").contains("Luna/Terra"));
+        assert_eq!(translator_label("chatgpt"), "ChatGPT 품질 우선 (Codex CLI)");
+        assert_eq!(translator_label("claude"), "Claude 품질 우선 (Claude Code)");
+        assert_eq!(
+            translator_label("gemini"),
+            "Gemini 품질 우선 (Antigravity CLI)"
+        );
+        assert_eq!(translator_label("deepl"), "DeepL 품질 우선 (API)");
         assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
-        for provider in ["chatgpt", "claude", "gemini"] {
-            assert!(translator_label(provider).contains("품질 최우선"));
-            assert!(!translator_label(provider).contains("지속"));
+        for provider in ["chatgpt", "claude", "gemini", "deepl"] {
+            assert!(!translator_label(provider).contains("Luna/Terra"));
+            assert!(!translator_label(provider).contains("GPT-5.6"));
         }
     }
 
