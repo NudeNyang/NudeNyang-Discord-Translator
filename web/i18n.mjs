@@ -5,6 +5,7 @@ export const COPY = Object.freeze({
   "사전": ["Dictionary", "辞書", "词典"],
   "자동 번역": ["Automatic translation", "自動翻訳", "自动翻译"],
   "원문 뜻": ["Original meaning", "原文の意味", "原文释义"],
+  "출처 및 라이선스": ["Sources and licenses", "出典とライセンス", "来源与许可"],
   "선택한 범위의 뜻을 찾고 있습니다.": ["Looking up the selection.", "選択範囲の意味を調べています。", "正在查询所选内容。"],
   "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": ["No matching expression was found in installed dictionaries.", "インストール済みの辞書に一致する表現はありません。", "已安装的词典中没有匹配的词语。"],
   "선택한 범위에서 찾은 표현": ["Expressions found in the selection", "選択範囲で見つかった表現", "在所选范围内找到的词语"],

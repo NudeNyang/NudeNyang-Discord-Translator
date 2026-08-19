@@ -489,7 +489,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "要重新啟動 Discord 嗎？",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "重新啟動 Discord 可能會捨棄你正在輸入的訊息，或結束進行中的通話。\n\n請重新啟動 Discord，以重新準備連線。",
     "Discord 재시작": "重新啟動 Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low（最新）"
+    "Gemini Flash Low (최신)": "Gemini Flash Low（最新）",
+    "출처 및 라이선스": "來源與授權"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -980,7 +981,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Reiniciar o Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Reiniciar o Discord pode descartar uma mensagem que você está digitando ou encerrar uma chamada ativa.\n\nReinicie o Discord para preparar a conexão novamente.",
     "Discord 재시작": "Reiniciar o Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (mais recente)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (mais recente)",
+    "출처 및 라이선스": "Fontes e licenças"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1471,7 +1473,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord को पुनः शुरू करें?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord को पुनः शुरू करने से आपका टाइप किया जा रहा संदेश मिट सकता है या जारी कॉल समाप्त हो सकती है।\n\nकनेक्शन को फिर से तैयार करने के लिए Discord को पुनः शुरू करें।",
     "Discord 재시작": "Discord को पुनः शुरू करें",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (नवीनतम)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (नवीनतम)",
+    "출처 및 라이선스": "स्रोत और लाइसेंस"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1962,7 +1965,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "¿Reiniciar Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Reiniciar Discord puede descartar un mensaje que estés escribiendo o finalizar una llamada activa.\n\nReinicia Discord para volver a preparar la conexión.",
     "Discord 재시작": "Reiniciar Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (más reciente)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (más reciente)",
+    "출처 및 라이선스": "Fuentes y licencias"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2453,7 +2457,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord neu starten?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Beim Neustart von Discord kann eine gerade verfasste Nachricht verloren gehen oder ein aktiver Anruf beendet werden.\n\nStarte Discord neu, um die Verbindung erneut vorzubereiten.",
     "Discord 재시작": "Discord neu starten",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (neueste Version)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (neueste Version)",
+    "출처 및 라이선스": "Quellen und Lizenzen"
   },
   "ru": {
     "설정": "Настройки",
@@ -2944,7 +2949,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Перезапустить Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "При перезапуске Discord набираемое сообщение может быть потеряно, а активный звонок — завершён.\n\nПерезапустите Discord, чтобы заново подготовить подключение.",
     "Discord 재시작": "Перезапустить Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (последняя версия)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (последняя версия)",
+    "출처 및 라이선스": "Источники и лицензии"
   },
   "id": {
     "설정": "Pengaturan",
@@ -3435,7 +3441,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Mulai ulang Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Memulai ulang Discord dapat menghapus pesan yang sedang Anda ketik atau mengakhiri panggilan aktif.\n\nMulai ulang Discord untuk menyiapkan kembali koneksi.",
     "Discord 재시작": "Mulai Ulang Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (terbaru)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (terbaru)",
+    "출처 및 라이선스": "Sumber dan lisensi"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3926,7 +3933,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Redémarrer Discord ?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Le redémarrage de Discord peut supprimer un message en cours de rédaction ou mettre fin à un appel actif.\n\nRedémarrez Discord pour préparer à nouveau la connexion.",
     "Discord 재시작": "Redémarrer Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (dernière version)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (dernière version)",
+    "출처 및 라이선스": "Sources et licences"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4417,7 +4425,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord yeniden başlatılsın mı?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord'u yeniden başlatmak, yazmakta olduğunuz mesajı silebilir veya etkin bir aramayı sonlandırabilir.\n\nBağlantıyı yeniden hazırlamak için Discord'u yeniden başlatın.",
     "Discord 재시작": "Discord'u Yeniden Başlat",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (en yeni)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (en yeni)",
+    "출처 및 라이선스": "Kaynaklar ve lisanslar"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4908,7 +4917,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "هل تريد إعادة تشغيل Discord؟",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "قد تؤدي إعادة تشغيل Discord إلى فقدان رسالة تكتبها أو إنهاء مكالمة جارية.\n\nأعد تشغيل Discord لإعداد الاتصال مجددًا.",
     "Discord 재시작": "إعادة تشغيل Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (الأحدث)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (الأحدث)",
+    "출처 및 라이선스": "المصادر والتراخيص"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5399,7 +5409,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Khởi động lại Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Việc khởi động lại Discord có thể làm mất tin nhắn bạn đang soạn hoặc kết thúc cuộc gọi đang diễn ra.\n\nHãy khởi động lại Discord để chuẩn bị lại kết nối.",
     "Discord 재시작": "Khởi động lại Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (mới nhất)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (mới nhất)",
+    "출처 및 라이선스": "Nguồn và giấy phép"
   },
   "it": {
     "설정": "Impostazioni",
@@ -5890,7 +5901,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Riavviare Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Il riavvio di Discord potrebbe eliminare un messaggio che stai scrivendo o terminare una chiamata attiva.\n\nRiavvia Discord per preparare nuovamente la connessione.",
     "Discord 재시작": "Riavvia Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (più recente)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (più recente)",
+    "출처 및 라이선스": "Fonti e licenze"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6381,7 +6393,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Uruchomić ponownie Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Ponowne uruchomienie Discord może spowodować utratę wpisywanej wiadomości lub zakończyć aktywne połączenie.\n\nUruchom ponownie Discord, aby ponownie przygotować połączenie.",
     "Discord 재시작": "Uruchom ponownie Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (najnowszy)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (najnowszy)",
+    "출처 및 라이선스": "Źródła i licencje"
   },
   "uk": {
     "설정": "Налаштування",
@@ -6872,7 +6885,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Перезапустити Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Перезапуск Discord може призвести до втрати повідомлення, яке ви вводите, або завершити активний дзвінок.\n\nПерезапустіть Discord, щоб повторно підготувати з’єднання.",
     "Discord 재시작": "Перезапустити Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (найновіша)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (найновіша)",
+    "출처 및 라이선스": "Джерела та ліцензії"
   },
   "ms": {
     "설정": "Tetapan",
@@ -7363,7 +7377,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Mulakan semula Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Memulakan semula Discord mungkin akan membuang mesej yang sedang anda taip atau menamatkan panggilan aktif.\n\nMulakan semula Discord untuk menyediakan sambungan sekali lagi.",
     "Discord 재시작": "Mulakan semula Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (terkini)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (terkini)",
+    "출처 및 라이선스": "Sumber dan lesen"
   },
   "nl": {
     "설정": "Instellingen",
@@ -7854,7 +7869,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord opnieuw starten?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Als je Discord opnieuw start, kan een bericht dat je aan het typen bent verloren gaan of een actief gesprek worden beëindigd.\n\nStart Discord opnieuw om de verbinding opnieuw voor te bereiden.",
     "Discord 재시작": "Discord opnieuw starten",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (nieuwste)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (nieuwste)",
+    "출처 및 라이선스": "Bronnen en licenties"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8345,7 +8361,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "รีสตาร์ต Discord หรือไม่?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "การรีสตาร์ต Discord อาจทำให้ข้อความที่กำลังพิมพ์อยู่หายไปหรือยุติสายที่กำลังสนทนา\n\nรีสตาร์ต Discord เพื่อเตรียมการเชื่อมต่ออีกครั้ง",
     "Discord 재시작": "รีสตาร์ต Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (ล่าสุด)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (ล่าสุด)",
+    "출처 및 라이선스": "แหล่งที่มาและใบอนุญาต"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8836,7 +8853,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "I-restart ang Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Maaaring mawala ang mensaheng tina-type mo o matapos ang kasalukuyang tawag kapag ni-restart ang Discord.\n\nI-restart ang Discord para ihanda muli ang koneksyon.",
     "Discord 재시작": "I-restart ang Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (pinakabago)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (pinakabago)",
+    "출처 및 라이선스": "Mga source at lisensya"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -9327,7 +9345,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord পুনরায় চালু করবেন?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord পুনরায় চালু করলে আপনার লেখা চলমান কোনো বার্তা মুছে যেতে পারে বা সক্রিয় কল শেষ হয়ে যেতে পারে।\n\nসংযোগটি আবার প্রস্তুত করতে Discord পুনরায় চালু করুন।",
     "Discord 재시작": "Discord পুনরায় চালু করুন",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (সর্বশেষ)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (সর্বশেষ)",
+    "출처 및 라이선스": "উৎস ও লাইসেন্সসমূহ"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9818,7 +9837,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord کو دوبارہ شروع کریں؟",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord کو دوبارہ شروع کرنے سے آپ کا زیرِ تحریر پیغام ضائع یا جاری کال ختم ہو سکتی ہے۔\n\nکنکشن کو دوبارہ تیار کرنے کے لیے Discord کو دوبارہ شروع کریں۔",
     "Discord 재시작": "Discord کو دوبارہ شروع کریں",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (تازہ ترین)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (تازہ ترین)",
+    "출처 및 라이선스": "ماخذ اور لائسنس"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -10309,7 +10329,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord-ஐ மறுதொடக்கம் செய்யவா?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Discord-ஐ மறுதொடக்கம் செய்தால் நீங்கள் தட்டச்சு செய்துகொண்டிருக்கும் செய்தி அழியலாம் அல்லது செயலில் உள்ள அழைப்பு முடிவடையலாம்.\n\nஇணைப்பை மீண்டும் தயார்படுத்த Discord-ஐ மறுதொடக்கம் செய்யவும்.",
     "Discord 재시작": "Discord-ஐ மறுதொடக்கம் செய்",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (சமீபத்தியது)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (சமீபத்தியது)",
+    "출처 및 라이선스": "மூலங்களும் உரிமங்களும்"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10800,7 +10821,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Discord راه‌اندازی مجدد شود؟",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "راه‌اندازی مجدد Discord ممکن است پیام در حال تایپ را حذف کند یا به تماس فعال پایان دهد.\n\nبرای آماده‌سازی دوبارهٔ اتصال، Discord را راه‌اندازی مجدد کنید.",
     "Discord 재시작": "راه‌اندازی مجدد Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (جدیدترین)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (جدیدترین)",
+    "출처 및 라이선스": "منابع و مجوزها"
   },
   "he": {
     "설정": "הגדרות",
@@ -11291,7 +11313,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "להפעיל מחדש את Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "הפעלה מחדש של Discord עלולה למחוק הודעה שכתבת או לסיים שיחה פעילה.\n\nיש להפעיל מחדש את Discord כדי להכין שוב את החיבור.",
     "Discord 재시작": "הפעלת Discord מחדש",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (העדכני ביותר)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (העדכני ביותר)",
+    "출처 및 라이선스": "מקורות ורישיונות"
   },
   "cs": {
     "설정": "Nastavení",
@@ -11782,6 +11805,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord를 다시 시작하시겠습니까?": "Restartovat Discord?",
     "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.": "Restartováním aplikace Discord můžete přijít o rozepsanou zprávu nebo ukončit probíhající hovor.\n\nRestartujte Discord, aby se připojení znovu připravilo.",
     "Discord 재시작": "Restartovat Discord",
-    "Gemini Flash Low (최신)": "Gemini Flash Low (nejnovější)"
+    "Gemini Flash Low (최신)": "Gemini Flash Low (nejnovější)",
+    "출처 및 라이선스": "Zdroje a licence"
   }
 });
