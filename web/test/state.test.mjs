@@ -247,6 +247,38 @@ test("translator runtime label distinguishes preparation from the active model",
     }),
     "Hy-MT2 7B 사용 중",
   );
+  assert.equal(
+    translatorRuntimeLabel({
+      configuredTranslator: "chatgpt",
+      activeTranslator: "chatgpt",
+      translatorState: "ready",
+    }),
+    "ChatGPT 품질 우선 (Codex CLI) 사용 중",
+  );
+  assert.equal(
+    translatorRuntimeLabel({
+      configuredTranslator: "claude",
+      activeTranslator: "claude",
+      translatorState: "ready",
+    }),
+    "Claude 품질 우선 (Claude Code) 사용 중",
+  );
+  assert.equal(
+    translatorRuntimeLabel({
+      configuredTranslator: "gemini",
+      activeTranslator: "gemini",
+      translatorState: "ready",
+    }),
+    "Gemini 품질 우선 (Antigravity CLI) 사용 중",
+  );
+  assert.equal(
+    translatorRuntimeLabel({
+      configuredTranslator: "deepl",
+      activeTranslator: "deepl",
+      translatorState: "ready",
+    }),
+    "DeepL 품질 우선 (API) 사용 중",
+  );
 });
 
 test("local model preparation reports downloaded gigabytes and progress", () => {

@@ -74,7 +74,7 @@ test("provider cards keep stable service names instead of volatile model labels"
   for (const provider of ["ChatGPT", "Claude", "Gemini", "DeepL"]) {
     assert.match(markup, new RegExp(`<h3>${provider}<\\/h3><span class="provider-use-badge" hidden>현재 사용<\\/span><\\/div><\\/div><\\/div>`));
   }
-  assert.doesNotMatch(markup, /GPT-5\.6 Luna\/Terra|Claude Haiku|Gemini Flash Low|DeepL API Free \/ Pro/);
+  assert.doesNotMatch(`${markup}${trayMarkup}`, /GPT-5\.6 Luna\/Terra|Claude Haiku|Gemini Flash Low|DeepL API Free \/ Pro/);
   assert.doesNotMatch(markup, /품질 최우선/);
   assert.match(script, /ChatGPT CLI \(권장·품질 우선\)/);
   assert.match(providers, /ChatGPT 무료 플랜 이상 · Codex CLI/);

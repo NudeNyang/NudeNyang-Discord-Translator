@@ -13,6 +13,7 @@ const capabilities = readFileSync(new URL("../../src-tauri/capabilities/default.
 const installerHooks = readFileSync(new URL("../../src-tauri/windows/hooks.nsh", import.meta.url), "utf8");
 const discordStartup = readFileSync(new URL("../../src-tauri/src/discord_startup.rs", import.meta.url), "utf8");
 const discord = readFileSync(new URL("../../src-tauri/src/discord.rs", import.meta.url), "utf8");
+const rustEngine = readFileSync(new URL("../../src-tauri/src/engine.rs", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app.css", import.meta.url), "utf8");
 
 test("the user-facing product name is NudeNyang Discord Translator", () => {
@@ -43,6 +44,11 @@ test("cancelled or failed automatic recovery exposes a quiet manual Discord rest
   assert.match(styles, /\.engine-restart-button\[data-state="working"\] \.engine-restart-icon\s*\{[^}]*animation:\s*engine-restart-spin/s);
   assert.match(rustMain, /let display_was_enabled = client\.status\(\)\?\.enabled;/);
   assert.match(rustMain, /client\.set_enabled\(display_was_enabled\)/);
+  const restartCommand = rustMain.match(/async fn discord_restart\([\s\S]*?\n\}/)?.[0] || "";
+  assert.match(restartCommand, /discord::restart_pipe\(expected_process_id\)/);
+  assert.doesNotMatch(restartCommand, /connect_or_restart_pipe/);
+  assert.match(rustEngine, /ReplaceCdp\(CdpClient, mpsc::Sender<Result<\(\), String>>\)/);
+  assert.match(rustEngine, /recv_timeout\(Duration::from_secs\(30\)\)/);
 });
 
 test("the manual Discord restart label uses one language-appropriate typeface", () => {
@@ -74,10 +80,10 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.5.21-beta");
-  assert.match(tauriConfig, /"version": "0\.5\.21-beta"/);
-  assert.match(cargoManifest, /^version = "0\.5\.21-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.5\.21 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.5.22-beta");
+  assert.match(tauriConfig, /"version": "0\.5\.22-beta"/);
+  assert.match(cargoManifest, /^version = "0\.5\.22-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.5\.22 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 

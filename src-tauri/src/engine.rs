@@ -112,7 +112,7 @@ enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
     CancelModelPreparation,
-    ReplaceCdp(CdpClient),
+    ReplaceCdp(CdpClient, mpsc::Sender<Result<(), String>>),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
     UiReady,
@@ -456,9 +456,13 @@ impl RustEngine {
     }
 
     pub fn replace_cdp(&self, client: CdpClient) -> Result<(), String> {
+        let (result_tx, result_rx) = mpsc::channel();
         self.controls
-            .send(Control::ReplaceCdp(client))
-            .map_err(|_| "Rust 번역 엔진에 보안 CDP 연결을 전달하지 못했습니다.".to_string())
+            .send(Control::ReplaceCdp(client, result_tx))
+            .map_err(|_| "Rust 번역 엔진에 보안 CDP 연결을 전달하지 못했습니다.".to_string())?;
+        result_rx
+            .recv_timeout(Duration::from_secs(30))
+            .map_err(|_| "Discord 보안 연결 검증 결과를 기다리지 못했습니다.".to_string())?
     }
 
     pub fn attach_app(&self, app: AppHandle) -> Result<(), String> {
@@ -764,28 +768,39 @@ fn run_controller(
                         runtime.notice.clear();
                     });
                 }
-                Control::ReplaceCdp(mut replacement) => {
+                Control::ReplaceCdp(mut replacement, result_tx) => {
                     restore(&mut client, &states, false);
-                    let prepare = replacement.connect().and_then(|_| {
+                    if let Some(mut previous) = client.take() {
+                        previous.close();
+                    }
+                    let prepare_result = replacement.connect().and_then(|_| {
                         for script in cdp_attach_text_scripts() {
                             replacement.evaluate(script, false)?;
                         }
                         Ok(())
                     });
-                    if let Err(error) = prepare {
-                        crate::diagnostics::error("cdp", &error);
+                    if let Err(error) = &prepare_result {
+                        crate::diagnostics::error("cdp-replacement", error);
+                        replacement.close();
+                        update_status(&status, |runtime| {
+                            runtime.cdp_connected = false;
+                            runtime.connection_issue = error.clone();
+                        });
+                        connection_issue_reported = true;
+                    } else {
+                        client = Some(replacement);
+                        states.clear();
+                        pending.clear();
+                        display_view = DisplayViewState::default();
+                        image_pending.clear();
+                        outgoing_pending.clear();
+                        generation += 1;
+                        image_ui_needs_cleanup = true;
+                        outgoing_ui_needs_cleanup = true;
+                        consecutive_connection_failures = 0;
+                        connection_issue_reported = false;
                     }
-                    client = Some(replacement);
-                    states.clear();
-                    pending.clear();
-                    display_view = DisplayViewState::default();
-                    image_pending.clear();
-                    outgoing_pending.clear();
-                    generation += 1;
-                    image_ui_needs_cleanup = true;
-                    outgoing_ui_needs_cleanup = true;
-                    consecutive_connection_failures = 0;
-                    connection_issue_reported = false;
+                    let _ = result_tx.send(prepare_result);
                 }
                 Control::ClearCache(result_tx) => {
                     let result = outgoing_original_store
@@ -1916,6 +1931,14 @@ fn drain_worker_results(
                     continue;
                 }
                 let Some(client) = client.as_mut() else {
+                    crate::diagnostics::warn(
+                        "image-translation",
+                        "Discord 연결이 끊어져 완료된 이미지 번역 결과를 적용하지 못했습니다.",
+                    );
+                    update_status(status, |runtime| {
+                        runtime.notice =
+                            "Discord 연결 후 이미지 번역을 다시 시도하십시오.".to_string();
+                    });
                     continue;
                 };
                 match outcome {

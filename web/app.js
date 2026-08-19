@@ -1572,7 +1572,13 @@ function localizeRuntimeLabel(label, language) {
   for (const suffix of ["준비 중", "사용 중", "준비 실패"]) {
     if (label.endsWith(suffix)) {
       const runtimeName = label.slice(0, -suffix.length).trim();
-      return `${translateCopy(language, runtimeName)} ${translateCopy(language, suffix)}`;
+      const externalService = runtimeName.match(
+        /^(ChatGPT|Claude|Gemini|DeepL) 품질 우선 \((Codex CLI|Claude Code|Antigravity CLI|API)\)$/,
+      );
+      const localizedRuntimeName = externalService
+        ? `${externalService[1]} ${translateCopy(language, "품질 최우선")} (${externalService[2]})`
+        : translateCopy(language, runtimeName);
+      return `${localizedRuntimeName} ${translateCopy(language, suffix)}`;
     }
   }
   return translateCopy(language, label);
