@@ -1058,11 +1058,10 @@ async fn discord_restart(
     let client = engine.inner().clone();
     let display_was_enabled = client.status()?.enabled;
     let _ = client.set_enabled(false);
-    let restart_result = tauri::async_runtime::spawn_blocking(move || {
-        discord::connect_or_restart_pipe(expected_process_id)
-    })
-    .await
-    .map_err(|error| format!("Discord 연결 작업을 기다리지 못했습니다: {error}"))?;
+    let restart_result =
+        tauri::async_runtime::spawn_blocking(move || discord::restart_pipe(expected_process_id))
+            .await
+            .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
     let (process, cdp) = match restart_result {
         Ok(result) => result,
         Err(error) => {
@@ -1070,7 +1069,11 @@ async fn discord_restart(
             return Err(error);
         }
     };
-    let replace_result = client.replace_cdp(cdp);
+    let replacement_client = client.clone();
+    let replace_result =
+        tauri::async_runtime::spawn_blocking(move || replacement_client.replace_cdp(cdp))
+            .await
+            .map_err(|error| format!("Discord 연결 검증을 기다리지 못했습니다: {error}"))?;
     let _ = client.set_enabled(display_was_enabled);
     replace_result?;
     Ok(json!({"connected": true, "process": process}))
