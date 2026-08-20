@@ -702,6 +702,7 @@ Apache License 2.0이 별도로 적용된다. 각 모델의 공식 라이선스 
 | MNN | 네이티브 OCR 추론 런타임 | Apache-2.0, <https://github.com/alibaba/MNN> |
 | PaddleOCR 모델 | PP-OCRv6 Small/Medium 감지·인식 및 한국어 PP-OCRv5 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
 | Lingua 1.8.0 및 선택 언어 모델 | 오프라인 채팅 언어 감지 | Apache-2.0, Copyright © 2020-present Peter M. Stahl, <https://github.com/pemistahl/lingua-rs> |
+| opencc-js 1.4.1 및 OpenCC 사전 데이터 | 간체 중국어 실용팩의 표제어 빌드 변환 | MIT AND Apache-2.0, <https://github.com/nk2028/opencc-js>, <https://github.com/BYVoid/OpenCC> |
 | Tabler Icons | 설정 메뉴 아이콘 | MIT, Copyright (c) 2020-2026 Paweł Kuna, <https://github.com/tabler/tabler-icons> |
 | Microsoft Visual C++ Redistributable | \`llama-server.exe\`의 앱 로컬 Windows 런타임 | Microsoft Software License Terms, <https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist> |
 | Microsoft Edge WebView2 Runtime | Tauri 설정 및 트레이 UI 렌더링 | Microsoft Edge WebView2 Runtime Terms, <https://developer.microsoft.com/microsoft-edge/webview2/> |
@@ -726,6 +727,13 @@ GFDL 1.1 이상으로 이중 라이선스되며, 변환팩에는 원본과 동�
 - Wiktionary copyright and contributor attribution: <https://ko.wiktionary.org/wiki/위키낱말사전:저작권>
 - CC BY-SA 4.0: <https://creativecommons.org/licenses/by-sa/4.0/legalcode>
 - GFDL 1.1 or later: <https://www.gnu.org/licenses/fdl-1.3.html>
+
+간체 중국어 실용팩의 표제어는 \`opencc-js\` 1.4.1과 OpenCC 사전 데이터를 사용해 검수된 번체
+표제어에서 변환했다. 변환 후 같은 간체 표제어와 뜻이 된 항목은 중복만 제거했으며 한국어 뜻은
+다시 작성하지 않았다. \`opencc-js\` 코드는 빌드 도구로만 사용하고 데스크톱 런타임에는 포함하지 않는다.
+
+- opencc-js: <https://github.com/nk2028/opencc-js> (MIT AND Apache-2.0)
+- OpenCC: <https://github.com/BYVoid/OpenCC> (Apache-2.0)
 
 일본어 실용팩은 Electronic Dictionary Research and Development Group(EDRDG)의 JMdict를
 \`jmdict-simplified\` common-word release \`3.6.2+20260817122448\`에서 필터링하고 내부 형식으로

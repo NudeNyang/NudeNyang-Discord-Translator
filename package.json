@@ -13,11 +13,13 @@
     "test:locales": "node scripts/validate-ui-locales.mjs",
     "test:dictionaries": "node --test scripts/test/*.test.mjs && node scripts/validate-dictionary-packs.mjs",
     "dictionary:build": "node scripts/build-dictionary-pack.mjs",
+    "dictionary:convert-zh": "node scripts/convert-zh-pack.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build --no-bundle"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.11.0"
+    "@tauri-apps/cli": "^2.11.0",
+    "opencc-js": "^1.4.1"
   }
 }

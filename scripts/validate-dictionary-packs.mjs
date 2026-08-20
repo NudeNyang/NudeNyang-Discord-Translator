@@ -114,6 +114,15 @@ assert.ok(mindSenses.length >= 5, "Korean practical pack must preserve homonymou
 assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("마음")), "정신 must preserve its common mind sense");
 assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("(역사)")), "정신 must preserve its historical senses as alternatives");
 
+const simplifiedChinese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/zh.json.gz", import.meta.url))));
+assert.ok(simplifiedChinese.packs[0].entries.some(entry => entry.headword === "喜欢"), "Simplified Chinese pack must cover 喜欢");
+assert.ok(simplifiedChinese.packs[0].entries.some(entry => entry.headword === "时间"), "Simplified Chinese pack must cover 时间");
+assert.ok(!simplifiedChinese.packs[0].entries.some(entry => entry.headword === "喜歡"), "Simplified Chinese pack must not keep the Traditional 喜歡 headword");
+
+const traditionalChinese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/zh-Hant.json.gz", import.meta.url))));
+assert.ok(traditionalChinese.packs[0].entries.some(entry => entry.headword === "喜歡"), "Traditional Chinese pack must cover 喜歡");
+assert.ok(traditionalChinese.packs[0].entries.some(entry => entry.headword === "時間"), "Traditional Chinese pack must cover 時間");
+
 console.log(`Dictionary catalog: ${catalog.languages.length}/28 languages`);
 console.log(`Bundled starter packs: ${starter.packs.length} packs · ${starter.packs.reduce((sum, pack) => sum + pack.entries.length, 0)} entries`);
 console.log(`Practical packs: ${practicalCodes.size} packs · ${catalog.languages.filter(item => item.availability === "practical").reduce((sum, item) => sum + item.entryCount, 0)} entries`);

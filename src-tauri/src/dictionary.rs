@@ -274,6 +274,26 @@ impl DictionaryStore {
         let mut segmented = false;
 
         if entries.is_empty() && personal_entries.is_empty() {
+            let inflection_terms = inflection_lookup_terms(&normalized, &detected);
+            if !inflection_terms.is_empty() {
+                entries = lookup_dictionary_terms(
+                    &connection,
+                    target_language,
+                    &detected,
+                    &inflection_terms,
+                    12,
+                )?;
+                personal_entries = lookup_personal_terms(
+                    &connection,
+                    target_language,
+                    &detected,
+                    &inflection_terms,
+                    4,
+                )?;
+            }
+        }
+
+        if entries.is_empty() && personal_entries.is_empty() {
             let terms = segment_lookup_terms(&connection, &normalized, &detected, target_language)?;
             if !terms.is_empty() {
                 entries =
@@ -823,6 +843,238 @@ fn lookup_personal_terms(
         }
     }
     Ok(entries)
+}
+
+fn inflection_lookup_terms(normalized_term: &str, detected_language: &str) -> Vec<String> {
+    let mut terms = Vec::new();
+    let mut known = HashSet::new();
+    match detected_language {
+        "ja" => japanese_inflection_terms(normalized_term, &mut terms, &mut known),
+        "ko" => korean_inflection_terms(normalized_term, &mut terms, &mut known),
+        "en" => english_inflection_terms(normalized_term, &mut terms, &mut known),
+        _ => {}
+    }
+    terms
+}
+
+fn push_inflection_term(
+    original: &str,
+    candidate: String,
+    terms: &mut Vec<String>,
+    known: &mut HashSet<String>,
+) {
+    let candidate = normalize_term(&candidate);
+    if candidate.chars().count() >= 2 && candidate != original && known.insert(candidate.clone()) {
+        terms.push(candidate);
+    }
+}
+
+fn replace_last_character(value: &str, replacement: char) -> Option<String> {
+    let mut characters = value.chars().collect::<Vec<_>>();
+    characters.pop()?;
+    characters.push(replacement);
+    Some(characters.into_iter().collect())
+}
+
+fn japanese_godan_i_stem(value: &str) -> Option<String> {
+    let replacement = match value.chars().last()? {
+        'い' => 'う',
+        'き' => 'く',
+        'ぎ' => 'ぐ',
+        'し' => 'す',
+        'ち' => 'つ',
+        'に' => 'ぬ',
+        'び' => 'ぶ',
+        'み' => 'む',
+        'り' => 'る',
+        _ => return None,
+    };
+    replace_last_character(value, replacement)
+}
+
+fn japanese_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut HashSet<String>) {
+    let mut push = |candidate: String| push_inflection_term(term, candidate, terms, known);
+
+    if let Some(candidate) = japanese_godan_i_stem(term) {
+        push(candidate);
+    }
+
+    for suffix in ["ませんでした", "ました", "ません", "ます"] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            push(format!("{stem}る"));
+            if let Some(candidate) = japanese_godan_i_stem(stem) {
+                push(candidate);
+            }
+        }
+    }
+
+    for (suffix, endings) in [
+        ("って", &['う', 'つ', 'る'][..]),
+        ("った", &['う', 'つ', 'る'][..]),
+        ("いて", &['く'][..]),
+        ("いた", &['く'][..]),
+        ("いで", &['ぐ'][..]),
+        ("いだ", &['ぐ'][..]),
+        ("んで", &['ぬ', 'ぶ', 'む'][..]),
+        ("んだ", &['ぬ', 'ぶ', 'む'][..]),
+        ("して", &['す'][..]),
+        ("した", &['す'][..]),
+    ] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            for ending in endings {
+                push(format!("{stem}{ending}"));
+            }
+            if matches!(suffix, "して" | "した") {
+                push(format!("{stem}する"));
+            }
+        }
+    }
+
+    for suffix in ["なかった", "ない", "て", "た"] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            push(format!("{stem}る"));
+        }
+    }
+
+    for (suffix, ending) in [
+        ("わない", 'う'),
+        ("かない", 'く'),
+        ("がない", 'ぐ'),
+        ("さない", 'す'),
+        ("たない", 'つ'),
+        ("なない", 'ぬ'),
+        ("ばない", 'ぶ'),
+        ("まない", 'む'),
+        ("らない", 'る'),
+    ] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            push(format!("{stem}{ending}"));
+        }
+    }
+
+    for suffix in ["くなかった", "くない", "かった", "ければ", "く"] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            push(format!("{stem}い"));
+        }
+    }
+
+    for (surface, base) in [
+        ("した", "する"),
+        ("して", "する"),
+        ("します", "する"),
+        ("しました", "する"),
+        ("しない", "する"),
+        ("来た", "来る"),
+        ("来て", "来る"),
+    ] {
+        if term == surface {
+            push(base.to_string());
+        }
+    }
+}
+
+fn korean_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut HashSet<String>) {
+    let mut push = |candidate: String| push_inflection_term(term, candidate, terms, known);
+
+    for (surface, base) in [
+        ("했어요", "하다"),
+        ("했다", "하다"),
+        ("해요", "하다"),
+        ("합니다", "하다"),
+        ("했습니다", "하다"),
+        ("됐어요", "되다"),
+        ("됐다", "되다"),
+    ] {
+        if term == surface {
+            push(base.to_string());
+        }
+    }
+
+    for suffix in [
+        "었습니다",
+        "았습니다",
+        "습니까",
+        "습니다",
+        "었어요",
+        "았어요",
+        "어요",
+        "아요",
+        "는다",
+        "었다",
+        "았다",
+        "고",
+        "며",
+        "면",
+        "자",
+        "지",
+    ] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            push(format!("{stem}다"));
+        }
+    }
+
+    if let Some(stem) = term.strip_suffix('요') {
+        push(format!("{stem}다"));
+    }
+
+    for particle in [
+        "으로", "에서", "에게", "한테", "까지", "부터", "처럼", "보다", "께서", "은", "는", "이",
+        "가", "을", "를", "의", "에", "도", "와", "과", "로", "만", "께",
+    ] {
+        if let Some(stem) = term.strip_suffix(particle) {
+            push(stem.to_string());
+        }
+    }
+}
+
+fn english_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut HashSet<String>) {
+    let mut push = |candidate: String| push_inflection_term(term, candidate, terms, known);
+
+    if let Some(base) = [
+        ("went", "go"),
+        ("gone", "go"),
+        ("was", "be"),
+        ("were", "be"),
+        ("been", "be"),
+        ("did", "do"),
+        ("done", "do"),
+        ("had", "have"),
+        ("made", "make"),
+        ("took", "take"),
+        ("taken", "take"),
+        ("came", "come"),
+        ("saw", "see"),
+        ("seen", "see"),
+    ]
+    .iter()
+    .find_map(|(surface, base)| (*surface == term).then_some(*base))
+    {
+        push(base.to_string());
+    }
+
+    if let Some(stem) = term.strip_suffix("ies") {
+        push(format!("{stem}y"));
+    }
+    if let Some(stem) = term.strip_suffix('s') {
+        push(stem.to_string());
+    }
+    if let Some(stem) = term.strip_suffix("es") {
+        push(stem.to_string());
+        push(format!("{stem}e"));
+    }
+
+    for suffix in ["ing", "ed"] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            push(stem.to_string());
+            push(format!("{stem}e"));
+            let characters = stem.chars().collect::<Vec<_>>();
+            if characters.len() >= 2
+                && characters[characters.len() - 1] == characters[characters.len() - 2]
+            {
+                push(characters[..characters.len() - 1].iter().collect());
+            }
+        }
+    }
 }
 
 fn segment_lookup_terms(
@@ -1629,6 +1881,28 @@ mod tests {
         );
         assert!(!time.entries[0].context_recommended);
 
+        let inflected = store
+            .lookup_with_context(
+                "巡り",
+                "今回は夏っぽいワールドを巡りつつまったり交流したいです。",
+                Some("ja"),
+                "ko",
+            )
+            .unwrap();
+        assert!(inflected
+            .entries
+            .iter()
+            .any(|entry| { entry.headword == "巡る" && entry.part_of_speech == "verb" }));
+
+        let past = store.lookup("食べた", Some("ja"), "ko").unwrap();
+        assert!(past.entries.iter().any(|entry| entry.headword == "食べる"));
+
+        let continuative = store.lookup("遊んで", Some("ja"), "ko").unwrap();
+        assert!(continuative
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "遊ぶ"));
+
         let phrase = store.lookup("非難禁止", Some("ja"), "ko").unwrap();
         assert!(phrase.segmented);
         let headwords = phrase
@@ -1704,6 +1978,59 @@ mod tests {
             .iter()
             .skip(1)
             .any(|entry| entry.definition.contains("(역사)")));
+
+        let polite = store.lookup("먹어요", Some("ko"), "ko").unwrap();
+        assert!(polite.entries.iter().any(|entry| entry.headword == "먹다"));
+
+        let irregular = store.lookup("했어요", Some("ko"), "ko").unwrap();
+        assert!(irregular
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "하다"));
+
+        let particle = store.lookup("정신이", Some("ko"), "ko").unwrap();
+        assert!(particle
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "정신"));
+    }
+
+    #[test]
+    fn english_practical_pack_resolves_common_inflections_after_exact_lookup_misses() {
+        let store = temporary_store("english-inflections");
+        store.install_bundled_pack("en").unwrap();
+
+        let plural = store.lookup("experiences", Some("en"), "ko").unwrap();
+        assert!(plural
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "experience"));
+
+        let past = store.lookup("completed", Some("en"), "ko").unwrap();
+        assert!(past
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "complete"));
+
+        let progressive = store.lookup("running", Some("en"), "ko").unwrap();
+        assert!(progressive
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "run"));
+    }
+
+    #[test]
+    fn chinese_practical_packs_follow_the_selected_writing_system() {
+        let simplified = temporary_store("simplified-chinese-script");
+        simplified.install_bundled_pack("zh").unwrap();
+        let result = simplified.lookup("喜欢", Some("zh"), "ko").unwrap();
+        assert!(result.entries.iter().any(|entry| entry.headword == "喜欢"));
+        assert!(!result.entries.iter().any(|entry| entry.headword == "喜歡"));
+
+        let traditional = temporary_store("traditional-chinese-script");
+        traditional.install_bundled_pack("zh-Hant").unwrap();
+        let result = traditional.lookup("喜歡", Some("zh-Hant"), "ko").unwrap();
+        assert!(result.entries.iter().any(|entry| entry.headword == "喜歡"));
     }
 
     #[test]
