@@ -476,7 +476,6 @@
     "설치 중 {progress}%": "正在安裝 {progress}%",
     "자동 번역": "自動翻譯",
     "원문 뜻": "原文含義",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "若介面語言沒有可用的釋義，已設定的翻譯模型會自動翻譯。選用外部模型時，字典中的原文釋義可能會傳送至該服務。",
     "선택한 범위의 뜻을 찾고 있습니다.": "正在查詢選取內容。",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "已安裝的字典中找不到相符的詞彙。",
     "선택한 범위에서 찾은 표현": "在選取內容中找到的詞彙",
@@ -494,7 +493,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "翻譯所有語言，或只翻譯你選取的語言。",
     "모든 언어": "所有語言",
     "선택한 언어 없음": "未選取任何語言",
-    "원문 언어 설정을 적용하지 못했습니다": "無法套用來源語言設定"
+    "원문 언어 설정을 적용하지 못했습니다": "無法套用來源語言設定",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "所選短語的全文和介面語言中沒有的字典釋義，可能會由已設定的翻譯模型自動翻譯。若選用外部模型，這些文字可能會傳送至該服務。周邊上下文僅在本機使用。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -973,7 +973,6 @@
     "설치 중 {progress}%": "Instalando {progress}%",
     "자동 번역": "Tradução automática",
     "원문 뜻": "Significado original",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se não houver um significado disponível no idioma da interface, o modelo de tradução configurado fará a tradução automaticamente. Quando um modelo externo estiver selecionado, o significado original do dicionário poderá ser enviado a esse serviço.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Procurando a seleção.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nenhuma expressão correspondente foi encontrada nos dicionários instalados.",
     "선택한 범위에서 찾은 표현": "Expressões encontradas na seleção",
@@ -991,7 +990,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Traduza todos os idiomas ou apenas os que você selecionar.",
     "모든 언어": "Todos os idiomas",
     "선택한 언어 없음": "Nenhum idioma selecionado",
-    "원문 언어 설정을 적용하지 못했습니다": "Não foi possível aplicar a configuração de idioma de origem"
+    "원문 언어 설정을 적용하지 못했습니다": "Não foi possível aplicar a configuração de idioma de origem",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "A frase selecionada completa e os significados do dicionário indisponíveis no idioma da interface podem ser traduzidos pelo modelo configurado. Se um modelo externo for selecionado, esse texto poderá ser enviado ao serviço. O contexto ao redor é usado apenas neste PC."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1470,7 +1470,6 @@
     "설치 중 {progress}%": "इंस्टॉल हो रहा है {progress}%",
     "자동 번역": "स्वचालित अनुवाद",
     "원문 뜻": "मूल अर्थ",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "यदि इंटरफ़ेस की भाषा में अर्थ उपलब्ध नहीं है, तो कॉन्फ़िगर किया गया अनुवाद मॉडल उसका स्वचालित रूप से अनुवाद करता है। बाहरी मॉडल चुने जाने पर, शब्दकोश का मूल अर्थ उस सेवा को भेजा जा सकता है।",
     "선택한 범위의 뜻을 찾고 있습니다.": "चयनित टेक्स्ट खोजा जा रहा है।",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "इंस्टॉल किए गए शब्दकोशों में कोई मेल खाती अभिव्यक्ति नहीं मिली।",
     "선택한 범위에서 찾은 표현": "चयनित टेक्स्ट में मिली अभिव्यक्तियाँ",
@@ -1488,7 +1487,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "सभी भाषाओं या केवल चुनी गई भाषाओं का अनुवाद करें।",
     "모든 언어": "सभी भाषाएँ",
     "선택한 언어 없음": "कोई भाषा नहीं चुनी गई",
-    "원문 언어 설정을 적용하지 못했습니다": "स्रोत भाषा सेटिंग लागू नहीं की जा सकी"
+    "원문 언어 설정을 적용하지 못했습니다": "स्रोत भाषा सेटिंग लागू नहीं की जा सकी",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "चुना गया पूरा वाक्यांश और इंटरफ़ेस भाषा में उपलब्ध न होने वाले शब्दकोश अर्थ कॉन्फ़िगर किए गए मॉडल से अनुवादित किए जा सकते हैं। बाहरी मॉडल चुने जाने पर, यह टेक्स्ट उस सेवा को भेजा जा सकता है। आसपास का संदर्भ केवल इस PC पर उपयोग होता है।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1967,7 +1967,6 @@
     "설치 중 {progress}%": "Instalando: {progress}%",
     "자동 번역": "Traducción automática",
     "원문 뜻": "Significado original",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si no hay un significado disponible en el idioma de la interfaz, el modelo de traducción configurado lo traduce automáticamente. Si se selecciona un modelo externo, el significado original del diccionario puede enviarse a ese servicio.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Buscando la selección.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "No se encontró ninguna expresión coincidente en los diccionarios instalados.",
     "선택한 범위에서 찾은 표현": "Expresiones encontradas en la selección",
@@ -1985,7 +1984,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Traduce todos los idiomas o solo los que selecciones.",
     "모든 언어": "Todos los idiomas",
     "선택한 언어 없음": "Ningún idioma seleccionado",
-    "원문 언어 설정을 적용하지 못했습니다": "No se pudo aplicar la configuración del idioma de origen"
+    "원문 언어 설정을 적용하지 못했습니다": "No se pudo aplicar la configuración del idioma de origen",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "La frase seleccionada completa y los significados del diccionario no disponibles en el idioma de la interfaz pueden traducirse con el modelo configurado. Si se selecciona un modelo externo, ese texto puede enviarse al servicio. El contexto cercano solo se usa en esta PC."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2464,7 +2464,6 @@
     "설치 중 {progress}%": "Installation läuft: {progress} %",
     "자동 번역": "Automatische Übersetzung",
     "원문 뜻": "Ursprüngliche Bedeutung",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Wenn keine Bedeutung in der Sprache der Benutzeroberfläche verfügbar ist, übersetzt das konfigurierte Übersetzungsmodell sie automatisch. Wenn ein externes Modell ausgewählt ist, kann die ursprüngliche Wörterbuchbedeutung an diesen Dienst gesendet werden.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Auswahl wird nachgeschlagen.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "In den installierten Wörterbüchern wurde kein passender Ausdruck gefunden.",
     "선택한 범위에서 찾은 표현": "In der Auswahl gefundene Ausdrücke",
@@ -2482,7 +2481,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Alle Sprachen oder nur die ausgewählten Sprachen übersetzen.",
     "모든 언어": "Alle Sprachen",
     "선택한 언어 없음": "Keine Sprachen ausgewählt",
-    "원문 언어 설정을 적용하지 못했습니다": "Die Einstellung für die Ausgangssprache konnte nicht angewendet werden"
+    "원문 언어 설정을 적용하지 못했습니다": "Die Einstellung für die Ausgangssprache konnte nicht angewendet werden",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Die vollständig ausgewählte Wortgruppe und Wörterbuchbedeutungen, die nicht in der Sprache der Benutzeroberfläche verfügbar sind, können mit dem konfigurierten Modell übersetzt werden. Wenn ein externes Modell ausgewählt ist, kann dieser Text an den Dienst gesendet werden. Der umgebende Kontext wird nur auf diesem PC verwendet."
   },
   "ru": {
     "설정": "Настройки",
@@ -2961,7 +2961,6 @@
     "설치 중 {progress}%": "Установка: {progress}%",
     "자동 번역": "Автоматический перевод",
     "원문 뜻": "Исходное значение",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Если значение недоступно на языке интерфейса, настроенная модель перевода автоматически переведёт его. При выборе внешней модели исходное словарное значение может быть отправлено соответствующему сервису.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Поиск выделенного текста.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "В установленных словарях совпадений не найдено.",
     "선택한 범위에서 찾은 표현": "Выражения, найденные в выделенном тексте",
@@ -2979,7 +2978,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Переводить все языки или только выбранные.",
     "모든 언어": "Все языки",
     "선택한 언어 없음": "Языки не выбраны",
-    "원문 언어 설정을 적용하지 못했습니다": "Не удалось применить настройку исходного языка"
+    "원문 언어 설정을 적용하지 못했습니다": "Не удалось применить настройку исходного языка",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Выбранная фраза целиком и словарные значения, недоступные на языке интерфейса, могут быть переведены настроенной моделью. Если выбрана внешняя модель, этот текст может быть отправлен соответствующему сервису. Окружающий контекст используется только на этом ПК."
   },
   "id": {
     "설정": "Pengaturan",
@@ -3458,7 +3458,6 @@
     "설치 중 {progress}%": "Menginstal {progress}%",
     "자동 번역": "Terjemahan otomatis",
     "원문 뜻": "Makna asli",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika makna tidak tersedia dalam bahasa antarmuka, model terjemahan yang dikonfigurasi akan menerjemahkannya secara otomatis. Jika model eksternal dipilih, makna asli dari kamus dapat dikirim ke layanan tersebut.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Mencari arti pilihan.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Tidak ditemukan ungkapan yang cocok dalam kamus yang terpasang.",
     "선택한 범위에서 찾은 표현": "Ungkapan yang ditemukan dalam pilihan",
@@ -3476,7 +3475,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Terjemahkan semua bahasa atau hanya bahasa yang Anda pilih.",
     "모든 언어": "Semua bahasa",
     "선택한 언어 없음": "Tidak ada bahasa yang dipilih",
-    "원문 언어 설정을 적용하지 못했습니다": "Tidak dapat menerapkan pengaturan bahasa sumber"
+    "원문 언어 설정을 적용하지 못했습니다": "Tidak dapat menerapkan pengaturan bahasa sumber",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Seluruh frasa yang dipilih dan arti kamus yang tidak tersedia dalam bahasa antarmuka dapat diterjemahkan oleh model yang dikonfigurasi. Jika model eksternal dipilih, teks tersebut dapat dikirim ke layanan itu. Konteks di sekitarnya hanya digunakan di PC ini."
   },
   "fr": {
     "설정": "Paramètres",
@@ -3955,7 +3955,6 @@
     "설치 중 {progress}%": "Installation en cours… {progress} %",
     "자동 번역": "Traduction automatique",
     "원문 뜻": "Sens original",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Si un sens n’est pas disponible dans la langue de l’interface, le modèle de traduction configuré le traduit automatiquement. Lorsqu’un modèle externe est sélectionné, le sens original du dictionnaire peut être envoyé à ce service.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Recherche de la sélection.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Aucune expression correspondante n’a été trouvée dans les dictionnaires installés.",
     "선택한 범위에서 찾은 표현": "Expressions trouvées dans la sélection",
@@ -3973,7 +3972,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Traduisez toutes les langues ou uniquement celles que vous sélectionnez.",
     "모든 언어": "Toutes les langues",
     "선택한 언어 없음": "Aucune langue sélectionnée",
-    "원문 언어 설정을 적용하지 못했습니다": "Impossible d’appliquer le paramètre de langue source"
+    "원문 언어 설정을 적용하지 못했습니다": "Impossible d’appliquer le paramètre de langue source",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "La phrase sélectionnée dans son intégralité et les définitions absentes dans la langue de l’interface peuvent être traduites par le modèle configuré. Si un modèle externe est sélectionné, ce texte peut être envoyé au service. Le contexte environnant est utilisé uniquement sur ce PC."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4452,7 +4452,6 @@
     "설치 중 {progress}%": "Yükleniyor %{progress}",
     "자동 번역": "Otomatik çeviri",
     "원문 뜻": "Orijinal anlam",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Arayüz dilinde bir anlam mevcut değilse, yapılandırılan çeviri modeli bunu otomatik olarak çevirir. Harici bir model seçildiğinde, sözlükteki orijinal anlam bu hizmete gönderilebilir.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Seçim aranıyor.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Yüklü sözlüklerde eşleşen bir ifade bulunamadı.",
     "선택한 범위에서 찾은 표현": "Seçimde bulunan ifadeler",
@@ -4470,7 +4469,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Tüm dilleri veya yalnızca seçtiğiniz dilleri çevirin.",
     "모든 언어": "Tüm diller",
     "선택한 언어 없음": "Dil seçilmedi",
-    "원문 언어 설정을 적용하지 못했습니다": "Kaynak dil ayarı uygulanamadı"
+    "원문 언어 설정을 적용하지 못했습니다": "Kaynak dil ayarı uygulanamadı",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Seçilen ifadenin tamamı ve arayüz dilinde bulunmayan sözlük anlamları, yapılandırılmış model tarafından çevrilebilir. Harici bir model seçilirse bu metin ilgili hizmete gönderilebilir. Çevredeki bağlam yalnızca bu PC'de kullanılır."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4949,7 +4949,6 @@
     "설치 중 {progress}%": "جارٍ التثبيت {progress}%",
     "자동 번역": "الترجمة التلقائية",
     "원문 뜻": "المعنى الأصلي",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "إذا لم يتوفر المعنى بلغة الواجهة، فسيترجمه نموذج الترجمة المُعَدّ تلقائيًا. عند اختيار نموذج خارجي، قد يُرسل المعنى الأصلي من القاموس إلى تلك الخدمة.",
     "선택한 범위의 뜻을 찾고 있습니다.": "جارٍ البحث عن النص المحدد.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "لم يُعثر على تعبير مطابق في القواميس المثبتة.",
     "선택한 범위에서 찾은 표현": "التعبيرات الموجودة في النص المحدد",
@@ -4967,7 +4966,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "ترجمة جميع اللغات أو اللغات التي تحددها فقط.",
     "모든 언어": "جميع اللغات",
     "선택한 언어 없음": "لم تُحدَّد أي لغات",
-    "원문 언어 설정을 적용하지 못했습니다": "تعذّر تطبيق إعداد لغة المصدر"
+    "원문 언어 설정을 적용하지 못했습니다": "تعذّر تطبيق إعداد لغة المصدر",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "قد يترجم النموذج المُعدّ العبارة المحددة كاملة ومعاني القاموس غير المتاحة بلغة الواجهة. وإذا تم اختيار نموذج خارجي، فقد يُرسل هذا النص إلى تلك الخدمة. يُستخدم السياق المحيط على هذا الكمبيوتر فقط."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5446,7 +5446,6 @@
     "설치 중 {progress}%": "Đang cài đặt {progress}%",
     "자동 번역": "Dịch tự động",
     "원문 뜻": "Nghĩa gốc",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Nếu không có nghĩa bằng ngôn ngữ giao diện, mô hình dịch đã cấu hình sẽ tự động dịch nghĩa đó. Khi chọn mô hình bên ngoài, nghĩa gốc trong từ điển có thể được gửi đến dịch vụ đó.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Đang tra cứu phần đã chọn.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Không tìm thấy cụm từ phù hợp trong các từ điển đã cài đặt.",
     "선택한 범위에서 찾은 표현": "Các cụm từ tìm thấy trong phần đã chọn",
@@ -5464,7 +5463,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Dịch tất cả ngôn ngữ hoặc chỉ những ngôn ngữ bạn chọn.",
     "모든 언어": "Tất cả ngôn ngữ",
     "선택한 언어 없음": "Chưa chọn ngôn ngữ nào",
-    "원문 언어 설정을 적용하지 못했습니다": "Không thể áp dụng cài đặt ngôn ngữ nguồn"
+    "원문 언어 설정을 적용하지 못했습니다": "Không thể áp dụng cài đặt ngôn ngữ nguồn",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Toàn bộ cụm từ đã chọn và các nghĩa từ điển không có trong ngôn ngữ giao diện có thể được mô hình đã cấu hình dịch. Nếu chọn mô hình bên ngoài, văn bản đó có thể được gửi đến dịch vụ. Ngữ cảnh xung quanh chỉ được sử dụng trên PC này."
   },
   "it": {
     "설정": "Impostazioni",
@@ -5943,7 +5943,6 @@
     "설치 중 {progress}%": "Installazione {progress}%",
     "자동 번역": "Traduzione automatica",
     "원문 뜻": "Significato originale",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Se non è disponibile un significato nella lingua dell'interfaccia, il modello di traduzione configurato lo traduce automaticamente. Se è selezionato un modello esterno, il significato originale del dizionario potrebbe essere inviato a tale servizio.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Ricerca della selezione.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nessuna espressione corrispondente trovata nei dizionari installati.",
     "선택한 범위에서 찾은 표현": "Espressioni trovate nella selezione",
@@ -5961,7 +5960,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Traduci tutte le lingue o solo quelle selezionate.",
     "모든 언어": "Tutte le lingue",
     "선택한 언어 없음": "Nessuna lingua selezionata",
-    "원문 언어 설정을 적용하지 못했습니다": "Impossibile applicare l'impostazione della lingua di origine"
+    "원문 언어 설정을 적용하지 못했습니다": "Impossibile applicare l'impostazione della lingua di origine",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "L’intera frase selezionata e i significati del dizionario non disponibili nella lingua dell’interfaccia possono essere tradotti dal modello configurato. Se è selezionato un modello esterno, il testo può essere inviato al servizio. Il contesto circostante viene usato solo su questo PC."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6440,7 +6440,6 @@
     "설치 중 {progress}%": "Instalowanie: {progress}%",
     "자동 번역": "Tłumaczenie automatyczne",
     "원문 뜻": "Oryginalne znaczenie",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jeśli znaczenie nie jest dostępne w języku interfejsu, skonfigurowany model tłumaczeniowy przetłumaczy je automatycznie. W przypadku wybrania modelu zewnętrznego oryginalne znaczenie słownikowe może zostać wysłane do tej usługi.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Wyszukiwanie zaznaczonego tekstu.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Nie znaleziono pasującego wyrażenia w zainstalowanych słownikach.",
     "선택한 범위에서 찾은 표현": "Wyrażenia znalezione w zaznaczonym tekście",
@@ -6458,7 +6457,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Tłumacz wszystkie języki lub tylko wybrane.",
     "모든 언어": "Wszystkie języki",
     "선택한 언어 없음": "Nie wybrano żadnego języka",
-    "원문 언어 설정을 적용하지 못했습니다": "Nie udało się zastosować ustawienia języka źródłowego"
+    "원문 언어 설정을 적용하지 못했습니다": "Nie udało się zastosować ustawienia języka źródłowego",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Cały zaznaczony zwrot oraz znaczenia słownikowe niedostępne w języku interfejsu mogą zostać przetłumaczone przez skonfigurowany model. Jeśli wybrano model zewnętrzny, tekst może zostać wysłany do tej usługi. Otaczający kontekst jest używany tylko na tym komputerze."
   },
   "uk": {
     "설정": "Налаштування",
@@ -6937,7 +6937,6 @@
     "설치 중 {progress}%": "Установлення: {progress}%",
     "자동 번역": "Автоматичний переклад",
     "원문 뜻": "Оригінальне значення",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Якщо значення мовою інтерфейсу недоступне, налаштована модель перекладу перекладає його автоматично. Якщо вибрано зовнішню модель, оригінальне словникове значення може бути надіслано цьому сервісу.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Пошук виділеного фрагмента.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "У встановлених словниках не знайдено відповідного виразу.",
     "선택한 범위에서 찾은 표현": "Вирази, знайдені у виділеному фрагменті",
@@ -6955,7 +6954,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Перекладайте всі мови або лише вибрані.",
     "모든 언어": "Усі мови",
     "선택한 언어 없음": "Мови не вибрано",
-    "원문 언어 설정을 적용하지 못했습니다": "Не вдалося застосувати налаштування мови оригіналу"
+    "원문 언어 설정을 적용하지 못했습니다": "Не вдалося застосувати налаштування мови оригіналу",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Уся вибрана фраза та словникові значення, недоступні мовою інтерфейсу, можуть бути перекладені налаштованою моделлю. Якщо вибрано зовнішню модель, цей текст може бути надіслано відповідному сервісу. Навколишній контекст використовується лише на цьому ПК."
   },
   "ms": {
     "설정": "Tetapan",
@@ -7434,7 +7434,6 @@
     "설치 중 {progress}%": "Sedang memasang {progress}%",
     "자동 번역": "Terjemahan automatik",
     "원문 뜻": "Maksud asal",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Jika maksud tidak tersedia dalam bahasa antara muka, model terjemahan yang dikonfigurasi akan menterjemahkannya secara automatik. Apabila model luaran dipilih, maksud asal dalam kamus mungkin dihantar kepada perkhidmatan tersebut.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Mencari pilihan.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Tiada ungkapan sepadan ditemui dalam kamus yang dipasang.",
     "선택한 범위에서 찾은 표현": "Ungkapan yang ditemui dalam pilihan",
@@ -7452,7 +7451,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Terjemahkan semua bahasa atau hanya bahasa yang anda pilih.",
     "모든 언어": "Semua bahasa",
     "선택한 언어 없음": "Tiada bahasa dipilih",
-    "원문 언어 설정을 적용하지 못했습니다": "Tidak dapat menggunakan tetapan bahasa sumber"
+    "원문 언어 설정을 적용하지 못했습니다": "Tidak dapat menggunakan tetapan bahasa sumber",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Seluruh frasa yang dipilih dan makna kamus yang tidak tersedia dalam bahasa antara muka boleh diterjemahkan oleh model yang dikonfigurasi. Jika model luaran dipilih, teks tersebut boleh dihantar kepada perkhidmatan itu. Konteks sekeliling hanya digunakan pada PC ini."
   },
   "nl": {
     "설정": "Instellingen",
@@ -7931,7 +7931,6 @@
     "설치 중 {progress}%": "Bezig met installeren: {progress}%",
     "자동 번역": "Automatische vertaling",
     "원문 뜻": "Oorspronkelijke betekenis",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Als er geen betekenis beschikbaar is in de interfacetaal, vertaalt het ingestelde vertaalmodel deze automatisch. Als een extern model is geselecteerd, kan de oorspronkelijke betekenis uit het woordenboek naar die service worden verzonden.",
     "선택한 범위의 뜻을 찾고 있습니다.": "De selectie wordt opgezocht.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Geen overeenkomende uitdrukking gevonden in de geïnstalleerde woordenboeken.",
     "선택한 범위에서 찾은 표현": "Uitdrukkingen gevonden in de selectie",
@@ -7949,7 +7948,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Vertaal alle talen of alleen de talen die je selecteert.",
     "모든 언어": "Alle talen",
     "선택한 언어 없음": "Geen talen geselecteerd",
-    "원문 언어 설정을 적용하지 못했습니다": "Kon de instelling voor de brontaal niet toepassen"
+    "원문 언어 설정을 적용하지 못했습니다": "Kon de instelling voor de brontaal niet toepassen",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "De volledige geselecteerde woordgroep en woordenboekbetekenissen die niet beschikbaar zijn in de interfacetaal kunnen door het ingestelde model worden vertaald. Als een extern model is geselecteerd, kan die tekst naar de service worden verzonden. De omliggende context wordt alleen op deze pc gebruikt."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8428,7 +8428,6 @@
     "설치 중 {progress}%": "กำลังติดตั้ง {progress}%",
     "자동 번역": "การแปลอัตโนมัติ",
     "원문 뜻": "ความหมายต้นฉบับ",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "หากไม่มีความหมายในภาษาของอินเทอร์เฟซ โมเดลแปลภาษาที่กำหนดไว้จะแปลให้โดยอัตโนมัติ เมื่อเลือกโมเดลภายนอก ความหมายต้นฉบับจากพจนานุกรมอาจถูกส่งไปยังบริการนั้น",
     "선택한 범위의 뜻을 찾고 있습니다.": "กำลังค้นหาข้อความที่เลือก",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "ไม่พบสำนวนที่ตรงกันในพจนานุกรมที่ติดตั้งไว้",
     "선택한 범위에서 찾은 표현": "สำนวนที่พบในข้อความที่เลือก",
@@ -8446,7 +8445,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "แปลทุกภาษาหรือเฉพาะภาษาที่คุณเลือก",
     "모든 언어": "ทุกภาษา",
     "선택한 언어 없음": "ยังไม่ได้เลือกภาษา",
-    "원문 언어 설정을 적용하지 못했습니다": "ไม่สามารถใช้การตั้งค่าภาษาต้นทางได้"
+    "원문 언어 설정을 적용하지 못했습니다": "ไม่สามารถใช้การตั้งค่าภาษาต้นทางได้",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "วลีที่เลือกทั้งหมดและความหมายในพจนานุกรมที่ไม่มีในภาษาของอินเทอร์เฟซอาจถูกแปลโดยโมเดลที่กำหนดไว้ หากเลือกโมเดลภายนอก ข้อความดังกล่าวอาจถูกส่งไปยังบริการนั้น บริบทรอบข้างจะใช้เฉพาะบน PC เครื่องนี้เท่านั้น"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8925,7 +8925,6 @@
     "설치 중 {progress}%": "Ini-install {progress}%",
     "자동 번역": "Awtomatikong pagsasalin",
     "원문 뜻": "Orihinal na kahulugan",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Kung walang kahulugan sa wika ng interface, awtomatiko itong isasalin ng naka-configure na modelo ng pagsasalin. Kapag pumili ng panlabas na modelo, maaaring ipadala sa serbisyong iyon ang orihinal na kahulugan mula sa diksyunaryo.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Hinahanap ang napili.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "Walang nakitang katugmang ekspresyon sa mga naka-install na diksyunaryo.",
     "선택한 범위에서 찾은 표현": "Mga ekspresyong nakita sa napili",
@@ -8943,7 +8942,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Isalin ang lahat ng wika o ang mga wikang pipiliin mo lang.",
     "모든 언어": "Lahat ng wika",
     "선택한 언어 없음": "Walang napiling wika",
-    "원문 언어 설정을 적용하지 못했습니다": "Hindi mailapat ang setting ng wikang pinagmulan"
+    "원문 언어 설정을 적용하지 못했습니다": "Hindi mailapat ang setting ng wikang pinagmulan",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Maaaring isalin ng naka-configure na modelo ang buong napiling parirala at mga kahulugan sa diksyunaryo na wala sa wika ng interface. Kapag panlabas na modelo ang pinili, maaaring ipadala ang tekstong iyon sa serbisyo. Sa PC na ito lamang ginagamit ang nakapaligid na konteksto."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -9422,7 +9422,6 @@
     "설치 중 {progress}%": "ইনস্টল হচ্ছে {progress}%",
     "자동 번역": "স্বয়ংক্রিয় অনুবাদ",
     "원문 뜻": "মূল অর্থ",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "ইন্টারফেসের ভাষায় কোনো অর্থ পাওয়া না গেলে, কনফিগার করা অনুবাদ মডেল সেটি স্বয়ংক্রিয়ভাবে অনুবাদ করে। কোনো বাহ্যিক মডেল বেছে নিলে, অভিধানের মূল অর্থ সেই পরিষেবায় পাঠানো হতে পারে।",
     "선택한 범위의 뜻을 찾고 있습니다.": "নির্বাচিত অংশটি খোঁজা হচ্ছে।",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "ইনস্টল করা অভিধানগুলোতে কোনো মিলে যাওয়া অভিব্যক্তি পাওয়া যায়নি।",
     "선택한 범위에서 찾은 표현": "নির্বাচিত অংশে পাওয়া অভিব্যক্তি",
@@ -9440,7 +9439,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "সব ভাষা অথবা শুধু আপনার নির্বাচিত ভাষাগুলো অনুবাদ করুন।",
     "모든 언어": "সব ভাষা",
     "선택한 언어 없음": "কোনো ভাষা নির্বাচন করা হয়নি",
-    "원문 언어 설정을 적용하지 못했습니다": "উৎস ভাষার সেটিং প্রয়োগ করা যায়নি"
+    "원문 언어 설정을 적용하지 못했습니다": "উৎস ভাষার সেটিং প্রয়োগ করা যায়নি",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "নির্বাচিত সম্পূর্ণ বাক্যাংশ এবং ইন্টারফেসের ভাষায় অনুপস্থিত অভিধানের অর্থ কনফিগার করা মডেল দিয়ে অনুবাদ করা হতে পারে। বাহ্যিক মডেল বেছে নিলে, ওই লেখা পরিষেবাটিতে পাঠানো হতে পারে। আশপাশের প্রসঙ্গ শুধু এই PC-তেই ব্যবহার করা হয়।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9919,7 +9919,6 @@
     "설치 중 {progress}%": "انسٹال ہو رہا ہے {progress}%",
     "자동 번역": "خودکار ترجمہ",
     "원문 뜻": "اصل معنی",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر انٹرفیس کی زبان میں معنی دستیاب نہ ہوں، تو ترتیب دیا گیا ترجمہ ماڈل خودکار طور پر ان کا ترجمہ کرتا ہے۔ بیرونی ماڈل منتخب ہونے کی صورت میں لغت کے اصل معنی اس سروس کو بھیجے جا سکتے ہیں۔",
     "선택한 범위의 뜻을 찾고 있습니다.": "انتخاب کردہ متن تلاش کیا جا رہا ہے۔",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "انسٹال کردہ لغات میں کوئی مماثل عبارت نہیں ملی۔",
     "선택한 범위에서 찾은 표현": "انتخاب کردہ متن میں ملنے والی عبارات",
@@ -9937,7 +9936,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "تمام زبانوں یا صرف اپنی منتخب کردہ زبانوں کا ترجمہ کریں۔",
     "모든 언어": "تمام زبانیں",
     "선택한 언어 없음": "کوئی زبان منتخب نہیں کی گئی",
-    "원문 언어 설정을 적용하지 못했습니다": "ماخذ زبان کی ترتیب لاگو نہیں ہو سکی"
+    "원문 언어 설정을 적용하지 못했습니다": "ماخذ زبان کی ترتیب لاگو نہیں ہو سکی",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "منتخب کردہ مکمل فقرہ اور انٹرفیس کی زبان میں دستیاب نہ ہونے والے لغت کے معانی ترتیب دیے گئے ماڈل سے ترجمہ کیے جا سکتے ہیں۔ بیرونی ماڈل منتخب ہونے پر، یہ متن اس سروس کو بھیجا جا سکتا ہے۔ آس پاس کا سیاق صرف اس PC پر استعمال ہوتا ہے۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -10416,7 +10416,6 @@
     "설치 중 {progress}%": "நிறுவுகிறது {progress}%",
     "자동 번역": "தானியங்கி மொழிபெயர்ப்பு",
     "원문 뜻": "அசல் பொருள்",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "இடைமுக மொழியில் பொருள் கிடைக்கவில்லை என்றால், உள்ளமைக்கப்பட்ட மொழிபெயர்ப்பு மாதிரி அதைத் தானாக மொழிபெயர்க்கும். வெளிப்புற மாதிரி தேர்ந்தெடுக்கப்பட்டால், அகராதியின் அசல் பொருள் அந்தச் சேவைக்கு அனுப்பப்படலாம்.",
     "선택한 범위의 뜻을 찾고 있습니다.": "தேர்வைத் தேடுகிறது.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "நிறுவப்பட்ட அகராதிகளில் பொருந்தும் சொற்றொடர் எதுவும் கிடைக்கவில்லை.",
     "선택한 범위에서 찾은 표현": "தேர்வில் கண்டறியப்பட்ட சொற்றொடர்கள்",
@@ -10434,7 +10433,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "அனைத்து மொழிகளையும் அல்லது நீங்கள் தேர்ந்தெடுக்கும் மொழிகளை மட்டும் மொழிபெயர்க்கவும்.",
     "모든 언어": "அனைத்து மொழிகளும்",
     "선택한 언어 없음": "மொழிகள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை",
-    "원문 언어 설정을 적용하지 못했습니다": "மூல மொழி அமைப்பைப் பயன்படுத்த முடியவில்லை"
+    "원문 언어 설정을 적용하지 못했습니다": "மூல மொழி அமைப்பைப் பயன்படுத்த முடியவில்லை",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "தேர்ந்தெடுத்த முழுச் சொற்றொடரும் இடைமுக மொழியில் இல்லாத அகராதிப் பொருள்களும் அமைக்கப்பட்ட மாதிரியால் மொழிபெயர்க்கப்படலாம். வெளிப்புற மாதிரி தேர்ந்தெடுக்கப்பட்டால், அந்த உரை சேவைக்கு அனுப்பப்படலாம். சுற்றியுள்ள சூழல் இந்த PC-யில் மட்டுமே பயன்படுத்தப்படும்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10913,7 +10913,6 @@
     "설치 중 {progress}%": "در حال نصب {progress}٪",
     "자동 번역": "ترجمهٔ خودکار",
     "원문 뜻": "معنی اصلی",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "اگر معنی به زبان رابط موجود نباشد، مدل ترجمهٔ پیکربندی‌شده آن را به‌طور خودکار ترجمه می‌کند. اگر مدلی خارجی انتخاب شده باشد، ممکن است معنی اصلی واژه‌نامه به آن سرویس ارسال شود.",
     "선택한 범위의 뜻을 찾고 있습니다.": "در حال جست‌وجوی متن انتخاب‌شده.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "هیچ عبارت منطبقی در فرهنگ‌نامه‌های نصب‌شده یافت نشد.",
     "선택한 범위에서 찾은 표현": "عبارت‌های یافت‌شده در متن انتخاب‌شده",
@@ -10931,7 +10930,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "همه زبان‌ها یا فقط زبان‌های انتخابی را ترجمه کنید.",
     "모든 언어": "همه زبان‌ها",
     "선택한 언어 없음": "هیچ زبانی انتخاب نشده است",
-    "원문 언어 설정을 적용하지 못했습니다": "تنظیم زبان مبدأ اعمال نشد"
+    "원문 언어 설정을 적용하지 못했습니다": "تنظیم زبان مبدأ اعمال نشد",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "عبارت انتخاب‌شده به‌طور کامل و معنی‌های واژه‌نامه که در زبان رابط موجود نیستند، ممکن است با مدل پیکربندی‌شده ترجمه شوند. اگر مدل خارجی انتخاب شده باشد، این متن ممکن است به آن سرویس ارسال شود. بافت پیرامونی فقط در این رایانه استفاده می‌شود."
   },
   "he": {
     "설정": "הגדרות",
@@ -11410,7 +11410,6 @@
     "설치 중 {progress}%": "מתקין {progress}%",
     "자동 번역": "תרגום אוטומטי",
     "원문 뜻": "המשמעות המקורית",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "אם אין משמעות זמינה בשפת הממשק, מודל התרגום שהוגדר יתרגם אותה אוטומטית. אם נבחר מודל חיצוני, המשמעות המקורית מהמילון עשויה להישלח לשירות זה.",
     "선택한 범위의 뜻을 찾고 있습니다.": "מחפש את הבחירה.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "לא נמצא ביטוי תואם במילונים המותקנים.",
     "선택한 범위에서 찾은 표현": "ביטויים שנמצאו בבחירה",
@@ -11428,7 +11427,8 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "תרגום כל השפות או רק השפות שבחרת.",
     "모든 언어": "כל השפות",
     "선택한 언어 없음": "לא נבחרו שפות",
-    "원문 언어 설정을 적용하지 못했습니다": "לא ניתן להחיל את הגדרת שפת המקור"
+    "원문 언어 설정을 적용하지 못했습니다": "לא ניתן להחיל את הגדרת שפת המקור",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "הביטוי שנבחר במלואו ומשמעויות מילון שאינן זמינות בשפת הממשק עשויים להיות מתורגמים באמצעות המודל שהוגדר. אם נבחר מודל חיצוני, הטקסט הזה עשוי להישלח לשירות. ההקשר שמסביב משמש רק במחשב זה."
   },
   "cs": {
     "설정": "Nastavení",
@@ -11907,7 +11907,6 @@
     "설치 중 {progress}%": "Instalace {progress} %",
     "자동 번역": "Automatický překlad",
     "원문 뜻": "Původní význam",
-    "인터페이스 언어의 뜻이 없으면 설정된 번역 모델로 뜻을 자동 번역합니다. 외부 모델을 선택했다면 사전의 원문 뜻이 해당 서비스로 전송될 수 있습니다.": "Pokud význam není v jazyce rozhraní dostupný, nakonfigurovaný překladový model jej automaticky přeloží. Je-li vybrán externí model, původní slovníkový význam může být odeslán dané službě.",
     "선택한 범위의 뜻을 찾고 있습니다.": "Vyhledávání výrazu ve výběru.",
     "설치된 사전에서 일치하는 표현을 찾지 못했습니다.": "V nainstalovaných slovnících nebyl nalezen žádný odpovídající výraz.",
     "선택한 범위에서 찾은 표현": "Výrazy nalezené ve výběru",
@@ -11925,6 +11924,7 @@
     "모든 언어를 번역하거나 선택한 언어만 번역합니다.": "Překládejte všechny jazyky, nebo jen ty, které vyberete.",
     "모든 언어": "Všechny jazyky",
     "선택한 언어 없음": "Nejsou vybrány žádné jazyky",
-    "원문 언어 설정을 적용하지 못했습니다": "Nastavení zdrojového jazyka se nepodařilo použít"
+    "원문 언어 설정을 적용하지 못했습니다": "Nastavení zdrojového jazyka se nepodařilo použít",
+    "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Celá vybraná fráze a slovníkové významy, které nejsou dostupné v jazyce rozhraní, mohou být přeloženy nastaveným modelem. Pokud je vybrán externí model, může být tento text odeslán dané službě. Okolní kontext se používá pouze na tomto počítači."
   }
 }

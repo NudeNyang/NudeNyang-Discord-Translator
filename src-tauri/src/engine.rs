@@ -1256,7 +1256,9 @@ fn scan_dictionary(
                     )?;
                     let target = Language::try_from(result.target_language.as_str())
                         .unwrap_or(Language::English);
-                    if result.needs_localization() && translation_ready {
+                    if translation_ready
+                        && (result.needs_localization() || result.needs_selection_translation())
+                    {
                         worker
                             .send(WorkerCommand::LocalizeDictionary(
                                 DictionaryLocalizationBatch {
@@ -1267,7 +1269,7 @@ fn scan_dictionary(
                                 },
                             ))
                             .map_err(|_| {
-                                "Rust 사전 뜻 번역 작업 스레드가 종료되었습니다.".to_string()
+                                "Rust 사전 번역 작업 스레드가 종료되었습니다.".to_string()
                             })?;
                         Ok(None)
                     } else {
@@ -2512,16 +2514,22 @@ fn run_translation_worker(
                 });
             }
             WorkerCommand::LocalizeDictionary(batch) => {
+                let selection_count = usize::from(batch.result.needs_selection_translation());
                 log_worker_queue(
                     "dictionary",
                     batch.queued_at,
-                    batch.result.entries.len(),
+                    batch.result.entries.len() + selection_count,
                     batch
                         .result
                         .entries
                         .iter()
                         .map(|entry| entry.definition.chars().count())
-                        .sum(),
+                        .sum::<usize>()
+                        + if selection_count == 1 {
+                            batch.result.query.chars().count()
+                        } else {
+                            0
+                        },
                 );
                 let result = localize_dictionary_result(&mut service, batch.result, batch.target);
                 let _ = results.send(WorkerResult::DictionaryLocalized {
@@ -2573,6 +2581,30 @@ fn localize_dictionary_result(
     mut result: DictionaryLookupResult,
     target: Language,
 ) -> DictionaryLookupResult {
+    if result.needs_selection_translation() {
+        let source =
+            Language::try_from(result.source_language.as_str()).unwrap_or(Language::Unknown);
+        match service.translate_with_source(&result.query, source, target) {
+            Ok(translated)
+                if dictionary_translation_is_acceptable(&result.query, &translated, target) =>
+            {
+                result.selection_translation = translated.trim().to_string();
+            }
+            Ok(rejected) => crate::diagnostics::warn(
+                "dictionary",
+                &format!(
+                    "dictionary selection translation rejected by quality gate: source_chars={}; translated_chars={}; target={}",
+                    result.query.chars().count(),
+                    rejected.chars().count(),
+                    target.code()
+                ),
+            ),
+            Err(error) => crate::diagnostics::warn(
+                "dictionary",
+                &format!("dictionary selection translation failed: {error}"),
+            ),
+        }
+    }
     for entry in &mut result.entries {
         if entry.definition.is_empty()
             || entry.definition_origin != "original"
@@ -2602,6 +2634,10 @@ fn localize_dictionary_result(
                 &format!("dictionary gloss translation failed: {error}"),
             ),
         }
+    }
+    if !result.selection_translation.is_empty() {
+        let translated_context = result.selection_translation.clone();
+        result.rerank_for_context(&translated_context);
     }
     result
 }
@@ -3151,6 +3187,7 @@ mod tests {
             query: "future".to_string(),
             source_language: "en".to_string(),
             target_language: "ja".to_string(),
+            selection_translation: String::new(),
             segmented: false,
             entries: vec![DictionaryEntry {
                 entry_id: 1,
@@ -3178,6 +3215,10 @@ mod tests {
             localized.entries[0].definition,
             "現在より後の時間、またはこれから起こる出来事。"
         );
+        assert_eq!(
+            localized.selection_translation,
+            "現在より後の時間、またはこれから起こる出来事"
+        );
         assert_eq!(localized.entries[0].definition_language, "ja");
         assert_eq!(localized.entries[0].definition_origin, "automatic");
         assert_eq!(
@@ -3199,6 +3240,7 @@ mod tests {
             query: "日本時間".to_string(),
             source_language: "ja".to_string(),
             target_language: "ko".to_string(),
+            selection_translation: String::new(),
             segmented: true,
             entries: vec![DictionaryEntry {
                 entry_id: 1,

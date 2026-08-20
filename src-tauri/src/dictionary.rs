@@ -118,6 +118,7 @@ pub struct DictionaryLookupResult {
     pub query: String,
     pub source_language: String,
     pub target_language: String,
+    pub selection_translation: String,
     pub segmented: bool,
     pub entries: Vec<DictionaryEntry>,
     pub personal_entries: Vec<PersonalDictionaryEntry>,
@@ -130,6 +131,16 @@ impl DictionaryLookupResult {
                 && entry.definition_origin == "original"
                 && entry.definition_language != self.target_language
         })
+    }
+
+    pub fn needs_selection_translation(&self) -> bool {
+        !self.query.trim().is_empty()
+            && self.source_language != self.target_language
+            && self.selection_translation.is_empty()
+    }
+
+    pub fn rerank_for_context(&mut self, context: &str) {
+        rank_entries_for_context(&mut self.entries, context);
     }
 }
 
@@ -309,6 +320,7 @@ impl DictionaryStore {
             query,
             source_language: detected,
             target_language: target_language.to_string(),
+            selection_translation: String::new(),
             segmented,
             entries,
             personal_entries,
@@ -1109,38 +1121,47 @@ fn segment_lookup_terms(
                AND (target_language=?3 OR target_language='*') LIMIT 1",
         )
         .map_err(|error| format!("개인 사전 표현 분해를 준비하지 못했습니다: {error}"))?;
-    let mut available = HashSet::new();
-    let mut checked = HashSet::new();
+    let mut availability = HashMap::new();
+    let mut matched = Vec::new();
     for span in &spans {
-        if !checked.insert(span.term.clone()) {
-            continue;
-        }
-        let in_dictionary = dictionary_exists
-            .query_row(params![span.term, detected_language], |_| Ok(()))
-            .optional()
-            .map_err(|error| format!("사전 표현을 확인하지 못했습니다: {error}"))?
-            .is_some();
-        let in_personal = if in_dictionary {
-            false
-        } else {
-            personal_exists
-                .query_row(
-                    params![span.term, detected_language, target_language],
-                    |_| Ok(()),
-                )
-                .optional()
-                .map_err(|error| format!("개인 사전 표현을 확인하지 못했습니다: {error}"))?
-                .is_some()
-        };
-        if in_dictionary || in_personal {
-            available.insert(span.term.clone());
+        let mut candidates = vec![span.term.clone()];
+        candidates.extend(inflection_lookup_terms(&span.term, detected_language));
+        for candidate in candidates {
+            let available = if let Some(available) = availability.get(&candidate) {
+                *available
+            } else {
+                let in_dictionary = dictionary_exists
+                    .query_row(params![candidate, detected_language], |_| Ok(()))
+                    .optional()
+                    .map_err(|error| format!("사전 표현을 확인하지 못했습니다: {error}"))?
+                    .is_some();
+                let in_personal = if in_dictionary {
+                    false
+                } else {
+                    personal_exists
+                        .query_row(
+                            params![candidate, detected_language, target_language],
+                            |_| Ok(()),
+                        )
+                        .optional()
+                        .map_err(|error| format!("개인 사전 표현을 확인하지 못했습니다: {error}"))?
+                        .is_some()
+                };
+                let available = in_dictionary || in_personal;
+                availability.insert(candidate.clone(), available);
+                available
+            };
+            if available {
+                matched.push(LookupSpan {
+                    term: candidate,
+                    start: span.start,
+                    end: span.end,
+                });
+                break;
+            }
         }
     }
 
-    let mut matched = spans
-        .into_iter()
-        .filter(|span| available.contains(&span.term))
-        .collect::<Vec<_>>();
     matched.sort_by(|left, right| {
         left.start
             .cmp(&right.start)
@@ -1270,7 +1291,8 @@ fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
     let normalized_context = normalize_term(context);
     let context_language = detect_language(&normalized_context).language;
     let mut groups: Vec<Vec<DictionaryEntry>> = Vec::new();
-    for entry in entries.drain(..) {
+    for mut entry in entries.drain(..) {
+        entry.context_recommended = false;
         let key = (entry.language.as_str(), normalize_term(&entry.headword));
         if let Some(group) = groups.iter_mut().find(|group| {
             group.first().is_some_and(|first| {
@@ -1308,14 +1330,19 @@ fn contextual_sense_score(
     context: &str,
     context_language: Language,
 ) -> i32 {
-    let definition = if entry.original_definition.is_empty() {
-        &entry.definition
-    } else {
-        &entry.original_definition
-    };
+    let displayed_language =
+        Language::try_from(entry.definition_language.as_str()).unwrap_or(Language::Unknown);
+    let (definition, definition_language) =
+        if displayed_language == context_language && !entry.definition.is_empty() {
+            (entry.definition.as_str(), displayed_language)
+        } else if entry.original_definition.is_empty() {
+            (entry.definition.as_str(), displayed_language)
+        } else {
+            let original_language = Language::try_from(entry.original_definition_language.as_str())
+                .unwrap_or(Language::Unknown);
+            (entry.original_definition.as_str(), original_language)
+        };
     let normalized_definition = normalize_term(definition);
-    let definition_language = Language::try_from(entry.original_definition_language.as_str())
-        .unwrap_or(Language::Unknown);
     let comparable_language = context_language != Language::Unknown
         && definition_language != Language::Unknown
         && context_language == definition_language;
@@ -1902,6 +1929,25 @@ mod tests {
             .entries
             .iter()
             .any(|entry| entry.headword == "遊ぶ"));
+
+        let polite_phrase = store
+            .lookup_with_context(
+                "こんにちは、お世話になります",
+                "こんにちは、お世話になります。今後ともよろしくお願いします。",
+                Some("ja"),
+                "ko",
+            )
+            .unwrap();
+        assert!(polite_phrase.segmented);
+        let polite_headwords = polite_phrase
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        assert!(polite_headwords.contains(&"こんにちは"));
+        assert!(polite_headwords.contains(&"お世話になる"));
+        assert!(!polite_headwords.contains(&"なり"));
+        assert!(!polite_headwords.contains(&"ます"));
 
         let phrase = store.lookup("非難禁止", Some("ja"), "ko").unwrap();
         assert!(phrase.segmented);

@@ -97,6 +97,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-panel .nt-dict-title small{display:block;color:var(--text-muted,#949ba4);font-size:11px;font-weight:650;letter-spacing:.04em}
       #nt-dictionary-panel .nt-dict-title strong{display:block;overflow-wrap:anywhere;color:var(--text-normal,#f2f3f5);font-size:22px;font-weight:720;letter-spacing:-.025em;line-height:1.2}
       #nt-dictionary-panel .nt-dict-reading{margin-left:7px;color:var(--text-muted,#949ba4);font-size:13px;font-weight:500}
+      #nt-dictionary-panel .nt-dict-selection-meaning{margin:6px 0 0;overflow-wrap:anywhere;color:var(--text-muted,#b5bac1);font-size:14px;font-weight:500;letter-spacing:-.01em;line-height:1.45}
       #nt-dictionary-panel button{border:0;color:inherit;font:inherit;cursor:pointer}
       #nt-dictionary-panel .nt-dict-icon-button{display:inline-flex;width:32px;height:32px;flex:none;align-items:center;justify-content:center;border:1px solid var(--background-modifier-accent,#ffffff18);border-radius:10px;background:var(--background-modifier-hover,#ffffff0b);color:var(--text-muted,#b5bac1);font-size:15px;font-weight:700}
       #nt-dictionary-panel .nt-dict-icon-button:hover{background:var(--background-modifier-selected,#ffffff14);color:var(--text-normal,#f2f3f5)}
@@ -338,6 +339,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     title.append(make('small','',copy('dictionary')),make('strong','',result?.query || panel.dataset.query || ''));
     const firstReading = result?.segmented ? '' : result?.entries?.find(entry => entry.reading)?.reading || '';
     if (firstReading) title.querySelector('strong').append(make('span','nt-dict-reading',firstReading));
+    if (result?.selectionTranslation) title.append(make('p','nt-dict-selection-meaning',result.selectionTranslation));
     const listen = make('button','nt-dict-icon-button','▶'); listen.type='button'; listen.setAttribute('aria-label',copy('pronounce')); listen.title=copy('pronounce'); listen.addEventListener('click',()=>speak(result?.query || '',result?.sourceLanguage));
     const close = make('button','nt-dict-icon-button','×'); close.type='button'; close.setAttribute('aria-label',copy('close')); close.addEventListener('click',closePanel);
     head.append(title,listen,close);
@@ -652,6 +654,16 @@ mod tests {
         assert!(script.contains("nt-dict-other-sense"));
         assert!(script.contains("copy('otherMeanings')"));
         assert!(script.contains("문맥상 우선 표시"));
+    }
+
+    #[test]
+    fn selection_translation_stays_inside_the_existing_dictionary_header() {
+        let script = dictionary_ui_script(true, "ko", "ko", true);
+
+        assert!(script.contains("result?.selectionTranslation"));
+        assert!(script.contains("nt-dict-selection-meaning"));
+        assert!(!script.contains("문맥에 맞는 표현"));
+        assert!(!script.contains("문법 요소"));
     }
 
     #[test]
