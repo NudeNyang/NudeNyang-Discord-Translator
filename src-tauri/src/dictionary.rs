@@ -1198,6 +1198,15 @@ fn segment_lookup_terms(
         let mut candidates = vec![span.term.clone()];
         candidates.extend(inflection_lookup_terms(&span.term, detected_language));
         for candidate in candidates {
+            if candidate != span.term
+                && !segmented_inflection_candidate_is_plausible(
+                    &query_chars,
+                    detected_language,
+                    span,
+                )
+            {
+                continue;
+            }
             let available = if let Some(available) = availability.get(&candidate) {
                 *available
             } else {
@@ -1264,6 +1273,19 @@ fn segment_lookup_terms(
         }
     }
     Ok(terms)
+}
+
+fn segmented_inflection_candidate_is_plausible(
+    query_chars: &[char],
+    detected_language: &str,
+    span: &LookupSpan,
+) -> bool {
+    if detected_language != "ko" || span.start == 0 {
+        return true;
+    }
+    query_chars
+        .get(span.start - 1)
+        .is_none_or(|character| !character.is_alphanumeric())
 }
 
 fn segmentation_candidate_is_plausible(
@@ -2218,6 +2240,29 @@ mod tests {
 
         let exact = store.lookup("거지", Some("ko"), "ko").unwrap();
         assert!(exact.entries.iter().any(|entry| entry.headword == "거지"));
+    }
+
+    #[test]
+    fn korean_unknown_word_does_not_surface_an_inner_inflected_verb() {
+        let store = temporary_store("korean-inner-inflection");
+        store.install_bundled_pack("ko").unwrap();
+
+        let unknown = store
+            .lookup_with_context(
+                "샘알트만이 지갑을 탐내요",
+                "샘알트만이 지갑을 탐내요",
+                Some("ko"),
+                "ko",
+            )
+            .unwrap();
+        assert!(unknown.entries.iter().any(|entry| entry.headword == "지갑"));
+        assert!(!unknown.entries.iter().any(|entry| entry.headword == "내다"));
+
+        let standalone = store.lookup("돈을 내요", Some("ko"), "ko").unwrap();
+        assert!(standalone
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "내다"));
     }
 
     #[test]
