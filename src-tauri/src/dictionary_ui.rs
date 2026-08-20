@@ -271,12 +271,17 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     if (top + height > innerHeight - inset) top = Math.max(inset, rect.top - height - 10);
     panel.style.left = `${left}px`; panel.style.top = `${top}px`;
   };
+  const selectionMessageRowSelector = '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]';
+  const selectionPreviewRootSelector = 'article,[class*="embedFull_"],[class*="embedWrapper_"]';
   const activeSelection = () => {
     const selection = getSelection();
     if (!selection || selection.isCollapsed || selection.rangeCount !== 1) return null;
     const range = selection.getRangeAt(0);
     const node = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
-    const root = node?.closest?.('[id^="message-content-"]') || node?.closest?.('[data-dto-message-id]') || node?.closest?.('[data-dto-root-id]');
+    const directRoot = node?.closest?.('[id^="message-content-"]') || node?.closest?.('[data-dto-message-id]') || node?.closest?.('[data-dto-root-id]');
+    const messageRow = node?.closest?.(selectionMessageRowSelector);
+    const previewRoot = messageRow ? node?.closest?.(selectionPreviewRootSelector) : null;
+    const root = directRoot || previewRoot || messageRow;
     if (!root || root.closest('[contenteditable="true"]') || root.closest('#nt-dictionary-panel')) return null;
     const query = selection.toString().trim().replace(/\s+/g,' ');
     if (!query || [...query].length > 120) return null;
@@ -613,6 +618,16 @@ mod tests {
         assert!(!script.contains("__CONTROLLER_VERSION__"));
         assert!(!script.contains("rust-dictionary-ui-v3"));
         assert!(!script.contains("innerHTML"));
+    }
+
+    #[test]
+    fn link_preview_selection_falls_back_to_its_discord_message_row() {
+        let script = dictionary_ui_script(true, "ko", "ko", true);
+
+        assert!(script.contains("selectionMessageRowSelector"));
+        assert!(script.contains("node?.closest?.(selectionMessageRowSelector)"));
+        assert!(script.contains("const root = directRoot || previewRoot || messageRow"));
+        assert!(script.contains("article,[class*=\"embedFull_\"],[class*=\"embedWrapper_\"]"));
     }
 
     #[test]

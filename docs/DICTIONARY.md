@@ -1,6 +1,6 @@
 # Selection dictionary
 
-The dictionary can be enabled independently from message translation. Selecting up to 120 characters in a Discord message reveals an `Aa` action. Lookup starts only after the user activates it. Results may include a headword, reading, part of speech, definition, example, source, license, and operating-system speech synthesis.
+The dictionary can be enabled independently from message translation. Selecting up to 120 characters in a Discord message reveals an `Aa` action. The same selection path applies to text rendered inside link previews and social-post cards, even before the translation scanner assigns an internal root identifier to the card. Lookup starts only after the user activates it. Results may include a headword, reading, part of speech, definition, example, source, license, and operating-system speech synthesis.
 
 Installed packs and personal terms stay on the device in a dedicated `dictionary.db` SQLite file. Nearby message context is used only on the device and is never included in translation or external-dictionary requests. When the configured translation model is ready, the app may send the selected phrase and pack definitions that are unavailable in the interface language to that model. If the configured model is external, those texts leave the device; this transfer is disclosed in settings. Choosing the optional Wiktionary action also sends the selected phrase to the external site. Reference translations never replace source-authored dictionary rows.
 
