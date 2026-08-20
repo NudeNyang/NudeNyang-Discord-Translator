@@ -989,24 +989,6 @@ select:focus-visible,
   transform: translateY(-50%);
 }
 
-.source-language-actions {
-  position: sticky;
-  z-index: 1;
-  bottom: -4px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: 4px;
-  padding: 7px 4px 4px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-raised);
-}
-
-.source-language-actions .button {
-  min-height: 34px;
-  padding: 0 12px;
-}
-
 .select-group-label {
   display: block;
   padding: 8px 11px 4px;

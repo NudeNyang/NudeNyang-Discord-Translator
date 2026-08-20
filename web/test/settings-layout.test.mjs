@@ -207,8 +207,11 @@ test("incoming translation can be limited to selected source languages", () => {
   assert.match(markup, /id="source-language-select"/);
   assert.match(markup, /id="source-language-options"[^>]*aria-multiselectable="true"/);
   assert.match(markup, /모든 언어를 번역하거나 선택한 언어만 번역합니다/);
-  assert.match(script, /incoming_language_mode: state\.sourceLanguageDraftMode/);
-  assert.match(script, /incoming_source_languages: \[\.\.\.state\.sourceLanguageDraft\]/);
+  assert.doesNotMatch(markup, /source-language-cancel|source-language-apply/);
+  assert.doesNotMatch(styles, /source-language-actions/);
+  assert.doesNotMatch(script, /sourceLanguageDraft/);
+  assert.match(script, /nextIncomingSourceLanguageSelection/);
+  assert.match(script, /await applySettingsPatch\(patch\)/);
   assert.match(script, /filterLanguageOptions\(LANGUAGE_OPTIONS, elements\.sourceLanguageSearch\.value\)/);
   assert.match(styles, /\.source-language-option\[aria-selected="true"\]::after/);
 });

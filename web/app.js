@@ -4,6 +4,7 @@ import {
   localModelStorageDisplay,
   manualDiscordRestartAvailability,
   modelPreparationBanner,
+  nextIncomingSourceLanguageSelection,
   normalizeConfig,
   providerOperationAvailability,
   resolveEnabledState,
@@ -133,8 +134,6 @@ const state = {
   dictionaryStatus: null,
   dictionaryPersonalEntries: [],
   dictionaryPackProgress: new Map(),
-  sourceLanguageDraftMode: "all",
-  sourceLanguageDraft: new Set(),
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
@@ -163,8 +162,6 @@ const elements = {
   sourceLanguageSearch: document.querySelector("#source-language-search"),
   sourceLanguageOptions: document.querySelector("#source-language-options"),
   sourceLanguageEmpty: document.querySelector("#source-language-empty"),
-  sourceLanguageCancel: document.querySelector("#source-language-cancel"),
-  sourceLanguageApply: document.querySelector("#source-language-apply"),
   translationShortcutHint: document.querySelector("#translation-shortcut-hint"),
   outgoingShortcutHint: document.querySelector("#outgoing-shortcut-hint"),
   keepWarm: document.querySelector("#keep-warm"),
@@ -1573,12 +1570,10 @@ function selectedSourceLanguageLabel(mode, languages) {
   return `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
 }
 
-function renderSourceLanguagePicker({ draft = false } = {}) {
+function renderSourceLanguagePicker() {
   if (!elements.sourceLanguageSelect) return;
-  const mode = draft ? state.sourceLanguageDraftMode : state.config.incoming_language_mode;
-  const languages = draft
-    ? [...state.sourceLanguageDraft]
-    : state.config.incoming_source_languages;
+  const mode = state.config.incoming_language_mode;
+  const languages = state.config.incoming_source_languages;
   elements.sourceLanguageTrigger.querySelector(".select-trigger-label").textContent =
     selectedSourceLanguageLabel(mode, languages);
   for (const option of elements.sourceLanguageOptions.querySelectorAll(".select-option")) {
@@ -1586,6 +1581,37 @@ function renderSourceLanguagePicker({ draft = false } = {}) {
       ? mode === "all"
       : mode === "selected" && languages.includes(option.dataset.value);
     option.setAttribute("aria-selected", String(selected));
+  }
+}
+
+function setSourceLanguagePickerBusy(busy) {
+  elements.sourceLanguageOptions.setAttribute("aria-busy", String(busy));
+  for (const option of elements.sourceLanguageOptions.querySelectorAll(".select-option")) {
+    option.disabled = busy;
+  }
+}
+
+async function applySourceLanguageSelection(value) {
+  const previous = {
+    incoming_language_mode: state.config.incoming_language_mode,
+    incoming_source_languages: [...state.config.incoming_source_languages],
+  };
+  const patch = nextIncomingSourceLanguageSelection(
+    previous.incoming_language_mode,
+    previous.incoming_source_languages,
+    value,
+  );
+  state.config = normalizeConfig({ ...state.config, ...patch });
+  renderSourceLanguagePicker();
+  setSourceLanguagePickerBusy(true);
+  try {
+    await applySettingsPatch(patch);
+  } catch (error) {
+    state.config = normalizeConfig({ ...state.config, ...previous });
+    renderSourceLanguagePicker();
+    await showError("원문 언어 설정을 적용하지 못했습니다", String(error));
+  } finally {
+    setSourceLanguagePickerBusy(false);
   }
 }
 
@@ -1600,17 +1626,7 @@ function initializeSourceLanguagePicker() {
     option.dir = "auto";
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", "false");
-    option.addEventListener("click", () => {
-      if (value === "all") {
-        state.sourceLanguageDraftMode = "all";
-        state.sourceLanguageDraft.clear();
-      } else {
-        state.sourceLanguageDraftMode = "selected";
-        if (state.sourceLanguageDraft.has(value)) state.sourceLanguageDraft.delete(value);
-        else state.sourceLanguageDraft.add(value);
-      }
-      renderSourceLanguagePicker({ draft: true });
-    });
+    option.addEventListener("click", async () => applySourceLanguageSelection(value));
     elements.sourceLanguageOptions.append(option);
   };
 
@@ -1621,9 +1637,7 @@ function initializeSourceLanguagePicker() {
     const opening = !elements.sourceLanguageSelect.classList.contains("open");
     closeAllSelects();
     if (!opening) return;
-    state.sourceLanguageDraftMode = state.config.incoming_language_mode;
-    state.sourceLanguageDraft = new Set(state.config.incoming_source_languages);
-    renderSourceLanguagePicker({ draft: true });
+    renderSourceLanguagePicker();
     openSelect(elements.sourceLanguageSelect);
   });
   elements.sourceLanguageSearch.addEventListener("input", () => {
@@ -1643,24 +1657,6 @@ function initializeSourceLanguagePicker() {
     event.preventDefault();
     closeSelect(elements.sourceLanguageSelect);
     elements.sourceLanguageTrigger.focus();
-  });
-  elements.sourceLanguageCancel.addEventListener("click", () => {
-    closeSelect(elements.sourceLanguageSelect);
-    elements.sourceLanguageTrigger.focus();
-  });
-  elements.sourceLanguageApply.addEventListener("click", async () => {
-    const patch = {
-      incoming_language_mode: state.sourceLanguageDraftMode,
-      incoming_source_languages: [...state.sourceLanguageDraft],
-    };
-    closeSelect(elements.sourceLanguageSelect);
-    try {
-      await applySettingsPatch(patch);
-      elements.sourceLanguageTrigger.focus();
-    } catch (error) {
-      renderSourceLanguagePicker();
-      await showError("원문 언어 설정을 적용하지 못했습니다", String(error));
-    }
   });
 }
 

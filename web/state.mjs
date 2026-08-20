@@ -113,6 +113,28 @@ export function normalizeConfig(value = {}) {
   };
 }
 
+export function nextIncomingSourceLanguageSelection(mode, languages, value) {
+  if (value === "all") {
+    return {
+      incoming_language_mode: "all",
+      incoming_source_languages: [],
+    };
+  }
+
+  const selected = new Set(
+    mode === "selected" && Array.isArray(languages)
+      ? languages.filter(language => SUPPORTED_TARGET_LANGUAGES.includes(language))
+      : [],
+  );
+  if (selected.has(value)) selected.delete(value);
+  else if (SUPPORTED_TARGET_LANGUAGES.includes(value)) selected.add(value);
+
+  return {
+    incoming_language_mode: "selected",
+    incoming_source_languages: [...selected],
+  };
+}
+
 export function restartCountdownMessage(seconds) {
   return [
     "Discord 디버그 렌더러에 연결할 수 없습니다.",

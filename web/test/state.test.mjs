@@ -6,6 +6,7 @@ import {
   localModelStorageDisplay,
   manualDiscordRestartAvailability,
   modelPreparationBanner,
+  nextIncomingSourceLanguageSelection,
   normalizeConfig,
   providerOperationAvailability,
   resolveEnabledState,
@@ -193,6 +194,36 @@ test("incoming source language filter defaults to all and normalizes selected la
   });
   assert.equal(invalid.incoming_language_mode, "all");
   assert.deepEqual(invalid.incoming_source_languages, []);
+});
+
+test("incoming source language selection changes only through explicit option clicks", () => {
+  const japanese = nextIncomingSourceLanguageSelection("all", [], "ja");
+  assert.deepEqual(japanese, {
+    incoming_language_mode: "selected",
+    incoming_source_languages: ["ja"],
+  });
+
+  const none = nextIncomingSourceLanguageSelection(
+    japanese.incoming_language_mode,
+    japanese.incoming_source_languages,
+    "ja",
+  );
+  assert.deepEqual(none, {
+    incoming_language_mode: "selected",
+    incoming_source_languages: [],
+  });
+
+  assert.deepEqual(
+    nextIncomingSourceLanguageSelection(
+      none.incoming_language_mode,
+      none.incoming_source_languages,
+      "all",
+    ),
+    {
+      incoming_language_mode: "all",
+      incoming_source_languages: [],
+    },
+  );
 });
 
 test("restart message contains countdown and data-loss warning", () => {
