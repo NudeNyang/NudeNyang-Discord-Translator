@@ -831,6 +831,14 @@ fn segment_lookup_terms(
     if spans.is_empty() {
         return Ok(Vec::new());
     }
+    let query_chars = normalized_query.chars().collect::<Vec<_>>();
+    let spans = spans
+        .into_iter()
+        .filter(|span| segmentation_candidate_is_plausible(&query_chars, detected_language, span))
+        .collect::<Vec<_>>();
+    if spans.is_empty() {
+        return Ok(Vec::new());
+    }
 
     let mut dictionary_exists = connection
         .prepare(
@@ -908,6 +916,36 @@ fn segment_lookup_terms(
         }
     }
     Ok(terms)
+}
+
+fn segmentation_candidate_is_plausible(
+    query_chars: &[char],
+    detected_language: &str,
+    span: &LookupSpan,
+) -> bool {
+    match detected_language {
+        "ko" => !is_attached_korean_grammar_homograph(query_chars, span),
+        _ => true,
+    }
+}
+
+fn is_attached_korean_grammar_homograph(query_chars: &[char], span: &LookupSpan) -> bool {
+    if span.term != "거지" || span.start == 0 || span.end > query_chars.len() {
+        return false;
+    }
+
+    let previous = query_chars[span.start - 1];
+    previous == '는'
+        || matches!(previous, '이' | '그' | '저')
+        || korean_syllable_ends_in_n_or_l(previous)
+}
+
+fn korean_syllable_ends_in_n_or_l(character: char) -> bool {
+    let codepoint = character as u32;
+    if !(0xAC00..=0xD7A3).contains(&codepoint) {
+        return false;
+    }
+    matches!((codepoint - 0xAC00) % 28, 4 | 8)
 }
 
 fn lookup_spans(normalized_query: &str, detected_language: &str) -> Vec<LookupSpan> {
@@ -1302,7 +1340,10 @@ fn now_seconds() -> f64 {
 mod tests {
     use std::collections::HashMap;
 
-    use super::{DictionaryStore, PersonalDictionaryEntry, StarterEntry, StarterPack};
+    use super::{
+        lookup_spans, segmentation_candidate_is_plausible, DictionaryStore,
+        PersonalDictionaryEntry, StarterEntry, StarterPack,
+    };
 
     fn temporary_store(name: &str) -> DictionaryStore {
         let path = std::env::temp_dir().join(format!(
@@ -1580,5 +1621,62 @@ mod tests {
             .iter()
             .skip(1)
             .any(|entry| entry.definition.contains("(역사)")));
+    }
+
+    #[test]
+    fn korean_clause_ending_does_not_surface_an_unrelated_noun_homograph() {
+        let store = temporary_store("korean-grammar-homograph");
+        store.install_bundled_pack("ko").unwrap();
+
+        let result = store
+            .lookup_with_context(
+                "그만큼 좋아하는게 많다는거지~",
+                "그만큼 좋아하는게 많다는거지~",
+                Some("ko"),
+                "ko",
+            )
+            .unwrap();
+        let headwords = result
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+
+        assert!(headwords.contains(&"그만큼"));
+        assert!(headwords.contains(&"많다"));
+        assert!(!headwords.contains(&"거지"));
+
+        let lexical = store.lookup("가난한 거지", Some("ko"), "ko").unwrap();
+        assert!(lexical.entries.iter().any(|entry| entry.headword == "거지"));
+
+        let exact = store.lookup("거지", Some("ko"), "ko").unwrap();
+        assert!(exact.entries.iter().any(|entry| entry.headword == "거지"));
+    }
+
+    #[test]
+    fn korean_grammar_homograph_filter_is_position_aware() {
+        for query in [
+            "먹는거지",
+            "좋은거지",
+            "할거지",
+            "이거지",
+            "그거지",
+            "저거지",
+        ] {
+            let chars = query.chars().collect::<Vec<_>>();
+            let span = lookup_spans(query, "ko")
+                .into_iter()
+                .find(|span| span.term == "거지")
+                .unwrap();
+            assert!(!segmentation_candidate_is_plausible(&chars, "ko", &span));
+        }
+
+        let lexical = "가난한 거지";
+        let chars = lexical.chars().collect::<Vec<_>>();
+        let span = lookup_spans(lexical, "ko")
+            .into_iter()
+            .find(|span| span.term == "거지")
+            .unwrap();
+        assert!(segmentation_candidate_is_plausible(&chars, "ko", &span));
     }
 }
