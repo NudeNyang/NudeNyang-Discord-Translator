@@ -89,6 +89,23 @@
                       <div class="setting-copy"><h3>표시 언어</h3><p>원문과 같은 언어는 그대로 표시합니다.</p></div>
                       <div class="custom-select" data-field="target_language"></div>
                     </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>번역할 원문 언어</h3><p>모든 언어를 번역하거나 선택한 언어만 번역합니다.</p></div>
+                      <div class="custom-select source-language-select" id="source-language-select">
+                        <button class="select-trigger" id="source-language-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="select-trigger-label">모든 언어</span></button>
+                        <div class="select-menu source-language-menu">
+                          <div class="select-search">
+                            <input class="select-search-input" id="source-language-search" type="search" autocomplete="off" spellcheck="false" placeholder="언어 검색" aria-label="언어 검색" />
+                          </div>
+                          <div class="select-options" id="source-language-options" role="listbox" aria-multiselectable="true"></div>
+                          <div class="select-search-empty" id="source-language-empty" hidden>검색 결과 없음</div>
+                          <div class="source-language-actions">
+                            <button class="button ghost source-language-cancel" id="source-language-cancel" type="button">취소</button>
+                            <button class="button primary source-language-apply" id="source-language-apply" type="button">확인</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </article>
 
                   <article class="settings-card">

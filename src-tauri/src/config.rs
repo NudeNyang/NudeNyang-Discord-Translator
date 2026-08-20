@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -67,6 +68,8 @@ impl Default for HotkeyConfig {
 #[serde(default)]
 pub struct AppConfig {
     pub target_language: String,
+    pub incoming_language_mode: String,
+    pub incoming_source_languages: Vec<String>,
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
@@ -103,6 +106,8 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             target_language: "ko".to_string(),
+            incoming_language_mode: "all".to_string(),
+            incoming_source_languages: Vec::new(),
             enabled: true,
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
@@ -247,6 +252,32 @@ impl AppConfig {
             object.insert(
                 "target_language".to_string(),
                 Value::String("ko".to_string()),
+            );
+        }
+        if object
+            .get("incoming_language_mode")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "all" | "selected"))
+        {
+            object.insert(
+                "incoming_language_mode".to_string(),
+                Value::String("all".to_string()),
+            );
+        }
+        if let Some(values) = object.get("incoming_source_languages") {
+            let mut seen = HashSet::new();
+            let normalized = values
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .filter(|value| is_supported_language_code(value))
+                .filter(|value| seen.insert((*value).to_string()))
+                .map(|value| Value::String(value.to_string()))
+                .collect();
+            object.insert(
+                "incoming_source_languages".to_string(),
+                Value::Array(normalized),
             );
         }
         if object
@@ -517,6 +548,8 @@ mod tests {
         assert_eq!(restored.translation_history_retention_days, 30);
         assert!(restored.dictionary_enabled);
         assert_eq!(restored.dictionary_external_provider, "wiktionary");
+        assert_eq!(restored.incoming_language_mode, "all");
+        assert!(restored.incoming_source_languages.is_empty());
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
@@ -547,6 +580,29 @@ mod tests {
         let invalid = AppConfig::from_value(json!({"image_ocr_quality": "maximum"}))
             .expect("invalid OCR quality mode should reset");
         assert_eq!(invalid.image_ocr_quality, "adaptive");
+    }
+
+    #[test]
+    fn incoming_language_filter_keeps_supported_unique_language_codes() {
+        let config = AppConfig::from_value(json!({
+            "incoming_language_mode": "selected",
+            "incoming_source_languages": ["ja", "invalid", "en", "ja", 42]
+        }))
+        .expect("normalize incoming source languages");
+
+        assert_eq!(config.incoming_language_mode, "selected");
+        assert_eq!(
+            config.incoming_source_languages,
+            vec!["ja".to_string(), "en".to_string()]
+        );
+
+        let invalid = AppConfig::from_value(json!({
+            "incoming_language_mode": "exclude",
+            "incoming_source_languages": "ja"
+        }))
+        .expect("invalid incoming filter should reset");
+        assert_eq!(invalid.incoming_language_mode, "all");
+        assert!(invalid.incoming_source_languages.is_empty());
     }
 
     #[test]

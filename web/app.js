@@ -133,6 +133,8 @@ const state = {
   dictionaryStatus: null,
   dictionaryPersonalEntries: [],
   dictionaryPackProgress: new Map(),
+  sourceLanguageDraftMode: "all",
+  sourceLanguageDraft: new Set(),
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
@@ -156,6 +158,13 @@ const elements = {
   dictionaryStorageSummary: document.querySelector("#dictionary-storage-summary"),
   autostart: document.querySelector("#autostart"),
   outgoingAutoHelp: document.querySelector("#outgoing-auto-help"),
+  sourceLanguageSelect: document.querySelector("#source-language-select"),
+  sourceLanguageTrigger: document.querySelector("#source-language-trigger"),
+  sourceLanguageSearch: document.querySelector("#source-language-search"),
+  sourceLanguageOptions: document.querySelector("#source-language-options"),
+  sourceLanguageEmpty: document.querySelector("#source-language-empty"),
+  sourceLanguageCancel: document.querySelector("#source-language-cancel"),
+  sourceLanguageApply: document.querySelector("#source-language-apply"),
   translationShortcutHint: document.querySelector("#translation-shortcut-hint"),
   outgoingShortcutHint: document.querySelector("#outgoing-shortcut-hint"),
   keepWarm: document.querySelector("#keep-warm"),
@@ -1351,6 +1360,7 @@ function applyUiLanguage(language) {
   renderAutostart();
   renderStorageStatus();
   renderLocalResourceGuidance();
+  renderSourceLanguagePicker();
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -1554,6 +1564,106 @@ function setSelectValue(field, value) {
   if (field === "outgoing_translator") renderOutgoingModelGuidance();
 }
 
+function selectedSourceLanguageLabel(mode, languages) {
+  if (mode === "all") return translateCopy(currentUiLanguage(), "모든 언어");
+  const labels = languages
+    .map(code => LANGUAGE_OPTIONS.find(([value]) => value === code)?.[1] || code);
+  if (labels.length === 0) return translateCopy(currentUiLanguage(), "선택한 언어 없음");
+  if (labels.length <= 2) return labels.join(", ");
+  return `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+}
+
+function renderSourceLanguagePicker({ draft = false } = {}) {
+  if (!elements.sourceLanguageSelect) return;
+  const mode = draft ? state.sourceLanguageDraftMode : state.config.incoming_language_mode;
+  const languages = draft
+    ? [...state.sourceLanguageDraft]
+    : state.config.incoming_source_languages;
+  elements.sourceLanguageTrigger.querySelector(".select-trigger-label").textContent =
+    selectedSourceLanguageLabel(mode, languages);
+  for (const option of elements.sourceLanguageOptions.querySelectorAll(".select-option")) {
+    const selected = option.dataset.value === "all"
+      ? mode === "all"
+      : mode === "selected" && languages.includes(option.dataset.value);
+    option.setAttribute("aria-selected", String(selected));
+  }
+}
+
+function initializeSourceLanguagePicker() {
+  const appendOption = (value, label, localized = false) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "select-option source-language-option";
+    option.dataset.value = value;
+    option.textContent = localized ? translateCopy(currentUiLanguage(), label) : label;
+    if (localized) option.dataset.i18nKey = label;
+    option.dir = "auto";
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", "false");
+    option.addEventListener("click", () => {
+      if (value === "all") {
+        state.sourceLanguageDraftMode = "all";
+        state.sourceLanguageDraft.clear();
+      } else {
+        state.sourceLanguageDraftMode = "selected";
+        if (state.sourceLanguageDraft.has(value)) state.sourceLanguageDraft.delete(value);
+        else state.sourceLanguageDraft.add(value);
+      }
+      renderSourceLanguagePicker({ draft: true });
+    });
+    elements.sourceLanguageOptions.append(option);
+  };
+
+  appendOption("all", "모든 언어", true);
+  for (const [value, label] of LANGUAGE_OPTIONS) appendOption(value, label);
+
+  elements.sourceLanguageTrigger.addEventListener("click", () => {
+    const opening = !elements.sourceLanguageSelect.classList.contains("open");
+    closeAllSelects();
+    if (!opening) return;
+    state.sourceLanguageDraftMode = state.config.incoming_language_mode;
+    state.sourceLanguageDraft = new Set(state.config.incoming_source_languages);
+    renderSourceLanguagePicker({ draft: true });
+    openSelect(elements.sourceLanguageSelect);
+  });
+  elements.sourceLanguageSearch.addEventListener("input", () => {
+    const matches = new Set(
+      filterLanguageOptions(LANGUAGE_OPTIONS, elements.sourceLanguageSearch.value)
+        .map(([value]) => String(value)),
+    );
+    for (const option of elements.sourceLanguageOptions.querySelectorAll(".select-option")) {
+      option.hidden = option.dataset.value === "all"
+        ? elements.sourceLanguageSearch.value.trim().length > 0
+        : !matches.has(option.dataset.value);
+    }
+    elements.sourceLanguageEmpty.hidden = matches.size > 0;
+  });
+  elements.sourceLanguageSearch.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeSelect(elements.sourceLanguageSelect);
+    elements.sourceLanguageTrigger.focus();
+  });
+  elements.sourceLanguageCancel.addEventListener("click", () => {
+    closeSelect(elements.sourceLanguageSelect);
+    elements.sourceLanguageTrigger.focus();
+  });
+  elements.sourceLanguageApply.addEventListener("click", async () => {
+    const patch = {
+      incoming_language_mode: state.sourceLanguageDraftMode,
+      incoming_source_languages: [...state.sourceLanguageDraft],
+    };
+    closeSelect(elements.sourceLanguageSelect);
+    try {
+      await applySettingsPatch(patch);
+      elements.sourceLanguageTrigger.focus();
+    } catch (error) {
+      renderSourceLanguagePicker();
+      await showError("원문 언어 설정을 적용하지 못했습니다", String(error));
+    }
+  });
+}
+
 function closeSelect(element) {
   element.classList.remove("open", "drop-up");
   element.querySelector(".select-trigger").setAttribute("aria-expanded", "false");
@@ -1566,6 +1676,7 @@ function closeAllSelects() {
 function renderConfig(config) {
   state.config = normalizeConfig(config);
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
+  renderSourceLanguagePicker();
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   setSwitch(
@@ -1987,7 +2098,8 @@ async function initializeSettingsUi() {
   await invoke("engine_ui_ready");
 }
 
-document.querySelectorAll(".custom-select").forEach(renderSelect);
+document.querySelectorAll(".custom-select[data-field]").forEach(renderSelect);
+initializeSourceLanguagePicker();
 populateDictionaryLanguageSelects();
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();

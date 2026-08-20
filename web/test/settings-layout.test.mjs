@@ -202,6 +202,17 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.doesNotMatch(script, /speech_style/);
 });
 
+test("incoming translation can be limited to selected source languages", () => {
+  assert.match(markup, /<h3>번역할 원문 언어<\/h3>/);
+  assert.match(markup, /id="source-language-select"/);
+  assert.match(markup, /id="source-language-options"[^>]*aria-multiselectable="true"/);
+  assert.match(markup, /모든 언어를 번역하거나 선택한 언어만 번역합니다/);
+  assert.match(script, /incoming_language_mode: state\.sourceLanguageDraftMode/);
+  assert.match(script, /incoming_source_languages: \[\.\.\.state\.sourceLanguageDraft\]/);
+  assert.match(script, /filterLanguageOptions\(LANGUAGE_OPTIONS, elements\.sourceLanguageSearch\.value\)/);
+  assert.match(styles, /\.source-language-option\[aria-selected="true"\]::after/);
+});
+
 test("only the incoming and outgoing direction icons use distinct semantic accents", () => {
   assert.doesNotMatch(markup, /message-settings-card/);
   assert.match(markup, /class="card-index message-direction-icon message-direction-icon--incoming" aria-hidden="true">↓<\/span>/);

@@ -175,6 +175,26 @@ test("all supported display languages survive settings normalization", () => {
   assert.equal(normalizeConfig({ target_language: "unsupported" }).target_language, "ko");
 });
 
+test("incoming source language filter defaults to all and normalizes selected languages", () => {
+  const defaults = normalizeConfig({});
+  assert.equal(defaults.incoming_language_mode, "all");
+  assert.deepEqual(defaults.incoming_source_languages, []);
+
+  const selected = normalizeConfig({
+    incoming_language_mode: "selected",
+    incoming_source_languages: ["ja", "invalid", "en", "ja"],
+  });
+  assert.equal(selected.incoming_language_mode, "selected");
+  assert.deepEqual(selected.incoming_source_languages, ["ja", "en"]);
+
+  const invalid = normalizeConfig({
+    incoming_language_mode: "exclude",
+    incoming_source_languages: "ja",
+  });
+  assert.equal(invalid.incoming_language_mode, "all");
+  assert.deepEqual(invalid.incoming_source_languages, []);
+});
+
 test("restart message contains countdown and data-loss warning", () => {
   const message = restartCountdownMessage(15);
 

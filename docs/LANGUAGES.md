@@ -39,6 +39,8 @@ Detection favors an unknown result over a confident-looking mistake.
 
 When detection remains uncertain, NudeNyang uses the recent channel language or asks the user to choose, depending on the outgoing-translation settings.
 
+Incoming text translation uses all detected source languages by default. Users can instead select one or more source languages; messages, server names, and channel names detected as other languages remain unchanged. Unknown text also remains unchanged. This filter does not apply to image translation requested from an image button.
+
 ## Translation providers
 
 | Provider | Language handling |

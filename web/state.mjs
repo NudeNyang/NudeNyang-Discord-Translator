@@ -8,6 +8,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   dictionary_enabled: true,
   dictionary_external_provider: "wiktionary",
   target_language: "ko",
+  incoming_language_mode: "all",
+  incoming_source_languages: [],
   translator: "hymt_1_8b",
   outgoing_translator: "hymt_1_8b",
   hymt_device: "auto",
@@ -70,6 +72,13 @@ export function normalizeConfig(value = {}) {
   )
     ? value.outgoing_target_language
     : DEFAULT_CONFIG.outgoing_target_language;
+  const incomingLanguageMode = ["all", "selected"].includes(value.incoming_language_mode)
+    ? value.incoming_language_mode
+    : DEFAULT_CONFIG.incoming_language_mode;
+  const incomingSourceLanguages = [...new Set(
+    (Array.isArray(value.incoming_source_languages) ? value.incoming_source_languages : [])
+      .filter(language => SUPPORTED_TARGET_LANGUAGES.includes(language)),
+  )];
   const uiLanguage = ["auto", ...SUPPORTED_TARGET_LANGUAGES].includes(value.ui_language)
     ? value.ui_language
     : DEFAULT_CONFIG.ui_language;
@@ -90,6 +99,8 @@ export function normalizeConfig(value = {}) {
     ...DEFAULT_CONFIG,
     ...value,
     target_language: targetLanguage,
+    incoming_language_mode: incomingLanguageMode,
+    incoming_source_languages: incomingSourceLanguages,
     outgoing_target_language: outgoingTargetLanguage,
     ui_language: uiLanguage,
     translation_history_retention_days: retentionDays,

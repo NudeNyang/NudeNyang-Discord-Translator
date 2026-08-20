@@ -970,6 +970,43 @@ select:focus-visible,
   outline-offset: -2px;
 }
 
+.source-language-menu {
+  max-height: 320px;
+}
+
+.source-language-option {
+  position: relative;
+  padding-inline-end: 34px;
+}
+
+.source-language-option[aria-selected="true"]::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 12px;
+  color: var(--accent-strong);
+  font-weight: 800;
+  transform: translateY(-50%);
+}
+
+.source-language-actions {
+  position: sticky;
+  z-index: 1;
+  bottom: -4px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 7px 4px 4px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.source-language-actions .button {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
 .select-group-label {
   display: block;
   padding: 8px 11px 4px;

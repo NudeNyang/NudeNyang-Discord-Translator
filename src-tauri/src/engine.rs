@@ -174,6 +174,7 @@ struct TranslationBatch {
     view_epoch: u64,
     view_scope: String,
     target: Language,
+    allowed_sources: Option<HashSet<Language>>,
     parts: Vec<DomPart>,
     context_scope: String,
     queued_at: Instant,
@@ -589,6 +590,9 @@ fn run_controller(
                     let history_retention_changed = updated.translation_history_retention_days
                         != config.translation_history_retention_days;
                     let target_changed = updated.target_language != config.target_language;
+                    let incoming_languages_changed = updated.incoming_language_mode
+                        != config.incoming_language_mode
+                        || updated.incoming_source_languages != config.incoming_source_languages;
                     let image_ocr_quality_changed =
                         updated.image_ocr_quality != config.image_ocr_quality;
                     let mut requested_preparation = translator_preparation_plan(&config, &updated);
@@ -608,7 +612,11 @@ fn run_controller(
                         updated.dictionary_enabled != config.dictionary_enabled;
                     let warm_changed =
                         updated.keep_local_model_warm != config.keep_local_model_warm;
-                    if target_changed || runtime_changed || image_ocr_quality_changed {
+                    if target_changed
+                        || incoming_languages_changed
+                        || runtime_changed
+                        || image_ocr_quality_changed
+                    {
                         reset_translation_state(
                             &mut client,
                             &mut states,
@@ -1118,6 +1126,7 @@ fn run_controller(
                     &mut display_view,
                     generation,
                     target,
+                    incoming_allowed_sources(&config),
                     display_batch_item_limit(&config),
                     &worker_tx,
                 )?;
@@ -1561,6 +1570,7 @@ fn scan_dom(
     display_view: &mut DisplayViewState,
     generation: u64,
     target: Language,
+    allowed_sources: Option<HashSet<Language>>,
     max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
 ) -> Result<bool, String> {
@@ -1588,6 +1598,7 @@ fn scan_dom(
                 view_epoch: display_view.epoch,
                 view_scope: display_view.scope.clone(),
                 target,
+                allowed_sources,
                 parts,
                 context_scope,
                 queued_at: Instant::now(),
@@ -2468,11 +2479,12 @@ fn run_translation_worker(
                     .iter()
                     .map(incoming_context_key)
                     .collect::<Vec<_>>();
-                let values = service.translate_many_for_incoming_contextual(
+                let values = service.translate_many_for_incoming_contextual_filtered(
                     &texts,
                     &message_keys,
                     &batch.context_scope,
                     batch.target,
+                    batch.allowed_sources.as_ref(),
                 );
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,
@@ -2969,6 +2981,16 @@ fn poll_interval(capture_fps: u32) -> Duration {
 
 fn display_translation_is_ready(config: &AppConfig, active_translator: &str) -> bool {
     config.enabled && active_translator == config.translator
+}
+
+fn incoming_allowed_sources(config: &AppConfig) -> Option<HashSet<Language>> {
+    (config.incoming_language_mode == "selected").then(|| {
+        config
+            .incoming_source_languages
+            .iter()
+            .filter_map(|code| Language::try_from(code.as_str()).ok())
+            .collect()
+    })
 }
 
 fn translator_label(name: &str) -> &str {
@@ -3536,6 +3558,7 @@ mod tests {
                     view_epoch,
                     view_scope: context_scope.to_string(),
                     target: Language::Korean,
+                    allowed_sources: None,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
                         item_id: item_id.to_string(),
@@ -3599,6 +3622,7 @@ mod tests {
                 view_epoch: 1,
                 view_scope: "/channels/server-a/channel-a".to_string(),
                 target: Language::Korean,
+                allowed_sources: None,
                 parts: vec![DomPart {
                     kind: "message".to_string(),
                     item_id: "previous-viewport".to_string(),
@@ -3642,6 +3666,7 @@ mod tests {
                     view_epoch: 1,
                     view_scope: "/channels/test/current".to_string(),
                     target: Language::Korean,
+                    allowed_sources: None,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
                         item_id: item_id.to_string(),
