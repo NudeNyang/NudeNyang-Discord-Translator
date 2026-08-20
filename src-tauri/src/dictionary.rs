@@ -1437,29 +1437,33 @@ fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
     for group in &mut groups {
         group.sort_by(|left, right| {
             contextual_sense_score(right, &normalized_context, context_language)
-                .cmp(&contextual_sense_score(
-                    left,
-                    &normalized_context,
-                    context_language,
-                ))
+                .ranking
+                .cmp(&contextual_sense_score(left, &normalized_context, context_language).ranking)
                 .then_with(|| left.sense_rank.cmp(&right.sense_rank))
                 .then_with(|| left.entry_id.cmp(&right.entry_id))
         });
-        if group.len() > 1
-            && contextual_sense_score(&group[0], &normalized_context, context_language)
-                > contextual_sense_score(&group[1], &normalized_context, context_language)
-        {
-            group[0].context_recommended = true;
+        if group.len() > 1 {
+            let first = contextual_sense_score(&group[0], &normalized_context, context_language);
+            let second = contextual_sense_score(&group[1], &normalized_context, context_language);
+            if first.evidence >= 24 && first.ranking.saturating_sub(second.ranking) >= 12 {
+                group[0].context_recommended = true;
+            }
         }
     }
     entries.extend(groups.into_iter().flatten());
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct ContextualSenseScore {
+    ranking: i32,
+    evidence: i32,
 }
 
 fn contextual_sense_score(
     entry: &DictionaryEntry,
     context: &str,
     context_language: Language,
-) -> i32 {
+) -> ContextualSenseScore {
     let displayed_language =
         Language::try_from(entry.definition_language.as_str()).unwrap_or(Language::Unknown);
     let (definition, definition_language) =
@@ -1476,15 +1480,15 @@ fn contextual_sense_score(
     let comparable_language = context_language != Language::Unknown
         && definition_language != Language::Unknown
         && context_language == definition_language;
-    let mut score = 0;
+    let mut score = ContextualSenseScore::default();
     if comparable_language {
-        score += normalized_definition.chars().count().min(80) as i32 / 4;
         for token in normalized_definition
             .split(|character: char| !character.is_alphanumeric())
-            .filter(|token| token.chars().count() >= 2)
+            .filter(|token| contextual_token_is_informative(token, definition_language))
         {
             if context.contains(token) {
-                score += 12;
+                score.ranking += 12;
+                score.evidence += 12;
             }
         }
     }
@@ -1511,7 +1515,12 @@ fn contextual_sense_score(
         ]
         .iter()
         .any(|cue| context.contains(cue));
-        score -= if historical_context { 10 } else { 80 };
+        if historical_context {
+            score.ranking += 24;
+            score.evidence += 24;
+        } else {
+            score.ranking -= 80;
+        }
     }
     if dated {
         let dated_context = [
@@ -1519,9 +1528,79 @@ fn contextual_sense_score(
         ]
         .iter()
         .any(|cue| context.contains(cue));
-        score -= if dated_context { 10 } else { 60 };
+        if dated_context {
+            score.ranking += 24;
+            score.evidence += 24;
+        } else {
+            score.ranking -= 60;
+        }
+    }
+    let figurative = [
+        "(비유)",
+        "비유적으로",
+        "figurative",
+        "metaphorical",
+        "比喩",
+        "比喻",
+    ]
+    .iter()
+    .any(|marker| normalized_definition.contains(marker));
+    if figurative {
+        let figurative_context = [
+            "비유",
+            "은유",
+            "상징",
+            "마치",
+            "처럼",
+            "figurative",
+            "metaphor",
+            "symbol",
+            "比喩",
+            "比喻",
+            "象徴",
+            "象征",
+        ]
+        .iter()
+        .any(|cue| context.contains(cue));
+        if figurative_context {
+            score.ranking += 24;
+            score.evidence += 24;
+        } else {
+            score.ranking -= 40;
+        }
     }
     score
+}
+
+fn contextual_token_is_informative(token: &str, language: Language) -> bool {
+    if token.chars().count() < 2 {
+        return false;
+    }
+    let common = match language {
+        Language::Korean => [
+            "있다",
+            "하다",
+            "되다",
+            "것",
+            "것이",
+            "것을",
+            "말",
+            "사람",
+            "무엇",
+            "어떤",
+            "또는",
+            "따위",
+            "이르다",
+        ]
+        .as_slice(),
+        Language::English => [
+            "the", "and", "that", "this", "with", "from", "into", "person", "thing", "be", "is",
+            "are", "or",
+        ]
+        .as_slice(),
+        _ => &[],
+    };
+    !common.contains(&token)
 }
 
 fn starter_catalog() -> Result<StarterCatalog, String> {
@@ -1896,7 +1975,7 @@ mod tests {
     }
 
     #[test]
-    fn homonymous_senses_are_preserved_and_ranked_without_rewriting_definitions() {
+    fn homonymous_senses_keep_the_source_order_until_context_evidence_is_strong() {
         let store = temporary_store("contextual-senses");
         store
             .install_pack(&StarterPack {
@@ -1909,13 +1988,13 @@ mod tests {
                 license: "Test".to_string(),
                 edition: "mini".to_string(),
                 entries: vec![
-                    test_sense("정신", "(역사) 궁궐 안에서 벼슬하는 신하.", 0),
-                    test_sense("정신", "어떤 일에 앞장서는 것.", 1),
                     test_sense(
                         "정신",
                         "사람의 느낌, 마음 따위를 아우러 이르는 말. 또는 생각하고 판단하는 능력. 또는 마음 자세나 상태.",
-                        2,
+                        0,
                     ),
+                    test_sense("정신", "어떤 일에 앞장서는 것.", 1),
+                    test_sense("정신", "(역사) 궁궐 안에서 벼슬하는 신하.", 2),
                 ],
             })
             .unwrap();
@@ -1931,7 +2010,10 @@ mod tests {
         assert!(conversational.segmented);
         assert_eq!(conversational.entries.len(), 3);
         assert!(conversational.entries[0].definition.contains("마음"));
-        assert!(conversational.entries[0].context_recommended);
+        assert!(!conversational
+            .entries
+            .iter()
+            .any(|entry| entry.context_recommended));
         assert!(conversational
             .entries
             .iter()
@@ -1946,6 +2028,7 @@ mod tests {
             )
             .unwrap();
         assert!(historical.entries[0].definition.contains("궁궐"));
+        assert!(historical.entries[0].context_recommended);
     }
 
     #[test]
@@ -2160,7 +2243,7 @@ mod tests {
     }
 
     #[test]
-    fn korean_practical_pack_preserves_and_ranks_the_reported_mind_senses() {
+    fn korean_practical_pack_preserves_and_safely_orders_the_reported_mind_senses() {
         let catalog = super::practical_catalog("ko").unwrap();
         let senses = catalog.packs[0]
             .entries
@@ -2189,7 +2272,7 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(mind_senses.len(), 6);
         assert!(mind_senses[0].definition.contains("마음"));
-        assert!(mind_senses[0].context_recommended);
+        assert!(!mind_senses.iter().any(|entry| entry.context_recommended));
         assert!(mind_senses
             .iter()
             .skip(1)
@@ -2315,6 +2398,15 @@ mod tests {
             .iter()
             .any(|entry| entry.headword == "잠들다"));
         assert!(!result.entries.iter().any(|entry| entry.headword == "었었"));
+
+        let sleep_senses = result
+            .entries
+            .iter()
+            .filter(|entry| entry.headword == "잠들다")
+            .collect::<Vec<_>>();
+        assert_eq!(sleep_senses.len(), 2);
+        assert!(sleep_senses[0].definition.contains("잠을 자고"));
+        assert!(!sleep_senses[0].context_recommended);
     }
 
     #[test]

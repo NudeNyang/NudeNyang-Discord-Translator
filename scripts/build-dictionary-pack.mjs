@@ -53,6 +53,46 @@ function firstText(values) {
   return values.map(value => String(value || "").trim()).find(Boolean) || "";
 }
 
+function normalizedEvidenceText(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .toLocaleLowerCase(values["gloss-language"])
+    .replace(/[\s.;,:!?()[\]{}'"“”‘’·・]+/gu, "")
+    .trim();
+}
+
+function senseSourcePriority(sense, rowTranslations, originalIndex) {
+  const glosses = (sense?.glosses || [])
+    .map(value => String(value || "").trim())
+    .filter(Boolean);
+  const normalizedGlosses = new Set(glosses.map(normalizedEvidenceText).filter(Boolean));
+  const linkedTranslations = rowTranslations.filter(translation =>
+    normalizedGlosses.has(normalizedEvidenceText(translation?.sense)),
+  ).length;
+  const exampleCount = Array.isArray(sense?.examples) ? sense.examples.length : 0;
+  const tagMarkers = [
+    ...(Array.isArray(sense?.tags) ? sense.tags : []),
+    ...(Array.isArray(sense?.raw_tags) ? sense.raw_tags : []),
+  ].map(value => String(value || "").normalize("NFKC").toLocaleLowerCase(values["gloss-language"]).trim());
+  const markedByTag = markers => tagMarkers.some(tag => markers.includes(tag));
+  const markedByGloss = markerPattern => glosses.some(gloss => markerPattern.test(
+    gloss.normalize("NFKC").toLocaleLowerCase(values["gloss-language"]),
+  ));
+  const historical = markedByTag(["historical", "archaic", "역사", "역사적", "고대", "古語", "古代", "历史", "歷史"])
+    || markedByGloss(/^\s*[\[(（](?:역사|역사적|고대|historical|archaic|古語|古代|历史|歷史)[\])）]/u);
+  const dated = markedByTag(["obsolete", "dated", "rare", "고어", "옛말", "폐어", "古い", "廃語", "过时", "過時"])
+    || markedByGloss(/^\s*[\[(（](?:고어|옛말|폐어|obsolete|dated|rare|古い|廃語|过时|過時)[\])）]/u);
+  const figurative = markedByTag(["figurative", "figuratively", "metaphorical", "비유", "비유적", "比喩", "比喻"])
+    || markedByGloss(/^\s*(?:[\[(（](?:비유|비유적|figurative|metaphorical|比喩|比喻)[\])）]|비유적으로\b|figuratively\b)/u);
+
+  let priority = linkedTranslations * 4 + Math.min(exampleCount, 3);
+  if (historical) priority -= 100;
+  if (dated) priority -= 80;
+  if (figurative) priority -= 40;
+
+  return { priority, originalIndex };
+}
+
 const source = createReadStream(values.input);
 const input = values.input.toLowerCase().endsWith(".gz") ? source.pipe(createGunzip()) : source;
 input.setEncoding("utf8");
@@ -77,7 +117,16 @@ for await (const line of lines) {
   const reading = firstText(row.sounds?.map(sound => sound?.ipa || sound?.zh_pron || sound?.other));
   const senses = Array.isArray(row.senses) && row.senses.length ? row.senses : [{ glosses: row.glosses || [] }];
   const definitions = definitionsByHeadword.get(normalized) || new Set();
-  for (const sense of senses) {
+  const rowTranslations = Array.isArray(row.translations) ? row.translations : [];
+  const orderedSenses = senses
+    .map((sense, originalIndex) => ({
+      sense,
+      ...senseSourcePriority(sense, rowTranslations, originalIndex),
+    }))
+    .sort((left, right) =>
+      right.priority - left.priority || left.originalIndex - right.originalIndex,
+    );
+  for (const { sense } of orderedSenses) {
     if (definitions.size >= MAX_SENSES_PER_HEADWORD) break;
     const definition = (sense?.glosses || [])
       .map(value => String(value || "").trim())
