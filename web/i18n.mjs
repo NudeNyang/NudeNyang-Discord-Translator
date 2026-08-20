@@ -32,6 +32,8 @@ export const COPY = Object.freeze({
   "개인 사전을 확인하고 있습니다.": ["Checking the personal dictionary.", "個人辞書を確認しています。", "正在检查个人词典。"],
   "저장된 개인 용어가 없습니다.": ["No personal terms have been saved.", "保存された個人用語はありません。", "尚未保存个人术语。"],
   "오프라인 사전팩": ["Offline dictionary packs", "オフライン辞書パック", "离线词典包"],
+  "오프라인 사전": ["Offline dictionaries", "オフライン辞書", "离线词典"],
+  "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": ["Install an extended dictionary to find more words and expressions.", "拡張辞書をインストールすると、より多くの単語や表現を検索できます。", "安装扩展词典后，可以查找更多单词和表达。"],
   "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": ["Korean, English, Japanese, and Chinese practical packs are included in compressed form. Only selected packs are installed in the local database.", "韓国語・英語・日本語・中国語の実用辞書は圧縮状態でアプリに含まれ、選択した辞書だけをローカルDBにインストールします。", "韩语、英语、日语和中文实用词典以压缩形式包含在应用中，仅将所选词典安装到本地数据库。"],
   "데이터 폴더": ["Data folder", "データフォルダー", "数据文件夹"],
   "사전팩 상태를 확인하고 있습니다.": ["Checking dictionary pack status.", "辞書パックの状態を確認しています。", "正在检查词典包状态。"],

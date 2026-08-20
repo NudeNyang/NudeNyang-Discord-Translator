@@ -1490,6 +1490,10 @@ select:focus-visible,
   min-width: 64px;
 }
 
+.dictionary-localization-note {
+  margin-bottom: 14px;
+}
+
 .dictionary-pack-footer {
   display: flex;
   flex-wrap: wrap;

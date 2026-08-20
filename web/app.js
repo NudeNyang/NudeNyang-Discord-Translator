@@ -563,6 +563,7 @@ function renderDictionaryPacks() {
   container.replaceChildren();
   const practical = status.packs.filter(pack => pack.availability === "practical");
   const planned = status.packs.filter(pack => pack.availability !== "practical");
+  const installedPackCount = practical.filter(pack => pack.installed && pack.edition === "practical").length;
   for (const pack of practical) {
     const row = document.createElement("article");
     row.className = "dictionary-pack-row";
@@ -583,12 +584,12 @@ function renderDictionaryPacks() {
       const percent = progress.total > 0 ? Math.min(100, Math.round(progress.processed / progress.total * 100)) : 0;
       setLocalizedText(stateBadge, `설치 중 ${percent}%`);
     } else {
-      setLocalizedText(stateBadge, installedPractical ? "실용팩 설치됨" : pack.edition === "mini" ? "미니팩" : "실용팩");
+      setLocalizedText(stateBadge, installedPractical ? "설치됨" : "미설치");
     }
     action.type = "button";
     action.className = "button secondary dictionary-row-action";
     action.disabled = Boolean(progress);
-    setLocalizedText(action, installedPractical ? "삭제" : "실용팩 설치");
+    setLocalizedText(action, installedPractical ? "삭제" : "설치");
     action.addEventListener("click", async () => {
       action.disabled = true;
       try {
@@ -623,7 +624,7 @@ function renderDictionaryPacks() {
     container.append(expansion);
   }
   const language = currentUiLanguage();
-  elements.dictionaryStorageSummary.textContent = `${translateCopy(language, "사전팩")} ${status.installedPackCount} · ${translateCopy(language, "개인 용어")} ${status.personalEntryCount} · ${formatStorageSize(status.databaseBytes)}`;
+  elements.dictionaryStorageSummary.textContent = `${translateCopy(language, "사전팩")} ${installedPackCount} · ${translateCopy(language, "개인 용어")} ${status.personalEntryCount} · ${formatStorageSize(status.databaseBytes)}`;
 }
 
 async function refreshDictionaryStatus() {

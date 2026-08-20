@@ -46,7 +46,7 @@ The app keeps a four-entry project-authored mini pack for each core language so 
 | Simplified Chinese | 12,846 | 13,167 | 222,489 bytes | Korean |
 | Traditional Chinese | 15,916 | 15,916 | 244,672 bytes | Korean |
 
-The five compressed resources total 4,088,448 bytes. Installation verifies the catalog size and SHA-256 digest before decompression, replaces only the selected language pack in a transaction, and reports progress to the settings UI. Removing a practical pack reclaims its SQLite entries; the mini pack can be installed lazily again on the next lookup.
+The five compressed resources total 4,088,448 bytes. Installation verifies the catalog size and SHA-256 digest before decompression, replaces only the selected language pack in a transaction, and reports progress to the settings UI. Removing a practical pack reclaims its SQLite entries; the mini pack can be installed lazily again on the next lookup. The internal `mini` and `practical` editions are not exposed as product choices: settings present each available language only as **Installed** or **Not installed**, and mini packs do not contribute to the displayed installed-language count.
 
 The shared catalog still covers all 28 product languages. The remaining 23 languages stay marked as planned until their source, attribution, pack size, and human quality review are complete. A future remote catalog can use the same metadata and pack format without changing lookup storage.
 

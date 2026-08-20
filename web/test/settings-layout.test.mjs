@@ -423,6 +423,17 @@ test("dictionary pack cards keep compact metadata and open consolidated source n
   assert.doesNotMatch(renderer, /pack\.sourceName/);
 });
 
+test("dictionary packs expose only installed and not-installed states with comfortable note spacing", () => {
+  assert.match(markup, /class="section-note dictionary-localization-note"/);
+  assert.match(markup, /<h3 id="dictionary-packs-heading">오프라인 사전<\/h3><p>확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다\.<\/p>/);
+  const renderer = script.match(/function renderDictionaryPacks\(\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(renderer, /installedPractical \? "설치됨" : "미설치"/);
+  assert.match(renderer, /installedPractical \? "삭제" : "설치"/);
+  assert.match(renderer, /filter\(pack => pack\.installed && pack\.edition === "practical"\)\.length/);
+  assert.doesNotMatch(renderer, /"실용팩"|"미니팩"|"실용팩 설치"|status\.installedPackCount/);
+  assert.match(styles, /\.dictionary-localization-note\s*\{[^}]*margin-bottom:\s*14px;/s);
+});
+
 test("the settings window title shows only the product name", () => {
   assert.match(markup, /<title>NudeNyang Discord Translator<\/title>/);
   assert.doesNotMatch(tauriConfig, /NudeNyang Discord Translator 설정/);
