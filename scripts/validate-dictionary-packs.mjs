@@ -97,6 +97,16 @@ for (const metadata of catalog.languages.filter(language => language.availabilit
 
 const japanese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/ja.json.gz", import.meta.url))));
 assert.ok(japanese.packs[0].entries.some(entry => entry.headword === "調べ"), "Japanese practical pack must cover 調べ");
+const timeSenses = japanese.packs[0].entries.filter(entry => entry.headword === "時間");
+assert.deepEqual(
+  timeSenses.slice(0, 3).map(entry => entry.glosses.en),
+  ["time", "hour", "period; class; lesson"],
+  "Japanese practical pack must preserve distinct JMdict senses for 時間",
+);
+assert.ok(
+  new Set(japanese.packs[0].entries.map(entry => entry.headword)).size >= 50_000,
+  "Japanese practical pack must keep at least 50,000 distinct headwords",
+);
 
 const korean = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/ko.json.gz", import.meta.url))));
 const mindSenses = korean.packs[0].entries.filter(entry => entry.headword === "정신");

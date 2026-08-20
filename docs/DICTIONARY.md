@@ -2,7 +2,7 @@
 
 The dictionary can be enabled independently from message translation. Selecting up to 120 characters in a Discord message reveals an `Aa` action. Lookup starts only after the user activates it. Results may include a headword, reading, part of speech, definition, example, source, license, and operating-system speech synthesis.
 
-Installed packs and personal terms stay on the device in a dedicated `dictionary.db` SQLite file. The selected word leaves the device only when the user chooses the external Wiktionary action, which can be disabled in settings. When a pack has no definition in the interface language, the app may send the pack's original definition to the configured translation model. This transfer is disclosed in settings and the result is marked as an automatic translation.
+Installed packs and personal terms stay on the device in a dedicated `dictionary.db` SQLite file. The selected word leaves the device only when the user chooses the external Wiktionary action, which can be disabled in settings. When a pack has no definition in the interface language, the app may send the pack's original definition to the configured translation model. This transfer is disclosed in settings. The result is marked as a reference translation and never replaces the source-authored dictionary row.
 
 ## Definition locale and fallback order
 
@@ -11,10 +11,12 @@ The interface language, not the message display-translation language, selects th
 Lookup uses the following order for each entry:
 
 1. A human-authored definition in the interface language from the installed pack.
-2. A previously cached automatic translation for that entry and interface language.
+2. A previously cached automatic translation that passed the current structural quality gate for that entry and interface language.
 3. The pack's English definition, or its first available original definition.
 
-When only step 3 is available and the configured translation model is ready, the definition is translated in the existing translation worker. Successful results are stored as a localized overlay in `dictionary_localized_text`, while the source dictionary rows remain unchanged. The popup labels the result as an automatic translation and keeps the original definition behind an expandable disclosure. If translation is unavailable or fails, the popup displays the original definition with its language instead of failing the lookup.
+When only step 3 is available and the configured translation model is ready, the definition is translated in the existing translation worker. A translated gloss is accepted only when its length is bounded, it uses the expected writing system for the interface language, and it does not contain common model-answer wrappers or control markers. Accepted results are stored as a versioned localized overlay in `dictionary_localized_text`, while the source dictionary rows remain unchanged. Overlays created before the current quality version are ignored and regenerated on demand. The popup labels the result as a reference translation and expands the source dictionary definition by default. If translation is unavailable, rejected, or fails, the popup displays the original definition with its language instead of failing the lookup.
+
+This gate catches malformed or clearly wrong-language output; it is not a semantic proof and is not presented as human review. Human-authored interface-language glosses from a pack remain the trusted first choice. Automatic localization is always secondary evidence alongside the immutable source gloss.
 
 ## Rough selection and phrase segmentation
 
@@ -34,17 +36,17 @@ The app keeps a four-entry project-authored mini pack for each core language so 
 |---|---:|---:|---:|---|
 | Korean | 68,220 | 77,269 | 1,911,630 bytes | Korean |
 | English | 15,288 | 15,288 | 405,918 bytes | Korean |
-| Japanese | 50,638 | 50,638 | 791,235 bytes | English |
+| Japanese | 50,640 | 91,031 | 1,303,739 bytes | English |
 | Simplified Chinese | 15,916 | 15,916 | 244,665 bytes | Korean |
 | Traditional Chinese | 15,916 | 15,916 | 244,672 bytes | Korean |
 
-The five compressed resources total 3,598,120 bytes. Installation verifies the catalog size and SHA-256 digest before decompression, replaces only the selected language pack in a transaction, and reports progress to the settings UI. Removing a practical pack reclaims its SQLite entries; the mini pack can be installed lazily again on the next lookup.
+The five compressed resources total 4,110,624 bytes. Installation verifies the catalog size and SHA-256 digest before decompression, replaces only the selected language pack in a transaction, and reports progress to the settings UI. Removing a practical pack reclaims its SQLite entries; the mini pack can be installed lazily again on the next lookup.
 
 The shared catalog still covers all 28 product languages. The remaining 23 languages stay marked as planned until their source, attribution, pack size, and human quality review are complete. A future remote catalog can use the same metadata and pack format without changing lookup storage.
 
 ## Sources and updates
 
-Korean, English, and Chinese practical packs are filtered and normalized from the Korean-language Wiktionary dump dated 2026-08-04, extracted by Wiktextract/kaikki.org in August 2026. Examples, audio, and separately licensed media are excluded. The Japanese practical pack is filtered from the English common-word JMdict simplified release `3.6.2+20260817122448`; all available written and reading forms are indexed.
+Korean, English, and Chinese practical packs are filtered and normalized from the Korean-language Wiktionary dump dated 2026-08-04, extracted by Wiktextract/kaikki.org in August 2026. Examples, audio, and separately licensed media are excluded. The Japanese practical pack is filtered from the English common-word JMdict simplified release `3.6.2+20260817122448`; all available written and reading forms are indexed. Up to twelve distinct, form-applicable JMdict senses are preserved per normalized headword. For example, `時間` keeps `time`, `hour`, and `period; class; lesson` as separate source senses instead of collapsing to the first gloss.
 
 JMdict's licence requires a regular update procedure, with monthly updates given as the example for dictionary services. Practical packs therefore carry a dated version and source digest and must be reviewed and rebuilt at least monthly while they are distributed. Source and licence acknowledgements are deduplicated in a single collapsed section at the bottom of each lookup result and are also shown in the app's licence screen and `THIRD_PARTY_NOTICES.md`. When one result combines entries from different sources, each sense keeps a short source label so its provenance remains identifiable without repeating the full licence text.
 

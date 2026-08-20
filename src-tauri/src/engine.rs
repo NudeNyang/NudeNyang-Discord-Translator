@@ -2571,15 +2571,20 @@ fn localize_dictionary_result(
         let source =
             Language::try_from(entry.definition_language.as_str()).unwrap_or(Language::Unknown);
         match service.translate_with_source(&entry.definition, source, target) {
-            Ok(translated)
-                if !translated.trim().is_empty()
-                    && translated.trim() != entry.definition.trim() =>
-            {
+            Ok(translated) if dictionary_translation_is_acceptable(&entry.definition, &translated, target) => {
                 entry.definition = translated.trim().to_string();
                 entry.definition_language = result.target_language.clone();
                 entry.definition_origin = "automatic".to_string();
             }
-            Ok(_) => {}
+            Ok(rejected) => crate::diagnostics::warn(
+                "dictionary",
+                &format!(
+                    "dictionary gloss translation rejected by quality gate: source_chars={}; translated_chars={}; target={}",
+                    entry.definition.chars().count(),
+                    rejected.chars().count(),
+                    target.code()
+                ),
+            ),
             Err(error) => crate::diagnostics::warn(
                 "dictionary",
                 &format!("dictionary gloss translation failed: {error}"),
@@ -2587,6 +2592,83 @@ fn localize_dictionary_result(
         }
     }
     result
+}
+
+fn dictionary_translation_is_acceptable(source: &str, translated: &str, target: Language) -> bool {
+    let source = source.trim();
+    let translated = translated.trim();
+    if source.is_empty()
+        || translated.is_empty()
+        || source == translated
+        || target == Language::Unknown
+    {
+        return false;
+    }
+    let source_length = source.chars().count();
+    let translated_length = translated.chars().count();
+    let maximum_length = source_length.saturating_mul(6).saturating_add(80).min(800);
+    if translated_length > maximum_length {
+        return false;
+    }
+    let lowered = translated.to_lowercase();
+    if [
+        "translation:",
+        "translated text:",
+        "answer:",
+        "result:",
+        "번역:",
+        "뜻:",
+    ]
+    .iter()
+    .any(|prefix| lowered.starts_with(prefix))
+        || lowered.contains("```")
+        || lowered.contains("<|")
+        || lowered.contains("here is the translation")
+    {
+        return false;
+    }
+    dictionary_target_script_is_present(translated, target)
+}
+
+fn dictionary_target_script_is_present(text: &str, target: Language) -> bool {
+    let in_range = |character: char, start: char, end: char| (start..=end).contains(&character);
+    text.chars().any(|character| match target {
+        Language::Korean => in_range(character, '\u{ac00}', '\u{d7af}'),
+        Language::Japanese => {
+            in_range(character, '\u{3040}', '\u{30ff}')
+                || in_range(character, '\u{3400}', '\u{9fff}')
+        }
+        Language::ChineseSimplified | Language::ChineseTraditional => {
+            in_range(character, '\u{3400}', '\u{9fff}')
+        }
+        Language::Hindi => in_range(character, '\u{0900}', '\u{097f}'),
+        Language::Russian | Language::Ukrainian => in_range(character, '\u{0400}', '\u{052f}'),
+        Language::Arabic | Language::Urdu | Language::Persian => {
+            in_range(character, '\u{0600}', '\u{06ff}')
+                || in_range(character, '\u{0750}', '\u{077f}')
+        }
+        Language::Thai => in_range(character, '\u{0e00}', '\u{0e7f}'),
+        Language::Bengali => in_range(character, '\u{0980}', '\u{09ff}'),
+        Language::Tamil => in_range(character, '\u{0b80}', '\u{0bff}'),
+        Language::Hebrew => in_range(character, '\u{0590}', '\u{05ff}'),
+        Language::English
+        | Language::BrazilianPortuguese
+        | Language::LatinAmericanSpanish
+        | Language::German
+        | Language::French
+        | Language::Indonesian
+        | Language::Vietnamese
+        | Language::Polish
+        | Language::Turkish
+        | Language::Italian
+        | Language::Dutch
+        | Language::Malay
+        | Language::Filipino
+        | Language::Czech => {
+            character.is_ascii_alphabetic() || in_range(character, '\u{00c0}', '\u{024f}')
+        }
+        Language::Unknown => false,
+    })
 }
 
 fn incoming_context_key(part: &DomPart) -> Option<String> {
@@ -2954,15 +3036,16 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_attach_text_scripts, dictionary_source_language, display_batch_item_limit,
-        display_preparation_is_required, display_translation_is_ready, display_view_scope,
-        incoming_context_key, initial_model_preparation_progress, localize_dictionary_result,
-        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
-        run_outgoing_translation_worker, translator_activation_notice, translator_label,
-        translator_preparation_plan, DisplayViewObservation, DisplayViewState,
-        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
-        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
-        CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
+        cdp_attach_text_scripts, dictionary_source_language, dictionary_translation_is_acceptable,
+        display_batch_item_limit, display_preparation_is_required, display_translation_is_ready,
+        display_view_scope, incoming_context_key, initial_model_preparation_progress,
+        localize_dictionary_result, next_worker_command, plan_dom_updates, poll_interval,
+        preparation_plan_for_active_lanes, run_outgoing_translation_worker,
+        translator_activation_notice, translator_label, translator_preparation_plan,
+        DisplayViewObservation, DisplayViewState, OutgoingTranslationBatch, OutgoingWorkerCommand,
+        PartState, RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan,
+        WorkerCommand, WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY,
+        MAX_BATCH_ITEMS,
     };
     use crate::cache::TranslationCache;
     use crate::cdp::{discord_target, CdpClient};
@@ -2973,11 +3056,36 @@ mod tests {
         INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
     use crate::language::{detect_explicit_language, Language};
-    use crate::translation::{MockTranslator, TranslationService};
+    use crate::translation::{TranslationService, Translator};
     use std::collections::{HashMap, HashSet, VecDeque};
     use std::sync::mpsc;
     use std::thread;
     use std::time::{Duration, Instant};
+
+    struct DictionaryTestTranslator;
+
+    impl Translator for DictionaryTestTranslator {
+        fn display_name(&self) -> &str {
+            "Dictionary test translator"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "dictionary-test:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            target: Language,
+        ) -> Result<String, String> {
+            Ok(match target {
+                Language::Japanese => "現在より後の時間、またはこれから起こる出来事。".to_string(),
+                Language::Korean if text == "time" => "시간".to_string(),
+                _ => text.to_string(),
+            })
+        }
+    }
 
     #[test]
     fn runtime_status_starts_with_the_configured_contract() {
@@ -3016,7 +3124,7 @@ mod tests {
         ));
         let _ = std::fs::remove_file(&cache_path);
         let cache = TranslationCache::open(cache_path, 16).unwrap();
-        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let mut service = TranslationService::new(Box::new(DictionaryTestTranslator), cache);
         let result = DictionaryLookupResult {
             query: "future".to_string(),
             source_language: "en".to_string(),
@@ -3046,7 +3154,7 @@ mod tests {
         let localized = localize_dictionary_result(&mut service, result, Language::Japanese);
         assert_eq!(
             localized.entries[0].definition,
-            "[ja] The time after the present."
+            "現在より後の時間、またはこれから起こる出来事。"
         );
         assert_eq!(localized.entries[0].definition_language, "ja");
         assert_eq!(localized.entries[0].definition_origin, "automatic");
@@ -3064,7 +3172,7 @@ mod tests {
         ));
         let _ = std::fs::remove_file(&cache_path);
         let cache = TranslationCache::open(cache_path, 16).unwrap();
-        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let mut service = TranslationService::new(Box::new(DictionaryTestTranslator), cache);
         let result = DictionaryLookupResult {
             query: "日本時間".to_string(),
             source_language: "ja".to_string(),
@@ -3092,9 +3200,28 @@ mod tests {
         };
 
         let localized = localize_dictionary_result(&mut service, result, Language::Korean);
-        assert_eq!(localized.entries[0].definition, "[ko] time");
+        assert_eq!(localized.entries[0].definition, "시간");
         assert_eq!(localized.entries[0].definition_language, "ko");
         assert_eq!(localized.entries[0].definition_origin, "automatic");
+    }
+
+    #[test]
+    fn dictionary_quality_gate_rejects_wrong_script_and_model_chatter() {
+        assert!(!dictionary_translation_is_acceptable(
+            "time",
+            "[ko] time",
+            Language::Korean
+        ));
+        assert!(!dictionary_translation_is_acceptable(
+            "time",
+            "번역: 시간",
+            Language::Korean
+        ));
+        assert!(dictionary_translation_is_acceptable(
+            "time",
+            "시간",
+            Language::Korean
+        ));
     }
 
     #[test]

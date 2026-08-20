@@ -8,6 +8,7 @@ const { values } = parseArgs({
     output: { type: "string" },
     version: { type: "string" },
     "source-url": { type: "string" },
+    "minimum-entries": { type: "string", default: "20000" },
   },
 });
 
@@ -21,7 +22,12 @@ if (!Array.isArray(document.words) || !document.commonOnly) {
 }
 
 const entries = [];
-const seen = new Set();
+const definitionsByHeadword = new Map();
+const maximumSensesPerHeadword = 12;
+const minimumEntries = Number.parseInt(values["minimum-entries"], 10);
+if (!Number.isSafeInteger(minimumEntries) || minimumEntries < 1) {
+  throw new Error("--minimum-entries must be a positive integer");
+}
 
 function normalized(value) {
   return String(value || "").normalize("NFKC").toLocaleLowerCase("ja").trim();
@@ -36,37 +42,64 @@ function partOfSpeech(tags) {
   return "other";
 }
 
-for (const word of document.words) {
-  const forms = [...(word.kanji || []), ...(word.kana || [])]
-    .filter(form => form?.text)
-    .sort((left, right) => Number(right.common) - Number(left.common));
-  const reading = String((word.kana || []).find(form => form.common)?.text || word.kana?.[0]?.text || "").trim();
-  const sense = (word.sense || []).find(item => item.gloss?.some(gloss => gloss.lang === "eng" && gloss.text));
-  if (!sense) continue;
-  const definition = sense.gloss
+function appliesToForm(values, text) {
+  return !Array.isArray(values) || values.length === 0 || values.includes("*") || values.includes(text);
+}
+
+function readingFor(word, form) {
+  if (form.kind === "kana") return form.text;
+  return String(
+    (word.kana || [])
+      .filter(kana => kana?.text && appliesToForm(kana.appliesToKanji, form.text))
+      .sort((left, right) => Number(right.common) - Number(left.common))[0]?.text || "",
+  ).trim();
+}
+
+function englishDefinition(sense) {
+  return (sense.gloss || [])
     .filter(gloss => gloss.lang === "eng" && gloss.text)
     .map(gloss => gloss.text.trim())
     .filter(Boolean)
     .slice(0, 4)
     .join("; ")
     .slice(0, 600);
-  if (!definition) continue;
+}
+
+for (const word of document.words) {
+  const forms = [
+    ...(word.kanji || []).map(form => ({ ...form, kind: "kanji" })),
+    ...(word.kana || []).map(form => ({ ...form, kind: "kana" })),
+  ]
+    .filter(form => form?.text)
+    .sort((left, right) => Number(right.common) - Number(left.common));
   for (const form of forms) {
     const key = normalized(form.text);
-    if (!key || key.length > 120 || seen.has(key)) continue;
-    entries.push({
-      headword: form.text.normalize("NFKC").trim(),
-      reading: reading.slice(0, 160),
-      partOfSpeech: partOfSpeech(sense.partOfSpeech || []),
-      glosses: { en: definition },
-      examples: {},
-    });
-    seen.add(key);
+    if (!key || key.length > 120) continue;
+    const knownDefinitions = definitionsByHeadword.get(key) || new Set();
+    for (const sense of word.sense || []) {
+      if (knownDefinitions.size >= maximumSensesPerHeadword) break;
+      const applies = form.kind === "kanji"
+        ? appliesToForm(sense.appliesToKanji, form.text)
+        : appliesToForm(sense.appliesToKana, form.text);
+      if (!applies) continue;
+      const definition = englishDefinition(sense);
+      if (!definition || knownDefinitions.has(definition)) continue;
+      entries.push({
+        headword: form.text.normalize("NFKC").trim(),
+        reading: readingFor(word, form).slice(0, 160),
+        partOfSpeech: partOfSpeech(sense.partOfSpeech || []),
+        senseRank: knownDefinitions.size,
+        glosses: { en: definition },
+        examples: {},
+      });
+      knownDefinitions.add(definition);
+    }
+    if (knownDefinitions.size) definitionsByHeadword.set(key, knownDefinitions);
   }
 }
 
-if (entries.length < 20_000) {
-  throw new Error(`JMdict quality gate failed: ${entries.length}/20000 accepted entries`);
+if (entries.length < minimumEntries) {
+  throw new Error(`JMdict quality gate failed: ${entries.length}/${minimumEntries} accepted entries`);
 }
 
 const pack = {
@@ -84,4 +117,4 @@ const pack = {
   }],
 };
 writeFileSync(values.output, gzipSync(`${JSON.stringify(pack)}\n`, { level: 9 }));
-console.log(`Built ${values.output}: ${entries.length} JMdict headwords`);
+console.log(`Built ${values.output}: ${entries.length} JMdict meaning entries`);

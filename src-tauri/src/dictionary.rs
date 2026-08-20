@@ -23,6 +23,7 @@ const PRACTICAL_ZH_HANT_GZIP: &[u8] =
     include_bytes!("../dictionary-packs/practical/zh-Hant.json.gz");
 const PACK_SCHEMA_VERSION: u32 = 1;
 const CATALOG_SCHEMA_VERSION: u32 = 2;
+const LOCALIZED_TEXT_QUALITY_VERSION: i64 = 1;
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -313,14 +314,16 @@ impl DictionaryStore {
             transaction
                 .execute(
                     "INSERT INTO dictionary_localized_text \
-                     (entry_id, locale, source_locale, text, updated_at) VALUES (?1, ?2, ?3, ?4, ?5) \
+                     (entry_id, locale, source_locale, text, quality_version, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
                      ON CONFLICT(entry_id, locale) DO UPDATE SET \
-                       source_locale=excluded.source_locale, text=excluded.text, updated_at=excluded.updated_at",
+                       source_locale=excluded.source_locale, text=excluded.text, \
+                       quality_version=excluded.quality_version, updated_at=excluded.updated_at",
                     params![
                         entry.entry_id,
                         result.target_language,
                         entry.original_definition_language,
                         entry.definition,
+                        LOCALIZED_TEXT_QUALITY_VERSION,
                         now_seconds()
                     ],
                 )
@@ -745,7 +748,7 @@ fn lookup_dictionary_terms(
              FROM dictionary_entries e \
              JOIN dictionary_packs p ON p.id=e.pack_id \
              LEFT JOIN dictionary_text g_target ON g_target.entry_id=e.id AND g_target.kind='gloss' AND g_target.locale=?1 \
-             LEFT JOIN dictionary_localized_text g_cached ON g_cached.entry_id=e.id AND g_cached.locale=?1 \
+             LEFT JOIN dictionary_localized_text g_cached ON g_cached.entry_id=e.id AND g_cached.locale=?1 AND g_cached.quality_version=?5 \
              LEFT JOIN dictionary_text g_en ON g_en.entry_id=e.id AND g_en.kind='gloss' AND g_en.locale='en' \
              LEFT JOIN dictionary_text g_any ON g_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='gloss' ORDER BY locale LIMIT 1) \
              LEFT JOIN dictionary_text x_target ON x_target.entry_id=e.id AND x_target.kind='example' AND x_target.locale=?1 \
@@ -764,7 +767,8 @@ fn lookup_dictionary_terms(
                     target_language,
                     term,
                     detected_language,
-                    per_term_limit as i64
+                    per_term_limit as i64,
+                    LOCALIZED_TEXT_QUALITY_VERSION
                 ],
                 dictionary_from_row,
             )
@@ -1012,6 +1016,7 @@ fn dictionary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<DictionaryEn
 
 fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
     let normalized_context = normalize_term(context);
+    let context_language = detect_language(&normalized_context).language;
     let mut groups: Vec<Vec<DictionaryEntry>> = Vec::new();
     for entry in entries.drain(..) {
         let key = (entry.language.as_str(), normalize_term(&entry.headword));
@@ -1027,32 +1032,51 @@ fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
     }
     for group in &mut groups {
         group.sort_by(|left, right| {
-            contextual_sense_score(right, &normalized_context)
-                .cmp(&contextual_sense_score(left, &normalized_context))
+            contextual_sense_score(right, &normalized_context, context_language)
+                .cmp(&contextual_sense_score(
+                    left,
+                    &normalized_context,
+                    context_language,
+                ))
                 .then_with(|| left.sense_rank.cmp(&right.sense_rank))
                 .then_with(|| left.entry_id.cmp(&right.entry_id))
         });
-        if group.len() > 1 && !normalized_context.is_empty() {
+        if group.len() > 1
+            && contextual_sense_score(&group[0], &normalized_context, context_language)
+                > contextual_sense_score(&group[1], &normalized_context, context_language)
+        {
             group[0].context_recommended = true;
         }
     }
     entries.extend(groups.into_iter().flatten());
 }
 
-fn contextual_sense_score(entry: &DictionaryEntry, context: &str) -> i32 {
+fn contextual_sense_score(
+    entry: &DictionaryEntry,
+    context: &str,
+    context_language: Language,
+) -> i32 {
     let definition = if entry.original_definition.is_empty() {
         &entry.definition
     } else {
         &entry.original_definition
     };
     let normalized_definition = normalize_term(definition);
-    let mut score = normalized_definition.chars().count().min(80) as i32 / 4;
-    for token in normalized_definition
-        .split(|character: char| !character.is_alphanumeric())
-        .filter(|token| token.chars().count() >= 2)
-    {
-        if context.contains(token) {
-            score += 12;
+    let definition_language = Language::try_from(entry.original_definition_language.as_str())
+        .unwrap_or(Language::Unknown);
+    let comparable_language = context_language != Language::Unknown
+        && definition_language != Language::Unknown
+        && context_language == definition_language;
+    let mut score = 0;
+    if comparable_language {
+        score += normalized_definition.chars().count().min(80) as i32 / 4;
+        for token in normalized_definition
+            .split(|character: char| !character.is_alphanumeric())
+            .filter(|token| token.chars().count() >= 2)
+        {
+            if context.contains(token) {
+                score += 12;
+            }
         }
     }
     let historical = [
@@ -1205,7 +1229,8 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
            kind TEXT NOT NULL, locale TEXT NOT NULL, text TEXT NOT NULL, UNIQUE(entry_id, kind, locale)); \
          CREATE TABLE IF NOT EXISTS dictionary_localized_text ( \
            entry_id INTEGER NOT NULL REFERENCES dictionary_entries(id) ON DELETE CASCADE, \
-           locale TEXT NOT NULL, source_locale TEXT NOT NULL, text TEXT NOT NULL, updated_at REAL NOT NULL, \
+           locale TEXT NOT NULL, source_locale TEXT NOT NULL, text TEXT NOT NULL, \
+           quality_version INTEGER NOT NULL DEFAULT 0, updated_at REAL NOT NULL, \
            PRIMARY KEY(entry_id, locale)); \
          CREATE TABLE IF NOT EXISTS personal_dictionary ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, source_language TEXT NOT NULL, target_language TEXT NOT NULL, \
@@ -1249,6 +1274,23 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
                 [],
             )
             .map_err(|error| format!("사전 항목 저장소 형식을 갱신하지 못했습니다: {error}"))?;
+    }
+    let has_localized_quality_version = connection
+        .prepare("PRAGMA table_info(dictionary_localized_text)")
+        .and_then(|mut statement| {
+            let columns = statement
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(columns.iter().any(|column| column == "quality_version"))
+        })
+        .map_err(|error| format!("자동 번역 사전 뜻의 저장 형식을 확인하지 못했습니다: {error}"))?;
+    if !has_localized_quality_version {
+        connection
+            .execute(
+                "ALTER TABLE dictionary_localized_text ADD COLUMN quality_version INTEGER NOT NULL DEFAULT 0",
+                [],
+            )
+            .map_err(|error| format!("자동 번역 사전 뜻의 저장 형식을 갱신하지 못했습니다: {error}"))?;
     }
     Ok(())
 }
@@ -1413,6 +1455,21 @@ mod tests {
             "The time or events that come after the present."
         );
 
+        store
+            .connection
+            .lock()
+            .unwrap()
+            .execute(
+                "INSERT INTO dictionary_localized_text \
+                 (entry_id, locale, source_locale, text, quality_version, updated_at) \
+                 VALUES (?1, 'ja', 'en', '以前の無検査キャッシュ', 0, 0)",
+                rusqlite::params![result.entries[0].entry_id],
+            )
+            .unwrap();
+        let legacy = store.lookup("future", Some("en"), "ja").unwrap();
+        assert_eq!(legacy.entries[0].definition_origin, "original");
+        assert!(legacy.needs_localization());
+
         result.entries[0].definition = "現在より後の時間、またはこれから起こる出来事。".to_string();
         result.entries[0].definition_language = "ja".to_string();
         result.entries[0].definition_origin = "automatic".to_string();
@@ -1527,7 +1584,15 @@ mod tests {
         let pack = &catalog.packs[0];
         assert_eq!(pack.edition, "practical");
         assert!(pack.entries.iter().any(|entry| entry.headword == "調べ"));
-        assert!(pack.entries.len() >= 50_000);
+        assert!(pack.entries.len() >= 90_000);
+        assert_eq!(
+            pack.entries
+                .iter()
+                .filter(|entry| entry.headword == "時間")
+                .map(|entry| entry.glosses["en"].as_str())
+                .collect::<Vec<_>>(),
+            vec!["time", "hour", "period; class; lesson"]
+        );
     }
 
     #[test]
@@ -1545,6 +1610,24 @@ mod tests {
             .expect("調べ should be available after installing the Japanese practical pack");
         assert_eq!(entry.reading, "しらべ");
         assert!(!entry.definition.is_empty());
+
+        let time = store
+            .lookup_with_context(
+                "時間",
+                "日本時間3/17の午後にシステムが変更されました。",
+                Some("ja"),
+                "ko",
+            )
+            .unwrap();
+        assert_eq!(
+            time.entries
+                .iter()
+                .filter(|entry| entry.headword == "時間")
+                .map(|entry| entry.definition.as_str())
+                .collect::<Vec<_>>(),
+            vec!["time", "hour", "period; class; lesson"]
+        );
+        assert!(!time.entries[0].context_recommended);
 
         let phrase = store.lookup("非難禁止", Some("ja"), "ko").unwrap();
         assert!(phrase.segmented);
