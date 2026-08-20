@@ -1062,11 +1062,20 @@ fn korean_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut Hash
     for (surface, base) in [
         ("했어요", "하다"),
         ("했다", "하다"),
+        ("했었어", "하다"),
+        ("했었어요", "하다"),
         ("해요", "하다"),
         ("합니다", "하다"),
         ("했습니다", "하다"),
         ("됐어요", "되다"),
         ("됐다", "되다"),
+        ("였어", "이다"),
+        ("였었어", "이다"),
+        ("그런", "그렇다"),
+        ("이런", "이렇다"),
+        ("저런", "저렇다"),
+        ("같애", "같다"),
+        ("같애요", "같다"),
     ] {
         if term == surface {
             push(base.to_string());
@@ -1076,10 +1085,16 @@ fn korean_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut Hash
     for suffix in [
         "었습니다",
         "았습니다",
+        "었었어요",
+        "았었어요",
+        "었었어",
+        "았었어",
         "습니까",
         "습니다",
         "었어요",
         "았어요",
+        "었어",
+        "았어",
         "어요",
         "아요",
         "는다",
@@ -1166,11 +1181,12 @@ fn segment_lookup_terms(
     detected_language: &str,
     target_language: &str,
 ) -> Result<Vec<String>, String> {
-    let spans = lookup_spans(normalized_query, detected_language);
+    let segmentation_query = normalize_segmentation_query(normalized_query, detected_language);
+    let spans = lookup_spans(&segmentation_query, detected_language);
     if spans.is_empty() {
         return Ok(Vec::new());
     }
-    let query_chars = normalized_query.chars().collect::<Vec<_>>();
+    let query_chars = segmentation_query.chars().collect::<Vec<_>>();
     let spans = spans
         .into_iter()
         .filter(|span| segmentation_candidate_is_plausible(&query_chars, detected_language, span))
@@ -1195,8 +1211,16 @@ fn segment_lookup_terms(
     let mut availability = HashMap::new();
     let mut matched = Vec::new();
     for span in &spans {
-        let mut candidates = vec![span.term.clone()];
-        candidates.extend(inflection_lookup_terms(&span.term, detected_language));
+        let inflection_candidates = inflection_lookup_terms(&span.term, detected_language);
+        let candidates = if prefer_korean_base_form(&span.term, detected_language) {
+            let mut candidates = inflection_candidates;
+            candidates.push(span.term.clone());
+            candidates
+        } else {
+            let mut candidates = vec![span.term.clone()];
+            candidates.extend(inflection_candidates);
+            candidates
+        };
         for candidate in candidates {
             if candidate != span.term
                 && !segmented_inflection_candidate_is_plausible(
@@ -1273,6 +1297,19 @@ fn segment_lookup_terms(
         }
     }
     Ok(terms)
+}
+
+fn normalize_segmentation_query(normalized_query: &str, detected_language: &str) -> String {
+    if detected_language != "ko" {
+        return normalized_query.to_string();
+    }
+    normalized_query
+        .replace("거같", "거 같")
+        .replace("것같", "것 같")
+}
+
+fn prefer_korean_base_form(term: &str, detected_language: &str) -> bool {
+    detected_language == "ko" && matches!(term, "그런" | "이런" | "저런")
 }
 
 fn segmented_inflection_candidate_is_plausible(
@@ -2263,6 +2300,39 @@ mod tests {
             .entries
             .iter()
             .any(|entry| entry.headword == "내다"));
+    }
+
+    #[test]
+    fn korean_casual_double_past_resolves_the_base_verb() {
+        let store = temporary_store("korean-casual-double-past");
+        store.install_bundled_pack("ko").unwrap();
+
+        let result = store
+            .lookup_with_context("자기 잠들었었어?", "자기 잠들었었어?", Some("ko"), "ko")
+            .unwrap();
+        assert!(result
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "잠들다"));
+        assert!(!result.entries.iter().any(|entry| entry.headword == "었었"));
+    }
+
+    #[test]
+    fn korean_colloquial_contraction_resolves_base_predicates() {
+        let store = temporary_store("korean-colloquial-contraction");
+        store.install_bundled_pack("ko").unwrap();
+
+        let result = store
+            .lookup_with_context("그런거같애", "그런거같애", Some("ko"), "ko")
+            .unwrap();
+        let headwords = result
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        assert!(headwords.contains(&"그렇다"));
+        assert!(headwords.contains(&"같다"));
+        assert!(!headwords.contains(&"그런"));
     }
 
     #[test]
