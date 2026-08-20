@@ -40,7 +40,10 @@ test("dictionary pack merger keeps primary meanings first and preserves per-entr
         reading: "퇴ː근",
         partOfSpeech: "noun",
         senseRank: 0,
-        glosses: { ko: "직장에서 일을 끝내고 집으로 돌아가거나 돌아옴." },
+        glosses: {
+          ko: "직장에서 일을 끝내고 집으로 돌아가거나 돌아옴.",
+          en: "Leaving work and returning home.",
+        },
         examples: {},
       }],
     ))));

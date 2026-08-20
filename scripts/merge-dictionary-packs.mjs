@@ -34,11 +34,15 @@ function normalizedHeadword(value) {
   return String(value || "").normalize("NFKC").toLocaleLowerCase(values.language).trim();
 }
 
-function glossKey(entry) {
-  return JSON.stringify(Object.entries(entry.glosses || {})
+function definitionKey(entry) {
+  const definitions = Object.entries(entry.glosses || {})
     .map(([locale, text]) => [locale, String(text || "").normalize("NFKC").trim()])
     .filter(([, text]) => text)
-    .sort(([left], [right]) => left.localeCompare(right)));
+    .sort(([left], [right]) => left.localeCompare(right));
+  const preferred = definitions.find(([locale]) => locale === values.language)
+    || definitions.find(([locale]) => locale === "en")
+    || definitions[0];
+  return preferred ? `${preferred[0]}\u0000${preferred[1]}` : "";
 }
 
 const entries = [];
@@ -62,10 +66,10 @@ for (const [sourcePriority, inputPath] of values.input.entries()) {
 
   for (const entry of pack.entries || []) {
     const headwordKey = normalizedHeadword(entry.headword);
-    const definitionKey = glossKey(entry);
-    if (!headwordKey || definitionKey === "[]") continue;
+    const definition = definitionKey(entry);
+    if (!headwordKey || !definition) continue;
     const knownGlosses = seenGlossesByHeadword.get(headwordKey) || new Set();
-    if (knownGlosses.has(definitionKey)) continue;
+    if (knownGlosses.has(definition)) continue;
 
     const senseRank = nextSenseRankByHeadword.get(headwordKey) || 0;
     const sourceName = entry.sourceName || pack.sourceName;
@@ -84,7 +88,7 @@ for (const [sourcePriority, inputPath] of values.input.entries()) {
       glosses: entry.glosses,
       examples: entry.examples || {},
     });
-    knownGlosses.add(definitionKey);
+    knownGlosses.add(definition);
     seenGlossesByHeadword.set(headwordKey, knownGlosses);
     nextSenseRankByHeadword.set(headwordKey, senseRank + 1);
   }

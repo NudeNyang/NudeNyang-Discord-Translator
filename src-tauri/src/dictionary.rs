@@ -792,6 +792,7 @@ struct LookupSpan {
     term: String,
     start: usize,
     end: usize,
+    derived: bool,
 }
 
 fn lookup_dictionary_terms(
@@ -1269,14 +1270,20 @@ fn segment_lookup_terms(
                 available
             };
             if available {
+                let derived = span.term != candidate;
                 matched.push(LookupSpan {
                     term: candidate,
                     start: span.start,
                     end: span.end,
+                    derived,
                 });
                 break;
             }
         }
+    }
+
+    if detected_language == "ko" {
+        retain_complete_korean_token_coverages(&mut matched, &query_chars);
     }
 
     matched.sort_by(|left, right| {
@@ -1312,6 +1319,74 @@ fn segment_lookup_terms(
     Ok(terms)
 }
 
+fn retain_complete_korean_token_coverages(matched: &mut Vec<LookupSpan>, query_chars: &[char]) {
+    let mut accepted = matched.iter().map(|span| span.derived).collect::<Vec<_>>();
+    let mut token_start = 0;
+    while token_start < query_chars.len() {
+        if !query_chars[token_start].is_alphanumeric() {
+            token_start += 1;
+            continue;
+        }
+        let mut token_end = token_start + 1;
+        while token_end < query_chars.len() && query_chars[token_end].is_alphanumeric() {
+            token_end += 1;
+        }
+
+        let internal = matched
+            .iter()
+            .enumerate()
+            .filter(|(_, span)| span.start >= token_start && span.end <= token_end)
+            .collect::<Vec<_>>();
+        let mut reachable_from_start = HashSet::from([token_start]);
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for (_, span) in &internal {
+                if reachable_from_start.contains(&span.start)
+                    && reachable_from_start.insert(span.end)
+                {
+                    changed = true;
+                }
+            }
+        }
+        if reachable_from_start.contains(&token_end) {
+            let mut reachable_to_end = HashSet::from([token_end]);
+            let mut changed = true;
+            while changed {
+                changed = false;
+                for (_, span) in &internal {
+                    if reachable_to_end.contains(&span.end) && reachable_to_end.insert(span.start) {
+                        changed = true;
+                    }
+                }
+            }
+            for (index, span) in &internal {
+                if reachable_from_start.contains(&span.start)
+                    && reachable_to_end.contains(&span.end)
+                {
+                    accepted[*index] = true;
+                }
+            }
+        }
+        token_start = token_end;
+    }
+
+    for (index, span) in matched.iter().enumerate() {
+        if query_chars[span.start..span.end]
+            .iter()
+            .any(|character| !character.is_alphanumeric())
+        {
+            accepted[index] = true;
+        }
+    }
+    let mut index = 0;
+    matched.retain(|_| {
+        let keep = accepted[index];
+        index += 1;
+        keep
+    });
+}
+
 fn normalize_segmentation_query(normalized_query: &str, detected_language: &str) -> String {
     if detected_language != "ko" {
         return normalized_query.to_string();
@@ -1330,7 +1405,16 @@ fn segmented_inflection_candidate_is_plausible(
     detected_language: &str,
     span: &LookupSpan,
 ) -> bool {
-    if detected_language != "ko" || span.start == 0 {
+    if detected_language != "ko" {
+        return true;
+    }
+    if query_chars[span.start..span.end]
+        .iter()
+        .any(|character| !character.is_alphanumeric())
+    {
+        return false;
+    }
+    if span.start == 0 {
         return true;
     }
     query_chars
@@ -1390,6 +1474,7 @@ fn lookup_spans(normalized_query: &str, detected_language: &str) -> Vec<LookupSp
                 term: chars[start..end].iter().collect(),
                 start,
                 end,
+                derived: false,
             });
         }
     }
@@ -1919,7 +2004,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::{
-        lookup_spans, segmentation_candidate_is_plausible, DictionaryStore,
+        lookup_spans, segment_lookup_terms, segmentation_candidate_is_plausible, DictionaryStore,
         PersonalDictionaryEntry, StarterEntry, StarterPack,
     };
 
@@ -2381,7 +2466,7 @@ mod tests {
             .iter()
             .filter(|entry| entry.headword == "정신")
             .collect::<Vec<_>>();
-        assert_eq!(senses.len(), 6);
+        assert!(senses.len() >= 10);
         assert!(senses
             .iter()
             .any(|entry| entry.glosses["ko"].contains("마음")));
@@ -2401,7 +2486,7 @@ mod tests {
             .iter()
             .filter(|entry| entry.headword == "정신")
             .collect::<Vec<_>>();
-        assert_eq!(mind_senses.len(), 6);
+        assert!(mind_senses.len() >= 10);
         assert!(mind_senses[0].definition.contains("마음"));
         assert!(!mind_senses.iter().any(|entry| entry.context_recommended));
         assert!(mind_senses
@@ -2437,6 +2522,48 @@ mod tests {
         assert!(overtime.entries.iter().any(|entry| {
             entry.headword == "야근하다" && entry.definition.contains("밤늦게까지 일하다")
         }));
+
+        let segmented_terms = {
+            let connection = store.connection.lock().unwrap();
+            segment_lookup_terms(&connection, "홍보 이미지 유출", "ko", "ko").unwrap()
+        };
+        assert!(
+            segmented_terms.contains(&"홍보".to_string()),
+            "{segmented_terms:?}"
+        );
+        assert!(
+            segmented_terms.contains(&"이미지".to_string()),
+            "{segmented_terms:?}"
+        );
+        assert!(
+            segmented_terms.contains(&"유출".to_string()),
+            "{segmented_terms:?}"
+        );
+        assert!(
+            !segmented_terms.contains(&"이미".to_string()),
+            "{segmented_terms:?}"
+        );
+
+        let media_leak = store.lookup("홍보 이미지 유출", Some("ko"), "ko").unwrap();
+        assert!(media_leak.segmented);
+        let media_leak_headwords = media_leak
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        assert!(
+            media_leak_headwords.contains(&"홍보"),
+            "{media_leak_headwords:?}"
+        );
+        assert!(
+            media_leak_headwords.contains(&"이미지"),
+            "{media_leak_headwords:?}"
+        );
+        assert!(
+            media_leak_headwords.contains(&"유출"),
+            "{media_leak_headwords:?}"
+        );
+        assert!(!media_leak_headwords.contains(&"이미"));
     }
 
     #[test]
@@ -2508,6 +2635,31 @@ mod tests {
     }
 
     #[test]
+    fn korean_segmentation_does_not_return_a_prefix_with_an_uncovered_hangul_suffix() {
+        let store = temporary_store("korean-uncovered-prefix");
+        store
+            .install_pack(&StarterPack {
+                id: "test-ko-uncovered-prefix".to_string(),
+                language: "ko".to_string(),
+                version: "2026.08.20.1".to_string(),
+                title: "Korean prefix test".to_string(),
+                source_name: "Test source".to_string(),
+                source_url: "https://example.com".to_string(),
+                license: "GPL-3.0-only".to_string(),
+                edition: "mini".to_string(),
+                entries: vec![test_sense(
+                    "이미",
+                    "어떤 일이 지금보다 앞서 이루어진 상태.",
+                    0,
+                )],
+            })
+            .unwrap();
+
+        let result = store.lookup("이미지", Some("ko"), "ko").unwrap();
+        assert!(result.entries.is_empty());
+    }
+
+    #[test]
     fn korean_unknown_word_does_not_surface_an_inner_inflected_verb() {
         let store = temporary_store("korean-inner-inflection");
         store.install_bundled_pack("ko").unwrap();
@@ -2549,8 +2701,9 @@ mod tests {
             .iter()
             .filter(|entry| entry.headword == "잠들다")
             .collect::<Vec<_>>();
-        assert_eq!(sleep_senses.len(), 2);
-        assert!(sleep_senses[0].definition.contains("잠을 자고"));
+        assert!(sleep_senses.len() >= 2);
+        assert_eq!(sleep_senses[0].definition, "잠을 자는 상태가 되다.");
+        assert_eq!(sleep_senses[0].source_name, "한국어기초사전, 국립국어원");
         assert!(!sleep_senses[0].context_recommended);
     }
 

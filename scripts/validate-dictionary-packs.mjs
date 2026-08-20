@@ -35,7 +35,7 @@ assert.deepEqual(
   "every installable language must have one core-vocabulary profile",
 );
 const minimumExpandedEntries = new Map([
-  ["ko", 70_000],
+  ["ko", 140_000],
   ["en", 150_000],
   ["ja", 500_000],
   ["zh", 120_000],
@@ -155,11 +155,16 @@ const mindSenses = korean.packs[0].entries.filter(entry => entry.headword === "�
 assert.ok(mindSenses.length >= 5, "Korean practical pack must preserve homonymous 정신 senses");
 assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("마음")), "정신 must preserve its common mind sense");
 assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("(역사)")), "정신 must preserve its historical senses as alternatives");
-for (const word of ["퇴근", "퇴근하다", "야근", "야근하다"]) {
+for (const word of ["퇴근", "퇴근하다", "야근", "야근하다", "홍보", "이미지", "유출"]) {
   const entry = korean.packs[0].entries.find(candidate => candidate.headword === word);
   assert.ok(entry, `Korean layered pack must cover ${word}`);
   assert.equal(entry.sourceName, "한국어기초사전, 국립국어원", `${word}: primary attribution is missing`);
   assert.equal(entry.sourcePriority, 0, `${word}: primary source must win`);
+}
+for (const word of ["홍보", "이미지", "유출"]) {
+  const entry = korean.packs[0].entries.find(candidate => candidate.headword === word);
+  assert.ok(entry.glosses.ko && entry.glosses.en && entry.glosses.ja && entry.glosses.zh,
+    `${word}: Korean Basic Dictionary localized definitions are incomplete`);
 }
 
 const simplifiedChinese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/zh.json.gz", import.meta.url))));
