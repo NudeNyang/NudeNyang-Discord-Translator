@@ -98,6 +98,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-panel .nt-dict-title strong{display:block;overflow-wrap:anywhere;color:var(--text-normal,#f2f3f5);font-size:22px;font-weight:720;letter-spacing:-.025em;line-height:1.2}
       #nt-dictionary-panel .nt-dict-reading{margin-left:7px;color:var(--text-muted,#949ba4);font-size:13px;font-weight:500}
       #nt-dictionary-panel .nt-dict-selection-meaning{margin:6px 0 0;overflow-wrap:anywhere;color:var(--text-muted,#b5bac1);font-size:14px;font-weight:500;letter-spacing:-.01em;line-height:1.45}
+      #nt-dictionary-panel .nt-dict-selection-pending{display:block;width:min(230px,72%);height:9px;margin-top:9px;border-radius:5px;background:var(--background-modifier-accent,#ffffff12);animation:nt-dictionary-pulse 1.1s ease-in-out infinite alternate}
       #nt-dictionary-panel button{border:0;color:inherit;font:inherit;cursor:pointer}
       #nt-dictionary-panel .nt-dict-icon-button{display:inline-flex;width:32px;height:32px;flex:none;align-items:center;justify-content:center;border:1px solid var(--background-modifier-accent,#ffffff18);border-radius:10px;background:var(--background-modifier-hover,#ffffff0b);color:var(--text-muted,#b5bac1);font-size:15px;font-weight:700}
       #nt-dictionary-panel .nt-dict-icon-button:hover{background:var(--background-modifier-selected,#ffffff14);color:var(--text-normal,#f2f3f5)}
@@ -143,7 +144,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-panel .nt-dict-form input::placeholder{color:var(--text-muted,#737b86)}
       #nt-dictionary-panel .nt-dict-form-actions{display:flex;justify-content:flex-end;gap:7px}
       #nt-dictionary-panel .nt-dict-saved{margin:11px 0 0;color:var(--status-positive-text,#57f287);font-size:12px}
-      @media(prefers-reduced-motion:reduce){#nt-dictionary-selection{transition:none}#nt-dictionary-panel .nt-dict-skeleton i{animation:none}}
+      @media(prefers-reduced-motion:reduce){#nt-dictionary-selection{transition:none}#nt-dictionary-panel .nt-dict-skeleton i,#nt-dictionary-panel .nt-dict-selection-pending{animation:none}}
       @media(prefers-reduced-transparency:reduce){#nt-dictionary-selection,#nt-dictionary-panel{backdrop-filter:none}}
     `;
     document.head.appendChild(style);
@@ -338,6 +339,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
   };
   const renderResult = (requestId, result, error = '') => {
     if (panel.dataset.requestId !== requestId) return;
+    const previousScrollTop=panel.querySelector('.nt-dict-scroll')?.scrollTop || 0;
     panel.replaceChildren();
     const head = make('header','nt-dict-head');
     const title = make('div','nt-dict-title');
@@ -345,6 +347,9 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     const firstReading = result?.segmented ? '' : result?.entries?.find(entry => entry.reading)?.reading || '';
     if (firstReading) title.querySelector('strong').append(make('span','nt-dict-reading',firstReading));
     if (result?.selectionTranslation) title.append(make('p','nt-dict-selection-meaning',result.selectionTranslation));
+    else if (result?.localizationPending && result?.sourceLanguage !== result?.targetLanguage) {
+      const pendingMeaning=make('i','nt-dict-selection-pending'); pendingMeaning.setAttribute('aria-label',copy('loading')); title.append(pendingMeaning);
+    }
     const listen = make('button','nt-dict-icon-button','▶'); listen.type='button'; listen.setAttribute('aria-label',copy('pronounce')); listen.title=copy('pronounce'); listen.addEventListener('click',()=>speak(result?.query || '',result?.sourceLanguage));
     const close = make('button','nt-dict-icon-button','×'); close.type='button'; close.setAttribute('aria-label',copy('close')); close.addEventListener('click',closePanel);
     head.append(title,listen,close);
@@ -427,7 +432,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       actions.after(form); target.focus();
     });
     if (externalEnabled) actions.append(external);
-    actions.append(add); body.append(actions); mountPanelContent(head,body);
+    actions.append(add); body.append(actions); const scroll=mountPanelContent(head,body); scroll.scrollTop=previousScrollTop;
     positionPanel(JSON.parse(panel.dataset.anchor || '{"left":12,"right":12,"top":12,"bottom":12,"width":0,"height":0}'));
   };
   window.__ntDictionaryApply = (requestId,payload,error='') => {
@@ -677,6 +682,9 @@ mod tests {
 
         assert!(script.contains("result?.selectionTranslation"));
         assert!(script.contains("nt-dict-selection-meaning"));
+        assert!(script.contains("result?.localizationPending"));
+        assert!(script.contains("nt-dict-selection-pending"));
+        assert!(script.contains("previousScrollTop"));
         assert!(!script.contains("문맥에 맞는 표현"));
         assert!(!script.contains("문법 요소"));
     }

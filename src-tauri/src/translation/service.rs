@@ -126,6 +126,16 @@ impl TranslationService {
         self.translate_many_with_source_hints(texts, &source_hints, target, None)
     }
 
+    pub fn translate_many_with_sources(
+        &mut self,
+        texts: &[String],
+        sources: &[Language],
+        target: Language,
+    ) -> Result<Vec<String>, String> {
+        let source_hints = sources.iter().copied().map(Some).collect::<Vec<_>>();
+        self.translate_many_with_source_hints(texts, &source_hints, target, None)
+    }
+
     fn translate_many_with_source_hints(
         &mut self,
         texts: &[String],
