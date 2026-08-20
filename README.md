@@ -95,7 +95,7 @@ sequenceDiagram
 
     App->>App: Verify the Discord executable path
     App->>Discord: Start with --remote-debugging-pipe
-    Note over App,Discord: Inherited anonymous pipe handles only; no TCP debug port
+    Note over App,Discord: Inherited anonymous pipe handles only — no TCP debug port
     App->>Discord: Verify PID handoff and the discord.com target
     App->>Discord: Read and update the rendered DOM
     App->>Guard: Leave app-side pipe handles for reconnect
