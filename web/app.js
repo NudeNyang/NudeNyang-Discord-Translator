@@ -576,7 +576,7 @@ function renderDictionaryPacks() {
     const progress = state.dictionaryPackProgress.get(pack.language);
     const installedPractical = pack.installed && pack.edition === "practical";
     const entryCount = pack.availableEntryCount || pack.entryCount;
-    detail.textContent = `${entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} · ${formatStorageSize(pack.compressedBytes)}`;
+    detail.textContent = `${entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} · ${translateCopy(currentUiLanguage(), "압축 용량")} ${formatStorageSize(pack.compressedBytes)}`;
     stateBadge.className = `dictionary-pack-state${installedPractical ? " installed" : ""}`;
     if (progress?.phase === "preparing") {
       setLocalizedText(stateBadge, "설치 준비 중");
@@ -624,7 +624,7 @@ function renderDictionaryPacks() {
     container.append(expansion);
   }
   const language = currentUiLanguage();
-  elements.dictionaryStorageSummary.textContent = `${translateCopy(language, "사전팩")} ${installedPackCount} · ${translateCopy(language, "개인 용어")} ${status.personalEntryCount} · ${formatStorageSize(status.databaseBytes)}`;
+  elements.dictionaryStorageSummary.textContent = `${translateCopy(language, "사전팩")} ${installedPackCount} · ${translateCopy(language, "개인 용어")} ${status.personalEntryCount} · ${translateCopy(language, "디스크 사용량")} ${formatStorageSize(status.databaseBytes)}`;
 }
 
 async function refreshDictionaryStatus() {

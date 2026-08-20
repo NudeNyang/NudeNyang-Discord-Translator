@@ -702,7 +702,6 @@ Apache License 2.0이 별도로 적용된다. 각 모델의 공식 라이선스 
 | MNN | 네이티브 OCR 추론 런타임 | Apache-2.0, <https://github.com/alibaba/MNN> |
 | PaddleOCR 모델 | PP-OCRv6 Small/Medium 감지·인식 및 한국어 PP-OCRv5 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
 | Lingua 1.8.0 및 선택 언어 모델 | 오프라인 채팅 언어 감지 | Apache-2.0, Copyright © 2020-present Peter M. Stahl, <https://github.com/pemistahl/lingua-rs> |
-| opencc-js 1.4.1 및 OpenCC 사전 데이터 | 간체 중국어 실용팩의 표제어 빌드 변환 | MIT AND Apache-2.0, <https://github.com/nk2028/opencc-js>, <https://github.com/BYVoid/OpenCC> |
 | Tabler Icons | 설정 메뉴 아이콘 | MIT, Copyright (c) 2020-2026 Paweł Kuna, <https://github.com/tabler/tabler-icons> |
 | Microsoft Visual C++ Redistributable | \`llama-server.exe\`의 앱 로컬 Windows 런타임 | Microsoft Software License Terms, <https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist> |
 | Microsoft Edge WebView2 Runtime | Tauri 설정 및 트레이 UI 렌더링 | Microsoft Edge WebView2 Runtime Terms, <https://developer.microsoft.com/microsoft-edge/webview2/> |
@@ -718,35 +717,40 @@ TranslateGemma is provided under and subject to the Gemma Terms of Use found at
 한·영·일·중 미니팩은 기능 검증을 위해 이 프로젝트에서 직접 작성했으며 앱과 같은
 \`GPL-3.0-only\`가 적용된다.
 
-한국어·영어·중국어 실용팩은 한국어 Wiktionary의 2026-08-04 덤프를 Wiktextract/kaikki.org로
-추출한 2026년 8월 데이터를 필터링하고 내부 형식으로 변환한 것이다. 원문 항목은 CC BY-SA 4.0과
-GFDL 1.1 이상으로 이중 라이선스되며, 변환팩에는 원본과 동일한 조건이 적용된다. 이 프로젝트는
-예문, 음성, 이미지와 별도 라이선스가 표시된 미디어를 포함하지 않는다.
+한국어 확장팩은 한국어 Wiktionary의 2026-08-04 덤프를 Wiktextract/kaikki.org로 추출한 데이터를
+필터링하고 내부 형식으로 변환한 것이다. 원문 항목은 CC BY-SA 4.0과 GFDL 1.1 이상으로
+이중 라이선스되며, 변환팩에는 원본과 동일한 조건이 적용된다.
 
 - Source: <https://kaikki.org/kowiktionary/rawdata.html>
 - Wiktionary copyright and contributor attribution: <https://ko.wiktionary.org/wiki/위키낱말사전:저작권>
 - CC BY-SA 4.0: <https://creativecommons.org/licenses/by-sa/4.0/legalcode>
 - GFDL 1.1 or later: <https://www.gnu.org/licenses/fdl-1.3.html>
 
-간체 중국어 실용팩의 표제어는 \`opencc-js\` 1.4.1과 OpenCC 사전 데이터를 사용해 검수된 번체
-표제어에서 변환했다. 변환 후 같은 간체 표제어와 뜻이 된 항목은 중복만 제거했으며 한국어 뜻은
-다시 작성하지 않았다. \`opencc-js\` 코드는 빌드 도구로만 사용하고 데스크톱 런타임에는 포함하지 않는다.
+영어 확장팩은 Open English WordNet 2025의 표제어, 발음과 synset 정의를 내부 형식으로
+재배열한 것이다. 원본과 변환팩에는 CC BY 4.0이 적용된다.
 
-- opencc-js: <https://github.com/nk2028/opencc-js> (MIT AND Apache-2.0)
-- OpenCC: <https://github.com/BYVoid/OpenCC> (Apache-2.0)
+- Project and download: <https://en-word.net/downloads>
+- CC BY 4.0: <https://creativecommons.org/licenses/by/4.0/legalcode>
 
-일본어 실용팩은 Electronic Dictionary Research and Development Group(EDRDG)의 JMdict를
-\`jmdict-simplified\` common-word release \`3.6.2+20260817122448\`에서 필터링하고 내부 형식으로
-변환한 것이다. JMdict와 이 파생 데이터는 CC BY-SA 4.0으로 제공된다. Copyright is held by
-James William BREEN and the Electronic Dictionary Research and Development Group.
+간체·번체 중국어 확장팩은 CC-CEDICT의 2026-08-20 배포본에 함께 기록된 두 표기, 병음과
+영어 뜻을 각각의 검색팩으로 재배열한 것이다. 원본과 변환팩에는 CC BY-SA 4.0이 적용된다.
+
+- Project and download: <https://www.mdbg.net/chinese/dictionary?page=cc-cedict>
+- CC BY-SA 4.0: <https://creativecommons.org/licenses/by-sa/4.0/legalcode>
+
+일본어 확장팩은 Electronic Dictionary Research and Development Group(EDRDG)의 전체 JMdict를
+\`jmdict-simplified\` full English release \`3.6.2+20260817122448\`에서 변환한 것이다. JMdict와
+이 파생 데이터는 CC BY-SA 4.0으로 제공된다. Copyright is held by James William BREEN and the
+Electronic Dictionary Research and Development Group.
 
 - JMdict project: <https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project>
 - EDRDG licence statement: <https://www.edrdg.org/edrdg/licence.html>
 - Conversion source: <https://github.com/scriptin/jmdict-simplified/releases/tag/3.6.2%2B20260817122448>
 
-두 실용팩 계열 모두 단어, 뜻, 품사와 읽기를 선별·정규화하고 NudeNyang 사전팩 JSON 구조로
-재배열한 변경본이다. 원본 출처는 각 조회 결과와 설정의 라이선스 화면에도 표시한다. JMdict
-배포 조건에 따라 일본어 데이터는 정기적으로, 최소 월 1회 최신 릴리스를 검토하고 갱신한다.
+모든 확장팩은 단어, 뜻, 품사와 읽기를 선별·정규화하고 NudeNyang 사전팩 JSON 구조로 재배열한
+변경본이다. 예문, 음성, 이미지와 별도 라이선스가 표시된 미디어는 포함하지 않는다. 원본 출처는
+각 조회 결과와 설정의 라이선스 화면에도 표시한다. JMdict 배포 조건에 따라 일본어 데이터는
+정기적으로, 최소 월 1회 최신 릴리스를 검토하고 갱신한다.
 
 외부 사전 버튼은 라이브러리나 데이터를 번들하지 않고 사용자가 선택한 단어의 Wiktionary 검색
 페이지를 기본 브라우저로 연다. 사용자는 Wiktionary의 이용 약관과 개인정보처리방침을 따른다.

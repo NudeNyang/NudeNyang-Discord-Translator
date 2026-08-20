@@ -419,7 +419,8 @@ test("dictionary pack cards keep compact metadata and open consolidated source n
   assert.match(script, /dictionaryPackLicenses:\s*document\.querySelector\("#dictionary-pack-licenses"\)/);
   assert.match(script, /message:\s*DICTIONARY_NOTICES_TEXT/);
   const renderer = script.match(/function renderDictionaryPacks\(\) \{[\s\S]*?\n\}/)?.[0] || "";
-  assert.match(renderer, /formatStorageSize\(pack\.compressedBytes\)/);
+  assert.match(renderer, /"압축 용량"[\s\S]*?formatStorageSize\(pack\.compressedBytes\)/);
+  assert.match(renderer, /"디스크 사용량"[\s\S]*?formatStorageSize\(status\.databaseBytes\)/);
   assert.doesNotMatch(renderer, /pack\.sourceName/);
 });
 

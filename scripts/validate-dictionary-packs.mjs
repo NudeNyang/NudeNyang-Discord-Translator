@@ -22,6 +22,13 @@ const practicalCodes = new Set(
   catalog.languages.filter(language => language.availability === "practical").map(language => language.code),
 );
 assert.deepEqual([...practicalCodes].sort(), ["en", "ja", "ko", "zh", "zh-Hant"].sort());
+const minimumExpandedEntries = new Map([
+  ["ko", 70_000],
+  ["en", 150_000],
+  ["ja", 500_000],
+  ["zh", 120_000],
+  ["zh-Hant", 120_000],
+]);
 
 const ids = new Set();
 for (const pack of starter.packs) {
@@ -68,6 +75,10 @@ for (const metadata of catalog.languages.filter(language => language.availabilit
   assert.equal(pack.language, metadata.code, `${metadata.code}: language mismatch`);
   assert.equal(pack.edition, "practical", `${metadata.code}: practical edition marker missing`);
   assert.equal(pack.entries.length, metadata.entryCount, `${metadata.code}: entry count mismatch`);
+  assert.ok(
+    pack.entries.length >= minimumExpandedEntries.get(metadata.code),
+    `${metadata.code}: expanded pack is too small`,
+  );
   assert.ok(metadata.title && metadata.source && metadata.sourceUrl && metadata.license, `${metadata.code}: catalog attribution is incomplete`);
   assert.match(metadata.version, /^\d{4}\.\d{2}\.\d{2}\.\d+$/, `${metadata.code}: invalid practical version`);
   const glossesByHeadword = new Map();
@@ -125,5 +136,5 @@ assert.ok(traditionalChinese.packs[0].entries.some(entry => entry.headword === "
 
 console.log(`Dictionary catalog: ${catalog.languages.length}/28 languages`);
 console.log(`Bundled starter packs: ${starter.packs.length} packs · ${starter.packs.reduce((sum, pack) => sum + pack.entries.length, 0)} entries`);
-console.log(`Practical packs: ${practicalCodes.size} packs · ${catalog.languages.filter(item => item.availability === "practical").reduce((sum, item) => sum + item.entryCount, 0)} entries`);
+console.log(`Expanded packs: ${practicalCodes.size} packs · ${catalog.languages.filter(item => item.availability === "practical").reduce((sum, item) => sum + item.entryCount, 0)} entries`);
 console.log("Dictionary pack validation passed.");

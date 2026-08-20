@@ -469,11 +469,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "字典套件",
     "개인 용어": "個人詞彙",
     "항목": "筆",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "韓文、英文、日文及中文實用語言包皆以壓縮形式內建。只有選取的語言包會安裝至本機資料庫。",
     "미니팩": "迷你語言包",
-    "실용팩": "實用語言包",
-    "실용팩 설치": "安裝實用語言包",
-    "실용팩 설치됨": "實用語言包已安裝",
     "설치 중 {progress}%": "正在安裝 {progress}%",
     "자동 번역": "自動翻譯",
     "원문 뜻": "原文含義",
@@ -497,7 +493,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "無法套用來源語言設定",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "所選短語的全文和介面語言中沒有的字典釋義，可能會由已設定的翻譯模型自動翻譯。若選用外部模型，這些文字可能會傳送至該服務。周邊上下文僅在本機使用。",
     "오프라인 사전": "離線字典",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "安裝擴充字典以查找更多單字和詞彙。"
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "安裝擴充字典以查找更多單字和詞彙。",
+    "다운로드": "下載",
+    "디스크 사용량": "磁碟使用量",
+    "압축 용량": "壓縮後大小"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -968,11 +967,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Pacotes de dicionário",
     "개인 용어": "Termos pessoais",
     "항목": "entradas",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Os pacotes práticos de coreano, inglês, japonês e chinês estão incluídos em formato compactado. Apenas os pacotes selecionados são instalados no banco de dados local.",
     "미니팩": "Pacote mini",
-    "실용팩": "Pacote prático",
-    "실용팩 설치": "Instalar pacote prático",
-    "실용팩 설치됨": "Pacote prático instalado",
     "설치 중 {progress}%": "Instalando {progress}%",
     "자동 번역": "Tradução automática",
     "원문 뜻": "Significado original",
@@ -996,7 +991,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Não foi possível aplicar a configuração de idioma de origem",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "A frase selecionada completa e os significados do dicionário indisponíveis no idioma da interface podem ser traduzidos pelo modelo configurado. Se um modelo externo for selecionado, esse texto poderá ser enviado ao serviço. O contexto ao redor é usado apenas neste PC.",
     "오프라인 사전": "Dicionários offline",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Instale um dicionário estendido para encontrar mais palavras e expressões."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Instale um dicionário estendido para encontrar mais palavras e expressões.",
+    "다운로드": "baixar",
+    "디스크 사용량": "uso do disco",
+    "압축 용량": "tamanho compactado"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1467,11 +1465,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "शब्दकोश पैक",
     "개인 용어": "निजी शब्द",
     "항목": "प्रविष्टियाँ",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "कोरियाई, अंग्रेज़ी, जापानी और चीनी व्यावहारिक पैक संपीड़ित रूप में शामिल हैं। केवल चुने गए पैक स्थानीय डेटाबेस में इंस्टॉल किए जाते हैं।",
     "미니팩": "मिनी पैक",
-    "실용팩": "व्यावहारिक पैक",
-    "실용팩 설치": "व्यावहारिक पैक इंस्टॉल करें",
-    "실용팩 설치됨": "व्यावहारिक पैक इंस्टॉल हो गया",
     "설치 중 {progress}%": "इंस्टॉल हो रहा है {progress}%",
     "자동 번역": "स्वचालित अनुवाद",
     "원문 뜻": "मूल अर्थ",
@@ -1495,7 +1489,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "स्रोत भाषा सेटिंग लागू नहीं की जा सकी",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "चुना गया पूरा वाक्यांश और इंटरफ़ेस भाषा में उपलब्ध न होने वाले शब्दकोश अर्थ कॉन्फ़िगर किए गए मॉडल से अनुवादित किए जा सकते हैं। बाहरी मॉडल चुने जाने पर, यह टेक्स्ट उस सेवा को भेजा जा सकता है। आसपास का संदर्भ केवल इस PC पर उपयोग होता है।",
     "오프라인 사전": "ऑफ़लाइन शब्दकोश",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "ज़्यादा शब्द और अभिव्यक्तियाँ खोजने के लिए विस्तृत शब्दकोश इंस्टॉल करें।"
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "ज़्यादा शब्द और अभिव्यक्तियाँ खोजने के लिए विस्तृत शब्दकोश इंस्टॉल करें।",
+    "다운로드": "डाउनलोड",
+    "디스크 사용량": "डिस्क उपयोग",
+    "압축 용량": "संपीड़ित आकार"
   },
   "es-419": {
     "설정": "Configuración",
@@ -1966,11 +1963,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Paquetes de diccionarios",
     "개인 용어": "Términos personales",
     "항목": "entradas",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Los paquetes prácticos de coreano, inglés, japonés y chino vienen incluidos en formato comprimido. Solo los paquetes seleccionados se instalan en la base de datos local.",
     "미니팩": "Paquete mini",
-    "실용팩": "Paquete práctico",
-    "실용팩 설치": "Instalar paquete práctico",
-    "실용팩 설치됨": "Paquete práctico instalado",
     "설치 중 {progress}%": "Instalando: {progress}%",
     "자동 번역": "Traducción automática",
     "원문 뜻": "Significado original",
@@ -1994,7 +1987,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "No se pudo aplicar la configuración del idioma de origen",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "La frase seleccionada completa y los significados del diccionario no disponibles en el idioma de la interfaz pueden traducirse con el modelo configurado. Si se selecciona un modelo externo, ese texto puede enviarse al servicio. El contexto cercano solo se usa en esta PC.",
     "오프라인 사전": "Diccionarios sin conexión",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Instala un diccionario ampliado para encontrar más palabras y expresiones."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Instala un diccionario ampliado para encontrar más palabras y expresiones.",
+    "다운로드": "descargar",
+    "디스크 사용량": "uso de disco",
+    "압축 용량": "tamaño comprimido"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2465,11 +2461,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Wörterbuchpakete",
     "개인 용어": "Persönliche Begriffe",
     "항목": "Einträge",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Die Praxispakete für Koreanisch, Englisch, Japanisch und Chinesisch sind in komprimierter Form enthalten. Nur ausgewählte Pakete werden in der lokalen Datenbank installiert.",
     "미니팩": "Minipaket",
-    "실용팩": "Praxispaket",
-    "실용팩 설치": "Praxispaket installieren",
-    "실용팩 설치됨": "Praxispaket installiert",
     "설치 중 {progress}%": "Installation läuft: {progress} %",
     "자동 번역": "Automatische Übersetzung",
     "원문 뜻": "Ursprüngliche Bedeutung",
@@ -2493,7 +2485,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Die Einstellung für die Ausgangssprache konnte nicht angewendet werden",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Die vollständig ausgewählte Wortgruppe und Wörterbuchbedeutungen, die nicht in der Sprache der Benutzeroberfläche verfügbar sind, können mit dem konfigurierten Modell übersetzt werden. Wenn ein externes Modell ausgewählt ist, kann dieser Text an den Dienst gesendet werden. Der umgebende Kontext wird nur auf diesem PC verwendet.",
     "오프라인 사전": "Offline-Wörterbücher",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installiere ein erweitertes Wörterbuch, um mehr Wörter und Ausdrücke zu finden."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installiere ein erweitertes Wörterbuch, um mehr Wörter und Ausdrücke zu finden.",
+    "다운로드": "Download",
+    "디스크 사용량": "Speicherplatzbelegung",
+    "압축 용량": "Komprimierte Größe"
   },
   "ru": {
     "설정": "Настройки",
@@ -2964,11 +2959,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Пакеты словарей",
     "개인 용어": "Личные термины",
     "항목": "записей",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Практические пакеты для корейского, английского, японского и китайского языков включены в сжатом виде. В локальную базу данных устанавливаются только выбранные пакеты.",
     "미니팩": "Мини-пакет",
-    "실용팩": "Практический пакет",
-    "실용팩 설치": "Установить практический пакет",
-    "실용팩 설치됨": "Практический пакет установлен",
     "설치 중 {progress}%": "Установка: {progress}%",
     "자동 번역": "Автоматический перевод",
     "원문 뜻": "Исходное значение",
@@ -2992,7 +2983,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Не удалось применить настройку исходного языка",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Выбранная фраза целиком и словарные значения, недоступные на языке интерфейса, могут быть переведены настроенной моделью. Если выбрана внешняя модель, этот текст может быть отправлен соответствующему сервису. Окружающий контекст используется только на этом ПК.",
     "오프라인 사전": "Офлайн-словари",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Установите расширенный словарь, чтобы находить больше слов и выражений."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Установите расширенный словарь, чтобы находить больше слов и выражений.",
+    "다운로드": "скачивание",
+    "디스크 사용량": "использование диска",
+    "압축 용량": "размер после сжатия"
   },
   "id": {
     "설정": "Pengaturan",
@@ -3463,11 +3457,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Paket kamus",
     "개인 용어": "Istilah pribadi",
     "항목": "entri",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Paket praktis bahasa Korea, Inggris, Jepang, dan Mandarin disertakan dalam bentuk terkompresi. Hanya paket yang dipilih yang diinstal di database lokal.",
     "미니팩": "Paket mini",
-    "실용팩": "Paket praktis",
-    "실용팩 설치": "Instal paket praktis",
-    "실용팩 설치됨": "Paket praktis terinstal",
     "설치 중 {progress}%": "Menginstal {progress}%",
     "자동 번역": "Terjemahan otomatis",
     "원문 뜻": "Makna asli",
@@ -3491,7 +3481,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Tidak dapat menerapkan pengaturan bahasa sumber",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Seluruh frasa yang dipilih dan arti kamus yang tidak tersedia dalam bahasa antarmuka dapat diterjemahkan oleh model yang dikonfigurasi. Jika model eksternal dipilih, teks tersebut dapat dikirim ke layanan itu. Konteks di sekitarnya hanya digunakan di PC ini.",
     "오프라인 사전": "Kamus offline",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Instal kamus tambahan untuk menemukan lebih banyak kata dan ungkapan."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Instal kamus tambahan untuk menemukan lebih banyak kata dan ungkapan.",
+    "다운로드": "unduh",
+    "디스크 사용량": "penggunaan disk",
+    "압축 용량": "ukuran terkompresi"
   },
   "fr": {
     "설정": "Paramètres",
@@ -3962,11 +3955,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Packs de dictionnaires",
     "개인 용어": "Termes personnels",
     "항목": "entrées",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Les packs pratiques coréen, anglais, japonais et chinois sont inclus sous forme compressée. Seuls les packs sélectionnés sont installés dans la base de données locale.",
     "미니팩": "Mini-pack",
-    "실용팩": "Pack pratique",
-    "실용팩 설치": "Installer le pack pratique",
-    "실용팩 설치됨": "Pack pratique installé",
     "설치 중 {progress}%": "Installation en cours… {progress} %",
     "자동 번역": "Traduction automatique",
     "원문 뜻": "Sens original",
@@ -3990,7 +3979,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Impossible d’appliquer le paramètre de langue source",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "La phrase sélectionnée dans son intégralité et les définitions absentes dans la langue de l’interface peuvent être traduites par le modèle configuré. Si un modèle externe est sélectionné, ce texte peut être envoyé au service. Le contexte environnant est utilisé uniquement sur ce PC.",
     "오프라인 사전": "Dictionnaires hors ligne",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installez un dictionnaire étendu pour trouver davantage de mots et d’expressions."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installez un dictionnaire étendu pour trouver davantage de mots et d’expressions.",
+    "다운로드": "téléchargement",
+    "디스크 사용량": "utilisation du disque",
+    "압축 용량": "taille compressée"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4461,11 +4453,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Sözlük paketleri",
     "개인 용어": "Kişisel terimler",
     "항목": "kayıt",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Korece, İngilizce, Japonca ve Çince pratik paketler sıkıştırılmış olarak sunulur. Yalnızca seçilen paketler yerel veritabanına yüklenir.",
     "미니팩": "Mini paket",
-    "실용팩": "Pratik paket",
-    "실용팩 설치": "Pratik paketi yükle",
-    "실용팩 설치됨": "Pratik paket yüklendi",
     "설치 중 {progress}%": "Yükleniyor %{progress}",
     "자동 번역": "Otomatik çeviri",
     "원문 뜻": "Orijinal anlam",
@@ -4489,7 +4477,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Kaynak dil ayarı uygulanamadı",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Seçilen ifadenin tamamı ve arayüz dilinde bulunmayan sözlük anlamları, yapılandırılmış model tarafından çevrilebilir. Harici bir model seçilirse bu metin ilgili hizmete gönderilebilir. Çevredeki bağlam yalnızca bu PC'de kullanılır.",
     "오프라인 사전": "Çevrimdışı sözlükler",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Daha fazla kelime ve ifade bulmak için genişletilmiş bir sözlük yükleyin."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Daha fazla kelime ve ifade bulmak için genişletilmiş bir sözlük yükleyin.",
+    "다운로드": "indir",
+    "디스크 사용량": "disk kullanımı",
+    "압축 용량": "sıkıştırılmış boyut"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -4960,11 +4951,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "حزم القواميس",
     "개인 용어": "مصطلحات شخصية",
     "항목": "إدخالات",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "حِزم اللغات الكورية والإنجليزية واليابانية والصينية العملية مضمنة بصيغة مضغوطة. لا تُثبَّت في قاعدة البيانات المحلية إلا الحِزم المحددة.",
     "미니팩": "حزمة مصغرة",
-    "실용팩": "حزمة عملية",
-    "실용팩 설치": "تثبيت الحزمة العملية",
-    "실용팩 설치됨": "تم تثبيت الحزمة العملية",
     "설치 중 {progress}%": "جارٍ التثبيت {progress}%",
     "자동 번역": "الترجمة التلقائية",
     "원문 뜻": "المعنى الأصلي",
@@ -4988,7 +4975,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "تعذّر تطبيق إعداد لغة المصدر",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "قد يترجم النموذج المُعدّ العبارة المحددة كاملة ومعاني القاموس غير المتاحة بلغة الواجهة. وإذا تم اختيار نموذج خارجي، فقد يُرسل هذا النص إلى تلك الخدمة. يُستخدم السياق المحيط على هذا الكمبيوتر فقط.",
     "오프라인 사전": "قواميس غير متصلة بالإنترنت",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "ثبّت قاموسًا موسّعًا للعثور على المزيد من الكلمات والتعبيرات."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "ثبّت قاموسًا موسّعًا للعثور على المزيد من الكلمات والتعبيرات.",
+    "다운로드": "تنزيل",
+    "디스크 사용량": "استخدام القرص",
+    "압축 용량": "الحجم المضغوط"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5459,11 +5449,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Gói từ điển",
     "개인 용어": "Thuật ngữ cá nhân",
     "항목": "mục",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Các gói thực dụng tiếng Hàn, Anh, Nhật và Trung được tích hợp ở dạng nén. Chỉ các gói đã chọn mới được cài đặt vào cơ sở dữ liệu cục bộ.",
     "미니팩": "Gói mini",
-    "실용팩": "Gói thực dụng",
-    "실용팩 설치": "Cài đặt gói thực dụng",
-    "실용팩 설치됨": "Đã cài đặt gói thực dụng",
     "설치 중 {progress}%": "Đang cài đặt {progress}%",
     "자동 번역": "Dịch tự động",
     "원문 뜻": "Nghĩa gốc",
@@ -5487,7 +5473,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Không thể áp dụng cài đặt ngôn ngữ nguồn",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Toàn bộ cụm từ đã chọn và các nghĩa từ điển không có trong ngôn ngữ giao diện có thể được mô hình đã cấu hình dịch. Nếu chọn mô hình bên ngoài, văn bản đó có thể được gửi đến dịch vụ. Ngữ cảnh xung quanh chỉ được sử dụng trên PC này.",
     "오프라인 사전": "Từ điển ngoại tuyến",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Cài đặt từ điển mở rộng để tìm thêm nhiều từ và cụm từ."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Cài đặt từ điển mở rộng để tìm thêm nhiều từ và cụm từ.",
+    "다운로드": "tải xuống",
+    "디스크 사용량": "dung lượng ổ đĩa",
+    "압축 용량": "kích thước nén"
   },
   "it": {
     "설정": "Impostazioni",
@@ -5958,11 +5947,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Pacchetti dizionario",
     "개인 용어": "Termini personali",
     "항목": "voci",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "I pacchetti pratici per coreano, inglese, giapponese e cinese sono inclusi in formato compresso. Solo i pacchetti selezionati vengono installati nel database locale.",
     "미니팩": "Pacchetto mini",
-    "실용팩": "Pacchetto pratico",
-    "실용팩 설치": "Installa il pacchetto pratico",
-    "실용팩 설치됨": "Pacchetto pratico installato",
     "설치 중 {progress}%": "Installazione {progress}%",
     "자동 번역": "Traduzione automatica",
     "원문 뜻": "Significato originale",
@@ -5986,7 +5971,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Impossibile applicare l'impostazione della lingua di origine",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "L’intera frase selezionata e i significati del dizionario non disponibili nella lingua dell’interfaccia possono essere tradotti dal modello configurato. Se è selezionato un modello esterno, il testo può essere inviato al servizio. Il contesto circostante viene usato solo su questo PC.",
     "오프라인 사전": "Dizionari offline",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installa un dizionario esteso per trovare più parole ed espressioni."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installa un dizionario esteso per trovare più parole ed espressioni.",
+    "다운로드": "download",
+    "디스크 사용량": "utilizzo del disco",
+    "압축 용량": "dimensione compressa"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -6457,11 +6445,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Pakiety słowników",
     "개인 용어": "Własne terminy",
     "항목": "wpisy",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Praktyczne pakiety dla języka koreańskiego, angielskiego, japońskiego i chińskiego są dołączone w postaci skompresowanej. W lokalnej bazie danych instalowane są tylko wybrane pakiety.",
     "미니팩": "Minipakiet",
-    "실용팩": "Pakiet praktyczny",
-    "실용팩 설치": "Zainstaluj pakiet praktyczny",
-    "실용팩 설치됨": "Pakiet praktyczny zainstalowany",
     "설치 중 {progress}%": "Instalowanie: {progress}%",
     "자동 번역": "Tłumaczenie automatyczne",
     "원문 뜻": "Oryginalne znaczenie",
@@ -6485,7 +6469,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Nie udało się zastosować ustawienia języka źródłowego",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Cały zaznaczony zwrot oraz znaczenia słownikowe niedostępne w języku interfejsu mogą zostać przetłumaczone przez skonfigurowany model. Jeśli wybrano model zewnętrzny, tekst może zostać wysłany do tej usługi. Otaczający kontekst jest używany tylko na tym komputerze.",
     "오프라인 사전": "Słowniki offline",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Zainstaluj rozszerzony słownik, aby znaleźć więcej słów i wyrażeń."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Zainstaluj rozszerzony słownik, aby znaleźć więcej słów i wyrażeń.",
+    "다운로드": "pobierz",
+    "디스크 사용량": "użycie dysku",
+    "압축 용량": "rozmiar po kompresji"
   },
   "uk": {
     "설정": "Налаштування",
@@ -6956,11 +6943,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Пакети словників",
     "개인 용어": "Особисті терміни",
     "항목": "записів",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Практичні пакети для корейської, англійської, японської та китайської мов включено у стисненому вигляді. У локальну базу даних установлюються лише вибрані пакети.",
     "미니팩": "Мініпакет",
-    "실용팩": "Практичний пакет",
-    "실용팩 설치": "Установити практичний пакет",
-    "실용팩 설치됨": "Практичний пакет установлено",
     "설치 중 {progress}%": "Установлення: {progress}%",
     "자동 번역": "Автоматичний переклад",
     "원문 뜻": "Оригінальне значення",
@@ -6984,7 +6967,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Не вдалося застосувати налаштування мови оригіналу",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Уся вибрана фраза та словникові значення, недоступні мовою інтерфейсу, можуть бути перекладені налаштованою моделлю. Якщо вибрано зовнішню модель, цей текст може бути надіслано відповідному сервісу. Навколишній контекст використовується лише на цьому ПК.",
     "오프라인 사전": "Офлайн-словники",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Установіть розширений словник, щоб знаходити більше слів і виразів."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Установіть розширений словник, щоб знаходити більше слів і виразів.",
+    "다운로드": "завантаження",
+    "디스크 사용량": "використання диска",
+    "압축 용량": "розмір після стиснення"
   },
   "ms": {
     "설정": "Tetapan",
@@ -7455,11 +7441,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Pek kamus",
     "개인 용어": "Istilah peribadi",
     "항목": "entri",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Pek praktikal bahasa Korea, Inggeris, Jepun dan Cina disertakan dalam bentuk termampat. Hanya pek yang dipilih dipasang dalam pangkalan data setempat.",
     "미니팩": "Pek mini",
-    "실용팩": "Pek praktikal",
-    "실용팩 설치": "Pasang pek praktikal",
-    "실용팩 설치됨": "Pek praktikal telah dipasang",
     "설치 중 {progress}%": "Sedang memasang {progress}%",
     "자동 번역": "Terjemahan automatik",
     "원문 뜻": "Maksud asal",
@@ -7483,7 +7465,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Tidak dapat menggunakan tetapan bahasa sumber",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Seluruh frasa yang dipilih dan makna kamus yang tidak tersedia dalam bahasa antara muka boleh diterjemahkan oleh model yang dikonfigurasi. Jika model luaran dipilih, teks tersebut boleh dihantar kepada perkhidmatan itu. Konteks sekeliling hanya digunakan pada PC ini.",
     "오프라인 사전": "Kamus luar talian",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Pasang kamus lanjutan untuk mencari lebih banyak perkataan dan ungkapan."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Pasang kamus lanjutan untuk mencari lebih banyak perkataan dan ungkapan.",
+    "다운로드": "muat turun",
+    "디스크 사용량": "penggunaan cakera",
+    "압축 용량": "saiz mampat"
   },
   "nl": {
     "설정": "Instellingen",
@@ -7954,11 +7939,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Woordenboekpakketten",
     "개인 용어": "Persoonlijke termen",
     "항목": "vermeldingen",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Praktische pakketten voor Koreaans, Engels, Japans en Chinees zijn in gecomprimeerde vorm inbegrepen. Alleen geselecteerde pakketten worden in de lokale database geïnstalleerd.",
     "미니팩": "Minipakket",
-    "실용팩": "Praktisch pakket",
-    "실용팩 설치": "Praktisch pakket installeren",
-    "실용팩 설치됨": "Praktisch pakket geïnstalleerd",
     "설치 중 {progress}%": "Bezig met installeren: {progress}%",
     "자동 번역": "Automatische vertaling",
     "원문 뜻": "Oorspronkelijke betekenis",
@@ -7982,7 +7963,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Kon de instelling voor de brontaal niet toepassen",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "De volledige geselecteerde woordgroep en woordenboekbetekenissen die niet beschikbaar zijn in de interfacetaal kunnen door het ingestelde model worden vertaald. Als een extern model is geselecteerd, kan die tekst naar de service worden verzonden. De omliggende context wordt alleen op deze pc gebruikt.",
     "오프라인 사전": "Offlinewoordenboeken",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installeer een uitgebreid woordenboek om meer woorden en uitdrukkingen te vinden."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Installeer een uitgebreid woordenboek om meer woorden en uitdrukkingen te vinden.",
+    "다운로드": "downloaden",
+    "디스크 사용량": "schijfgebruik",
+    "압축 용량": "gecomprimeerde grootte"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -8453,11 +8437,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "ชุดพจนานุกรม",
     "개인 용어": "คำศัพท์ส่วนตัว",
     "항목": "รายการ",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "แพ็กคำศัพท์ใช้งานภาษาเกาหลี อังกฤษ ญี่ปุ่น และจีนรวมมาในรูปแบบบีบอัด โดยจะติดตั้งเฉพาะแพ็กที่เลือกลงในฐานข้อมูลภายในเครื่อง",
     "미니팩": "แพ็กมินิ",
-    "실용팩": "แพ็กใช้งาน",
-    "실용팩 설치": "ติดตั้งแพ็กใช้งาน",
-    "실용팩 설치됨": "ติดตั้งแพ็กใช้งานแล้ว",
     "설치 중 {progress}%": "กำลังติดตั้ง {progress}%",
     "자동 번역": "การแปลอัตโนมัติ",
     "원문 뜻": "ความหมายต้นฉบับ",
@@ -8481,7 +8461,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "ไม่สามารถใช้การตั้งค่าภาษาต้นทางได้",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "วลีที่เลือกทั้งหมดและความหมายในพจนานุกรมที่ไม่มีในภาษาของอินเทอร์เฟซอาจถูกแปลโดยโมเดลที่กำหนดไว้ หากเลือกโมเดลภายนอก ข้อความดังกล่าวอาจถูกส่งไปยังบริการนั้น บริบทรอบข้างจะใช้เฉพาะบน PC เครื่องนี้เท่านั้น",
     "오프라인 사전": "พจนานุกรมออฟไลน์",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "ติดตั้งพจนานุกรมฉบับขยายเพื่อค้นหาคำและสำนวนเพิ่มเติม"
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "ติดตั้งพจนานุกรมฉบับขยายเพื่อค้นหาคำและสำนวนเพิ่มเติม",
+    "다운로드": "ดาวน์โหลด",
+    "디스크 사용량": "พื้นที่ดิสก์ที่ใช้",
+    "압축 용량": "ขนาดไฟล์บีบอัด"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -8952,11 +8935,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Mga pakete ng diksyunaryo",
     "개인 용어": "Mga personal na termino",
     "항목": "mga tala",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Kasama sa naka-compress na anyo ang mga praktikal na pack para sa Korean, English, Japanese, at Chinese. Ang mga piniling pack lang ang ini-install sa lokal na database.",
     "미니팩": "Mini pack",
-    "실용팩": "Praktikal na pack",
-    "실용팩 설치": "I-install ang praktikal na pack",
-    "실용팩 설치됨": "Naka-install na ang praktikal na pack",
     "설치 중 {progress}%": "Ini-install {progress}%",
     "자동 번역": "Awtomatikong pagsasalin",
     "원문 뜻": "Orihinal na kahulugan",
@@ -8980,7 +8959,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Hindi mailapat ang setting ng wikang pinagmulan",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Maaaring isalin ng naka-configure na modelo ang buong napiling parirala at mga kahulugan sa diksyunaryo na wala sa wika ng interface. Kapag panlabas na modelo ang pinili, maaaring ipadala ang tekstong iyon sa serbisyo. Sa PC na ito lamang ginagamit ang nakapaligid na konteksto.",
     "오프라인 사전": "Mga offline na diksyunaryo",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Mag-install ng pinalawak na diksyunaryo para makahanap ng mas maraming salita at ekspresyon."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Mag-install ng pinalawak na diksyunaryo para makahanap ng mas maraming salita at ekspresyon.",
+    "다운로드": "i-download",
+    "디스크 사용량": "paggamit ng disk",
+    "압축 용량": "laki kapag naka-compress"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -9451,11 +9433,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "অভিধান প্যাক",
     "개인 용어": "ব্যক্তিগত পরিভাষা",
     "항목": "এন্ট্রি",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "কোরিয়ান, ইংরেজি, জাপানি ও চীনা ব্যবহারিক প্যাকগুলো সংকুচিত আকারে অন্তর্ভুক্ত আছে। শুধু নির্বাচিত প্যাকগুলোই লোকাল ডেটাবেসে ইনস্টল করা হয়।",
     "미니팩": "মিনি প্যাক",
-    "실용팩": "ব্যবহারিক প্যাক",
-    "실용팩 설치": "ব্যবহারিক প্যাক ইনস্টল করুন",
-    "실용팩 설치됨": "ব্যবহারিক প্যাক ইনস্টল করা হয়েছে",
     "설치 중 {progress}%": "ইনস্টল হচ্ছে {progress}%",
     "자동 번역": "স্বয়ংক্রিয় অনুবাদ",
     "원문 뜻": "মূল অর্থ",
@@ -9479,7 +9457,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "উৎস ভাষার সেটিং প্রয়োগ করা যায়নি",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "নির্বাচিত সম্পূর্ণ বাক্যাংশ এবং ইন্টারফেসের ভাষায় অনুপস্থিত অভিধানের অর্থ কনফিগার করা মডেল দিয়ে অনুবাদ করা হতে পারে। বাহ্যিক মডেল বেছে নিলে, ওই লেখা পরিষেবাটিতে পাঠানো হতে পারে। আশপাশের প্রসঙ্গ শুধু এই PC-তেই ব্যবহার করা হয়।",
     "오프라인 사전": "অফলাইন অভিধানসমূহ",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "আরও শব্দ ও অভিব্যক্তি খুঁজে পেতে একটি বর্ধিত অভিধান ইনস্টল করুন।"
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "আরও শব্দ ও অভিব্যক্তি খুঁজে পেতে একটি বর্ধিত অভিধান ইনস্টল করুন।",
+    "다운로드": "ডাউনলোড",
+    "디스크 사용량": "ডিস্কের ব্যবহার",
+    "압축 용량": "সংকুচিত আকার"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -9950,11 +9931,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "لغت پیکس",
     "개인 용어": "ذاتی اصطلاحات",
     "항목": "اندراجات",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "کوریائی، انگریزی، جاپانی اور چینی زبانوں کے عملی پیک کمپریس شدہ شکل میں شامل ہیں۔ صرف منتخب پیک مقامی ڈیٹا بیس میں انسٹال کیے جاتے ہیں۔",
     "미니팩": "منی پیک",
-    "실용팩": "عملی پیک",
-    "실용팩 설치": "عملی پیک انسٹال کریں",
-    "실용팩 설치됨": "عملی پیک انسٹال ہو گیا",
     "설치 중 {progress}%": "انسٹال ہو رہا ہے {progress}%",
     "자동 번역": "خودکار ترجمہ",
     "원문 뜻": "اصل معنی",
@@ -9978,7 +9955,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "ماخذ زبان کی ترتیب لاگو نہیں ہو سکی",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "منتخب کردہ مکمل فقرہ اور انٹرفیس کی زبان میں دستیاب نہ ہونے والے لغت کے معانی ترتیب دیے گئے ماڈل سے ترجمہ کیے جا سکتے ہیں۔ بیرونی ماڈل منتخب ہونے پر، یہ متن اس سروس کو بھیجا جا سکتا ہے۔ آس پاس کا سیاق صرف اس PC پر استعمال ہوتا ہے۔",
     "오프라인 사전": "آف لائن لغات",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "مزید الفاظ اور محاورے تلاش کرنے کے لیے ایک وسیع لغت انسٹال کریں۔"
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "مزید الفاظ اور محاورے تلاش کرنے کے لیے ایک وسیع لغت انسٹال کریں۔",
+    "다운로드": "ڈاؤن لوڈ",
+    "디스크 사용량": "ڈسک کا استعمال",
+    "압축 용량": "کمپریس شدہ سائز"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -10449,11 +10429,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "அகராதித் தொகுப்புகள்",
     "개인 용어": "தனிப்பட்ட சொற்கள்",
     "항목": "பதிவுகள்",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "கொரியன், ஆங்கிலம், ஜப்பானியம் மற்றும் சீன மொழிகளுக்கான நடைமுறைப் பொதிகள் சுருக்கப்பட்ட வடிவில் சேர்க்கப்பட்டுள்ளன. தேர்ந்தெடுக்கப்பட்ட பொதிகள் மட்டுமே உள்ளகத் தரவுத்தளத்தில் நிறுவப்படும்.",
     "미니팩": "சிறு பொதி",
-    "실용팩": "நடைமுறைப் பொதி",
-    "실용팩 설치": "நடைமுறைப் பொதியை நிறுவு",
-    "실용팩 설치됨": "நடைமுறைப் பொதி நிறுவப்பட்டது",
     "설치 중 {progress}%": "நிறுவுகிறது {progress}%",
     "자동 번역": "தானியங்கி மொழிபெயர்ப்பு",
     "원문 뜻": "அசல் பொருள்",
@@ -10477,7 +10453,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "மூல மொழி அமைப்பைப் பயன்படுத்த முடியவில்லை",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "தேர்ந்தெடுத்த முழுச் சொற்றொடரும் இடைமுக மொழியில் இல்லாத அகராதிப் பொருள்களும் அமைக்கப்பட்ட மாதிரியால் மொழிபெயர்க்கப்படலாம். வெளிப்புற மாதிரி தேர்ந்தெடுக்கப்பட்டால், அந்த உரை சேவைக்கு அனுப்பப்படலாம். சுற்றியுள்ள சூழல் இந்த PC-யில் மட்டுமே பயன்படுத்தப்படும்.",
     "오프라인 사전": "ஆஃப்லைன் அகராதிகள்",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "மேலும் பல சொற்களையும் சொற்றொடர்களையும் கண்டறிய விரிவாக்கப்பட்ட அகராதியை நிறுவவும்."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "மேலும் பல சொற்களையும் சொற்றொடர்களையும் கண்டறிய விரிவாக்கப்பட்ட அகராதியை நிறுவவும்.",
+    "다운로드": "பதிவிறக்கம்",
+    "디스크 사용량": "வட்டு பயன்பாடு",
+    "압축 용량": "சுருக்கப்பட்ட அளவு"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -10948,11 +10927,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "بسته‌های فرهنگ لغت",
     "개인 용어": "اصطلاحات شخصی",
     "항목": "مدخل",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "بسته‌های کاربردی کره‌ای، انگلیسی، ژاپنی و چینی به‌صورت فشرده در برنامه گنجانده شده‌اند. فقط بسته‌های انتخاب‌شده در پایگاه داده محلی نصب می‌شوند.",
     "미니팩": "بسته کوچک",
-    "실용팩": "بسته کاربردی",
-    "실용팩 설치": "نصب بسته کاربردی",
-    "실용팩 설치됨": "بسته کاربردی نصب شد",
     "설치 중 {progress}%": "در حال نصب {progress}٪",
     "자동 번역": "ترجمهٔ خودکار",
     "원문 뜻": "معنی اصلی",
@@ -10976,7 +10951,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "تنظیم زبان مبدأ اعمال نشد",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "عبارت انتخاب‌شده به‌طور کامل و معنی‌های واژه‌نامه که در زبان رابط موجود نیستند، ممکن است با مدل پیکربندی‌شده ترجمه شوند. اگر مدل خارجی انتخاب شده باشد، این متن ممکن است به آن سرویس ارسال شود. بافت پیرامونی فقط در این رایانه استفاده می‌شود.",
     "오프라인 사전": "فرهنگ‌های لغت آفلاین",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "برای یافتن واژه‌ها و عبارت‌های بیشتر، یک فرهنگ لغت گسترده نصب کنید."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "برای یافتن واژه‌ها و عبارت‌های بیشتر، یک فرهنگ لغت گسترده نصب کنید.",
+    "다운로드": "دانلود",
+    "디스크 사용량": "فضای دیسک مصرف‌شده",
+    "압축 용량": "حجم فشرده"
   },
   "he": {
     "설정": "הגדרות",
@@ -11447,11 +11425,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "חבילות מילון",
     "개인 용어": "מונחים אישיים",
     "항목": "רשומות",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "חבילות שימושיות לקוריאנית, אנגלית, יפנית וסינית כלולות בצורה דחוסה. רק החבילות שנבחרו מותקנות במסד הנתונים המקומי.",
     "미니팩": "חבילה מוקטנת",
-    "실용팩": "חבילה שימושית",
-    "실용팩 설치": "התקנת חבילה שימושית",
-    "실용팩 설치됨": "החבילה השימושית הותקנה",
     "설치 중 {progress}%": "מתקין {progress}%",
     "자동 번역": "תרגום אוטומטי",
     "원문 뜻": "המשמעות המקורית",
@@ -11475,7 +11449,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "לא ניתן להחיל את הגדרת שפת המקור",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "הביטוי שנבחר במלואו ומשמעויות מילון שאינן זמינות בשפת הממשק עשויים להיות מתורגמים באמצעות המודל שהוגדר. אם נבחר מודל חיצוני, הטקסט הזה עשוי להישלח לשירות. ההקשר שמסביב משמש רק במחשב זה.",
     "오프라인 사전": "מילונים לא מקוונים",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "התקינו מילון מורחב כדי למצוא מילים וביטויים נוספים."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "התקינו מילון מורחב כדי למצוא מילים וביטויים נוספים.",
+    "다운로드": "הורדה",
+    "디스크 사용량": "שימוש בדיסק",
+    "압축 용량": "גודל דחוס"
   },
   "cs": {
     "설정": "Nastavení",
@@ -11946,11 +11923,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "사전팩": "Slovníkové balíčky",
     "개인 용어": "Osobní termíny",
     "항목": "položek",
-    "한·영·일·중 실용팩은 압축 상태로 앱에 포함되며, 선택한 팩만 로컬 DB에 설치합니다.": "Praktické balíčky pro korejštinu, angličtinu, japonštinu a čínštinu jsou součástí aplikace v komprimované podobě. Do místní databáze se nainstalují pouze vybrané balíčky.",
     "미니팩": "Mini balíček",
-    "실용팩": "Praktický balíček",
-    "실용팩 설치": "Nainstalovat praktický balíček",
-    "실용팩 설치됨": "Praktický balíček nainstalován",
     "설치 중 {progress}%": "Instalace {progress} %",
     "자동 번역": "Automatický překlad",
     "원문 뜻": "Původní význam",
@@ -11974,6 +11947,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "원문 언어 설정을 적용하지 못했습니다": "Nastavení zdrojového jazyka se nepodařilo použít",
     "선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은 설정된 번역 모델로 자동 번역될 수 있습니다. 외부 모델을 선택했다면 해당 텍스트가 그 서비스로 전송될 수 있습니다. 주변 문맥은 PC 안에서만 사용합니다.": "Celá vybraná fráze a slovníkové významy, které nejsou dostupné v jazyce rozhraní, mohou být přeloženy nastaveným modelem. Pokud je vybrán externí model, může být tento text odeslán dané službě. Okolní kontext se používá pouze na tomto počítači.",
     "오프라인 사전": "Offline slovníky",
-    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Nainstalujte rozšířený slovník a najděte více slov a výrazů."
+    "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.": "Nainstalujte rozšířený slovník a najděte více slov a výrazů.",
+    "다운로드": "stažení",
+    "디스크 사용량": "využití disku",
+    "압축 용량": "komprimovaná velikost"
   }
 });

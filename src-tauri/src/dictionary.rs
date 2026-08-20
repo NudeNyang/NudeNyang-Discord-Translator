@@ -285,6 +285,29 @@ impl DictionaryStore {
             lookup_personal_terms(&connection, target_language, &detected, &exact_terms, 12)?;
         let mut segmented = false;
 
+        if should_merge_inflection_candidates(&normalized, context, &detected) {
+            let inflection_terms = inflection_lookup_terms(&normalized, &detected);
+            if !inflection_terms.is_empty() {
+                let mut inflected_entries = lookup_dictionary_terms(
+                    &connection,
+                    target_language,
+                    &detected,
+                    &inflection_terms,
+                    12,
+                )?;
+                let mut known_entry_ids = inflected_entries
+                    .iter()
+                    .map(|entry| entry.entry_id)
+                    .collect::<HashSet<_>>();
+                inflected_entries.extend(
+                    entries
+                        .drain(..)
+                        .filter(|entry| known_entry_ids.insert(entry.entry_id)),
+                );
+                entries = inflected_entries;
+            }
+        }
+
         if entries.is_empty() && personal_entries.is_empty() {
             let inflection_terms = inflection_lookup_terms(&normalized, &detected);
             if !inflection_terms.is_empty() {
@@ -495,7 +518,7 @@ impl DictionaryStore {
             .packs
             .iter()
             .find(|pack| pack.language == language)
-            .ok_or_else(|| "이 언어의 실용 사전팩은 아직 준비되지 않았습니다.".to_string())?;
+            .ok_or_else(|| "이 언어의 확장 사전은 아직 준비되지 않았습니다.".to_string())?;
         self.install_pack_with_progress(pack, progress)?;
         self.pack_status(language)?
             .ok_or_else(|| "설치한 사전팩 상태를 확인하지 못했습니다.".to_string())
@@ -526,6 +549,9 @@ impl DictionaryStore {
         transaction
             .commit()
             .map_err(|error| format!("사전팩 삭제를 완료하지 못했습니다: {error}"))?;
+        connection
+            .execute_batch("VACUUM")
+            .map_err(|error| format!("삭제한 사전팩 공간을 정리하지 못했습니다: {error}"))?;
         Ok(true)
     }
 
@@ -869,6 +895,49 @@ fn inflection_lookup_terms(normalized_term: &str, detected_language: &str) -> Ve
         _ => {}
     }
     terms
+}
+
+fn should_merge_inflection_candidates(
+    normalized_term: &str,
+    context: &str,
+    detected_language: &str,
+) -> bool {
+    if normalized_term.is_empty() {
+        return false;
+    }
+    if detected_language == "en" {
+        return true;
+    }
+    if detected_language != "ja" || context.is_empty() {
+        return false;
+    }
+    let normalized_context = normalize_term(context);
+    normalized_context
+        .match_indices(normalized_term)
+        .map(|(start, _)| &normalized_context[start + normalized_term.len()..])
+        .any(|tail| {
+            [
+                "つつ",
+                "ながら",
+                "ます",
+                "ました",
+                "ません",
+                "たい",
+                "たがる",
+                "て",
+                "で",
+                "た",
+                "たり",
+                "そう",
+                "やすい",
+                "にくい",
+                "始める",
+                "続ける",
+                "終わる",
+            ]
+            .iter()
+            .any(|suffix| tail.starts_with(suffix))
+        })
 }
 
 fn push_inflection_term(
@@ -1433,7 +1502,7 @@ fn practical_pack_bytes(language: &str) -> Option<&'static [u8]> {
 
 fn practical_catalog(language: &str) -> Result<StarterCatalog, String> {
     let bytes = practical_pack_bytes(language)
-        .ok_or_else(|| "이 언어의 실용 사전팩은 아직 준비되지 않았습니다.".to_string())?;
+        .ok_or_else(|| "이 언어의 확장 사전은 아직 준비되지 않았습니다.".to_string())?;
     let manifest = pack_catalog()?;
     let offered = manifest
         .languages
@@ -1457,10 +1526,10 @@ fn practical_catalog(language: &str) -> Result<StarterCatalog, String> {
         .read_to_end(&mut json)
         .map_err(|error| format!("사전팩 압축을 풀지 못했습니다: {error}"))?;
     let catalog: StarterCatalog = serde_json::from_slice(&json)
-        .map_err(|error| format!("실용 사전팩을 읽지 못했습니다: {error}"))?;
+        .map_err(|error| format!("확장 사전을 읽지 못했습니다: {error}"))?;
     if catalog.schema_version != PACK_SCHEMA_VERSION {
         return Err(format!(
-            "지원하지 않는 실용 사전팩 형식입니다: {}",
+            "지원하지 않는 확장 사전 형식입니다: {}",
             catalog.schema_version
         ));
     }
@@ -1468,9 +1537,9 @@ fn practical_catalog(language: &str) -> Result<StarterCatalog, String> {
         .packs
         .iter()
         .find(|pack| pack.language == language)
-        .ok_or_else(|| "실용 사전팩의 언어 정보가 올바르지 않습니다.".to_string())?;
+        .ok_or_else(|| "확장 사전의 언어 정보가 올바르지 않습니다.".to_string())?;
     if pack.edition != "practical" || pack.entries.len() as u64 != offered.entry_count {
-        return Err("실용 사전팩의 항목 수 또는 등급 정보가 올바르지 않습니다.".to_string());
+        return Err("확장 사전의 항목 수 또는 등급 정보가 올바르지 않습니다.".to_string());
     }
     Ok(catalog)
 }
@@ -1846,6 +1915,46 @@ mod tests {
     }
 
     #[test]
+    fn removing_a_pack_reclaims_its_sqlite_file_space() {
+        let store = temporary_store("pack-compaction");
+        let entries = (0..2_000)
+            .map(|index| StarterEntry {
+                headword: format!("compaction-test-{index}"),
+                reading: String::new(),
+                part_of_speech: "noun".to_string(),
+                sense_rank: 0,
+                glosses: HashMap::from([(
+                    "en".to_string(),
+                    format!("definition {index} {}", "content ".repeat(40)),
+                )]),
+                examples: HashMap::new(),
+            })
+            .collect();
+        store
+            .install_pack(&StarterPack {
+                id: "test-en-compaction".to_string(),
+                language: "en".to_string(),
+                version: "2026.08.20.1".to_string(),
+                title: "Compaction test".to_string(),
+                source_name: "Test".to_string(),
+                source_url: "https://example.com".to_string(),
+                license: "Test".to_string(),
+                edition: "practical".to_string(),
+                entries,
+            })
+            .unwrap();
+        let bytes_before = store.status().unwrap().database_bytes;
+
+        assert!(store.remove_pack("en").unwrap());
+        let bytes_after = store.status().unwrap().database_bytes;
+
+        assert!(
+            bytes_after < bytes_before / 2,
+            "{bytes_after} should be much smaller than {bytes_before}"
+        );
+    }
+
+    #[test]
     fn catalog_covers_all_product_languages() {
         let store = temporary_store("catalog");
         let catalog = store.pack_catalog().unwrap();
@@ -1962,14 +2071,14 @@ mod tests {
         assert!(headwords.contains(&"禁止"));
 
         let time_phrase = store.lookup("日本時間", Some("ja"), "ko").unwrap();
-        assert!(time_phrase.segmented);
-        let time_headwords = time_phrase
-            .entries
-            .iter()
-            .map(|entry| entry.headword.as_str())
-            .collect::<Vec<_>>();
-        assert!(time_headwords.contains(&"日本"));
-        assert!(time_headwords.contains(&"時間"));
+        assert!(!time_phrase.segmented);
+        assert!(time_phrase.entries.iter().any(|entry| {
+            entry.headword == "日本時間"
+                && entry
+                    .original_definition
+                    .split(';')
+                    .any(|definition| definition.trim() == "Japan time")
+        }));
 
         let notice_phrase = store
             .lookup(

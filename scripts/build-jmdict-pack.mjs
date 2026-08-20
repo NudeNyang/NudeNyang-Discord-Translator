@@ -8,7 +8,7 @@ const { values } = parseArgs({
     output: { type: "string" },
     version: { type: "string" },
     "source-url": { type: "string" },
-    "minimum-entries": { type: "string", default: "20000" },
+    "minimum-entries": { type: "string", default: "150000" },
   },
 });
 
@@ -17,8 +17,8 @@ for (const required of ["input", "output", "version", "source-url"]) {
 }
 
 const document = JSON.parse(readFileSync(values.input, "utf8"));
-if (!Array.isArray(document.words) || !document.commonOnly) {
-  throw new Error("input must be a jmdict-simplified common-only JSON document");
+if (!Array.isArray(document.words) || document.commonOnly !== false) {
+  throw new Error("input must be a full jmdict-simplified JSON document");
 }
 
 const entries = [];
@@ -105,10 +105,10 @@ if (entries.length < minimumEntries) {
 const pack = {
   schemaVersion: 1,
   packs: [{
-    id: `nudenyang-ja-practical-${values.version}`,
+    id: `nudenyang-ja-expanded-${values.version}`,
     language: "ja",
     version: values.version,
-    title: "日本語実用辞書",
+    title: "日本語拡張辞書",
     sourceName: "JMdict by the Electronic Dictionary Research and Development Group",
     sourceUrl: values["source-url"],
     license: "CC-BY-SA-4.0",

@@ -36,8 +36,9 @@ test("in-app license view contains the app, notices, and both bundled model lice
 });
 
 test("dictionary notices can be opened without the unrelated application licences", () => {
-  assert.match(DICTIONARY_NOTICES_TEXT, /한국어·영어·중국어 실용팩/);
+  assert.match(DICTIONARY_NOTICES_TEXT, /한국어 확장팩/);
+  assert.match(DICTIONARY_NOTICES_TEXT, /Open English WordNet 2025/);
+  assert.match(DICTIONARY_NOTICES_TEXT, /CC-CEDICT/);
   assert.match(DICTIONARY_NOTICES_TEXT, /JMdict/);
-  assert.match(DICTIONARY_NOTICES_TEXT, /opencc-js/);
   assert.doesNotMatch(DICTIONARY_NOTICES_TEXT, /Hy-MT2 내장 배포/);
 });

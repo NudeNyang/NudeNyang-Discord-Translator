@@ -13,7 +13,7 @@ test("JMdict builder preserves distinct applicable senses per headword", () => {
     const input = join(directory, "input.json");
     const output = join(directory, "output.json.gz");
     writeFileSync(input, JSON.stringify({
-      commonOnly: true,
+      commonOnly: false,
       words: [{
         kanji: [{ text: "時間", common: true }],
         kana: [{ text: "じかん", common: true, appliesToKanji: ["*"] }],
@@ -39,6 +39,26 @@ test("JMdict builder preserves distinct applicable senses per headword", () => {
     assert.deepEqual(senses.map(entry => entry.glosses.en), ["time", "hour"]);
     assert.deepEqual(senses.map(entry => entry.senseRank), [0, 1]);
     assert.ok(senses.every(entry => entry.reading === "じかん"));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("JMdict builder rejects the reduced common-only source", () => {
+  const directory = mkdtempSync(join(tmpdir(), "nudenyang-jmdict-common-test-"));
+  try {
+    const input = join(directory, "input.json");
+    const output = join(directory, "output.json.gz");
+    writeFileSync(input, JSON.stringify({ commonOnly: true, words: [] }));
+
+    assert.throws(() => execFileSync(process.execPath, [
+      fileURLToPath(new URL("../build-jmdict-pack.mjs", import.meta.url)),
+      "--input", input,
+      "--output", output,
+      "--version", "2026.08.20.1",
+      "--source-url", "https://example.com/jmdict",
+      "--minimum-entries", "1",
+    ], { stdio: "pipe" }));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
