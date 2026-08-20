@@ -1097,6 +1097,23 @@ fn korean_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut Hash
     }
 
     for suffix in [
+        "했었어요",
+        "했었어",
+        "했습니다",
+        "했어요",
+        "했어",
+        "했다",
+        "해서",
+        "해요",
+        "해도",
+        "해",
+    ] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            push(format!("{stem}하다"));
+        }
+    }
+
+    for suffix in [
         "었습니다",
         "았습니다",
         "었었어요",
@@ -1131,7 +1148,7 @@ fn korean_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut Hash
 
     for particle in [
         "으로", "에서", "에게", "한테", "까지", "부터", "처럼", "보다", "께서", "은", "는", "이",
-        "가", "을", "를", "의", "에", "도", "와", "과", "로", "만", "께",
+        "가", "을", "를", "의", "에", "도", "와", "과", "로", "만", "께", "쯤",
     ] {
         if let Some(stem) = term.strip_suffix(particle) {
             push(stem.to_string());
@@ -2657,6 +2674,44 @@ mod tests {
 
         let result = store.lookup("이미지", Some("ko"), "ko").unwrap();
         assert!(result.entries.is_empty());
+    }
+
+    #[test]
+    fn korean_hada_contractions_resolve_base_forms() {
+        let store = temporary_store("korean-hada-contraction");
+        store.install_bundled_pack("ko").unwrap();
+
+        for (query, expected) in [
+            ("맹해보여서", "맹하다"),
+            ("공부해서", "공부하다"),
+            ("좋아해요", "좋아하다"),
+        ] {
+            let result = store.lookup(query, Some("ko"), "ko").unwrap();
+            assert!(
+                result
+                    .entries
+                    .iter()
+                    .any(|entry| entry.headword == expected),
+                "{query}: {:?}",
+                result
+                    .entries
+                    .iter()
+                    .map(|entry| entry.headword.as_str())
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn korean_approximation_particles_resolve_base_nouns() {
+        let store = temporary_store("korean-approximation-particle");
+        store.install_bundled_pack("ko").unwrap();
+
+        let lunchtime = store.lookup("점심쯤?", Some("ko"), "ko").unwrap();
+        assert!(lunchtime
+            .entries
+            .iter()
+            .any(|entry| entry.headword == "점심"));
     }
 
     #[test]
