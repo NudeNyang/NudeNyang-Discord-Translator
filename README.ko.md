@@ -84,19 +84,19 @@ WebView는 설정창과 트레이를 그리는 데만 씁니다. 프로세스 �
 ## 보안 구조
 
 ```mermaid
-sequenceDiagram
-    participant App as NudeNyang
-    participant Guard as 로컬 파이프 가디언
-    participant Discord as Discord 데스크톱
+flowchart LR
+    subgraph LOCAL["사용자 PC · 로컬 보안 경계"]
+        direction LR
 
-    App->>App: Discord 실행 파일 경로 검증
-    App->>Discord: --remote-debugging-pipe로 실행
-    Note over App,Discord: 상속된 익명 파이프 핸들만 사용 · TCP 포트 없음
-    App->>Discord: PID 인계와 discord.com 대상 검증
-    App->>Discord: 현재 DOM 읽기·변경
-    App->>Guard: 재연결용 앱 측 파이프 핸들 유지
-    App-->>Discord: 정상 종료 시 저장한 원문 복원
+        APP["NudeNyang<br/>Tauri / Rust 코어"]
+        PIPE[["전용 CDP 파이프<br/>상속된 익명 핸들<br/>TCP 리스너 없음"]]
+        DISCORD["Discord 데스크톱<br/>렌더러 DOM만 접근"]
+
+        APP <-->|"CDP"| PIPE <--> DISCORD
+    end
 ```
+
+연결 전 NudeNyang은 Discord 실행 파일 경로, PID 인계, 가디언 실행 인수와 `https://discord.com` 렌더러 대상을 검증합니다. 로컬 파이프 가디언은 앱 측 핸들을 유지해 Discord를 재시작하지 않고 기존 세션에 다시 연결할 수 있게 합니다.
 
 연결 범위는 필요한 만큼으로만 좁혀 두었습니다.
 

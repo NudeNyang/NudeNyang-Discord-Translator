@@ -88,19 +88,19 @@ There are three translation paths:
 ## Security boundary
 
 ```mermaid
-sequenceDiagram
-    participant App as NudeNyang
-    participant Guard as Local pipe guardian
-    participant Discord as Discord desktop
+flowchart LR
+    subgraph LOCAL["User device · local security boundary"]
+        direction LR
 
-    App->>App: Verify the Discord executable path
-    App->>Discord: Start with --remote-debugging-pipe
-    Note over App,Discord: Inherited anonymous pipe handles only — no TCP debug port
-    App->>Discord: Verify PID handoff and the discord.com target
-    App->>Discord: Read and update the rendered DOM
-    App->>Guard: Leave app-side pipe handles for reconnect
-    App-->>Discord: Restore saved DOM on normal shutdown
+        APP["NudeNyang<br/>Tauri / Rust core"]
+        PIPE[["Private CDP pipe<br/>Inherited anonymous handles<br/>No TCP listener"]]
+        DISCORD["Discord desktop<br/>Renderer DOM only"]
+
+        APP <-->|"CDP"| PIPE <--> DISCORD
+    end
 ```
+
+Before connecting, NudeNyang validates the Discord executable path, PID handoff, guardian startup arguments, and the `https://discord.com` renderer target. A local pipe guardian retains the app-side handles so the app can reconnect to the existing session without restarting Discord.
 
 The boundary is intentionally narrow:
 
