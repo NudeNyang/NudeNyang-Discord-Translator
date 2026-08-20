@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   APP_LICENSE_TEXT,
+  DICTIONARY_NOTICES_TEXT,
   HYMT_1_8B_LICENSE_TEXT,
   HYMT_7B_LICENSE_TEXT,
   LICENSE_DOCUMENTS,
@@ -32,4 +33,11 @@ test("in-app license view contains the app, notices, and both bundled model lice
   assert.match(LICENSE_DOCUMENTS_TEXT, /NudeNyang Discord Translator \(GPL-3\.0-only\)/);
   assert.match(LICENSE_DOCUMENTS_TEXT, /Hy-MT2 1\.8B GGUF \(Apache-2\.0\)/);
   assert.match(LICENSE_DOCUMENTS_TEXT, /Hy-MT2 7B GGUF \(Apache-2\.0\)/);
+});
+
+test("dictionary notices can be opened without the unrelated application licences", () => {
+  assert.match(DICTIONARY_NOTICES_TEXT, /한국어·영어·중국어 실용팩/);
+  assert.match(DICTIONARY_NOTICES_TEXT, /JMdict/);
+  assert.match(DICTIONARY_NOTICES_TEXT, /opencc-js/);
+  assert.doesNotMatch(DICTIONARY_NOTICES_TEXT, /Hy-MT2 내장 배포/);
 });

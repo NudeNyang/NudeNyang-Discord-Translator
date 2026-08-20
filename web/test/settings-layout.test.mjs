@@ -414,6 +414,15 @@ test("dictionary settings expose local packs, personal terms, and an optional ex
   assert.match(script, /dictionary_storage_folder_open/);
 });
 
+test("dictionary pack cards keep compact metadata and open consolidated source notices", () => {
+  assert.match(markup, /id="dictionary-pack-licenses"[^>]*>[\s\S]*?출처 및 라이선스[\s\S]*?<\/button>/);
+  assert.match(script, /dictionaryPackLicenses:\s*document\.querySelector\("#dictionary-pack-licenses"\)/);
+  assert.match(script, /message:\s*DICTIONARY_NOTICES_TEXT/);
+  const renderer = script.match(/function renderDictionaryPacks\(\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(renderer, /formatStorageSize\(pack\.compressedBytes\)/);
+  assert.doesNotMatch(renderer, /pack\.sourceName/);
+});
+
 test("the settings window title shows only the product name", () => {
   assert.match(markup, /<title>NudeNyang Discord Translator<\/title>/);
   assert.doesNotMatch(tauriConfig, /NudeNyang Discord Translator 설정/);

@@ -753,6 +753,10 @@ James William BREEN and the Electronic Dictionary Research and Development Group
 
 `;
 
+export const DICTIONARY_NOTICES_TEXT = THIRD_PARTY_NOTICES_TEXT.slice(
+  THIRD_PARTY_NOTICES_TEXT.indexOf("## 사전 데이터와 외부 연결"),
+).trim();
+
 export const HYMT_1_8B_LICENSE_TEXT = `Tencent is pleased to support the open-source community by making Hy-MT2-1.8B-GGUF available.
 
 Copyright (C) 2026 Tencent. All rights reserved.

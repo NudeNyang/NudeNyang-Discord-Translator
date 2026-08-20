@@ -1490,6 +1490,45 @@ select:focus-visible,
   min-width: 64px;
 }
 
+.dictionary-pack-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dictionary-pack-footer .section-note {
+  min-width: 0;
+}
+
+.dictionary-license-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 4px 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.dictionary-license-link:hover,
+.dictionary-license-link:focus-visible {
+  color: var(--text);
+}
+
+.dictionary-license-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 .dictionary-pack-heading {
   display: flex;
   align-items: end;

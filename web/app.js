@@ -14,7 +14,7 @@ import {
   shouldPromptRestart,
   translatorRuntimeLabel,
 } from "./state.mjs";
-import { LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
+import { DICTIONARY_NOTICES_TEXT, LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
 import { LANGUAGE_OPTIONS } from "./languages.mjs";
 import { filterLanguageOptions } from "./language-search.mjs";
 import {
@@ -153,6 +153,7 @@ const elements = {
   dictionaryPersonalSave: document.querySelector("#dictionary-personal-save"),
   dictionaryPersonalList: document.querySelector("#dictionary-personal-list"),
   dictionaryPackList: document.querySelector("#dictionary-pack-list"),
+  dictionaryPackLicenses: document.querySelector("#dictionary-pack-licenses"),
   dictionaryOpenFolder: document.querySelector("#dictionary-open-folder"),
   dictionaryStorageSummary: document.querySelector("#dictionary-storage-summary"),
   autostart: document.querySelector("#autostart"),
@@ -574,7 +575,7 @@ function renderDictionaryPacks() {
     const progress = state.dictionaryPackProgress.get(pack.language);
     const installedPractical = pack.installed && pack.edition === "practical";
     const entryCount = pack.availableEntryCount || pack.entryCount;
-    detail.textContent = `${entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} / ${formatStorageSize(pack.compressedBytes)} / ${pack.sourceName}`;
+    detail.textContent = `${entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} · ${formatStorageSize(pack.compressedBytes)}`;
     stateBadge.className = `dictionary-pack-state${installedPractical ? " installed" : ""}`;
     if (progress?.phase === "preparing") {
       setLocalizedText(stateBadge, "설치 준비 중");
@@ -2228,6 +2229,15 @@ elements.authorLink.addEventListener("click", () => {
 });
 elements.githubLink.addEventListener("click", () => {
   openExternalUrl(APP_LINKS.repository).catch(error => showError("링크를 열지 못했습니다", String(error)));
+});
+elements.dictionaryPackLicenses.addEventListener("click", () => {
+  showModal({
+    title: "출처 및 라이선스",
+    message: DICTIONARY_NOTICES_TEXT,
+    acceptText: "닫기",
+    cancelVisible: false,
+    variant: "license",
+  });
 });
 elements.viewLicense.addEventListener("click", () => {
   showModal({
