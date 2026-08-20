@@ -51,6 +51,15 @@ TranslateGemma is provided under and subject to the Gemma Terms of Use found at
 - Copyright policy: <https://krdict.korean.go.kr/kor/kboardPolicy/copyRightTermsInfo>
 - CC BY-SA 2.0 KR: <https://creativecommons.org/licenses/by-sa/2.0/kr/legalcode>
 
+한국어 확장팩의 검토 보완층에는 국립국어원 우리말샘에서 확인한 현대 전문어의 표제어,
+문자 발음과 뜻풀이가 포함된다. 현재 보완층은 전체 약 1.8 GB XML 자료를 앱에 중복 포함하지 않고,
+확장팩 품질 검사에서 누락이 확인된 항목만 원문 그대로 보존한다. 텍스트 자료에는
+CC BY-SA 2.0 대한민국이 적용되며 용례와 매체 자료는 포함하지 않는다.
+
+- Source and dictionary: <https://opendict.korean.go.kr/main>
+- Copyright policy: <https://opendict.korean.go.kr/service/copyrightPolicy>
+- CC BY-SA 2.0 KR: <https://creativecommons.org/licenses/by-sa/2.0/kr/legalcode>
+
 한국어 확장팩은 한국어 Wiktionary의 2026-08-04 덤프를 Wiktextract/kaikki.org로 추출한 데이터를
 필터링하고 내부 형식으로 변환한 것이다. 원문 항목은 CC BY-SA 4.0과 GFDL 1.1 이상으로
 이중 라이선스되며, 변환팩에는 원본과 동일한 조건이 적용된다.

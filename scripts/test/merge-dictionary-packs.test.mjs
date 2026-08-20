@@ -45,6 +45,14 @@ test("dictionary pack merger keeps primary meanings first and preserves per-entr
           en: "Leaving work and returning home.",
         },
         examples: {},
+      }, {
+        headword: "야근",
+        reading: "야ː근",
+        partOfSpeech: "noun",
+        senseRank: 0,
+        sourcePriority: 1,
+        glosses: { ko: "퇴근 시간이 지나 밤늦게까지 하는 일." },
+        examples: {},
       }],
     ))));
     writeFileSync(expandedPath, gzipSync(JSON.stringify(pack(
@@ -80,19 +88,19 @@ test("dictionary pack merger keeps primary meanings first and preserves per-entr
       "--source-name", "Community dictionary",
       "--source-url", "https://example.com/expanded",
       "--license", "CC-BY-SA-4.0",
-      "--minimum-entries", "2",
+      "--minimum-entries", "3",
       "--compact",
     ], { stdio: "pipe" });
 
     const document = JSON.parse(gunzipSync(readFileSync(outputPath)));
     const entries = document.packs[0].entries;
-    assert.equal(entries.length, 2, "the lower-priority duplicate should be removed");
-    assert.deepEqual(entries.map(entry => entry.sourcePriority), [0, 1]);
-    assert.deepEqual(entries.map(entry => entry.senseRank), [0, 1]);
+    assert.equal(entries.length, 3, "the lower-priority duplicate should be removed");
+    assert.deepEqual(entries.map(entry => entry.sourcePriority), [0, 1, 2]);
+    assert.deepEqual(entries.map(entry => entry.senseRank), [0, 0, 1]);
     assert.equal(entries[0].sourceName, "Official learner dictionary");
     assert.equal(entries[0].sourceUrl, "https://example.com/primary");
     assert.equal(entries[0].license, "CC-BY-SA-2.0-KR");
-    assert.equal(entries[1].sourceName, undefined, "the pack-level fallback should not be repeated");
+    assert.equal(entries[2].sourceName, undefined, "the pack-level fallback should not be repeated");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

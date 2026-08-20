@@ -49,8 +49,9 @@ const entries = [];
 const seenGlossesByHeadword = new Map();
 const nextSenseRankByHeadword = new Map();
 const sourceSummaries = [];
+let sourcePriorityOffset = 0;
 
-for (const [sourcePriority, inputPath] of values.input.entries()) {
+for (const inputPath of values.input) {
   const document = readDocument(inputPath);
   if (document.schemaVersion !== 1 || !Array.isArray(document.packs) || document.packs.length !== 1) {
     throw new Error(`${inputPath}: expected one schema-version-1 dictionary pack`);
@@ -63,6 +64,7 @@ for (const [sourcePriority, inputPath] of values.input.entries()) {
     throw new Error(`${inputPath}: pack attribution is incomplete`);
   }
   sourceSummaries.push(pack.sourceName);
+  let highestLocalPriority = 0;
 
   for (const entry of pack.entries || []) {
     const headwordKey = normalizedHeadword(entry.headword);
@@ -72,6 +74,10 @@ for (const [sourcePriority, inputPath] of values.input.entries()) {
     if (knownGlosses.has(definition)) continue;
 
     const senseRank = nextSenseRankByHeadword.get(headwordKey) || 0;
+    const localSourcePriority = Number.isSafeInteger(entry.sourcePriority)
+      ? Math.max(0, entry.sourcePriority)
+      : 0;
+    highestLocalPriority = Math.max(highestLocalPriority, localSourcePriority);
     const sourceName = entry.sourceName || pack.sourceName;
     const sourceUrl = entry.sourceUrl || pack.sourceUrl;
     const license = entry.license || pack.license;
@@ -83,7 +89,7 @@ for (const [sourcePriority, inputPath] of values.input.entries()) {
       reading: String(entry.reading || ""),
       partOfSpeech: entry.partOfSpeech || "other",
       senseRank,
-      sourcePriority,
+      sourcePriority: sourcePriorityOffset + localSourcePriority,
       ...(attributionOverride ? { sourceName, sourceUrl, license } : {}),
       glosses: entry.glosses,
       examples: entry.examples || {},
@@ -92,6 +98,7 @@ for (const [sourcePriority, inputPath] of values.input.entries()) {
     seenGlossesByHeadword.set(headwordKey, knownGlosses);
     nextSenseRankByHeadword.set(headwordKey, senseRank + 1);
   }
+  sourcePriorityOffset += highestLocalPriority + 1;
 }
 
 const minimumEntries = Number.parseInt(values["minimum-entries"], 10);

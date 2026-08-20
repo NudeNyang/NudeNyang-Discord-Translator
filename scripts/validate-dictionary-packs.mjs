@@ -12,7 +12,7 @@ const coreVocabulary = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-
 assert.equal(catalog.schemaVersion, 2, "unsupported dictionary catalog schema");
 assert.equal(starter.schemaVersion, 1, "unsupported starter pack schema");
 assert.equal(coreVocabulary.schemaVersion, 1, "unsupported core-vocabulary schema");
-assert.deepEqual(catalog.coveragePolicy.sourceLayerOrder, ["primary", "expanded"]);
+assert.deepEqual(catalog.coveragePolicy.sourceLayerOrder, ["primary", "expanded", "supplemental"]);
 assert.deepEqual(
   catalog.coveragePolicy.plannedPackRequirements,
   ["reviewed-primary-source", "core-vocabulary-profile", "redistribution-license"],

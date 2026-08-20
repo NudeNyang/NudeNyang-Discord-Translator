@@ -11,6 +11,11 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
 
+use crate::dictionary_morphology::{
+    analysis_profile, grammar_spans, inflection_terms, is_attached_grammar_surface,
+    normalize_segmentation_query as normalize_query_for_segmentation,
+    single_syllable_inflection_spans, BoundaryStrategy,
+};
 use crate::language::{detect_language, is_supported_language_code, Language, LANGUAGE_MENU_ORDER};
 
 const STARTER_PACKS_JSON: &str = include_str!("../dictionary-packs/starter.json");
@@ -793,6 +798,7 @@ struct LookupSpan {
     start: usize,
     end: usize,
     derived: bool,
+    display: bool,
 }
 
 fn lookup_dictionary_terms(
@@ -900,15 +906,7 @@ fn lookup_personal_terms(
 }
 
 fn inflection_lookup_terms(normalized_term: &str, detected_language: &str) -> Vec<String> {
-    let mut terms = Vec::new();
-    let mut known = HashSet::new();
-    match detected_language {
-        "ja" => japanese_inflection_terms(normalized_term, &mut terms, &mut known),
-        "ko" => korean_inflection_terms(normalized_term, &mut terms, &mut known),
-        "en" => english_inflection_terms(normalized_term, &mut terms, &mut known),
-        _ => {}
-    }
-    terms
+    inflection_terms(normalized_term, detected_language)
 }
 
 fn should_merge_inflection_candidates(
@@ -954,265 +952,13 @@ fn should_merge_inflection_candidates(
         })
 }
 
-fn push_inflection_term(
-    original: &str,
-    candidate: String,
-    terms: &mut Vec<String>,
-    known: &mut HashSet<String>,
-) {
-    let candidate = normalize_term(&candidate);
-    if candidate.chars().count() >= 2 && candidate != original && known.insert(candidate.clone()) {
-        terms.push(candidate);
-    }
-}
-
-fn replace_last_character(value: &str, replacement: char) -> Option<String> {
-    let mut characters = value.chars().collect::<Vec<_>>();
-    characters.pop()?;
-    characters.push(replacement);
-    Some(characters.into_iter().collect())
-}
-
-fn japanese_godan_i_stem(value: &str) -> Option<String> {
-    let replacement = match value.chars().last()? {
-        'い' => 'う',
-        'き' => 'く',
-        'ぎ' => 'ぐ',
-        'し' => 'す',
-        'ち' => 'つ',
-        'に' => 'ぬ',
-        'び' => 'ぶ',
-        'み' => 'む',
-        'り' => 'る',
-        _ => return None,
-    };
-    replace_last_character(value, replacement)
-}
-
-fn japanese_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut HashSet<String>) {
-    let mut push = |candidate: String| push_inflection_term(term, candidate, terms, known);
-
-    if let Some(candidate) = japanese_godan_i_stem(term) {
-        push(candidate);
-    }
-
-    for suffix in ["ませんでした", "ました", "ません", "ます"] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            push(format!("{stem}る"));
-            if let Some(candidate) = japanese_godan_i_stem(stem) {
-                push(candidate);
-            }
-        }
-    }
-
-    for (suffix, endings) in [
-        ("って", &['う', 'つ', 'る'][..]),
-        ("った", &['う', 'つ', 'る'][..]),
-        ("いて", &['く'][..]),
-        ("いた", &['く'][..]),
-        ("いで", &['ぐ'][..]),
-        ("いだ", &['ぐ'][..]),
-        ("んで", &['ぬ', 'ぶ', 'む'][..]),
-        ("んだ", &['ぬ', 'ぶ', 'む'][..]),
-        ("して", &['す'][..]),
-        ("した", &['す'][..]),
-    ] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            for ending in endings {
-                push(format!("{stem}{ending}"));
-            }
-            if matches!(suffix, "して" | "した") {
-                push(format!("{stem}する"));
-            }
-        }
-    }
-
-    for suffix in ["なかった", "ない", "て", "た"] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            push(format!("{stem}る"));
-        }
-    }
-
-    for (suffix, ending) in [
-        ("わない", 'う'),
-        ("かない", 'く'),
-        ("がない", 'ぐ'),
-        ("さない", 'す'),
-        ("たない", 'つ'),
-        ("なない", 'ぬ'),
-        ("ばない", 'ぶ'),
-        ("まない", 'む'),
-        ("らない", 'る'),
-    ] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            push(format!("{stem}{ending}"));
-        }
-    }
-
-    for suffix in ["くなかった", "くない", "かった", "ければ", "く"] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            push(format!("{stem}い"));
-        }
-    }
-
-    for (surface, base) in [
-        ("した", "する"),
-        ("して", "する"),
-        ("します", "する"),
-        ("しました", "する"),
-        ("しない", "する"),
-        ("来た", "来る"),
-        ("来て", "来る"),
-    ] {
-        if term == surface {
-            push(base.to_string());
-        }
-    }
-}
-
-fn korean_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut HashSet<String>) {
-    let mut push = |candidate: String| push_inflection_term(term, candidate, terms, known);
-
-    for (surface, base) in [
-        ("했어요", "하다"),
-        ("했다", "하다"),
-        ("했었어", "하다"),
-        ("했었어요", "하다"),
-        ("해요", "하다"),
-        ("합니다", "하다"),
-        ("했습니다", "하다"),
-        ("됐어요", "되다"),
-        ("됐다", "되다"),
-        ("였어", "이다"),
-        ("였었어", "이다"),
-        ("그런", "그렇다"),
-        ("이런", "이렇다"),
-        ("저런", "저렇다"),
-        ("같애", "같다"),
-        ("같애요", "같다"),
-    ] {
-        if term == surface {
-            push(base.to_string());
-        }
-    }
-
-    for suffix in [
-        "했었어요",
-        "했었어",
-        "했습니다",
-        "했어요",
-        "했어",
-        "했다",
-        "해서",
-        "해요",
-        "해도",
-        "해",
-    ] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            push(format!("{stem}하다"));
-        }
-    }
-
-    for suffix in [
-        "었습니다",
-        "았습니다",
-        "었었어요",
-        "았었어요",
-        "었었어",
-        "았었어",
-        "습니까",
-        "습니다",
-        "었어요",
-        "았어요",
-        "었어",
-        "았어",
-        "어요",
-        "아요",
-        "는다",
-        "었다",
-        "았다",
-        "고",
-        "며",
-        "면",
-        "자",
-        "지",
-    ] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            push(format!("{stem}다"));
-        }
-    }
-
-    if let Some(stem) = term.strip_suffix('요') {
-        push(format!("{stem}다"));
-    }
-
-    for particle in [
-        "으로", "에서", "에게", "한테", "까지", "부터", "처럼", "보다", "께서", "은", "는", "이",
-        "가", "을", "를", "의", "에", "도", "와", "과", "로", "만", "께", "쯤",
-    ] {
-        if let Some(stem) = term.strip_suffix(particle) {
-            push(stem.to_string());
-        }
-    }
-}
-
-fn english_inflection_terms(term: &str, terms: &mut Vec<String>, known: &mut HashSet<String>) {
-    let mut push = |candidate: String| push_inflection_term(term, candidate, terms, known);
-
-    if let Some(base) = [
-        ("went", "go"),
-        ("gone", "go"),
-        ("was", "be"),
-        ("were", "be"),
-        ("been", "be"),
-        ("did", "do"),
-        ("done", "do"),
-        ("had", "have"),
-        ("made", "make"),
-        ("took", "take"),
-        ("taken", "take"),
-        ("came", "come"),
-        ("saw", "see"),
-        ("seen", "see"),
-    ]
-    .iter()
-    .find_map(|(surface, base)| (*surface == term).then_some(*base))
-    {
-        push(base.to_string());
-    }
-
-    if let Some(stem) = term.strip_suffix("ies") {
-        push(format!("{stem}y"));
-    }
-    if let Some(stem) = term.strip_suffix('s') {
-        push(stem.to_string());
-    }
-    if let Some(stem) = term.strip_suffix("es") {
-        push(stem.to_string());
-        push(format!("{stem}e"));
-    }
-
-    for suffix in ["ing", "ed"] {
-        if let Some(stem) = term.strip_suffix(suffix) {
-            push(stem.to_string());
-            push(format!("{stem}e"));
-            let characters = stem.chars().collect::<Vec<_>>();
-            if characters.len() >= 2
-                && characters[characters.len() - 1] == characters[characters.len() - 2]
-            {
-                push(characters[..characters.len() - 1].iter().collect());
-            }
-        }
-    }
-}
-
 fn segment_lookup_terms(
     connection: &Connection,
     normalized_query: &str,
     detected_language: &str,
     target_language: &str,
 ) -> Result<Vec<String>, String> {
-    let segmentation_query = normalize_segmentation_query(normalized_query, detected_language);
+    let segmentation_query = normalize_query_for_segmentation(normalized_query, detected_language);
     let spans = lookup_spans(&segmentation_query, detected_language);
     if spans.is_empty() {
         return Ok(Vec::new());
@@ -1293,6 +1039,7 @@ fn segment_lookup_terms(
                     start: span.start,
                     end: span.end,
                     derived,
+                    display: true,
                 });
                 break;
             }
@@ -1300,6 +1047,40 @@ fn segment_lookup_terms(
     }
 
     if detected_language == "ko" {
+        for (term, start, end) in single_syllable_inflection_spans(&query_chars, detected_language)
+        {
+            let available = if let Some(available) = availability.get(&term) {
+                *available
+            } else {
+                let in_dictionary = dictionary_exists
+                    .query_row(params![term, detected_language], |_| Ok(()))
+                    .optional()
+                    .map_err(|error| format!("사전 표현을 확인하지 못했습니다: {error}"))?
+                    .is_some();
+                availability.insert(term.clone(), in_dictionary);
+                in_dictionary
+            };
+            if available {
+                matched.push(LookupSpan {
+                    term,
+                    start,
+                    end,
+                    derived: true,
+                    display: true,
+                });
+            }
+        }
+        matched.extend(
+            grammar_spans(&query_chars, detected_language)
+                .into_iter()
+                .map(|(start, end)| LookupSpan {
+                    term: String::new(),
+                    start,
+                    end,
+                    derived: true,
+                    display: false,
+                }),
+        );
         retain_complete_korean_token_coverages(&mut matched, &query_chars);
     }
 
@@ -1329,7 +1110,7 @@ fn segment_lookup_terms(
             break;
         };
         cursor = best.end;
-        if returned.insert(best.term.clone()) {
+        if best.display && returned.insert(best.term.clone()) {
             terms.push(best.term.clone());
         }
     }
@@ -1337,7 +1118,7 @@ fn segment_lookup_terms(
 }
 
 fn retain_complete_korean_token_coverages(matched: &mut Vec<LookupSpan>, query_chars: &[char]) {
-    let mut accepted = matched.iter().map(|span| span.derived).collect::<Vec<_>>();
+    let mut accepted = vec![false; matched.len()];
     let mut token_start = 0;
     while token_start < query_chars.len() {
         if !query_chars[token_start].is_alphanumeric() {
@@ -1354,6 +1135,11 @@ fn retain_complete_korean_token_coverages(matched: &mut Vec<LookupSpan>, query_c
             .enumerate()
             .filter(|(_, span)| span.start >= token_start && span.end <= token_end)
             .collect::<Vec<_>>();
+        for (index, span) in &internal {
+            if span.derived && span.display && span.start == token_start {
+                accepted[*index] = true;
+            }
+        }
         let mut reachable_from_start = HashSet::from([token_start]);
         let mut changed = true;
         while changed {
@@ -1404,15 +1190,6 @@ fn retain_complete_korean_token_coverages(matched: &mut Vec<LookupSpan>, query_c
     });
 }
 
-fn normalize_segmentation_query(normalized_query: &str, detected_language: &str) -> String {
-    if detected_language != "ko" {
-        return normalized_query.to_string();
-    }
-    normalized_query
-        .replace("거같", "거 같")
-        .replace("것같", "것 같")
-}
-
 fn prefer_korean_base_form(term: &str, detected_language: &str) -> bool {
     detected_language == "ko" && matches!(term, "그런" | "이런" | "저런")
 }
@@ -1431,12 +1208,7 @@ fn segmented_inflection_candidate_is_plausible(
     {
         return false;
     }
-    if span.start == 0 {
-        return true;
-    }
-    query_chars
-        .get(span.start - 1)
-        .is_none_or(|character| !character.is_alphanumeric())
+    true
 }
 
 fn segmentation_candidate_is_plausible(
@@ -1445,33 +1217,21 @@ fn segmentation_candidate_is_plausible(
     span: &LookupSpan,
 ) -> bool {
     match detected_language {
-        "ko" => !is_attached_korean_grammar_homograph(query_chars, span),
+        "ko" => !is_attached_grammar_surface(
+            query_chars,
+            detected_language,
+            &span.term,
+            span.start,
+            span.end,
+        ),
         _ => true,
     }
 }
 
-fn is_attached_korean_grammar_homograph(query_chars: &[char], span: &LookupSpan) -> bool {
-    if span.term != "거지" || span.start == 0 || span.end > query_chars.len() {
-        return false;
-    }
-
-    let previous = query_chars[span.start - 1];
-    previous == '는'
-        || matches!(previous, '이' | '그' | '저')
-        || korean_syllable_ends_in_n_or_l(previous)
-}
-
-fn korean_syllable_ends_in_n_or_l(character: char) -> bool {
-    let codepoint = character as u32;
-    if !(0xAC00..=0xD7A3).contains(&codepoint) {
-        return false;
-    }
-    matches!((codepoint - 0xAC00) % 28, 4 | 8)
-}
-
 fn lookup_spans(normalized_query: &str, detected_language: &str) -> Vec<LookupSpan> {
     let chars = normalized_query.chars().collect::<Vec<_>>();
-    let compact = matches!(detected_language, "ja" | "ko" | "th" | "zh" | "zh-Hant")
+    let compact = analysis_profile(detected_language)
+        .is_some_and(|profile| profile.boundaries == BoundaryStrategy::Compact)
         || chars.iter().copied().any(is_compact_dictionary_character);
     let mut spans = Vec::new();
     for start in 0..chars.len() {
@@ -1481,7 +1241,14 @@ fn lookup_spans(normalized_query: &str, detected_language: &str) -> Vec<LookupSp
             continue;
         }
         let max_end = (start + 24).min(chars.len());
-        for end in (start + 2)..=max_end {
+        for end in (start + 1)..=max_end {
+            let single_character = end == start + 1;
+            if single_character
+                && (start > 0 && chars[start - 1].is_alphanumeric()
+                    || end < chars.len() && chars[end].is_alphanumeric())
+            {
+                continue;
+            }
             if !chars[end - 1].is_alphanumeric()
                 || (!compact && end < chars.len() && chars[end].is_alphanumeric())
             {
@@ -1492,6 +1259,7 @@ fn lookup_spans(normalized_query: &str, detected_language: &str) -> Vec<LookupSp
                 start,
                 end,
                 derived: false,
+                display: true,
             });
         }
     }
@@ -2581,6 +2349,66 @@ mod tests {
             "{media_leak_headwords:?}"
         );
         assert!(!media_leak_headwords.contains(&"이미"));
+    }
+
+    #[test]
+    fn korean_sentence_analysis_handles_endings_grammar_and_colloquial_spacing() {
+        let store = temporary_store("korean-sentence-analysis");
+        store.install_bundled_pack("ko").unwrap();
+
+        let cute = store.lookup("귀엽네", Some("ko"), "ko").unwrap();
+        assert!(
+            cute.entries.iter().any(|entry| entry.headword == "귀엽다"),
+            "{:?}",
+            cute.entries
+                .iter()
+                .map(|entry| entry.headword.as_str())
+                .collect::<Vec<_>>()
+        );
+        for (surface, base) in [
+            ("귀여워요", "귀엽다"),
+            ("추운데", "춥다"),
+            ("몰라요", "모르다"),
+            ("써요", "쓰다"),
+        ] {
+            let result = store.lookup(surface, Some("ko"), "ko").unwrap();
+            assert!(
+                result.entries.iter().any(|entry| entry.headword == base),
+                "{surface}: {:?}",
+                result
+                    .entries
+                    .iter()
+                    .map(|entry| entry.headword.as_str())
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        let copula = store.lookup("무슨조건이지", Some("ko"), "ko").unwrap();
+        let copula_headwords = copula
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        assert!(copula_headwords.contains(&"무슨"), "{copula_headwords:?}");
+        assert!(copula_headwords.contains(&"조건"), "{copula_headwords:?}");
+        assert!(!copula_headwords.contains(&"이지"), "{copula_headwords:?}");
+
+        let casual = store
+            .lookup_with_context(
+                "왤케 초기화 자주해주냐",
+                "왤케 초기화 자주해주냐",
+                Some("ko"),
+                "ko",
+            )
+            .unwrap();
+        let casual_headwords = casual
+            .entries
+            .iter()
+            .map(|entry| entry.headword.as_str())
+            .collect::<Vec<_>>();
+        for expected in ["왜", "이렇게", "초기화", "자주", "하다", "주다"] {
+            assert!(casual_headwords.contains(&expected), "{casual_headwords:?}");
+        }
     }
 
     #[test]

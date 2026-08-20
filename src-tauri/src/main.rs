@@ -7,6 +7,7 @@ mod config;
 mod credentials;
 pub mod diagnostics;
 pub mod dictionary;
+mod dictionary_morphology;
 pub mod dictionary_ui;
 mod discord;
 mod discord_startup;
