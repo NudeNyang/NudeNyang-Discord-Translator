@@ -717,6 +717,15 @@ TranslateGemma is provided under and subject to the Gemma Terms of Use found at
 한·영·일·중 미니팩은 기능 검증을 위해 이 프로젝트에서 직접 작성했으며 앱과 같은
 \`GPL-3.0-only\`가 적용된다.
 
+한국어 확장팩의 생활어 기본층은 국립국어원 한국어기초사전에서 검수한 표제어, 발음과 한국어
+뜻풀이를 내부 형식으로 변환한 것이다. 현재 기본층에는 \`퇴근\`, \`퇴근하다\`, \`야근\`, \`야근하다\`가
+포함되며, 인용 용례와 멀티미디어는 포함하지 않는다. 텍스트 자료에는 CC BY-SA 2.0 대한민국이
+적용되며, 각 항목은 원문 페이지를 출처로 유지한다.
+
+- Source and full dictionary download: <https://krdict.korean.go.kr/kor/mainAction>
+- Copyright policy: <https://krdict.korean.go.kr/kor/kboardPolicy/copyRightTermsInfo>
+- CC BY-SA 2.0 KR: <https://creativecommons.org/licenses/by-sa/2.0/kr/legalcode>
+
 한국어 확장팩은 한국어 Wiktionary의 2026-08-04 덤프를 Wiktextract/kaikki.org로 추출한 데이터를
 필터링하고 내부 형식으로 변환한 것이다. 원문 항목은 CC BY-SA 4.0과 GFDL 1.1 이상으로
 이중 라이선스되며, 변환팩에는 원본과 동일한 조건이 적용된다.

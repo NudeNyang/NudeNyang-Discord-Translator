@@ -7,9 +7,16 @@ import { SUPPORTED_TARGET_LANGUAGES } from "../web/languages.mjs";
 
 const catalog = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-packs/catalog.json", import.meta.url), "utf8"));
 const starter = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-packs/starter.json", import.meta.url), "utf8"));
+const coreVocabulary = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-packs/core-vocabulary.json", import.meta.url), "utf8"));
 
 assert.equal(catalog.schemaVersion, 2, "unsupported dictionary catalog schema");
 assert.equal(starter.schemaVersion, 1, "unsupported starter pack schema");
+assert.equal(coreVocabulary.schemaVersion, 1, "unsupported core-vocabulary schema");
+assert.deepEqual(catalog.coveragePolicy.sourceLayerOrder, ["primary", "expanded"]);
+assert.deepEqual(
+  catalog.coveragePolicy.plannedPackRequirements,
+  ["reviewed-primary-source", "core-vocabulary-profile", "redistribution-license"],
+);
 assert.deepEqual(
   catalog.languages.map(language => language.code),
   SUPPORTED_TARGET_LANGUAGES,
@@ -22,6 +29,11 @@ const practicalCodes = new Set(
   catalog.languages.filter(language => language.availability === "practical").map(language => language.code),
 );
 assert.deepEqual([...practicalCodes].sort(), ["en", "ja", "ko", "zh", "zh-Hant"].sort());
+assert.deepEqual(
+  Object.keys(coreVocabulary.profiles).sort(),
+  [...practicalCodes].sort(),
+  "every installable language must have one core-vocabulary profile",
+);
 const minimumExpandedEntries = new Map([
   ["ko", 70_000],
   ["en", 150_000],
@@ -80,6 +92,13 @@ for (const metadata of catalog.languages.filter(language => language.availabilit
     `${metadata.code}: expanded pack is too small`,
   );
   assert.ok(metadata.title && metadata.source && metadata.sourceUrl && metadata.license, `${metadata.code}: catalog attribution is incomplete`);
+  assert.ok(Array.isArray(metadata.sources) && metadata.sources.length > 0, `${metadata.code}: source layers are missing`);
+  assert.equal(metadata.sources[0].role, "primary", `${metadata.code}: the first source layer must be primary`);
+  assert.equal(new Set(metadata.sources.map(source => source.role)).size, metadata.sources.length, `${metadata.code}: duplicate source layer role`);
+  for (const source of metadata.sources) {
+    assert.ok(catalog.coveragePolicy.sourceLayerOrder.includes(source.role), `${metadata.code}: unsupported source layer role`);
+    assert.ok(source.name && source.url && source.license, `${metadata.code}/${source.role}: source attribution is incomplete`);
+  }
   assert.match(metadata.version, /^\d{4}\.\d{2}\.\d{2}\.\d+$/, `${metadata.code}: invalid practical version`);
   const glossesByHeadword = new Map();
   for (const entry of pack.entries) {
@@ -93,6 +112,11 @@ for (const metadata of catalog.languages.filter(language => language.availabilit
     if (entry.senseRank !== undefined) {
       assert.ok(Number.isSafeInteger(entry.senseRank) && entry.senseRank >= 0, `${metadata.code}/${entry.headword}: invalid sense rank`);
     }
+    if (entry.sourcePriority !== undefined) {
+      assert.ok(Number.isSafeInteger(entry.sourcePriority) && entry.sourcePriority >= 0, `${metadata.code}/${entry.headword}: invalid source priority`);
+    }
+    const attributionFields = [entry.sourceName, entry.sourceUrl, entry.license].filter(Boolean).length;
+    assert.ok(attributionFields === 0 || attributionFields === 3, `${metadata.code}/${entry.headword}: partial source attribution override`);
     assert.ok(
       catalog.coveragePolicy.allowedPartsOfSpeech.includes(entry.partOfSpeech),
       `${metadata.code}/${entry.headword}: unsupported practical part of speech`,
@@ -104,6 +128,13 @@ for (const metadata of catalog.languages.filter(language => language.availabilit
     pack.entries.every(entry => Object.keys(entry.examples || {}).length === 0),
     `${metadata.code}: separately licensed examples must not be bundled`,
   );
+  const normalizedHeadwords = new Set(pack.entries.map(entry =>
+    String(entry.headword || "").normalize("NFKC").toLocaleLowerCase(metadata.code),
+  ));
+  const missingCoreWords = coreVocabulary.profiles[metadata.code].filter(word =>
+    !normalizedHeadwords.has(String(word).normalize("NFKC").toLocaleLowerCase(metadata.code)),
+  );
+  assert.deepEqual(missingCoreWords, [], `${metadata.code}: core-vocabulary coverage regressed`);
 }
 
 const japanese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/ja.json.gz", import.meta.url))));
@@ -124,6 +155,12 @@ const mindSenses = korean.packs[0].entries.filter(entry => entry.headword === "�
 assert.ok(mindSenses.length >= 5, "Korean practical pack must preserve homonymous 정신 senses");
 assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("마음")), "정신 must preserve its common mind sense");
 assert.ok(mindSenses.some(entry => entry.glosses.ko?.includes("(역사)")), "정신 must preserve its historical senses as alternatives");
+for (const word of ["퇴근", "퇴근하다", "야근", "야근하다"]) {
+  const entry = korean.packs[0].entries.find(candidate => candidate.headword === word);
+  assert.ok(entry, `Korean layered pack must cover ${word}`);
+  assert.equal(entry.sourceName, "한국어기초사전, 국립국어원", `${word}: primary attribution is missing`);
+  assert.equal(entry.sourcePriority, 0, `${word}: primary source must win`);
+}
 
 const simplifiedChinese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/zh.json.gz", import.meta.url))));
 assert.ok(simplifiedChinese.packs[0].entries.some(entry => entry.headword === "喜欢"), "Simplified Chinese pack must cover 喜欢");

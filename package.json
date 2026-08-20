@@ -13,6 +13,7 @@
     "test:locales": "node scripts/validate-ui-locales.mjs",
     "test:dictionaries": "node --test scripts/test/*.test.mjs && node scripts/validate-dictionary-packs.mjs",
     "dictionary:build": "node scripts/build-dictionary-pack.mjs",
+    "dictionary:merge": "node scripts/merge-dictionary-packs.mjs",
     "dictionary:build:english": "node scripts/build-oewn-pack.mjs",
     "dictionary:build:chinese": "node scripts/build-cedict-pack.mjs",
     "tauri": "tauri",

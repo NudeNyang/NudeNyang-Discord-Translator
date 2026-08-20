@@ -84,6 +84,14 @@ struct StarterEntry {
     part_of_speech: String,
     #[serde(default)]
     sense_rank: i64,
+    #[serde(default)]
+    source_priority: i64,
+    #[serde(default)]
+    source_name: String,
+    #[serde(default)]
+    source_url: String,
+    #[serde(default)]
+    license: String,
     glosses: HashMap<String, String>,
     #[serde(default)]
     examples: HashMap<String, String>,
@@ -100,6 +108,8 @@ pub struct DictionaryEntry {
     pub part_of_speech: String,
     #[serde(skip)]
     pub sense_rank: i64,
+    #[serde(skip)]
+    pub source_priority: i64,
     pub context_recommended: bool,
     pub definition: String,
     pub definition_language: String,
@@ -747,9 +757,10 @@ impl DictionaryStore {
         for (index, entry) in pack.entries.iter().enumerate() {
             transaction
                 .execute(
-                    "INSERT INTO dictionary_entries (pack_id, language, headword, normalized_headword, reading, part_of_speech, sense_rank) \
-                     VALUES (?1,?2,?3,?4,?5,?6,?7)",
-                    params![pack.id, pack.language, entry.headword, normalize_term(&entry.headword), entry.reading, entry.part_of_speech, entry.sense_rank],
+                    "INSERT INTO dictionary_entries (pack_id, language, headword, normalized_headword, reading, part_of_speech, sense_rank, source_priority, source_name, source_url, license) \
+                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+                    params![pack.id, pack.language, entry.headword, normalize_term(&entry.headword), entry.reading, entry.part_of_speech, entry.sense_rank,
+                        entry.source_priority, entry.source_name, entry.source_url, entry.license],
                 )
                 .map_err(|error| format!("사전 항목을 저장하지 못했습니다: {error}"))?;
             let entry_id = transaction.last_insert_rowid();
@@ -804,7 +815,9 @@ fn lookup_dictionary_terms(
                     COALESCE(g_en.text, g_any.text, ''), \
                     CASE WHEN g_en.text IS NOT NULL THEN 'en' ELSE COALESCE(g_any.locale, '') END, \
                     COALESCE(x_target.text, x_en.text, x_any.text, ''), \
-                    p.source_name, p.source_url, p.license, e.sense_rank \
+                    COALESCE(NULLIF(e.source_name,''), p.source_name), \
+                    COALESCE(NULLIF(e.source_url,''), p.source_url), \
+                    COALESCE(NULLIF(e.license,''), p.license), e.sense_rank, e.source_priority \
              FROM dictionary_entries e \
              JOIN dictionary_packs p ON p.id=e.pack_id \
              LEFT JOIN dictionary_text g_target ON g_target.entry_id=e.id AND g_target.kind='gloss' AND g_target.locale=?1 \
@@ -815,7 +828,7 @@ fn lookup_dictionary_terms(
              LEFT JOIN dictionary_text x_en ON x_en.entry_id=e.id AND x_en.kind='example' AND x_en.locale='en' \
              LEFT JOIN dictionary_text x_any ON x_any.id=(SELECT id FROM dictionary_text WHERE entry_id=e.id AND kind='example' ORDER BY locale LIMIT 1) \
              WHERE e.normalized_headword=?2 AND (?3='' OR e.language=?3) \
-             ORDER BY CASE WHEN e.language=?3 THEN 0 ELSE 1 END, e.sense_rank, e.id LIMIT ?4",
+             ORDER BY CASE WHEN e.language=?3 THEN 0 ELSE 1 END, e.source_priority, e.sense_rank, e.id LIMIT ?4",
         )
         .map_err(|error| format!("사전 조회를 준비하지 못했습니다: {error}"))?;
     let total_limit = per_term_limit.saturating_mul(terms.len()).min(96);
@@ -1404,6 +1417,7 @@ fn dictionary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<DictionaryEn
         reading: row.get(3)?,
         part_of_speech: row.get(4)?,
         sense_rank: row.get(14)?,
+        source_priority: row.get(15)?,
         context_recommended: false,
         definition: row.get(5)?,
         definition_language: row.get(6)?,
@@ -1439,6 +1453,7 @@ fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
             contextual_sense_score(right, &normalized_context, context_language)
                 .ranking
                 .cmp(&contextual_sense_score(left, &normalized_context, context_language).ranking)
+                .then_with(|| left.source_priority.cmp(&right.source_priority))
                 .then_with(|| left.sense_rank.cmp(&right.sense_rank))
                 .then_with(|| left.entry_id.cmp(&right.entry_id))
         });
@@ -1710,7 +1725,8 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
            id INTEGER PRIMARY KEY AUTOINCREMENT, pack_id TEXT NOT NULL REFERENCES dictionary_packs(id) ON DELETE CASCADE, \
            language TEXT NOT NULL, headword TEXT NOT NULL, normalized_headword TEXT NOT NULL, \
            reading TEXT NOT NULL DEFAULT '', part_of_speech TEXT NOT NULL DEFAULT 'other', \
-           sense_rank INTEGER NOT NULL DEFAULT 0); \
+           sense_rank INTEGER NOT NULL DEFAULT 0, source_priority INTEGER NOT NULL DEFAULT 0, \
+           source_name TEXT NOT NULL DEFAULT '', source_url TEXT NOT NULL DEFAULT '', license TEXT NOT NULL DEFAULT ''); \
          CREATE INDEX IF NOT EXISTS idx_dictionary_lookup ON dictionary_entries(normalized_headword, language); \
          CREATE TABLE IF NOT EXISTS dictionary_text ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, entry_id INTEGER NOT NULL REFERENCES dictionary_entries(id) ON DELETE CASCADE, \
@@ -1762,6 +1778,38 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
                 [],
             )
             .map_err(|error| format!("사전 항목 저장소 형식을 갱신하지 못했습니다: {error}"))?;
+    }
+    let entry_columns = connection
+        .prepare("PRAGMA table_info(dictionary_entries)")
+        .and_then(|mut statement| {
+            statement
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<rusqlite::Result<Vec<_>>>()
+        })
+        .map_err(|error| format!("사전 항목 출처 저장 형식을 확인하지 못했습니다: {error}"))?;
+    for (column, declaration) in [
+        (
+            "source_priority",
+            "ALTER TABLE dictionary_entries ADD COLUMN source_priority INTEGER NOT NULL DEFAULT 0",
+        ),
+        (
+            "source_name",
+            "ALTER TABLE dictionary_entries ADD COLUMN source_name TEXT NOT NULL DEFAULT ''",
+        ),
+        (
+            "source_url",
+            "ALTER TABLE dictionary_entries ADD COLUMN source_url TEXT NOT NULL DEFAULT ''",
+        ),
+        (
+            "license",
+            "ALTER TABLE dictionary_entries ADD COLUMN license TEXT NOT NULL DEFAULT ''",
+        ),
+    ] {
+        if !entry_columns.iter().any(|existing| existing == column) {
+            connection.execute(declaration, []).map_err(|error| {
+                format!("사전 항목 출처 저장 형식을 갱신하지 못했습니다: {error}")
+            })?;
+        }
     }
     let has_localized_quality_version = connection
         .prepare("PRAGMA table_info(dictionary_localized_text)")
@@ -1890,6 +1938,10 @@ mod tests {
             reading: "[t͡ɕʌ̹ŋɕʰin]".to_string(),
             part_of_speech: "noun".to_string(),
             sense_rank,
+            source_priority: 0,
+            source_name: String::new(),
+            source_url: String::new(),
+            license: String::new(),
             glosses: HashMap::from([("ko".to_string(), definition.to_string())]),
             examples: HashMap::new(),
         }
@@ -1929,6 +1981,46 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["future", "server"]
         );
+    }
+
+    #[test]
+    fn legacy_entry_schema_is_migrated_for_layered_sources() {
+        let path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-layer-migration-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&path);
+        let connection = rusqlite::Connection::open(&path).unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE dictionary_packs ( \
+                   id TEXT PRIMARY KEY, language TEXT NOT NULL UNIQUE, version TEXT NOT NULL, title TEXT NOT NULL, \
+                   source_name TEXT NOT NULL, source_url TEXT NOT NULL, license TEXT NOT NULL, \
+                   edition TEXT NOT NULL DEFAULT 'mini', entry_count INTEGER NOT NULL, installed_at REAL NOT NULL); \
+                 CREATE TABLE dictionary_entries ( \
+                   id INTEGER PRIMARY KEY AUTOINCREMENT, pack_id TEXT NOT NULL REFERENCES dictionary_packs(id) ON DELETE CASCADE, \
+                   language TEXT NOT NULL, headword TEXT NOT NULL, normalized_headword TEXT NOT NULL, \
+                   reading TEXT NOT NULL DEFAULT '', part_of_speech TEXT NOT NULL DEFAULT 'other', \
+                   sense_rank INTEGER NOT NULL DEFAULT 0);",
+            )
+            .unwrap();
+        drop(connection);
+
+        let store = DictionaryStore::open(path).unwrap();
+        let columns = store
+            .connection
+            .lock()
+            .unwrap()
+            .prepare("PRAGMA table_info(dictionary_entries)")
+            .and_then(|mut statement| {
+                statement
+                    .query_map([], |row| row.get::<_, String>(1))?
+                    .collect::<rusqlite::Result<Vec<_>>>()
+            })
+            .unwrap();
+        for expected in ["source_priority", "source_name", "source_url", "license"] {
+            assert!(columns.iter().any(|column| column == expected));
+        }
     }
 
     #[test]
@@ -2032,6 +2124,41 @@ mod tests {
     }
 
     #[test]
+    fn layered_pack_keeps_primary_source_first_and_preserves_attribution() {
+        let store = temporary_store("layered-attribution");
+        let mut primary = test_sense("퇴근", "직장에서 일을 끝내고 집으로 돌아가거나 돌아옴.", 0);
+        primary.source_priority = 0;
+        primary.source_name = "Official learner dictionary".to_string();
+        primary.source_url = "https://example.com/primary".to_string();
+        primary.license = "CC-BY-SA-2.0-KR".to_string();
+        let mut expanded = test_sense("퇴근", "다른 자료에만 있는 뜻.", 1);
+        expanded.source_priority = 1;
+        expanded.source_name = "Community dictionary".to_string();
+        expanded.source_url = "https://example.com/expanded".to_string();
+        expanded.license = "CC-BY-SA-4.0".to_string();
+
+        store
+            .install_pack(&StarterPack {
+                id: "test-ko-layered".to_string(),
+                language: "ko".to_string(),
+                version: "2026.08.20.1".to_string(),
+                title: "Layered test".to_string(),
+                source_name: "Combined source".to_string(),
+                source_url: "https://example.com/notices".to_string(),
+                license: "Multiple".to_string(),
+                edition: "mini".to_string(),
+                entries: vec![expanded, primary],
+            })
+            .unwrap();
+
+        let result = store.lookup("퇴근", Some("ko"), "ko").unwrap();
+        assert_eq!(result.entries.len(), 2);
+        assert_eq!(result.entries[0].source_name, "Official learner dictionary");
+        assert_eq!(result.entries[0].license, "CC-BY-SA-2.0-KR");
+        assert_eq!(result.entries[1].source_name, "Community dictionary");
+    }
+
+    #[test]
     fn personal_terms_are_saved_and_found_for_the_language_pair() {
         let store = temporary_store("personal");
         let saved = store
@@ -2065,6 +2192,10 @@ mod tests {
                 reading: String::new(),
                 part_of_speech: "noun".to_string(),
                 sense_rank: 0,
+                source_priority: 0,
+                source_name: String::new(),
+                source_url: String::new(),
+                license: String::new(),
                 glosses: HashMap::from([(
                     "en".to_string(),
                     format!("definition {index} {}", "content ".repeat(40)),
@@ -2292,6 +2423,20 @@ mod tests {
             .entries
             .iter()
             .any(|entry| entry.headword == "정신"));
+
+        let leave_work = store.lookup("퇴근", Some("ko"), "ko").unwrap();
+        let leave_work_entry = leave_work
+            .entries
+            .iter()
+            .find(|entry| entry.headword == "퇴근")
+            .unwrap();
+        assert_eq!(leave_work_entry.source_name, "한국어기초사전, 국립국어원");
+        assert!(leave_work_entry.definition.contains("직장에서 일을 끝내고"));
+
+        let overtime = store.lookup("야근하다", Some("ko"), "ko").unwrap();
+        assert!(overtime.entries.iter().any(|entry| {
+            entry.headword == "야근하다" && entry.definition.contains("밤늦게까지 일하다")
+        }));
     }
 
     #[test]
