@@ -155,6 +155,11 @@ select:focus-visible,
   min-height: 0;
 }
 
+.settings-workspace[data-focus-view="dictionary-manager"] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
 .settings-navigation {
   align-self: start;
   display: grid;
@@ -163,6 +168,10 @@ select:focus-visible,
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: color-mix(in srgb, var(--surface) 88%, var(--bg));
+}
+
+.settings-navigation[hidden] {
+  display: none;
 }
 
 .settings-navigation > p {
@@ -2468,6 +2477,28 @@ select:focus-visible,
   .storage-cache-row {
     grid-template-columns: minmax(0, 1fr) 104px;
   }
+
+  .dictionary-manager-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dictionary-manager-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .dictionary-manager-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dictionary-search-field {
+    grid-column: 1 / -1;
+  }
+
+  .dictionary-filter-check {
+    min-height: 38px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -2574,28 +2605,14 @@ select:focus-visible,
     width: 100%;
   }
 
-  .dictionary-manager-header,
   .dictionary-personal-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .dictionary-manager-actions,
   .dictionary-heading-actions {
     width: 100%;
     flex-wrap: wrap;
-  }
-
-  .dictionary-manager-toolbar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dictionary-search-field {
-    grid-column: 1 / -1;
-  }
-
-  .dictionary-filter-check {
-    min-height: 38px;
   }
 
   .dictionary-editor-grid {

@@ -436,6 +436,19 @@ test("personal dictionary management scales to searchable and portable collectio
   assert.match(styles, /\.dictionary-manager-row:hover \.dictionary-row-actions/);
 });
 
+test("personal dictionary management uses the full settings workspace", () => {
+  assert.match(markup, /id="settings-workspace"[^>]*class="settings-workspace"/);
+  assert.match(markup, /id="settings-navigation"[^>]*class="settings-navigation"/);
+  assert.match(script, /settingsWorkspace\.dataset\.focusView = "dictionary-manager"/);
+  assert.match(script, /delete elements\.settingsWorkspace\.dataset\.focusView/);
+  assert.match(script, /settingsNavigation\.hidden = true/);
+  assert.match(script, /settingsNavigation\.hidden = false/);
+  assert.match(styles, /\.settings-workspace\[data-focus-view="dictionary-manager"\]\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+  assert.match(styles, /\.settings-navigation\[hidden\]\s*\{[^}]*display:\s*none/s);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-header\s*\{[^}]*flex-direction:\s*column/s);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
+});
+
 test("dictionary pack cards keep compact metadata and open consolidated source notices", () => {
   assert.match(markup, /id="dictionary-pack-licenses"[^>]*>[\s\S]*?출처 및 라이선스[\s\S]*?<\/button>/);
   assert.match(script, /dictionaryPackLicenses:\s*document\.querySelector\("#dictionary-pack-licenses"\)/);

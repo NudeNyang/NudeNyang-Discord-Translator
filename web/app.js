@@ -152,6 +152,8 @@ const elements = {
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
   dictionaryEnabled: document.querySelector("#dictionary-enabled"),
+  settingsWorkspace: document.querySelector("#settings-workspace"),
+  settingsNavigation: document.querySelector("#settings-navigation"),
   dictionaryOverview: document.querySelector("#dictionary-overview"),
   dictionaryPersonalManager: document.querySelector("#dictionary-personal-manager"),
   dictionaryPersonalOpen: document.querySelector("#dictionary-personal-open"),
@@ -635,6 +637,8 @@ function dictionaryEntryPayload(entry = {}) {
 
 function openDictionaryManager() {
   state.dictionaryPersonalManagerOpen = true;
+  elements.settingsWorkspace.dataset.focusView = "dictionary-manager";
+  elements.settingsNavigation.hidden = true;
   elements.dictionaryOverview.hidden = true;
   elements.dictionaryPersonalManager.hidden = false;
   state.dictionaryPersonalQuery.offset = 0;
@@ -646,6 +650,8 @@ function openDictionaryManager() {
 
 function closeDictionaryManager() {
   state.dictionaryPersonalManagerOpen = false;
+  delete elements.settingsWorkspace.dataset.focusView;
+  elements.settingsNavigation.hidden = false;
   elements.dictionaryPersonalManager.hidden = true;
   elements.dictionaryOverview.hidden = false;
   elements.settingsScroll.scrollTop = 0;
