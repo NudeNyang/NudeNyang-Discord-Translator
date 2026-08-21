@@ -436,6 +436,26 @@ test("personal dictionary management scales to searchable and portable collectio
   assert.match(styles, /\.dictionary-manager-row:hover \.dictionary-row-actions/);
 });
 
+test("personal dictionary selection uses a bottom action dock and clean row toggles", () => {
+  const searchIndex = markup.indexOf('id="dictionary-personal-search"');
+  const favoriteIndex = markup.indexOf('id="dictionary-filter-pinned"');
+  const sourceIndex = markup.indexOf('id="dictionary-filter-source"');
+  const sortIndex = markup.indexOf('id="dictionary-sort"');
+  assert.ok(searchIndex > -1 && searchIndex < favoriteIndex && favoriteIndex < sourceIndex && sourceIndex < sortIndex);
+  assert.match(markup, /id="dictionary-selection-all"[^>]*>전체 선택<\/button>/);
+  assert.match(markup, /id="dictionary-selection-clear"[^>]*>선택 취소<\/button>/);
+  assert.match(markup, /id="dictionary-selection-delete"[^>]*>선택 항목 삭제<\/button>/);
+  assert.doesNotMatch(markup, /id="dictionary-selection-pin"/);
+  assert.doesNotMatch(markup, /id="dictionary-selection-unpin"/);
+  assert.match(script, /selector\.className = "dictionary-row-selector"/);
+  assert.match(script, /selector\.setAttribute\("aria-pressed", String\(selected\)\)/);
+  assert.doesNotMatch(script, /check\.type = "checkbox"/);
+  assert.match(script, /dictionaryPersonalPage\.entries\.forEach\(entry => state\.dictionarySelectedIds\.add\(entry\.id\)\)/);
+  assert.match(script, /dictionarySelectedIds\.clear\(\);[\s\S]*?renderDictionaryManagerEntries\(\)/);
+  assert.match(styles, /\.dictionary-selection-bar\s*\{[^}]*position:\s*fixed;[^}]*left:\s*50%;[^}]*bottom:/s);
+  assert.match(styles, /\.dictionary-row-selector\s*\{[^}]*border-radius:\s*50%;/s);
+});
+
 test("personal dictionary management uses the full settings workspace", () => {
   assert.match(markup, /id="settings-workspace"[^>]*class="settings-workspace"/);
   assert.match(markup, /id="settings-navigation"[^>]*class="settings-navigation"/);
@@ -446,7 +466,7 @@ test("personal dictionary management uses the full settings workspace", () => {
   assert.match(styles, /\.settings-workspace\[data-focus-view="dictionary-manager"\]\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
   assert.match(styles, /\.settings-navigation\[hidden\]\s*\{[^}]*display:\s*none/s);
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-header\s*\{[^}]*flex-direction:\s*column/s);
-  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(180px, 1fr\) 42px/s);
 });
 
 test("personal dictionary controls use localized custom selects and center the back icon", () => {
@@ -493,7 +513,8 @@ test("personal dictionary toolbar prioritizes export format, source language, an
   assert.match(script, /dictionaryFilterPinned\.setAttribute\("aria-pressed", String\(enabled\)\)/);
   assert.match(script, /dictionary-favorite-filter-star"\)\.textContent = enabled \? "★" : "☆"/);
   assert.match(styles, /\.dictionary-manager-actions \.dictionary-custom-select \.select-trigger\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*650;/s);
-  assert.match(styles, /\.dictionary-favorite-filter\s*\{[^}]*margin-inline-start:\s*auto;/s);
+  assert.match(styles, /\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(240px, 1\.3fr\) 42px/s);
+  assert.doesNotMatch(styles, /\.dictionary-favorite-filter\s*\{[^}]*margin-inline-start:\s*auto;/s);
   assert.match(styles, /\.dictionary-favorite-filter\[aria-pressed="true"\]/);
 });
 

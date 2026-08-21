@@ -557,7 +557,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "關閉",
     "즐겨찾기": "我的最愛",
     "원문 용어 복사": "複製原文術語",
-    "원문 용어를 복사했습니다.": "已複製原文術語。"
+    "원문 용어를 복사했습니다.": "已複製原文術語。",
+    "전체 선택": "全選",
+    "선택 취소": "清除選取",
+    "선택 항목 삭제": "刪除所選項目"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -1116,7 +1119,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Fechar",
     "즐겨찾기": "Favoritos",
     "원문 용어 복사": "Copiar termo original",
-    "원문 용어를 복사했습니다.": "Termo original copiado."
+    "원문 용어를 복사했습니다.": "Termo original copiado.",
+    "전체 선택": "Selecionar tudo",
+    "선택 취소": "Limpar seleção",
+    "선택 항목 삭제": "Excluir selecionados"
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1675,7 +1681,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "बंद करें",
     "즐겨찾기": "पसंदीदा",
     "원문 용어 복사": "स्रोत शब्द कॉपी करें",
-    "원문 용어를 복사했습니다.": "स्रोत शब्द कॉपी किया गया।"
+    "원문 용어를 복사했습니다.": "स्रोत शब्द कॉपी किया गया।",
+    "전체 선택": "सभी चुनें",
+    "선택 취소": "चयन हटाएँ",
+    "선택 항목 삭제": "चुने गए हटाएँ"
   },
   "es-419": {
     "설정": "Configuración",
@@ -2234,7 +2243,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Cerrar",
     "즐겨찾기": "Favoritos",
     "원문 용어 복사": "Copiar término original",
-    "원문 용어를 복사했습니다.": "Se copió el término original."
+    "원문 용어를 복사했습니다.": "Se copió el término original.",
+    "전체 선택": "Seleccionar todo",
+    "선택 취소": "Borrar selección",
+    "선택 항목 삭제": "Eliminar seleccionados"
   },
   "de": {
     "설정": "Einstellungen",
@@ -2793,7 +2805,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Schließen",
     "즐겨찾기": "Favoriten",
     "원문 용어 복사": "Quellbegriff kopieren",
-    "원문 용어를 복사했습니다.": "Quellbegriff kopiert."
+    "원문 용어를 복사했습니다.": "Quellbegriff kopiert.",
+    "전체 선택": "Alle auswählen",
+    "선택 취소": "Auswahl aufheben",
+    "선택 항목 삭제": "Ausgewählte löschen"
   },
   "ru": {
     "설정": "Настройки",
@@ -3352,7 +3367,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Закрыть",
     "즐겨찾기": "Избранное",
     "원문 용어 복사": "Копировать исходный термин",
-    "원문 용어를 복사했습니다.": "Исходный термин скопирован."
+    "원문 용어를 복사했습니다.": "Исходный термин скопирован.",
+    "전체 선택": "Выбрать всё",
+    "선택 취소": "Снять выделение",
+    "선택 항목 삭제": "Удалить выбранное"
   },
   "id": {
     "설정": "Pengaturan",
@@ -3911,7 +3929,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Tutup",
     "즐겨찾기": "Favorit",
     "원문 용어 복사": "Salin istilah sumber",
-    "원문 용어를 복사했습니다.": "Istilah sumber telah disalin."
+    "원문 용어를 복사했습니다.": "Istilah sumber telah disalin.",
+    "전체 선택": "Pilih semua",
+    "선택 취소": "Hapus pilihan",
+    "선택 항목 삭제": "Hapus yang dipilih"
   },
   "fr": {
     "설정": "Paramètres",
@@ -4470,7 +4491,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Fermer",
     "즐겨찾기": "Favoris",
     "원문 용어 복사": "Copier le terme source",
-    "원문 용어를 복사했습니다.": "Terme source copié."
+    "원문 용어를 복사했습니다.": "Terme source copié.",
+    "전체 선택": "Tout sélectionner",
+    "선택 취소": "Effacer la sélection",
+    "선택 항목 삭제": "Supprimer les éléments sélectionnés"
   },
   "tr": {
     "설정": "Ayarlar",
@@ -5029,7 +5053,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Kapat",
     "즐겨찾기": "Favoriler",
     "원문 용어 복사": "Kaynak terimi kopyala",
-    "원문 용어를 복사했습니다.": "Kaynak terim kopyalandı."
+    "원문 용어를 복사했습니다.": "Kaynak terim kopyalandı.",
+    "전체 선택": "Tümünü seç",
+    "선택 취소": "Seçimi temizle",
+    "선택 항목 삭제": "Seçilenleri sil"
   },
   "ar": {
     "설정": "الإعدادات",
@@ -5588,7 +5615,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "إغلاق",
     "즐겨찾기": "المفضلة",
     "원문 용어 복사": "نسخ المصطلح المصدر",
-    "원문 용어를 복사했습니다.": "تم نسخ المصطلح المصدر."
+    "원문 용어를 복사했습니다.": "تم نسخ المصطلح المصدر.",
+    "전체 선택": "تحديد الكل",
+    "선택 취소": "إلغاء التحديد",
+    "선택 항목 삭제": "حذف العناصر المحددة"
   },
   "vi": {
     "설정": "Cài đặt",
@@ -6147,7 +6177,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Đóng",
     "즐겨찾기": "Yêu thích",
     "원문 용어 복사": "Sao chép thuật ngữ nguồn",
-    "원문 용어를 복사했습니다.": "Đã sao chép thuật ngữ nguồn."
+    "원문 용어를 복사했습니다.": "Đã sao chép thuật ngữ nguồn.",
+    "전체 선택": "Chọn tất cả",
+    "선택 취소": "Bỏ chọn",
+    "선택 항목 삭제": "Xóa mục đã chọn"
   },
   "it": {
     "설정": "Impostazioni",
@@ -6706,7 +6739,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Chiudi",
     "즐겨찾기": "Preferiti",
     "원문 용어 복사": "Copia termine sorgente",
-    "원문 용어를 복사했습니다.": "Termine sorgente copiato."
+    "원문 용어를 복사했습니다.": "Termine sorgente copiato.",
+    "전체 선택": "Seleziona tutto",
+    "선택 취소": "Deseleziona tutto",
+    "선택 항목 삭제": "Elimina selezionati"
   },
   "pl": {
     "설정": "Ustawienia",
@@ -7265,7 +7301,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Zamknij",
     "즐겨찾기": "Ulubione",
     "원문 용어 복사": "Kopiuj termin źródłowy",
-    "원문 용어를 복사했습니다.": "Skopiowano termin źródłowy."
+    "원문 용어를 복사했습니다.": "Skopiowano termin źródłowy.",
+    "전체 선택": "Zaznacz wszystko",
+    "선택 취소": "Wyczyść zaznaczenie",
+    "선택 항목 삭제": "Usuń zaznaczone"
   },
   "uk": {
     "설정": "Налаштування",
@@ -7824,7 +7863,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Закрити",
     "즐겨찾기": "Вибране",
     "원문 용어 복사": "Копіювати термін оригіналу",
-    "원문 용어를 복사했습니다.": "Термін оригіналу скопійовано."
+    "원문 용어를 복사했습니다.": "Термін оригіналу скопійовано.",
+    "전체 선택": "Вибрати все",
+    "선택 취소": "Скасувати вибір",
+    "선택 항목 삭제": "Видалити вибране"
   },
   "ms": {
     "설정": "Tetapan",
@@ -8383,7 +8425,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Tutup",
     "즐겨찾기": "Kegemaran",
     "원문 용어 복사": "Salin istilah sumber",
-    "원문 용어를 복사했습니다.": "Istilah sumber telah disalin."
+    "원문 용어를 복사했습니다.": "Istilah sumber telah disalin.",
+    "전체 선택": "Pilih semua",
+    "선택 취소": "Kosongkan pilihan",
+    "선택 항목 삭제": "Padam yang dipilih"
   },
   "nl": {
     "설정": "Instellingen",
@@ -8942,7 +8987,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Sluiten",
     "즐겨찾기": "Favorieten",
     "원문 용어 복사": "Bronterm kopiëren",
-    "원문 용어를 복사했습니다.": "Bronterm gekopieerd."
+    "원문 용어를 복사했습니다.": "Bronterm gekopieerd.",
+    "전체 선택": "Alles selecteren",
+    "선택 취소": "Selectie wissen",
+    "선택 항목 삭제": "Selectie verwijderen"
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -9501,7 +9549,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "ปิด",
     "즐겨찾기": "รายการโปรด",
     "원문 용어 복사": "คัดลอกคำศัพท์ต้นฉบับ",
-    "원문 용어를 복사했습니다.": "คัดลอกคำศัพท์ต้นฉบับแล้ว"
+    "원문 용어를 복사했습니다.": "คัดลอกคำศัพท์ต้นฉบับแล้ว",
+    "전체 선택": "เลือกทั้งหมด",
+    "선택 취소": "ล้างการเลือก",
+    "선택 항목 삭제": "ลบรายการที่เลือก"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -10060,7 +10111,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Isara",
     "즐겨찾기": "Mga Paborito",
     "원문 용어 복사": "Kopyahin ang termino sa pinagmulan",
-    "원문 용어를 복사했습니다.": "Nakopya ang termino sa pinagmulan."
+    "원문 용어를 복사했습니다.": "Nakopya ang termino sa pinagmulan.",
+    "전체 선택": "Piliin lahat",
+    "선택 취소": "Alisin ang pagkakapili",
+    "선택 항목 삭제": "Tanggalin ang napili"
   },
   "bn": {
     "설정": "সেটিংস",
@@ -10619,7 +10673,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "বন্ধ করুন",
     "즐겨찾기": "পছন্দের",
     "원문 용어 복사": "উৎসের পরিভাষা কপি করুন",
-    "원문 용어를 복사했습니다.": "উৎসের পরিভাষা কপি করা হয়েছে।"
+    "원문 용어를 복사했습니다.": "উৎসের পরিভাষা কপি করা হয়েছে।",
+    "전체 선택": "সব নির্বাচন করুন",
+    "선택 취소": "নির্বাচন মুছুন",
+    "선택 항목 삭제": "নির্বাচিতগুলো মুছুন"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -11178,7 +11235,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "بند کریں",
     "즐겨찾기": "پسندیدہ",
     "원문 용어 복사": "ماخذ کی اصطلاح کاپی کریں",
-    "원문 용어를 복사했습니다.": "ماخذ کی اصطلاح کاپی ہو گئی۔"
+    "원문 용어를 복사했습니다.": "ماخذ کی اصطلاح کاپی ہو گئی۔",
+    "전체 선택": "سب منتخب کریں",
+    "선택 취소": "انتخاب صاف کریں",
+    "선택 항목 삭제": "منتخب کردہ کو حذف کریں"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -11737,7 +11797,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "மூடு",
     "즐겨찾기": "பிடித்தவை",
     "원문 용어 복사": "மூலச் சொல்லை நகலெடு",
-    "원문 용어를 복사했습니다.": "மூலச் சொல் நகலெடுக்கப்பட்டது."
+    "원문 용어를 복사했습니다.": "மூலச் சொல் நகலெடுக்கப்பட்டது.",
+    "전체 선택": "அனைத்தையும் தேர்ந்தெடு",
+    "선택 취소": "தேர்வை நீக்கு",
+    "선택 항목 삭제": "தேர்ந்தெடுத்தவற்றை நீக்கு"
   },
   "fa": {
     "설정": "تنظیمات",
@@ -12296,7 +12359,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "بستن",
     "즐겨찾기": "علاقه‌مندی‌ها",
     "원문 용어 복사": "کپی اصطلاح مبدأ",
-    "원문 용어를 복사했습니다.": "اصطلاح مبدأ کپی شد."
+    "원문 용어를 복사했습니다.": "اصطلاح مبدأ کپی شد.",
+    "전체 선택": "انتخاب همه",
+    "선택 취소": "لغو انتخاب",
+    "선택 항목 삭제": "حذف موارد انتخاب‌شده"
   },
   "he": {
     "설정": "הגדרות",
@@ -12855,7 +12921,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "סגירה",
     "즐겨찾기": "מועדפים",
     "원문 용어 복사": "העתקת מונח המקור",
-    "원문 용어를 복사했습니다.": "מונח המקור הועתק."
+    "원문 용어를 복사했습니다.": "מונח המקור הועתק.",
+    "전체 선택": "בחר הכול",
+    "선택 취소": "נקה בחירה",
+    "선택 항목 삭제": "מחק את הפריטים שנבחרו"
   },
   "cs": {
     "설정": "Nastavení",
@@ -13414,6 +13483,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닫기": "Zavřít",
     "즐겨찾기": "Oblíbené",
     "원문 용어 복사": "Kopírovat zdrojový termín",
-    "원문 용어를 복사했습니다.": "Zdrojový termín byl zkopírován."
+    "원문 용어를 복사했습니다.": "Zdrojový termín byl zkopírován.",
+    "전체 선택": "Vybrat vše",
+    "선택 취소": "Zrušit výběr",
+    "선택 항목 삭제": "Smazat vybrané"
   }
 });

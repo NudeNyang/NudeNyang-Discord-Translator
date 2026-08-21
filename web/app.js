@@ -171,8 +171,8 @@ const elements = {
   dictionarySort: document.querySelector("#dictionary-sort"),
   dictionarySelectionBar: document.querySelector("#dictionary-selection-bar"),
   dictionarySelectionCount: document.querySelector("#dictionary-selection-count"),
-  dictionarySelectionPin: document.querySelector("#dictionary-selection-pin"),
-  dictionarySelectionUnpin: document.querySelector("#dictionary-selection-unpin"),
+  dictionarySelectionAll: document.querySelector("#dictionary-selection-all"),
+  dictionarySelectionClear: document.querySelector("#dictionary-selection-clear"),
   dictionarySelectionDelete: document.querySelector("#dictionary-selection-delete"),
   dictionaryManagerList: document.querySelector("#dictionary-manager-list"),
   dictionaryPageSummary: document.querySelector("#dictionary-page-summary"),
@@ -918,20 +918,25 @@ function renderDictionaryManagerEntries() {
 function createDictionaryManagerRow(entry) {
   const row = document.createElement("article");
   row.className = "dictionary-manager-row";
-  row.dataset.selected = String(state.dictionarySelectedIds.has(entry.id));
-  const checkLabel = document.createElement("label");
-  const check = document.createElement("input");
-  checkLabel.className = "dictionary-row-check";
-  check.type = "checkbox";
-  check.checked = state.dictionarySelectedIds.has(entry.id);
-  check.setAttribute("aria-label", `${entry.sourceTerm} 선택`);
-  check.addEventListener("change", () => {
-    if (check.checked) state.dictionarySelectedIds.add(entry.id);
+  const selected = state.dictionarySelectedIds.has(entry.id);
+  row.dataset.selected = String(selected);
+  const selector = document.createElement("button");
+  selector.className = "dictionary-row-selector";
+  selector.type = "button";
+  selector.setAttribute("aria-label", `${entry.sourceTerm} 선택`);
+  selector.setAttribute("aria-pressed", String(selected));
+  const selectionCheck = document.createElement("span");
+  selectionCheck.setAttribute("aria-hidden", "true");
+  selectionCheck.textContent = "✓";
+  selector.append(selectionCheck);
+  selector.addEventListener("click", () => {
+    const nextSelected = !state.dictionarySelectedIds.has(entry.id);
+    if (nextSelected) state.dictionarySelectedIds.add(entry.id);
     else state.dictionarySelectedIds.delete(entry.id);
-    row.dataset.selected = String(check.checked);
+    row.dataset.selected = String(nextSelected);
+    selector.setAttribute("aria-pressed", String(nextSelected));
     renderDictionarySelectionBar();
   });
-  checkLabel.append(check);
 
   const copy = document.createElement("div");
   copy.className = "dictionary-row-copy";
@@ -968,7 +973,7 @@ function createDictionaryManagerRow(entry) {
   });
   edit.addEventListener("click", () => openDictionaryEditor(entry));
   actions.append(pin, duplicate, edit);
-  row.append(checkLabel, copy, actions);
+  row.append(selector, copy, actions);
   return row;
 }
 
@@ -989,6 +994,7 @@ function dictionaryIconButton(symbol, label, active = false) {
 function renderDictionarySelectionBar() {
   const count = state.dictionarySelectedIds.size;
   elements.dictionarySelectionBar.hidden = count === 0;
+  elements.dictionarySelectionAll.disabled = count > 0 && count === state.dictionaryPersonalPage.entries.length;
   setLocalizedText(elements.dictionarySelectionCount, `${count.toLocaleString()}개 선택`);
 }
 
@@ -2764,13 +2770,13 @@ elements.dictionaryPageNext.addEventListener("click", () => {
   state.dictionaryPersonalQuery.offset += state.dictionaryPersonalQuery.limit;
   loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
 });
-elements.dictionarySelectionPin.addEventListener("click", () => {
-  const entries = state.dictionaryPersonalPage.entries.filter(entry => state.dictionarySelectedIds.has(entry.id));
-  updateDictionaryEntries(entries, { pinned: true }).catch(error => showError("개인 사전을 수정하지 못했습니다", String(error)));
+elements.dictionarySelectionAll.addEventListener("click", () => {
+  state.dictionaryPersonalPage.entries.forEach(entry => state.dictionarySelectedIds.add(entry.id));
+  renderDictionaryManagerEntries();
 });
-elements.dictionarySelectionUnpin.addEventListener("click", () => {
-  const entries = state.dictionaryPersonalPage.entries.filter(entry => state.dictionarySelectedIds.has(entry.id));
-  updateDictionaryEntries(entries, { pinned: false }).catch(error => showError("개인 사전을 수정하지 못했습니다", String(error)));
+elements.dictionarySelectionClear.addEventListener("click", () => {
+  state.dictionarySelectedIds.clear();
+  renderDictionaryManagerEntries();
 });
 elements.dictionarySelectionDelete.addEventListener("click", async () => {
   const ids = [...state.dictionarySelectedIds];
