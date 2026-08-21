@@ -1881,6 +1881,26 @@ select:focus-visible,
   padding-bottom: 2px;
 }
 
+.button.dictionary-page-button {
+  display: inline-grid;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  place-items: center;
+}
+
+.dictionary-page-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .dictionary-pagination span {
   min-width: 94px;
   color: var(--muted);

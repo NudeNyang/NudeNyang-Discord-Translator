@@ -500,6 +500,33 @@ test("personal dictionary controls use localized custom selects and center the b
   assert.match(styles, /\.select-menu:hover::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--scroll\);/s);
 });
 
+test("personal dictionary editor shares searchable language selects and icon pagination", () => {
+  for (const id of ["dictionary-source-language", "dictionary-target-language"]) {
+    assert.match(
+      markup,
+      new RegExp(`id="${id}"[^>]*data-custom-select[^>]*data-searchable`),
+    );
+  }
+  assert.match(
+    script,
+    /refreshDictionaryCustomSelect\(elements\.dictionarySourceLanguage\);[\s\S]*?refreshDictionaryCustomSelect\(elements\.dictionaryTargetLanguage\);/,
+  );
+  assert.match(
+    script,
+    /element\.closest\("\.dictionary-editor-modal, \.dictionary-import-modal"\);[\s\S]*?selectViewport\.getBoundingClientRect\(\)[\s\S]*?elements\.settingsScroll\.getBoundingClientRect\(\)/,
+  );
+  assert.match(
+    markup,
+    /id="dictionary-page-prev"[^>]*aria-label="이전"[^>]*>[\s\S]*?class="dictionary-page-icon"[\s\S]*?<path d="M15 6l-6 6l6 6"\/>[\s\S]*?<\/button>/,
+  );
+  assert.match(
+    markup,
+    /id="dictionary-page-next"[^>]*aria-label="다음"[^>]*>[\s\S]*?class="dictionary-page-icon"[\s\S]*?<path d="M9 6l6 6l-6 6"\/>[\s\S]*?<\/button>/,
+  );
+  assert.match(styles, /\.button\.dictionary-page-button\s*\{[^}]*width:\s*40px;[^}]*min-width:\s*40px;[^}]*padding:\s*0;/s);
+  assert.match(styles, /\.dictionary-page-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);
+});
+
 test("personal dictionary toolbar prioritizes export format, source language, and favorites", () => {
   const formatIndex = markup.indexOf('id="dictionary-export-format"');
   const importIndex = markup.indexOf('id="dictionary-manager-import"');

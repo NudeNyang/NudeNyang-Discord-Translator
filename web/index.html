@@ -293,7 +293,7 @@
                   </div>
                   <div id="dictionary-selection-bar" class="dictionary-selection-bar" role="toolbar" aria-labelledby="dictionary-selection-count" hidden><strong id="dictionary-selection-count">선택 없음</strong><span class="dictionary-selection-divider" aria-hidden="true"></span><div class="dictionary-selection-actions"><button class="dictionary-selection-action" id="dictionary-selection-all" type="button">전체 선택</button><button class="dictionary-selection-action" id="dictionary-selection-clear" type="button">선택 취소</button><button class="button danger dictionary-selection-delete" id="dictionary-selection-delete" type="button">선택 항목 삭제</button></div></div>
                   <div id="dictionary-manager-list" class="dictionary-manager-list" aria-live="polite"><p class="dictionary-empty">개인 사전을 확인하고 있습니다.</p></div>
-                  <footer class="dictionary-pagination"><button class="button secondary" id="dictionary-page-prev" type="button">이전</button><span id="dictionary-page-summary">1페이지</span><button class="button secondary" id="dictionary-page-next" type="button">다음</button></footer>
+                  <footer class="dictionary-pagination"><button class="button secondary dictionary-page-button" id="dictionary-page-prev" type="button" aria-label="이전" data-tooltip="이전"><svg class="dictionary-page-icon" data-icon="chevron-left" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6l6 6"/></svg></button><span id="dictionary-page-summary">1페이지</span><button class="button secondary dictionary-page-button" id="dictionary-page-next" type="button" aria-label="다음" data-tooltip="다음"><svg class="dictionary-page-icon" data-icon="chevron-right" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6l-6 6"/></svg></button></footer>
                 </section>
               </section>
 
@@ -370,8 +370,8 @@
         <header class="dictionary-modal-header"><div><span class="feature-badge">개인 사전</span><h2 id="dictionary-editor-title">용어 추가</h2></div><button class="dictionary-modal-close" id="dictionary-editor-close" type="button" aria-label="닫기">×</button></header>
         <form id="dictionary-editor-form" class="dictionary-editor-form">
           <div class="dictionary-editor-grid">
-            <label><span>원문 언어</span><select id="dictionary-source-language" class="dictionary-language-select"></select></label>
-            <label><span>대상 언어</span><select id="dictionary-target-language" class="dictionary-language-select"></select></label>
+            <label><span>원문 언어</span><select id="dictionary-source-language" class="dictionary-language-select" data-custom-select data-searchable aria-label="원문 언어"></select></label>
+            <label><span>대상 언어</span><select id="dictionary-target-language" class="dictionary-language-select" data-custom-select data-searchable aria-label="대상 언어"></select></label>
             <label><span>원문 용어</span><input id="dictionary-source-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" required /></label>
             <label><span>표시할 용어</span><input id="dictionary-target-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" required /></label>
             <label class="dictionary-wide-field"><span>태그 (쉼표로 구분)</span><input id="dictionary-tags" class="text-field dictionary-text-field" type="text" maxlength="420" autocomplete="off" placeholder="프로젝트, 인물, 자주 사용" /></label>

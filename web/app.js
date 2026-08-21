@@ -837,6 +837,8 @@ function openDictionaryEditor(entry = null) {
   setLocalizedText(elements.dictionaryEditorTitle, entry ? "용어 편집" : "용어 추가");
   elements.dictionarySourceLanguage.value = value.sourceLanguage;
   elements.dictionaryTargetLanguage.value = value.targetLanguage;
+  refreshDictionaryCustomSelect(elements.dictionarySourceLanguage);
+  refreshDictionaryCustomSelect(elements.dictionaryTargetLanguage);
   elements.dictionarySourceTerm.value = value.sourceTerm;
   elements.dictionaryTargetTerm.value = value.targetTerm;
   elements.dictionaryTags.value = value.tags;
@@ -1988,7 +1990,10 @@ function openSelect(element) {
   element.classList.add("open");
   trigger.setAttribute("aria-expanded", "true");
 
-  const viewportBounds = elements.settingsScroll.getBoundingClientRect();
+  const selectViewport = element.closest(".dictionary-editor-modal, .dictionary-import-modal");
+  const viewportBounds = selectViewport
+    ? selectViewport.getBoundingClientRect()
+    : elements.settingsScroll.getBoundingClientRect();
   const triggerBounds = trigger.getBoundingClientRect();
   const menuHeight = menu.getBoundingClientRect().height;
   const spaceBelow = viewportBounds.bottom - triggerBounds.bottom - 8;
