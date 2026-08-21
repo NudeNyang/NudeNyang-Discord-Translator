@@ -449,7 +449,7 @@ test("personal dictionary management uses the full settings workspace", () => {
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
 });
 
-test("personal dictionary controls keep Korean labels visible and center the back icon", () => {
+test("personal dictionary controls use localized custom selects and center the back icon", () => {
   assert.match(
     markup,
     /id="dictionary-personal-back"[^>]*>[\s\S]*?class="dictionary-back-icon"[\s\S]*?<path d="M15 6l-6 6l6 6"\/>[\s\S]*?<\/button>/,
@@ -460,12 +460,22 @@ test("personal dictionary controls keep Korean labels visible and center the bac
   );
   assert.match(
     styles,
-    /\.dictionary-back-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
+    /\.dictionary-back-icon\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*margin:\s*auto;[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
   );
   assert.match(
-    styles,
-    /\.dictionary-compact-select,[\s\S]*?\.dictionary-language-select\s*\{[^}]*min-height:\s*42px;[^}]*height:\s*42px;[^}]*padding:\s*6px 30px 6px 11px;[^}]*line-height:\s*1\.4;/s,
+    markup,
+    /id="dictionary-sort"[^>]*data-custom-select[^>]*>[\s\S]*?data-i18n-key="최근 수정순"/,
   );
+  assert.match(script, /function initializeDictionaryCustomSelect\(select, \{ searchable = false \} = \{\}\)/);
+  assert.match(script, /function refreshDictionaryCustomSelects\(\{ rebuild = false \} = \{\}\)/);
+  assert.match(script, /refreshDictionaryCustomSelects\(\{ rebuild: true \}\)/);
+  assert.match(script, /select\.dispatchEvent\(new Event\("change", \{ bubbles: true \}\)\)/);
+  assert.match(styles, /\.dictionary-native-select\s*\{[^}]*position:\s*absolute;[^}]*width:\s*1px;[^}]*height:\s*1px;/s);
+  assert.match(styles, /\.dictionary-custom-select \.select-trigger\s*\{[^}]*min-height:\s*42px;/s);
+  assert.match(styles, /\.select-menu\s*\{[^}]*scrollbar-color:\s*transparent transparent;/s);
+  assert.match(styles, /\.select-menu:hover\s*\{[^}]*scrollbar-color:\s*var\(--scroll\) transparent;/s);
+  assert.match(styles, /\.select-menu::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*transparent;/s);
+  assert.match(styles, /\.select-menu:hover::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--scroll\);/s);
 });
 
 test("dictionary pack cards keep compact metadata and open consolidated source notices", () => {

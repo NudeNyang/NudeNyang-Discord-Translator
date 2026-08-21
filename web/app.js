@@ -145,6 +145,7 @@ const state = {
 const localizedText = new Map();
 const localizedErrors = new Map();
 const localizedBackendText = new Map();
+const dictionaryCustomSelects = new Map();
 
 const elements = {
   form: document.querySelector("#settings-form"),
@@ -565,6 +566,7 @@ function populateDictionaryLanguageSelects() {
     if (!select || select.options.length) continue;
     const all = document.createElement("option");
     all.value = "";
+    all.dataset.i18nKey = "전체 언어";
     setLocalizedText(all, "전체 언어");
     select.append(all);
     appendDictionaryLanguageOptions(select);
@@ -573,6 +575,178 @@ function populateDictionaryLanguageSelects() {
   elements.dictionaryTargetLanguage.value = state.config.target_language || "ko";
   elements.dictionaryImportSource.value = "en";
   elements.dictionaryImportTarget.value = state.config.target_language || "ko";
+}
+
+function dictionarySelectOptionLabel(option) {
+  const key = option.dataset.i18nKey;
+  return key ? translateCopy(currentUiLanguage(), key) : option.textContent;
+}
+
+function refreshDictionaryCustomSelect(select, { rebuild = false } = {}) {
+  const control = dictionaryCustomSelects.get(select);
+  if (!control) return;
+  const { wrapper, trigger, triggerLabel, optionContainer } = control;
+  const selectedOption = select.selectedOptions[0] || select.options[0];
+  triggerLabel.textContent = selectedOption ? dictionarySelectOptionLabel(selectedOption) : "";
+  const ariaKey = select.dataset.i18nAriaLabel || select.getAttribute("aria-label") || "";
+  if (ariaKey) trigger.setAttribute("aria-label", translateCopy(currentUiLanguage(), ariaKey));
+  if (!rebuild) {
+    for (const option of optionContainer.querySelectorAll(".select-option")) {
+      option.setAttribute("aria-selected", String(option.dataset.value === String(select.value)));
+    }
+    return;
+  }
+
+  optionContainer.replaceChildren();
+  for (const sourceOption of select.options) {
+    const option = document.createElement("button");
+    const label = dictionarySelectOptionLabel(sourceOption);
+    option.type = "button";
+    option.className = "select-option";
+    option.dataset.value = sourceOption.value;
+    option.dataset.searchValue = `${label} ${sourceOption.value}`.toLocaleLowerCase();
+    if (sourceOption.dataset.i18nKey) option.dataset.i18nKey = sourceOption.dataset.i18nKey;
+    option.textContent = label;
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(sourceOption.value === select.value));
+    option.addEventListener("click", () => {
+      select.value = sourceOption.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      refreshDictionaryCustomSelect(select);
+      closeSelect(wrapper);
+      trigger.focus();
+    });
+    option.addEventListener("keydown", event => {
+      const visibleOptions = [...optionContainer.querySelectorAll(".select-option:not([hidden])")];
+      const index = visibleOptions.indexOf(option);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(wrapper);
+        trigger.focus();
+      } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? visibleOptions.length - 1
+            : event.key === "ArrowDown"
+              ? Math.min(index + 1, visibleOptions.length - 1)
+              : Math.max(index - 1, 0);
+        visibleOptions[next]?.focus();
+      }
+    });
+    optionContainer.append(option);
+  }
+}
+
+function initializeDictionaryCustomSelect(select, { searchable = false } = {}) {
+  if (!select || dictionaryCustomSelects.has(select)) return;
+  const wrapper = document.createElement("div");
+  const trigger = document.createElement("button");
+  const triggerLabel = document.createElement("span");
+  const menu = document.createElement("div");
+  let optionContainer = menu;
+  wrapper.className = "custom-select dictionary-custom-select";
+  wrapper.dataset.nativeSelect = select.id;
+  trigger.type = "button";
+  trigger.className = "select-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  triggerLabel.className = "select-trigger-label";
+  trigger.append(triggerLabel);
+  menu.className = "select-menu";
+  menu.id = `${select.id}-menu`;
+  trigger.setAttribute("aria-controls", menu.id);
+
+  if (searchable) {
+    const search = document.createElement("div");
+    const searchInput = document.createElement("input");
+    const searchEmpty = document.createElement("div");
+    optionContainer = document.createElement("div");
+    search.className = "select-search";
+    searchInput.className = "select-search-input";
+    searchInput.type = "search";
+    searchInput.autocomplete = "off";
+    searchInput.spellcheck = false;
+    searchInput.placeholder = translateCopy(currentUiLanguage(), "언어 검색");
+    searchInput.setAttribute("aria-label", translateCopy(currentUiLanguage(), "언어 검색"));
+    searchInput.dataset.i18nPlaceholder = "언어 검색";
+    searchInput.dataset.i18nAriaLabel = "언어 검색";
+    optionContainer.className = "select-options";
+    optionContainer.setAttribute("role", "listbox");
+    searchEmpty.className = "select-search-empty";
+    searchEmpty.dataset.i18nKey = "검색 결과 없음";
+    searchEmpty.textContent = translateCopy(currentUiLanguage(), "검색 결과 없음");
+    searchEmpty.hidden = true;
+    search.append(searchInput);
+    menu.append(search, optionContainer, searchEmpty);
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.trim().toLocaleLowerCase();
+      let visibleCount = 0;
+      for (const option of optionContainer.querySelectorAll(".select-option")) {
+        option.hidden = Boolean(query) && !option.dataset.searchValue.includes(query);
+        if (!option.hidden) visibleCount += 1;
+      }
+      searchEmpty.hidden = visibleCount > 0;
+    });
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(wrapper);
+        trigger.focus();
+      } else if (event.key === "ArrowDown") {
+        const first = optionContainer.querySelector(".select-option:not([hidden])");
+        if (first) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
+  } else {
+    menu.setAttribute("role", "listbox");
+  }
+
+  wrapper.append(trigger, menu);
+  select.after(wrapper);
+  select.classList.add("dictionary-native-select");
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+  dictionaryCustomSelects.set(select, { wrapper, trigger, triggerLabel, optionContainer });
+  refreshDictionaryCustomSelect(select, { rebuild: true });
+  select.addEventListener("change", () => refreshDictionaryCustomSelect(select));
+  trigger.addEventListener("click", () => {
+    const opening = !wrapper.classList.contains("open");
+    closeAllSelects();
+    if (opening) openSelect(wrapper);
+  });
+  trigger.addEventListener("keydown", event => {
+    if (!["ArrowDown", "ArrowUp", "Escape"].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === "Escape") {
+      closeSelect(wrapper);
+      return;
+    }
+    openSelect(wrapper);
+    if (searchable) return;
+    const options = [...optionContainer.querySelectorAll(".select-option")];
+    const selected = Math.max(0, options.findIndex(option => option.dataset.value === String(select.value)));
+    const next = event.key === "ArrowDown"
+      ? Math.min(selected + 1, options.length - 1)
+      : Math.max(selected - 1, 0);
+    options[next]?.focus();
+  });
+}
+
+function refreshDictionaryCustomSelects({ rebuild = false } = {}) {
+  for (const select of dictionaryCustomSelects.keys()) {
+    refreshDictionaryCustomSelect(select, { rebuild });
+  }
+}
+
+function initializeDictionaryCustomSelects() {
+  for (const select of document.querySelectorAll("select[data-custom-select]")) {
+    initializeDictionaryCustomSelect(select, { searchable: select.hasAttribute("data-searchable") });
+  }
 }
 
 function appendDictionaryLanguageOptions(select) {
@@ -1774,6 +1948,7 @@ function applyUiLanguage(language) {
   renderStorageStatus();
   renderLocalResourceGuidance();
   renderSourceLanguagePicker();
+  refreshDictionaryCustomSelects({ rebuild: true });
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -2513,6 +2688,7 @@ async function initializeSettingsUi() {
 document.querySelectorAll(".custom-select[data-field]").forEach(renderSelect);
 initializeSourceLanguagePicker();
 populateDictionaryLanguageSelects();
+initializeDictionaryCustomSelects();
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });

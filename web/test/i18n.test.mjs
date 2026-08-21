@@ -87,6 +87,17 @@ test("UI Language and Auto (System) stay universal", () => {
   }
 });
 
+test("personal dictionary sort choices follow every selected interface language", () => {
+  const keys = ["최근 수정순", "원문순", "표시어순", "오래된순"];
+  for (const language of SUPPORTED_TARGET_LANGUAGES.filter(value => value !== "ko")) {
+    for (const key of keys) {
+      const localized = translateCopy(language, key);
+      assert.notEqual(localized, key, `${language}: ${key}`);
+      assert.doesNotMatch(localized, /[가-힣]/, `${language}: ${key}`);
+    }
+  }
+});
+
 test("app information copy is translated completely", () => {
   assert.equal(translateCopy("ja", "버전"), "バージョン");
   assert.equal(

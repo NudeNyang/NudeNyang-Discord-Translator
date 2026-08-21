@@ -889,21 +889,34 @@ select:focus-visible,
   background: var(--surface-raised);
   box-shadow: var(--shadow);
   scrollbar-width: thin;
-  scrollbar-color: var(--scroll) transparent;
+  scrollbar-color: transparent transparent;
 }
 
 .select-menu::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 3px;
+  height: 3px;
 }
 
 .select-menu::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: var(--scroll);
+  background: transparent;
 }
 
 .select-menu::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.select-menu:hover {
+  scrollbar-color: var(--scroll) transparent;
+}
+
+.select-menu:hover::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.select-menu:hover::-webkit-scrollbar-thumb {
+  background: var(--scroll);
 }
 
 .select-search {
@@ -1453,6 +1466,7 @@ select:focus-visible,
 }
 
 .dictionary-back-button {
+  position: relative;
   width: 38px;
   height: 38px;
   padding: 0;
@@ -1462,6 +1476,9 @@ select:focus-visible,
 }
 
 .dictionary-back-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
   width: 18px;
   height: 18px;
   fill: none;
@@ -1491,6 +1508,51 @@ select:focus-visible,
   font: inherit;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.dictionary-native-select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.dictionary-custom-select {
+  min-width: 0;
+}
+
+.dictionary-custom-select .select-trigger {
+  min-height: 42px;
+  height: 42px;
+  padding: 0 11px;
+  background: var(--surface-raised);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.dictionary-custom-select .select-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dictionary-custom-select .select-menu {
+  min-width: max(100%, 190px);
+}
+
+.dictionary-manager-actions .dictionary-custom-select {
+  flex: 0 0 108px;
+  width: 108px;
+}
+
+.dictionary-manager-toolbar .dictionary-custom-select:last-child .select-menu {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
 }
 
 .dictionary-manager-toolbar {
