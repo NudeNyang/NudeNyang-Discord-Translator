@@ -38,6 +38,8 @@ export const COPY = Object.freeze({
   "전체 언어": ["All languages", "すべての言語", "所有语言"],
   "고정 항목만": ["Pinned only", "固定項目のみ", "仅固定条目"],
   "즐겨찾기": ["Favorites", "お気に入り", "收藏"],
+  "즐겨찾기에 추가": ["Add to favorites", "お気に入りに追加", "添加到收藏"],
+  "즐겨찾기 해제": ["Remove from favorites", "お気に入りから削除", "取消收藏"],
   "정렬": ["Sort", "並べ替え", "排序"],
   "최근 수정순": ["Recently updated", "更新が新しい順", "最近更新"],
   "원문순": ["Source term", "原文順", "按原文"],

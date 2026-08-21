@@ -441,7 +441,7 @@ test("personal dictionary selection uses a bottom action dock and clean row togg
   const favoriteIndex = markup.indexOf('id="dictionary-filter-pinned"');
   const sourceIndex = markup.indexOf('id="dictionary-filter-source"');
   const sortIndex = markup.indexOf('id="dictionary-sort"');
-  assert.ok(searchIndex > -1 && searchIndex < favoriteIndex && favoriteIndex < sourceIndex && sourceIndex < sortIndex);
+  assert.ok(favoriteIndex > -1 && favoriteIndex < searchIndex && searchIndex < sourceIndex && sourceIndex < sortIndex);
   assert.match(markup, /id="dictionary-selection-all"[^>]*>전체 선택<\/button>/);
   assert.match(markup, /id="dictionary-selection-clear"[^>]*>선택 취소<\/button>/);
   assert.match(markup, /id="dictionary-selection-delete"[^>]*>선택 항목 삭제<\/button>/);
@@ -466,7 +466,7 @@ test("personal dictionary management uses the full settings workspace", () => {
   assert.match(styles, /\.settings-workspace\[data-focus-view="dictionary-manager"\]\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
   assert.match(styles, /\.settings-navigation\[hidden\]\s*\{[^}]*display:\s*none/s);
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-header\s*\{[^}]*flex-direction:\s*column/s);
-  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(180px, 1fr\) 42px/s);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*42px minmax\(180px, 1fr\)/s);
 });
 
 test("personal dictionary controls use localized custom selects and center the back icon", () => {
@@ -513,12 +513,13 @@ test("personal dictionary toolbar prioritizes export format, source language, an
   assert.match(script, /dictionaryFilterPinned\.setAttribute\("aria-pressed", String\(enabled\)\)/);
   assert.match(script, /dictionary-favorite-filter-star"\)\.textContent = enabled \? "★" : "☆"/);
   assert.match(styles, /\.dictionary-manager-actions \.dictionary-custom-select \.select-trigger\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*650;/s);
-  assert.match(styles, /\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(240px, 1\.3fr\) 42px/s);
+  assert.match(styles, /\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*42px minmax\(240px, 1\.3fr\)/s);
   assert.doesNotMatch(styles, /\.dictionary-favorite-filter\s*\{[^}]*margin-inline-start:\s*auto;/s);
   assert.match(styles, /\.dictionary-favorite-filter\[aria-pressed="true"\]/);
 });
 
 test("personal dictionary copies source terms and uses the shared borderless tooltip", () => {
+  assert.match(script, /entry\.pinned \? "즐겨찾기 해제" : "즐겨찾기에 추가"/);
   assert.match(script, /dictionaryIconButton\("⧉", "원문 용어 복사"\)/);
   assert.match(script, /navigator\.clipboard\.writeText\(entry\.sourceTerm\)/);
   assert.match(script, /setLocalizedText\(elements\.saveStatus, "원문 용어를 복사했습니다\."\)/);
@@ -526,6 +527,9 @@ test("personal dictionary copies source terms and uses the shared borderless too
   assert.match(script, /button\.dataset\.tooltip = translated/);
   assert.match(styles, /\[data-tooltip\]::after\s*\{[^}]*border:\s*0;[^}]*content:\s*attr\(data-tooltip\)/s);
   assert.match(styles, /\[data-tooltip\]:is\(:hover, :focus-visible\)::after/);
+  assert.match(styles, /\.dictionary-manager-list\s*\{[^}]*overflow:\s*visible;/s);
+  assert.match(styles, /\.dictionary-manager-row:first-child\s*\{[^}]*border-start-start-radius:/s);
+  assert.match(styles, /\.dictionary-manager-row:last-child\s*\{[^}]*border-end-start-radius:/s);
 });
 
 test("dictionary pack cards keep compact metadata and open consolidated source notices", () => {

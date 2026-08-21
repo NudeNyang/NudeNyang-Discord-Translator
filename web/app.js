@@ -963,7 +963,7 @@ function createDictionaryManagerRow(entry) {
 
   const actions = document.createElement("div");
   actions.className = "dictionary-row-actions";
-  const pin = dictionaryIconButton(entry.pinned ? "★" : "☆", entry.pinned ? "고정 해제" : "고정", entry.pinned);
+  const pin = dictionaryIconButton(entry.pinned ? "★" : "☆", entry.pinned ? "즐겨찾기 해제" : "즐겨찾기에 추가", entry.pinned);
   const duplicate = dictionaryIconButton("⧉", "원문 용어 복사");
   const edit = dictionaryIconButton("✎", "편집");
   pin.addEventListener("click", () => updateDictionaryEntries([entry], { pinned: !entry.pinned }));

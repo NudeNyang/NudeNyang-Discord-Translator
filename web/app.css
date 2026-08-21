@@ -1568,7 +1568,7 @@ select:focus-visible,
 
 .dictionary-manager-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1.3fr) 42px minmax(140px, 0.65fr) minmax(132px, 0.55fr);
+  grid-template-columns: 42px minmax(240px, 1.3fr) minmax(140px, 0.65fr) minmax(132px, 0.55fr);
   align-items: center;
   gap: 8px;
   padding: 10px;
@@ -1733,7 +1733,7 @@ select:focus-visible,
 
 .dictionary-manager-list {
   display: grid;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -1750,6 +1750,16 @@ select:focus-visible,
 
 .dictionary-manager-row + .dictionary-manager-row {
   border-top: 1px solid var(--border);
+}
+
+.dictionary-manager-row:first-child {
+  border-start-start-radius: calc(var(--radius-card) - 1px);
+  border-start-end-radius: calc(var(--radius-card) - 1px);
+}
+
+.dictionary-manager-row:last-child {
+  border-end-start-radius: calc(var(--radius-card) - 1px);
+  border-end-end-radius: calc(var(--radius-card) - 1px);
 }
 
 .dictionary-manager-row[data-selected="true"] {
@@ -2715,7 +2725,7 @@ select:focus-visible,
   }
 
   .dictionary-manager-toolbar {
-    grid-template-columns: minmax(180px, 1fr) 42px minmax(120px, 0.65fr) minmax(120px, 0.55fr);
+    grid-template-columns: 42px minmax(180px, 1fr) minmax(120px, 0.65fr) minmax(120px, 0.55fr);
   }
 
   .dictionary-search-field {
@@ -2852,7 +2862,7 @@ select:focus-visible,
 
 @media (max-width: 520px) {
   .dictionary-manager-toolbar {
-    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-columns: 42px minmax(0, 1fr);
   }
 
   .dictionary-search-field {
