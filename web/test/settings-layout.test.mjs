@@ -449,6 +449,25 @@ test("personal dictionary management uses the full settings workspace", () => {
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.dictionary-manager-toolbar\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
 });
 
+test("personal dictionary controls keep Korean labels visible and center the back icon", () => {
+  assert.match(
+    markup,
+    /id="dictionary-personal-back"[^>]*>[\s\S]*?class="dictionary-back-icon"[\s\S]*?<path d="M15 6l-6 6l6 6"\/>[\s\S]*?<\/button>/,
+  );
+  assert.match(
+    styles,
+    /\.dictionary-back-button\s*\{[^}]*padding:\s*0;[^}]*font-size:\s*0;/s,
+  );
+  assert.match(
+    styles,
+    /\.dictionary-back-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
+  );
+  assert.match(
+    styles,
+    /\.dictionary-compact-select,[\s\S]*?\.dictionary-language-select\s*\{[^}]*min-height:\s*42px;[^}]*height:\s*42px;[^}]*padding:\s*6px 30px 6px 11px;[^}]*line-height:\s*1\.4;/s,
+  );
+});
+
 test("dictionary pack cards keep compact metadata and open consolidated source notices", () => {
   assert.match(markup, /id="dictionary-pack-licenses"[^>]*>[\s\S]*?출처 및 라이선스[\s\S]*?<\/button>/);
   assert.match(script, /dictionaryPackLicenses:\s*document\.querySelector\("#dictionary-pack-licenses"\)/);

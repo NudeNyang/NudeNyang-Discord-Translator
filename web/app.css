@@ -1455,9 +1455,20 @@ select:focus-visible,
 .dictionary-back-button {
   width: 38px;
   height: 38px;
+  padding: 0;
   border-radius: var(--radius-control);
-  font-size: 27px;
+  font-size: 0;
   line-height: 1;
+}
+
+.dictionary-back-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .dictionary-back-button:hover,
@@ -1470,14 +1481,16 @@ select:focus-visible,
 
 .dictionary-compact-select,
 .dictionary-language-select {
-  height: 38px;
-  padding: 0 30px 0 11px;
+  min-height: 42px;
+  height: 42px;
+  padding: 6px 30px 6px 11px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   color: var(--text);
   background: var(--surface-raised);
   font: inherit;
   font-size: 12px;
+  line-height: 1.4;
 }
 
 .dictionary-manager-toolbar {
@@ -1494,13 +1507,13 @@ select:focus-visible,
 
 .dictionary-search-field .text-field {
   width: 100%;
-  height: 38px;
+  height: 42px;
   padding-right: 38px;
 }
 
 .dictionary-search-field kbd {
   position: absolute;
-  top: 9px;
+  top: 11px;
   right: 10px;
   min-width: 20px;
   padding: 2px 5px;
@@ -2497,7 +2510,7 @@ select:focus-visible,
   }
 
   .dictionary-filter-check {
-    min-height: 38px;
+    min-height: 42px;
   }
 }
 
