@@ -4,6 +4,12 @@ The dictionary can be enabled independently from message translation. Selecting 
 
 Installed packs and personal terms stay on the device in a dedicated `dictionary.db` SQLite file. Nearby message context is used only on the device and is never included in translation or external-dictionary requests. When the configured translation model is ready, the app may send the selected phrase and pack definitions that are unavailable in the interface language to that model. If the configured model is external, those texts leave the device; this transfer is disclosed in settings. Choosing the optional Wiktionary action also sends the selected phrase to the external site. Reference translations never replace source-authored dictionary rows.
 
+## Personal dictionary management
+
+The dictionary settings overview shows only the three most recently changed personal terms and provides a quick-add action. A dedicated management view handles larger collections with local search across source terms, display terms, tags, and notes; source and target language filters; pinned-only filtering; stable sorting; pagination; editing; copying; pinning; and selection-based batch actions. Tags and pin state are stored with each entry, while existing global, server, or channel scope metadata remains intact when an entry is edited.
+
+Users can import up to 5,000 entries at once from a versioned JSON backup or UTF-8 CSV/TSV data. Delimited data accepts a header row or the compact column order `sourceTerm`, `targetTerm`, `sourceLanguage`, `targetLanguage`, `tags`, and `note`. The import preview rejects rows without both terms and lets the user either skip duplicate dictionary keys or overwrite them in one SQLite transaction. Export is available as JSON, CSV, or TSV; JSON preserves all matching options and scope metadata, while delimited export is intended for spreadsheet editing. Bulk deletion is transactional, and all personal dictionary data remains on the device unless the user explicitly exports it.
+
 ## Definition locale and fallback order
 
 The interface language, not the message display-translation language, selects the preferred definition locale. This means a Korean interface requests Korean definitions, a Japanese interface requests Japanese definitions, and a Chinese interface requests Chinese definitions regardless of the current Discord translation direction.

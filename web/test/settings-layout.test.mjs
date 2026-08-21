@@ -414,6 +414,28 @@ test("dictionary settings expose local packs, personal terms, and an optional ex
   assert.match(script, /dictionary_storage_folder_open/);
 });
 
+test("personal dictionary management scales to searchable and portable collections", () => {
+  assert.match(markup, /id="dictionary-personal-manager"[^>]*hidden/);
+  assert.match(markup, /id="dictionary-personal-search"/);
+  assert.match(markup, /id="dictionary-filter-source"/);
+  assert.match(markup, /id="dictionary-filter-target"/);
+  assert.match(markup, /id="dictionary-selection-bar"[^>]*hidden/);
+  assert.match(markup, /id="dictionary-editor-layer"[^>]*hidden/);
+  assert.match(markup, /id="dictionary-import-layer"[^>]*hidden/);
+  assert.match(markup, /id="dictionary-tags"/);
+  assert.match(markup, /id="dictionary-pinned"/);
+  assert.match(script, /invoke\("dictionary_personal_query"/);
+  assert.match(script, /invoke\("dictionary_personal_batch_upsert"/);
+  assert.match(script, /invoke\("dictionary_personal_batch_delete"/);
+  assert.match(script, /schemaVersion:\s*1/);
+  assert.match(script, /dictionaryImportValue\(raw, "scope"/);
+  assert.match(script, /dictionaryImportValue\(raw, "scopeValue"/);
+  assert.match(script, /page\.offset >= page\.total/);
+  assert.match(script, /navigator\.clipboard\.writeText/);
+  assert.match(styles, /\.dictionary-manager-toolbar\s*\{/);
+  assert.match(styles, /\.dictionary-manager-row:hover \.dictionary-row-actions/);
+});
+
 test("dictionary pack cards keep compact metadata and open consolidated source notices", () => {
   assert.match(markup, /id="dictionary-pack-licenses"[^>]*>[\s\S]*?출처 및 라이선스[\s\S]*?<\/button>/);
   assert.match(script, /dictionaryPackLicenses:\s*document\.querySelector\("#dictionary-pack-licenses"\)/);

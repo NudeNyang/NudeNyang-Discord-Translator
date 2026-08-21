@@ -436,6 +436,17 @@ async fn dictionary_personal_list() -> Result<Vec<dictionary::PersonalDictionary
 }
 
 #[tauri::command]
+async fn dictionary_personal_query(
+    query: dictionary::PersonalDictionaryQuery,
+) -> Result<dictionary::PersonalDictionaryPage, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.personal_entries_page(query)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 검색 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
 async fn dictionary_personal_upsert(
     entry: dictionary::PersonalDictionaryEntry,
 ) -> Result<dictionary::PersonalDictionaryEntry, String> {
@@ -447,12 +458,32 @@ async fn dictionary_personal_upsert(
 }
 
 #[tauri::command]
+async fn dictionary_personal_batch_upsert(
+    batch: dictionary::PersonalDictionaryBatch,
+) -> Result<dictionary::PersonalDictionaryBatchResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.upsert_personal_batch(batch)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 일괄 저장 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
 async fn dictionary_personal_delete(id: i64) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
         dictionary::DictionaryStore::open_default()?.delete_personal(id)
     })
     .await
     .map_err(|error| format!("개인 사전 삭제 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_batch_delete(ids: Vec<i64>) -> Result<u64, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.delete_personal_batch(ids)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 일괄 삭제 작업을 기다리지 못했습니다: {error}"))?
 }
 
 #[tauri::command]
@@ -1638,8 +1669,11 @@ fn main() {
             settings_get,
             dictionary_status_get,
             dictionary_personal_list,
+            dictionary_personal_query,
             dictionary_personal_upsert,
+            dictionary_personal_batch_upsert,
             dictionary_personal_delete,
+            dictionary_personal_batch_delete,
             dictionary_pack_install,
             dictionary_pack_remove,
             dictionary_storage_folder_open,

@@ -241,6 +241,7 @@
               </section>
 
               <section class="settings-view" data-settings-view="dictionary" aria-labelledby="dictionary-heading" hidden>
+                <div id="dictionary-overview">
                 <div class="panel-heading"><h2 id="dictionary-heading">사전</h2><p>Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.</p></div>
                 <article class="settings-card dictionary-feature-card">
                   <div class="dictionary-feature-mark" aria-hidden="true"><span>Aa</span><i></i><i></i></div>
@@ -263,16 +264,8 @@
                 </article>
 
                 <section aria-labelledby="personal-dictionary-heading">
-                  <div class="panel-subheading"><h3 id="personal-dictionary-heading">개인 사전</h3><p>제품명, 고유명사와 자주 쓰는 표현의 표시 방식을 직접 지정합니다.</p></div>
-                  <article class="settings-card dictionary-personal-card">
-                    <div class="dictionary-editor">
-                      <label><span>원문 언어</span><select id="dictionary-source-language" class="dictionary-language-select"></select></label>
-                      <label><span>대상 언어</span><select id="dictionary-target-language" class="dictionary-language-select"></select></label>
-                      <label><span>원문 용어</span><input id="dictionary-source-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" /></label>
-                      <label><span>표시할 용어</span><input id="dictionary-target-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" /></label>
-                      <label class="dictionary-note-field"><span>메모 (선택)</span><input id="dictionary-note" class="text-field dictionary-text-field" type="text" maxlength="500" autocomplete="off" /></label>
-                      <button class="button primary dictionary-save" id="dictionary-personal-save" type="button">용어 추가</button>
-                    </div>
+                  <div class="panel-subheading dictionary-personal-heading"><div><h3 id="personal-dictionary-heading">개인 사전</h3><p>제품명, 고유명사와 자주 쓰는 표현을 저장하고 필요한 항목을 빠르게 찾습니다.</p></div><div class="dictionary-heading-actions"><button class="button secondary" id="dictionary-personal-open" type="button">전체 관리</button><button class="button primary" id="dictionary-personal-quick-add" type="button">빠른 추가</button></div></div>
+                  <article class="settings-card dictionary-personal-summary">
                     <div id="dictionary-personal-list" class="dictionary-personal-list" aria-live="polite"><p class="dictionary-empty">개인 사전을 확인하고 있습니다.</p></div>
                   </article>
                 </section>
@@ -284,6 +277,24 @@
                     <p class="section-note" id="dictionary-storage-summary">사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.</p>
                     <button class="dictionary-license-link" id="dictionary-pack-licenses" type="button"><span>출처 및 라이선스</span><span aria-hidden="true">›</span></button>
                   </div>
+                </section>
+                </div>
+
+                <section id="dictionary-personal-manager" class="dictionary-manager" aria-labelledby="dictionary-manager-heading" hidden>
+                  <header class="dictionary-manager-header">
+                    <div class="dictionary-manager-title"><button class="dictionary-back-button" id="dictionary-personal-back" type="button" aria-label="사전 설정으로 돌아가기">‹</button><div><span class="feature-badge">개인 사전</span><h2 id="dictionary-manager-heading">저장한 용어 관리</h2><p id="dictionary-personal-count">개인 용어를 불러오고 있습니다.</p></div></div>
+                    <div class="dictionary-manager-actions"><button class="button secondary" id="dictionary-manager-import" type="button">가져오기</button><select id="dictionary-export-format" class="dictionary-compact-select" aria-label="내보내기 형식"><option value="json">JSON</option><option value="csv">CSV</option><option value="tsv">TSV</option></select><button class="button secondary" id="dictionary-manager-export" type="button">내보내기</button><button class="button primary" id="dictionary-manager-add" type="button">용어 추가</button></div>
+                  </header>
+                  <div class="settings-card dictionary-manager-toolbar">
+                    <label class="dictionary-search-field"><span class="sr-only">개인 사전 검색</span><input id="dictionary-personal-search" class="text-field" type="search" autocomplete="off" placeholder="원문, 표시어, 태그 또는 메모 검색" /><kbd>/</kbd></label>
+                    <select id="dictionary-filter-source" class="dictionary-compact-select" aria-label="원문 언어 필터"></select>
+                    <select id="dictionary-filter-target" class="dictionary-compact-select" aria-label="대상 언어 필터"></select>
+                    <label class="dictionary-filter-check"><input id="dictionary-filter-pinned" type="checkbox" /><span>고정 항목만</span></label>
+                    <select id="dictionary-sort" class="dictionary-compact-select" aria-label="정렬"><option value="updated_desc">최근 수정순</option><option value="source_asc">원문순</option><option value="target_asc">표시어순</option><option value="oldest">오래된순</option></select>
+                  </div>
+                  <div id="dictionary-selection-bar" class="dictionary-selection-bar" hidden><strong id="dictionary-selection-count">선택 없음</strong><div><button class="button secondary" id="dictionary-selection-pin" type="button">고정</button><button class="button secondary" id="dictionary-selection-unpin" type="button">고정 해제</button><button class="button danger" id="dictionary-selection-delete" type="button">삭제</button></div></div>
+                  <div id="dictionary-manager-list" class="dictionary-manager-list" aria-live="polite"><p class="dictionary-empty">개인 사전을 확인하고 있습니다.</p></div>
+                  <footer class="dictionary-pagination"><button class="button secondary" id="dictionary-page-prev" type="button">이전</button><span id="dictionary-page-summary">1페이지</span><button class="button secondary" id="dictionary-page-next" type="button">다음</button></footer>
                 </section>
               </section>
 
@@ -353,6 +364,37 @@
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <h2 id="modal-title"></h2><p id="modal-message"></p>
         <div class="modal-actions"><button class="button secondary" id="modal-cancel" type="button">취소</button><button class="button primary" id="modal-accept" type="button"></button></div>
+      </section>
+    </div>
+    <div class="modal-layer dictionary-modal-layer" id="dictionary-editor-layer" hidden>
+      <section class="modal dictionary-editor-modal" role="dialog" aria-modal="true" aria-labelledby="dictionary-editor-title">
+        <header class="dictionary-modal-header"><div><span class="feature-badge">개인 사전</span><h2 id="dictionary-editor-title">용어 추가</h2></div><button class="dictionary-modal-close" id="dictionary-editor-close" type="button" aria-label="닫기">×</button></header>
+        <form id="dictionary-editor-form" class="dictionary-editor-form">
+          <div class="dictionary-editor-grid">
+            <label><span>원문 언어</span><select id="dictionary-source-language" class="dictionary-language-select"></select></label>
+            <label><span>대상 언어</span><select id="dictionary-target-language" class="dictionary-language-select"></select></label>
+            <label><span>원문 용어</span><input id="dictionary-source-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" required /></label>
+            <label><span>표시할 용어</span><input id="dictionary-target-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" required /></label>
+            <label class="dictionary-wide-field"><span>태그 (쉼표로 구분)</span><input id="dictionary-tags" class="text-field dictionary-text-field" type="text" maxlength="420" autocomplete="off" placeholder="프로젝트, 인물, 자주 사용" /></label>
+            <label class="dictionary-wide-field"><span>메모 (선택)</span><textarea id="dictionary-note" class="text-field dictionary-textarea" maxlength="500"></textarea></label>
+          </div>
+          <div class="dictionary-editor-options">
+            <label><input id="dictionary-pinned" type="checkbox" /><span>목록 위에 고정</span></label>
+            <label><input id="dictionary-case-sensitive" type="checkbox" /><span>대소문자 구분</span></label>
+            <label><input id="dictionary-whole-word" type="checkbox" checked /><span>단어 단위로 일치</span></label>
+          </div>
+          <div class="modal-actions"><button class="button secondary" id="dictionary-editor-cancel" type="button">취소</button><button class="button primary" id="dictionary-personal-save" type="button">저장</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="modal-layer dictionary-modal-layer" id="dictionary-import-layer" hidden>
+      <section class="modal dictionary-import-modal" role="dialog" aria-modal="true" aria-labelledby="dictionary-import-title">
+        <header class="dictionary-modal-header"><div><span class="feature-badge">개인 사전</span><h2 id="dictionary-import-title">용어 가져오기</h2><p>JSON 백업이나 CSV, TSV 파일을 불러오거나 표의 내용을 붙여 넣을 수 있습니다.</p></div><button class="dictionary-modal-close" id="dictionary-import-close" type="button" aria-label="닫기">×</button></header>
+        <input id="dictionary-import-file" type="file" accept=".json,.csv,.tsv,.txt,application/json,text/csv,text/tab-separated-values,text/plain" hidden />
+        <div class="dictionary-import-controls"><button class="button secondary" id="dictionary-import-choose" type="button">파일 선택</button><label><span>기본 원문 언어</span><select id="dictionary-import-source" class="dictionary-compact-select" aria-label="기본 원문 언어"></select></label><label><span>기본 대상 언어</span><select id="dictionary-import-target" class="dictionary-compact-select" aria-label="기본 대상 언어"></select></label><label><span>중복 처리</span><select id="dictionary-import-overwrite" class="dictionary-compact-select" aria-label="중복 처리"><option value="skip">중복 건너뛰기</option><option value="overwrite">기존 항목 덮어쓰기</option></select></label></div>
+        <textarea id="dictionary-import-text" class="text-field dictionary-import-text" spellcheck="false" placeholder="원문,표시어,원문 언어,대상 언어,태그,메모"></textarea>
+        <p id="dictionary-import-preview" class="dictionary-import-preview">가져올 내용을 선택하거나 붙여 넣으십시오.</p>
+        <div class="modal-actions"><button class="button secondary" id="dictionary-import-cancel" type="button">취소</button><button class="button primary" id="dictionary-import-accept" type="button" disabled>가져오기</button></div>
       </section>
     </div>
     <script type="module" src="./app.js"></script>

@@ -171,6 +171,10 @@ pub struct PersonalDictionaryEntry {
     pub target_term: String,
     #[serde(default)]
     pub note: String,
+    #[serde(default)]
+    pub tags: String,
+    #[serde(default)]
+    pub pinned: bool,
     #[serde(default = "default_scope")]
     pub scope: String,
     #[serde(default)]
@@ -183,6 +187,50 @@ pub struct PersonalDictionaryEntry {
     pub created_at: f64,
     #[serde(default)]
     pub updated_at: f64,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalDictionaryQuery {
+    #[serde(default)]
+    pub search: String,
+    #[serde(default)]
+    pub source_language: String,
+    #[serde(default)]
+    pub target_language: String,
+    #[serde(default)]
+    pub pinned_only: bool,
+    #[serde(default)]
+    pub sort: String,
+    #[serde(default)]
+    pub offset: u64,
+    #[serde(default)]
+    pub limit: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalDictionaryPage {
+    pub entries: Vec<PersonalDictionaryEntry>,
+    pub total: u64,
+    pub offset: u64,
+    pub limit: u64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalDictionaryBatch {
+    pub entries: Vec<PersonalDictionaryEntry>,
+    #[serde(default = "default_true")]
+    pub overwrite: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalDictionaryBatchResult {
+    pub inserted: u64,
+    pub updated: u64,
+    pub skipped: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -414,7 +462,7 @@ impl DictionaryStore {
         let mut statement = connection
             .prepare(
                 "SELECT id, source_language, target_language, source_term, target_term, note, \
-                        scope, scope_value, case_sensitive, whole_word, created_at, updated_at \
+                        tags, pinned, scope, scope_value, case_sensitive, whole_word, created_at, updated_at \
                  FROM personal_dictionary ORDER BY updated_at DESC, id DESC",
             )
             .map_err(|error| format!("개인 사전 목록 조회를 준비하지 못했습니다: {error}"))?;
@@ -425,80 +473,138 @@ impl DictionaryStore {
             .collect()
     }
 
-    pub fn upsert_personal(
+    pub fn personal_entries_page(
         &self,
-        mut entry: PersonalDictionaryEntry,
-    ) -> Result<PersonalDictionaryEntry, String> {
-        if !is_supported_language_code(&entry.source_language) {
-            return Err("개인 사전의 원문 언어가 올바르지 않습니다.".to_string());
-        }
-        if entry.target_language != "*" && !is_supported_language_code(&entry.target_language) {
-            return Err("개인 사전의 대상 언어가 올바르지 않습니다.".to_string());
-        }
-        entry.source_term = validate_term(&entry.source_term, "원문 용어")?;
-        entry.target_term = validate_term(&entry.target_term, "대상 용어")?;
-        entry.note = entry.note.trim().chars().take(500).collect();
-        if !matches!(entry.scope.as_str(), "global" | "server" | "channel") {
-            entry.scope = default_scope();
-        }
-        if entry.scope == "global" {
-            entry.scope_value.clear();
-        } else if !entry.scope_value.starts_with("/channels/") {
-            return Err("서버 또는 채널 적용 범위가 올바르지 않습니다.".to_string());
-        }
-        let now = now_seconds();
-        let normalized = normalize_term(&entry.source_term);
+        query: PersonalDictionaryQuery,
+    ) -> Result<PersonalDictionaryPage, String> {
         let connection = self
             .connection
             .lock()
             .map_err(|_| "개인 사전 저장소 잠금을 열지 못했습니다.".to_string())?;
-        if entry.id > 0 {
-            let changed = connection
-                .execute(
-                    "UPDATE personal_dictionary SET source_language=?1, target_language=?2, source_term=?3, \
-                       normalized_source_term=?4, target_term=?5, note=?6, scope=?7, scope_value=?8, \
-                       case_sensitive=?9, whole_word=?10, updated_at=?11 WHERE id=?12",
-                    params![entry.source_language, entry.target_language, entry.source_term, normalized,
-                        entry.target_term, entry.note, entry.scope, entry.scope_value,
-                        entry.case_sensitive, entry.whole_word, now, entry.id],
-                )
-                .map_err(|error| format!("개인 사전 항목을 수정하지 못했습니다: {error}"))?;
-            if changed == 0 {
-                return Err("수정할 개인 사전 항목을 찾지 못했습니다.".to_string());
-            }
+        let search = personal_search_pattern(&query.search);
+        let source_language = if is_supported_language_code(&query.source_language) {
+            query.source_language
         } else {
-            connection
-                .execute(
-                    "INSERT INTO personal_dictionary \
-                     (source_language, target_language, source_term, normalized_source_term, target_term, note, \
-                      scope, scope_value, case_sensitive, whole_word, created_at, updated_at) \
-                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?11) \
-                     ON CONFLICT(source_language, target_language, normalized_source_term, scope, scope_value) \
-                     DO UPDATE SET source_term=excluded.source_term, target_term=excluded.target_term, note=excluded.note, \
-                       case_sensitive=excluded.case_sensitive, whole_word=excluded.whole_word, updated_at=excluded.updated_at",
-                    params![entry.source_language, entry.target_language, entry.source_term, normalized,
-                        entry.target_term, entry.note, entry.scope, entry.scope_value,
-                        entry.case_sensitive, entry.whole_word, now],
-                )
-                .map_err(|error| format!("개인 사전 항목을 저장하지 못했습니다: {error}"))?;
-            entry.id = connection
-                .query_row(
-                    "SELECT id FROM personal_dictionary WHERE source_language=?1 AND target_language=?2 \
-                     AND normalized_source_term=?3 AND scope=?4 AND scope_value=?5",
-                    params![entry.source_language, entry.target_language, normalized, entry.scope, entry.scope_value],
-                    |row| row.get(0),
-                )
-                .map_err(|error| format!("저장한 개인 사전 항목을 찾지 못했습니다: {error}"))?;
+            String::new()
+        };
+        let target_language =
+            if query.target_language == "*" || is_supported_language_code(&query.target_language) {
+                query.target_language
+            } else {
+                String::new()
+            };
+        let sort = match query.sort.as_str() {
+            "source" | "source_asc" => "source",
+            "target" | "target_asc" => "target",
+            "oldest" => "oldest",
+            _ => "updated",
         }
-        entry.created_at = connection
+        .to_string();
+        let limit = if query.limit == 0 {
+            80
+        } else {
+            query.limit.clamp(1, 200)
+        };
+        let total = connection
             .query_row(
-                "SELECT created_at FROM personal_dictionary WHERE id=?1",
-                params![entry.id],
-                |row| row.get(0),
+                "SELECT COUNT(*) FROM personal_dictionary \
+                 WHERE (?1='%' OR source_term LIKE ?1 ESCAPE '\\' OR target_term LIKE ?1 ESCAPE '\\' \
+                   OR note LIKE ?1 ESCAPE '\\' OR tags LIKE ?1 ESCAPE '\\') \
+                   AND (?2='' OR source_language=?2) AND (?3='' OR target_language=?3) \
+                   AND (?4=0 OR pinned=1)",
+                params![search, source_language, target_language, query.pinned_only],
+                |row| row.get::<_, u64>(0),
             )
-            .unwrap_or(now);
-        entry.updated_at = now;
-        Ok(entry)
+            .map_err(|error| format!("개인 사전 검색 결과 수를 확인하지 못했습니다: {error}"))?;
+        let mut statement = connection
+            .prepare(
+                "SELECT id, source_language, target_language, source_term, target_term, note, \
+                        tags, pinned, scope, scope_value, case_sensitive, whole_word, created_at, updated_at \
+                 FROM personal_dictionary \
+                 WHERE (?1='%' OR source_term LIKE ?1 ESCAPE '\\' OR target_term LIKE ?1 ESCAPE '\\' \
+                   OR note LIKE ?1 ESCAPE '\\' OR tags LIKE ?1 ESCAPE '\\') \
+                   AND (?2='' OR source_language=?2) AND (?3='' OR target_language=?3) \
+                   AND (?4=0 OR pinned=1) \
+                 ORDER BY pinned DESC, \
+                   CASE WHEN ?5='source' THEN normalized_source_term END COLLATE NOCASE ASC, \
+                   CASE WHEN ?5='target' THEN target_term END COLLATE NOCASE ASC, \
+                   CASE WHEN ?5='oldest' THEN updated_at END ASC, \
+                   CASE WHEN ?5='updated' THEN updated_at END DESC, id DESC \
+                 LIMIT ?6 OFFSET ?7",
+            )
+            .map_err(|error| format!("개인 사전 검색을 준비하지 못했습니다: {error}"))?;
+        let entries = statement
+            .query_map(
+                params![
+                    search,
+                    source_language,
+                    target_language,
+                    query.pinned_only,
+                    sort,
+                    limit,
+                    query.offset
+                ],
+                personal_from_row,
+            )
+            .map_err(|error| format!("개인 사전을 검색하지 못했습니다: {error}"))?
+            .map(|row| row.map_err(|error| format!("개인 사전 항목을 읽지 못했습니다: {error}")))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(PersonalDictionaryPage {
+            entries,
+            total,
+            offset: query.offset,
+            limit,
+        })
+    }
+
+    pub fn upsert_personal(
+        &self,
+        entry: PersonalDictionaryEntry,
+    ) -> Result<PersonalDictionaryEntry, String> {
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| "개인 사전 저장소 잠금을 열지 못했습니다.".to_string())?;
+        upsert_personal_connection(&connection, entry)
+    }
+
+    pub fn upsert_personal_batch(
+        &self,
+        batch: PersonalDictionaryBatch,
+    ) -> Result<PersonalDictionaryBatchResult, String> {
+        if batch.entries.is_empty() {
+            return Ok(PersonalDictionaryBatchResult::default());
+        }
+        if batch.entries.len() > 5_000 {
+            return Err("한 번에 가져올 수 있는 개인 사전 항목은 5,000개입니다.".to_string());
+        }
+        let mut connection = self
+            .connection
+            .lock()
+            .map_err(|_| "개인 사전 저장소 잠금을 열지 못했습니다.".to_string())?;
+        let transaction = connection
+            .transaction()
+            .map_err(|error| format!("개인 사전 일괄 저장을 시작하지 못했습니다: {error}"))?;
+        let mut result = PersonalDictionaryBatchResult::default();
+        for entry in batch.entries {
+            let entry = prepare_personal_entry(entry)?;
+            let existing = personal_entry_id(&transaction, &entry)?;
+            if existing.is_some() && !batch.overwrite {
+                result.skipped += 1;
+                continue;
+            }
+            let inserted = existing.is_none();
+            upsert_personal_connection(&transaction, entry)?;
+            if inserted {
+                result.inserted += 1;
+            } else {
+                result.updated += 1;
+            }
+        }
+        transaction
+            .commit()
+            .map_err(|error| format!("개인 사전 일괄 저장을 완료하지 못했습니다: {error}"))?;
+        Ok(result)
     }
 
     pub fn delete_personal(&self, id: i64) -> Result<bool, String> {
@@ -511,6 +617,34 @@ impl DictionaryStore {
             .execute("DELETE FROM personal_dictionary WHERE id=?1", params![id])
             .map(|changed| changed > 0)
             .map_err(|error| format!("개인 사전 항목을 삭제하지 못했습니다: {error}"))
+    }
+
+    pub fn delete_personal_batch(&self, ids: Vec<i64>) -> Result<u64, String> {
+        let ids = ids.into_iter().filter(|id| *id > 0).collect::<HashSet<_>>();
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        if ids.len() > 5_000 {
+            return Err("한 번에 삭제할 수 있는 개인 사전 항목은 5,000개입니다.".to_string());
+        }
+        let mut connection = self
+            .connection
+            .lock()
+            .map_err(|_| "개인 사전 저장소 잠금을 열지 못했습니다.".to_string())?;
+        let transaction = connection
+            .transaction()
+            .map_err(|error| format!("개인 사전 일괄 삭제를 시작하지 못했습니다: {error}"))?;
+        let mut removed = 0;
+        for id in ids {
+            removed += transaction
+                .execute("DELETE FROM personal_dictionary WHERE id=?1", params![id])
+                .map_err(|error| format!("개인 사전 항목을 삭제하지 못했습니다: {error}"))?
+                as u64;
+        }
+        transaction
+            .commit()
+            .map_err(|error| format!("개인 사전 일괄 삭제를 완료하지 못했습니다: {error}"))?;
+        Ok(removed)
     }
 
     pub fn install_bundled_pack(&self, language: &str) -> Result<DictionaryPackStatus, String> {
@@ -873,11 +1007,11 @@ fn lookup_personal_terms(
     let mut statement = connection
         .prepare(
             "SELECT id, source_language, target_language, source_term, target_term, note, \
-                    scope, scope_value, case_sensitive, whole_word, created_at, updated_at \
+                    tags, pinned, scope, scope_value, case_sensitive, whole_word, created_at, updated_at \
              FROM personal_dictionary \
              WHERE normalized_source_term=?1 AND (?2='' OR source_language=?2) \
                AND (target_language=?3 OR target_language='*') \
-             ORDER BY updated_at DESC LIMIT ?4",
+             ORDER BY pinned DESC, updated_at DESC LIMIT ?4",
         )
         .map_err(|error| format!("개인 사전 조회를 준비하지 못했습니다: {error}"))?;
     let total_limit = per_term_limit.saturating_mul(terms.len()).min(16);
@@ -1575,13 +1709,161 @@ fn personal_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<PersonalDictio
         source_term: row.get(3)?,
         target_term: row.get(4)?,
         note: row.get(5)?,
-        scope: row.get(6)?,
-        scope_value: row.get(7)?,
-        case_sensitive: row.get(8)?,
-        whole_word: row.get(9)?,
-        created_at: row.get(10)?,
-        updated_at: row.get(11)?,
+        tags: row.get(6)?,
+        pinned: row.get(7)?,
+        scope: row.get(8)?,
+        scope_value: row.get(9)?,
+        case_sensitive: row.get(10)?,
+        whole_word: row.get(11)?,
+        created_at: row.get(12)?,
+        updated_at: row.get(13)?,
     })
+}
+
+fn prepare_personal_entry(
+    mut entry: PersonalDictionaryEntry,
+) -> Result<PersonalDictionaryEntry, String> {
+    if !is_supported_language_code(&entry.source_language) {
+        return Err("개인 사전의 원문 언어가 올바르지 않습니다.".to_string());
+    }
+    if entry.target_language != "*" && !is_supported_language_code(&entry.target_language) {
+        return Err("개인 사전의 대상 언어가 올바르지 않습니다.".to_string());
+    }
+    entry.source_term = validate_term(&entry.source_term, "원문 용어")?;
+    entry.target_term = validate_term(&entry.target_term, "대상 용어")?;
+    entry.note = entry.note.trim().chars().take(500).collect();
+    entry.tags = normalize_personal_tags(&entry.tags);
+    if !matches!(entry.scope.as_str(), "global" | "server" | "channel") {
+        entry.scope = default_scope();
+    }
+    if entry.scope == "global" {
+        entry.scope_value.clear();
+    } else if !entry.scope_value.starts_with("/channels/") {
+        return Err("서버 또는 채널 적용 범위가 올바르지 않습니다.".to_string());
+    }
+    Ok(entry)
+}
+
+fn personal_entry_id(
+    connection: &Connection,
+    entry: &PersonalDictionaryEntry,
+) -> Result<Option<i64>, String> {
+    connection
+        .query_row(
+            "SELECT id FROM personal_dictionary WHERE source_language=?1 AND target_language=?2 \
+             AND normalized_source_term=?3 AND scope=?4 AND scope_value=?5",
+            params![
+                entry.source_language,
+                entry.target_language,
+                normalize_term(&entry.source_term),
+                entry.scope,
+                entry.scope_value
+            ],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| format!("개인 사전의 중복 항목을 확인하지 못했습니다: {error}"))
+}
+
+fn upsert_personal_connection(
+    connection: &Connection,
+    entry: PersonalDictionaryEntry,
+) -> Result<PersonalDictionaryEntry, String> {
+    let mut entry = prepare_personal_entry(entry)?;
+    let now = now_seconds();
+    let normalized = normalize_term(&entry.source_term);
+    if entry.id > 0 {
+        let changed = connection
+            .execute(
+                "UPDATE personal_dictionary SET source_language=?1, target_language=?2, source_term=?3, \
+                   normalized_source_term=?4, target_term=?5, note=?6, tags=?7, pinned=?8, scope=?9, scope_value=?10, \
+                   case_sensitive=?11, whole_word=?12, updated_at=?13 WHERE id=?14",
+                params![
+                    entry.source_language,
+                    entry.target_language,
+                    entry.source_term,
+                    normalized,
+                    entry.target_term,
+                    entry.note,
+                    entry.tags,
+                    entry.pinned,
+                    entry.scope,
+                    entry.scope_value,
+                    entry.case_sensitive,
+                    entry.whole_word,
+                    now,
+                    entry.id
+                ],
+            )
+            .map_err(|error| format!("개인 사전 항목을 수정하지 못했습니다: {error}"))?;
+        if changed == 0 {
+            return Err("수정할 개인 사전 항목을 찾지 못했습니다.".to_string());
+        }
+    } else {
+        connection
+            .execute(
+                "INSERT INTO personal_dictionary \
+                 (source_language, target_language, source_term, normalized_source_term, target_term, note, tags, pinned, \
+                  scope, scope_value, case_sensitive, whole_word, created_at, updated_at) \
+                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?13) \
+                 ON CONFLICT(source_language, target_language, normalized_source_term, scope, scope_value) \
+                 DO UPDATE SET source_term=excluded.source_term, target_term=excluded.target_term, note=excluded.note, \
+                   tags=excluded.tags, pinned=excluded.pinned, case_sensitive=excluded.case_sensitive, \
+                   whole_word=excluded.whole_word, updated_at=excluded.updated_at",
+                params![
+                    entry.source_language,
+                    entry.target_language,
+                    entry.source_term,
+                    normalized,
+                    entry.target_term,
+                    entry.note,
+                    entry.tags,
+                    entry.pinned,
+                    entry.scope,
+                    entry.scope_value,
+                    entry.case_sensitive,
+                    entry.whole_word,
+                    now
+                ],
+            )
+            .map_err(|error| format!("개인 사전 항목을 저장하지 못했습니다: {error}"))?;
+        entry.id = personal_entry_id(connection, &entry)?
+            .ok_or_else(|| "저장한 개인 사전 항목을 찾지 못했습니다.".to_string())?;
+    }
+    entry.created_at = connection
+        .query_row(
+            "SELECT created_at FROM personal_dictionary WHERE id=?1",
+            params![entry.id],
+            |row| row.get(0),
+        )
+        .unwrap_or(now);
+    entry.updated_at = now;
+    Ok(entry)
+}
+
+fn personal_search_pattern(value: &str) -> String {
+    let value = value.trim().chars().take(120).collect::<String>();
+    if value.is_empty() {
+        return "%".to_string();
+    }
+    let escaped = value
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
+    format!("%{escaped}%")
+}
+
+fn normalize_personal_tags(value: &str) -> String {
+    let mut seen = HashSet::new();
+    value
+        .split([',', ';', '#'])
+        .map(str::trim)
+        .filter(|tag| !tag.is_empty())
+        .filter(|tag| seen.insert(tag.to_lowercase()))
+        .take(12)
+        .map(|tag| tag.chars().take(32).collect::<String>())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn initialize_schema(connection: &Connection) -> Result<(), String> {
@@ -1609,6 +1891,7 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
          CREATE TABLE IF NOT EXISTS personal_dictionary ( \
            id INTEGER PRIMARY KEY AUTOINCREMENT, source_language TEXT NOT NULL, target_language TEXT NOT NULL, \
            source_term TEXT NOT NULL, normalized_source_term TEXT NOT NULL, target_term TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', \
+           tags TEXT NOT NULL DEFAULT '', pinned INTEGER NOT NULL DEFAULT 0, \
            scope TEXT NOT NULL DEFAULT 'global', scope_value TEXT NOT NULL DEFAULT '', case_sensitive INTEGER NOT NULL DEFAULT 0, \
            whole_word INTEGER NOT NULL DEFAULT 1, created_at REAL NOT NULL, updated_at REAL NOT NULL, \
            UNIQUE(source_language, target_language, normalized_source_term, scope, scope_value)); \
@@ -1697,6 +1980,30 @@ fn initialize_schema(connection: &Connection) -> Result<(), String> {
                 [],
             )
             .map_err(|error| format!("자동 번역 사전 뜻의 저장 형식을 갱신하지 못했습니다: {error}"))?;
+    }
+    let personal_columns = connection
+        .prepare("PRAGMA table_info(personal_dictionary)")
+        .and_then(|mut statement| {
+            statement
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<rusqlite::Result<Vec<_>>>()
+        })
+        .map_err(|error| format!("개인 사전 저장 형식을 확인하지 못했습니다: {error}"))?;
+    for (column, declaration) in [
+        (
+            "tags",
+            "ALTER TABLE personal_dictionary ADD COLUMN tags TEXT NOT NULL DEFAULT ''",
+        ),
+        (
+            "pinned",
+            "ALTER TABLE personal_dictionary ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0",
+        ),
+    ] {
+        if !personal_columns.iter().any(|existing| existing == column) {
+            connection
+                .execute(declaration, [])
+                .map_err(|error| format!("개인 사전 저장 형식을 갱신하지 못했습니다: {error}"))?;
+        }
     }
     Ok(())
 }
@@ -1790,7 +2097,8 @@ mod tests {
 
     use super::{
         lookup_spans, segment_lookup_terms, segmentation_candidate_is_plausible, DictionaryStore,
-        PersonalDictionaryEntry, StarterEntry, StarterPack,
+        PersonalDictionaryBatch, PersonalDictionaryEntry, PersonalDictionaryQuery, StarterEntry,
+        StarterPack,
     };
 
     fn temporary_store(name: &str) -> DictionaryStore {
@@ -2039,6 +2347,8 @@ mod tests {
                 source_term: "BugCat".into(),
                 target_term: "누드냥".into(),
                 note: "캐릭터명".into(),
+                tags: "Discord, 캐릭터".into(),
+                pinned: true,
                 scope: "global".into(),
                 scope_value: String::new(),
                 case_sensitive: true,
@@ -2051,6 +2361,64 @@ mod tests {
         let result = store.lookup("BugCat", Some("en"), "ko").unwrap();
         assert_eq!(result.personal_entries[0].target_term, "누드냥");
         assert!(store.delete_personal(saved.id).unwrap());
+    }
+
+    #[test]
+    fn personal_dictionary_supports_search_pinning_editing_and_batch_management() {
+        let store = temporary_store("personal-management");
+        let make_entry = |source: &str, target: &str, tags: &str| PersonalDictionaryEntry {
+            id: 0,
+            source_language: "en".into(),
+            target_language: "ko".into(),
+            source_term: source.into(),
+            target_term: target.into(),
+            note: format!("{source} 메모"),
+            tags: tags.into(),
+            pinned: source == "VRChat",
+            scope: "global".into(),
+            scope_value: String::new(),
+            case_sensitive: false,
+            whole_word: true,
+            created_at: 0.0,
+            updated_at: 0.0,
+        };
+        let imported = store
+            .upsert_personal_batch(PersonalDictionaryBatch {
+                entries: vec![
+                    make_entry("VRChat", "브이알챗", "게임, Discord, 게임"),
+                    make_entry("avatar", "아바타", "캐릭터"),
+                ],
+                overwrite: true,
+            })
+            .unwrap();
+        assert_eq!(imported.inserted, 2);
+        assert_eq!(imported.updated, 0);
+
+        let page = store
+            .personal_entries_page(PersonalDictionaryQuery {
+                search: "discord".into(),
+                limit: 20,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(page.total, 1);
+        assert_eq!(page.entries[0].source_term, "VRChat");
+        assert_eq!(page.entries[0].tags, "게임, Discord");
+        assert!(page.entries[0].pinned);
+
+        let skipped = store
+            .upsert_personal_batch(PersonalDictionaryBatch {
+                entries: vec![make_entry("VRChat", "VR챗", "게임")],
+                overwrite: false,
+            })
+            .unwrap();
+        assert_eq!(skipped.skipped, 1);
+        assert_eq!(
+            store
+                .delete_personal_batch(vec![page.entries[0].id])
+                .unwrap(),
+            1
+        );
     }
 
     #[test]

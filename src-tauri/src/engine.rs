@@ -1315,6 +1315,8 @@ fn scan_dictionary(
                         source_term: request.query.clone(),
                         target_term: request.target_term.clone(),
                         note: request.note.clone(),
+                        tags: String::new(),
+                        pinned: false,
                         scope: "global".to_string(),
                         scope_value: String::new(),
                         case_sensitive: false,
