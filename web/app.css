@@ -1859,12 +1859,6 @@ select:focus-visible,
 .dictionary-row-actions {
   display: flex;
   gap: 6px;
-  opacity: 0.42;
-  transition: opacity 140ms ease;
-}
-
-.dictionary-manager-row:hover .dictionary-row-actions,
-.dictionary-manager-row:focus-within .dictionary-row-actions {
   opacity: 1;
 }
 
@@ -2875,7 +2869,6 @@ select:focus-visible,
 
   .dictionary-row-actions {
     grid-column: 2;
-    opacity: 1;
   }
 
   .dictionary-manager-toolbar .dictionary-custom-select {

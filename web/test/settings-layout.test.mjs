@@ -433,7 +433,9 @@ test("personal dictionary management scales to searchable and portable collectio
   assert.match(script, /page\.offset >= page\.total/);
   assert.match(script, /navigator\.clipboard\.writeText/);
   assert.match(styles, /\.dictionary-manager-toolbar\s*\{/);
-  assert.match(styles, /\.dictionary-manager-row:hover \.dictionary-row-actions/);
+  assert.match(styles, /\.dictionary-row-actions\s*\{[^}]*opacity:\s*1;/s);
+  assert.doesNotMatch(styles, /\.dictionary-row-actions\s*\{[^}]*opacity:\s*0\.42;/s);
+  assert.doesNotMatch(styles, /\.dictionary-manager-row:hover \.dictionary-row-actions/);
 });
 
 test("personal dictionary selection uses a bottom action dock and clean row toggles", () => {
