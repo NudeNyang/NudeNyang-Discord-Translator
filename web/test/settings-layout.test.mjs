@@ -418,7 +418,7 @@ test("personal dictionary management scales to searchable and portable collectio
   assert.match(markup, /id="dictionary-personal-manager"[^>]*hidden/);
   assert.match(markup, /id="dictionary-personal-search"/);
   assert.match(markup, /id="dictionary-filter-source"/);
-  assert.match(markup, /id="dictionary-filter-target"/);
+  assert.doesNotMatch(markup, /id="dictionary-filter-target"/);
   assert.match(markup, /id="dictionary-selection-bar"[^>]*hidden/);
   assert.match(markup, /id="dictionary-editor-layer"[^>]*hidden/);
   assert.match(markup, /id="dictionary-import-layer"[^>]*hidden/);
@@ -476,6 +476,35 @@ test("personal dictionary controls use localized custom selects and center the b
   assert.match(styles, /\.select-menu:hover\s*\{[^}]*scrollbar-color:\s*var\(--scroll\) transparent;/s);
   assert.match(styles, /\.select-menu::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*transparent;/s);
   assert.match(styles, /\.select-menu:hover::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--scroll\);/s);
+});
+
+test("personal dictionary toolbar prioritizes export format, source language, and favorites", () => {
+  const formatIndex = markup.indexOf('id="dictionary-export-format"');
+  const importIndex = markup.indexOf('id="dictionary-manager-import"');
+  const exportIndex = markup.indexOf('id="dictionary-manager-export"');
+  assert.ok(formatIndex > -1 && formatIndex < importIndex && importIndex < exportIndex);
+  assert.match(
+    markup,
+    /id="dictionary-filter-pinned"[^>]*class="dictionary-favorite-filter"[^>]*aria-label="즐겨찾기"[^>]*aria-pressed="false"[^>]*>[\s\S]*?dictionary-favorite-filter-star[^>]*>☆<\/span><\/button>/,
+  );
+  assert.doesNotMatch(markup, /dictionary-filter-check/);
+  assert.doesNotMatch(script, /dictionaryFilterTarget/);
+  assert.match(script, /dictionaryFilterPinned\.getAttribute\("aria-pressed"\) !== "true"/);
+  assert.match(script, /dictionaryFilterPinned\.setAttribute\("aria-pressed", String\(enabled\)\)/);
+  assert.match(script, /dictionary-favorite-filter-star"\)\.textContent = enabled \? "★" : "☆"/);
+  assert.match(styles, /\.dictionary-manager-actions \.dictionary-custom-select \.select-trigger\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*650;/s);
+  assert.match(styles, /\.dictionary-favorite-filter\s*\{[^}]*margin-inline-start:\s*auto;/s);
+  assert.match(styles, /\.dictionary-favorite-filter\[aria-pressed="true"\]/);
+});
+
+test("personal dictionary copies source terms and uses the shared borderless tooltip", () => {
+  assert.match(script, /dictionaryIconButton\("⧉", "원문 용어 복사"\)/);
+  assert.match(script, /navigator\.clipboard\.writeText\(entry\.sourceTerm\)/);
+  assert.match(script, /setLocalizedText\(elements\.saveStatus, "원문 용어를 복사했습니다\."\)/);
+  assert.doesNotMatch(script, /button\.title = translateCopy/);
+  assert.match(script, /button\.dataset\.tooltip = translated/);
+  assert.match(styles, /\[data-tooltip\]::after\s*\{[^}]*border:\s*0;[^}]*content:\s*attr\(data-tooltip\)/s);
+  assert.match(styles, /\[data-tooltip\]:is\(:hover, :focus-visible\)::after/);
 });
 
 test("dictionary pack cards keep compact metadata and open consolidated source notices", () => {

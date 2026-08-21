@@ -520,7 +520,6 @@
     "고정": "釘選",
     "고정 해제": "取消釘選",
     "편집": "編輯",
-    "표시할 용어 복사": "複製顯示詞彙",
     "이전": "上一頁",
     "다음": "下一頁",
     "1페이지": "第 1 頁",
@@ -541,7 +540,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "原文,顯示詞彙,原文語言,目標語言,標籤,備註",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "選擇要匯入的內容，或貼在這裡。",
     "검색 결과가 없습니다.": "找不到相符詞彙。",
-    "표시할 용어를 복사했습니다.": "已複製顯示詞彙。",
     "개인 사전을 내보냈습니다.": "已匯出個人字典。",
     "선택한 용어를 삭제하시겠습니까?": "要刪除選取的詞彙嗎？",
     "선택한 개인 용어를 삭제했습니다.": "已刪除選取的個人詞彙。",
@@ -555,7 +553,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "可匯入 {count} 筆項目。",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "可匯入 {count} 筆項目。因缺少來源詞或顯示詞，已排除 {invalid} 列。",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "已新增 {inserted} 筆 · 已更新 {updated} 筆 · 已略過 {skipped} 筆",
-    "닫기": "關閉"
+    "닫기": "關閉",
+    "즐겨찾기": "我的最愛",
+    "원문 용어 복사": "複製原文術語",
+    "원문 용어를 복사했습니다.": "已複製原文術語。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -1078,7 +1079,6 @@
     "고정": "Fixar",
     "고정 해제": "Desafixar",
     "편집": "Editar",
-    "표시할 용어 복사": "Copiar termo exibido",
     "이전": "Anterior",
     "다음": "Próxima",
     "1페이지": "Página 1",
@@ -1099,7 +1099,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Origem,termo exibido,idioma de origem,idioma de destino,tags,nota",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Escolha o conteúdo para importar ou cole-o aqui.",
     "검색 결과가 없습니다.": "Nenhum termo correspondente.",
-    "표시할 용어를 복사했습니다.": "Termo exibido copiado.",
     "개인 사전을 내보냈습니다.": "Dicionário pessoal exportado.",
     "선택한 용어를 삭제하시겠습니까?": "Excluir os termos selecionados?",
     "선택한 개인 용어를 삭제했습니다.": "Termos pessoais selecionados excluídos.",
@@ -1113,7 +1112,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} entradas podem ser importadas.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} entradas podem ser importadas. {invalid} linhas foram excluídas porque falta um termo de origem ou de exibição.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} adicionados · {updated} atualizados · {skipped} ignorados",
-    "닫기": "Fechar"
+    "닫기": "Fechar",
+    "즐겨찾기": "Favoritos",
+    "원문 용어 복사": "Copiar termo original",
+    "원문 용어를 복사했습니다.": "Termo original copiado."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1636,7 +1638,6 @@
     "고정": "पिन करें",
     "고정 해제": "पिन हटाएँ",
     "편집": "संपादित करें",
-    "표시할 용어 복사": "प्रदर्शित शब्द कॉपी करें",
     "이전": "पिछला",
     "다음": "अगला",
     "1페이지": "पृष्ठ 1",
@@ -1657,7 +1658,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "स्रोत,प्रदर्शित शब्द,स्रोत भाषा,लक्ष्य भाषा,टैग,नोट",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "आयात करने के लिए सामग्री चुनें या यहाँ पेस्ट करें।",
     "검색 결과가 없습니다.": "कोई मिलता-जुलता शब्द नहीं मिला।",
-    "표시할 용어를 복사했습니다.": "प्रदर्शित शब्द कॉपी किया गया।",
     "개인 사전을 내보냈습니다.": "व्यक्तिगत शब्दकोश निर्यात किया गया।",
     "선택한 용어를 삭제하시겠습니까?": "चुने गए शब्द हटाएँ?",
     "선택한 개인 용어를 삭제했습니다.": "चुने गए व्यक्तिगत शब्द हटा दिए गए।",
@@ -1671,7 +1671,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} प्रविष्टियाँ आयात की जा सकती हैं।",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} प्रविष्टियाँ आयात की जा सकती हैं। स्रोत या प्रदर्शित शब्द न होने के कारण {invalid} पंक्तियाँ बाहर रखी गई हैं।",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} जोड़ी गईं · {updated} अपडेट की गईं · {skipped} छोड़ी गईं",
-    "닫기": "बंद करें"
+    "닫기": "बंद करें",
+    "즐겨찾기": "पसंदीदा",
+    "원문 용어 복사": "स्रोत शब्द कॉपी करें",
+    "원문 용어를 복사했습니다.": "स्रोत शब्द कॉपी किया गया।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -2194,7 +2197,6 @@
     "고정": "Fijar",
     "고정 해제": "Desfijar",
     "편집": "Editar",
-    "표시할 용어 복사": "Copiar término mostrado",
     "이전": "Anterior",
     "다음": "Siguiente",
     "1페이지": "Página 1",
@@ -2215,7 +2217,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Origen,término mostrado,idioma de origen,idioma de destino,etiquetas,nota",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Elige el contenido que quieres importar o pégalo aquí.",
     "검색 결과가 없습니다.": "No hay términos coincidentes.",
-    "표시할 용어를 복사했습니다.": "Se copió el término mostrado.",
     "개인 사전을 내보냈습니다.": "Se exportó el diccionario personal.",
     "선택한 용어를 삭제하시겠습니까?": "¿Eliminar los términos seleccionados?",
     "선택한 개인 용어를 삭제했습니다.": "Se eliminaron los términos personales seleccionados.",
@@ -2229,7 +2230,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "Se pueden importar {count} entradas.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Se pueden importar {count} entradas. Se excluyen {invalid} filas porque les falta un término de origen o de visualización.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} agregados · {updated} actualizados · {skipped} omitidos",
-    "닫기": "Cerrar"
+    "닫기": "Cerrar",
+    "즐겨찾기": "Favoritos",
+    "원문 용어 복사": "Copiar término original",
+    "원문 용어를 복사했습니다.": "Se copió el término original."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2752,7 +2756,6 @@
     "고정": "Anheften",
     "고정 해제": "Nicht mehr anheften",
     "편집": "Bearbeiten",
-    "표시할 용어 복사": "Anzeigebegriff kopieren",
     "이전": "Zurück",
     "다음": "Weiter",
     "1페이지": "Seite 1",
@@ -2773,7 +2776,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Ausgangsbegriff,Anzeigebegriff,Ausgangssprache,Zielsprache,Tags,Notiz",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Zu importierende Inhalte auswählen oder hier einfügen.",
     "검색 결과가 없습니다.": "Keine passenden Begriffe.",
-    "표시할 용어를 복사했습니다.": "Anzeigebegriff kopiert.",
     "개인 사전을 내보냈습니다.": "Persönliches Wörterbuch exportiert.",
     "선택한 용어를 삭제하시겠습니까?": "Ausgewählte Begriffe löschen?",
     "선택한 개인 용어를 삭제했습니다.": "Ausgewählte persönliche Begriffe gelöscht.",
@@ -2787,7 +2789,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} Einträge können importiert werden.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} Einträge können importiert werden. {invalid} Zeilen werden ausgeschlossen, da ein Quell- oder Anzeigebegriff fehlt.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} hinzugefügt · {updated} aktualisiert · {skipped} übersprungen",
-    "닫기": "Schließen"
+    "닫기": "Schließen",
+    "즐겨찾기": "Favoriten",
+    "원문 용어 복사": "Quellbegriff kopieren",
+    "원문 용어를 복사했습니다.": "Quellbegriff kopiert."
   },
   "ru": {
     "설정": "Настройки",
@@ -3310,7 +3315,6 @@
     "고정": "Закрепить",
     "고정 해제": "Открепить",
     "편집": "Изменить",
-    "표시할 용어 복사": "Копировать отображаемый термин",
     "이전": "Назад",
     "다음": "Далее",
     "1페이지": "Страница 1",
@@ -3331,7 +3335,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Исходный текст,отображаемый термин,исходный язык,целевой язык,теги,примечание",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Выберите содержимое для импорта или вставьте его сюда.",
     "검색 결과가 없습니다.": "Подходящих терминов нет.",
-    "표시할 용어를 복사했습니다.": "Отображаемый термин скопирован.",
     "개인 사전을 내보냈습니다.": "Личный словарь экспортирован.",
     "선택한 용어를 삭제하시겠습니까?": "Удалить выбранные термины?",
     "선택한 개인 용어를 삭제했습니다.": "Выбранные личные термины удалены.",
@@ -3345,7 +3348,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "Можно импортировать записей: {count}.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Можно импортировать записей: {count}. Строки без исходного или отображаемого термина исключены: {invalid}.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "Добавлено: {inserted} · Обновлено: {updated} · Пропущено: {skipped}",
-    "닫기": "Закрыть"
+    "닫기": "Закрыть",
+    "즐겨찾기": "Избранное",
+    "원문 용어 복사": "Копировать исходный термин",
+    "원문 용어를 복사했습니다.": "Исходный термин скопирован."
   },
   "id": {
     "설정": "Pengaturan",
@@ -3868,7 +3874,6 @@
     "고정": "Sematkan",
     "고정 해제": "Lepas sematan",
     "편집": "Edit",
-    "표시할 용어 복사": "Salin istilah tampilan",
     "이전": "Sebelumnya",
     "다음": "Berikutnya",
     "1페이지": "Halaman 1",
@@ -3889,7 +3894,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Sumber,istilah tampilan,bahasa sumber,bahasa target,tag,catatan",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Pilih konten untuk diimpor atau tempel di sini.",
     "검색 결과가 없습니다.": "Tidak ada istilah yang cocok.",
-    "표시할 용어를 복사했습니다.": "Istilah tampilan telah disalin.",
     "개인 사전을 내보냈습니다.": "Kamus pribadi telah diekspor.",
     "선택한 용어를 삭제하시겠습니까?": "Hapus istilah yang dipilih?",
     "선택한 개인 용어를 삭제했습니다.": "Istilah pribadi yang dipilih telah dihapus.",
@@ -3903,7 +3907,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} entri dapat diimpor.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} entri dapat diimpor. {invalid} baris dikecualikan karena istilah sumber atau istilah tampilan tidak ada.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} ditambahkan · {updated} diperbarui · {skipped} dilewati",
-    "닫기": "Tutup"
+    "닫기": "Tutup",
+    "즐겨찾기": "Favorit",
+    "원문 용어 복사": "Salin istilah sumber",
+    "원문 용어를 복사했습니다.": "Istilah sumber telah disalin."
   },
   "fr": {
     "설정": "Paramètres",
@@ -4426,7 +4433,6 @@
     "고정": "Épingler",
     "고정 해제": "Désépingler",
     "편집": "Modifier",
-    "표시할 용어 복사": "Copier le terme affiché",
     "이전": "Précédent",
     "다음": "Suivant",
     "1페이지": "Page 1",
@@ -4447,7 +4453,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Source,terme affiché,langue source,langue cible,tags,note",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Choisissez le contenu à importer ou collez-le ici.",
     "검색 결과가 없습니다.": "Aucun terme correspondant.",
-    "표시할 용어를 복사했습니다.": "Terme affiché copié.",
     "개인 사전을 내보냈습니다.": "Dictionnaire personnel exporté.",
     "선택한 용어를 삭제하시겠습니까?": "Supprimer les termes sélectionnés ?",
     "선택한 개인 용어를 삭제했습니다.": "Termes personnels sélectionnés supprimés.",
@@ -4461,7 +4466,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} entrées peuvent être importées.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} entrées peuvent être importées. {invalid} lignes sont exclues, car un terme source ou d’affichage est manquant.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} ajouté(s) · {updated} mis à jour · {skipped} ignoré(s)",
-    "닫기": "Fermer"
+    "닫기": "Fermer",
+    "즐겨찾기": "Favoris",
+    "원문 용어 복사": "Copier le terme source",
+    "원문 용어를 복사했습니다.": "Terme source copié."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4984,7 +4992,6 @@
     "고정": "Sabitle",
     "고정 해제": "Sabitlemeyi kaldır",
     "편집": "Düzenle",
-    "표시할 용어 복사": "Görüntülenecek terimi kopyala",
     "이전": "Önceki",
     "다음": "Sonraki",
     "1페이지": "Sayfa 1",
@@ -5005,7 +5012,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Kaynak,görüntülenecek terim,kaynak dil,hedef dil,etiketler,not",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "İçe aktarılacak içeriği seç veya buraya yapıştır.",
     "검색 결과가 없습니다.": "Eşleşen terim yok.",
-    "표시할 용어를 복사했습니다.": "Görüntülenecek terim kopyalandı.",
     "개인 사전을 내보냈습니다.": "Kişisel sözlük dışa aktarıldı.",
     "선택한 용어를 삭제하시겠습니까?": "Seçili terimler silinsin mi?",
     "선택한 개인 용어를 삭제했습니다.": "Seçili kişisel terimler silindi.",
@@ -5019,7 +5025,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} girdi içe aktarılabilir.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} girdi içe aktarılabilir. Kaynak veya görüntülenecek terim eksik olduğundan {invalid} satır hariç tutuldu.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} eklendi · {updated} güncellendi · {skipped} atlandı",
-    "닫기": "Kapat"
+    "닫기": "Kapat",
+    "즐겨찾기": "Favoriler",
+    "원문 용어 복사": "Kaynak terimi kopyala",
+    "원문 용어를 복사했습니다.": "Kaynak terim kopyalandı."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -5542,7 +5551,6 @@
     "고정": "تثبيت",
     "고정 해제": "إلغاء التثبيت",
     "편집": "تعديل",
-    "표시할 용어 복사": "نسخ مصطلح العرض",
     "이전": "السابق",
     "다음": "التالي",
     "1페이지": "الصفحة 1",
@@ -5563,7 +5571,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "المصدر,مصطلح العرض,اللغة المصدر,اللغة الهدف,الوسوم,ملاحظة",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "اختر المحتوى المراد استيراده أو الصقه هنا.",
     "검색 결과가 없습니다.": "لا توجد مصطلحات مطابقة.",
-    "표시할 용어를 복사했습니다.": "تم نسخ مصطلح العرض.",
     "개인 사전을 내보냈습니다.": "تم تصدير القاموس الشخصي.",
     "선택한 용어를 삭제하시겠습니까?": "هل تريد حذف المصطلحات المحددة؟",
     "선택한 개인 용어를 삭제했습니다.": "تم حذف المصطلحات الشخصية المحددة.",
@@ -5577,7 +5584,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "يمكن استيراد {count} من الإدخالات.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "يمكن استيراد {count} من الإدخالات. تم استبعاد {invalid} من الصفوف لعدم وجود مصطلح مصدر أو مصطلح عرض.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "تمت إضافة {inserted} · تم تحديث {updated} · تم تخطي {skipped}",
-    "닫기": "إغلاق"
+    "닫기": "إغلاق",
+    "즐겨찾기": "المفضلة",
+    "원문 용어 복사": "نسخ المصطلح المصدر",
+    "원문 용어를 복사했습니다.": "تم نسخ المصطلح المصدر."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -6100,7 +6110,6 @@
     "고정": "Ghim",
     "고정 해제": "Bỏ ghim",
     "편집": "Sửa",
-    "표시할 용어 복사": "Sao chép thuật ngữ hiển thị",
     "이전": "Trước",
     "다음": "Tiếp",
     "1페이지": "Trang 1",
@@ -6121,7 +6130,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Nguồn,thuật ngữ hiển thị,ngôn ngữ nguồn,ngôn ngữ đích,thẻ,ghi chú",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Chọn nội dung cần nhập hoặc dán vào đây.",
     "검색 결과가 없습니다.": "Không có thuật ngữ phù hợp.",
-    "표시할 용어를 복사했습니다.": "Đã sao chép thuật ngữ hiển thị.",
     "개인 사전을 내보냈습니다.": "Đã xuất từ điển cá nhân.",
     "선택한 용어를 삭제하시겠습니까?": "Xóa các thuật ngữ đã chọn?",
     "선택한 개인 용어를 삭제했습니다.": "Đã xóa các thuật ngữ cá nhân được chọn.",
@@ -6135,7 +6143,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "Có thể nhập {count} mục.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Có thể nhập {count} mục. {invalid} hàng bị loại vì thiếu thuật ngữ nguồn hoặc thuật ngữ hiển thị.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "Đã thêm {inserted} · Đã cập nhật {updated} · Đã bỏ qua {skipped}",
-    "닫기": "Đóng"
+    "닫기": "Đóng",
+    "즐겨찾기": "Yêu thích",
+    "원문 용어 복사": "Sao chép thuật ngữ nguồn",
+    "원문 용어를 복사했습니다.": "Đã sao chép thuật ngữ nguồn."
   },
   "it": {
     "설정": "Impostazioni",
@@ -6658,7 +6669,6 @@
     "고정": "Fissa",
     "고정 해제": "Rimuovi",
     "편집": "Modifica",
-    "표시할 용어 복사": "Copia termine visualizzato",
     "이전": "Precedente",
     "다음": "Successiva",
     "1페이지": "Pagina 1",
@@ -6679,7 +6689,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Testo originale,termine visualizzato,lingua di origine,lingua di destinazione,tag,nota",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Scegli il contenuto da importare o incollalo qui.",
     "검색 결과가 없습니다.": "Nessun termine corrispondente.",
-    "표시할 용어를 복사했습니다.": "Termine visualizzato copiato.",
     "개인 사전을 내보냈습니다.": "Dizionario personale esportato.",
     "선택한 용어를 삭제하시겠습니까?": "Eliminare i termini selezionati?",
     "선택한 개인 용어를 삭제했습니다.": "Termini personali selezionati eliminati.",
@@ -6693,7 +6702,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "È possibile importare {count} voci.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "È possibile importare {count} voci. {invalid} righe sono escluse perché manca un termine di origine o di visualizzazione.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} aggiunti · {updated} aggiornati · {skipped} ignorati",
-    "닫기": "Chiudi"
+    "닫기": "Chiudi",
+    "즐겨찾기": "Preferiti",
+    "원문 용어 복사": "Copia termine sorgente",
+    "원문 용어를 복사했습니다.": "Termine sorgente copiato."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -7216,7 +7228,6 @@
     "고정": "Przypnij",
     "고정 해제": "Odepnij",
     "편집": "Edytuj",
-    "표시할 용어 복사": "Kopiuj wyświetlany termin",
     "이전": "Poprzednia",
     "다음": "Następna",
     "1페이지": "Strona 1",
@@ -7237,7 +7248,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Termin źródłowy,wyświetlany termin,język źródłowy,język docelowy,tagi,notatka",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Wybierz zawartość do zaimportowania lub wklej ją tutaj.",
     "검색 결과가 없습니다.": "Brak pasujących terminów.",
-    "표시할 용어를 복사했습니다.": "Skopiowano wyświetlany termin.",
     "개인 사전을 내보냈습니다.": "Wyeksportowano słownik osobisty.",
     "선택한 용어를 삭제하시겠습니까?": "Usunąć wybrane terminy?",
     "선택한 개인 용어를 삭제했습니다.": "Usunięto wybrane terminy osobiste.",
@@ -7251,7 +7261,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "Można zaimportować {count} wpisów.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Można zaimportować {count} wpisów. Wykluczono {invalid} wierszy z powodu braku terminu źródłowego lub wyświetlanego.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "Dodano: {inserted} · Zaktualizowano: {updated} · Pominięto: {skipped}",
-    "닫기": "Zamknij"
+    "닫기": "Zamknij",
+    "즐겨찾기": "Ulubione",
+    "원문 용어 복사": "Kopiuj termin źródłowy",
+    "원문 용어를 복사했습니다.": "Skopiowano termin źródłowy."
   },
   "uk": {
     "설정": "Налаштування",
@@ -7774,7 +7787,6 @@
     "고정": "Закріпити",
     "고정 해제": "Відкріпити",
     "편집": "Редагувати",
-    "표시할 용어 복사": "Копіювати відображуваний термін",
     "이전": "Назад",
     "다음": "Далі",
     "1페이지": "Сторінка 1",
@@ -7795,7 +7807,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Оригінал,відображуваний термін,мова оригіналу,цільова мова,теги,примітка",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Виберіть вміст для імпорту або вставте його сюди.",
     "검색 결과가 없습니다.": "Відповідних термінів не знайдено.",
-    "표시할 용어를 복사했습니다.": "Відображуваний термін скопійовано.",
     "개인 사전을 내보냈습니다.": "Особистий словник експортовано.",
     "선택한 용어를 삭제하시겠습니까?": "Видалити вибрані терміни?",
     "선택한 개인 용어를 삭제했습니다.": "Вибрані особисті терміни видалено.",
@@ -7809,7 +7820,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "Можна імпортувати записів: {count}.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Можна імпортувати записів: {count}. Рядки ({invalid}) виключено через відсутність вихідного або відображуваного терміна.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "Додано: {inserted} · Оновлено: {updated} · Пропущено: {skipped}",
-    "닫기": "Закрити"
+    "닫기": "Закрити",
+    "즐겨찾기": "Вибране",
+    "원문 용어 복사": "Копіювати термін оригіналу",
+    "원문 용어를 복사했습니다.": "Термін оригіналу скопійовано."
   },
   "ms": {
     "설정": "Tetapan",
@@ -8332,7 +8346,6 @@
     "고정": "Semat",
     "고정 해제": "Nyahsemat",
     "편집": "Edit",
-    "표시할 용어 복사": "Salin istilah paparan",
     "이전": "Sebelumnya",
     "다음": "Seterusnya",
     "1페이지": "Halaman 1",
@@ -8353,7 +8366,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Sumber,istilah paparan,bahasa sumber,bahasa sasaran,tag,nota",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Pilih kandungan untuk diimport atau tampalkannya di sini.",
     "검색 결과가 없습니다.": "Tiada istilah yang sepadan.",
-    "표시할 용어를 복사했습니다.": "Istilah paparan telah disalin.",
     "개인 사전을 내보냈습니다.": "Kamus peribadi telah dieksport.",
     "선택한 용어를 삭제하시겠습니까?": "Padam istilah yang dipilih?",
     "선택한 개인 용어를 삭제했습니다.": "Istilah peribadi yang dipilih telah dipadam.",
@@ -8367,7 +8379,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} entri boleh diimport.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} entri boleh diimport. {invalid} baris dikecualikan kerana istilah sumber atau paparan tiada.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} ditambah · {updated} dikemas kini · {skipped} dilangkau",
-    "닫기": "Tutup"
+    "닫기": "Tutup",
+    "즐겨찾기": "Kegemaran",
+    "원문 용어 복사": "Salin istilah sumber",
+    "원문 용어를 복사했습니다.": "Istilah sumber telah disalin."
   },
   "nl": {
     "설정": "Instellingen",
@@ -8890,7 +8905,6 @@
     "고정": "Vastzetten",
     "고정 해제": "Losmaken",
     "편집": "Bewerken",
-    "표시할 용어 복사": "Weergaveterm kopiëren",
     "이전": "Vorige",
     "다음": "Volgende",
     "1페이지": "Pagina 1",
@@ -8911,7 +8925,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Bron,displayterm,brontaal,doeltaal,tags,notitie",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Kies inhoud om te importeren of plak die hier.",
     "검색 결과가 없습니다.": "Geen overeenkomende termen.",
-    "표시할 용어를 복사했습니다.": "De weergaveterm is gekopieerd.",
     "개인 사전을 내보냈습니다.": "Het persoonlijke woordenboek is geëxporteerd.",
     "선택한 용어를 삭제하시겠습니까?": "De geselecteerde termen verwijderen?",
     "선택한 개인 용어를 삭제했습니다.": "De geselecteerde persoonlijke termen zijn verwijderd.",
@@ -8925,7 +8938,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "Er kunnen {count} vermeldingen worden geïmporteerd.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Er kunnen {count} vermeldingen worden geïmporteerd. {invalid} rijen worden uitgesloten omdat een bron- of weergaveterm ontbreekt.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} toegevoegd · {updated} bijgewerkt · {skipped} overgeslagen",
-    "닫기": "Sluiten"
+    "닫기": "Sluiten",
+    "즐겨찾기": "Favorieten",
+    "원문 용어 복사": "Bronterm kopiëren",
+    "원문 용어를 복사했습니다.": "Bronterm gekopieerd."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -9448,7 +9464,6 @@
     "고정": "ปักหมุด",
     "고정 해제": "เลิกปักหมุด",
     "편집": "แก้ไข",
-    "표시할 용어 복사": "คัดลอกคำที่แสดง",
     "이전": "ก่อนหน้า",
     "다음": "ถัดไป",
     "1페이지": "หน้า 1",
@@ -9469,7 +9484,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "ต้นฉบับ,คำที่แสดง,ภาษาต้นฉบับ,ภาษาเป้าหมาย,แท็ก,หมายเหตุ",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "เลือกเนื้อหาที่จะนำเข้าหรือวางที่นี่.",
     "검색 결과가 없습니다.": "ไม่พบคำศัพท์ที่ตรงกัน.",
-    "표시할 용어를 복사했습니다.": "คัดลอกคำที่แสดงแล้ว.",
     "개인 사전을 내보냈습니다.": "ส่งออกพจนานุกรมส่วนตัวแล้ว.",
     "선택한 용어를 삭제하시겠습니까?": "ต้องการลบคำศัพท์ที่เลือกหรือไม่?",
     "선택한 개인 용어를 삭제했습니다.": "ลบคำศัพท์ส่วนตัวที่เลือกแล้ว.",
@@ -9483,7 +9497,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "นำเข้าได้ {count} รายการ",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "นำเข้าได้ {count} รายการ โดยไม่รวม {invalid} แถว เนื่องจากไม่มีคำต้นฉบับหรือคำที่ใช้แสดง",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "เพิ่มแล้ว {inserted} รายการ · อัปเดตแล้ว {updated} รายการ · ข้ามแล้ว {skipped} รายการ",
-    "닫기": "ปิด"
+    "닫기": "ปิด",
+    "즐겨찾기": "รายการโปรด",
+    "원문 용어 복사": "คัดลอกคำศัพท์ต้นฉบับ",
+    "원문 용어를 복사했습니다.": "คัดลอกคำศัพท์ต้นฉบับแล้ว"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -10006,7 +10023,6 @@
     "고정": "I-pin",
     "고정 해제": "I-unpin",
     "편집": "I-edit",
-    "표시할 용어 복사": "Kopyahin ang terminong ipinapakita",
     "이전": "Nakaraan",
     "다음": "Susunod",
     "1페이지": "Pahina 1",
@@ -10027,7 +10043,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Pinagmulan,terminong ipinapakita,wikang pinagmulan,wikang patutunguhan,mga tag,tala",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Pumili ng nilalamang i-import o i-paste ito rito.",
     "검색 결과가 없습니다.": "Walang tumutugmang termino.",
-    "표시할 용어를 복사했습니다.": "Nakopya ang terminong ipinapakita.",
     "개인 사전을 내보냈습니다.": "Na-export ang personal na diksyunaryo.",
     "선택한 용어를 삭제하시겠습니까?": "Burahin ang mga napiling termino?",
     "선택한 개인 용어를 삭제했습니다.": "Nabura ang mga napiling personal na termino.",
@@ -10041,7 +10056,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "Maaaring i-import ang {count} entry.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Maaaring i-import ang {count} entry. Hindi isinama ang {invalid} row dahil walang source o display term.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} idinagdag · {updated} na-update · {skipped} nilaktawan",
-    "닫기": "Isara"
+    "닫기": "Isara",
+    "즐겨찾기": "Mga Paborito",
+    "원문 용어 복사": "Kopyahin ang termino sa pinagmulan",
+    "원문 용어를 복사했습니다.": "Nakopya ang termino sa pinagmulan."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -10564,7 +10582,6 @@
     "고정": "পিন করুন",
     "고정 해제": "পিন সরান",
     "편집": "সম্পাদনা করুন",
-    "표시할 용어 복사": "প্রদর্শিত শব্দ কপি করুন",
     "이전": "আগেরটি",
     "다음": "পরেরটি",
     "1페이지": "পৃষ্ঠা ১",
@@ -10585,7 +10602,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "মূল শব্দ,প্রদর্শিত শব্দ,উৎস ভাষা,লক্ষ্য ভাষা,ট্যাগ,নোট",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "আমদানি করার বিষয়বস্তু বেছে নিন অথবা এখানে পেস্ট করুন।",
     "검색 결과가 없습니다.": "মিলে যাওয়া কোনো পরিভাষা নেই।",
-    "표시할 용어를 복사했습니다.": "প্রদর্শিত শব্দ কপি করা হয়েছে।",
     "개인 사전을 내보냈습니다.": "ব্যক্তিগত অভিধান রপ্তানি করা হয়েছে।",
     "선택한 용어를 삭제하시겠습니까?": "নির্বাচিত পরিভাষাগুলো মুছবেন?",
     "선택한 개인 용어를 삭제했습니다.": "নির্বাচিত ব্যক্তিগত পরিভাষাগুলো মুছে ফেলা হয়েছে।",
@@ -10599,7 +10615,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count}টি এন্ট্রি আমদানি করা যাবে।",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count}টি এন্ট্রি আমদানি করা যাবে। উৎস বা প্রদর্শন শব্দ না থাকায় {invalid}টি সারি বাদ দেওয়া হয়েছে।",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted}টি যোগ করা হয়েছে · {updated}টি হালনাগাদ করা হয়েছে · {skipped}টি এড়িয়ে যাওয়া হয়েছে",
-    "닫기": "বন্ধ করুন"
+    "닫기": "বন্ধ করুন",
+    "즐겨찾기": "পছন্দের",
+    "원문 용어 복사": "উৎসের পরিভাষা কপি করুন",
+    "원문 용어를 복사했습니다.": "উৎসের পরিভাষা কপি করা হয়েছে।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -11122,7 +11141,6 @@
     "고정": "پن کریں",
     "고정 해제": "پن ہٹائیں",
     "편집": "ترمیم کریں",
-    "표시할 용어 복사": "ظاہری اصطلاح کاپی کریں",
     "이전": "پچھلا",
     "다음": "اگلا",
     "1페이지": "صفحہ 1",
@@ -11143,7 +11161,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "ماخذ،ظاہری اصطلاح،ماخذ زبان،ہدف زبان،ٹیگز،نوٹ",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "درآمد کرنے کے لیے مواد منتخب کریں یا یہاں پیسٹ کریں۔",
     "검색 결과가 없습니다.": "کوئی مماثل اصطلاح نہیں۔",
-    "표시할 용어를 복사했습니다.": "ظاہری اصطلاح کاپی ہو گئی۔",
     "개인 사전을 내보냈습니다.": "ذاتی لغت برآمد ہو گئی۔",
     "선택한 용어를 삭제하시겠습니까?": "منتخب اصطلاحات حذف کریں؟",
     "선택한 개인 용어를 삭제했습니다.": "منتخب ذاتی اصطلاحات حذف ہو گئیں۔",
@@ -11157,7 +11174,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} اندراجات درآمد کیے جا سکتے ہیں۔",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} اندراجات درآمد کیے جا سکتے ہیں۔ {invalid} قطاریں خارج کر دی گئی ہیں کیونکہ ماخذ یا دکھائی جانے والی اصطلاح موجود نہیں۔",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} شامل · {updated} اپ ڈیٹ · {skipped} چھوڑے گئے",
-    "닫기": "بند کریں"
+    "닫기": "بند کریں",
+    "즐겨찾기": "پسندیدہ",
+    "원문 용어 복사": "ماخذ کی اصطلاح کاپی کریں",
+    "원문 용어를 복사했습니다.": "ماخذ کی اصطلاح کاپی ہو گئی۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -11680,7 +11700,6 @@
     "고정": "பொருத்து",
     "고정 해제": "பொருத்தலை நீக்கு",
     "편집": "திருத்து",
-    "표시할 용어 복사": "காட்சிச் சொல்லை நகலெடு",
     "이전": "முந்தையது",
     "다음": "அடுத்தது",
     "1페이지": "பக்கம் 1",
@@ -11701,7 +11720,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "மூல உரை,காட்சிச் சொல்,மூல மொழி,இலக்கு மொழி,குறிச்சொற்கள்,குறிப்பு",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "இறக்குமதி செய்ய உள்ளடக்கத்தைத் தேர்ந்தெடுக்கவும் அல்லது இங்கே ஒட்டவும்.",
     "검색 결과가 없습니다.": "பொருந்தும் சொற்கள் இல்லை.",
-    "표시할 용어를 복사했습니다.": "காட்சிச் சொல் நகலெடுக்கப்பட்டது.",
     "개인 사전을 내보냈습니다.": "தனிப்பட்ட அகராதி ஏற்றுமதி செய்யப்பட்டது.",
     "선택한 용어를 삭제하시겠습니까?": "தேர்ந்தெடுத்த சொற்களை நீக்கவா?",
     "선택한 개인 용어를 삭제했습니다.": "தேர்ந்தெடுத்த தனிப்பட்ட சொற்கள் நீக்கப்பட்டன.",
@@ -11715,7 +11733,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} பதிவுகளை இறக்குமதி செய்யலாம்.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} பதிவுகளை இறக்குமதி செய்யலாம். மூலச் சொல் அல்லது காட்சிச் சொல் இல்லாததால் {invalid} வரிசைகள் விலக்கப்பட்டன.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} சேர்க்கப்பட்டன · {updated} புதுப்பிக்கப்பட்டன · {skipped} தவிர்க்கப்பட்டன",
-    "닫기": "மூடு"
+    "닫기": "மூடு",
+    "즐겨찾기": "பிடித்தவை",
+    "원문 용어 복사": "மூலச் சொல்லை நகலெடு",
+    "원문 용어를 복사했습니다.": "மூலச் சொல் நகலெடுக்கப்பட்டது."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -12238,7 +12259,6 @@
     "고정": "سنجاق کردن",
     "고정 해제": "برداشتن سنجاق",
     "편집": "ویرایش",
-    "표시할 용어 복사": "کپی اصطلاح نمایشی",
     "이전": "قبلی",
     "다음": "بعدی",
     "1페이지": "صفحه 1",
@@ -12259,7 +12279,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "مبدأ,اصطلاح نمایشی,زبان مبدأ,زبان مقصد,برچسب‌ها,یادداشت",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "محتوایی را برای درون‌ریزی انتخاب کنید یا اینجا جای‌گذاری کنید.",
     "검색 결과가 없습니다.": "هیچ اصطلاح منطبقی وجود ندارد.",
-    "표시할 용어를 복사했습니다.": "اصطلاح نمایشی کپی شد.",
     "개인 사전을 내보냈습니다.": "واژه‌نامه شخصی برون‌ریزی شد.",
     "선택한 용어를 삭제하시겠습니까?": "اصطلاحات انتخاب‌شده حذف شوند؟",
     "선택한 개인 용어를 삭제했습니다.": "اصطلاحات شخصی انتخاب‌شده حذف شدند.",
@@ -12273,7 +12292,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "{count} ورودی قابل درون‌ریزی است.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "{count} ورودی قابل درون‌ریزی است. {invalid} ردیف به‌دلیل نبود عبارت مبدأ یا عبارت نمایشی حذف می‌شود.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} افزوده · {updated} به‌روزرسانی‌شده · {skipped} ردشده",
-    "닫기": "بستن"
+    "닫기": "بستن",
+    "즐겨찾기": "علاقه‌مندی‌ها",
+    "원문 용어 복사": "کپی اصطلاح مبدأ",
+    "원문 용어를 복사했습니다.": "اصطلاح مبدأ کپی شد."
   },
   "he": {
     "설정": "הגדרות",
@@ -12796,7 +12818,6 @@
     "고정": "הצמדה",
     "고정 해제": "ביטול הצמדה",
     "편집": "עריכה",
-    "표시할 용어 복사": "העתקת מונח התצוגה",
     "이전": "הקודם",
     "다음": "הבא",
     "1페이지": "עמוד 1",
@@ -12817,7 +12838,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "מקור,מונח תצוגה,שפת מקור,שפת יעד,תגיות,הערה",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "בחר תוכן לייבוא או הדבק אותו כאן.",
     "검색 결과가 없습니다.": "לא נמצאו מונחים תואמים.",
-    "표시할 용어를 복사했습니다.": "מונח התצוגה הועתק.",
     "개인 사전을 내보냈습니다.": "המילון האישי יוצא.",
     "선택한 용어를 삭제하시겠습니까?": "למחוק את המונחים שנבחרו?",
     "선택한 개인 용어를 삭제했습니다.": "המונחים האישיים שנבחרו נמחקו.",
@@ -12831,7 +12851,10 @@
     "{count}개 항목을 가져올 수 있습니다.": "ניתן לייבא {count} רשומות.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "ניתן לייבא {count} רשומות. {invalid} שורות לא נכללו כי חסר מונח מקור או מונח תצוגה.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} נוספו · {updated} עודכנו · {skipped} דולגו",
-    "닫기": "סגירה"
+    "닫기": "סגירה",
+    "즐겨찾기": "מועדפים",
+    "원문 용어 복사": "העתקת מונח המקור",
+    "원문 용어를 복사했습니다.": "מונח המקור הועתק."
   },
   "cs": {
     "설정": "Nastavení",
@@ -13354,7 +13377,6 @@
     "고정": "Připnout",
     "고정 해제": "Odepnout",
     "편집": "Upravit",
-    "표시할 용어 복사": "Kopírovat zobrazený výraz",
     "이전": "Předchozí",
     "다음": "Další",
     "1페이지": "Stránka 1",
@@ -13375,7 +13397,6 @@
     "원문,표시어,원문 언어,대상 언어,태그,메모": "Zdroj,zobrazený výraz,zdrojový jazyk,cílový jazyk,štítky,poznámka",
     "가져올 내용을 선택하거나 붙여 넣으십시오.": "Vyberte obsah k importu nebo ho vložte sem.",
     "검색 결과가 없습니다.": "Žádné odpovídající výrazy.",
-    "표시할 용어를 복사했습니다.": "Zobrazený výraz byl zkopírován.",
     "개인 사전을 내보냈습니다.": "Osobní slovník byl exportován.",
     "선택한 용어를 삭제하시겠습니까?": "Smazat vybrané výrazy?",
     "선택한 개인 용어를 삭제했습니다.": "Vybrané osobní výrazy byly smazány.",
@@ -13389,6 +13410,9 @@
     "{count}개 항목을 가져올 수 있습니다.": "Lze importovat {count} záznamů.",
     "{count}개 항목을 가져올 수 있습니다. {invalid}개 행은 원문이나 표시어가 없어 제외됩니다.": "Lze importovat {count} záznamů. {invalid} řádků bylo vyloučeno, protože chybí zdrojový nebo zobrazovaný termín.",
     "{inserted}개 추가 · {updated}개 수정 · {skipped}개 건너뜀": "{inserted} přidáno · {updated} aktualizováno · {skipped} přeskočeno",
-    "닫기": "Zavřít"
+    "닫기": "Zavřít",
+    "즐겨찾기": "Oblíbené",
+    "원문 용어 복사": "Kopírovat zdrojový termín",
+    "원문 용어를 복사했습니다.": "Zdrojový termín byl zkopírován."
   }
 }

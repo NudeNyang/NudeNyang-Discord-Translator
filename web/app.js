@@ -167,7 +167,6 @@ const elements = {
   dictionaryManagerExport: document.querySelector("#dictionary-manager-export"),
   dictionaryPersonalSearch: document.querySelector("#dictionary-personal-search"),
   dictionaryFilterSource: document.querySelector("#dictionary-filter-source"),
-  dictionaryFilterTarget: document.querySelector("#dictionary-filter-target"),
   dictionaryFilterPinned: document.querySelector("#dictionary-filter-pinned"),
   dictionarySort: document.querySelector("#dictionary-sort"),
   dictionarySelectionBar: document.querySelector("#dictionary-selection-bar"),
@@ -562,7 +561,7 @@ function populateDictionaryLanguageSelects() {
     elements.dictionaryImportTarget,
   ];
   for (const select of plainSelects) appendDictionaryLanguageOptions(select);
-  for (const select of [elements.dictionaryFilterSource, elements.dictionaryFilterTarget]) {
+  for (const select of [elements.dictionaryFilterSource]) {
     if (!select || select.options.length) continue;
     const all = document.createElement("option");
     all.value = "";
@@ -960,12 +959,12 @@ function createDictionaryManagerRow(entry) {
   const actions = document.createElement("div");
   actions.className = "dictionary-row-actions";
   const pin = dictionaryIconButton(entry.pinned ? "★" : "☆", entry.pinned ? "고정 해제" : "고정", entry.pinned);
-  const duplicate = dictionaryIconButton("⧉", "표시할 용어 복사");
+  const duplicate = dictionaryIconButton("⧉", "원문 용어 복사");
   const edit = dictionaryIconButton("✎", "편집");
   pin.addEventListener("click", () => updateDictionaryEntries([entry], { pinned: !entry.pinned }));
   duplicate.addEventListener("click", async () => {
-    await navigator.clipboard.writeText(entry.targetTerm);
-    setLocalizedText(elements.saveStatus, "표시할 용어를 복사했습니다.");
+    await navigator.clipboard.writeText(entry.sourceTerm);
+    setLocalizedText(elements.saveStatus, "원문 용어를 복사했습니다.");
   });
   edit.addEventListener("click", () => openDictionaryEditor(entry));
   actions.append(pin, duplicate, edit);
@@ -975,12 +974,15 @@ function createDictionaryManagerRow(entry) {
 
 function dictionaryIconButton(symbol, label, active = false) {
   const button = document.createElement("button");
+  const translated = translateCopy(currentUiLanguage(), label);
   button.type = "button";
   button.className = "dictionary-icon-button";
   button.dataset.active = String(active);
+  button.dataset.i18nAriaLabel = label;
+  button.dataset.i18nTooltip = label;
+  button.dataset.tooltip = translated;
   button.textContent = symbol;
-  button.title = translateCopy(currentUiLanguage(), label);
-  button.setAttribute("aria-label", translateCopy(currentUiLanguage(), label));
+  button.setAttribute("aria-label", translated);
   return button;
 }
 
@@ -1013,7 +1015,7 @@ function openDictionaryImport() {
   elements.dictionaryImportText.value = "";
   elements.dictionaryImportFile.value = "";
   elements.dictionaryImportSource.value = elements.dictionaryFilterSource.value || "en";
-  elements.dictionaryImportTarget.value = elements.dictionaryFilterTarget.value || state.config.target_language || "ko";
+  elements.dictionaryImportTarget.value = state.config.target_language || "ko";
   setLocalizedText(elements.dictionaryImportPreview, "가져올 내용을 선택하거나 붙여 넣으십시오.");
   elements.dictionaryImportAccept.disabled = true;
   elements.dictionaryImportLayer.hidden = false;
@@ -2741,13 +2743,11 @@ elements.dictionaryFilterSource.addEventListener("change", () => {
   state.dictionaryPersonalQuery.offset = 0;
   loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
 });
-elements.dictionaryFilterTarget.addEventListener("change", () => {
-  state.dictionaryPersonalQuery.targetLanguage = elements.dictionaryFilterTarget.value;
-  state.dictionaryPersonalQuery.offset = 0;
-  loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
-});
-elements.dictionaryFilterPinned.addEventListener("change", () => {
-  state.dictionaryPersonalQuery.pinnedOnly = elements.dictionaryFilterPinned.checked;
+elements.dictionaryFilterPinned.addEventListener("click", () => {
+  const enabled = elements.dictionaryFilterPinned.getAttribute("aria-pressed") !== "true";
+  elements.dictionaryFilterPinned.setAttribute("aria-pressed", String(enabled));
+  elements.dictionaryFilterPinned.querySelector(".dictionary-favorite-filter-star").textContent = enabled ? "★" : "☆";
+  state.dictionaryPersonalQuery.pinnedOnly = enabled;
   state.dictionaryPersonalQuery.offset = 0;
   loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
 });

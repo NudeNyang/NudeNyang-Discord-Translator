@@ -1550,6 +1550,17 @@ select:focus-visible,
   width: 108px;
 }
 
+.dictionary-manager-actions .dictionary-custom-select .select-trigger {
+  min-height: 40px;
+  height: 40px;
+  padding-inline: 15px 11px;
+  border-radius: 8px;
+  background: var(--control);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+}
+
 .dictionary-manager-toolbar .dictionary-custom-select:last-child .select-menu {
   inset-inline-start: auto;
   inset-inline-end: 0;
@@ -1557,7 +1568,7 @@ select:focus-visible,
 
 .dictionary-manager-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.3fr) repeat(2, minmax(120px, 0.65fr)) auto minmax(116px, 0.55fr);
+  grid-template-columns: minmax(240px, 1.3fr) minmax(140px, 0.65fr) minmax(132px, 0.55fr) auto;
   align-items: center;
   gap: 8px;
   padding: 10px;
@@ -1588,7 +1599,6 @@ select:focus-visible,
   pointer-events: none;
 }
 
-.dictionary-filter-check,
 .dictionary-editor-options label {
   display: flex;
   align-items: center;
@@ -1598,10 +1608,58 @@ select:focus-visible,
   white-space: nowrap;
 }
 
-.dictionary-filter-check input,
 .dictionary-editor-options input,
 .dictionary-row-check input {
   accent-color: var(--accent);
+}
+
+.dictionary-favorite-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-height: 42px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.dictionary-favorite-filter:hover {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface-hover);
+}
+
+.dictionary-favorite-filter:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dictionary-favorite-filter-star {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+  font-size: 21px;
+  line-height: 1;
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.dictionary-favorite-filter[aria-pressed="true"] {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+  background: var(--accent-soft);
+}
+
+.dictionary-favorite-filter[aria-pressed="true"] .dictionary-favorite-filter-star {
+  color: var(--accent);
+  transform: scale(1.08);
 }
 
 .dictionary-selection-bar {
@@ -2331,32 +2389,36 @@ select:focus-visible,
   display: none;
 }
 
-.provider-icon-button::after {
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
   position: absolute;
-  z-index: 30;
-  top: 50%;
-  right: calc(100% + 8px);
-  padding: 5px 8px;
-  border: 1px solid var(--border);
+  z-index: 80;
+  inset-inline-end: 0;
+  bottom: calc(100% + 7px);
+  padding: 6px 9px;
+  border: 0;
   border-radius: 6px;
   color: var(--text);
-  background: var(--surface);
-  box-shadow: 0 6px 18px rgb(2 12 16 / 0.28);
+  background: color-mix(in srgb, var(--surface-raised) 92%, var(--text));
+  box-shadow: 0 5px 16px rgb(2 12 16 / 0.24);
   content: attr(data-tooltip);
   font-size: 11px;
   font-weight: 650;
   line-height: 1.2;
   opacity: 0;
   pointer-events: none;
-  transform: translate(4px, -50%);
+  transform: translateY(3px);
   transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
   visibility: hidden;
   white-space: nowrap;
 }
 
-.provider-icon-button:is(:hover, :focus-visible)::after {
+[data-tooltip]:is(:hover, :focus-visible)::after {
   opacity: 1;
-  transform: translate(0, -50%);
+  transform: translateY(0);
   visibility: visible;
 }
 
@@ -2571,7 +2633,7 @@ select:focus-visible,
     grid-column: 1 / -1;
   }
 
-  .dictionary-filter-check {
+  .dictionary-favorite-filter {
     min-height: 42px;
   }
 }
