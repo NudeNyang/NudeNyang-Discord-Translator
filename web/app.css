@@ -771,12 +771,16 @@ select:focus-visible,
 }
 
 .settings-view[data-settings-view="convenience"] .setting-row {
-  grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 250px);
 }
 
 .settings-view[data-settings-view="convenience"] .setting-row > :last-child {
-  width: 100%;
   justify-self: end;
+}
+
+.settings-view[data-settings-view="convenience"] .setting-row > .custom-select,
+.settings-view[data-settings-view="convenience"] .setting-row > .shortcut-editor {
+  width: 100%;
 }
 
 .single-row .setting-row,

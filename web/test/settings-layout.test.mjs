@@ -333,11 +333,19 @@ test("convenience panel exposes global toggles and editable composer shortcuts",
 test("convenience controls stay compact in wider settings windows", () => {
   assert.match(
     styles,
-    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(230px,\s*300px\);/s,
+    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(210px,\s*250px\);/s,
   );
   assert.match(
     styles,
-    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*>\s*:\s*last-child\s*\{[^}]*width:\s*100%;[^}]*justify-self:\s*end;/s,
+    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*>\s*:\s*last-child\s*\{[^}]*justify-self:\s*end;/s,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*>\s*:\s*last-child\s*\{[^}]*width:\s*100%/s,
+  );
+  assert.match(
+    styles,
+    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*>\s*\.custom-select,\s*\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*>\s*\.shortcut-editor\s*\{[^}]*width:\s*100%;/s,
   );
 });
 
