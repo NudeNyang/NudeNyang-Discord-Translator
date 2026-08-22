@@ -2685,6 +2685,7 @@ fn localize_dictionary_result(
         String::new()
     };
     let selection_needs_translation = result.needs_selection_translation();
+    let mut contextual_focus = String::new();
     if selection_needs_translation
         && !context_matches_selection
         && !context.is_empty()
@@ -2703,7 +2704,7 @@ fn localize_dictionary_result(
                     &translated_selection,
                     target,
                 ) {
-                    result.selection_translation = translated_selection.trim().to_string();
+                    contextual_focus = translated_selection.trim().to_string();
                 } else {
                     log_rejected_dictionary_translation(
                         "contextual selection",
@@ -2859,11 +2860,17 @@ fn localize_dictionary_result(
         }
     }
     if !localized_context.is_empty() {
-        if !result.selection_translation.is_empty() && source_language != target {
-            result.rerank_for_localized_context(
-                &localized_context,
-                &result.selection_translation.clone(),
-            );
+        let mut ranking_focus = result.selection_translation.clone();
+        if !contextual_focus.is_empty()
+            && !contextual_focus.eq_ignore_ascii_case(&result.selection_translation)
+        {
+            if !ranking_focus.is_empty() {
+                ranking_focus.push(' ');
+            }
+            ranking_focus.push_str(&contextual_focus);
+        }
+        if !ranking_focus.is_empty() && source_language != target {
+            result.rerank_for_localized_context(&localized_context, &ranking_focus);
         } else {
             result.rerank_for_context(&localized_context);
         }
@@ -3418,9 +3425,16 @@ mod tests {
                 text if text.contains("<NTSPLIT>") && text.contains("river") => {
                     "그는 강의 <NTSPLIT> 물가 <NTSPLIT> 에 앉아 물을 바라봤다"
                 }
+                text if text.contains("<NTSPLIT>")
+                    && text.contains("do not")
+                    && text.contains("share") =>
+                {
+                    "다른 사람의 창작물을 <NTSPLIT> 공유하지 마세요 <NTSPLIT> ."
+                }
                 text if text.contains("<NTSPLIT>") && text.contains("share") => {
                     "회원들은 <NTSPLIT> 공유 <NTSPLIT> 사진을 공동체와 나눌 수 있다"
                 }
+                "share" => "공유",
                 "bank" => "둑",
                 "He sat on the river bank and watched the water." => {
                     "그는 강의 물가에 앉아 물을 바라봤다"
@@ -3744,7 +3758,7 @@ mod tests {
             Language::Korean,
         );
 
-        assert_eq!(localized.selection_translation, "물가");
+        assert_eq!(localized.selection_translation, "둑");
         assert_eq!(
             localized.entries[0].definition,
             "강의 물가에 있는 경사진 땅"
@@ -3804,6 +3818,66 @@ mod tests {
             &mut service,
             result,
             "Members share photos with the community.",
+            Language::Korean,
+        );
+
+        assert_eq!(localized.selection_translation, "공유");
+        assert_eq!(localized.entries[0].part_of_speech, "verb");
+        assert!(localized.entries[0].context_recommended);
+    }
+
+    #[test]
+    fn dictionary_selection_label_does_not_absorb_negation_from_context() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-share-negation-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(ContextDictionaryTranslator), cache);
+        let sense =
+            |entry_id, part_of_speech: &str, sense_rank, definition: &str| DictionaryEntry {
+                entry_id,
+                headword: "share".to_string(),
+                language: "en".to_string(),
+                reading: String::new(),
+                part_of_speech: part_of_speech.to_string(),
+                sense_rank,
+                source_priority: 0,
+                context_recommended: false,
+                definition: definition.to_string(),
+                definition_language: "en".to_string(),
+                definition_origin: "original".to_string(),
+                original_definition: definition.to_string(),
+                original_definition_language: "en".to_string(),
+                example: String::new(),
+                source_name: "Test".to_string(),
+                source_url: String::new(),
+                license: "Test".to_string(),
+            };
+        let result = DictionaryLookupResult {
+            query: "share".to_string(),
+            source_language: "en".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: true,
+            segmented: false,
+            entries: vec![
+                sense(
+                    1,
+                    "noun",
+                    0,
+                    "assets belonging to or contributed by an individual or group",
+                ),
+                sense(2, "verb", 1, "communicate information with other people"),
+            ],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(
+            &mut service,
+            result,
+            "Please do not share other people's creations.",
             Language::Korean,
         );
 
