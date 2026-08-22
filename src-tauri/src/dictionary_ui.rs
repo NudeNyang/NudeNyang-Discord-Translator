@@ -466,8 +466,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       const selection=getSelection(); const rect=selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : selectionButton.getBoundingClientRect();
       const query=selectionButton.dataset.query || ''; if(!query) return;
       const anchor={left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height};
-      loadingBody(query); panel.dataset.query=query; panel.dataset.anchor=JSON.stringify(anchor); positionPanel(anchor);
-      panel.dataset.requestId=queue({action:'lookup',query,context:selectionButton.dataset.context || '',sourceLanguage:'',targetLanguage:definitionLanguage}); closeSelection();
+      queue({action:'lookup',query,context:selectionButton.dataset.context || '',sourceLanguage:'',targetLanguage:definitionLanguage}); closeSelection(); closePanel();
     },{signal});
   }
   return window.__ntDictionaryRequests.splice(0);
@@ -629,6 +628,15 @@ mod tests {
         assert!(!script.contains("__CONTROLLER_VERSION__"));
         assert!(!script.contains("rust-dictionary-ui-v3"));
         assert!(!script.contains("innerHTML"));
+    }
+
+    #[test]
+    fn discord_controller_only_queues_lookup_for_the_native_dictionary_window() {
+        let script = dictionary_ui_script(true, "ko", "ko", true);
+
+        assert!(script.contains("queue({action:'lookup'"));
+        assert!(script.contains("closeSelection();"));
+        assert!(!script.contains("loadingBody(query); panel.dataset.query=query"));
     }
 
     #[test]

@@ -19,6 +19,7 @@ use crate::dictionary_ui::{
     apply_dictionary_error_script, apply_dictionary_result_script, apply_dictionary_saved_script,
     dictionary_ui_script, parse_dictionary_requests, DICTIONARY_CLEANUP_SCRIPT,
 };
+use crate::dictionary_window;
 use crate::dom::{
     apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
     INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
@@ -1007,6 +1008,7 @@ fn run_controller(
             &config,
             &status,
             dictionary_store.as_ref(),
+            app_handle.as_ref(),
         );
 
         let had_client = client.is_some();
@@ -1055,6 +1057,9 @@ fn run_controller(
                     .as_mut()
                     .expect("connected CDP client")
                     .evaluate(DICTIONARY_CLEANUP_SCRIPT, false)?;
+                if let Some(app) = app_handle.as_ref() {
+                    let _ = dictionary_window::hide(app);
+                }
                 dictionary_ui_needs_cleanup = false;
             }
             ensure_outgoing_originals(
@@ -1245,53 +1250,69 @@ fn scan_dictionary(
     )?;
     for request in parse_dictionary_requests(value)?.into_iter().take(4) {
         let outcome = match request.action.as_str() {
-            "lookup" => store
-                .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
-                .and_then(|store| {
-                    let source_language = dictionary_source_language(
-                        &request.source_language,
-                        &request.query,
-                        &request.context,
-                    );
-                    let target_language = if is_supported_language_code(&request.target_language) {
-                        request.target_language.as_str()
-                    } else {
-                        config.target_language.as_str()
-                    };
-                    let result = store.lookup_with_context(
-                        &request.query,
-                        &request.context,
-                        source_language.as_deref(),
-                        target_language,
-                    )?;
-                    let target = Language::try_from(result.target_language.as_str())
-                        .unwrap_or(Language::English);
-                    let (immediate, pending) =
-                        stage_dictionary_lookup_result(result, translation_ready);
-                    if let Some(result) = pending {
-                        worker
-                            .send(WorkerCommand::LocalizeDictionary(
-                                DictionaryLocalizationBatch {
-                                    request_id: request.id.clone(),
-                                    target,
-                                    context: request.context.clone(),
-                                    result,
-                                    queued_at: Instant::now(),
-                                },
-                            ))
-                            .map_err(|_| {
-                                "Rust 사전 번역 작업 스레드가 종료되었습니다.".to_string()
-                            })?;
-                    }
-                    Ok(Some(immediate))
-                })
-                .and_then(|result| {
-                    result
-                        .as_ref()
-                        .map(|result| apply_dictionary_result_script(&request.id, result))
-                        .transpose()
-                        .map(|script| script.unwrap_or_default())
-                }),
+            "lookup" => {
+                let app =
+                    app.ok_or_else(|| "사전 도구 창을 열 준비가 되지 않았습니다.".to_string())?;
+                dictionary_window::show_loading(
+                    app,
+                    &request.id,
+                    &request.query,
+                    &config.ui_language,
+                    &config.target_language,
+                    config.dictionary_external_provider != "none",
+                )?;
+                store
+                    .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
+                    .and_then(|store| {
+                        let source_language = dictionary_source_language(
+                            &request.source_language,
+                            &request.query,
+                            &request.context,
+                        );
+                        let target_language =
+                            if is_supported_language_code(&request.target_language) {
+                                request.target_language.as_str()
+                            } else {
+                                config.target_language.as_str()
+                            };
+                        let result = store.lookup_with_context(
+                            &request.query,
+                            &request.context,
+                            source_language.as_deref(),
+                            target_language,
+                        )?;
+                        let target = Language::try_from(result.target_language.as_str())
+                            .unwrap_or(Language::English);
+                        let (immediate, pending) =
+                            stage_dictionary_lookup_result(result, translation_ready);
+                        if let Some(result) = pending {
+                            worker
+                                .send(WorkerCommand::LocalizeDictionary(
+                                    DictionaryLocalizationBatch {
+                                        request_id: request.id.clone(),
+                                        target,
+                                        context: request.context.clone(),
+                                        result,
+                                        queued_at: Instant::now(),
+                                    },
+                                ))
+                                .map_err(|_| {
+                                    "Rust 사전 번역 작업 스레드가 종료되었습니다.".to_string()
+                                })?;
+                        }
+                        Ok(immediate)
+                    })
+                    .and_then(|result| {
+                        dictionary_window::show_result(
+                            app,
+                            &request.id,
+                            result,
+                            &config.ui_language,
+                            config.dictionary_external_provider != "none",
+                        )?;
+                        Ok(String::new())
+                    })
+            }
             "save" => store
                 .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
                 .and_then(|store| {
@@ -1332,12 +1353,38 @@ fn scan_dictionary(
                 if config.dictionary_external_provider == "none" {
                     Ok(String::new())
                 } else {
-                    open_external_dictionary(app, &request.query).map(|()| String::new())
+                    app.ok_or_else(|| "기본 브라우저를 열 준비가 되지 않았습니다.".to_string())
+                        .and_then(|app| {
+                            dictionary_window::open_external_dictionary(app, &request.query)
+                        })
+                        .map(|()| String::new())
                 }
             }
             _ => Err("알 수 없는 사전 요청입니다.".to_string()),
         };
-        let script = outcome.or_else(|error| apply_dictionary_error_script(&request.id, &error))?;
+        let script = match outcome {
+            Ok(script) => script,
+            Err(error) => {
+                if request.action == "lookup" {
+                    if let Some(app) = app {
+                        if let Err(window_error) = dictionary_window::show_error(
+                            app,
+                            &request.id,
+                            &request.query,
+                            &config.ui_language,
+                            &config.target_language,
+                            config.dictionary_external_provider != "none",
+                            &error,
+                        ) {
+                            crate::diagnostics::warn("dictionary-window", &window_error);
+                        }
+                    }
+                    String::new()
+                } else {
+                    apply_dictionary_error_script(&request.id, &error)?
+                }
+            }
+        };
         if !script.is_empty() {
             client.evaluate(&script, false)?;
         }
@@ -1380,16 +1427,6 @@ fn dictionary_source_language(
         return Some(selected_language.code().to_string());
     }
     (contextual_language != Language::Unknown).then(|| contextual_language.code().to_string())
-}
-
-fn open_external_dictionary(app: Option<&AppHandle>, query: &str) -> Result<(), String> {
-    let app = app.ok_or_else(|| "기본 브라우저를 열 준비가 되지 않았습니다.".to_string())?;
-    let mut url = url::Url::parse("https://en.wiktionary.org/w/index.php")
-        .map_err(|error| format!("외부 사전 주소를 만들지 못했습니다: {error}"))?;
-    url.query_pairs_mut().append_pair("search", query.trim());
-    app.opener()
-        .open_url(url.as_str(), None::<&str>)
-        .map_err(|error| format!("기본 브라우저에서 외부 사전을 열지 못했습니다: {error}"))
 }
 
 fn handle_invite_assist(
@@ -2128,6 +2165,7 @@ fn drain_worker_results(
     config: &AppConfig,
     status: &Arc<Mutex<RuntimeStatus>>,
     dictionary_store: Option<&DictionaryStore>,
+    app: Option<&AppHandle>,
 ) {
     let mut changes = Vec::new();
     while let Ok(result) = results.try_recv() {
@@ -2297,14 +2335,23 @@ fn drain_worker_results(
                         crate::diagnostics::warn("dictionary", &error);
                     }
                 }
-                let Some(client) = client.as_mut() else {
-                    continue;
-                };
-                match apply_dictionary_result_script(&request_id, &result) {
-                    Ok(script) => {
-                        let _ = client.evaluate(&script, false);
+                if let Some(app) = app {
+                    if let Err(error) = dictionary_window::show_result(
+                        app,
+                        &request_id,
+                        result,
+                        &config.ui_language,
+                        config.dictionary_external_provider != "none",
+                    ) {
+                        crate::diagnostics::warn("dictionary-window", &error);
                     }
-                    Err(error) => crate::diagnostics::warn("dictionary", &error),
+                } else if let Some(client) = client.as_mut() {
+                    match apply_dictionary_result_script(&request_id, &result) {
+                        Ok(script) => {
+                            let _ = client.evaluate(&script, false);
+                        }
+                        Err(error) => crate::diagnostics::warn("dictionary", &error),
+                    }
                 }
             }
             WorkerResult::DisplayActivated {

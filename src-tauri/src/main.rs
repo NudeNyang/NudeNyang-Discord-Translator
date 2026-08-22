@@ -9,6 +9,7 @@ pub mod diagnostics;
 pub mod dictionary;
 mod dictionary_morphology;
 pub mod dictionary_ui;
+pub mod dictionary_window;
 mod discord;
 mod discord_startup;
 pub mod dom;
@@ -1604,6 +1605,7 @@ fn main() {
         .manage(ProviderLoginState::default())
         .manage(config)
         .manage(engine)
+        .manage(dictionary_window::DictionaryWindowStore::default())
         .setup(|app| {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
             create_tray(app)?;
@@ -1634,7 +1636,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if window.label() == "tray-menu" {
+            if window.label() == "tray-menu" || window.label() == "dictionary" {
                 match event {
                     WindowEvent::Focused(false) => {
                         let _ = window.hide();
@@ -1677,6 +1679,9 @@ fn main() {
             dictionary_pack_install,
             dictionary_pack_remove,
             dictionary_storage_folder_open,
+            dictionary_window::dictionary_window_state_get,
+            dictionary_window::dictionary_window_hide,
+            dictionary_window::dictionary_external_open,
             settings_update,
             settings_reset,
             main_window_set_theme,

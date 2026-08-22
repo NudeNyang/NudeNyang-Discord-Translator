@@ -31,6 +31,20 @@
         "skipTaskbar": true,
         "resizable": false,
         "shadow": false
+      },
+      {
+        "label": "dictionary",
+        "title": "NudeNyang Dictionary",
+        "url": "dictionary.html",
+        "width": 440,
+        "height": 630,
+        "visible": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false
       }
     ],
     "security": {
