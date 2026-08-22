@@ -238,6 +238,7 @@ const elements = {
   engineStateLabel: document.querySelector("#engine-state-label"),
   discordRestartManual: document.querySelector("#discord-restart-manual"),
   verificationBanner: document.querySelector("#verification-banner"),
+  verificationReconnect: document.querySelector("#verification-reconnect"),
   verificationReconnectHeader: document.querySelector("#verification-reconnect-header"),
   verificationContinueVanilla: document.querySelector("#verification-continue-vanilla"),
   modalLayer: document.querySelector("#modal-layer"),
@@ -2597,6 +2598,7 @@ function renderVerificationMode(status = state.runtime) {
   if (!active) state.verificationBannerDismissed = false;
   elements.verificationBanner.hidden = !active || state.verificationBannerDismissed;
   const disabled = Boolean(state.repairActive || state.verificationPromptActive);
+  elements.verificationReconnect.disabled = disabled;
   elements.verificationReconnectHeader.hidden = !active || !state.verificationBannerDismissed;
   elements.verificationReconnectHeader.disabled = disabled;
   elements.verificationReconnectHeader.dataset.state = state.repairActive ? "working" : "idle";
@@ -2900,6 +2902,7 @@ elements.discordRestartManual.addEventListener("click", restartDiscordManually);
 const requestVerificationReconnect = () => {
   reconnectAfterVerification().catch(error => showError("NudeNyang 재연결 실패", String(error)));
 };
+elements.verificationReconnect.addEventListener("click", requestVerificationReconnect);
 elements.verificationReconnectHeader.addEventListener("click", requestVerificationReconnect);
 elements.verificationContinueVanilla.addEventListener("click", () => {
   state.verificationBannerDismissed = true;

@@ -19,7 +19,7 @@ test("Discord verification pauses the pipe and offers a neutral compatibility fl
   assert.match(markup, /id="verification-banner"/);
   assert.match(markup, /Discord 인증을 완료한 후 NudeNyang을 다시 연결할 수 있습니다/);
   assert.match(markup, /id="verification-continue-vanilla"[^>]*>현재 Discord에서 인증 계속/);
-  assert.doesNotMatch(markup, /id="verification-reconnect"/);
+  assert.match(markup, /id="verification-reconnect"[^>]*>NudeNyang 다시 연결/);
   assert.match(script, /invoke\("discord_restart_vanilla"/);
   assert.match(script, /invoke\("discord_restart"/);
   assert.match(script, /tauriListen\("discord-verification-required"/);
@@ -32,14 +32,14 @@ test("Discord verification pauses the pipe and offers a neutral compatibility fl
 test("continuing verification reveals one persistent reconnect action", () => {
   assert.match(markup, /id="verification-reconnect-header"[^>]*hidden/);
   assert.match(script, /verificationReconnectHeader: document\.querySelector\("#verification-reconnect-header"\)/);
-  assert.doesNotMatch(script, /verificationReconnect: document\.querySelector\("#verification-reconnect"\)/);
+  assert.match(script, /verificationReconnect: document\.querySelector\("#verification-reconnect"\)/);
   assert.match(
     script,
     /elements\.verificationReconnectHeader\.hidden = !active \|\| !state\.verificationBannerDismissed/,
   );
   assert.match(script, /elements\.verificationReconnectHeader\.disabled = disabled/);
   assert.match(script, /elements\.verificationReconnectHeader\.addEventListener\("click", requestVerificationReconnect\)/);
-  assert.doesNotMatch(script, /elements\.verificationReconnect\.addEventListener/);
+  assert.match(script, /elements\.verificationReconnect\.addEventListener\("click", requestVerificationReconnect\)/);
   assert.match(
     script,
     /state\.verificationBannerDismissed = true;[\s\S]*?renderVerificationMode\(\);/,
