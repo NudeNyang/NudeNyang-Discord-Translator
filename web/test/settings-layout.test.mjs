@@ -127,9 +127,18 @@ test("image translation exposes adaptive local OCR quality controls", () => {
 
 test("settings window keeps a readable minimum width without horizontal navigation scrolling", () => {
   const windowConfig = JSON.parse(tauriConfig).app.windows.find(window => window.label === "main");
-  assert.ok(windowConfig.minWidth >= 760);
+  assert.equal(windowConfig.width, 1180);
+  assert.equal(windowConfig.height, 780);
+  assert.equal(windowConfig.minWidth, 900);
+  assert.equal(windowConfig.minHeight, 560);
+  assert.ok(windowConfig.minWidth > 760);
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.settings-navigation\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
   assert.doesNotMatch(styles, /\.settings-navigation\s*\{[^}]*overflow-x:\s*auto/);
+});
+
+test("wider settings window lets localized descriptions use the available width", () => {
+  assert.match(styles, /\.app-shell\s*\{[^}]*width:\s*min\(100%,\s*1120px\)/s);
+  assert.match(styles, /\.setting-copy p\s*\{[^}]*max-width:\s*68ch;/s);
 });
 
 test("settings navigation adapts to long localized labels", () => {

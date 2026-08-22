@@ -12,9 +12,9 @@
       {
         "label": "main",
         "title": "NudeNyang Discord Translator",
-        "width": 860,
+        "width": 1180,
         "height": 780,
-        "minWidth": 760,
+        "minWidth": 900,
         "minHeight": 560,
         "resizable": true
       },
