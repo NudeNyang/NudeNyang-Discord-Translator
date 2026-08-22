@@ -525,11 +525,12 @@ impl DictionaryStore {
                    OR note LIKE ?1 ESCAPE '\\' OR tags LIKE ?1 ESCAPE '\\') \
                    AND (?2='' OR source_language=?2) AND (?3='' OR target_language=?3) \
                    AND (?4=0 OR pinned=1) \
-                 ORDER BY pinned DESC, \
-                   CASE WHEN ?5='source' THEN normalized_source_term END COLLATE NOCASE ASC, \
-                   CASE WHEN ?5='target' THEN target_term END COLLATE NOCASE ASC, \
-                   CASE WHEN ?5='oldest' THEN updated_at END ASC, \
-                   CASE WHEN ?5='updated' THEN updated_at END DESC, id DESC \
+                  ORDER BY CASE WHEN ?5='source' THEN normalized_source_term END COLLATE NOCASE ASC, \
+                    CASE WHEN ?5='target' THEN target_term END COLLATE NOCASE ASC, \
+                    CASE WHEN ?5='oldest' THEN updated_at END ASC, \
+                    CASE WHEN ?5='oldest' THEN id END ASC, \
+                    CASE WHEN ?5='updated' THEN updated_at END DESC, \
+                    CASE WHEN ?5='updated' THEN id END DESC, id DESC \
                  LIMIT ?6 OFFSET ?7",
             )
             .map_err(|error| format!("개인 사전 검색을 준비하지 못했습니다: {error}"))?;
@@ -2119,6 +2120,8 @@ fn now_seconds() -> f64 {
 mod tests {
     use std::collections::HashMap;
 
+    use rusqlite::params;
+
     use super::{
         lookup_spans, segment_lookup_terms, segmentation_candidate_is_plausible, DictionaryStore,
         PersonalDictionaryBatch, PersonalDictionaryEntry, PersonalDictionaryQuery, StarterEntry,
@@ -2500,6 +2503,78 @@ mod tests {
                 .delete_personal_batch(vec![page.entries[0].id])
                 .unwrap(),
             1
+        );
+    }
+
+    #[test]
+    fn personal_dictionary_oldest_sort_ignores_favorite_priority() {
+        let store = temporary_store("personal-oldest-sort");
+        let make_entry = |source: &str, pinned: bool| PersonalDictionaryEntry {
+            id: 0,
+            source_language: "en".into(),
+            target_language: "ko".into(),
+            source_term: source.into(),
+            target_term: format!("{source}-ko"),
+            note: String::new(),
+            tags: String::new(),
+            pinned,
+            scope: "global".into(),
+            scope_value: String::new(),
+            case_sensitive: false,
+            whole_word: true,
+            created_at: 0.0,
+            updated_at: 0.0,
+        };
+        let older = store.upsert_personal(make_entry("older", false)).unwrap();
+        let newer_favorite = store.upsert_personal(make_entry("newer", true)).unwrap();
+        {
+            let connection = store.connection.lock().unwrap();
+            connection
+                .execute(
+                    "UPDATE personal_dictionary SET updated_at=CASE id WHEN ?1 THEN 100 ELSE 200 END",
+                    params![older.id],
+                )
+                .unwrap();
+        }
+
+        let page = store
+            .personal_entries_page(PersonalDictionaryQuery {
+                sort: "oldest".into(),
+                limit: 20,
+                ..Default::default()
+            })
+            .unwrap();
+
+        assert_eq!(
+            page.entries
+                .iter()
+                .map(|entry| entry.source_term.as_str())
+                .collect::<Vec<_>>(),
+            vec!["older", "newer"]
+        );
+        assert!(page.entries[1].pinned);
+        assert_eq!(page.entries[1].id, newer_favorite.id);
+
+        {
+            let connection = store.connection.lock().unwrap();
+            connection
+                .execute("UPDATE personal_dictionary SET updated_at=100", [])
+                .unwrap();
+        }
+        let tied_page = store
+            .personal_entries_page(PersonalDictionaryQuery {
+                sort: "oldest".into(),
+                limit: 20,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(
+            tied_page
+                .entries
+                .iter()
+                .map(|entry| entry.source_term.as_str())
+                .collect::<Vec<_>>(),
+            vec!["older", "newer"]
         );
     }
 

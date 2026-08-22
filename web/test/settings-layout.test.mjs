@@ -500,6 +500,18 @@ test("personal dictionary controls use localized custom selects and center the b
   );
   assert.match(
     markup,
+    /class="dictionary-manager-title">[\s\S]*?id="dictionary-personal-back"[\s\S]*?<span class="feature-badge">개인 사전<\/span>[\s\S]*?<h2 id="dictionary-manager-heading">저장한 용어 관리<\/h2>/,
+  );
+  assert.match(
+    styles,
+    /\.dictionary-manager-title\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*38px minmax\(0, 1fr\);/s,
+  );
+  assert.match(
+    styles,
+    /\.dictionary-back-button\s*\{[^}]*grid-column:\s*1;[^}]*grid-row:\s*2;[^}]*align-self:\s*center;/s,
+  );
+  assert.match(
+    markup,
     /id="dictionary-sort"[^>]*data-custom-select[^>]*>[\s\S]*?data-i18n-key="최근 수정순"/,
   );
   assert.match(script, /function initializeDictionaryCustomSelect\(select, \{ searchable = false \} = \{\}\)/);

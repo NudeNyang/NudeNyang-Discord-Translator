@@ -1437,17 +1437,35 @@ select:focus-visible,
 }
 
 .dictionary-manager-title {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-rows: auto 38px auto;
+  align-items: start;
   min-width: 0;
-  gap: 12px;
+  column-gap: 12px;
+}
+
+.dictionary-manager-title .feature-badge,
+.dictionary-manager-title h2,
+.dictionary-manager-title p {
+  grid-column: 2;
+}
+
+.dictionary-manager-title .feature-badge {
+  grid-row: 1;
+  justify-self: start;
 }
 
 .dictionary-manager-title h2 {
-  margin: 5px 0 2px;
+  grid-row: 2;
+  align-self: center;
+  margin: 0;
   font-size: 21px;
   letter-spacing: -0.025em;
 }
 
 .dictionary-manager-title p {
+  grid-row: 3;
   margin: 0;
   color: var(--muted);
   font-size: 12px;
@@ -1467,6 +1485,9 @@ select:focus-visible,
 
 .dictionary-back-button {
   position: relative;
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
   width: 38px;
   height: 38px;
   padding: 0;
