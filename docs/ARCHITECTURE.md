@@ -17,6 +17,8 @@ NudeNyang Discord Translator is a Tauri 2 desktop application with a Rust core. 
 | Credentials | `src-tauri/src/credentials.rs` |
 | Memory and SQLite caches | `src-tauri/src/cache.rs` |
 | OCR and image composition | `src-tauri/src/ocr.rs`, `image_translation.rs` |
+| Selection dictionary UI and requests | `src-tauri/src/dictionary_ui.rs`, `engine.rs` |
+| Offline packs and personal dictionary SQLite | `src-tauri/src/dictionary.rs` |
 | Updates | `src-tauri/src/updater.rs` |
 
 Engine work runs outside the UI thread. Incoming and outgoing translation can use different providers. When a provider changes, the engine advances its generation and ignores late results from the previous generation.
@@ -42,9 +44,10 @@ The integration is deliberately limited:
 - no modification of Discord installation files or server-side data;
 - changes are limited to the currently rendered DOM;
 - saved original DOM content is restored when translation is disabled or the app shuts down normally;
-- live translation remains off until the user accepts the integration notice.
+- live translation remains off until the user accepts the integration notice;
+- additional verification switches the app to verification compatibility mode, detaches the translation pipe, and waits for the user to reconnect after verification.
 
-This is not an officially supported Discord extension interface. Discord updates can change the renderer and break the integration, and use may carry policy risk.
+This is not an officially supported Discord extension interface. Discord updates can change the renderer and temporarily break the integration.
 
 ## Translation and data
 

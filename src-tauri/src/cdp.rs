@@ -303,6 +303,11 @@ impl CdpClient {
     }
 
     pub fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
+        if !is_allowed_cdp_method(method) {
+            return Err(format!(
+                "계정 행동을 만들 수 있는 CDP 명령은 허용되지 않습니다: {method}"
+            ));
+        }
         self.connect()?;
         let session_id = self.session_id.clone();
         self.raw_call(method, params, session_id.as_deref())
@@ -386,6 +391,10 @@ impl CdpClient {
     }
 }
 
+fn is_allowed_cdp_method(method: &str) -> bool {
+    !method.starts_with("Input.") || method == "Input.insertText"
+}
+
 impl Drop for CdpClient {
     fn drop(&mut self) {
         self.close();
@@ -409,7 +418,9 @@ fn first_address(host: &str, port: u16) -> Result<SocketAddr, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{local_websocket_matches_port, select_discord_target, CdpTarget};
+    use super::{
+        is_allowed_cdp_method, local_websocket_matches_port, select_discord_target, CdpTarget,
+    };
 
     fn target(id: &str, kind: &str, title: &str, url: &str) -> CdpTarget {
         CdpTarget {
@@ -475,5 +486,14 @@ mod tests {
             "ws://example.com:49152/devtools/page/1",
             49152
         ));
+    }
+
+    #[test]
+    fn cdp_input_is_limited_to_placing_review_text() {
+        assert!(is_allowed_cdp_method("Runtime.evaluate"));
+        assert!(is_allowed_cdp_method("Input.insertText"));
+        assert!(!is_allowed_cdp_method("Input.dispatchKeyEvent"));
+        assert!(!is_allowed_cdp_method("Input.dispatchMouseEvent"));
+        assert!(!is_allowed_cdp_method("Input.setFileInputFiles"));
     }
 }

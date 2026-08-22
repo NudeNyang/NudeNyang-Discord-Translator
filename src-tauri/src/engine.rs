@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
@@ -14,6 +14,13 @@ use tauri_plugin_opener::OpenerExt;
 use crate::cache::{CacheCleanupResult, TranslationCache};
 use crate::cdp::CdpClient;
 use crate::config::{default_config_path, AppConfig, ConfigStore};
+use crate::dictionary::{DictionaryLookupResult, DictionaryStore, PersonalDictionaryEntry};
+use crate::dictionary_ui::{
+    apply_dictionary_error_script, apply_dictionary_result_script, apply_dictionary_saved_script,
+    dictionary_ui_script, parse_dictionary_requests, DICTIONARY_CLEANUP_SCRIPT,
+};
+use crate::dictionary_window;
+use crate::discord_verification::{parse_verification_observation, VERIFICATION_DETECTION_SCRIPT};
 use crate::dom::{
     apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
     INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
@@ -25,18 +32,15 @@ use crate::image_translation::{
     ImageTranslationProcessor,
 };
 use crate::invite_assist::{invite_assist_script, parse_invite_open_request};
-use crate::language::Language;
+use crate::language::{detect_language, is_han_only, is_supported_language_code, Language};
 use crate::ocr::OcrQualityMode;
 use crate::outgoing::{
     apply_outgoing_detected_script, apply_outgoing_error_script, apply_outgoing_review_script,
-    apply_outgoing_suggestion_script, attach_outgoing_text_file_script,
-    capture_outgoing_send_script, finish_outgoing_review_script, outgoing_originals_ui_script,
-    outgoing_ui_script, parse_outgoing_bindings, parse_outgoing_requests,
-    prepare_outgoing_attachment_script, prepare_outgoing_reviewed_send_script,
-    prepare_outgoing_send_script, suggest_recent_language, OutgoingRequest,
-    OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
+    apply_outgoing_suggestion_script, finish_outgoing_review_script, outgoing_originals_ui_script,
+    outgoing_ui_script, parse_outgoing_bindings, parse_outgoing_requests, suggest_recent_language,
+    OutgoingRequest, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
+    OUTGOING_ORIGINALS_UI_VERSION,
 };
-use crate::text_split::split_for_discord;
 use crate::translation::{
     DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationCancellation,
     ModelPreparationProgress, ModelProgressObserver, OriginalTranslator, ResilientTranslator,
@@ -47,10 +51,10 @@ const MAX_BATCH_ITEMS: usize = 32;
 const CPU_MAX_BATCH_ITEMS: usize = 6;
 const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
 const DISPLAY_VIEW_SETTLE_DELAY: Duration = Duration::from_millis(250);
-const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
 const MAX_IMAGE_BASE64_BYTES: usize = (MAX_IMAGE_BYTES * 4 / 3) + 8;
+const VERIFICATION_SIGNAL_PREFIX: &str = "__NUDENYANG_VERIFICATION__:";
 
 type Locator = (String, String, usize);
 type PendingKey = (u64, u64, String, String, usize, String);
@@ -65,6 +69,8 @@ pub struct RuntimeStatus {
     pub cdp_connected: bool,
     pub connection_issue: String,
     pub discord_process_id: Option<u32>,
+    pub verification_required: bool,
+    pub verification_kind: String,
     pub engine: String,
     pub target_language: String,
     pub configured_translator: String,
@@ -82,10 +88,14 @@ impl RuntimeStatus {
     fn new(config: &AppConfig) -> Self {
         Self {
             enabled: config.enabled,
-            controller_enabled: config.enabled || config.outgoing_translation_enabled,
+            controller_enabled: config.enabled
+                || config.outgoing_translation_enabled
+                || config.dictionary_enabled,
             cdp_connected: false,
             connection_issue: String::new(),
             discord_process_id: None,
+            verification_required: config.discord_verification_mode,
+            verification_kind: String::new(),
             engine: "rust-native".to_string(),
             target_language: config.target_language.clone(),
             configured_translator: config.translator.clone(),
@@ -108,11 +118,15 @@ pub struct RustEngine {
     thread: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
+// Control messages are infrequent, and keeping the CDP client inline simplifies ownership
+// when a live Discord connection is replaced.
+#[allow(clippy::large_enum_variant)]
 enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
     CancelModelPreparation,
     ReplaceCdp(CdpClient, mpsc::Sender<Result<(), String>>),
+    PauseForVerification(String, mpsc::Sender<Result<(), String>>),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
     UiReady,
@@ -167,6 +181,7 @@ struct TranslationBatch {
     view_epoch: u64,
     view_scope: String,
     target: Language,
+    allowed_sources: Option<HashSet<Language>>,
     parts: Vec<DomPart>,
     context_scope: String,
     queued_at: Instant,
@@ -187,13 +202,21 @@ struct OutgoingTranslationBatch {
     target: Language,
     request_id: String,
     text: String,
-    send_immediately: bool,
+    queued_at: Instant,
+}
+
+struct DictionaryLocalizationBatch {
+    request_id: String,
+    target: Language,
+    context: String,
+    result: DictionaryLookupResult,
     queued_at: Instant,
 }
 
 enum WorkerCommand {
     Translate(TranslationBatch),
     TranslateImage(ImageTranslationBatch),
+    LocalizeDictionary(DictionaryLocalizationBatch),
     DiscardDisplayBefore {
         generation: u64,
         view_epoch: u64,
@@ -230,7 +253,7 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
         | WorkerCommand::ClearCacheMemory
         | WorkerCommand::DiscardDisplayBefore { .. }
         | WorkerCommand::Stop => 0,
-        WorkerCommand::Translate(_) => 1,
+        WorkerCommand::LocalizeDictionary(_) | WorkerCommand::Translate(_) => 1,
         WorkerCommand::TranslateImage(_) => 2,
     }
 }
@@ -263,6 +286,15 @@ fn next_worker_command(
                 generation,
                 view_epoch,
             } => (*generation, *view_epoch) == latest_view,
+            _ => true,
+        });
+    }
+    if let Some(latest_request_id) = backlog.iter().rev().find_map(|command| match command {
+        WorkerCommand::LocalizeDictionary(batch) => Some(batch.request_id.clone()),
+        _ => None,
+    }) {
+        backlog.retain(|command| match command {
+            WorkerCommand::LocalizeDictionary(batch) => batch.request_id == latest_request_id,
             _ => true,
         });
     }
@@ -307,7 +339,10 @@ enum WorkerResult {
         generation: u64,
         request_id: String,
         value: Result<String, String>,
-        send_immediately: bool,
+    },
+    DictionaryLocalized {
+        request_id: String,
+        result: DictionaryLookupResult,
     },
     DisplayActivated {
         generation: u64,
@@ -382,7 +417,10 @@ fn preparation_plan_for_active_lanes(
     plan: TranslatorPreparationPlan,
 ) -> TranslatorPreparationPlan {
     TranslatorPreparationPlan {
-        display: plan.display && (config.enabled || !is_local_model_name(&config.translator)),
+        display: plan.display
+            && (config.enabled
+                || config.dictionary_enabled
+                || !is_local_model_name(&config.translator)),
         outgoing: plan.outgoing
             && (config.outgoing_translation_enabled
                 || !is_local_model_name(&config.outgoing_translator)),
@@ -465,6 +503,16 @@ impl RustEngine {
             .map_err(|_| "Discord 보안 연결 검증 결과를 기다리지 못했습니다.".to_string())?
     }
 
+    pub fn pause_for_verification(&self, kind: &str) -> Result<(), String> {
+        let (result_tx, result_rx) = mpsc::channel();
+        self.controls
+            .send(Control::PauseForVerification(kind.to_string(), result_tx))
+            .map_err(|_| "Discord 인증을 위해 번역 연결을 중지하지 못했습니다.".to_string())?;
+        result_rx
+            .recv_timeout(Duration::from_secs(10))
+            .map_err(|_| "Discord 인증 보호 모드 전환 결과를 기다리지 못했습니다.".to_string())?
+    }
+
     pub fn attach_app(&self, app: AppHandle) -> Result<(), String> {
         self.controls
             .send(Control::AttachApp(app))
@@ -529,6 +577,7 @@ fn run_controller(
         .ok();
     let (preparation_tx, preparation_rx) = mpsc::channel();
     let outgoing_original_store = TranslationCache::open_default().ok();
+    let dictionary_store = DictionaryStore::open_default().ok();
     let mut outgoing_channel_languages = outgoing_original_store
         .as_ref()
         .and_then(|store| store.outgoing_channel_languages().ok())
@@ -546,7 +595,9 @@ fn run_controller(
     let mut connection_issue_reported = false;
     let mut image_ui_needs_cleanup = true;
     let mut outgoing_ui_needs_cleanup = true;
+    let mut dictionary_ui_needs_cleanup = true;
     let mut app_handle: Option<AppHandle> = None;
+    let mut verification_paused = config.discord_verification_mode;
     let mut ui_ready = false;
     let mut stopped = false;
     let mut pending_control = None;
@@ -565,6 +616,9 @@ fn run_controller(
                     let history_retention_changed = updated.translation_history_retention_days
                         != config.translation_history_retention_days;
                     let target_changed = updated.target_language != config.target_language;
+                    let incoming_languages_changed = updated.incoming_language_mode
+                        != config.incoming_language_mode
+                        || updated.incoming_source_languages != config.incoming_source_languages;
                     let image_ocr_quality_changed =
                         updated.image_ocr_quality != config.image_ocr_quality;
                     let mut requested_preparation = translator_preparation_plan(&config, &updated);
@@ -580,9 +634,15 @@ fn run_controller(
                     let enabled_changed = updated.enabled != config.enabled;
                     let outgoing_changed =
                         updated.outgoing_translation_enabled != config.outgoing_translation_enabled;
+                    let dictionary_changed =
+                        updated.dictionary_enabled != config.dictionary_enabled;
                     let warm_changed =
                         updated.keep_local_model_warm != config.keep_local_model_warm;
-                    if target_changed || runtime_changed || image_ocr_quality_changed {
+                    if target_changed
+                        || incoming_languages_changed
+                        || runtime_changed
+                        || image_ocr_quality_changed
+                    {
                         reset_translation_state(
                             &mut client,
                             &mut states,
@@ -599,8 +659,9 @@ fn run_controller(
                     }
                     update_status(&status, |runtime| {
                         runtime.enabled = config.enabled;
-                        runtime.controller_enabled =
-                            config.enabled || config.outgoing_translation_enabled;
+                        runtime.controller_enabled = config.enabled
+                            || config.outgoing_translation_enabled
+                            || config.dictionary_enabled;
                         runtime.target_language = config.target_language.clone();
                         runtime.configured_translator = config.translator.clone();
                         runtime.configured_outgoing_translator = config.outgoing_translator.clone();
@@ -630,14 +691,12 @@ fn run_controller(
                         if requested_preparation.outgoing && !preparation_plan.outgoing {
                             let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                         }
-                    } else if warm_changed {
-                        if !config.keep_local_model_warm {
-                            if !config.enabled {
-                                let _ = worker_tx.send(WorkerCommand::Release);
-                            }
-                            if !config.outgoing_translation_enabled {
-                                let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
-                            }
+                    } else if warm_changed && !config.keep_local_model_warm {
+                        if !config.enabled && !config.dictionary_enabled {
+                            let _ = worker_tx.send(WorkerCommand::Release);
+                        }
+                        if !config.outgoing_translation_enabled {
+                            let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                         }
                     }
                     if enabled_changed && !config.enabled {
@@ -646,7 +705,7 @@ fn run_controller(
                         pending.clear();
                         image_pending.clear();
                         generation += 1;
-                        if !config.keep_local_model_warm {
+                        if !config.keep_local_model_warm && !config.dictionary_enabled {
                             let _ = worker_tx.send(WorkerCommand::Release);
                         }
                     } else if enabled_changed {
@@ -699,14 +758,41 @@ fn run_controller(
                             let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                         }
                     }
+                    if dictionary_changed {
+                        dictionary_ui_needs_cleanup = true;
+                        if config.dictionary_enabled {
+                            let needs_preparation = status.lock().is_ok_and(|runtime| {
+                                display_preparation_is_required(&runtime, &config)
+                            });
+                            if ui_ready && needs_preparation && !preparation_requested {
+                                request_translator_preparation(
+                                    &config,
+                                    TranslatorPreparationPlan {
+                                        display: true,
+                                        outgoing: false,
+                                    },
+                                    &preparation_tx,
+                                    &progress_result_tx,
+                                    &status,
+                                    &mut preparation_generation,
+                                    &mut preparation_cancellation,
+                                );
+                            } else if !needs_preparation {
+                                let _ = worker_tx.send(WorkerCommand::Warm);
+                            }
+                        } else if !config.enabled && !config.keep_local_model_warm {
+                            let _ = worker_tx.send(WorkerCommand::Release);
+                        }
+                    }
                 }
                 Control::SetEnabled(enabled) => {
                     if config.enabled != enabled {
                         config.enabled = enabled;
                         update_status(&status, |runtime| {
                             runtime.enabled = enabled;
-                            runtime.controller_enabled =
-                                enabled || config.outgoing_translation_enabled;
+                            runtime.controller_enabled = enabled
+                                || config.outgoing_translation_enabled
+                                || config.dictionary_enabled;
                             if !enabled {
                                 runtime.connection_issue.clear();
                             }
@@ -761,7 +847,7 @@ fn run_controller(
                     let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                     update_status(&status, |runtime| {
                         runtime.enabled = false;
-                        runtime.controller_enabled = false;
+                        runtime.controller_enabled = config.dictionary_enabled;
                         runtime.translator_state = "queued".to_string();
                         runtime.translator_error.clear();
                         runtime.model_progress = None;
@@ -788,6 +874,17 @@ fn run_controller(
                         });
                         connection_issue_reported = true;
                     } else {
+                        verification_paused = false;
+                        config.discord_verification_mode = false;
+                        if let Some(app) = app_handle.as_ref() {
+                            if let Ok(updated) = app
+                                .state::<ConfigStore>()
+                                .update(json!({"discord_verification_mode": false}))
+                            {
+                                config = updated.clone();
+                                let _ = app.emit("settings-changed", updated);
+                            }
+                        }
                         client = Some(replacement);
                         states.clear();
                         pending.clear();
@@ -797,10 +894,51 @@ fn run_controller(
                         generation += 1;
                         image_ui_needs_cleanup = true;
                         outgoing_ui_needs_cleanup = true;
+                        dictionary_ui_needs_cleanup = true;
                         consecutive_connection_failures = 0;
                         connection_issue_reported = false;
+                        update_status(&status, |runtime| {
+                            runtime.verification_required = false;
+                            runtime.verification_kind.clear();
+                        });
                     }
                     let _ = result_tx.send(prepare_result);
+                }
+                Control::PauseForVerification(kind, result_tx) => {
+                    config.discord_verification_mode = true;
+                    restore(&mut client, &states, false);
+                    if let Some(active) = client.as_mut() {
+                        let _ = active.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+                        let _ = active.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
+                    }
+                    if let Some(mut active) = client.take() {
+                        active.close();
+                    }
+                    let guardian_result = crate::discord::disconnect_current_guardian();
+                    verification_paused = true;
+                    states.clear();
+                    pending.clear();
+                    image_pending.clear();
+                    outgoing_pending.clear();
+                    generation += 1;
+                    update_status(&status, |runtime| {
+                        runtime.cdp_connected = false;
+                        runtime.connection_issue.clear();
+                        runtime.verification_required = true;
+                        runtime.verification_kind = kind.clone();
+                        runtime.notice =
+                            "Discord 추가 인증을 위해 번역 연결을 일시 중지했습니다.".to_string();
+                    });
+                    if let Some(app) = app_handle.as_ref() {
+                        if let Ok(updated) = app
+                            .state::<ConfigStore>()
+                            .update(json!({"discord_verification_mode": true}))
+                        {
+                            config = updated.clone();
+                            let _ = app.emit("settings-changed", updated);
+                        }
+                    }
+                    let _ = result_tx.send(guardian_result);
                 }
                 Control::ClearCache(result_tx) => {
                     let result = outgoing_original_store
@@ -933,10 +1071,15 @@ fn run_controller(
             target,
             &config,
             &status,
+            dictionary_store.as_ref(),
+            app_handle.as_ref(),
         );
 
         let had_client = client.is_some();
         let result = (|| -> Result<(), String> {
+            if verification_paused {
+                return Ok(());
+            }
             if client.is_none() {
                 return Err(
                     "Discord가 보안 연결로 열리지 않았어. Discord 재시작을 진행해줘.".to_string(),
@@ -949,6 +1092,15 @@ fn run_controller(
                 runtime.cdp_connected = true;
                 runtime.connection_issue.clear();
             });
+            let verification = parse_verification_observation(
+                client
+                    .as_mut()
+                    .expect("connected CDP client")
+                    .evaluate(VERIFICATION_DETECTION_SCRIPT, false)?,
+            )?;
+            if verification.required {
+                return Err(format!("{VERIFICATION_SIGNAL_PREFIX}{}", verification.kind));
+            }
             if !prepare_display_view_for_dom(
                 client.as_mut().expect("connected CDP client"),
                 &mut pending,
@@ -963,6 +1115,29 @@ fn run_controller(
                 app_handle.as_ref(),
                 &config.ui_language,
             )?;
+            if config.dictionary_enabled {
+                let dictionary_translation_ready = status
+                    .lock()
+                    .is_ok_and(|runtime| runtime.active_translator == config.translator);
+                scan_dictionary(
+                    client.as_mut().expect("connected CDP client"),
+                    dictionary_store.as_ref(),
+                    app_handle.as_ref(),
+                    &config,
+                    &worker_tx,
+                    dictionary_translation_ready,
+                )?;
+                dictionary_ui_needs_cleanup = true;
+            } else if dictionary_ui_needs_cleanup {
+                client
+                    .as_mut()
+                    .expect("connected CDP client")
+                    .evaluate(DICTIONARY_CLEANUP_SCRIPT, false)?;
+                if let Some(app) = app_handle.as_ref() {
+                    let _ = dictionary_window::hide(app);
+                }
+                dictionary_ui_needs_cleanup = false;
+            }
             ensure_outgoing_originals(
                 client.as_mut().expect("connected CDP client"),
                 outgoing_original_store.as_ref(),
@@ -991,9 +1166,6 @@ fn run_controller(
                             &config.outgoing_target_language,
                             &config.ui_language,
                             &outgoing_channel_languages,
-                            config.outgoing_confirm_send,
-                            &config.hotkeys.send_outgoing_immediately,
-                            &config.hotkeys.review_outgoing_before_send,
                         ),
                         false,
                     )?;
@@ -1042,6 +1214,7 @@ fn run_controller(
                     &mut display_view,
                     generation,
                     target,
+                    incoming_allowed_sources(&config),
                     display_batch_item_limit(&config),
                     &worker_tx,
                 )?;
@@ -1074,25 +1247,76 @@ fn run_controller(
             Ok(())
         })();
         if let Err(error) = result {
-            if !had_client
-                && (config.enabled || config.outgoing_translation_enabled)
-                && !connection_issue_reported
-            {
-                consecutive_connection_failures += 1;
-                if consecutive_connection_failures >= 2 {
-                    connection_issue_reported = true;
-                    crate::diagnostics::error("discord-connection", &error);
-                    update_status(&status, |runtime| {
-                        runtime.connection_issue = error.clone();
-                    });
+            if let Some(kind) = error.strip_prefix(VERIFICATION_SIGNAL_PREFIX) {
+                config.discord_verification_mode = true;
+                restore(&mut client, &states, false);
+                if let Some(active) = client.as_mut() {
+                    let _ = active.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+                    let _ = active.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
                 }
-            }
-            if let Some(mut disconnected) = client.take() {
-                disconnected.close();
+                if let Some(mut disconnected) = client.take() {
+                    disconnected.close();
+                }
+                if let Err(guardian_error) = crate::discord::disconnect_current_guardian() {
+                    crate::diagnostics::warn("verification-guard", &guardian_error);
+                }
+                verification_paused = true;
+                states.clear();
+                pending.clear();
+                image_pending.clear();
+                outgoing_pending.clear();
+                generation += 1;
+                update_status(&status, |runtime| {
+                    runtime.cdp_connected = false;
+                    runtime.connection_issue.clear();
+                    runtime.verification_required = true;
+                    runtime.verification_kind = kind.to_string();
+                    runtime.notice =
+                        "Discord 추가 인증을 위해 번역 연결을 일시 중지했습니다.".to_string();
+                });
+                if let Some(app) = app_handle.as_ref() {
+                    if let Ok(updated) = app
+                        .state::<ConfigStore>()
+                        .update(json!({"discord_verification_mode": true}))
+                    {
+                        config = updated.clone();
+                        let _ = app.emit("settings-changed", updated);
+                    }
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                    }
+                    let _ = app.emit("discord-verification-required", json!({"kind": kind}));
+                }
+                crate::diagnostics::warn(
+                    "verification-guard",
+                    &format!("Discord verification detected; kind={kind}"),
+                );
+            } else {
+                if !had_client
+                    && (config.enabled
+                        || config.outgoing_translation_enabled
+                        || config.dictionary_enabled)
+                    && !connection_issue_reported
+                {
+                    consecutive_connection_failures += 1;
+                    if consecutive_connection_failures >= 2 {
+                        connection_issue_reported = true;
+                        crate::diagnostics::error("discord-connection", &error);
+                        update_status(&status, |runtime| {
+                            runtime.connection_issue = error.clone();
+                        });
+                    }
+                }
+                if let Some(mut disconnected) = client.take() {
+                    disconnected.close();
+                }
+                update_status(&status, |runtime| runtime.cdp_connected = false);
             }
             image_ui_needs_cleanup = true;
             outgoing_ui_needs_cleanup = true;
-            update_status(&status, |runtime| runtime.cdp_connected = false);
+            dictionary_ui_needs_cleanup = true;
         }
 
         let interval = if client.is_some() {
@@ -1113,6 +1337,7 @@ fn run_controller(
     restore(&mut client, &states, false);
     if let Some(client) = client.as_mut() {
         let _ = client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+        let _ = client.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
     }
     let _ = worker_tx.send(WorkerCommand::Stop);
     let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Stop);
@@ -1125,6 +1350,207 @@ fn run_controller(
     if let Some(mut client) = client {
         client.close();
     }
+}
+
+fn scan_dictionary(
+    client: &mut CdpClient,
+    store: Option<&DictionaryStore>,
+    app: Option<&AppHandle>,
+    config: &AppConfig,
+    worker: &mpsc::Sender<WorkerCommand>,
+    translation_ready: bool,
+) -> Result<(), String> {
+    let value = client.evaluate(
+        &dictionary_ui_script(
+            config.dictionary_enabled,
+            &config.ui_language,
+            &config.target_language,
+            config.dictionary_external_provider != "none",
+        ),
+        false,
+    )?;
+    for request in parse_dictionary_requests(value)?.into_iter().take(4) {
+        let outcome = match request.action.as_str() {
+            "lookup" => {
+                let app =
+                    app.ok_or_else(|| "사전 도구 창을 열 준비가 되지 않았습니다.".to_string())?;
+                dictionary_window::show_loading(
+                    app,
+                    &request.id,
+                    &request.query,
+                    &config.ui_language,
+                    &config.target_language,
+                    config.dictionary_external_provider != "none",
+                )?;
+                store
+                    .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
+                    .and_then(|store| {
+                        let source_language = dictionary_source_language(
+                            &request.source_language,
+                            &request.query,
+                            &request.context,
+                        );
+                        let target_language =
+                            if is_supported_language_code(&request.target_language) {
+                                request.target_language.as_str()
+                            } else {
+                                config.target_language.as_str()
+                            };
+                        let result = store.lookup_with_context(
+                            &request.query,
+                            &request.context,
+                            source_language.as_deref(),
+                            target_language,
+                        )?;
+                        let target = Language::try_from(result.target_language.as_str())
+                            .unwrap_or(Language::English);
+                        let (immediate, pending) =
+                            stage_dictionary_lookup_result(result, translation_ready);
+                        if let Some(result) = pending {
+                            worker
+                                .send(WorkerCommand::LocalizeDictionary(
+                                    DictionaryLocalizationBatch {
+                                        request_id: request.id.clone(),
+                                        target,
+                                        context: request.context.clone(),
+                                        result,
+                                        queued_at: Instant::now(),
+                                    },
+                                ))
+                                .map_err(|_| {
+                                    "Rust 사전 번역 작업 스레드가 종료되었습니다.".to_string()
+                                })?;
+                        }
+                        Ok(immediate)
+                    })
+                    .and_then(|result| {
+                        dictionary_window::show_result(
+                            app,
+                            &request.id,
+                            result,
+                            &config.ui_language,
+                            config.dictionary_external_provider != "none",
+                        )?;
+                        Ok(String::new())
+                    })
+            }
+            "save" => store
+                .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
+                .and_then(|store| {
+                    let detected = detect_language(&request.query).language;
+                    let source_language = if is_supported_language_code(&request.source_language) {
+                        request.source_language.clone()
+                    } else if detected != Language::Unknown {
+                        detected.code().to_string()
+                    } else {
+                        return Err(
+                            "개인 사전에 저장할 원문 언어를 확인하지 못했습니다.".to_string()
+                        );
+                    };
+                    let target_language = if is_supported_language_code(&request.target_language) {
+                        request.target_language.clone()
+                    } else {
+                        config.target_language.clone()
+                    };
+                    let saved = store.upsert_personal(PersonalDictionaryEntry {
+                        id: 0,
+                        source_language,
+                        target_language,
+                        source_term: request.query.clone(),
+                        target_term: request.target_term.clone(),
+                        note: request.note.clone(),
+                        tags: String::new(),
+                        pinned: false,
+                        scope: "global".to_string(),
+                        scope_value: String::new(),
+                        case_sensitive: false,
+                        whole_word: true,
+                        created_at: 0.0,
+                        updated_at: 0.0,
+                    })?;
+                    if let Some(app) = app {
+                        let _ = app.emit_to("main", "dictionary-personal-changed", &saved);
+                    }
+                    apply_dictionary_saved_script(&request.id)
+                }),
+            "open" => {
+                if config.dictionary_external_provider == "none" {
+                    Ok(String::new())
+                } else {
+                    app.ok_or_else(|| "기본 브라우저를 열 준비가 되지 않았습니다.".to_string())
+                        .and_then(|app| {
+                            dictionary_window::open_external_dictionary(app, &request.query)
+                        })
+                        .map(|()| String::new())
+                }
+            }
+            _ => Err("알 수 없는 사전 요청입니다.".to_string()),
+        };
+        let script = match outcome {
+            Ok(script) => script,
+            Err(error) => {
+                if request.action == "lookup" {
+                    if let Some(app) = app {
+                        if let Err(window_error) = dictionary_window::show_error(
+                            app,
+                            &request.id,
+                            &request.query,
+                            &config.ui_language,
+                            &config.target_language,
+                            config.dictionary_external_provider != "none",
+                            &error,
+                        ) {
+                            crate::diagnostics::warn("dictionary-window", &window_error);
+                        }
+                    }
+                    String::new()
+                } else {
+                    apply_dictionary_error_script(&request.id, &error)?
+                }
+            }
+        };
+        if !script.is_empty() {
+            client.evaluate(&script, false)?;
+        }
+    }
+    Ok(())
+}
+
+fn stage_dictionary_lookup_result(
+    mut result: DictionaryLookupResult,
+    translation_ready: bool,
+) -> (DictionaryLookupResult, Option<DictionaryLookupResult>) {
+    if translation_ready && (result.needs_localization() || result.needs_selection_translation()) {
+        let pending = result.clone();
+        result.localization_pending = true;
+        (result, Some(pending))
+    } else {
+        (result, None)
+    }
+}
+
+fn dictionary_source_language(
+    explicit_language: &str,
+    query: &str,
+    context: &str,
+) -> Option<String> {
+    if is_supported_language_code(explicit_language) {
+        return Some(explicit_language.to_string());
+    }
+    let selected_language = detect_language(query).language;
+    let contextual_language = detect_language(context).language;
+    if is_han_only(query)
+        && matches!(
+            contextual_language,
+            Language::Japanese | Language::ChineseSimplified | Language::ChineseTraditional
+        )
+    {
+        return Some(contextual_language.code().to_string());
+    }
+    if selected_language != Language::Unknown {
+        return Some(selected_language.code().to_string());
+    }
+    (contextual_language != Language::Unknown).then(|| contextual_language.code().to_string())
 }
 
 fn handle_invite_assist(
@@ -1193,6 +1619,9 @@ fn maybe_cleanup_translation_history(
     }
 }
 
+// This boundary receives the live CDP and worker state together so one scan cannot mix
+// generations or status handles.
+#[allow(clippy::too_many_arguments)]
 fn scan_images(
     client: &mut CdpClient,
     pending: &mut HashSet<ImagePendingKey>,
@@ -1324,6 +1753,9 @@ fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, 
     Ok(decoded)
 }
 
+// DOM scanning operates on one coherent runtime snapshot. Grouping these values into an
+// additional state object would obscure their borrowing and generation boundaries.
+#[allow(clippy::too_many_arguments)]
 fn scan_dom(
     client: &mut CdpClient,
     states: &HashMap<Locator, PartState>,
@@ -1331,6 +1763,7 @@ fn scan_dom(
     display_view: &mut DisplayViewState,
     generation: u64,
     target: Language,
+    allowed_sources: Option<HashSet<Language>>,
     max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
 ) -> Result<bool, String> {
@@ -1358,6 +1791,7 @@ fn scan_dom(
                 view_epoch: display_view.epoch,
                 view_scope: display_view.scope.clone(),
                 target,
+                allowed_sources,
                 parts,
                 context_scope,
                 queued_at: Instant::now(),
@@ -1529,9 +1963,6 @@ fn scan_outgoing(
             &config.outgoing_target_language,
             &config.ui_language,
             channel_languages,
-            config.outgoing_confirm_send,
-            &config.hotkeys.send_outgoing_immediately,
-            &config.hotkeys.review_outgoing_before_send,
         ),
         false,
     )?)?;
@@ -1562,13 +1993,6 @@ fn scan_outgoing(
         if request.id.is_empty() || request.text.trim().is_empty() {
             continue;
         }
-        if request.action == "send-reviewed" {
-            if let Err(error) = dispatch_outgoing_reviewed_send(client, &request.id, &request.text)
-            {
-                client.evaluate(&apply_outgoing_error_script(&request.id, &error)?, false)?;
-            }
-            continue;
-        }
         if request.selected_language == "auto" {
             let suggestion = suggest_recent_language(&request.recent_messages);
             if let Some(target) = suggestion {
@@ -1577,20 +2001,6 @@ fn scan_outgoing(
                 continue;
             }
             client.evaluate(&apply_outgoing_suggestion_script(&request.id, None)?, false)?;
-            continue;
-        }
-        if request.selected_language == "original" {
-            if let Err(error) = dispatch_outgoing_send(client, &request.id, None) {
-                client.evaluate(
-                    &apply_outgoing_error_script(
-                        &request.id,
-                        &format!(
-                            "메시지를 전송하지 못했습니다. 번역하지 않고 원문을 유지합니다. {error}"
-                        ),
-                    )?,
-                    false,
-                )?;
-            }
             continue;
         }
         let target = match Language::try_from(request.selected_language.as_str()) {
@@ -1628,100 +2038,9 @@ fn enqueue_outgoing_translation(
             target,
             request_id: request.id,
             text: request.text,
-            send_immediately: request.send_immediately,
             queued_at: Instant::now(),
         }))
         .map_err(|_| "전송 메시지 통역 작업을 시작하지 못했습니다.".to_string())
-}
-
-fn dispatch_outgoing_send(
-    client: &mut CdpClient,
-    request_id: &str,
-    replacement: Option<&str>,
-) -> Result<(), String> {
-    if let Some(text) = replacement {
-        let utf16_units = text.encode_utf16().count();
-        crate::diagnostics::info(
-            "outgoing-translation",
-            &format!(
-                "dispatch prepared; utf16_units={utf16_units}; delivery={}",
-                if utf16_units > DISCORD_MESSAGE_UTF16_LIMIT {
-                    "attachment"
-                } else {
-                    "single-message"
-                }
-            ),
-        );
-    }
-    if let Some(text) =
-        replacement.filter(|text| text.encode_utf16().count() > DISCORD_MESSAGE_UTF16_LIMIT)
-    {
-        if dispatch_outgoing_text_file(client, request_id, text)? {
-            return Ok(());
-        }
-        return Err(
-            "장문 번역문을 텍스트 파일로 첨부하지 못했습니다. 원문은 입력창에 유지됩니다."
-                .to_string(),
-        );
-    }
-
-    let parts = replacement
-        .map(|text| split_for_discord(text, DISCORD_MESSAGE_UTF16_LIMIT))
-        .unwrap_or_else(|| vec![String::new()]);
-    if parts.is_empty() || replacement.is_some_and(str::is_empty) {
-        return Err("전송할 번역문이 없습니다.".to_string());
-    }
-
-    for (index, part) in parts.iter().enumerate() {
-        let continuation = index > 0;
-        let final_part = index + 1 == parts.len();
-        let deadline = Instant::now() + Duration::from_secs(5);
-        let prepared = loop {
-            let prepared = client.evaluate(
-                &prepare_outgoing_send_script(
-                    request_id,
-                    replacement.is_some(),
-                    continuation,
-                    final_part,
-                    index + 1,
-                    parts.len(),
-                )?,
-                false,
-            )?;
-            if prepared.as_bool() == Some(true) {
-                break true;
-            }
-            if Instant::now() >= deadline {
-                break false;
-            }
-            thread::sleep(Duration::from_millis(40));
-        };
-        if !prepared {
-            return if index == 0 {
-                Err(
-                    "Discord 메시지 입력창을 찾을 수 없습니다. 원문은 입력창에 유지됩니다."
-                        .to_string(),
-                )
-            } else {
-                Err(format!(
-                    "분할된 번역문 {}개 중 {index}개를 전송했습니다. 나머지 메시지는 입력창 상태를 확인한 후 다시 전송하십시오.",
-                    parts.len()
-                ))
-            };
-        }
-        if replacement.is_some() {
-            client.call("Input.insertText", json!({"text": part}))?;
-        }
-        let captured = client.evaluate(&capture_outgoing_send_script(request_id)?, false)?;
-        if captured.as_bool() != Some(true) {
-            return Err("전송 직전 메시지 내용을 보존하지 못했습니다.".to_string());
-        }
-        dispatch_enter(client)?;
-        if !final_part {
-            thread::sleep(Duration::from_millis(250));
-        }
-    }
-    Ok(())
 }
 
 fn dispatch_outgoing_review(
@@ -1744,106 +2063,6 @@ fn dispatch_outgoing_review(
     Ok(())
 }
 
-fn dispatch_outgoing_reviewed_send(
-    client: &mut CdpClient,
-    request_id: &str,
-    text: &str,
-) -> Result<(), String> {
-    if text.encode_utf16().count() > DISCORD_MESSAGE_UTF16_LIMIT {
-        if dispatch_outgoing_text_file(client, request_id, text)? {
-            return Ok(());
-        }
-        return Err("첨삭한 장문을 텍스트 파일로 전송하지 못했습니다.".to_string());
-    }
-    let prepared = client.evaluate(&prepare_outgoing_reviewed_send_script(request_id)?, false)?;
-    if prepared.as_bool() != Some(true) {
-        return Err("확인한 번역문을 전송할 입력창을 찾지 못했습니다.".to_string());
-    }
-    let captured = client.evaluate(&capture_outgoing_send_script(request_id)?, false)?;
-    if captured.as_bool() != Some(true) {
-        return Err("첨삭한 번역문의 전송 기록을 보존하지 못했습니다.".to_string());
-    }
-    dispatch_enter(client)
-}
-
-fn dispatch_outgoing_text_file(
-    client: &mut CdpClient,
-    request_id: &str,
-    content: &str,
-) -> Result<bool, String> {
-    let prepared = client.evaluate(&prepare_outgoing_attachment_script(request_id)?, false)?;
-    if prepared.as_bool() != Some(true) {
-        return Ok(false);
-    }
-
-    dispatch_backspace(client)?;
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let filename = format!("NudeNyangDiscordTranslator-translation-{timestamp}.txt");
-    let attached = client.evaluate(
-        &attach_outgoing_text_file_script(request_id, content, &filename)?,
-        false,
-    )?;
-    if attached.as_bool() != Some(true) {
-        return Ok(false);
-    }
-
-    // Discord가 change 이벤트로 첨부 파일을 읽고 전송 대기열을 만드는 시간을 확보합니다.
-    thread::sleep(Duration::from_millis(700));
-    dispatch_enter(client)?;
-    Ok(true)
-}
-
-fn dispatch_backspace(client: &mut CdpClient) -> Result<(), String> {
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "rawKeyDown",
-            "key": "Backspace",
-            "code": "Backspace",
-            "windowsVirtualKeyCode": 8,
-            "nativeVirtualKeyCode": 8
-        }),
-    )?;
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "keyUp",
-            "key": "Backspace",
-            "code": "Backspace",
-            "windowsVirtualKeyCode": 8,
-            "nativeVirtualKeyCode": 8
-        }),
-    )?;
-    Ok(())
-}
-
-fn dispatch_enter(client: &mut CdpClient) -> Result<(), String> {
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "rawKeyDown",
-            "key": "Enter",
-            "code": "Enter",
-            "windowsVirtualKeyCode": 13,
-            "nativeVirtualKeyCode": 13
-        }),
-    )?;
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "keyUp",
-            "key": "Enter",
-            "code": "Enter",
-            "windowsVirtualKeyCode": 13,
-            "nativeVirtualKeyCode": 13
-        }),
-    )?;
-    Ok(())
-}
-
 #[allow(clippy::too_many_arguments)]
 fn drain_worker_results(
     results: &mpsc::Receiver<WorkerResult>,
@@ -1860,6 +2079,8 @@ fn drain_worker_results(
     target: Language,
     config: &AppConfig,
     status: &Arc<Mutex<RuntimeStatus>>,
+    dictionary_store: Option<&DictionaryStore>,
+    app: Option<&AppHandle>,
 ) {
     let mut changes = Vec::new();
     while let Ok(result) = results.try_recv() {
@@ -1984,7 +2205,6 @@ fn drain_worker_results(
                 generation: result_generation,
                 request_id,
                 value,
-                send_immediately,
             } => {
                 outgoing_pending.remove(&(result_generation, request_id.clone()));
                 if result_generation != *generation || !config.outgoing_translation_enabled {
@@ -1995,16 +2215,12 @@ fn drain_worker_results(
                 };
                 match value {
                     Ok(translated) => {
-                        let delivery = if send_immediately {
-                            dispatch_outgoing_send(client, &request_id, Some(&translated))
-                        } else {
-                            dispatch_outgoing_review(client, &request_id, &translated)
-                        };
+                        let delivery = dispatch_outgoing_review(client, &request_id, &translated);
                         if let Err(error) = delivery {
                             crate::diagnostics::error("outgoing-translation", &error);
                             if let Ok(script) = apply_outgoing_error_script(
                                 &request_id,
-                                &format!("번역문을 모두 전송하지 못했습니다. {error}"),
+                                &format!("번역문을 입력창에 준비하지 못했습니다. {error}"),
                             ) {
                                 let _ = client.evaluate(&script, false);
                             }
@@ -2020,6 +2236,31 @@ fn drain_worker_results(
                         ) {
                             let _ = client.evaluate(&script, false);
                         }
+                    }
+                }
+            }
+            WorkerResult::DictionaryLocalized { request_id, result } => {
+                if let Some(store) = dictionary_store {
+                    if let Err(error) = store.cache_localized_result(&result) {
+                        crate::diagnostics::warn("dictionary", &error);
+                    }
+                }
+                if let Some(app) = app {
+                    if let Err(error) = dictionary_window::show_result(
+                        app,
+                        &request_id,
+                        result,
+                        &config.ui_language,
+                        config.dictionary_external_provider != "none",
+                    ) {
+                        crate::diagnostics::warn("dictionary-window", &error);
+                    }
+                } else if let Some(client) = client.as_mut() {
+                    match apply_dictionary_result_script(&request_id, &result) {
+                        Ok(script) => {
+                            let _ = client.evaluate(&script, false);
+                        }
+                        Err(error) => crate::diagnostics::warn("dictionary", &error),
                     }
                 }
             }
@@ -2130,7 +2371,9 @@ fn finish_activation_status(
     let mut release = false;
     update_status(status, |runtime| {
         let display_ready = runtime.active_translator == runtime.configured_translator
-            || (!config.enabled && is_local_model_name(&runtime.configured_translator));
+            || (!config.enabled
+                && !config.dictionary_enabled
+                && is_local_model_name(&runtime.configured_translator));
         let outgoing_ready = runtime.active_outgoing_translator
             == runtime.configured_outgoing_translator
             || (!config.outgoing_translation_enabled
@@ -2143,6 +2386,7 @@ fn finish_activation_status(
         runtime.model_progress = None;
         let model_is_prepared = !is_local_model_name(&runtime.active_translator)
             || config.enabled
+            || config.dictionary_enabled
             || config.outgoing_translation_enabled
             || config.keep_local_model_warm;
         runtime.notice = if runtime.local_model_device == "vram-protected" {
@@ -2161,6 +2405,7 @@ fn finish_activation_status(
         release = (is_local_model_name(&runtime.active_translator)
             || is_local_model_name(&runtime.active_outgoing_translator))
             && !config.enabled
+            && !config.dictionary_enabled
             && !config.outgoing_translation_enabled
             && !config.keep_local_model_warm;
     });
@@ -2217,11 +2462,12 @@ fn run_translation_worker(
                     .iter()
                     .map(incoming_context_key)
                     .collect::<Vec<_>>();
-                let values = service.translate_many_for_incoming_contextual(
+                let values = service.translate_many_for_incoming_contextual_filtered(
                     &texts,
                     &message_keys,
                     &batch.context_scope,
                     batch.target,
+                    batch.allowed_sources.as_ref(),
                 );
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,
@@ -2247,6 +2493,33 @@ fn run_translation_worker(
                     source_key: batch.source_key,
                     outcome,
                 });
+            }
+            WorkerCommand::LocalizeDictionary(batch) => {
+                let DictionaryLocalizationBatch {
+                    request_id,
+                    target,
+                    context,
+                    result,
+                    queued_at,
+                } = batch;
+                let selection_count = usize::from(result.needs_selection_translation());
+                log_worker_queue(
+                    "dictionary",
+                    queued_at,
+                    result.entries.len() + selection_count,
+                    result
+                        .entries
+                        .iter()
+                        .map(|entry| entry.definition.chars().count())
+                        .sum::<usize>()
+                        + if selection_count == 1 {
+                            result.query.chars().count()
+                        } else {
+                            0
+                        },
+                );
+                let result = localize_dictionary_result(&mut service, result, &context, target);
+                let _ = results.send(WorkerResult::DictionaryLocalized { request_id, result });
             }
             WorkerCommand::DiscardDisplayBefore { .. } => {}
             WorkerCommand::Activate {
@@ -2285,6 +2558,328 @@ fn run_translation_worker(
             WorkerCommand::Stop => break,
         }
     }
+}
+
+fn localize_dictionary_result(
+    service: &mut TranslationService,
+    mut result: DictionaryLookupResult,
+    context: &str,
+    target: Language,
+) -> DictionaryLookupResult {
+    const DICTIONARY_LOCALIZATION_BATCH_ITEMS: usize = 2;
+
+    #[derive(Clone, Copy)]
+    enum LocalizationTarget {
+        Selection,
+        Context,
+        Entry(usize),
+    }
+
+    result.localization_pending = false;
+    let mut texts = Vec::new();
+    let mut sources = Vec::new();
+    let mut targets = Vec::new();
+    let context = context.trim();
+    let context_matches_selection = !context.is_empty() && context == result.query.trim();
+    let detected_context_language = detect_language(context).language;
+    let source_language =
+        Language::try_from(result.source_language.as_str()).unwrap_or(Language::Unknown);
+    let context_source = if detected_context_language == Language::Unknown {
+        source_language
+    } else {
+        detected_context_language
+    };
+    let mut localized_context = if !context.is_empty() && context_source == target {
+        context.to_string()
+    } else {
+        String::new()
+    };
+    let selection_needs_translation = result.needs_selection_translation();
+    let mut contextual_focus = String::new();
+    if selection_needs_translation
+        && !context_matches_selection
+        && !context.is_empty()
+        && source_language != Language::Unknown
+        && source_language != target
+    {
+        match service.translate_span_with_context(
+            &result.query,
+            context,
+            source_language,
+            target,
+        ) {
+            Ok((translated_selection, translated_context)) => {
+                if dictionary_translation_is_acceptable(
+                    &result.query,
+                    &translated_selection,
+                    target,
+                ) {
+                    contextual_focus = translated_selection.trim().to_string();
+                } else {
+                    log_rejected_dictionary_translation(
+                        "contextual selection",
+                        &result.query,
+                        &translated_selection,
+                        target,
+                    );
+                }
+                if dictionary_translation_is_acceptable(context, &translated_context, target) {
+                    localized_context = translated_context.trim().to_string();
+                } else {
+                    log_rejected_dictionary_translation(
+                        "contextual sentence",
+                        context,
+                        &translated_context,
+                        target,
+                    );
+                }
+            }
+            Err(error) => crate::diagnostics::warn(
+                "dictionary",
+                &format!(
+                    "contextual selection translation failed; using separate translation: error={error}"
+                ),
+            ),
+        }
+    }
+    if selection_needs_translation && result.selection_translation.is_empty() {
+        texts.push(result.query.clone());
+        sources.push(source_language);
+        targets.push(LocalizationTarget::Selection);
+    }
+    if !context.is_empty()
+        && !context_matches_selection
+        && context_source != Language::Unknown
+        && context_source != target
+        && localized_context.is_empty()
+    {
+        texts.push(context.to_string());
+        sources.push(context_source);
+        targets.push(LocalizationTarget::Context);
+    }
+
+    for (index, entry) in result.entries.iter().enumerate() {
+        if entry.definition.is_empty()
+            || entry.definition_origin != "original"
+            || entry.definition_language == result.target_language
+        {
+            continue;
+        }
+        texts.push(entry.definition.clone());
+        sources.push(
+            Language::try_from(entry.definition_language.as_str()).unwrap_or(Language::Unknown),
+        );
+        targets.push(LocalizationTarget::Entry(index));
+    }
+
+    for chunk_start in (0..texts.len()).step_by(DICTIONARY_LOCALIZATION_BATCH_ITEMS) {
+        let chunk_end = (chunk_start + DICTIONARY_LOCALIZATION_BATCH_ITEMS).min(texts.len());
+        let chunk_texts = &texts[chunk_start..chunk_end];
+        let chunk_sources = &sources[chunk_start..chunk_end];
+        let translated = match service.translate_many_with_sources(
+            chunk_texts,
+            chunk_sources,
+            target,
+        ) {
+            Ok(translated) => translated.into_iter().map(Some).collect::<Vec<_>>(),
+            Err(error) => {
+                crate::diagnostics::warn(
+                    "dictionary",
+                    &format!(
+                        "dictionary localization batch failed; retrying items separately: items={}; error={error}",
+                        chunk_texts.len()
+                    ),
+                );
+                chunk_texts
+                    .iter()
+                    .zip(chunk_sources)
+                    .map(|(text, source)| {
+                        match service.translate_many_with_sources(
+                            std::slice::from_ref(text),
+                            std::slice::from_ref(source),
+                            target,
+                        ) {
+                            Ok(mut translated) => translated.pop(),
+                            Err(item_error) => {
+                                crate::diagnostics::warn(
+                                    "dictionary",
+                                    &format!(
+                                        "dictionary localization item kept as original: chars={}; source={}; target={}; error={item_error}",
+                                        text.chars().count(),
+                                        source.code(),
+                                        target.code()
+                                    ),
+                                );
+                                None
+                            }
+                        }
+                    })
+                    .collect()
+            }
+        };
+
+        for (offset, translated) in translated.into_iter().enumerate() {
+            let Some(translated) = translated else {
+                continue;
+            };
+            match targets[chunk_start + offset] {
+                LocalizationTarget::Selection => {
+                    if dictionary_translation_is_acceptable(&result.query, &translated, target) {
+                        result.selection_translation = translated.trim().to_string();
+                        if context_matches_selection {
+                            localized_context = result.selection_translation.clone();
+                        }
+                    } else {
+                        log_rejected_dictionary_translation(
+                            "selection",
+                            &result.query,
+                            &translated,
+                            target,
+                        );
+                    }
+                }
+                LocalizationTarget::Context => {
+                    if dictionary_translation_is_acceptable(context, &translated, target) {
+                        localized_context = translated.trim().to_string();
+                    } else {
+                        log_rejected_dictionary_translation(
+                            "context",
+                            context,
+                            &translated,
+                            target,
+                        );
+                    }
+                }
+                LocalizationTarget::Entry(index) => {
+                    let entry = &mut result.entries[index];
+                    if dictionary_translation_is_acceptable(&entry.definition, &translated, target)
+                    {
+                        entry.definition = translated.trim().to_string();
+                        entry.definition_language = result.target_language.clone();
+                        entry.definition_origin = "automatic".to_string();
+                    } else {
+                        log_rejected_dictionary_translation(
+                            "gloss",
+                            &entry.definition,
+                            &translated,
+                            target,
+                        );
+                    }
+                }
+            }
+        }
+    }
+    if !localized_context.is_empty() {
+        let mut ranking_focus = result.selection_translation.clone();
+        if !contextual_focus.is_empty()
+            && !contextual_focus.eq_ignore_ascii_case(&result.selection_translation)
+        {
+            if !ranking_focus.is_empty() {
+                ranking_focus.push(' ');
+            }
+            ranking_focus.push_str(&contextual_focus);
+        }
+        if !ranking_focus.is_empty() && source_language != target {
+            result.rerank_for_localized_context(&localized_context, &ranking_focus);
+        } else {
+            result.rerank_for_context(&localized_context);
+        }
+    }
+    result
+}
+
+fn log_rejected_dictionary_translation(
+    kind: &str,
+    source: &str,
+    translated: &str,
+    target: Language,
+) {
+    crate::diagnostics::warn(
+        "dictionary",
+        &format!(
+            "dictionary {kind} translation rejected by quality gate: source_chars={}; translated_chars={}; target={}",
+            source.chars().count(),
+            translated.chars().count(),
+            target.code()
+        ),
+    );
+}
+
+fn dictionary_translation_is_acceptable(source: &str, translated: &str, target: Language) -> bool {
+    let source = source.trim();
+    let translated = translated.trim();
+    if source.is_empty()
+        || translated.is_empty()
+        || source == translated
+        || target == Language::Unknown
+    {
+        return false;
+    }
+    let source_length = source.chars().count();
+    let translated_length = translated.chars().count();
+    let maximum_length = source_length.saturating_mul(6).saturating_add(80).min(800);
+    if translated_length > maximum_length {
+        return false;
+    }
+    let lowered = translated.to_lowercase();
+    if [
+        "translation:",
+        "translated text:",
+        "answer:",
+        "result:",
+        "번역:",
+        "뜻:",
+    ]
+    .iter()
+    .any(|prefix| lowered.starts_with(prefix))
+        || lowered.contains("```")
+        || lowered.contains("<|")
+        || lowered.contains("here is the translation")
+    {
+        return false;
+    }
+    dictionary_target_script_is_present(translated, target)
+}
+
+fn dictionary_target_script_is_present(text: &str, target: Language) -> bool {
+    let in_range = |character: char, start: char, end: char| (start..=end).contains(&character);
+    text.chars().any(|character| match target {
+        Language::Korean => in_range(character, '\u{ac00}', '\u{d7af}'),
+        Language::Japanese => {
+            in_range(character, '\u{3040}', '\u{30ff}')
+                || in_range(character, '\u{3400}', '\u{9fff}')
+        }
+        Language::ChineseSimplified | Language::ChineseTraditional => {
+            in_range(character, '\u{3400}', '\u{9fff}')
+        }
+        Language::Hindi => in_range(character, '\u{0900}', '\u{097f}'),
+        Language::Russian | Language::Ukrainian => in_range(character, '\u{0400}', '\u{052f}'),
+        Language::Arabic | Language::Urdu | Language::Persian => {
+            in_range(character, '\u{0600}', '\u{06ff}')
+                || in_range(character, '\u{0750}', '\u{077f}')
+        }
+        Language::Thai => in_range(character, '\u{0e00}', '\u{0e7f}'),
+        Language::Bengali => in_range(character, '\u{0980}', '\u{09ff}'),
+        Language::Tamil => in_range(character, '\u{0b80}', '\u{0bff}'),
+        Language::Hebrew => in_range(character, '\u{0590}', '\u{05ff}'),
+        Language::English
+        | Language::BrazilianPortuguese
+        | Language::LatinAmericanSpanish
+        | Language::German
+        | Language::French
+        | Language::Indonesian
+        | Language::Vietnamese
+        | Language::Polish
+        | Language::Turkish
+        | Language::Italian
+        | Language::Dutch
+        | Language::Malay
+        | Language::Filipino
+        | Language::Czech => {
+            character.is_ascii_alphabetic() || in_range(character, '\u{00c0}', '\u{024f}')
+        }
+        Language::Unknown => false,
+    })
 }
 
 fn incoming_context_key(part: &DomPart) -> Option<String> {
@@ -2326,13 +2921,11 @@ fn run_outgoing_translation_worker(
         match command {
             OutgoingWorkerCommand::Translate(batch) => {
                 log_worker_queue("outgoing", batch.queued_at, 1, batch.text.chars().count());
-                let send_immediately = batch.send_immediately;
                 let value = service.translate_for_discord(&batch.text, batch.target);
                 let _ = results.send(WorkerResult::OutgoingTranslated {
                     generation: batch.generation,
                     request_id: batch.request_id,
                     value,
-                    send_immediately,
                 });
             }
             OutgoingWorkerCommand::Activate {
@@ -2587,6 +3180,16 @@ fn display_translation_is_ready(config: &AppConfig, active_translator: &str) -> 
     config.enabled && active_translator == config.translator
 }
 
+fn incoming_allowed_sources(config: &AppConfig) -> Option<HashSet<Language>> {
+    (config.incoming_language_mode == "selected").then(|| {
+        config
+            .incoming_source_languages
+            .iter()
+            .filter_map(|code| Language::try_from(code.as_str()).ok())
+            .collect()
+    })
+}
+
 fn translator_label(name: &str) -> &str {
     if let Some(model_size) = HyMtModelSize::from_config_id(name) {
         return model_size.runtime_label();
@@ -2652,27 +3255,149 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_attach_text_scripts, display_batch_item_limit, display_preparation_is_required,
-        display_translation_is_ready, display_view_scope, incoming_context_key,
-        initial_model_preparation_progress, next_worker_command, plan_dom_updates, poll_interval,
+        cdp_attach_text_scripts, dictionary_source_language, dictionary_translation_is_acceptable,
+        display_batch_item_limit, display_preparation_is_required, display_translation_is_ready,
+        display_view_scope, incoming_context_key, initial_model_preparation_progress,
+        localize_dictionary_result, next_worker_command, plan_dom_updates, poll_interval,
         preparation_plan_for_active_lanes, run_outgoing_translation_worker,
-        translator_activation_notice, translator_label, translator_preparation_plan,
-        DisplayViewObservation, DisplayViewState, OutgoingTranslationBatch, OutgoingWorkerCommand,
-        PartState, RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan,
-        WorkerCommand, WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY,
-        MAX_BATCH_ITEMS,
+        stage_dictionary_lookup_result, translator_activation_notice, translator_label,
+        translator_preparation_plan, DictionaryLocalizationBatch, DisplayViewObservation,
+        DisplayViewState, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
+        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
+        WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
     };
+    use crate::cache::TranslationCache;
     use crate::cdp::{discord_target, CdpClient};
     use crate::config::AppConfig;
+    use crate::dictionary::{DictionaryEntry, DictionaryLookupResult};
     use crate::dom::{
         apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
         INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
     use crate::language::{detect_explicit_language, Language};
+    use crate::translation::{TranslationService, Translator};
     use std::collections::{HashMap, HashSet, VecDeque};
-    use std::sync::mpsc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{mpsc, Arc};
     use std::thread;
     use std::time::{Duration, Instant};
+
+    struct DictionaryTestTranslator;
+
+    impl Translator for DictionaryTestTranslator {
+        fn display_name(&self) -> &str {
+            "Dictionary test translator"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "dictionary-test:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            target: Language,
+        ) -> Result<String, String> {
+            Ok(match target {
+                Language::Japanese => "現在より後の時間、またはこれから起こる出来事。".to_string(),
+                Language::Korean if text == "time" => "시간".to_string(),
+                _ => text.to_string(),
+            })
+        }
+    }
+
+    struct CountingDictionaryBatchTranslator {
+        calls: Arc<AtomicUsize>,
+        items: Arc<AtomicUsize>,
+    }
+
+    struct ContextDictionaryTranslator;
+
+    impl Translator for ContextDictionaryTranslator {
+        fn display_name(&self) -> &str {
+            "Context dictionary test translator"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "dictionary-context-test:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            Ok(match text {
+                text if text.contains("<NTSPLIT>") && text.contains("river") => {
+                    "그는 강의 <NTSPLIT> 물가 <NTSPLIT> 에 앉아 물을 바라봤다"
+                }
+                text if text.contains("<NTSPLIT>")
+                    && text.contains("do not")
+                    && text.contains("share") =>
+                {
+                    "다른 사람의 창작물을 <NTSPLIT> 공유하지 마세요 <NTSPLIT> ."
+                }
+                text if text.contains("<NTSPLIT>") && text.contains("share") => {
+                    "회원들은 <NTSPLIT> 공유 <NTSPLIT> 사진을 공동체와 나눌 수 있다"
+                }
+                "share" => "공유",
+                "bank" => "둑",
+                "He sat on the river bank and watched the water." => {
+                    "그는 강의 물가에 앉아 물을 바라봤다"
+                }
+                "a financial institution that holds money" => "돈을 보관하는 금융 기관",
+                "sloping land beside a river" => "강의 물가에 있는 경사진 땅",
+                "assets belonging to or contributed by an individual or group" => {
+                    "개인이나 집단이 소유하거나 기여한 자산"
+                }
+                "communicate information with other people" => "다른 사람과 정보를 공유하다",
+                _ => text,
+            }
+            .to_string())
+        }
+    }
+
+    impl Translator for CountingDictionaryBatchTranslator {
+        fn display_name(&self) -> &str {
+            "Counting dictionary batch translator"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "dictionary-batch-test:v1"
+        }
+
+        fn translate(
+            &mut self,
+            _text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            Err("사전 번역은 단건 호출을 사용하면 안 됩니다.".to_string())
+        }
+
+        fn translate_many(
+            &mut self,
+            items: &[(String, Language)],
+            _target: Language,
+        ) -> Result<Vec<String>, String> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            self.items.fetch_add(items.len(), Ordering::SeqCst);
+            if items.len() > 2 {
+                return Err("Hy-MT2 테스트 서버가 큰 사전 묶음을 거부했습니다.".to_string());
+            }
+            Ok(items
+                .iter()
+                .map(|(text, source)| match source {
+                    Language::Japanese => "출시 기념으로 할인합니다".to_string(),
+                    Language::English if text.contains("release") => "출시; 발매".to_string(),
+                    Language::English => "판매; 할인 판매".to_string(),
+                    _ => "번역 결과".to_string(),
+                })
+                .collect())
+        }
+    }
 
     #[test]
     fn runtime_status_starts_with_the_configured_contract() {
@@ -2681,6 +3406,411 @@ mod tests {
         assert_eq!(status.engine, "rust-native");
         assert_eq!(status.configured_translator, "hymt_1_8b");
         assert_eq!(status.active_translator, "original");
+    }
+
+    #[test]
+    fn dictionary_lookup_prefers_selected_japanese_over_unrelated_context() {
+        let language = dictionary_source_language(
+            "",
+            "方針変更、またはプレイヤーからの通報などの影響により、",
+            "關於突然轉為非公開的說明，並收到了官方警告通知。",
+        );
+        assert_eq!(language.as_deref(), Some("ja"));
+    }
+
+    #[test]
+    fn dictionary_lookup_uses_nearby_japanese_for_ambiguous_han_selection() {
+        let language = dictionary_source_language(
+            "",
+            "日本時間",
+            "日本時間3/17の午後にSuRroomはシステムによって自動的に変更されました。",
+        );
+        assert_eq!(language.as_deref(), Some("ja"));
+    }
+
+    #[test]
+    fn dictionary_lookup_returns_local_entries_while_localization_is_pending() {
+        let result = DictionaryLookupResult {
+            query: "発売記念".to_string(),
+            source_language: "ja".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: false,
+            segmented: false,
+            entries: Vec::new(),
+            personal_entries: Vec::new(),
+        };
+
+        let (immediate, pending) = stage_dictionary_lookup_result(result, true);
+
+        assert!(immediate.localization_pending);
+        assert!(immediate.selection_translation.is_empty());
+        assert!(pending.is_some());
+        assert!(!pending.unwrap().localization_pending);
+    }
+
+    #[test]
+    fn dictionary_gloss_localization_marks_the_translation_and_keeps_the_original() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-localization-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(DictionaryTestTranslator), cache);
+        let result = DictionaryLookupResult {
+            query: "future".to_string(),
+            source_language: "en".to_string(),
+            target_language: "ja".to_string(),
+            selection_translation: String::new(),
+            localization_pending: false,
+            segmented: false,
+            entries: vec![DictionaryEntry {
+                entry_id: 1,
+                headword: "future".to_string(),
+                language: "en".to_string(),
+                reading: String::new(),
+                part_of_speech: "noun".to_string(),
+                sense_rank: 0,
+                source_priority: 0,
+                context_recommended: false,
+                definition: "The time after the present.".to_string(),
+                definition_language: "en".to_string(),
+                definition_origin: "original".to_string(),
+                original_definition: "The time after the present.".to_string(),
+                original_definition_language: "en".to_string(),
+                example: String::new(),
+                source_name: "Test".to_string(),
+                source_url: String::new(),
+                license: "Test".to_string(),
+            }],
+            personal_entries: Vec::new(),
+        };
+
+        let localized =
+            localize_dictionary_result(&mut service, result, "future", Language::Japanese);
+        assert_eq!(
+            localized.entries[0].definition,
+            "現在より後の時間、またはこれから起こる出来事。"
+        );
+        assert_eq!(
+            localized.selection_translation,
+            "現在より後の時間、またはこれから起こる出来事"
+        );
+        assert_eq!(localized.entries[0].definition_language, "ja");
+        assert_eq!(localized.entries[0].definition_origin, "automatic");
+        assert_eq!(
+            localized.entries[0].original_definition,
+            "The time after the present."
+        );
+    }
+
+    #[test]
+    fn dictionary_gloss_localization_translates_short_known_english_meanings() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-short-localization-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(DictionaryTestTranslator), cache);
+        let result = DictionaryLookupResult {
+            query: "日本時間".to_string(),
+            source_language: "ja".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: false,
+            segmented: true,
+            entries: vec![DictionaryEntry {
+                entry_id: 1,
+                headword: "時間".to_string(),
+                language: "ja".to_string(),
+                reading: "じかん".to_string(),
+                part_of_speech: "noun".to_string(),
+                sense_rank: 0,
+                source_priority: 0,
+                context_recommended: false,
+                definition: "time".to_string(),
+                definition_language: "en".to_string(),
+                definition_origin: "original".to_string(),
+                original_definition: "time".to_string(),
+                original_definition_language: "en".to_string(),
+                example: String::new(),
+                source_name: "JMdict".to_string(),
+                source_url: String::new(),
+                license: "CC-BY-SA-4.0".to_string(),
+            }],
+            personal_entries: Vec::new(),
+        };
+
+        let localized =
+            localize_dictionary_result(&mut service, result, "日本時間", Language::Korean);
+        assert_eq!(localized.entries[0].definition, "시간");
+        assert_eq!(localized.entries[0].definition_language, "ko");
+        assert_eq!(localized.entries[0].definition_origin, "automatic");
+    }
+
+    #[test]
+    fn dictionary_localization_splits_selection_and_all_visible_senses_into_safe_batches() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-batch-localization-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let items = Arc::new(AtomicUsize::new(0));
+        let translator = CountingDictionaryBatchTranslator {
+            calls: calls.clone(),
+            items: items.clone(),
+        };
+        let mut service = TranslationService::new(Box::new(translator), cache);
+        let sense = |entry_id, sense_rank, definition: &str| DictionaryEntry {
+            entry_id,
+            headword: "発売".to_string(),
+            language: "ja".to_string(),
+            reading: "はつばい".to_string(),
+            part_of_speech: "noun".to_string(),
+            sense_rank,
+            source_priority: 0,
+            context_recommended: false,
+            definition: definition.to_string(),
+            definition_language: "en".to_string(),
+            definition_origin: "original".to_string(),
+            original_definition: definition.to_string(),
+            original_definition_language: "en".to_string(),
+            example: String::new(),
+            source_name: "JMdict".to_string(),
+            source_url: String::new(),
+            license: "CC-BY-SA-4.0".to_string(),
+        };
+        let result = DictionaryLookupResult {
+            query: "発売記念でセールします".to_string(),
+            source_language: "ja".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: true,
+            segmented: false,
+            entries: vec![
+                sense(1, 0, "sale; offering for sale"),
+                sense(2, 1, "release; publication"),
+            ],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(
+            &mut service,
+            result,
+            "発売記念でセールします",
+            Language::Korean,
+        );
+
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        assert_eq!(items.load(Ordering::SeqCst), 3);
+        assert!(!localized.localization_pending);
+        assert_eq!(localized.selection_translation, "출시 기념으로 할인합니다");
+        assert_eq!(localized.entries[0].definition, "출시; 발매");
+        assert_eq!(localized.entries[0].definition_origin, "automatic");
+        assert!(localized.entries[0].context_recommended);
+        assert_eq!(localized.entries[1].definition, "판매; 할인 판매");
+        assert_eq!(localized.entries[1].definition_language, "ko");
+        assert_eq!(localized.entries[1].definition_origin, "automatic");
+    }
+
+    #[test]
+    fn dictionary_localization_reranks_with_the_full_translated_context() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-context-localization-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(ContextDictionaryTranslator), cache);
+        let sense = |entry_id, sense_rank, definition: &str| DictionaryEntry {
+            entry_id,
+            headword: "bank".to_string(),
+            language: "en".to_string(),
+            reading: String::new(),
+            part_of_speech: "noun".to_string(),
+            sense_rank,
+            source_priority: 0,
+            context_recommended: false,
+            definition: definition.to_string(),
+            definition_language: "en".to_string(),
+            definition_origin: "original".to_string(),
+            original_definition: definition.to_string(),
+            original_definition_language: "en".to_string(),
+            example: String::new(),
+            source_name: "Test".to_string(),
+            source_url: String::new(),
+            license: "Test".to_string(),
+        };
+        let result = DictionaryLookupResult {
+            query: "bank".to_string(),
+            source_language: "en".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: true,
+            segmented: false,
+            entries: vec![
+                sense(1, 0, "a financial institution that holds money"),
+                sense(2, 1, "sloping land beside a river"),
+            ],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(
+            &mut service,
+            result,
+            "He sat on the river bank and watched the water.",
+            Language::Korean,
+        );
+
+        assert_eq!(localized.selection_translation, "둑");
+        assert_eq!(
+            localized.entries[0].definition,
+            "강의 물가에 있는 경사진 땅"
+        );
+        assert!(localized.entries[0].context_recommended);
+    }
+
+    #[test]
+    fn dictionary_localization_uses_contextual_focus_to_promote_share_as_a_verb() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-share-context-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(ContextDictionaryTranslator), cache);
+        let sense =
+            |entry_id, part_of_speech: &str, sense_rank, definition: &str| DictionaryEntry {
+                entry_id,
+                headword: "share".to_string(),
+                language: "en".to_string(),
+                reading: String::new(),
+                part_of_speech: part_of_speech.to_string(),
+                sense_rank,
+                source_priority: 0,
+                context_recommended: false,
+                definition: definition.to_string(),
+                definition_language: "en".to_string(),
+                definition_origin: "original".to_string(),
+                original_definition: definition.to_string(),
+                original_definition_language: "en".to_string(),
+                example: String::new(),
+                source_name: "Test".to_string(),
+                source_url: String::new(),
+                license: "Test".to_string(),
+            };
+        let result = DictionaryLookupResult {
+            query: "share".to_string(),
+            source_language: "en".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: true,
+            segmented: false,
+            entries: vec![
+                sense(
+                    1,
+                    "noun",
+                    0,
+                    "assets belonging to or contributed by an individual or group",
+                ),
+                sense(2, "verb", 1, "communicate information with other people"),
+            ],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(
+            &mut service,
+            result,
+            "Members share photos with the community.",
+            Language::Korean,
+        );
+
+        assert_eq!(localized.selection_translation, "공유");
+        assert_eq!(localized.entries[0].part_of_speech, "verb");
+        assert!(localized.entries[0].context_recommended);
+    }
+
+    #[test]
+    fn dictionary_selection_label_does_not_absorb_negation_from_context() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-share-negation-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(ContextDictionaryTranslator), cache);
+        let sense =
+            |entry_id, part_of_speech: &str, sense_rank, definition: &str| DictionaryEntry {
+                entry_id,
+                headword: "share".to_string(),
+                language: "en".to_string(),
+                reading: String::new(),
+                part_of_speech: part_of_speech.to_string(),
+                sense_rank,
+                source_priority: 0,
+                context_recommended: false,
+                definition: definition.to_string(),
+                definition_language: "en".to_string(),
+                definition_origin: "original".to_string(),
+                original_definition: definition.to_string(),
+                original_definition_language: "en".to_string(),
+                example: String::new(),
+                source_name: "Test".to_string(),
+                source_url: String::new(),
+                license: "Test".to_string(),
+            };
+        let result = DictionaryLookupResult {
+            query: "share".to_string(),
+            source_language: "en".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: true,
+            segmented: false,
+            entries: vec![
+                sense(
+                    1,
+                    "noun",
+                    0,
+                    "assets belonging to or contributed by an individual or group",
+                ),
+                sense(2, "verb", 1, "communicate information with other people"),
+            ],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(
+            &mut service,
+            result,
+            "Please do not share other people's creations.",
+            Language::Korean,
+        );
+
+        assert_eq!(localized.selection_translation, "공유");
+        assert_eq!(localized.entries[0].part_of_speech, "verb");
+        assert!(localized.entries[0].context_recommended);
+    }
+
+    #[test]
+    fn dictionary_quality_gate_rejects_wrong_script_and_model_chatter() {
+        assert!(!dictionary_translation_is_acceptable(
+            "time",
+            "[ko] time",
+            Language::Korean
+        ));
+        assert!(!dictionary_translation_is_acceptable(
+            "time",
+            "번역: 시간",
+            Language::Korean
+        ));
+        assert!(dictionary_translation_is_acceptable(
+            "time",
+            "시간",
+            Language::Korean
+        ));
     }
 
     #[test]
@@ -2822,6 +3952,7 @@ mod tests {
     fn inactive_local_lanes_are_deferred_until_the_feature_uses_them() {
         let display_inactive = AppConfig {
             enabled: false,
+            dictionary_enabled: false,
             outgoing_translation_enabled: true,
             translator: "hymt_1_8b".to_string(),
             outgoing_translator: "chatgpt".to_string(),
@@ -2833,6 +3964,21 @@ mod tests {
             TranslatorPreparationPlan {
                 display: false,
                 outgoing: true,
+            }
+        );
+
+        let dictionary_active = AppConfig {
+            enabled: false,
+            dictionary_enabled: true,
+            outgoing_translation_enabled: false,
+            translator: "hymt_1_8b".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            preparation_plan_for_active_lanes(&dictionary_active, TranslatorPreparationPlan::all()),
+            TranslatorPreparationPlan {
+                display: true,
+                outgoing: false,
             }
         );
 
@@ -2920,6 +4066,7 @@ mod tests {
     fn ui_ready_prepares_only_the_enabled_lane_when_the_other_lane_is_local() {
         let config = AppConfig {
             enabled: false,
+            dictionary_enabled: false,
             outgoing_translation_enabled: true,
             translator: "hymt_1_8b".to_string(),
             outgoing_translator: "mock".to_string(),
@@ -2951,7 +4098,6 @@ mod tests {
                 target: Language::Japanese,
                 request_id: "outgoing-priority".to_string(),
                 text: "안녕하세요".to_string(),
-                send_immediately: true,
                 queued_at: Instant::now(),
             }))
             .unwrap();
@@ -2978,6 +4124,7 @@ mod tests {
                     view_epoch,
                     view_scope: context_scope.to_string(),
                     target: Language::Korean,
+                    allowed_sources: None,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
                         item_id: item_id.to_string(),
@@ -3006,6 +4153,45 @@ mod tests {
             )),
             "이전 화면 번역 작업은 새 화면이 도착하면 대기열에서 제거되어야 합니다"
         );
+    }
+
+    #[test]
+    fn newest_dictionary_localization_replaces_stale_pending_lookup() {
+        let (sender, receiver) = mpsc::channel();
+        for request_id in ["dictionary-old", "dictionary-current"] {
+            sender
+                .send(WorkerCommand::LocalizeDictionary(
+                    DictionaryLocalizationBatch {
+                        request_id: request_id.to_string(),
+                        target: Language::Korean,
+                        context: String::new(),
+                        result: DictionaryLookupResult {
+                            query: request_id.to_string(),
+                            source_language: "ja".to_string(),
+                            target_language: "ko".to_string(),
+                            selection_translation: String::new(),
+                            localization_pending: false,
+                            segmented: false,
+                            entries: Vec::new(),
+                            personal_entries: Vec::new(),
+                        },
+                        queued_at: Instant::now(),
+                    },
+                ))
+                .unwrap();
+        }
+
+        let mut backlog = VecDeque::new();
+        let command = next_worker_command(&receiver, &mut backlog).unwrap();
+        let WorkerCommand::LocalizeDictionary(batch) = command else {
+            panic!("dictionary localization batch expected");
+        };
+        assert_eq!(batch.request_id, "dictionary-current");
+        assert!(backlog.iter().all(|command| !matches!(
+            command,
+            WorkerCommand::LocalizeDictionary(batch)
+                if batch.request_id == "dictionary-old"
+        )));
     }
 
     #[test]
@@ -3041,6 +4227,7 @@ mod tests {
                 view_epoch: 1,
                 view_scope: "/channels/server-a/channel-a".to_string(),
                 target: Language::Korean,
+                allowed_sources: None,
                 parts: vec![DomPart {
                     kind: "message".to_string(),
                     item_id: "previous-viewport".to_string(),
@@ -3084,6 +4271,7 @@ mod tests {
                     view_epoch: 1,
                     view_scope: "/channels/test/current".to_string(),
                     target: Language::Korean,
+                    allowed_sources: None,
                     parts: vec![DomPart {
                         kind: "message".to_string(),
                         item_id: item_id.to_string(),

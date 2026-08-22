@@ -198,6 +198,7 @@ fn evaluate_vram_protection(
     }
 }
 
+#[derive(Default)]
 struct SharedModelRuntime {
     process: Option<Child>,
     #[cfg(windows)]
@@ -210,24 +211,6 @@ struct SharedModelRuntime {
     monitor_running: bool,
     pending_vram_action: Option<VramProtectionAction>,
     vram_protection: VramProtectionState,
-}
-
-impl Default for SharedModelRuntime {
-    fn default() -> Self {
-        Self {
-            process: None,
-            #[cfg(windows)]
-            process_job: None,
-            port: 0,
-            clients: 0,
-            generation: 0,
-            active_device: None,
-            active_requests: 0,
-            monitor_running: false,
-            pending_vram_action: None,
-            vram_protection: VramProtectionState::default(),
-        }
-    }
 }
 
 static SHARED_MODEL_RUNTIMES: LazyLock<Mutex<HashMap<String, Weak<Mutex<SharedModelRuntime>>>>> =
@@ -1660,7 +1643,7 @@ fn matching_korean_particle(word: &str, particle: &str) -> &'static str {
         .chars()
         .rev()
         .find(|character| matches!(*character as u32, 0xac00..=0xd7a3))
-        .is_some_and(|character| (character as u32 - 0xac00) % 28 != 0);
+        .is_some_and(|character| !(character as u32 - 0xac00).is_multiple_of(28));
     match particle {
         "이" | "가" => {
             if has_batchim {
@@ -1896,7 +1879,7 @@ fn clean_korean_moderation_terms(text: &str, original: &str, target: Language) -
 
     let numbers = original
         .split(|character: char| !character.is_ascii_digit())
-        .filter_map(|part| (!part.is_empty()).then_some(part))
+        .filter(|part| !part.is_empty())
         .collect::<Vec<_>>();
     let has_violation = original_normalized.contains("violation")
         || ["违反", "違反", "ละเมิด", "ฝ่าฝืน"]

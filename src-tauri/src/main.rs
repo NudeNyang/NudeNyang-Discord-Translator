@@ -6,13 +6,19 @@ pub mod cdp;
 mod config;
 mod credentials;
 pub mod diagnostics;
+pub mod dictionary;
+mod dictionary_morphology;
+pub mod dictionary_ui;
+pub mod dictionary_window;
 mod discord;
 mod discord_startup;
+mod discord_verification;
 pub mod dom;
 mod engine;
 pub mod image_translation;
 pub mod invite_assist;
 pub mod language;
+mod native_speech;
 pub mod ocr;
 pub mod outgoing;
 mod providers;
@@ -417,6 +423,134 @@ fn settings_get(config: State<'_, ConfigStore>) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
+async fn dictionary_status_get() -> Result<dictionary::DictionaryStatus, String> {
+    tauri::async_runtime::spawn_blocking(|| dictionary::DictionaryStore::open_default()?.status())
+        .await
+        .map_err(|error| format!("사전 상태 확인 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_list() -> Result<Vec<dictionary::PersonalDictionaryEntry>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        dictionary::DictionaryStore::open_default()?.personal_entries()
+    })
+    .await
+    .map_err(|error| format!("개인 사전 목록 조회 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_query(
+    query: dictionary::PersonalDictionaryQuery,
+) -> Result<dictionary::PersonalDictionaryPage, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.personal_entries_page(query)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 검색 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_upsert(
+    app: AppHandle,
+    entry: dictionary::PersonalDictionaryEntry,
+) -> Result<dictionary::PersonalDictionaryEntry, String> {
+    let saved = tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.upsert_personal(entry)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 저장 작업을 기다리지 못했습니다: {error}"))??;
+    app.emit_to("main", "dictionary-personal-changed", &saved)
+        .map_err(|error| format!("개인 사전 변경을 설정 창에 알리지 못했습니다: {error}"))?;
+    Ok(saved)
+}
+
+#[tauri::command]
+async fn dictionary_personal_batch_upsert(
+    batch: dictionary::PersonalDictionaryBatch,
+) -> Result<dictionary::PersonalDictionaryBatchResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.upsert_personal_batch(batch)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 일괄 저장 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_delete(id: i64) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.delete_personal(id)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 삭제 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_personal_batch_delete(ids: Vec<i64>) -> Result<u64, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.delete_personal_batch(ids)
+    })
+    .await
+    .map_err(|error| format!("개인 사전 일괄 삭제 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+async fn dictionary_pack_install(
+    app: AppHandle,
+    language: String,
+) -> Result<dictionary::DictionaryPackStatus, String> {
+    let progress_app = app.clone();
+    let progress_language = language.clone();
+    let install_language = language.clone();
+    let _ = app.emit(
+        "dictionary-pack-progress",
+        serde_json::json!({"language": language.clone(), "phase": "preparing", "processed": 0, "total": 0}),
+    );
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = dictionary::DictionaryStore::open_default()?;
+        store.install_bundled_pack_with_progress(&install_language, |processed, total| {
+            let _ = progress_app.emit(
+                "dictionary-pack-progress",
+                serde_json::json!({
+                    "language": progress_language.clone(),
+                    "phase": "installing",
+                    "processed": processed,
+                    "total": total,
+                }),
+            );
+        })
+    })
+    .await
+    .map_err(|error| format!("사전팩 설치 작업을 기다리지 못했습니다: {error}"))?
+    .inspect(|_| {
+        let _ = app.emit(
+            "dictionary-pack-progress",
+            serde_json::json!({"language": language.clone(), "phase": "complete"}),
+        );
+    })
+}
+
+#[tauri::command]
+async fn dictionary_pack_remove(language: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        dictionary::DictionaryStore::open_default()?.remove_pack(&language)
+    })
+    .await
+    .map_err(|error| format!("사전팩 삭제 작업을 기다리지 못했습니다: {error}"))?
+}
+
+#[tauri::command]
+fn dictionary_storage_folder_open(app: AppHandle) -> Result<String, String> {
+    let path = dictionary::dictionary_storage_root();
+    std::fs::create_dir_all(&path)
+        .map_err(|error| format!("사전 데이터 폴더를 만들지 못했습니다: {error}"))?;
+    let display_path = path.to_string_lossy().into_owned();
+    app.opener()
+        .open_path(display_path.clone(), None::<&str>)
+        .map_err(|error| format!("사전 데이터 폴더를 열지 못했습니다: {error}"))?;
+    Ok(display_path)
+}
+
+#[tauri::command]
 fn main_window_set_theme(
     app: AppHandle,
     theme: String,
@@ -441,8 +575,6 @@ fn settings_update(
     if !shortcuts_are_unique(&[
         &preview.hotkeys.toggle_translation,
         &preview.hotkeys.toggle_outgoing_translation,
-        &preview.hotkeys.send_outgoing_immediately,
-        &preview.hotkeys.review_outgoing_before_send,
     ]) {
         return Err("편의 기능의 각 동작에는 서로 다른 단축키를 지정하십시오.".to_string());
     }
@@ -556,7 +688,11 @@ fn runtime_status(
         object.insert("enabled".to_string(), Value::Bool(current_config.enabled));
         object.insert(
             "controllerEnabled".to_string(),
-            Value::Bool(current_config.enabled || current_config.outgoing_translation_enabled),
+            Value::Bool(
+                current_config.enabled
+                    || current_config.outgoing_translation_enabled
+                    || current_config.dictionary_enabled,
+            ),
         );
         object.insert(
             "outgoingTranslationEnabled".to_string(),
@@ -575,12 +711,6 @@ fn runtime_status(
         object.insert(
             "configuredTranslator".to_string(),
             Value::String(current_config.translator),
-        );
-        object.insert(
-            "discordProcessId".to_string(),
-            discord::current_process()
-                .map(|process| Value::from(process.process_id))
-                .unwrap_or(Value::Null),
         );
         let configured = shortcut
             .toggle_translation
@@ -672,6 +802,38 @@ fn diagnostic_log_write(level: String, component: String, message: String) {
 }
 
 #[tauri::command]
+fn dictionary_speech_play(
+    app: AppHandle,
+    state: State<'_, native_speech::NativeSpeechState>,
+    text: String,
+    language: String,
+    request_id: String,
+) -> Result<bool, String> {
+    state.play(app, text, language, request_id)
+}
+
+#[tauri::command]
+fn dictionary_speech_pause(
+    state: State<'_, native_speech::NativeSpeechState>,
+) -> Result<(), String> {
+    state.pause()
+}
+
+#[tauri::command]
+fn dictionary_speech_resume(
+    state: State<'_, native_speech::NativeSpeechState>,
+) -> Result<(), String> {
+    state.resume()
+}
+
+#[tauri::command]
+fn dictionary_speech_stop(
+    state: State<'_, native_speech::NativeSpeechState>,
+) -> Result<(), String> {
+    state.stop()
+}
+
+#[tauri::command]
 async fn storage_status_get() -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(|| {
         let cache = cache::TranslationCache::open_default()?;
@@ -746,6 +908,17 @@ fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
 }
 
 fn start_pipe_discord_for_autostart(app: AppHandle) {
+    if app
+        .state::<ConfigStore>()
+        .get()
+        .is_ok_and(|config| config.discord_verification_mode)
+    {
+        diagnostics::info(
+            "discord-startup",
+            "인증 호환 모드가 활성화되어 Discord 번역 연결을 자동 시작하지 않습니다.",
+        );
+        return;
+    }
     let engine = app.state::<RustEngine>().inner().clone();
     tauri::async_runtime::spawn(async move {
         let result = tauri::async_runtime::spawn_blocking(|| {
@@ -978,6 +1151,30 @@ async fn discord_restart(
     let _ = client.set_enabled(display_was_enabled);
     replace_result?;
     Ok(json!({"connected": true, "process": process}))
+}
+
+#[tauri::command]
+async fn discord_restart_vanilla(
+    engine: State<'_, RustEngine>,
+    expected_process_id: Option<u32>,
+) -> Result<Value, String> {
+    let client = engine.inner().clone();
+    let kind = client.status()?.verification_kind;
+    let pause_kind = if kind.is_empty() {
+        "account-verification"
+    } else {
+        kind.as_str()
+    };
+    let pause_client = client.clone();
+    let pause_kind = pause_kind.to_string();
+    tauri::async_runtime::spawn_blocking(move || pause_client.pause_for_verification(&pause_kind))
+        .await
+        .map_err(|error| format!("인증 호환 모드 전환 작업을 기다리지 못했습니다: {error}"))??;
+    let process =
+        tauri::async_runtime::spawn_blocking(move || discord::restart_vanilla(expected_process_id))
+            .await
+            .map_err(|error| format!("일반 Discord 전환 작업을 기다리지 못했습니다: {error}"))??;
+    Ok(json!({"connected": false, "verificationMode": true, "process": process}))
 }
 
 #[tauri::command]
@@ -1473,6 +1670,8 @@ fn main() {
         .manage(ProviderLoginState::default())
         .manage(config)
         .manage(engine)
+        .manage(dictionary_window::DictionaryWindowStore::default())
+        .manage(native_speech::NativeSpeechState::default())
         .setup(|app| {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
             create_tray(app)?;
@@ -1503,7 +1702,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if window.label() == "tray-menu" {
+            if window.label() == "tray-menu" || window.label() == "dictionary" {
                 match event {
                     WindowEvent::Focused(false) => {
                         let _ = window.hide();
@@ -1536,6 +1735,19 @@ fn main() {
             engine_ui_ready,
             shortcut_capture_set_active,
             settings_get,
+            dictionary_status_get,
+            dictionary_personal_list,
+            dictionary_personal_query,
+            dictionary_personal_upsert,
+            dictionary_personal_batch_upsert,
+            dictionary_personal_delete,
+            dictionary_personal_batch_delete,
+            dictionary_pack_install,
+            dictionary_pack_remove,
+            dictionary_storage_folder_open,
+            dictionary_window::dictionary_window_state_get,
+            dictionary_window::dictionary_window_hide,
+            dictionary_window::dictionary_external_open,
             settings_update,
             settings_reset,
             main_window_set_theme,
@@ -1547,6 +1759,10 @@ fn main() {
             update_install,
             diagnostic_log_reveal,
             diagnostic_log_write,
+            dictionary_speech_play,
+            dictionary_speech_pause,
+            dictionary_speech_resume,
+            dictionary_speech_stop,
             storage_status_get,
             system_memory_status_get,
             autostart_get,
@@ -1561,6 +1777,7 @@ fn main() {
             provider_login_open,
             provider_disconnect,
             discord_restart,
+            discord_restart_vanilla,
             main_window_show,
             main_window_hide,
             tray_menu_hide,

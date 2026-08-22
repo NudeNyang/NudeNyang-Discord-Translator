@@ -4,6 +4,7 @@ import {
   localModelStorageDisplay,
   manualDiscordRestartAvailability,
   modelPreparationBanner,
+  nextIncomingSourceLanguageSelection,
   normalizeConfig,
   providerOperationAvailability,
   resolveEnabledState,
@@ -13,11 +14,16 @@ import {
   shouldPromptRestart,
   translatorRuntimeLabel,
 } from "./state.mjs";
-import { LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
+import { DICTIONARY_NOTICES_TEXT, LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
 import { LANGUAGE_OPTIONS } from "./languages.mjs";
 import { filterLanguageOptions } from "./language-search.mjs";
 import {
+  createLatestDictionaryRequestGate,
+  dictionaryOverviewFingerprint,
+} from "./dictionary-sync.mjs";
+import {
   applyStaticTranslations,
+  resolveUiLanguage,
   translateCopy,
   translateDynamicCopy,
   translateUserFacingError,
@@ -85,6 +91,10 @@ const OPTIONS = {
     ["dark", "다크"],
   ],
   ui_language: [["auto", "Auto (System)", "", "System language"], ...LANGUAGE_OPTIONS],
+  dictionary_external_provider: [
+    ["wiktionary", "Wiktionary (기본 브라우저)"],
+    ["none", "사용 안 함"],
+  ],
   translation_history_retention_days: [
     [0, "사용 안 함"],
     [7, "7일 보관"],
@@ -102,6 +112,9 @@ const state = {
   repairActive: false,
   restartAttempted: false,
   manualRestartRequired: false,
+  verificationPromptActive: false,
+  verificationPromptShown: false,
+  verificationBannerDismissed: false,
   polling: false,
   updateCheckActive: false,
   availableUpdateVersion: "",
@@ -124,31 +137,115 @@ const state = {
   providerOperation: "",
   storageStatus: null,
   systemMemory: null,
+  dictionaryLoaded: false,
+  dictionaryLoading: false,
+  dictionaryStatus: null,
+  dictionaryPersonalEntries: [],
+  dictionaryPersonalPage: { entries: [], total: 0, offset: 0, limit: 80 },
+  dictionaryPersonalQuery: { search: "", sourceLanguage: "", targetLanguage: "", pinnedOnly: false, sort: "updated_desc", offset: 0, limit: 80 },
+  dictionaryPersonalManagerOpen: false,
+  dictionaryPackManagerOpen: false,
+  dictionaryPackQuery: { search: "", filter: "all" },
+  dictionaryPersonalSearchTimer: 0,
+  dictionarySelectedIds: new Set(),
+  dictionaryEditingEntry: null,
+  dictionaryImportEntries: [],
+  dictionaryPackProgress: new Map(),
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
 const localizedBackendText = new Map();
+const dictionaryCustomSelects = new Map();
+const dictionaryOverviewRequests = createLatestDictionaryRequestGate();
 
 const elements = {
   form: document.querySelector("#settings-form"),
   enabled: document.querySelector("#enabled"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
-  outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
+  dictionaryEnabled: document.querySelector("#dictionary-enabled"),
+  dictionaryExternalModelNote: document.querySelector("#dictionary-external-model-note"),
+  settingsWorkspace: document.querySelector("#settings-workspace"),
+  settingsNavigation: document.querySelector("#settings-navigation"),
+  dictionaryOverview: document.querySelector("#dictionary-overview"),
+  dictionaryPersonalManager: document.querySelector("#dictionary-personal-manager"),
+  dictionaryPackManager: document.querySelector("#dictionary-pack-manager"),
+  dictionaryPackManagerOpen: document.querySelector("#dictionary-pack-manager-open"),
+  dictionaryPackManagerBack: document.querySelector("#dictionary-pack-manager-back"),
+  dictionaryPackManagerCount: document.querySelector("#dictionary-pack-manager-count"),
+  dictionaryPackManagerFolder: document.querySelector("#dictionary-pack-manager-folder"),
+  dictionaryPackManagerList: document.querySelector("#dictionary-pack-manager-list"),
+  dictionaryPackSearch: document.querySelector("#dictionary-pack-search"),
+  dictionaryPackFilter: document.querySelector("#dictionary-pack-filter"),
+  dictionaryPersonalOpen: document.querySelector("#dictionary-personal-open"),
+  dictionaryPersonalQuickAdd: document.querySelector("#dictionary-personal-quick-add"),
+  dictionaryPersonalBack: document.querySelector("#dictionary-personal-back"),
+  dictionaryPersonalCount: document.querySelector("#dictionary-personal-count"),
+  dictionaryManagerAdd: document.querySelector("#dictionary-manager-add"),
+  dictionaryManagerImport: document.querySelector("#dictionary-manager-import"),
+  dictionaryExportFormat: document.querySelector("#dictionary-export-format"),
+  dictionaryManagerExport: document.querySelector("#dictionary-manager-export"),
+  dictionaryPersonalSearch: document.querySelector("#dictionary-personal-search"),
+  dictionaryFilterSource: document.querySelector("#dictionary-filter-source"),
+  dictionaryFilterPinned: document.querySelector("#dictionary-filter-pinned"),
+  dictionarySort: document.querySelector("#dictionary-sort"),
+  dictionarySelectionBar: document.querySelector("#dictionary-selection-bar"),
+  dictionarySelectionCount: document.querySelector("#dictionary-selection-count"),
+  dictionarySelectionAll: document.querySelector("#dictionary-selection-all"),
+  dictionarySelectionClear: document.querySelector("#dictionary-selection-clear"),
+  dictionarySelectionDelete: document.querySelector("#dictionary-selection-delete"),
+  dictionaryManagerList: document.querySelector("#dictionary-manager-list"),
+  dictionaryPageSummary: document.querySelector("#dictionary-page-summary"),
+  dictionaryPagePrev: document.querySelector("#dictionary-page-prev"),
+  dictionaryPageNext: document.querySelector("#dictionary-page-next"),
+  dictionarySourceLanguage: document.querySelector("#dictionary-source-language"),
+  dictionaryTargetLanguage: document.querySelector("#dictionary-target-language"),
+  dictionarySourceTerm: document.querySelector("#dictionary-source-term"),
+  dictionaryTargetTerm: document.querySelector("#dictionary-target-term"),
+  dictionaryTags: document.querySelector("#dictionary-tags"),
+  dictionaryNote: document.querySelector("#dictionary-note"),
+  dictionaryPersonalSave: document.querySelector("#dictionary-personal-save"),
+  dictionaryPersonalList: document.querySelector("#dictionary-personal-list"),
+  dictionaryEditorLayer: document.querySelector("#dictionary-editor-layer"),
+  dictionaryEditorForm: document.querySelector("#dictionary-editor-form"),
+  dictionaryEditorTitle: document.querySelector("#dictionary-editor-title"),
+  dictionaryEditorCancel: document.querySelector("#dictionary-editor-cancel"),
+  dictionaryImportLayer: document.querySelector("#dictionary-import-layer"),
+  dictionaryImportClose: document.querySelector("#dictionary-import-close"),
+  dictionaryImportCancel: document.querySelector("#dictionary-import-cancel"),
+  dictionaryImportFile: document.querySelector("#dictionary-import-file"),
+  dictionaryImportChoose: document.querySelector("#dictionary-import-choose"),
+  dictionaryImportSource: document.querySelector("#dictionary-import-source"),
+  dictionaryImportTarget: document.querySelector("#dictionary-import-target"),
+  dictionaryImportOverwrite: document.querySelector("#dictionary-import-overwrite"),
+  dictionaryImportText: document.querySelector("#dictionary-import-text"),
+  dictionaryImportPreview: document.querySelector("#dictionary-import-preview"),
+  dictionaryImportAccept: document.querySelector("#dictionary-import-accept"),
+  dictionaryPackList: document.querySelector("#dictionary-pack-list"),
+  dictionaryPackLicenses: document.querySelector("#dictionary-pack-licenses"),
+  dictionaryOpenFolder: document.querySelector("#dictionary-open-folder"),
+  dictionaryStorageSummary: document.querySelector("#dictionary-storage-summary"),
   autostart: document.querySelector("#autostart"),
   outgoingAutoHelp: document.querySelector("#outgoing-auto-help"),
+  sourceLanguageSelect: document.querySelector("#source-language-select"),
+  sourceLanguageTrigger: document.querySelector("#source-language-trigger"),
+  sourceLanguageSearch: document.querySelector("#source-language-search"),
+  sourceLanguageOptions: document.querySelector("#source-language-options"),
+  sourceLanguageEmpty: document.querySelector("#source-language-empty"),
   translationShortcutHint: document.querySelector("#translation-shortcut-hint"),
   outgoingShortcutHint: document.querySelector("#outgoing-shortcut-hint"),
   keepWarm: document.querySelector("#keep-warm"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
   outgoingShortcut: document.querySelector("#toggle-outgoing-shortcut"),
-  sendImmediatelyShortcut: document.querySelector("#send-immediately-shortcut"),
-  reviewBeforeSendShortcut: document.querySelector("#review-before-send-shortcut"),
   resetSettings: document.querySelector("#reset-settings"),
   saveStatus: document.querySelector("#save-status"),
   engineState: document.querySelector("#engine-state"),
   engineStateLabel: document.querySelector("#engine-state-label"),
   discordRestartManual: document.querySelector("#discord-restart-manual"),
+  verificationBanner: document.querySelector("#verification-banner"),
+  verificationReconnect: document.querySelector("#verification-reconnect"),
+  verificationReconnectHeader: document.querySelector("#verification-reconnect-header"),
+  verificationContinueVanilla: document.querySelector("#verification-continue-vanilla"),
   modalLayer: document.querySelector("#modal-layer"),
   modalTitle: document.querySelector("#modal-title"),
   modalMessage: document.querySelector("#modal-message"),
@@ -469,9 +566,859 @@ function revealProviderConnection(provider) {
   window.setTimeout(() => delete row.dataset.highlight, 1800);
 }
 
+function dictionaryLanguageLabel(code) {
+  return LANGUAGE_OPTIONS.find(([value]) => value === code)?.[1] || code;
+}
+
+function populateDictionaryLanguageSelects() {
+  const plainSelects = [
+    elements.dictionarySourceLanguage,
+    elements.dictionaryTargetLanguage,
+    elements.dictionaryImportSource,
+    elements.dictionaryImportTarget,
+  ];
+  for (const select of plainSelects) appendDictionaryLanguageOptions(select);
+  for (const select of [elements.dictionaryFilterSource]) {
+    if (!select || select.options.length) continue;
+    const all = document.createElement("option");
+    all.value = "";
+    all.dataset.i18nKey = "전체 언어";
+    setLocalizedText(all, "전체 언어");
+    select.append(all);
+    appendDictionaryLanguageOptions(select);
+  }
+  elements.dictionarySourceLanguage.value = "en";
+  elements.dictionaryTargetLanguage.value = state.config.target_language || "ko";
+  elements.dictionaryImportSource.value = "en";
+  elements.dictionaryImportTarget.value = state.config.target_language || "ko";
+}
+
+function renderDictionaryLocalizationNotice() {
+  const selected = state.selectValues.translator || state.config.translator;
+  if (!elements.dictionaryExternalModelNote) return;
+  elements.dictionaryExternalModelNote.hidden = !EXTERNAL_PROVIDERS.has(selected);
+}
+
+function dictionarySelectOptionLabel(option) {
+  const key = option.dataset.i18nKey;
+  return key ? translateCopy(currentUiLanguage(), key) : option.textContent;
+}
+
+function refreshDictionaryCustomSelect(select, { rebuild = false } = {}) {
+  const control = dictionaryCustomSelects.get(select);
+  if (!control) return;
+  const { wrapper, trigger, triggerLabel, optionContainer } = control;
+  const selectedOption = select.selectedOptions[0] || select.options[0];
+  triggerLabel.textContent = selectedOption ? dictionarySelectOptionLabel(selectedOption) : "";
+  const ariaKey = select.dataset.i18nAriaLabel || select.getAttribute("aria-label") || "";
+  if (ariaKey) trigger.setAttribute("aria-label", translateCopy(currentUiLanguage(), ariaKey));
+  if (!rebuild) {
+    for (const option of optionContainer.querySelectorAll(".select-option")) {
+      option.setAttribute("aria-selected", String(option.dataset.value === String(select.value)));
+    }
+    return;
+  }
+
+  optionContainer.replaceChildren();
+  for (const sourceOption of select.options) {
+    const option = document.createElement("button");
+    const label = dictionarySelectOptionLabel(sourceOption);
+    option.type = "button";
+    option.className = "select-option";
+    option.dataset.value = sourceOption.value;
+    option.dataset.searchValue = `${label} ${sourceOption.value}`.toLocaleLowerCase();
+    if (sourceOption.dataset.i18nKey) option.dataset.i18nKey = sourceOption.dataset.i18nKey;
+    option.textContent = label;
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(sourceOption.value === select.value));
+    option.addEventListener("click", () => {
+      select.value = sourceOption.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      refreshDictionaryCustomSelect(select);
+      closeSelect(wrapper);
+      trigger.focus();
+    });
+    option.addEventListener("keydown", event => {
+      const visibleOptions = [...optionContainer.querySelectorAll(".select-option:not([hidden])")];
+      const index = visibleOptions.indexOf(option);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(wrapper);
+        trigger.focus();
+      } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? visibleOptions.length - 1
+            : event.key === "ArrowDown"
+              ? Math.min(index + 1, visibleOptions.length - 1)
+              : Math.max(index - 1, 0);
+        visibleOptions[next]?.focus();
+      }
+    });
+    optionContainer.append(option);
+  }
+}
+
+function initializeDictionaryCustomSelect(select, { searchable = false } = {}) {
+  if (!select || dictionaryCustomSelects.has(select)) return;
+  const wrapper = document.createElement("div");
+  const trigger = document.createElement("button");
+  const triggerLabel = document.createElement("span");
+  const menu = document.createElement("div");
+  let optionContainer = menu;
+  wrapper.className = "custom-select dictionary-custom-select";
+  wrapper.dataset.nativeSelect = select.id;
+  trigger.type = "button";
+  trigger.className = "select-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  triggerLabel.className = "select-trigger-label";
+  trigger.append(triggerLabel);
+  menu.className = "select-menu";
+  menu.id = `${select.id}-menu`;
+  trigger.setAttribute("aria-controls", menu.id);
+
+  if (searchable) {
+    const search = document.createElement("div");
+    const searchInput = document.createElement("input");
+    const searchEmpty = document.createElement("div");
+    optionContainer = document.createElement("div");
+    search.className = "select-search";
+    searchInput.className = "select-search-input";
+    searchInput.type = "search";
+    searchInput.autocomplete = "off";
+    searchInput.spellcheck = false;
+    searchInput.placeholder = translateCopy(currentUiLanguage(), "언어 검색");
+    searchInput.setAttribute("aria-label", translateCopy(currentUiLanguage(), "언어 검색"));
+    searchInput.dataset.i18nPlaceholder = "언어 검색";
+    searchInput.dataset.i18nAriaLabel = "언어 검색";
+    optionContainer.className = "select-options";
+    optionContainer.setAttribute("role", "listbox");
+    searchEmpty.className = "select-search-empty";
+    searchEmpty.dataset.i18nKey = "검색 결과 없음";
+    searchEmpty.textContent = translateCopy(currentUiLanguage(), "검색 결과 없음");
+    searchEmpty.hidden = true;
+    search.append(searchInput);
+    menu.append(search, optionContainer, searchEmpty);
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.trim().toLocaleLowerCase();
+      let visibleCount = 0;
+      for (const option of optionContainer.querySelectorAll(".select-option")) {
+        option.hidden = Boolean(query) && !option.dataset.searchValue.includes(query);
+        if (!option.hidden) visibleCount += 1;
+      }
+      searchEmpty.hidden = visibleCount > 0;
+    });
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(wrapper);
+        trigger.focus();
+      } else if (event.key === "ArrowDown") {
+        const first = optionContainer.querySelector(".select-option:not([hidden])");
+        if (first) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
+  } else {
+    menu.setAttribute("role", "listbox");
+  }
+
+  wrapper.append(trigger, menu);
+  select.after(wrapper);
+  select.classList.add("dictionary-native-select");
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+  dictionaryCustomSelects.set(select, { wrapper, trigger, triggerLabel, optionContainer });
+  refreshDictionaryCustomSelect(select, { rebuild: true });
+  select.addEventListener("change", () => refreshDictionaryCustomSelect(select));
+  trigger.addEventListener("click", () => {
+    const opening = !wrapper.classList.contains("open");
+    closeAllSelects();
+    if (opening) openSelect(wrapper);
+  });
+  trigger.addEventListener("keydown", event => {
+    if (!["ArrowDown", "ArrowUp", "Escape"].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === "Escape") {
+      closeSelect(wrapper);
+      return;
+    }
+    openSelect(wrapper);
+    if (searchable) return;
+    const options = [...optionContainer.querySelectorAll(".select-option")];
+    const selected = Math.max(0, options.findIndex(option => option.dataset.value === String(select.value)));
+    const next = event.key === "ArrowDown"
+      ? Math.min(selected + 1, options.length - 1)
+      : Math.max(selected - 1, 0);
+    options[next]?.focus();
+  });
+}
+
+function refreshDictionaryCustomSelects({ rebuild = false } = {}) {
+  for (const select of dictionaryCustomSelects.keys()) {
+    refreshDictionaryCustomSelect(select, { rebuild });
+  }
+}
+
+function initializeDictionaryCustomSelects() {
+  for (const select of document.querySelectorAll("select[data-custom-select]")) {
+    initializeDictionaryCustomSelect(select, { searchable: select.hasAttribute("data-searchable") });
+  }
+}
+
+function appendDictionaryLanguageOptions(select) {
+  if (!select || select.dataset.dictionaryLanguages === "true") return;
+  for (const [value, label] of LANGUAGE_OPTIONS) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.append(option);
+  }
+  select.dataset.dictionaryLanguages = "true";
+}
+
+function renderDictionaryPersonalEntries() {
+  const container = elements.dictionaryPersonalList;
+  if (!container) return;
+  container.replaceChildren();
+  if (!state.dictionaryPersonalEntries.length) {
+    const empty = document.createElement("p");
+    empty.className = "dictionary-empty";
+    setLocalizedText(empty, "저장된 개인 용어가 없습니다.");
+    container.append(empty);
+    return;
+  }
+  for (const entry of state.dictionaryPersonalEntries.slice(0, 3)) {
+    const row = document.createElement("article");
+    row.className = "dictionary-personal-row";
+    const copy = document.createElement("div");
+    const terms = document.createElement("strong");
+    const meta = document.createElement("span");
+    const edit = document.createElement("button");
+    terms.textContent = `${entry.sourceTerm}  →  ${entry.targetTerm}`;
+    meta.textContent = `${entry.pinned ? "★ · " : ""}${dictionaryLanguageLabel(entry.sourceLanguage)} · ${dictionaryLanguageLabel(entry.targetLanguage)}${entry.tags ? ` · ${entry.tags}` : ""}`;
+    edit.type = "button";
+    edit.className = "button secondary dictionary-row-action";
+    setLocalizedText(edit, "편집");
+    edit.addEventListener("click", () => openDictionaryEditor(entry));
+    copy.append(terms, meta);
+    row.append(copy, edit);
+    container.append(row);
+  }
+}
+
+function applyDictionaryPersonalOverviewChange(entry) {
+  const saved = dictionaryEntryPayload(entry || {});
+  if (!saved.id) return;
+  dictionaryOverviewRequests.invalidate();
+  const entries = state.dictionaryPersonalEntries.filter(current => current.id !== saved.id);
+  entries.push(saved);
+  entries.sort((left, right) => right.updatedAt - left.updatedAt || right.id - left.id);
+  state.dictionaryPersonalEntries = entries.slice(0, 3);
+  renderDictionaryPersonalEntries();
+}
+
+function dictionaryEntryPayload(entry = {}) {
+  return {
+    id: Number(entry.id || 0),
+    sourceLanguage: entry.sourceLanguage || "en",
+    targetLanguage: entry.targetLanguage || state.config.target_language || "ko",
+    sourceTerm: String(entry.sourceTerm || "").trim(),
+    targetTerm: String(entry.targetTerm || "").trim(),
+    note: String(entry.note || "").trim(),
+    tags: String(entry.tags || "").trim(),
+    pinned: Boolean(entry.pinned),
+    scope: entry.scope || "global",
+    scopeValue: entry.scopeValue || "",
+    caseSensitive: Boolean(entry.caseSensitive),
+    wholeWord: entry.wholeWord !== false,
+    createdAt: Number(entry.createdAt || 0),
+    updatedAt: Number(entry.updatedAt || 0),
+  };
+}
+
+function openDictionaryManager() {
+  state.dictionaryPersonalManagerOpen = true;
+  elements.settingsWorkspace.dataset.focusView = "dictionary-manager";
+  elements.settingsNavigation.hidden = true;
+  elements.dictionaryOverview.hidden = true;
+  elements.dictionaryPersonalManager.hidden = false;
+  state.dictionaryPersonalQuery.offset = 0;
+  state.dictionarySelectedIds.clear();
+  elements.settingsScroll.scrollTop = 0;
+  loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
+  window.requestAnimationFrame(updateScrollIndicator);
+}
+
+function closeDictionaryManager() {
+  state.dictionaryPersonalManagerOpen = false;
+  delete elements.settingsWorkspace.dataset.focusView;
+  elements.settingsNavigation.hidden = false;
+  elements.dictionaryPersonalManager.hidden = true;
+  elements.dictionaryOverview.hidden = false;
+  elements.settingsScroll.scrollTop = 0;
+  window.requestAnimationFrame(updateScrollIndicator);
+}
+
+function openDictionaryPackManager() {
+  state.dictionaryPackManagerOpen = true;
+  elements.settingsWorkspace.dataset.focusView = "dictionary-manager";
+  elements.settingsNavigation.hidden = true;
+  elements.dictionaryOverview.hidden = true;
+  elements.dictionaryPackManager.hidden = false;
+  elements.settingsScroll.scrollTop = 0;
+  renderDictionaryPacks();
+  window.requestAnimationFrame(updateScrollIndicator);
+}
+
+function closeDictionaryPackManager() {
+  state.dictionaryPackManagerOpen = false;
+  delete elements.settingsWorkspace.dataset.focusView;
+  elements.settingsNavigation.hidden = false;
+  elements.dictionaryPackManager.hidden = true;
+  elements.dictionaryOverview.hidden = false;
+  elements.settingsScroll.scrollTop = 0;
+  window.requestAnimationFrame(updateScrollIndicator);
+}
+
+function handleDictionaryMouseBack(event) {
+  if (event.button !== 3) return;
+  let handled = true;
+  if (!elements.dictionaryImportLayer.hidden) closeDictionaryImport();
+  else if (!elements.dictionaryEditorLayer.hidden) closeDictionaryEditor();
+  else if (state.dictionaryPackManagerOpen) closeDictionaryPackManager();
+  else if (state.dictionaryPersonalManagerOpen) closeDictionaryManager();
+  else handled = false;
+  if (!handled) return;
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function openDictionaryEditor(entry = null) {
+  const value = dictionaryEntryPayload(entry || {});
+  state.dictionaryEditingEntry = entry ? value : null;
+  setLocalizedText(elements.dictionaryEditorTitle, entry ? "용어 편집" : "용어 추가");
+  updateDictionaryEditorSecondaryAction();
+  elements.dictionarySourceLanguage.value = value.sourceLanguage;
+  elements.dictionaryTargetLanguage.value = value.targetLanguage;
+  refreshDictionaryCustomSelect(elements.dictionarySourceLanguage);
+  refreshDictionaryCustomSelect(elements.dictionaryTargetLanguage);
+  elements.dictionarySourceTerm.value = value.sourceTerm;
+  elements.dictionaryTargetTerm.value = value.targetTerm;
+  elements.dictionaryTags.value = value.tags;
+  elements.dictionaryNote.value = value.note;
+  elements.dictionaryEditorLayer.hidden = false;
+  window.setTimeout(() => elements.dictionarySourceTerm.focus(), 0);
+}
+
+function updateDictionaryEditorSecondaryAction() {
+  const editing = Boolean(state.dictionaryEditingEntry);
+  elements.dictionaryEditorCancel.classList.toggle("secondary", !editing);
+  elements.dictionaryEditorCancel.classList.toggle("danger", editing);
+  setLocalizedText(elements.dictionaryEditorCancel, editing ? "삭제" : "취소");
+}
+
+function closeDictionaryEditor() {
+  elements.dictionaryEditorLayer.hidden = true;
+  state.dictionaryEditingEntry = null;
+  elements.dictionaryEditorForm.reset();
+}
+
+async function deleteDictionaryEditingEntry() {
+  const entry = state.dictionaryEditingEntry;
+  if (!entry?.id) {
+    closeDictionaryEditor();
+    return;
+  }
+  const confirmed = await showModal({
+    title: "선택한 용어를 삭제하시겠습니까?",
+    message: `${entry.sourceTerm} → ${entry.targetTerm}`,
+    acceptText: "삭제",
+    variant: "dictionary-action",
+  });
+  if (!confirmed) return;
+  elements.dictionaryEditorCancel.disabled = true;
+  elements.dictionaryPersonalSave.disabled = true;
+  try {
+    await invoke("dictionary_personal_delete", { id: entry.id });
+    closeDictionaryEditor();
+    await reloadDictionaryPersonalData();
+    setLocalizedText(elements.saveStatus, "개인 사전 용어를 삭제했습니다.");
+  } finally {
+    elements.dictionaryEditorCancel.disabled = false;
+    elements.dictionaryPersonalSave.disabled = false;
+  }
+}
+
+async function saveDictionaryPersonalEntry() {
+  const entry = dictionaryEntryPayload({
+    ...(state.dictionaryEditingEntry || {}),
+    sourceLanguage: elements.dictionarySourceLanguage.value,
+    targetLanguage: elements.dictionaryTargetLanguage.value,
+    sourceTerm: elements.dictionarySourceTerm.value,
+    targetTerm: elements.dictionaryTargetTerm.value,
+    note: elements.dictionaryNote.value,
+    tags: elements.dictionaryTags.value,
+  });
+  if (!entry.sourceTerm || !entry.targetTerm) throw new Error("원문 용어와 표시할 용어를 모두 입력하십시오.");
+  elements.dictionaryPersonalSave.disabled = true;
+  try {
+    const saved = await invoke("dictionary_personal_upsert", { entry });
+    applyDictionaryPersonalOverviewChange(saved);
+    closeDictionaryEditor();
+    await reloadDictionaryPersonalData();
+    setLocalizedText(elements.saveStatus, "개인 사전에 저장했습니다.");
+  } finally {
+    elements.dictionaryPersonalSave.disabled = false;
+  }
+}
+
+async function loadDictionaryPersonalPage() {
+  const query = { ...state.dictionaryPersonalQuery };
+  let page = await invoke("dictionary_personal_query", { query });
+  if (page.total > 0 && page.offset >= page.total) {
+    state.dictionaryPersonalQuery.offset = Math.floor((page.total - 1) / page.limit) * page.limit;
+    page = await invoke("dictionary_personal_query", { query: { ...state.dictionaryPersonalQuery } });
+  } else if (page.total === 0) {
+    state.dictionaryPersonalQuery.offset = 0;
+  }
+  state.dictionaryPersonalPage = page;
+  const liveIds = new Set(page.entries.map(entry => entry.id));
+  state.dictionarySelectedIds = new Set([...state.dictionarySelectedIds].filter(id => liveIds.has(id)));
+  renderDictionaryManagerEntries();
+}
+
+function renderDictionaryManagerEntries() {
+  const container = elements.dictionaryManagerList;
+  const page = state.dictionaryPersonalPage;
+  container.replaceChildren();
+  if (!page.entries.length) {
+    const empty = document.createElement("p");
+    empty.className = "dictionary-empty";
+    setLocalizedText(empty, state.dictionaryPersonalQuery.search ? "검색 결과가 없습니다." : "저장된 개인 용어가 없습니다.");
+    container.append(empty);
+  }
+  for (const entry of page.entries) container.append(createDictionaryManagerRow(entry));
+  const currentPage = page.total ? Math.floor(page.offset / page.limit) + 1 : 0;
+  const totalPages = page.total ? Math.ceil(page.total / page.limit) : 0;
+  elements.dictionaryPersonalCount.textContent = `${page.total.toLocaleString()} ${translateCopy(currentUiLanguage(), "개인 용어")}`;
+  elements.dictionaryPageSummary.textContent = `${currentPage.toLocaleString()} / ${totalPages.toLocaleString()}`;
+  elements.dictionaryPagePrev.disabled = page.offset <= 0;
+  elements.dictionaryPageNext.disabled = page.offset + page.limit >= page.total;
+  renderDictionarySelectionBar();
+}
+
+function createDictionaryManagerRow(entry) {
+  const row = document.createElement("article");
+  row.className = "dictionary-manager-row";
+  const selected = state.dictionarySelectedIds.has(entry.id);
+  row.dataset.selected = String(selected);
+  const selector = document.createElement("button");
+  selector.className = "dictionary-row-selector";
+  selector.type = "button";
+  selector.setAttribute("aria-label", `${entry.sourceTerm} 선택`);
+  selector.setAttribute("aria-pressed", String(selected));
+  const selectionCheck = document.createElement("span");
+  selectionCheck.setAttribute("aria-hidden", "true");
+  selectionCheck.textContent = "✓";
+  selector.append(selectionCheck);
+  selector.addEventListener("click", () => {
+    const nextSelected = !state.dictionarySelectedIds.has(entry.id);
+    if (nextSelected) state.dictionarySelectedIds.add(entry.id);
+    else state.dictionarySelectedIds.delete(entry.id);
+    row.dataset.selected = String(nextSelected);
+    selector.setAttribute("aria-pressed", String(nextSelected));
+    renderDictionarySelectionBar();
+  });
+
+  const copy = document.createElement("div");
+  copy.className = "dictionary-row-copy";
+  const terms = document.createElement("div");
+  terms.className = "dictionary-row-terms";
+  const source = document.createElement("strong");
+  const arrow = document.createElement("span");
+  const target = document.createElement("b");
+  source.textContent = entry.sourceTerm;
+  arrow.className = "dictionary-row-arrow";
+  arrow.textContent = "→";
+  target.textContent = entry.targetTerm;
+  terms.append(source, arrow, target);
+  const meta = document.createElement("span");
+  meta.className = "dictionary-row-meta";
+  meta.textContent = `${dictionaryLanguageLabel(entry.sourceLanguage)} · ${dictionaryLanguageLabel(entry.targetLanguage)}${entry.note ? ` · ${entry.note}` : ""}`;
+  copy.append(terms, meta);
+  if (entry.tags) {
+    const tags = document.createElement("span");
+    tags.className = "dictionary-row-tags";
+    tags.textContent = entry.tags.split(",").map(tag => `#${tag.trim()}`).join("  ");
+    copy.append(tags);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "dictionary-row-actions";
+  const pin = dictionaryIconButton(entry.pinned ? "★" : "☆", entry.pinned ? "즐겨찾기 해제" : "즐겨찾기에 추가", entry.pinned);
+  const duplicate = dictionaryIconButton("⧉", "원문 용어 복사");
+  const edit = dictionaryIconButton("✎", "편집");
+  pin.addEventListener("click", () => updateDictionaryEntries([entry], { pinned: !entry.pinned }));
+  duplicate.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(entry.sourceTerm);
+    setLocalizedText(elements.saveStatus, "원문 용어를 복사했습니다.");
+  });
+  edit.addEventListener("click", () => openDictionaryEditor(entry));
+  actions.append(pin, duplicate, edit);
+  row.append(selector, copy, actions);
+  return row;
+}
+
+function dictionaryIconButton(symbol, label, active = false) {
+  const button = document.createElement("button");
+  const translated = translateCopy(currentUiLanguage(), label);
+  button.type = "button";
+  button.className = "dictionary-icon-button";
+  button.dataset.active = String(active);
+  button.dataset.i18nAriaLabel = label;
+  button.dataset.i18nTooltip = label;
+  button.dataset.tooltip = translated;
+  button.textContent = symbol;
+  button.setAttribute("aria-label", translated);
+  return button;
+}
+
+function renderDictionarySelectionBar() {
+  const count = state.dictionarySelectedIds.size;
+  elements.dictionarySelectionBar.hidden = count === 0;
+  elements.dictionarySelectionAll.disabled = count > 0 && count === state.dictionaryPersonalPage.entries.length;
+  setLocalizedText(elements.dictionarySelectionCount, `${count.toLocaleString()}개 선택`);
+}
+
+async function updateDictionaryEntries(entries, changes) {
+  const updated = entries.map(entry => dictionaryEntryPayload({ ...entry, ...changes }));
+  await invoke("dictionary_personal_batch_upsert", { batch: { entries: updated, overwrite: true } });
+  await reloadDictionaryPersonalData();
+}
+
+async function reloadDictionaryPersonalData() {
+  await Promise.all([refreshDictionaryStatus(), refreshDictionaryOverviewEntries(), loadDictionaryPersonalPage()]);
+}
+
+async function refreshDictionaryOverviewEntries() {
+  const requestRevision = dictionaryOverviewRequests.begin();
+  const page = await invoke("dictionary_personal_query", {
+    query: { search: "", sourceLanguage: "", targetLanguage: "", pinnedOnly: false, sort: "updated_desc", offset: 0, limit: 3 },
+  });
+  if (!dictionaryOverviewRequests.isCurrent(requestRevision)) return false;
+  if (dictionaryOverviewFingerprint(state.dictionaryPersonalEntries) === dictionaryOverviewFingerprint(page.entries)) return true;
+  state.dictionaryPersonalEntries = page.entries;
+  renderDictionaryPersonalEntries();
+  return true;
+}
+
+function openDictionaryImport() {
+  state.dictionaryImportEntries = [];
+  elements.dictionaryImportText.value = "";
+  elements.dictionaryImportFile.value = "";
+  elements.dictionaryImportSource.value = elements.dictionaryFilterSource.value || "en";
+  elements.dictionaryImportTarget.value = state.config.target_language || "ko";
+  setLocalizedText(elements.dictionaryImportPreview, "가져올 내용을 선택하거나 붙여 넣으십시오.");
+  elements.dictionaryImportAccept.disabled = true;
+  elements.dictionaryImportLayer.hidden = false;
+  window.setTimeout(() => elements.dictionaryImportText.focus(), 0);
+}
+
+function closeDictionaryImport() {
+  elements.dictionaryImportLayer.hidden = true;
+  state.dictionaryImportEntries = [];
+}
+
+function parseDelimitedDictionary(text, delimiter) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '"') {
+      if (quoted && text[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else quoted = !quoted;
+    } else if (char === delimiter && !quoted) {
+      row.push(field);
+      field = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && text[index + 1] === "\n") index += 1;
+      row.push(field);
+      if (row.some(value => value.trim())) rows.push(row);
+      row = [];
+      field = "";
+    } else field += char;
+  }
+  row.push(field);
+  if (row.some(value => value.trim())) rows.push(row);
+  return rows;
+}
+
+function dictionaryImportValue(value, ...keys) {
+  for (const key of keys) {
+    if (Object.hasOwn(value, key)) return value[key];
+  }
+  return undefined;
+}
+
+function parseDictionaryImport(text) {
+  const clean = text.replace(/^\uFEFF/, "").trim();
+  if (!clean) return [];
+  let rawEntries;
+  if (clean.startsWith("[") || clean.startsWith("{")) {
+    const parsed = JSON.parse(clean);
+    rawEntries = Array.isArray(parsed) ? parsed : parsed.entries;
+    if (!Array.isArray(rawEntries)) throw new Error("JSON에서 entries 배열을 찾지 못했습니다.");
+  } else {
+    const delimiter = clean.includes("\t") ? "\t" : ",";
+    const rows = parseDelimitedDictionary(clean, delimiter);
+    const normalizedHeader = rows[0]?.map(value => value.trim().toLowerCase().replace(/[ _-]/g, "")) || [];
+    const knownHeaders = new Set(["sourceterm", "원문", "targetterm", "표시어", "번역"]);
+    const hasHeader = normalizedHeader.some(value => knownHeaders.has(value));
+    const header = hasHeader ? normalizedHeader : ["sourceterm", "targetterm", "sourcelanguage", "targetlanguage", "tags", "note"];
+    const body = hasHeader ? rows.slice(1) : rows;
+    rawEntries = body.map(columns => Object.fromEntries(header.map((name, index) => [name, columns[index] ?? ""])));
+  }
+  if (rawEntries.length > 5000) throw new Error("한 번에 최대 5,000개까지 가져올 수 있습니다.");
+  const result = [];
+  let invalid = 0;
+  for (const raw of rawEntries) {
+    const sourceTerm = String(dictionaryImportValue(raw, "sourceTerm", "sourceterm", "원문") ?? "").trim();
+    const targetTerm = String(dictionaryImportValue(raw, "targetTerm", "targetterm", "표시어", "번역") ?? "").trim();
+    if (!sourceTerm || !targetTerm) {
+      invalid += 1;
+      continue;
+    }
+    const bool = value => value === true || ["true", "1", "yes", "y"].includes(String(value || "").toLowerCase());
+    result.push(dictionaryEntryPayload({
+      sourceLanguage: dictionaryImportValue(raw, "sourceLanguage", "sourcelanguage", "원문언어") || elements.dictionaryImportSource.value,
+      targetLanguage: dictionaryImportValue(raw, "targetLanguage", "targetlanguage", "대상언어") || elements.dictionaryImportTarget.value,
+      sourceTerm,
+      targetTerm,
+      tags: dictionaryImportValue(raw, "tags", "태그") || "",
+      note: dictionaryImportValue(raw, "note", "메모") || "",
+      pinned: bool(dictionaryImportValue(raw, "pinned", "고정")),
+      caseSensitive: bool(dictionaryImportValue(raw, "caseSensitive", "casesensitive", "대소문자구분")),
+      wholeWord: dictionaryImportValue(raw, "wholeWord", "wholeword", "단어일치") === undefined
+        ? true
+        : bool(dictionaryImportValue(raw, "wholeWord", "wholeword", "단어일치")),
+      scope: dictionaryImportValue(raw, "scope", "적용범위") || "global",
+      scopeValue: dictionaryImportValue(raw, "scopeValue", "scopevalue", "범위값") || "",
+    }));
+  }
+  result.invalid = invalid;
+  return result;
+}
+
+function updateDictionaryImportPreview() {
+  try {
+    const entries = parseDictionaryImport(elements.dictionaryImportText.value);
+    state.dictionaryImportEntries = entries;
+    const invalid = entries.invalid || 0;
+    setLocalizedText(elements.dictionaryImportPreview, invalid
+      ? `${entries.length.toLocaleString()}개 항목을 가져올 수 있습니다. ${invalid.toLocaleString()}개 행은 원문이나 표시어가 없어 제외됩니다.`
+      : `${entries.length.toLocaleString()}개 항목을 가져올 수 있습니다.`);
+    elements.dictionaryImportPreview.dataset.state = "ready";
+    elements.dictionaryImportAccept.disabled = entries.length === 0;
+  } catch (error) {
+    state.dictionaryImportEntries = [];
+    elements.dictionaryImportPreview.textContent = String(error.message || error);
+    elements.dictionaryImportPreview.dataset.state = "error";
+    elements.dictionaryImportAccept.disabled = true;
+  }
+}
+
+async function importDictionaryEntries() {
+  const entries = state.dictionaryImportEntries;
+  if (!entries.length) return;
+  elements.dictionaryImportAccept.disabled = true;
+  try {
+    const result = await invoke("dictionary_personal_batch_upsert", {
+      batch: { entries, overwrite: elements.dictionaryImportOverwrite.value === "overwrite" },
+    });
+    closeDictionaryImport();
+    await reloadDictionaryPersonalData();
+    setLocalizedText(elements.saveStatus, `${result.inserted.toLocaleString()}개 추가 · ${result.updated.toLocaleString()}개 수정 · ${result.skipped.toLocaleString()}개 건너뜀`);
+  } finally {
+    elements.dictionaryImportAccept.disabled = false;
+  }
+}
+
+function csvCell(value, delimiter) {
+  const text = String(value ?? "");
+  return /["\r\n,\t]/.test(text) || text.includes(delimiter) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+async function exportDictionaryEntries() {
+  const entries = await invoke("dictionary_personal_list");
+  if (!entries.length) throw new Error("내보낼 개인 용어가 없습니다.");
+  const format = elements.dictionaryExportFormat.value;
+  let content;
+  let mime;
+  if (format === "json") {
+    content = JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), entries }, null, 2);
+    mime = "application/json;charset=utf-8";
+  } else {
+    const delimiter = format === "tsv" ? "\t" : ",";
+    const headers = ["sourceTerm", "targetTerm", "sourceLanguage", "targetLanguage", "tags", "note", "pinned", "caseSensitive", "wholeWord"];
+    const rows = entries.map(entry => headers.map(key => csvCell(entry[key], delimiter)).join(delimiter));
+    content = `\uFEFF${headers.join(delimiter)}\r\n${rows.join("\r\n")}`;
+    mime = "text/plain;charset=utf-8";
+  }
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+  anchor.href = url;
+  anchor.download = `nudenyang-personal-dictionary-${date}.${format}`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+  setLocalizedText(elements.saveStatus, "개인 사전을 내보냈습니다.");
+}
+
+function renderDictionaryPacks() {
+  const container = elements.dictionaryPackList;
+  const status = state.dictionaryStatus;
+  if (!container || !status) return;
+  container.replaceChildren();
+  const practical = status.packs.filter(pack => pack.availability === "practical");
+  const installedPackCount = practical.filter(pack => pack.installed && pack.edition === "practical").length;
+  const createPackRow = pack => {
+    const row = document.createElement("article");
+    row.className = "dictionary-pack-row";
+    const identity = document.createElement("div");
+    const title = document.createElement("strong");
+    const detail = document.createElement("span");
+    const stateBadge = document.createElement("span");
+    const action = document.createElement("button");
+    title.textContent = dictionaryLanguageLabel(pack.language);
+    const progress = state.dictionaryPackProgress.get(pack.language);
+    const installedPractical = pack.installed && pack.edition === "practical";
+    const entryCount = pack.availableEntryCount || pack.entryCount;
+    detail.textContent = `${entryCount.toLocaleString()} ${translateCopy(currentUiLanguage(), "항목")} · ${translateCopy(currentUiLanguage(), "압축 용량")} ${formatStorageSize(pack.compressedBytes)}`;
+    stateBadge.className = `dictionary-pack-state${installedPractical ? " installed" : ""}`;
+    if (progress?.phase === "preparing") {
+      setLocalizedText(stateBadge, "설치 준비 중");
+    } else if (progress?.phase === "installing") {
+      const percent = progress.total > 0 ? Math.min(100, Math.round(progress.processed / progress.total * 100)) : 0;
+      setLocalizedText(stateBadge, `설치 중 ${percent}%`);
+    } else {
+      setLocalizedText(stateBadge, installedPractical ? "설치됨" : "미설치");
+    }
+    action.type = "button";
+    action.className = "button secondary dictionary-row-action";
+    action.disabled = Boolean(progress);
+    setLocalizedText(action, installedPractical ? "삭제" : "설치");
+    action.addEventListener("click", async () => {
+      action.disabled = true;
+      try {
+        if (installedPractical) await invoke("dictionary_pack_remove", { language: pack.language });
+        else await invoke("dictionary_pack_install", { language: pack.language });
+        await loadDictionaryData(true);
+        setLocalizedText(elements.saveStatus, installedPractical ? "사전팩을 삭제했습니다." : "사전팩을 설치했습니다.");
+      } catch (error) {
+        state.dictionaryPackProgress.delete(pack.language);
+        renderDictionaryPacks();
+        action.disabled = false;
+        await showError("사전팩 상태를 변경하지 못했습니다", String(error));
+      }
+    });
+    identity.append(title, detail);
+    row.append(identity, stateBadge, action);
+    return row;
+  };
+  const installed = practical.filter(pack => pack.installed && pack.edition === "practical");
+  if (installed.length) {
+    installed.forEach(pack => container.append(createPackRow(pack)));
+  } else {
+    const empty = document.createElement("p");
+    empty.className = "dictionary-empty";
+    setLocalizedText(empty, "설치된 확장 사전이 없습니다.");
+    container.append(empty);
+  }
+  const language = resolveUiLanguage(currentUiLanguage());
+  elements.dictionaryStorageSummary.textContent = `${translateCopy(language, "사전팩")} ${installedPackCount} · ${translateCopy(language, "개인 용어")} ${status.personalEntryCount} · ${translateCopy(language, "디스크 사용량")} ${formatStorageSize(status.databaseBytes)}`;
+  if (!elements.dictionaryPackManagerList) return;
+  const search = state.dictionaryPackQuery.search.toLocaleLowerCase(language);
+  const filtered = practical.filter(pack => {
+    const installedPractical = pack.installed && pack.edition === "practical";
+    if (state.dictionaryPackQuery.filter === "installed" && !installedPractical) return false;
+    if (state.dictionaryPackQuery.filter === "available" && installedPractical) return false;
+    if (!search) return true;
+    return `${dictionaryLanguageLabel(pack.language)} ${pack.language}`.toLocaleLowerCase(language).includes(search);
+  }).sort((left, right) => {
+    const leftInstalled = left.installed && left.edition === "practical";
+    const rightInstalled = right.installed && right.edition === "practical";
+    return Number(rightInstalled) - Number(leftInstalled)
+      || dictionaryLanguageLabel(left.language).localeCompare(dictionaryLanguageLabel(right.language), language);
+  });
+  elements.dictionaryPackManagerList.replaceChildren();
+  filtered.forEach(pack => elements.dictionaryPackManagerList.append(createPackRow(pack)));
+  if (!filtered.length) {
+    const empty = document.createElement("p");
+    empty.className = "dictionary-empty";
+    setLocalizedText(empty, "조건에 맞는 언어팩이 없습니다.");
+    elements.dictionaryPackManagerList.append(empty);
+  }
+  elements.dictionaryPackManagerCount.textContent = `${translateCopy(language, "설치됨")} ${installedPackCount}/${practical.length}`;
+}
+
+async function refreshDictionaryStatus() {
+  state.dictionaryStatus = await invoke("dictionary_status_get");
+  renderDictionaryPacks();
+}
+
+async function loadDictionaryData(force = false) {
+  if (state.dictionaryLoading || (state.dictionaryLoaded && !force)) return;
+  state.dictionaryLoading = true;
+  const overviewRequestRevision = dictionaryOverviewRequests.begin();
+  try {
+    const [status, page] = await Promise.all([
+      invoke("dictionary_status_get"),
+      invoke("dictionary_personal_query", {
+        query: { search: "", sourceLanguage: "", targetLanguage: "", pinnedOnly: false, sort: "updated_desc", offset: 0, limit: 3 },
+      }),
+    ]);
+    state.dictionaryStatus = status;
+    if (dictionaryOverviewRequests.isCurrent(overviewRequestRevision)) {
+      state.dictionaryPersonalEntries = page.entries;
+      renderDictionaryPersonalEntries();
+    }
+    state.dictionaryLoaded = true;
+    renderDictionaryPacks();
+  } catch (error) {
+    setLocalizedError(elements.dictionaryStorageSummary, error);
+  } finally {
+    state.dictionaryLoading = false;
+  }
+}
+
+function dictionarySettingsPanelIsVisible() {
+  const panel = document.querySelector('[data-settings-view="dictionary"]');
+  return Boolean(panel && !panel.hidden);
+}
+
+function syncVisibleDictionaryPersonalData() {
+  if (!dictionarySettingsPanelIsVisible()) return;
+  refreshDictionaryOverviewEntries().catch(error => {
+    writeDiagnostic("warn", `dictionary-overview-sync: ${String(error)}`);
+  });
+}
+
 function activateSettingsPanel(panel) {
   const target = document.querySelector(`[data-settings-view="${panel}"]`);
   if (!target) return;
+  if (panel !== "dictionary" && state.dictionaryPersonalManagerOpen) closeDictionaryManager();
+  if (panel !== "dictionary" && state.dictionaryPackManagerOpen) closeDictionaryPackManager();
   for (const view of document.querySelectorAll("[data-settings-view]")) {
     const active = view === target;
     view.hidden = !active;
@@ -485,6 +1432,7 @@ function activateSettingsPanel(panel) {
   }
   elements.settingsScroll.scrollTop = 0;
   closeAllSelects();
+  if (panel === "dictionary") loadDictionaryData(true).catch(() => {});
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -1141,6 +2089,8 @@ function applyUiLanguage(language) {
   renderAutostart();
   renderStorageStatus();
   renderLocalResourceGuidance();
+  renderSourceLanguagePicker();
+  refreshDictionaryCustomSelects({ rebuild: true });
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -1172,7 +2122,10 @@ function openSelect(element) {
   element.classList.add("open");
   trigger.setAttribute("aria-expanded", "true");
 
-  const viewportBounds = elements.settingsScroll.getBoundingClientRect();
+  const selectViewport = element.closest(".dictionary-editor-modal, .dictionary-import-modal");
+  const viewportBounds = selectViewport
+    ? selectViewport.getBoundingClientRect()
+    : elements.settingsScroll.getBoundingClientRect();
   const triggerBounds = trigger.getBoundingClientRect();
   const menuHeight = menu.getBoundingClientRect().height;
   const spaceBelow = viewportBounds.bottom - triggerBounds.bottom - 8;
@@ -1341,7 +2294,107 @@ function setSelectValue(field, value) {
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === String(value)));
   }
+  if (field === "translator") renderDictionaryLocalizationNotice();
   if (field === "outgoing_translator") renderOutgoingModelGuidance();
+}
+
+function selectedSourceLanguageLabel(mode, languages) {
+  if (mode === "all") return translateCopy(currentUiLanguage(), "모든 언어");
+  const labels = languages
+    .map(code => LANGUAGE_OPTIONS.find(([value]) => value === code)?.[1] || code);
+  if (labels.length === 0) return translateCopy(currentUiLanguage(), "선택한 언어 없음");
+  if (labels.length <= 2) return labels.join(", ");
+  return `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+}
+
+function renderSourceLanguagePicker() {
+  if (!elements.sourceLanguageSelect) return;
+  const mode = state.config.incoming_language_mode;
+  const languages = state.config.incoming_source_languages;
+  elements.sourceLanguageTrigger.querySelector(".select-trigger-label").textContent =
+    selectedSourceLanguageLabel(mode, languages);
+  for (const option of elements.sourceLanguageOptions.querySelectorAll(".select-option")) {
+    const selected = option.dataset.value === "all"
+      ? mode === "all"
+      : mode === "selected" && languages.includes(option.dataset.value);
+    option.setAttribute("aria-selected", String(selected));
+  }
+}
+
+function setSourceLanguagePickerBusy(busy) {
+  elements.sourceLanguageOptions.setAttribute("aria-busy", String(busy));
+  for (const option of elements.sourceLanguageOptions.querySelectorAll(".select-option")) {
+    option.disabled = busy;
+  }
+}
+
+async function applySourceLanguageSelection(value) {
+  const previous = {
+    incoming_language_mode: state.config.incoming_language_mode,
+    incoming_source_languages: [...state.config.incoming_source_languages],
+  };
+  const patch = nextIncomingSourceLanguageSelection(
+    previous.incoming_language_mode,
+    previous.incoming_source_languages,
+    value,
+  );
+  state.config = normalizeConfig({ ...state.config, ...patch });
+  renderSourceLanguagePicker();
+  setSourceLanguagePickerBusy(true);
+  try {
+    await applySettingsPatch(patch);
+  } catch (error) {
+    state.config = normalizeConfig({ ...state.config, ...previous });
+    renderSourceLanguagePicker();
+    await showError("원문 언어 설정을 적용하지 못했습니다", String(error));
+  } finally {
+    setSourceLanguagePickerBusy(false);
+  }
+}
+
+function initializeSourceLanguagePicker() {
+  const appendOption = (value, label, localized = false) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "select-option source-language-option";
+    option.dataset.value = value;
+    option.textContent = localized ? translateCopy(currentUiLanguage(), label) : label;
+    if (localized) option.dataset.i18nKey = label;
+    option.dir = "auto";
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", "false");
+    option.addEventListener("click", async () => applySourceLanguageSelection(value));
+    elements.sourceLanguageOptions.append(option);
+  };
+
+  appendOption("all", "모든 언어", true);
+  for (const [value, label] of LANGUAGE_OPTIONS) appendOption(value, label);
+
+  elements.sourceLanguageTrigger.addEventListener("click", () => {
+    const opening = !elements.sourceLanguageSelect.classList.contains("open");
+    closeAllSelects();
+    if (!opening) return;
+    renderSourceLanguagePicker();
+    openSelect(elements.sourceLanguageSelect);
+  });
+  elements.sourceLanguageSearch.addEventListener("input", () => {
+    const matches = new Set(
+      filterLanguageOptions(LANGUAGE_OPTIONS, elements.sourceLanguageSearch.value)
+        .map(([value]) => String(value)),
+    );
+    for (const option of elements.sourceLanguageOptions.querySelectorAll(".select-option")) {
+      option.hidden = option.dataset.value === "all"
+        ? elements.sourceLanguageSearch.value.trim().length > 0
+        : !matches.has(option.dataset.value);
+    }
+    elements.sourceLanguageEmpty.hidden = matches.size > 0;
+  });
+  elements.sourceLanguageSearch.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeSelect(elements.sourceLanguageSelect);
+    elements.sourceLanguageTrigger.focus();
+  });
 }
 
 function closeSelect(element) {
@@ -1356,6 +2409,7 @@ function closeAllSelects() {
 function renderConfig(config) {
   state.config = normalizeConfig(config);
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
+  renderSourceLanguagePicker();
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   setSwitch(
@@ -1364,20 +2418,16 @@ function renderConfig(config) {
     "켜짐",
     "꺼짐",
   );
-  setSwitch(
-    elements.outgoingConfirmSend,
-    state.config.outgoing_confirm_send,
-    "확인",
-    "즉시",
-  );
+  setSwitch(elements.dictionaryEnabled, state.config.dictionary_enabled, "켜짐", "꺼짐");
+  if (!state.dictionaryLoaded && !elements.dictionarySourceTerm.value && !elements.dictionaryTargetTerm.value) {
+    elements.dictionaryTargetLanguage.value = state.config.target_language;
+  }
   setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "켜짐", "꺼짐");
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
   elements.translationShortcutHint.textContent = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcutHint.textContent = state.config.hotkeys.toggle_outgoing_translation;
-  elements.sendImmediatelyShortcut.value = state.config.hotkeys.send_outgoing_immediately;
-  elements.reviewBeforeSendShortcut.value = state.config.hotkeys.review_outgoing_before_send;
   applyTheme(state.config.ui_theme);
   applyUiLanguage(state.config.ui_language);
 }
@@ -1554,6 +2604,7 @@ function updateEngineState(status) {
     ? `${connectionLabel} · ${modelLabel}`
     : connectionLabel;
   renderManualDiscordRestart(status);
+  renderVerificationMode(status);
   state.config.enabled = enabledState.enabled;
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   if (status.notice) setLocalizedBackendText(elements.saveStatus, status.notice);
@@ -1565,6 +2616,90 @@ function renderManualDiscordRestart(status = state.runtime) {
   elements.discordRestartManual.disabled = availability.disabled;
   elements.discordRestartManual.dataset.state = state.repairActive ? "working" : "idle";
   elements.discordRestartManual.setAttribute("aria-busy", String(state.repairActive));
+}
+
+function renderVerificationMode(status = state.runtime) {
+  const active = Boolean(status?.verificationRequired || state.config.discord_verification_mode);
+  if (!active) state.verificationBannerDismissed = false;
+  elements.verificationBanner.hidden = !active || state.verificationBannerDismissed;
+  const disabled = Boolean(state.repairActive || state.verificationPromptActive);
+  elements.verificationReconnect.disabled = disabled;
+  elements.verificationReconnectHeader.hidden = !active || !state.verificationBannerDismissed;
+  elements.verificationReconnectHeader.disabled = disabled;
+  elements.verificationReconnectHeader.dataset.state = state.repairActive ? "working" : "idle";
+  elements.verificationReconnectHeader.setAttribute("aria-busy", String(state.repairActive));
+  elements.verificationContinueVanilla.disabled = disabled;
+}
+
+async function restartVanillaForVerification(status = state.runtime) {
+  if (state.repairActive) return;
+  state.repairActive = true;
+  renderVerificationMode(status);
+  try {
+    setLocalizedText(elements.engineStateLabel, "일반 Discord로 전환 중");
+    await invoke("discord_restart_vanilla", {
+      expectedProcessId: status?.discordProcessId ?? null,
+    });
+    await pollRuntime();
+  } catch (error) {
+    await showError("일반 Discord 전환 실패", String(error));
+  } finally {
+    state.repairActive = false;
+    renderVerificationMode();
+  }
+}
+
+async function handleVerificationRequired() {
+  if (state.verificationPromptActive || state.promptActive || state.repairActive) return;
+  state.verificationPromptActive = true;
+  state.promptActive = true;
+  renderVerificationMode();
+  try {
+    const confirmed = await showModal({
+      title: "Discord 추가 인증이 필요합니다",
+      message:
+        "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
+      acceptText: "일반 Discord로 다시 시작",
+      cancelText: "현재 Discord에서 인증 계속",
+      variant: "verification",
+    });
+    if (confirmed) await restartVanillaForVerification(state.runtime);
+  } finally {
+    state.promptActive = false;
+    state.verificationPromptActive = false;
+    renderVerificationMode();
+  }
+}
+
+async function reconnectAfterVerification() {
+  if (state.verificationPromptActive || state.promptActive || state.repairActive) return;
+  state.verificationPromptActive = true;
+  state.promptActive = true;
+  renderVerificationMode();
+  try {
+    const confirmed = await showModal({
+      title: "NudeNyang을 다시 연결하시겠습니까?",
+      message:
+        "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
+      acceptText: "Discord를 다시 시작하고 연결",
+    });
+    if (!confirmed) return;
+    state.repairActive = true;
+    renderVerificationMode();
+    const status = state.runtime || await invoke("runtime_status");
+    await invoke("discord_restart", {
+      expectedProcessId: status?.discordProcessId ?? null,
+    });
+    state.verificationBannerDismissed = false;
+    await pollRuntime();
+  } catch (error) {
+    await showError("NudeNyang 재연결 실패", String(error));
+  } finally {
+    state.repairActive = false;
+    state.promptActive = false;
+    state.verificationPromptActive = false;
+    renderVerificationMode();
+  }
 }
 
 function localizeRuntimeLabel(label, language) {
@@ -1591,6 +2726,12 @@ async function pollRuntime() {
     const status = await invoke("runtime_status");
     state.runtime = status;
     updateEngineState(status);
+    if (status.verificationRequired && !state.verificationPromptShown) {
+      state.verificationPromptShown = true;
+      await handleVerificationRequired();
+    } else if (!status.verificationRequired) {
+      state.verificationPromptShown = false;
+    }
     if (shouldPromptRestart(status, state)) await handleRestartRequired(status);
   } catch (error) {
     elements.engineState.dataset.state = "error";
@@ -1773,12 +2914,25 @@ async function initializeSettingsUi() {
   await invoke("engine_ui_ready");
 }
 
-document.querySelectorAll(".custom-select").forEach(renderSelect);
+document.querySelectorAll(".custom-select[data-field]").forEach(renderSelect);
+initializeSourceLanguagePicker();
+populateDictionaryLanguageSelects();
+initializeDictionaryCustomSelects();
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });
+document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
 elements.discordRestartManual.addEventListener("click", restartDiscordManually);
+const requestVerificationReconnect = () => {
+  reconnectAfterVerification().catch(error => showError("NudeNyang 재연결 실패", String(error)));
+};
+elements.verificationReconnect.addEventListener("click", requestVerificationReconnect);
+elements.verificationReconnectHeader.addEventListener("click", requestVerificationReconnect);
+elements.verificationContinueVanilla.addEventListener("click", () => {
+  state.verificationBannerDismissed = true;
+  renderVerificationMode();
+});
 elements.outgoingTranslation.addEventListener("click", async () => {
   const enabled = elements.outgoingTranslation.getAttribute("aria-checked") !== "true";
   try {
@@ -1787,13 +2941,163 @@ elements.outgoingTranslation.addEventListener("click", async () => {
     await showError("전송 메시지 통역 상태를 변경하지 못했습니다", String(error));
   }
 });
-elements.outgoingConfirmSend.addEventListener("click", () => {
-  const enabled = elements.outgoingConfirmSend.getAttribute("aria-checked") !== "true";
-  setSwitch(elements.outgoingConfirmSend, enabled, "확인", "즉시");
-  applySettingsPatch({ outgoing_confirm_send: enabled }).catch(async error => {
-    setSwitch(elements.outgoingConfirmSend, !enabled, "확인", "즉시");
-    await showError("전송 전 확인 설정을 적용하지 못했습니다", String(error));
-  });
+elements.dictionaryEnabled.addEventListener("click", async () => {
+  const enabled = elements.dictionaryEnabled.getAttribute("aria-checked") !== "true";
+  setSwitch(elements.dictionaryEnabled, enabled, "켜짐", "꺼짐");
+  try {
+    await applySettingsPatch({ dictionary_enabled: enabled });
+  } catch (error) {
+    setSwitch(elements.dictionaryEnabled, state.config.dictionary_enabled, "켜짐", "꺼짐");
+    await showError("사전 사용 설정을 변경하지 못했습니다", String(error));
+  }
+});
+elements.dictionaryPersonalOpen.addEventListener("click", openDictionaryManager);
+elements.dictionaryPersonalQuickAdd.addEventListener("click", () => openDictionaryEditor());
+elements.dictionaryPersonalBack.addEventListener("click", closeDictionaryManager);
+elements.dictionaryPackManagerOpen.addEventListener("click", openDictionaryPackManager);
+elements.dictionaryPackManagerBack.addEventListener("click", closeDictionaryPackManager);
+elements.dictionaryPackSearch.addEventListener("input", () => {
+  state.dictionaryPackQuery.search = elements.dictionaryPackSearch.value.trim();
+  renderDictionaryPacks();
+});
+elements.dictionaryPackFilter.addEventListener("change", () => {
+  state.dictionaryPackQuery.filter = elements.dictionaryPackFilter.value;
+  renderDictionaryPacks();
+});
+elements.dictionaryManagerAdd.addEventListener("click", () => openDictionaryEditor());
+elements.dictionaryEditorCancel.addEventListener("click", () => {
+  if (!state.dictionaryEditingEntry) {
+    closeDictionaryEditor();
+    return;
+  }
+  deleteDictionaryEditingEntry().catch(error => showError("개인 사전 용어를 삭제하지 못했습니다", String(error)));
+});
+elements.dictionaryEditorLayer.addEventListener("click", event => {
+  if (event.target === elements.dictionaryEditorLayer) closeDictionaryEditor();
+});
+elements.dictionaryPersonalSave.addEventListener("click", () => {
+  saveDictionaryPersonalEntry().catch(error => showError("개인 사전에 저장하지 못했습니다", String(error)));
+});
+elements.dictionaryEditorForm.addEventListener("submit", event => {
+  event.preventDefault();
+  saveDictionaryPersonalEntry().catch(error => showError("개인 사전에 저장하지 못했습니다", String(error)));
+});
+elements.dictionaryPersonalSearch.addEventListener("input", () => {
+  window.clearTimeout(state.dictionaryPersonalSearchTimer);
+  state.dictionaryPersonalSearchTimer = window.setTimeout(() => {
+    state.dictionaryPersonalQuery.search = elements.dictionaryPersonalSearch.value.trim();
+    state.dictionaryPersonalQuery.offset = 0;
+    loadDictionaryPersonalPage().catch(error => showError("개인 사전을 검색하지 못했습니다", String(error)));
+  }, 180);
+});
+elements.dictionaryFilterSource.addEventListener("change", () => {
+  state.dictionaryPersonalQuery.sourceLanguage = elements.dictionaryFilterSource.value;
+  state.dictionaryPersonalQuery.offset = 0;
+  loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
+});
+elements.dictionaryFilterPinned.addEventListener("click", () => {
+  const enabled = elements.dictionaryFilterPinned.getAttribute("aria-pressed") !== "true";
+  elements.dictionaryFilterPinned.setAttribute("aria-pressed", String(enabled));
+  elements.dictionaryFilterPinned.querySelector(".dictionary-favorite-filter-star").textContent = enabled ? "★" : "☆";
+  state.dictionaryPersonalQuery.pinnedOnly = enabled;
+  state.dictionaryPersonalQuery.offset = 0;
+  loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
+});
+elements.dictionarySort.addEventListener("change", () => {
+  state.dictionaryPersonalQuery.sort = elements.dictionarySort.value;
+  state.dictionaryPersonalQuery.offset = 0;
+  loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
+});
+elements.dictionaryPagePrev.addEventListener("click", () => {
+  state.dictionaryPersonalQuery.offset = Math.max(0, state.dictionaryPersonalQuery.offset - state.dictionaryPersonalQuery.limit);
+  loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
+});
+elements.dictionaryPageNext.addEventListener("click", () => {
+  state.dictionaryPersonalQuery.offset += state.dictionaryPersonalQuery.limit;
+  loadDictionaryPersonalPage().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
+});
+elements.dictionarySelectionAll.addEventListener("click", () => {
+  state.dictionaryPersonalPage.entries.forEach(entry => state.dictionarySelectedIds.add(entry.id));
+  renderDictionaryManagerEntries();
+});
+elements.dictionarySelectionClear.addEventListener("click", () => {
+  state.dictionarySelectedIds.clear();
+  renderDictionaryManagerEntries();
+});
+elements.dictionarySelectionDelete.addEventListener("click", async () => {
+  const ids = [...state.dictionarySelectedIds];
+  if (!ids.length) return;
+  const confirmed = await showModal({ title: "선택한 용어를 삭제하시겠습니까?", message: `${ids.length.toLocaleString()}개의 개인 용어가 삭제됩니다.`, acceptText: "삭제" });
+  if (!confirmed) return;
+  try {
+    await invoke("dictionary_personal_batch_delete", { ids });
+    state.dictionarySelectedIds.clear();
+    await reloadDictionaryPersonalData();
+    setLocalizedText(elements.saveStatus, "선택한 개인 용어를 삭제했습니다.");
+  } catch (error) {
+    await showError("개인 사전 용어를 삭제하지 못했습니다", String(error));
+  }
+});
+elements.dictionaryManagerImport.addEventListener("click", openDictionaryImport);
+elements.dictionaryImportClose.addEventListener("click", closeDictionaryImport);
+elements.dictionaryImportCancel.addEventListener("click", closeDictionaryImport);
+elements.dictionaryImportLayer.addEventListener("click", event => {
+  if (event.target === elements.dictionaryImportLayer) closeDictionaryImport();
+});
+elements.dictionaryImportChoose.addEventListener("click", () => elements.dictionaryImportFile.click());
+elements.dictionaryImportFile.addEventListener("change", async () => {
+  const file = elements.dictionaryImportFile.files?.[0];
+  if (!file) return;
+  elements.dictionaryImportText.value = await file.text();
+  updateDictionaryImportPreview();
+});
+elements.dictionaryImportText.addEventListener("input", updateDictionaryImportPreview);
+elements.dictionaryImportSource.addEventListener("change", updateDictionaryImportPreview);
+elements.dictionaryImportTarget.addEventListener("change", updateDictionaryImportPreview);
+elements.dictionaryImportAccept.addEventListener("click", () => {
+  importDictionaryEntries().catch(error => showError("개인 사전을 가져오지 못했습니다", String(error)));
+});
+elements.dictionaryManagerExport.addEventListener("click", () => {
+  exportDictionaryEntries().catch(error => showError("개인 사전을 내보내지 못했습니다", String(error)));
+});
+document.addEventListener("keydown", event => {
+  if (!elements.dictionaryImportLayer.hidden || !elements.dictionaryEditorLayer.hidden) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (!elements.dictionaryImportLayer.hidden) closeDictionaryImport();
+      else closeDictionaryEditor();
+    }
+    return;
+  }
+  if (state.dictionaryPackManagerOpen) {
+    const editing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+    if (event.key === "Escape") closeDictionaryPackManager();
+    else if ((!editing && event.key === "/") || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f")) {
+      event.preventDefault();
+      elements.dictionaryPackSearch.focus();
+      elements.dictionaryPackSearch.select();
+    }
+    return;
+  }
+  if (!state.dictionaryPersonalManagerOpen) return;
+  const editing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+  if (event.key === "Escape") closeDictionaryManager();
+  else if ((!editing && event.key === "/") || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f")) {
+    event.preventDefault();
+    elements.dictionaryPersonalSearch.focus();
+    elements.dictionaryPersonalSearch.select();
+  } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") {
+    event.preventDefault();
+    openDictionaryEditor();
+  }
+});
+elements.dictionaryOpenFolder.addEventListener("click", async () => {
+  try {
+    await invoke("dictionary_storage_folder_open");
+    setLocalizedText(elements.saveStatus, "사전 데이터 폴더를 열었습니다.");
+  } catch (error) {
+    await showError("사전 데이터 폴더를 열지 못했습니다", String(error));
+  }
 });
 elements.keepWarm.addEventListener("click", () => {
   const enabled = elements.keepWarm.getAttribute("aria-checked") !== "true";
@@ -1812,8 +3116,6 @@ async function applyShortcutImmediately(element, configKey, shortcut, help, fall
   const hotkeys = {
     toggle_translation: elements.shortcut.value.trim() || "F12",
     toggle_outgoing_translation: elements.outgoingShortcut.value.trim() || "F8",
-    send_outgoing_immediately: elements.sendImmediatelyShortcut.value.trim() || "Ctrl+Enter",
-    review_outgoing_before_send: elements.reviewBeforeSendShortcut.value.trim() || "Alt+Enter",
     [configKey]: shortcut,
   };
   try {
@@ -1863,18 +3165,6 @@ bindShortcutEditor(
   "outgoing-shortcut-help",
   "F8",
 );
-bindShortcutEditor(
-  elements.sendImmediatelyShortcut,
-  "send_outgoing_immediately",
-  "send-immediately-shortcut-help",
-  "Ctrl+Enter",
-);
-bindShortcutEditor(
-  elements.reviewBeforeSendShortcut,
-  "review_outgoing_before_send",
-  "review-before-send-shortcut-help",
-  "Alt+Enter",
-);
 
 for (const item of document.querySelectorAll("[data-settings-panel]")) {
   item.addEventListener("click", () => activateSettingsPanel(item.dataset.settingsPanel));
@@ -1884,6 +3174,16 @@ elements.authorLink.addEventListener("click", () => {
 });
 elements.githubLink.addEventListener("click", () => {
   openExternalUrl(APP_LINKS.repository).catch(error => showError("링크를 열지 못했습니다", String(error)));
+});
+elements.dictionaryPackManagerFolder.addEventListener("click", () => elements.dictionaryOpenFolder.click());
+elements.dictionaryPackLicenses.addEventListener("click", () => {
+  showModal({
+    title: "출처 및 라이선스",
+    message: DICTIONARY_NOTICES_TEXT,
+    acceptText: "닫기",
+    cancelVisible: false,
+    variant: "license",
+  });
 });
 elements.viewLicense.addEventListener("click", () => {
   showModal({
@@ -1988,12 +3288,22 @@ elements.form.addEventListener("submit", async event => {
 if (tauriListen) {
   tauriListen("request-translation-toggle", toggleTranslation);
   tauriListen("request-outgoing-translation-toggle", toggleOutgoingTranslation);
+  tauriListen("discord-verification-required", () => {
+    state.verificationPromptShown = true;
+    pollRuntime()
+      .then(handleVerificationRequired)
+      .catch(error => showError("Discord 인증 보호 모드를 열지 못했습니다", String(error)));
+  });
   tauriListen("translation-state-changed", event => {
     state.runtime = event.payload;
     updateEngineState(event.payload);
   });
   tauriListen("settings-changed", event => {
     if (state.settingsUpdatesPending === 0) renderConfig(event.payload);
+  });
+  tauriListen("dictionary-personal-changed", event => {
+    applyDictionaryPersonalOverviewChange(event.payload);
+    reloadDictionaryPersonalData().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
   });
   tauriListen("provider-connections-changed", loadProviderConnections);
   tauriListen("request-update-install", () => {
@@ -2010,7 +3320,20 @@ if (tauriListen) {
   tauriListen("update-download-finished", () => {
     setLocalizedText(elements.updateStatus, "업데이트 서명을 확인하고 설치하고 있습니다...");
   });
+  tauriListen("dictionary-pack-progress", event => {
+    const progress = event.payload || {};
+    if (!progress.language) return;
+    if (progress.phase === "complete") state.dictionaryPackProgress.delete(progress.language);
+    else state.dictionaryPackProgress.set(progress.language, progress);
+    renderDictionaryPacks();
+  });
 }
+
+window.addEventListener("focus", syncVisibleDictionaryPersonalData);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syncVisibleDictionaryPersonalData();
+});
+window.setInterval(syncVisibleDictionaryPersonalData, 1500);
 
 bindOverlayScrollIndicator();
 new ResizeObserver(updateScrollIndicator).observe(elements.settingsScroll);

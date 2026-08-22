@@ -246,7 +246,7 @@ function renderStatus(status, config) {
     : enabled ? "Discord 연결 중" : "번역 대기 중");
   const targetLanguage = config?.target_language || status?.targetLanguage || "ko";
   elements.targetLanguage.textContent = LANGUAGE_LABELS[targetLanguage] || "한국어";
-  elements.targetLanguage.title = elements.targetLanguage.textContent;
+  elements.targetLanguage.closest("button").dataset.tooltip = elements.targetLanguage.textContent;
   updateLanguageSelection(targetLanguage);
   const translator = config?.translator || status?.configuredTranslator || "hymt_1_8b";
   const translatorLabel = translateCopy(
@@ -260,7 +260,7 @@ function renderStatus(status, config) {
   elements.translatorName.textContent = translatorPending
     ? `${translatorLabel} ${translateCopy(currentUiLanguage(), "준비 중")}`
     : translatorFailed ? `${translatorLabel} ${translateCopy(currentUiLanguage(), "오류")}` : translatorLabel;
-  elements.translatorName.title = translatorLabel;
+  elements.translatorName.closest("button").dataset.tooltip = translatorLabel;
   updateTranslatorSelection(translator);
   resizeTray(elements.mainMenu.hidden
     ? elements.languageView.hidden ? VIEW_HEIGHTS.model : VIEW_HEIGHTS.language

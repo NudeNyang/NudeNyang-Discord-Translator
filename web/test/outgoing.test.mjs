@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const outgoing = readFileSync(new URL("../../src-tauri/src/outgoing.rs", import.meta.url), "utf8");
+const outgoingProduction = outgoing.split("#[cfg(test)]")[0];
 const engine = readFileSync(new URL("../../src-tauri/src/engine.rs", import.meta.url), "utf8");
 const dom = readFileSync(new URL("../../src-tauri/src/dom.rs", import.meta.url), "utf8");
 const cache = readFileSync(new URL("../../src-tauri/src/cache.rs", import.meta.url), "utf8");
@@ -14,20 +15,18 @@ function outgoingComparableMessageText() {
   return Function("value", match[1]);
 }
 
-test("outgoing translation gives Enter and configurable action shortcuts stable meanings", () => {
-  assert.match(outgoing, /__SEND_IMMEDIATELY_SHORTCUT__/);
-  assert.match(outgoing, /__REVIEW_BEFORE_SEND_SHORTCUT__/);
+test("outgoing translation reserves the second physical Enter for the user", () => {
+  assert.doesNotMatch(outgoing, /__SEND_IMMEDIATELY_SHORTCUT__/);
+  assert.doesNotMatch(outgoing, /__REVIEW_BEFORE_SEND_SHORTCUT__/);
   assert.match(outgoing, /const ordinaryEnter = event\.key === 'Enter'/);
-  assert.match(outgoing, /const sendImmediately = sameShortcut/);
-  assert.match(outgoing, /const reviewBeforeSend = sameShortcut/);
   assert.match(outgoing, /!event\.isComposing/);
-  assert.doesNotMatch(outgoing, /if \(!this\.enabled \|\| event\.isComposing\)/);
-  assert.match(outgoing, /sendImmediately \|\| \(!this\.confirmSend && !reviewBeforeSend\)/);
-  assert.match(outgoing, /if \(!ordinaryEnter && !sendImmediately\)/);
-  assert.match(outgoing, /action:'send-reviewed'/);
+  assert.match(outgoing, /if \(!ordinaryEnter\) return/);
   assert.match(outgoing, /review_ready/);
-  assert.match(outgoing, /reviewHint:'번역문을 수정하거나 Enter로 전송하십시오\.'/);
-  assert.doesNotMatch(outgoing, /reviewHint:[^\n]*\{shortcut\}/);
+  assert.match(outgoing, /if \(review\) \{[\s\S]*?this\.pending\.delete\(id\);[\s\S]*?return;/);
+  assert.match(outgoingProduction, /if \(selected === 'original'\) return;[\s\S]*?event\.preventDefault\(\)/);
+  assert.doesNotMatch(outgoing, /action:'send-reviewed'/);
+  assert.doesNotMatch(outgoingProduction, /Input\.dispatchKeyEvent/);
+  assert.match(outgoing, /reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오\.'/);
   assert.match(outgoing, /startsWith\('\/'\)/);
   assert.doesNotMatch(outgoing, /text\.includes\('```'\)/);
 });
@@ -49,7 +48,7 @@ test("channel memory, one-message overrides, and safe failures are represented",
   assert.match(engine, /OutgoingWorkerCommand::Translate/);
   assert.match(engine, /rust-outgoing-translation-worker/);
   assert.match(engine, /Input\.insertText/);
-  assert.match(engine, /Input\.dispatchKeyEvent/);
+  assert.doesNotMatch(engine, /Input\.dispatchKeyEvent/);
   assert.match(outgoing, /created_at/);
   assert.match(outgoing, />= 30000/);
   assert.match(outgoing, /CONTROLLER_VERSION/);
@@ -65,23 +64,34 @@ test("confirming an automatic suggestion remembers it for the channel", () => {
   assert.match(cache, /outgoing_channel_languages/);
 });
 
-test("configured outgoing defaults and confirmation policy reach Discord", () => {
+test("configured outgoing defaults always reach the review-before-send path", () => {
   assert.match(outgoing, /__DEFAULT_LANGUAGE__/);
   assert.match(engine, /outgoing_target_language/);
   assert.doesNotMatch(engine, /outgoing_confirm_language/);
-  assert.match(engine, /outgoing_confirm_send/);
-  assert.match(engine, /send_outgoing_immediately/);
-  assert.match(engine, /review_outgoing_before_send/);
+  assert.doesNotMatch(engine, /outgoing_confirm_send/);
+  assert.doesNotMatch(engine, /send_outgoing_immediately/);
+  assert.doesNotMatch(engine, /review_outgoing_before_send/);
   assert.match(engine, /outgoing_translator/);
   assert.match(engine, /enqueue_outgoing_translation/);
+  assert.match(engine, /dispatch_outgoing_review\(client, &request_id, &translated\)/);
 });
 
-test("long outgoing translations use one text attachment instead of notification spam", () => {
-  assert.match(outgoing, /prepareAttachment/);
-  assert.match(outgoing, /attachTextFile/);
-  assert.match(outgoing, /new File\(\[content\], filename/);
-  assert.match(outgoing, /번역문이 길어 텍스트 파일로 전송합니다\./);
-  assert.match(engine, /dispatch_outgoing_text_file/);
+test("outgoing interpretation status stays visible until the request finishes", () => {
+  assert.match(outgoing, /translating:'메시지를 통역하고 있습니다\.'/);
+  assert.doesNotMatch(outgoing, /translating:'메시지를 번역하고 있습니다\.'/);
+  assert.match(outgoing, /setStatus\(message, error = false, persistent = false\)/);
+  assert.match(outgoing, /if \(message && !persistent\) this\.statusTimer = setTimeout/);
+  assert.match(outgoing, /setStatus\(copy\('translating'\), false, true\)/);
+  assert.match(outgoing, /selected !== 'original'/);
+  assert.match(outgoing, /detected\(id, language\)[\s\S]*?setStatus\(copy\('translating'\), false, true\)/);
+});
+
+test("long outgoing translations stay in the composer for manual handling", () => {
+  assert.doesNotMatch(outgoing, /prepareAttachment/);
+  assert.doesNotMatch(outgoing, /attachTextFile/);
+  assert.doesNotMatch(outgoing, /new File\(\[content\], filename/);
+  assert.match(outgoing, /reviewReadyLong:'번역문이 Discord 길이 제한을 초과했습니다/);
+  assert.doesNotMatch(engine, /dispatch_outgoing_text_file/);
 });
 
 test("sent translations restore the exact typed original instead of translating twice", () => {
@@ -136,7 +146,7 @@ test("outgoing translation preserves Discord Slate mention entities", () => {
   assert.match(outgoing, /function visibleComposerText\(root\)/);
   assert.match(outgoing, /preserve_prefix_mentions/);
   assert.match(outgoing, /item\.original_text \|\| item\.text/);
-  assert.match(outgoing, /selectionRangeForItem\(editor, item, continuation\)/);
+  assert.match(outgoing, /selectionRangeForItem\(editor, item/);
   assert.match(outgoing, /if \(mentionPlan && !mentionPlan\.supported\) return/);
   assert.match(outgoing, /function hasActiveAutocomplete\(editor\)/);
   assert.match(outgoing, /if \(hasActiveAutocomplete\(editor\)\) return/);
@@ -193,7 +203,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 43/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 44/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
@@ -256,7 +266,8 @@ test("Discord chat controls stay aligned to the composer and expose display tran
 test("Discord-injected controls follow the settings interface language", () => {
   assert.match(outgoing, /__UI_LANGUAGE__/);
   assert.match(outgoing, /requestedUiLanguage/);
-  assert.match(outgoing, /pub fn outgoing_ui_script\([\s\S]*confirm_send: bool/);
+  assert.doesNotMatch(outgoingProduction, /pub fn outgoing_ui_script\([\s\S]*confirm_send: bool/);
+  assert.match(outgoingProduction, /pub fn outgoing_ui_script\([\s\S]*channel_languages: &HashMap<String, String>/);
   assert.match(outgoing, /outgoing_originals_ui_script[\s\S]*ui_language: &str/);
   assert.match(imageTranslation, /pub fn image_ui_script\(ui_language: &str\)/);
   for (const copy of ["Image translation", "画像を翻訳", "翻译图片"]) {

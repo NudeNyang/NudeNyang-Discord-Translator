@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,8 +43,6 @@ impl Default for RegionConfig {
 pub struct HotkeyConfig {
     pub toggle_translation: String,
     pub toggle_outgoing_translation: String,
-    pub send_outgoing_immediately: String,
-    pub review_outgoing_before_send: String,
     pub toggle_original: String,
     pub hide_overlay: String,
     pub copy_current: String,
@@ -54,8 +53,6 @@ impl Default for HotkeyConfig {
         Self {
             toggle_translation: "F12".to_string(),
             toggle_outgoing_translation: "F8".to_string(),
-            send_outgoing_immediately: "Ctrl+Enter".to_string(),
-            review_outgoing_before_send: "Alt+Enter".to_string(),
             toggle_original: "Ctrl+Alt+O".to_string(),
             hide_overlay: "Ctrl+Alt+H".to_string(),
             copy_current: "Ctrl+Alt+C".to_string(),
@@ -67,10 +64,13 @@ impl Default for HotkeyConfig {
 #[serde(default)]
 pub struct AppConfig {
     pub target_language: String,
+    pub incoming_language_mode: String,
+    pub incoming_source_languages: Vec<String>,
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
-    pub outgoing_confirm_send: bool,
+    pub dictionary_enabled: bool,
+    pub dictionary_external_provider: String,
     pub show_original: bool,
     pub theme: String,
     pub ui_theme: String,
@@ -92,6 +92,7 @@ pub struct AppConfig {
     pub auto_update: bool,
     pub update_repository: String,
     pub discord_auto_restart_consent_granted: bool,
+    pub discord_verification_mode: bool,
     pub translation_history_retention_days: u32,
     pub chat_region: RegionConfig,
     pub hotkeys: HotkeyConfig,
@@ -101,10 +102,13 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             target_language: "ko".to_string(),
+            incoming_language_mode: "all".to_string(),
+            incoming_source_languages: Vec::new(),
             enabled: true,
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
-            outgoing_confirm_send: true,
+            dictionary_enabled: true,
+            dictionary_external_provider: "wiktionary".to_string(),
             show_original: false,
             theme: "auto".to_string(),
             ui_theme: "system".to_string(),
@@ -126,6 +130,7 @@ impl Default for AppConfig {
             auto_update: true,
             update_repository: DEFAULT_UPDATE_REPOSITORY.to_string(),
             discord_auto_restart_consent_granted: false,
+            discord_verification_mode: false,
             translation_history_retention_days: 30,
             chat_region: RegionConfig::default(),
             hotkeys: HotkeyConfig::default(),
@@ -246,6 +251,32 @@ impl AppConfig {
             );
         }
         if object
+            .get("incoming_language_mode")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "all" | "selected"))
+        {
+            object.insert(
+                "incoming_language_mode".to_string(),
+                Value::String("all".to_string()),
+            );
+        }
+        if let Some(values) = object.get("incoming_source_languages") {
+            let mut seen = HashSet::new();
+            let normalized = values
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .filter(|value| is_supported_language_code(value))
+                .filter(|value| seen.insert((*value).to_string()))
+                .map(|value| Value::String(value.to_string()))
+                .collect();
+            object.insert(
+                "incoming_source_languages".to_string(),
+                Value::Array(normalized),
+            );
+        }
+        if object
             .get("outgoing_target_language")
             .and_then(Value::as_str)
             .is_some_and(|value| value != "auto" && !is_supported_language_code(value))
@@ -253,6 +284,16 @@ impl AppConfig {
             object.insert(
                 "outgoing_target_language".to_string(),
                 Value::String("auto".to_string()),
+            );
+        }
+        if object
+            .get("dictionary_external_provider")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "wiktionary" | "none"))
+        {
+            object.insert(
+                "dictionary_external_provider".to_string(),
+                Value::String("wiktionary".to_string()),
             );
         }
         if object
@@ -494,13 +535,15 @@ mod tests {
         assert_eq!(restored.image_ocr_quality, "adaptive");
         assert!(!restored.outgoing_translation_enabled);
         assert_eq!(restored.outgoing_target_language, "auto");
-        assert!(restored.outgoing_confirm_send);
+        assert!(!restored.discord_verification_mode);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
         assert_eq!(restored.hotkeys.toggle_outgoing_translation, "F8");
-        assert_eq!(restored.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
-        assert_eq!(restored.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert!(restored.disabled_providers.is_empty());
         assert_eq!(restored.translation_history_retention_days, 30);
+        assert!(restored.dictionary_enabled);
+        assert_eq!(restored.dictionary_external_provider, "wiktionary");
+        assert_eq!(restored.incoming_language_mode, "all");
+        assert!(restored.incoming_source_languages.is_empty());
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
@@ -531,6 +574,42 @@ mod tests {
         let invalid = AppConfig::from_value(json!({"image_ocr_quality": "maximum"}))
             .expect("invalid OCR quality mode should reset");
         assert_eq!(invalid.image_ocr_quality, "adaptive");
+    }
+
+    #[test]
+    fn incoming_language_filter_keeps_supported_unique_language_codes() {
+        let config = AppConfig::from_value(json!({
+            "incoming_language_mode": "selected",
+            "incoming_source_languages": ["ja", "invalid", "en", "ja", 42]
+        }))
+        .expect("normalize incoming source languages");
+
+        assert_eq!(config.incoming_language_mode, "selected");
+        assert_eq!(
+            config.incoming_source_languages,
+            vec!["ja".to_string(), "en".to_string()]
+        );
+
+        let invalid = AppConfig::from_value(json!({
+            "incoming_language_mode": "exclude",
+            "incoming_source_languages": "ja"
+        }))
+        .expect("invalid incoming filter should reset");
+        assert_eq!(invalid.incoming_language_mode, "all");
+        assert!(invalid.incoming_source_languages.is_empty());
+    }
+
+    #[test]
+    fn dictionary_external_provider_accepts_only_supported_choices() {
+        for provider in ["wiktionary", "none"] {
+            let config = AppConfig::from_value(json!({"dictionary_external_provider": provider}))
+                .expect("supported dictionary provider");
+            assert_eq!(config.dictionary_external_provider, provider);
+        }
+
+        let invalid = AppConfig::from_value(json!({"dictionary_external_provider": "unknown"}))
+            .expect("invalid dictionary provider should reset");
+        assert_eq!(invalid.dictionary_external_provider, "wiktionary");
     }
 
     #[test]
@@ -590,8 +669,6 @@ mod tests {
 
         assert_eq!(updated.hotkeys.toggle_translation, "Ctrl+Alt+T");
         assert_eq!(updated.hotkeys.toggle_outgoing_translation, "F8");
-        assert_eq!(updated.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
-        assert_eq!(updated.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert_eq!(updated.hotkeys.toggle_original, "Ctrl+Alt+O");
         assert!(!updated.keep_local_model_warm);
         let restored = ConfigStore::load(path.clone())

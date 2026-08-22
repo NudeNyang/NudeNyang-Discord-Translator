@@ -174,6 +174,44 @@ pub fn restart_pipe(
     }
 }
 
+pub fn disconnect_current_guardian() -> Result<(), String> {
+    let Some(process) = current_pipe_process() else {
+        return Ok(());
+    };
+    #[cfg(windows)]
+    {
+        windows_pipe_launcher::disconnect_guardian(&process)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = process;
+        Ok(())
+    }
+}
+
+pub fn restart_vanilla(expected_process_id: Option<u32>) -> Result<DiscordProcess, String> {
+    let _restart_guard = pipe_restart_lock()
+        .lock()
+        .map_err(|_| "Discord 재시작 잠금이 손상되었습니다.".to_string())?;
+    let _restart_lease = acquire_restart_lease(Duration::from_secs(15))?;
+    let current = current_process();
+    let current_id = current.as_ref().map(|process| process.process_id);
+    if expected_process_id != current_id {
+        return Err("Discord가 확인 중에 다시 실행되어 일반 모드 전환을 취소했습니다.".to_string());
+    }
+    let executable = restart_executable_from(current.as_ref(), local_app_data().as_deref())?;
+    disconnect_current_guardian()?;
+    stop_installation_processes(&executable, current.as_ref())?;
+
+    let launch_executable = launchable_windows_path(&executable);
+    let mut command = std::process::Command::new(&launch_executable);
+    configure_background(&mut command);
+    let child = command
+        .spawn()
+        .map_err(|error| format!("일반 Discord를 시작하지 못했습니다: {error}"))?;
+    wait_for_restarted_process(&executable, child.id(), Duration::from_secs(15))
+}
+
 pub fn connect_guarded_pipe(process: &DiscordProcess) -> Result<CdpClient, String> {
     #[cfg(windows)]
     {
@@ -376,6 +414,7 @@ fn restart_executable_from(
     )
 }
 
+#[cfg(test)]
 fn installed_executable_in(local_app_data: &Path) -> Option<PathBuf> {
     installed_executable_in_preferred(local_app_data, None)
 }
@@ -1023,6 +1062,30 @@ mod windows_pipe_launcher {
         let writer =
             duplicate_remote_handle(guardian.0, state.writer_handle as HANDLE)?.into_file();
         Ok(CdpClient::from_pipe(reader, writer))
+    }
+
+    pub(super) fn disconnect_guardian(process: &DiscordProcess) -> Result<(), String> {
+        let Ok(state) = guardian_state_for_process(process) else {
+            return Ok(());
+        };
+        validate_guardian_process(&state)?;
+        let path = guardian_state_path(state.discord_process_id);
+        if path.is_file() {
+            std::fs::remove_file(&path).map_err(|error| {
+                format!("Discord 보안 파이프 가디언을 분리하지 못했습니다: {error}")
+            })?;
+        }
+        let guardian_pid = Pid::from_u32(state.guardian_process_id);
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let mut system = System::new();
+        while Instant::now() < deadline {
+            system.refresh_processes(ProcessesToUpdate::Some(&[guardian_pid]), true);
+            if system.process(guardian_pid).is_none() {
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(50));
+        }
+        Err("Discord 보안 파이프 가디언이 제한 시간 안에 종료되지 않았습니다.".to_string())
     }
 
     fn guardian_state_for_process(process: &DiscordProcess) -> Result<PipeGuardianState, String> {

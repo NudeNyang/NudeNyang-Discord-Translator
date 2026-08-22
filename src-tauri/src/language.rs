@@ -769,6 +769,11 @@ pub(crate) fn detection_script_family(text: &str) -> Option<ScriptFamily> {
     (count > 0 && count * 2 >= counts.letters).then_some(family)
 }
 
+pub(crate) fn is_han_only(text: &str) -> bool {
+    let counts = script_counts(&prepare_for_detection(text));
+    counts.han > 0 && counts.letters == counts.han
+}
+
 pub(crate) fn language_script_family(language: Language) -> Option<ScriptFamily> {
     Some(match language {
         Language::Korean => ScriptFamily::Hangul,

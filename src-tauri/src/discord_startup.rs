@@ -305,7 +305,7 @@ pub fn suppress() -> Result<(), String> {
     #[cfg(windows)]
     {
         let mut registry = windows_registry::WindowsDiscordStartupRegistry;
-        return suppress_registration(&mut registry);
+        suppress_registration(&mut registry)
     }
     #[cfg(not(windows))]
     {
@@ -317,7 +317,7 @@ pub fn restore() -> Result<(), String> {
     #[cfg(windows)]
     {
         let mut registry = windows_registry::WindowsDiscordStartupRegistry;
-        return restore_registration(&mut registry);
+        restore_registration(&mut registry)
     }
     #[cfg(not(windows))]
     {

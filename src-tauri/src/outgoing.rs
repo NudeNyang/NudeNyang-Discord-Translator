@@ -17,9 +17,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const requestedUiLanguage = __UI_LANGUAGE__;
   const rememberedChannelLanguages = __CHANNEL_LANGUAGES__;
-  const confirmSend = __CONFIRM_SEND__;
-  const sendImmediatelyShortcut = __SEND_IMMEDIATELY_SHORTCUT__;
-  const reviewBeforeSendShortcut = __REVIEW_BEFORE_SEND_SHORTCUT__;
   const systemUiLanguage = (navigator.language || 'en').toLowerCase();
   const supportedUiLanguages = ['ko','en','ja','zh','zh-Hant','pt-BR','hi','es-419','de','ru','id','fr','tr','ar','vi','it','pl','uk','ms','nl','th','fil','bn','ur','ta','fa','he','cs'];
   function resolveUiLanguage(value) {
@@ -33,9 +30,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 43;
+  const CONTROLLER_VERSION = 44;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
+  const MESSAGE_UTF16_LIMIT = 1900;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
@@ -43,41 +41,41 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     ko: {
       auto:'자동 감지', outgoingLanguage:'전송', selectLanguage:'전송 언어 선택', originalOnce:'이번 메시지만 원문으로 전송',
       nextOriginal:'다음 메시지는 번역하지 않고 전송합니다.', selectLanguageFormal:'전송 언어를 선택하십시오.', sendingOriginal:'원문을 전송합니다.',
-      translating:'메시지를 번역하고 있습니다.', detectionFailed:'대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.',
+      translating:'메시지를 통역하고 있습니다.', detectionFailed:'대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.',
       detectedLanguage:'{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.',
       sendOriginal:'원문 전송', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
-      pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', sendingParts:'번역문을 분할 전송하고 있습니다. ({part}/{total})',
-      longAttachment:'번역문이 길어 텍스트 파일로 전송합니다.', reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.', reviewHint:'번역문을 수정하거나 Enter로 전송하십시오.',
+      pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.',
+      reviewReadyLong:'번역문이 Discord 길이 제한을 초과했습니다. 내용을 줄이거나 직접 파일로 첨부하십시오.',
       realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택', searchLanguages:'언어 검색', noMatchingLanguages:'검색 결과 없음'
     },
     en: {
       auto:'Auto detect', outgoingLanguage:'Send', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
       nextOriginal:'The next message will be sent without translation.', selectLanguageFormal:'Select an outgoing language.', sendingOriginal:'Sending the original message.',
-      translating:'Translating the message.', detectionFailed:'The conversation language could not be determined. Select an outgoing language.',
+      translating:'Interpreting the message.', detectionFailed:'The conversation language could not be determined. Select an outgoing language.',
       detectedLanguage:'Detected {language}. You can change it from the outgoing language menu.',
       sendOriginal:'Send original', translationFailed:'The message could not be translated. The original message has been preserved.',
-      pending:'The previous message is still being processed. Try again shortly.', sendingParts:'Sending the translated message in parts. ({part}/{total})',
-      longAttachment:'The translation is long and will be sent as a text file.', reviewReady:'Review or edit the translation, then press Enter to send.', reviewHint:'Edit the translation or press Enter to send it.',
+      pending:'The previous message is still being processed. Try again shortly.', reviewReady:'Review or edit the translation, then press Enter to send.',
+      reviewReadyLong:'The translation exceeds Discord’s length limit. Shorten it or attach it as a file yourself.',
       realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language', searchLanguages:'Search languages', noMatchingLanguages:'No matching languages'
     },
     ja: {
       auto:'自動検出', outgoingLanguage:'送信', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
       nextOriginal:'次のメッセージは翻訳せずに送信します。', selectLanguageFormal:'送信言語を選択してください。', sendingOriginal:'原文を送信します。',
-      translating:'メッセージを翻訳しています。', detectionFailed:'会話の言語を判定できませんでした。送信言語を選択してください。',
+      translating:'メッセージを通訳しています。', detectionFailed:'会話の言語を判定できませんでした。送信言語を選択してください。',
       detectedLanguage:'{language}と判定しました。送信言語メニューから変更できます。',
       sendOriginal:'原文を送信', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
-      pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', sendingParts:'翻訳文を分割して送信しています。({part}/{total})',
-      longAttachment:'翻訳文が長いため、テキストファイルとして送信します。', reviewReady:'翻訳文を確認・修正し、Enterで送信してください。', reviewHint:'翻訳文を修正するか、Enterで送信してください。',
+      pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', reviewReady:'翻訳文を確認・修正し、Enterで送信してください。',
+      reviewReadyLong:'翻訳文がDiscordの文字数制限を超えています。短くするか、手動でファイルを添付してください。',
       realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択', searchLanguages:'言語を検索', noMatchingLanguages:'一致する言語がありません'
     },
     zh: {
       auto:'自动检测', outgoingLanguage:'发送', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
       nextOriginal:'下一条消息将不翻译并直接发送。', selectLanguageFormal:'请选择发送语言。', sendingOriginal:'正在发送原文。',
-      translating:'正在翻译消息。', detectionFailed:'无法判断对话语言。请选择发送语言。',
+      translating:'正在转译消息。', detectionFailed:'无法判断对话语言。请选择发送语言。',
       detectedLanguage:'已检测为{language}。可在发送语言菜单中更改。',
       sendOriginal:'发送原文', translationFailed:'无法翻译消息。原文已保持不变。',
-      pending:'上一条消息仍在处理中。请稍后重试。', sendingParts:'正在分段发送译文。({part}/{total})',
-      longAttachment:'译文较长，将以文本文件形式发送。', reviewReady:'请检查或修改译文，然后按 Enter 发送。', reviewHint:'请修改译文或按 Enter 发送。',
+      pending:'上一条消息仍在处理中。请稍后重试。', reviewReady:'请检查或修改译文，然后按 Enter 发送。',
+      reviewReadyLong:'译文超过 Discord 的长度限制。请缩短内容或自行附加文件。',
       realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言', searchLanguages:'搜索语言', noMatchingLanguages:'没有匹配的语言'
     }
   }, __GENERATED_OUTGOING_COPIES__);
@@ -88,20 +86,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__;
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const formatCopy = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), copy(key));
-  const shortcutFromEvent = event => {
-    const rawKey = String(event.key || '');
-    if (['Control','Alt','Shift','Meta','Tab','Escape'].includes(rawKey)) return '';
-    const namedKeys = {' ':'Space',Spacebar:'Space',Enter:'Enter',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',Home:'Home',End:'End',PageUp:'PageUp',PageDown:'PageDown',Insert:'Insert'};
-    const key = /^F(?:[1-9]|1\d|2[0-4])$/i.test(rawKey) || /^[a-z0-9]$/i.test(rawKey) ? rawKey.toUpperCase() : (namedKeys[rawKey] || '');
-    if (!key) return '';
-    const modifiers = [];
-    if (event.ctrlKey) modifiers.push('Ctrl');
-    if (event.altKey) modifiers.push('Alt');
-    if (event.shiftKey) modifiers.push('Shift');
-    if (event.metaKey) modifiers.push('Super');
-    return [...modifiers,key].join('+');
-  };
-  const sameShortcut = (left, right) => Boolean(left && right && left.toLowerCase() === right.toLowerCase());
   function currentChannelKey() {
     return location.pathname.startsWith('/channels/') ? location.pathname : '';
   }
@@ -551,8 +535,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sent: [],
       bindings: [],
       sequence: 0,
-      bypass: 0,
-      activeRequest: '',
       oneShotOriginal: false,
       manualRequest: '',
       statusTimer: 0,
@@ -564,9 +546,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       displayEnabled: false,
       displayLanguage: 'ko',
       channelLanguages: {},
-      confirmSend: true,
-      sendImmediatelyShortcut: 'Ctrl+Enter',
-      reviewBeforeSendShortcut: 'Alt+Enter',
       pointerDownListener: null,
       failsafe() {
         if (this.released) return;
@@ -583,7 +562,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         for (const [id, item] of this.pending) {
           const editor = item.editor;
           const original = item.original_text || item.text || '';
-          const translationWasInserted = item.review_ready || item.installing_review || this.activeRequest === id;
+          const translationWasInserted = item.review_ready || item.installing_review;
           if (!translationWasInserted || !original || !editor?.isConnected || !composerHasText(editor)) continue;
           if (composerText(editor) === original) continue;
           editor.focus();
@@ -596,8 +575,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         }
         this.pending.clear();
         this.queue.length = 0;
-        this.activeRequest = '';
-        this.bypass = 0;
 
         window.__nudeTranslatorRestoreTranslatedText?.();
         window.__ntImageEnabled = false;
@@ -635,14 +612,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         document.getElementById(`${ROOT_ID}-style`)?.remove();
         if (window[GLOBAL] === this) delete window[GLOBAL];
       },
-      setStatus(message, error = false) {
+      setStatus(message, error = false, persistent = false) {
         if (!this.root) return;
         const status = this.root.querySelector('.nt-outgoing-status');
         status.textContent = message;
         status.dataset.error = String(error);
         status.hidden = !message;
         clearTimeout(this.statusTimer);
-        if (message) this.statusTimer = setTimeout(() => { status.hidden = true; }, 5000);
+        this.statusTimer = 0;
+        if (message && !persistent) this.statusTimer = setTimeout(() => {
+          status.hidden = true;
+          this.statusTimer = 0;
+        }, 5000);
       },
       reposition() {
         if (!this.root) return;
@@ -713,7 +694,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           action:'remember-language',
           selected_language:language,
           recent_messages:[],
-          send_immediately:false,
         });
       },
       closeMenus() {
@@ -790,7 +770,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           action:'display-language',
           selected_language:this.displayLanguage,
           recent_messages:[],
-          send_immediately:false,
         });
         const menu = this.root.querySelector('.nt-display-menu');
         menu.hidden = true;
@@ -827,8 +806,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       retry(id, language) {
         const item = this.pending.get(id);
         if (!item) return;
+        if (language === 'original') {
+          this.pending.delete(id);
+          this.setStatus(copy('nextOriginal'));
+          return;
+        }
         this.queue.push({...item, selected_language: language});
-        this.setStatus(language === 'original' ? copy('sendingOriginal') : copy('translating'));
+        this.setStatus(copy('translating'), false, true);
       },
       suggest(id, language) {
         const item = this.pending.get(id);
@@ -837,28 +821,23 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       detected(id, language) {
         if (!this.pending.has(id) || !languageLabels[language]) return;
-        this.setStatus(formatCopy('detectedLanguage', {language:languageLabels[language]}));
+        this.setStatus(copy('translating'), false, true);
       },
       fail(id, message) {
         this.pending.delete(id);
-        if (this.activeRequest === id) {
-          this.activeRequest = '';
-          this.bypass = 0;
-        }
         if (message) console.warn('[NudeNyang Discord Translator] outgoing translation failed:', message);
         this.setStatus(copy('translationFailed'), true);
       },
       prunePending() {
         const now = Date.now();
+        let timedOutTranslation = false;
         for (const [id, item] of this.pending) {
           if (item.review_ready && item.editor?.isConnected) continue;
           if (now - item.created_at < PENDING_TIMEOUT_MS) continue;
           this.pending.delete(id);
-          if (this.activeRequest === id) {
-            this.activeRequest = '';
-            this.bypass = 0;
-          }
+          if (item.selected_language !== 'original') timedOutTranslation = true;
         }
+        if (timedOutTranslation) this.setStatus(copy('translationFailed'), true);
       },
       pendingForEditor(editor) {
         for (const entry of this.pending.entries()) {
@@ -912,10 +891,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           if (item.editor !== editor || !item.review_ready || item.installing_review) continue;
           this.pending.delete(id);
           cancelled = true;
-          if (this.activeRequest === id) {
-            this.activeRequest = '';
-            this.bypass = 0;
-          }
         }
         if (cancelled) this.setStatus('');
         return cancelled;
@@ -940,54 +915,34 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           return;
         }
         if (!this.enabled) return;
-        const pressedShortcut = shortcutFromEvent(event);
-        const sendImmediately = sameShortcut(pressedShortcut, this.sendImmediatelyShortcut);
-        const reviewBeforeSend = sameShortcut(pressedShortcut, this.reviewBeforeSendShortcut);
         const ordinaryEnter = event.key === 'Enter' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && !event.isComposing;
-        if (!ordinaryEnter && !sendImmediately && !reviewBeforeSend) return;
+        if (!ordinaryEnter) return;
         const editor = event.target.closest?.(composerSelector);
         if (!editor) return;
-        if (this.bypass > 0) {
-          this.bypass -= 1;
-          const activeId = this.activeRequest;
-          const activeItem = activeId ? this.pending.get(activeId) : null;
-          const keepAfterSend = Boolean(activeItem?.keep_after_send);
-          const sentText = activeItem?.prepared_sent_text || composerText(editor);
-          if (activeItem && sentText) {
-            this.sent.push({
-              channel_key: activeItem.channel_key,
-              original_text: activeItem.original_text || activeItem.text,
-              sent_text: sentText,
-              part_number: activeItem.part_number || 1,
-              total_parts: activeItem.total_parts || 1,
-              existing_message_ids: activeItem.prepared_existing_message_ids || [],
-              created_at: Date.now(),
-            });
-          }
-          if (activeItem) {
-            activeItem.keep_after_send = false;
-            activeItem.prepared_sent_text = '';
-            activeItem.prepared_existing_message_ids = null;
-          }
-          if (activeId && !keepAfterSend) this.pending.delete(activeId);
-          this.activeRequest = '';
-          if (!keepAfterSend) this.setStatus('');
-          return;
-        }
         if (hasActiveAutocomplete(editor)) return;
         const review = [...this.pending.entries()].find(([, item]) => item.editor === editor && item.review_ready);
         if (review) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          if (!ordinaryEnter && !sendImmediately) {
-            this.setStatus(copy('reviewHint'));
-            return;
-          }
           const [id, item] = review;
           const text = composerText(editor);
           if (!text.trim()) return;
-          this.queue.push({...item, id, text, action:'send-reviewed', send_immediately:true});
-          this.setStatus(copy('sendingOriginal'));
+          if (text.length > MESSAGE_UTF16_LIMIT) {
+            this.setStatus(copy('reviewReadyLong'), true, true);
+            return;
+          }
+          this.sent.push({
+            channel_key: item.channel_key,
+            original_text: item.original_text || item.text,
+            sent_text: text,
+            part_number: 1,
+            total_parts: 1,
+            existing_message_ids: [...document.querySelectorAll('[id^="message-content-"]')]
+              .map(discordMessageId)
+              .filter(Boolean),
+            created_at: Date.now(),
+          });
+          this.pending.delete(id);
+          this.setStatus('');
+          // 실제 키보드 Enter를 Discord에 그대로 전달한다. 여기서는 전송 이벤트를 만들지 않는다.
           return;
         }
         const mentionPlan = prefixMentionPlan(editor);
@@ -997,28 +952,25 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const originalText = composerText(editor);
         const key = currentChannelKey();
         if (!key) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
+        const selected = this.oneShotOriginal
+          ? 'original'
+          : selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
+        this.oneShotOriginal = false;
+        if (selected === 'original') return;
         const previous = this.pendingForEditor(editor);
         if (previous) {
           const [previousId, previousItem] = previous;
           const expired = Date.now() - previousItem.created_at >= 30000;
           const changed = (previousItem.original_text || previousItem.text) !== originalText;
           if (!expired && !changed) {
-            this.setStatus(copy('pending'));
+            this.setStatus(copy('pending'), false, true);
             return;
           }
           this.pending.delete(previousId);
-          if (this.activeRequest === previousId) {
-            this.activeRequest = '';
-            this.bypass = 0;
-          }
         }
+        event.preventDefault();
+        event.stopImmediatePropagation();
         const id = `outgoing-${Date.now()}-${++this.sequence}`;
-        const selected = this.oneShotOriginal
-          ? 'original'
-          : selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
-        this.oneShotOriginal = false;
         const item = {
           id,
           channel_key:key,
@@ -1028,49 +980,31 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           selected_language:selected,
           recent_messages:recentMessages(),
           action:'translate',
-          send_immediately:sendImmediately || (!this.confirmSend && !reviewBeforeSend),
           created_at:Date.now(),
         };
         this.pending.set(id, {...item, editor});
         this.queue.push(item);
-        this.setStatus(selected === 'original' ? copy('sendingOriginal') : copy('translating'));
+        this.setStatus(
+          selected === 'original' ? copy('sendingOriginal') : copy('translating'),
+          false,
+          selected !== 'original',
+        );
       },
-      prepare(id, replace, continuation = false, finalPart = true, partNumber = 1, totalParts = 1, sendAfter = true) {
+      prepareReview(id) {
         const item = this.pending.get(id);
         if (!item) return false;
-        let editor = item.editor;
-        if (continuation) {
-          if (!editor?.isConnected || composerHasText(editor)) {
-            const editors = [...document.querySelectorAll(composerSelector)];
-            editor = editors.reverse().find(candidate => candidate.isConnected && !composerHasText(candidate));
-          }
-          if (!editor?.isConnected || composerHasText(editor)) return false;
-          item.editor = editor;
-        } else {
-          editor = currentComposerForItem(item);
-          if (!editor) return false;
-          item.editor = editor;
-        }
+        const editor = currentComposerForItem(item);
+        if (!editor) return false;
+        item.editor = editor;
         editor.focus();
-        if (replace) {
-          const range = selectionRangeForItem(editor, item, continuation);
-          if (!range) return false;
-          const selection = getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-        item.keep_after_send = sendAfter && !finalPart;
-        item.part_number = partNumber;
-        item.total_parts = totalParts;
-        if (sendAfter) {
-          this.activeRequest = id;
-          this.bypass += 1;
-          if (totalParts > 1) this.setStatus(formatCopy('sendingParts', {part:partNumber,total:totalParts}));
-        } else {
-          item.installing_review = true;
-          item.review_ready = true;
-          this.setStatus(copy('reviewReady'));
-        }
+        const range = selectionRangeForItem(editor, item, false);
+        if (!range) return false;
+        const selection = getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        item.installing_review = true;
+        item.review_ready = true;
+        this.setStatus(copy('reviewReady'));
         return true;
       },
       finishReview(id) {
@@ -1078,82 +1012,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!item?.installing_review || !item.editor?.isConnected || !composerHasText(item.editor)) return false;
         item.installing_review = false;
         item.review_ready = true;
+        const text = composerText(item.editor);
+        this.setStatus(text.length > MESSAGE_UTF16_LIMIT ? copy('reviewReadyLong') : copy('reviewReady'), text.length > MESSAGE_UTF16_LIMIT, text.length > MESSAGE_UTF16_LIMIT);
         return true;
-      },
-      captureSend(id) {
-        const item = this.pending.get(id);
-        const editor = item?.editor;
-        const text = editor?.isConnected ? composerText(editor) : '';
-        if (!item || !text.trim()) return false;
-        item.prepared_sent_text = text;
-        item.prepared_existing_message_ids = [...document.querySelectorAll('[id^="message-content-"]')]
-          .map(discordMessageId)
-          .filter(Boolean);
-        return true;
-      },
-      prepareReviewed(id) {
-        const item = this.pending.get(id);
-        if (!item?.review_ready || item.installing_review || !item.editor?.isConnected || !composerHasText(item.editor)) return false;
-        item.editor.focus();
-        item.keep_after_send = false;
-        this.activeRequest = id;
-        this.bypass += 1;
-        return true;
-      },
-      prepareAttachment(id) {
-        const item = this.pending.get(id);
-        if (!item) return false;
-        const editor = item.editor;
-        if (!editor?.isConnected || (!item.review_ready && composerText(editor) !== (item.original_text || item.text))) return false;
-        const inputs = [...document.querySelectorAll('input[type="file"]')]
-          .filter(input => !input.disabled);
-        let input = null;
-        for (let parent = editor.parentElement; parent && parent !== document.body && !input; parent = parent.parentElement) {
-          input = inputs.find(candidate => parent.contains(candidate)) || null;
-        }
-        input ||= inputs.find(candidate => candidate.multiple) || inputs[0] || null;
-        if (!input) return false;
-        editor.focus();
-        const range = selectionRangeForItem(editor, item, false);
-        if (!range) return false;
-        const selection = getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        item.attachment_input = input;
-        return true;
-      },
-      attachTextFile(id, content, filename) {
-        const item = this.pending.get(id);
-        const editor = item?.editor;
-        const input = item?.attachment_input;
-        if (!item || !editor?.isConnected || !input?.isConnected || (!item.review_ready && sourceTextForItem(editor, item))) {
-          if (item && editor?.isConnected && !sourceTextForItem(editor, item)) {
-            editor.focus();
-            document.execCommand('insertText', false, item.text);
-            if (!item.preserve_prefix_mentions && !composerHasText(editor)) editor.textContent = item.text;
-          }
-          return false;
-        }
-        try {
-          const transfer = new DataTransfer();
-          const file = new File([content], filename, {type:'text/plain;charset=utf-8'});
-          transfer.items.add(file);
-          input.files = transfer.files;
-          input.dispatchEvent(new Event('input', {bubbles:true, composed:true}));
-          input.dispatchEvent(new Event('change', {bubbles:true, composed:true}));
-          item.attachment_input = null;
-          item.keep_after_send = false;
-          this.activeRequest = id;
-          this.bypass += 1;
-          this.setStatus(copy('longAttachment'));
-          return true;
-        } catch (error) {
-          editor.focus();
-          document.execCommand('insertText', false, item.text);
-          if (!item.preserve_prefix_mentions && !composerHasText(editor)) editor.textContent = item.text;
-          item.attachment_input = null;
-          return false;
-        }
       },
     };
     controller.listener = event => controller.keydown(event);
@@ -1181,9 +1042,6 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   for (const [channelKey, language] of optimisticLanguages) {
     controller.channelLanguages[channelKey] = language;
   }
-  controller.confirmSend = confirmSend;
-  controller.sendImmediatelyShortcut = sendImmediatelyShortcut;
-  controller.reviewBeforeSendShortcut = reviewBeforeSendShortcut;
   controller.enabled = enabled;
   controller.displayEnabled = displayEnabled;
   controller.displayLanguage = displayLanguage;
@@ -1477,8 +1335,6 @@ pub struct OutgoingRequest {
     pub text: String,
     #[serde(default)]
     pub action: String,
-    #[serde(default)]
-    pub send_immediately: bool,
     pub selected_language: String,
     #[serde(default)]
     pub recent_messages: Vec<String>,
@@ -1491,9 +1347,6 @@ pub fn outgoing_ui_script(
     default_language: &str,
     ui_language: &str,
     channel_languages: &HashMap<String, String>,
-    confirm_send: bool,
-    send_immediately_shortcut: &str,
-    review_before_send_shortcut: &str,
 ) -> String {
     let display_language = if is_supported_language_code(display_language) {
         display_language
@@ -1586,7 +1439,7 @@ pub fn outgoing_ui_script(
         ("nextOriginal", "다음 메시지는 번역하지 않고 전송합니다."),
         ("selectLanguageFormal", "전송 언어를 선택하십시오."),
         ("sendingOriginal", "원문을 전송합니다."),
-        ("translating", "메시지를 번역하고 있습니다."),
+        ("translating", "메시지를 통역하고 있습니다."),
         (
             "detectionFailed",
             "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.",
@@ -1605,15 +1458,13 @@ pub fn outgoing_ui_script(
             "이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.",
         ),
         (
-            "sendingParts",
-            "번역문을 분할 전송하고 있습니다. ({part}/{total})",
-        ),
-        ("longAttachment", "번역문이 길어 텍스트 파일로 전송합니다."),
-        (
             "reviewReady",
             "번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.",
         ),
-        ("reviewHint", "번역문을 수정하거나 Enter로 전송하십시오."),
+        (
+            "reviewReadyLong",
+            "번역문이 Discord 길이 제한을 초과했습니다. 내용을 줄이거나 직접 파일로 첨부하십시오.",
+        ),
         ("realTimeOn", "번역 켜짐"),
         ("displayLanguage", "표시"),
         ("selectDisplayLanguage", "표시 언어 선택"),
@@ -1666,18 +1517,6 @@ pub fn outgoing_ui_script(
         .replace(
             "__GENERATED_OUTGOING_COPIES__",
             &serde_json::to_string(&localized_copies).expect("generated outgoing interface copies"),
-        )
-        .replace(
-            "__CONFIRM_SEND__",
-            if confirm_send { "true" } else { "false" },
-        )
-        .replace(
-            "__SEND_IMMEDIATELY_SHORTCUT__",
-            &serde_json::to_string(send_immediately_shortcut).expect("configured shortcut"),
-        )
-        .replace(
-            "__REVIEW_BEFORE_SEND_SHORTCUT__",
-            &serde_json::to_string(review_before_send_shortcut).expect("configured shortcut"),
         )
 }
 
@@ -1801,26 +1640,11 @@ pub fn apply_outgoing_error_script(request_id: &str, message: &str) -> Result<St
     ))
 }
 
-pub fn prepare_outgoing_send_script(
-    request_id: &str,
-    replace: bool,
-    continuation: bool,
-    final_part: bool,
-    part_number: usize,
-    total_parts: usize,
-) -> Result<String, String> {
-    let id = serde_json::to_string(request_id)
-        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
-    Ok(format!(
-        "window.__nudeTranslatorOutgoing?.prepare({id},{replace},{continuation},{final_part},{part_number},{total_parts},true) === true"
-    ))
-}
-
 pub fn apply_outgoing_review_script(request_id: &str) -> Result<String, String> {
     let id = serde_json::to_string(request_id)
         .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
     Ok(format!(
-        "window.__nudeTranslatorOutgoing?.prepare({id},true,false,true,1,1,false) === true"
+        "window.__nudeTranslatorOutgoing?.prepareReview({id}) === true"
     ))
 }
 
@@ -1829,46 +1653,6 @@ pub fn finish_outgoing_review_script(request_id: &str) -> Result<String, String>
         .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
     Ok(format!(
         "window.__nudeTranslatorOutgoing?.finishReview({id}) === true"
-    ))
-}
-
-pub fn prepare_outgoing_reviewed_send_script(request_id: &str) -> Result<String, String> {
-    let id = serde_json::to_string(request_id)
-        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
-    Ok(format!(
-        "window.__nudeTranslatorOutgoing?.prepareReviewed({id}) === true"
-    ))
-}
-
-pub fn capture_outgoing_send_script(request_id: &str) -> Result<String, String> {
-    let id = serde_json::to_string(request_id)
-        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
-    Ok(format!(
-        "window.__nudeTranslatorOutgoing?.captureSend({id}) === true"
-    ))
-}
-
-pub fn prepare_outgoing_attachment_script(request_id: &str) -> Result<String, String> {
-    let id = serde_json::to_string(request_id)
-        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
-    Ok(format!(
-        "window.__nudeTranslatorOutgoing?.prepareAttachment({id}) === true"
-    ))
-}
-
-pub fn attach_outgoing_text_file_script(
-    request_id: &str,
-    content: &str,
-    filename: &str,
-) -> Result<String, String> {
-    let id = serde_json::to_string(request_id)
-        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
-    let content = serde_json::to_string(content)
-        .map_err(|error| format!("장문 번역문을 인코딩하지 못했습니다: {error}"))?;
-    let filename = serde_json::to_string(filename)
-        .map_err(|error| format!("장문 번역 파일 이름을 인코딩하지 못했습니다: {error}"))?;
-    Ok(format!(
-        "window.__nudeTranslatorOutgoing?.attachTextFile({id},{content},{filename}) === true"
     ))
 }
 
@@ -1882,11 +1666,10 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        apply_outgoing_suggestion_script, attach_outgoing_text_file_script,
-        finish_outgoing_review_script, outgoing_originals_ui_script, outgoing_ui_script,
-        parse_outgoing_bindings, parse_outgoing_requests, prepare_outgoing_attachment_script,
-        prepare_outgoing_reviewed_send_script, prepare_outgoing_send_script,
-        suggest_recent_language, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
+        apply_outgoing_suggestion_script, finish_outgoing_review_script,
+        outgoing_originals_ui_script, outgoing_ui_script as build_outgoing_ui_script,
+        parse_outgoing_bindings, parse_outgoing_requests, suggest_recent_language,
+        OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
     };
     use crate::cache::OutgoingOriginalRecord;
     use crate::cdp::{discord_target, CdpClient};
@@ -1900,6 +1683,27 @@ mod tests {
         LIVE_OUTGOING_LOCK
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn outgoing_ui_script(
+        enabled: bool,
+        display_enabled: bool,
+        display_language: &str,
+        default_language: &str,
+        ui_language: &str,
+        channel_languages: &HashMap<String, String>,
+        _legacy_confirm_send: bool,
+        _legacy_immediate_shortcut: &str,
+        _legacy_review_shortcut: &str,
+    ) -> String {
+        build_outgoing_ui_script(
+            enabled,
+            display_enabled,
+            display_language,
+            default_language,
+            ui_language,
+            channel_languages,
+        )
     }
 
     #[test]
@@ -1971,12 +1775,13 @@ mod tests {
             "id": "outgoing-1",
             "channel_key": "/channels/1/2",
             "text": "안녕하세요",
+            "action": "translate",
             "selected_language": "ja",
             "recent_messages": ["こんにちは"]
         }]))
         .unwrap();
         assert_eq!(requests[0].selected_language, "ja");
-        assert!(!requests[0].send_immediately);
+        assert_eq!(requests[0].action, "translate");
     }
 
     #[test]
@@ -1985,15 +1790,6 @@ mod tests {
             apply_outgoing_suggestion_script("x');alert(1)//", Some(Language::English)).unwrap();
         assert!(script.contains("\\u0027") || script.contains("x');alert"));
         assert!(script.contains("\"en\""));
-    }
-
-    #[test]
-    fn continuation_send_script_keeps_request_until_the_final_part() {
-        let script = prepare_outgoing_send_script("outgoing-1", true, true, false, 2, 3).unwrap();
-        assert!(script.contains("prepare(\"outgoing-1\",true,true,false,2,3,true)"));
-        assert!(prepare_outgoing_reviewed_send_script("outgoing-1")
-            .unwrap()
-            .contains("prepareReviewed"));
     }
 
     #[test]
@@ -2014,13 +1810,11 @@ mod tests {
         assert!(script.contains("const displayEnabled = true"));
         assert!(script.contains("const displayLanguage = \"ko\""));
         assert!(script.contains("action:'display-language'"));
-        assert!(script.contains("const sendImmediatelyShortcut = \"Ctrl+Shift+Enter\""));
-        assert!(script.contains("const reviewBeforeSendShortcut = \"Alt+J\""));
         assert!(script.contains("\"/channels/1/2\":\"ja\""));
         assert!(script.contains("送信言語"));
         assert!(!script.contains("__UI_LANGUAGE__"));
-        assert!(!script.contains("__SEND_IMMEDIATELY_SHORTCUT__"));
-        assert!(!script.contains("__REVIEW_BEFORE_SEND_SHORTCUT__"));
+        assert!(!script.contains("sendImmediatelyShortcut"));
+        assert!(!script.contains("reviewBeforeSendShortcut"));
         assert!(!script.contains("__CHANNEL_LANGUAGES__"));
         assert!(!script.contains("__DISPLAY_ENABLED__"));
         assert!(!script.contains("__DISPLAY_LANGUAGE__"));
@@ -2078,21 +1872,6 @@ mod tests {
         assert!(script.contains("const languageSearchAliases"));
         assert!(script.contains("\"ja\":\"JP\""));
         assert!(script.contains("languageSearchAliases[code]"));
-    }
-
-    #[test]
-    fn attachment_scripts_json_encode_content_and_filename() {
-        let prepare = prepare_outgoing_attachment_script("outgoing-'1").unwrap();
-        assert!(prepare.contains("prepareAttachment"));
-        let attach = attach_outgoing_text_file_script(
-            "outgoing-'1",
-            "첫 줄\n</script>\n마지막 줄",
-            "번역-'문.txt",
-        )
-        .unwrap();
-        assert!(attach.contains("attachTextFile"));
-        assert!(attach.contains("\\n"));
-        assert!(attach.contains("</script>"));
     }
 
     #[test]
@@ -2461,7 +2240,7 @@ mod tests {
                         id:'review-insertion', editor, original_text:'원문', text:'원문',
                         channel_key:location.pathname, selected_language:'ja', created_at:Date.now()
                       }});
-                      return active.prepare('review-insertion', true, false, true, 1, 1, false);
+                      return active.prepareReview('review-insertion');
                     }})()"#
                 ),
                 true,
@@ -2491,7 +2270,12 @@ mod tests {
                   };
                   active.keydown(event);
                   const request = active.queue.at(-1) || null;
-                  return {pending:Boolean(item),reviewReady:Boolean(item?.review_ready),request};
+                  return {
+                    pending:Boolean(item),
+                    reviewReady:Boolean(item?.review_ready),
+                    prevented:Boolean(event.prevented),
+                    request
+                  };
                 })()"#,
                 true,
             )
@@ -2507,7 +2291,8 @@ mod tests {
             .expect("cleanup controller");
         assert_eq!(result["pending"].as_bool(), Some(true));
         assert_eq!(result["reviewReady"].as_bool(), Some(true));
-        assert_eq!(result["request"]["action"].as_str(), Some("send-reviewed"));
+        assert_eq!(result["prevented"].as_bool(), Some(false));
+        assert!(result["request"].is_null());
     }
 
     #[test]
@@ -3176,8 +2961,9 @@ mod tests {
         }
     }
 
+    #[cfg(any())]
     #[test]
-    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    #[ignore = "삭제된 자동 전송 경로의 이전 통합 테스트"]
     fn live_discord_can_mount_and_remove_the_outgoing_control() {
         let _guard = lock_live_outgoing();
         let target = discord_target(9222).expect("Discord channel target");
@@ -3417,8 +3203,9 @@ mod tests {
         );
     }
 
+    #[cfg(any())]
     #[test]
-    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    #[ignore = "삭제된 자동 분할 전송 경로의 이전 통합 테스트"]
     fn live_discord_controller_keeps_a_request_across_split_messages() {
         let _guard = lock_live_outgoing();
         let target = discord_target(9222).expect("Discord channel target");
@@ -3589,8 +3376,9 @@ mod tests {
             .expect("cleanup controller");
     }
 
+    #[cfg(any())]
     #[test]
-    #[ignore = "실행 중인 Discord 디버그 렌더러가 필요합니다"]
+    #[ignore = "삭제된 자동 첨부 경로의 이전 통합 테스트"]
     fn live_discord_controller_attaches_one_text_file_for_a_long_message() {
         let _guard = lock_live_outgoing();
         let target = discord_target(9222).expect("Discord channel target");

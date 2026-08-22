@@ -861,6 +861,28 @@ summary:focus-visible {
   background: var(--accent-soft);
 }
 
+.feature-dictionary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 270px;
+  padding: 32px;
+  background:
+    linear-gradient(145deg, var(--surface-raised), color-mix(in srgb, var(--accent-soft) 58%, var(--surface-raised)));
+}
+
+.feature-dictionary h3 {
+  max-width: 430px;
+  font-size: clamp(22px, 2vw, 28px);
+}
+
+.feature-dictionary p {
+  max-width: 470px;
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .feature-image {
   display: grid;
   grid-column: 1 / -1;
@@ -1522,6 +1544,10 @@ html[dir="rtl"] .theme-toggle {
 
   .feature-primary {
     min-height: 410px;
+  }
+
+  .feature-dictionary {
+    min-height: 210px;
   }
 
   .feature-greetings {

@@ -13,10 +13,10 @@ pub fn migrate_legacy_data_directory() -> Result<bool, String> {
             return Ok(false);
         };
         let parent = PathBuf::from(local_app_data).join("LocalTools");
-        return migrate_directory(
+        migrate_directory(
             &parent.join(LEGACY_DATA_DIRECTORY),
             &parent.join(CURRENT_DATA_DIRECTORY),
-        );
+        )
     }
 
     #[cfg(not(target_os = "windows"))]

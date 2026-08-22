@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 2,
+  "coveragePolicy": {
+    "bundledMinimumEntries": 4,
+    "requiredGlossLanguages": [
+      "en"
+    ],
+    "allowedPartsOfSpeech": [
+      "noun",
+      "verb",
+      "adjective",
+      "adverb",
+      "other"
+    ],
+    "sourceLayerOrder": [
+      "primary",
+      "expanded",
+      "supplemental"
+    ],
+    "plannedPackRequirements": [
+      "reviewed-primary-source",
+      "core-vocabulary-profile",
+      "redistribution-license"
+    ]
+  },
+  "languages": [
+    {
+      "code": "ko",
+      "tier": 1,
+      "availability": "practical",
+      "version": "2026.08.21.1",
+      "title": "한국어 확장 사전",
+      "entryCount": 153321,
+      "compressedBytes": 27402878,
+      "sha256": "fdbf1715211897369ee9226779ce2ce6cded4cfd22aff1a0189fc9c46a5b8e0d",
+      "source": "Korean Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/kowiktionary/rawdata.html",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "한국어기초사전, 국립국어원",
+          "url": "https://krdict.korean.go.kr/kor/mainAction",
+          "license": "CC-BY-SA-2.0-KR"
+        },
+        {
+          "role": "expanded",
+          "name": "Korean Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/kowiktionary/rawdata.html",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        },
+        {
+          "role": "supplemental",
+          "name": "우리말샘, 국립국어원",
+          "url": "https://opendict.korean.go.kr/main",
+          "license": "CC-BY-SA-2.0-KR"
+        }
+      ]
+    },
+    {
+      "code": "en",
+      "tier": 1,
+      "availability": "practical",
+      "version": "2025.12.31.1",
+      "title": "English expanded dictionary",
+      "entryCount": 182055,
+      "compressedBytes": 5241208,
+      "sha256": "19a96b67337d1e0bb85a13c19200f8701109db78f7685855dcc1b2218750579f",
+      "source": "Open English WordNet 2025",
+      "sourceUrl": "https://en-word.net/downloads",
+      "license": "CC-BY-4.0",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Open English WordNet 2025",
+          "url": "https://en-word.net/downloads",
+          "license": "CC-BY-4.0"
+        }
+      ]
+    },
+    {
+      "code": "ja",
+      "tier": 1,
+      "availability": "practical",
+      "version": "2026.08.20.2",
+      "title": "日本語拡張辞書",
+      "entryCount": 584460,
+      "compressedBytes": 10220505,
+      "sha256": "f70f5fbd3c0d3f84d18f538f66bff0b7bc6366d060fdfcaf6a168d7876ec42e5",
+      "source": "JMdict by the Electronic Dictionary Research and Development Group",
+      "sourceUrl": "https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project",
+      "license": "CC-BY-SA-4.0",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "JMdict by the Electronic Dictionary Research and Development Group",
+          "url": "https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project",
+          "license": "CC-BY-SA-4.0"
+        }
+      ]
+    },
+    {
+      "code": "zh",
+      "tier": 1,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "简体中文扩展词典",
+      "entryCount": 124750,
+      "compressedBytes": 3994942,
+      "sha256": "5f9c0248ec5ce6f19c684de7feb943d03756c94ba7f6fad5e284ca4b32fb3a4e",
+      "source": "CC-CEDICT via MDBG",
+      "sourceUrl": "https://www.mdbg.net/chinese/dictionary?page=cc-cedict",
+      "license": "CC-BY-SA-4.0",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "CC-CEDICT via MDBG",
+          "url": "https://www.mdbg.net/chinese/dictionary?page=cc-cedict",
+          "license": "CC-BY-SA-4.0"
+        }
+      ]
+    },
+    {
+      "code": "zh-Hant",
+      "tier": 1,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "繁體中文擴充詞典",
+      "entryCount": 124877,
+      "compressedBytes": 3989983,
+      "sha256": "2162c82cc3488f7610088058af3745e73912328b10996bbf1748bb9bb2e88c51",
+      "source": "CC-CEDICT via MDBG",
+      "sourceUrl": "https://www.mdbg.net/chinese/dictionary?page=cc-cedict",
+      "license": "CC-BY-SA-4.0",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "CC-CEDICT via MDBG",
+          "url": "https://www.mdbg.net/chinese/dictionary?page=cc-cedict",
+          "license": "CC-BY-SA-4.0"
+        }
+      ]
+    },
+    {
+      "code": "pt-BR",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Dicionário expandido de português",
+      "entryCount": 104789,
+      "compressedBytes": 2742570,
+      "sha256": "03c30a1ca69d2e35eb9057c92eb75d126553ffd4e9f53c0bb882534886062b81",
+      "source": "Portuguese Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Portuguese/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Portuguese Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/Portuguese/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "hi",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "es-419",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Diccionario ampliado de español",
+      "entryCount": 143682,
+      "compressedBytes": 3199199,
+      "sha256": "e66743a112b9488b822b539519d33423d8c6801bec6b0d986cc9e54f3d51b34d",
+      "source": "Spanish Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Spanish/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Spanish Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/Spanish/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "de",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Erweitertes deutsches Wörterbuch",
+      "entryCount": 117730,
+      "compressedBytes": 3092483,
+      "sha256": "4f957900482a6ddd8ec3176c024347f0594907b690683dac14b2eaf54c14ae31",
+      "source": "German Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/German/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "German Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/German/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "ru",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Расширенный словарь русского языка",
+      "entryCount": 86982,
+      "compressedBytes": 2395603,
+      "sha256": "57e439437d58f7c9b567bea2423c1c1530e359ae20b940f668b3d72fbc406502",
+      "source": "Russian Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Russian/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Russian Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/Russian/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "id",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "fr",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Dictionnaire français étendu",
+      "entryCount": 120174,
+      "compressedBytes": 2887711,
+      "sha256": "94e98e0a83bec8aaa9be0b9648d6374632c9b3a278b16a33e622c870c25fa804",
+      "source": "French Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/French/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "French Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/French/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "tr",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "ar",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "vi",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "it",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Dizionario italiano esteso",
+      "entryCount": 198302,
+      "compressedBytes": 3390715,
+      "sha256": "8a88c3287cf8c816c390971052e2738e443c4c3f204f17e60376df1da783de77",
+      "source": "Italian Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Italian/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Italian Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/Italian/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "pl",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Rozszerzony słownik polski",
+      "entryCount": 152544,
+      "compressedBytes": 3853795,
+      "sha256": "392234ae03c780333f581989f5d3d38473666fa1ab1d1a06424da609682c7fbd",
+      "source": "Polish Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Polish/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Polish Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/Polish/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "uk",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "ms",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "nl",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Uitgebreid Nederlands woordenboek",
+      "entryCount": 87299,
+      "compressedBytes": 2192622,
+      "sha256": "de6465d4b45c95d3fdf347cda5581cef0daccb303ef57e274feb73183a00bd2c",
+      "source": "Dutch Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Dutch/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Dutch Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/Dutch/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    },
+    {
+      "code": "th",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "fil",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "bn",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "ur",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "ta",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "fa",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "he",
+      "tier": 3,
+      "availability": "planned",
+      "source": "Wiktionary-derived pack candidate",
+      "license": "review-required"
+    },
+    {
+      "code": "cs",
+      "tier": 2,
+      "availability": "practical",
+      "version": "2026.08.20.1",
+      "title": "Rozšířený český slovník",
+      "entryCount": 54851,
+      "compressedBytes": 1223913,
+      "sha256": "ea0ea1f44ac018a2a60f421bc1f2954efb64abac2bb494664000030f637b379e",
+      "source": "Czech Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Czech/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "sources": [
+        {
+          "role": "primary",
+          "name": "Czech Wiktionary via kaikki.org and Wiktextract",
+          "url": "https://kaikki.org/dictionary/Czech/",
+          "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later"
+        }
+      ]
+    }
+  ]
+}

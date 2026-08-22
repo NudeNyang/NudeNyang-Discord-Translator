@@ -29,7 +29,7 @@
 NudeNyang works with the Discord window that is already on screen. It does not use a Discord user token, an unofficial Discord API, or a self-bot. A Tauri/Rust app reads the current renderer through a private CDP pipe and replaces only the rendered DOM. Turning translation off restores the saved original content.
 
 > [!IMPORTANT]
-> This is an unofficial beta. Discord does not provide a supported client-extension API for this integration, so a Discord update can break it and using it may carry policy risk. Live translation stays off until the user accepts that notice.
+> This is an unofficial beta. A Discord update can change the renderer and temporarily break translation. When Discord shows additional verification, verification compatibility mode pauses the translation connection until the user completes verification and explicitly reconnects NudeNyang.
 
 ## Download the Open Beta
 
@@ -82,25 +82,31 @@ There are three translation paths:
 | Path | What happens |
 |---|---|
 | Incoming text | Visible messages and channel names are detected, translated, and replaced in the current DOM. The original nodes are kept for restoration. |
-| Outgoing text | Enter or a configured shortcut translates the composer text before sending. Results over 1,900 UTF-16 units are attached as one UTF-8 text file instead of being split into message spam. |
+| Outgoing text | The first physical Enter translates the composer text and leaves it editable. A second physical Enter is passed untouched to Discord, so only the user sends the message. Long results remain in the composer for manual shortening or attachment. |
 | Images | Rust reads the image locally, runs PP-OCR, translates the extracted text, creates a replacement PNG, and swaps only the displayed image source. Original and translated views remain switchable. |
 
 ## Security boundary
 
 ```mermaid
-flowchart LR
-    subgraph LOCAL["User device · local security boundary"]
-        direction LR
+sequenceDiagram
+    participant App as NudeNyang
+    participant Guard as Local pipe guardian
+    participant Discord as Discord desktop
 
-        APP["NudeNyang<br/>Tauri / Rust core"]
-        PIPE[["Private CDP pipe<br/>Inherited anonymous handles<br/>No TCP listener"]]
-        DISCORD["Discord desktop<br/>Renderer DOM only"]
-
-        APP <-->|"CDP"| PIPE <--> DISCORD
+    App->>App: Verify the Discord executable path
+    App->>Discord: Start with --remote-debugging-pipe
+    Note over App,Discord: Inherited anonymous pipe handles only — no TCP debug port
+    App->>Discord: Verify PID handoff and the discord.com target
+    App->>Discord: Read and update the rendered DOM
+    alt Additional verification becomes visible
+        Discord-->>App: Show verification UI
+        App-->>Discord: Detach CDP and the pipe guardian
+        Note over App,Discord: Reconnection stays paused until the user explicitly requests it
+    else Normal application shutdown
+        App->>Guard: Leave app-side pipe handles for reconnect
+        App-->>Discord: Restore saved DOM
     end
 ```
-
-Before connecting, NudeNyang validates the Discord executable path, PID handoff, guardian startup arguments, and the `https://discord.com` renderer target. A local pipe guardian retains the app-side handles so the app can reconnect to the existing session without restarting Discord.
 
 The boundary is intentionally narrow:
 
@@ -110,6 +116,8 @@ The boundary is intentionally narrow:
 | Connection | Uses inherited anonymous pipe handles. It does not open a TCP debugging port. |
 | Process trust | Checks the normalized executable path, the original process, a same-install PID handoff, guardian arguments, and an `https://discord.com` page target. |
 | Client changes | Changes the current renderer only. It does not patch Discord installation files or write server-side data. |
+| Sending | Places translated text with `Input.insertText` only. It does not synthesize Enter, mouse actions, file attachments, or split-message sends. |
+| Verification compatibility | Detects visible additional verification, detaches the translation pipe, and offers a standard Discord restart. Reconnection requires an explicit user action. |
 | External translation | Sends extracted text only when an external provider is selected. Image pixels, authentication tokens, and the cache database stay local. |
 | Credentials | Stores the DeepL key in Windows Credential Manager, not in settings JSON, logs, or the translation cache. Subscription connections use each provider's official local CLI authentication. |
 | Diagnostics | Redacts home paths and secrets. Message bodies and local-model prompts are not written to the log. |
@@ -119,12 +127,14 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 
 ## Features
 
-- Incoming-message and channel-name translation with conservative language detection
-- Outgoing translation based on a per-channel choice or recent conversation language
+- Incoming-message and channel-name translation with conservative detection and an optional source-language filter
+- Outgoing translation based on a per-channel choice or recent conversation language, with the final send left to the user
 - 28 chat and interface languages, including Korean, English, Japanese, Simplified and Traditional Chinese
 - Hy-MT2 1.8B and 7B local models, plus experimental TranslateGemma 4B
 - Optional ChatGPT, Claude, Gemini, DeepL, and a mock provider for testing
 - Local image translation with adaptive PP-OCR recognition and original/translated toggling
+- Selection dictionary with a separate result window, speech, contextual sense ordering, personal terms, and install-on-demand practical packs
+- Verification compatibility mode that pauses translation during additional Discord verification and reconnects only on request
 - Memory and SQLite caching separated by engine, language, prompt, register, and renderer version
 - Automatic GPU fallback to a RAM-conscious CPU mode when acceleration is unavailable
 - Configurable global shortcuts, synchronized tray state, and a single settings window
@@ -174,13 +184,7 @@ cargo build --release
 <details>
 <summary>Windows packaging and Open Beta deployment</summary>
 
-The normal ZIP contains the Tauri/Rust app, llama.cpp, the Microsoft Visual C++ app-local runtime, and Hy-MT2 1.8B. Add `-IncludeLargeModel` to package the 7B model as well.
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/package.ps1 -Clean
-```
-
-Open Beta builds use a Tauri updater-signed NSIS installer and GitHub Releases. The updater signature verifies artifact integrity but is separate from Microsoft Authenticode code signing. The updater signing key stays outside the repository under `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`. Version 0.5.14 is a one-time Cloudflare R2 bridge that moves existing private-beta installations to the public GitHub update channel.
+Open Beta builds use updater-signed NSIS installers and GitHub Releases. Windows releases build and verify x64 and ARM64 installers together. Portable packages remain excluded because they do not support automatic updates. The updater signing key stays outside the repository under `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
@@ -195,9 +199,11 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime ownership, Discord connection, data boundaries, OCR, and platform separation |
 | [docs/LANGUAGES.md](docs/LANGUAGES.md) | The 28-language catalog, detection behavior, provider coverage, and OCR scope |
+| [docs/DICTIONARY.md](docs/DICTIONARY.md) | Selection lookup, offline packs, personal terms, expansion gates, and data licensing boundaries |
 | [PRIVACY.md](PRIVACY.md) | Local data handling and optional external-provider transfers |
 | [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | Release provenance, signing roles, and verification policy |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Model, runtime, and dependency notices |
+| [docs/releases/0.6.0-beta.md](docs/releases/0.6.0-beta.md) | New features and fixes in 0.6.0 Beta |
 
 ## License
 

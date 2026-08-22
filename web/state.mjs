@@ -4,8 +4,11 @@ export const DEFAULT_CONFIG = Object.freeze({
   enabled: false,
   outgoing_translation_enabled: false,
   outgoing_target_language: "auto",
-  outgoing_confirm_send: true,
+  dictionary_enabled: true,
+  dictionary_external_provider: "wiktionary",
   target_language: "ko",
+  incoming_language_mode: "all",
+  incoming_source_languages: [],
   translator: "hymt_1_8b",
   outgoing_translator: "hymt_1_8b",
   hymt_device: "auto",
@@ -15,12 +18,11 @@ export const DEFAULT_CONFIG = Object.freeze({
   ui_theme: "system",
   ui_language: "auto",
   discord_auto_restart_consent_granted: false,
+  discord_verification_mode: false,
   translation_history_retention_days: 30,
   hotkeys: {
     toggle_translation: "F12",
     toggle_outgoing_translation: "F8",
-    send_outgoing_immediately: "Ctrl+Enter",
-    review_outgoing_before_send: "Alt+Enter",
   },
 });
 
@@ -68,6 +70,13 @@ export function normalizeConfig(value = {}) {
   )
     ? value.outgoing_target_language
     : DEFAULT_CONFIG.outgoing_target_language;
+  const incomingLanguageMode = ["all", "selected"].includes(value.incoming_language_mode)
+    ? value.incoming_language_mode
+    : DEFAULT_CONFIG.incoming_language_mode;
+  const incomingSourceLanguages = [...new Set(
+    (Array.isArray(value.incoming_source_languages) ? value.incoming_source_languages : [])
+      .filter(language => SUPPORTED_TARGET_LANGUAGES.includes(language)),
+  )];
   const uiLanguage = ["auto", ...SUPPORTED_TARGET_LANGUAGES].includes(value.ui_language)
     ? value.ui_language
     : DEFAULT_CONFIG.ui_language;
@@ -79,18 +88,48 @@ export function normalizeConfig(value = {}) {
   const imageOcrQuality = ["fast", "adaptive", "quality"].includes(value.image_ocr_quality)
     ? value.image_ocr_quality
     : DEFAULT_CONFIG.image_ocr_quality;
+  const dictionaryExternalProvider = ["wiktionary", "none"].includes(
+    value.dictionary_external_provider,
+  )
+    ? value.dictionary_external_provider
+    : DEFAULT_CONFIG.dictionary_external_provider;
   return {
     ...DEFAULT_CONFIG,
     ...value,
     target_language: targetLanguage,
+    incoming_language_mode: incomingLanguageMode,
+    incoming_source_languages: incomingSourceLanguages,
     outgoing_target_language: outgoingTargetLanguage,
     ui_language: uiLanguage,
     translation_history_retention_days: retentionDays,
     image_ocr_quality: imageOcrQuality,
+    dictionary_external_provider: dictionaryExternalProvider,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),
     },
+  };
+}
+
+export function nextIncomingSourceLanguageSelection(mode, languages, value) {
+  if (value === "all") {
+    return {
+      incoming_language_mode: "all",
+      incoming_source_languages: [],
+    };
+  }
+
+  const selected = new Set(
+    mode === "selected" && Array.isArray(languages)
+      ? languages.filter(language => SUPPORTED_TARGET_LANGUAGES.includes(language))
+      : [],
+  );
+  if (selected.has(value)) selected.delete(value);
+  else if (SUPPORTED_TARGET_LANGUAGES.includes(value)) selected.add(value);
+
+  return {
+    incoming_language_mode: "selected",
+    incoming_source_languages: [...selected],
   };
 }
 
@@ -106,6 +145,7 @@ export function restartCountdownMessage(seconds) {
 export function shouldPromptRestart(status, flags) {
   return Boolean(
     (status?.controllerEnabled ?? status?.enabled) &&
+      !status?.verificationRequired &&
       status?.connectionIssue &&
       !status?.cdpConnected &&
       !flags.promptActive &&
@@ -119,7 +159,7 @@ export function manualDiscordRestartAvailability(status = {}, flags = {}) {
     flags.manualRestartRequired ||
       (flags.restartAttempted && status.connectionIssue),
   );
-  const visible = Boolean(recoveryRequired && !status.cdpConnected);
+  const visible = Boolean(recoveryRequired && !status.cdpConnected && !status.verificationRequired);
   return {
     visible,
     disabled: visible && Boolean(flags.repairActive || flags.promptActive),
@@ -146,6 +186,7 @@ export function resolveEnabledState(reportedEnabled, pendingEnabled) {
 
 export function discordConnectionLabel(status = {}) {
   if (status.cdpConnected) return "Discord 연결됨";
+  if (status.verificationRequired) return "인증 호환 모드";
   if (status.connectionIssue) return "연결 확인 필요";
   return (status.controllerEnabled ?? status.enabled) ? "Discord 연결 중" : "번역 대기 중";
 }

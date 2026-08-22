@@ -227,6 +227,23 @@ test("로컬 AI 카드는 원래 높이를 유지하고 한국어 제목을 단�
   assert.doesNotMatch(css, /\.feature-outgoing\s*\{[^}]*min-height:\s*558px/s);
 });
 
+test("선택형 사전 기능을 간결한 텍스트 카드로 소개한다", () => {
+  const title = "모르는 표현은 선택해서 바로 확인할 수 있습니다.";
+  const description = "대화에서 표현을 선택하고 Aa 버튼을 누르면 뜻과 발음, 예문을 확인할 수 있습니다. 필요한 용어는 개인 사전에 저장해 언제든 다시 볼 수 있습니다.";
+
+  assert.ok(html.includes(title));
+  assert.ok(html.includes(description));
+  assert.match(html, /class="feature-card feature-dictionary reveal"/);
+  assert.doesNotMatch(html, /dictionary-lookup\.png/);
+  assert.match(css, /\.feature-dictionary\s*\{[^}]*min-height:\s*270px/s);
+  assert.doesNotMatch(css, /\.feature-dictionary-media/);
+
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.ok(LANDING_LOCALES[locale]?.[title], `${locale} 사전 기능 제목이 필요합니다.`);
+    assert.ok(LANDING_LOCALES[locale]?.[description], `${locale} 사전 기능 설명이 필요합니다.`);
+  }
+});
+
 test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준다", async () => {
   const imageTitle = "이미지 속 글자까지 번역합니다.";
   const imageDescription = "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.";
@@ -286,25 +303,24 @@ test("개인정보 구간은 자체 서버와 수집 여부를 명확히 설명�
   assert.doesNotMatch(css, /\.privacy-copy\s*\{[^}]*position:\s*sticky/s);
 });
 
-test("Discord 이용 전 안내와 공식 정책 링크를 FAQ 앞에 제공한다", () => {
+test("Discord 추가 인증 안내와 호환 모드 복귀 방법을 FAQ 앞에 제공한다", () => {
   const noticeIndex = html.indexOf('id="discord-notice"');
   const faqIndex = html.indexOf('id="faq"');
-  const noticeTitle = "Discord 이용 전 확인해 주세요";
-  const noticeCopy = "이 앱은 사용자 토큰이나 비공식 Discord API를 사용하지 않습니다. 다만 Discord가 공식적으로 승인한 도구는 아니며, 정책 해석에 따라 이용이 제한될 수 있습니다. 사용 전 최신 정책을 확인해 주세요. 최종적인 이용 판단과 그에 따른 책임은 사용자에게 있습니다.";
+  const noticeTitle = "추가 인증이 필요할 때";
+  const noticeCopy = "Discord가 추가 인증 화면을 표시하면 NudeNyang은 입력 충돌을 막기 위해 번역 연결을 잠시 분리합니다. 일반 Discord에서 인증을 마친 뒤 설정 창의 NudeNyang 다시 연결을 선택하면 번역을 계속 사용할 수 있습니다.";
 
-  assert.ok(noticeIndex > 0, "Discord 이용 전 안내 구간이 필요합니다.");
-  assert.ok(noticeIndex < faqIndex, "Discord 이용 전 안내는 FAQ 앞에 배치해야 합니다.");
-  assert.match(html, />Discord 이용 전 확인해 주세요</);
-  assert.match(html, /정책 해석에 따라 이용이 제한될 수 있습니다/);
-  assert.match(html, /최종적인 이용 판단과 그에 따른 책임은 사용자에게 있습니다/);
-  assert.doesNotMatch(html, /계정에 조치가 적용될 수 있습니다/);
+  assert.ok(noticeIndex > 0, "Discord 추가 인증 안내 구간이 필요합니다.");
+  assert.ok(noticeIndex < faqIndex, "Discord 추가 인증 안내는 FAQ 앞에 배치해야 합니다.");
+  assert.match(html, />추가 인증이 필요할 때</);
+  assert.match(html, /인증을 마친 뒤 설정 창의 NudeNyang 다시 연결/);
+  assert.doesNotMatch(html, /정책 해석에 따라 이용이 제한|정책 위반으로 판단|결과에 대한 책임/);
   assert.doesNotMatch(html, /<p class="discord-notice-responsibility"/);
   assert.match(html, /href="https:\/\/discord\.com\/terms"/);
-  assert.match(html, /href="https:\/\/discord\.com\/safety\/platform-manipulation-policy-explainer-oct-2023"/);
+  assert.match(html, /href="https:\/\/support\.discord\.com\/"/);
   assert.match(html, />Discord 이용 약관</);
-  assert.match(html, />플랫폼 조작 정책</);
-  assert.match(html, />Discord 이용 약관에 위배될 수 있나요\?</);
-  assert.match(html, /사용 여부와 결과에 대한 책임은 사용자에게 있습니다\./);
+  assert.match(html, />Discord 고객센터</);
+  assert.match(html, />Discord에서 추가 인증을 요청하면 어떻게 하나요\?</);
+  assert.match(html, /인증 호환 모드가 번역 연결을 멈추고/);
   assert.doesNotMatch(css, /\.discord-notice[^}]*#[0-9a-f]{3,8}/i);
   assert.doesNotMatch(css, /\.discord-policy-links a\s*\{[^}]*border-bottom:/s);
   assert.doesNotMatch(css, /\.discord-policy-links a:hover\s*\{[^}]*border-bottom/s);

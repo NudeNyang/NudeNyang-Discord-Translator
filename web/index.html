@@ -19,6 +19,10 @@
             <span class="state-dot" aria-hidden="true"></span>
             <span id="engine-state-label">엔진 연결 중</span>
           </div>
+          <button class="button secondary engine-restart-button verification-reconnect-button" id="verification-reconnect-header" type="button" data-state="idle" aria-busy="false" hidden>
+            <svg class="engine-restart-icon" data-icon="rotate-ccw" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0 -6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <span>NudeNyang 다시 연결</span>
+          </button>
           <button class="button secondary engine-restart-button" id="discord-restart-manual" type="button" data-state="idle" aria-busy="false" hidden>
             <svg class="engine-restart-icon" data-icon="rotate-ccw" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0 -6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             <span>Discord 재시작</span>
@@ -42,8 +46,19 @@
             <button class="button primary" id="update-banner-install" type="button">업데이트 설치</button>
           </div>
         </aside>
-        <div class="settings-workspace">
-          <nav class="settings-navigation" aria-label="설정 분류">
+        <aside class="verification-banner" id="verification-banner" hidden role="status" aria-live="polite">
+          <span class="verification-banner-mark" aria-hidden="true">✓</span>
+          <div class="verification-banner-copy">
+            <strong>인증 호환 모드</strong>
+            <p>Discord 인증을 완료한 후 NudeNyang을 다시 연결할 수 있습니다.</p>
+          </div>
+          <div class="verification-banner-actions">
+            <button class="button secondary" id="verification-continue-vanilla" type="button">현재 Discord에서 인증 계속</button>
+            <button class="button primary" id="verification-reconnect" type="button">NudeNyang 다시 연결</button>
+          </div>
+        </aside>
+        <div id="settings-workspace" class="settings-workspace">
+          <nav id="settings-navigation" class="settings-navigation" aria-label="설정 분류">
             <p>설정</p>
             <button class="settings-nav-item active" type="button" data-settings-panel="translation" aria-current="page">
               <span class="settings-nav-icon" data-icon="language" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M9 6.371c0 4.418 -2.239 6.629 -5 6.629"/><path d="M4 6.371h7"/><path d="M5 9c0 2.144 2.252 3.908 6 4"/><path d="M12 20l4 -9l4 9"/><path d="M19.1 18h-6.2"/><path d="M6.694 3l.793 .582"/></svg></span><span>번역</span>
@@ -53,6 +68,9 @@
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="image">
               <span class="settings-nav-icon" data-icon="photo" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg></span><span>이미지 번역</span>
+            </button>
+            <button class="settings-nav-item" type="button" data-settings-panel="dictionary">
+              <span class="settings-nav-icon" data-icon="book" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M4 19.5a2.5 2.5 0 0 1 2.5 -2.5h13.5"/><path d="M6.5 2h13.5v20h-13.5a2.5 2.5 0 0 1 -2.5 -2.5v-15a2.5 2.5 0 0 1 2.5 -2.5"/><path d="M8 7h8"/><path d="M8 11h5"/></svg></span><span>사전</span>
             </button>
             <button class="settings-nav-item" type="button" data-settings-panel="convenience">
               <span class="settings-nav-icon" data-icon="adjustments-horizontal" aria-hidden="true"><svg class="settings-nav-glyph" viewBox="0 0 24 24" focusable="false"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 6l8 0M16 6l4 0M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 12l2 0M10 12l10 0M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M4 18l11 0M19 18l1 0"/></svg></span><span>편의 기능</span>
@@ -86,6 +104,19 @@
                       <div class="setting-copy"><h3>표시 언어</h3><p>원문과 같은 언어는 그대로 표시합니다.</p></div>
                       <div class="custom-select" data-field="target_language"></div>
                     </div>
+                    <div class="setting-row compact-row">
+                      <div class="setting-copy"><h3>번역할 원문 언어</h3><p>모든 언어를 번역하거나 선택한 언어만 번역합니다.</p></div>
+                      <div class="custom-select source-language-select" id="source-language-select">
+                        <button class="select-trigger" id="source-language-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="select-trigger-label">모든 언어</span></button>
+                        <div class="select-menu source-language-menu">
+                          <div class="select-search">
+                            <input class="select-search-input" id="source-language-search" type="search" autocomplete="off" spellcheck="false" placeholder="언어 검색" aria-label="언어 검색" />
+                          </div>
+                          <div class="select-options" id="source-language-options" role="listbox" aria-multiselectable="true"></div>
+                          <div class="select-search-empty" id="source-language-empty" hidden>검색 결과 없음</div>
+                        </div>
+                      </div>
+                    </div>
                   </article>
 
                   <article class="settings-card">
@@ -103,10 +134,6 @@
                         <div class="custom-select" data-field="outgoing_target_language"></div>
                         <small class="select-help" id="outgoing-auto-help">언어를 판단하기 어려울 때만 전송 언어를 확인합니다.</small>
                       </div>
-                    </div>
-                    <div class="setting-row compact-row">
-                      <div class="setting-copy"><h3>전송 전 확인</h3><p>켜면 번역문을 입력창에 남겨 확인하거나 수정할 수 있습니다.</p></div>
-                      <button class="switch" id="outgoing-confirm-send" type="button" role="switch" aria-checked="true"><span></span><b>확인</b></button>
                     </div>
                   </article>
                 </div>
@@ -224,6 +251,79 @@
                 </article>
               </section>
 
+              <section class="settings-view" data-settings-view="dictionary" aria-labelledby="dictionary-heading" hidden>
+                <div id="dictionary-overview">
+                <div class="panel-heading"><h2 id="dictionary-heading">사전</h2><p>Discord에서 선택한 단어의 뜻을 확인하고 개인 용어와 오프라인 사전팩을 관리합니다.</p></div>
+                <article class="settings-card dictionary-feature-card">
+                  <div class="dictionary-feature-mark" aria-hidden="true"><span>Aa</span><i></i><i></i></div>
+                  <div class="feature-copy">
+                    <span class="feature-badge">선택형 사전</span>
+                    <h3>메시지 안에서 바로 뜻 확인</h3>
+                    <p>Discord 메시지에서 단어나 짧은 구절을 대략 선택한 뒤 Aa 버튼을 누르면, 사전이 일치하는 표현을 나누어 뜻과 발음을 찾습니다. 개인 용어와 설치된 사전팩은 PC 안에서만 조회합니다.</p>
+                  </div>
+                </article>
+                <div class="section-note dictionary-localization-note" role="note">
+                  <span>사전 뜻이 없으면 설정된 번역 모델로 보완합니다.</span>
+                  <span id="dictionary-external-model-note" hidden>선택한 텍스트가 해당 서비스로 전송될 수 있습니다.</span>
+                  <button class="dictionary-localization-info" type="button" aria-label="주변 문맥은 PC 안에서만 처리됩니다." data-tooltip="주변 문맥은 PC 안에서만 처리됩니다." data-i18n-aria-label="주변 문맥은 PC 안에서만 처리됩니다." data-i18n-tooltip="주변 문맥은 PC 안에서만 처리됩니다."><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg></button>
+                </div>
+                <article class="settings-card">
+                  <div class="setting-row compact-row first-row">
+                    <div class="setting-copy"><h3>선택형 사전 사용</h3><p>번역 기능이 꺼져 있어도 사전을 독립적으로 사용할 수 있습니다.</p></div>
+                    <button class="switch" id="dictionary-enabled" type="button" role="switch" aria-checked="true"><span></span><b>켜짐</b></button>
+                  </div>
+                  <div class="setting-row compact-row">
+                    <div class="setting-copy"><h3>외부 사전 연결</h3><p>더 자세한 정보가 필요할 때 기본 브라우저로 엽니다. 선택한 단어는 해당 사이트에 전달됩니다.</p></div>
+                    <div class="custom-select" data-field="dictionary_external_provider"></div>
+                  </div>
+                </article>
+
+                <section aria-labelledby="personal-dictionary-heading">
+                  <div class="panel-subheading dictionary-personal-heading"><div><h3 id="personal-dictionary-heading">개인 사전</h3><p>제품명, 고유명사와 자주 쓰는 표현을 저장하고 필요한 항목을 빠르게 찾습니다.</p></div><div class="dictionary-heading-actions"><button class="button secondary" id="dictionary-personal-open" type="button">전체 관리</button><button class="button primary" id="dictionary-personal-quick-add" type="button">빠른 추가</button></div></div>
+                  <article class="settings-card dictionary-personal-summary">
+                    <div id="dictionary-personal-list" class="dictionary-personal-list" aria-live="polite"><p class="dictionary-empty">개인 사전을 확인하고 있습니다.</p></div>
+                  </article>
+                </section>
+
+                <section aria-labelledby="dictionary-packs-heading">
+                  <div class="panel-subheading dictionary-pack-heading"><div><h3 id="dictionary-packs-heading">오프라인 사전</h3><p>확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.</p></div><div class="dictionary-heading-actions"><button class="button secondary" id="dictionary-pack-manager-open" type="button">언어팩 관리</button><button class="button secondary" id="dictionary-open-folder" type="button">데이터 폴더</button></div></div>
+                  <div id="dictionary-pack-list" class="dictionary-pack-list" aria-live="polite"><p class="dictionary-empty">사전팩 상태를 확인하고 있습니다.</p></div>
+                  <div class="dictionary-pack-footer">
+                    <p class="section-note" id="dictionary-storage-summary">사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.</p>
+                    <button class="dictionary-license-link" id="dictionary-pack-licenses" type="button"><span>출처 및 라이선스</span><span aria-hidden="true">›</span></button>
+                  </div>
+                </section>
+                </div>
+
+                <section id="dictionary-personal-manager" class="dictionary-manager" aria-labelledby="dictionary-manager-heading" hidden>
+                  <header class="dictionary-manager-header">
+                    <div class="dictionary-manager-title"><button class="dictionary-back-button" id="dictionary-personal-back" type="button" aria-label="사전 설정으로 돌아가기"><svg class="dictionary-back-icon" data-icon="chevron-left" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6l6 6"/></svg></button><span class="feature-badge">개인 사전</span><h2 id="dictionary-manager-heading">저장한 용어 관리</h2><p id="dictionary-personal-count">개인 용어를 불러오고 있습니다.</p></div>
+                    <div class="dictionary-manager-actions"><select id="dictionary-export-format" class="dictionary-compact-select" data-custom-select aria-label="내보내기 형식"><option value="json">JSON</option><option value="csv">CSV</option><option value="tsv">TSV</option></select><button class="button secondary" id="dictionary-manager-import" type="button">가져오기</button><button class="button secondary" id="dictionary-manager-export" type="button">내보내기</button><button class="button primary" id="dictionary-manager-add" type="button">용어 추가</button></div>
+                  </header>
+                  <div class="settings-card dictionary-manager-toolbar">
+                    <button id="dictionary-filter-pinned" class="dictionary-favorite-filter" type="button" aria-label="즐겨찾기" aria-pressed="false"><span class="dictionary-favorite-filter-star" aria-hidden="true">☆</span></button>
+                    <label class="dictionary-search-field"><span class="sr-only">개인 사전 검색</span><input id="dictionary-personal-search" class="text-field" type="search" autocomplete="off" placeholder="원문, 표시어, 태그 또는 메모 검색" /><kbd>/</kbd></label>
+                    <select id="dictionary-filter-source" class="dictionary-compact-select" data-custom-select data-searchable aria-label="원문 언어 필터"></select>
+                    <select id="dictionary-sort" class="dictionary-compact-select" data-custom-select aria-label="정렬"><option value="updated_desc" data-i18n-key="최근 수정순">최근 수정순</option><option value="oldest" data-i18n-key="오래된 수정순">오래된 수정순</option><option value="source_asc" data-i18n-key="원문 오름차순">원문 오름차순</option><option value="target_asc" data-i18n-key="표시어 오름차순">표시어 오름차순</option></select>
+                  </div>
+                  <div id="dictionary-selection-bar" class="dictionary-selection-bar" role="toolbar" aria-labelledby="dictionary-selection-count" hidden><strong id="dictionary-selection-count">선택 없음</strong><span class="dictionary-selection-divider" aria-hidden="true"></span><div class="dictionary-selection-actions"><button class="dictionary-selection-action" id="dictionary-selection-all" type="button">전체 선택</button><button class="dictionary-selection-action" id="dictionary-selection-clear" type="button">선택 취소</button><button class="button danger dictionary-selection-delete" id="dictionary-selection-delete" type="button">선택 항목 삭제</button></div></div>
+                  <div id="dictionary-manager-list" class="dictionary-manager-list" aria-live="polite"><p class="dictionary-empty">개인 사전을 확인하고 있습니다.</p></div>
+                  <footer class="dictionary-pagination"><button class="button secondary dictionary-page-button" id="dictionary-page-prev" type="button" aria-label="이전" data-tooltip="이전"><svg class="dictionary-page-icon" data-icon="chevron-left" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6l6 6"/></svg></button><span id="dictionary-page-summary">1페이지</span><button class="button secondary dictionary-page-button" id="dictionary-page-next" type="button" aria-label="다음" data-tooltip="다음"><svg class="dictionary-page-icon" data-icon="chevron-right" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6l-6 6"/></svg></button></footer>
+                </section>
+
+                <section id="dictionary-pack-manager" class="dictionary-manager dictionary-pack-manager" aria-labelledby="dictionary-pack-manager-heading" hidden>
+                  <header class="dictionary-manager-header">
+                    <div class="dictionary-manager-title"><button class="dictionary-back-button" id="dictionary-pack-manager-back" type="button" aria-label="사전 설정으로 돌아가기"><svg class="dictionary-back-icon" data-icon="chevron-left" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6l6 6"/></svg></button><span class="feature-badge">오프라인 사전</span><h2 id="dictionary-pack-manager-heading">언어팩 관리</h2><p id="dictionary-pack-manager-count">언어팩을 확인하고 있습니다.</p></div>
+                    <div class="dictionary-manager-actions"><button class="button secondary" id="dictionary-pack-manager-folder" type="button">데이터 폴더</button></div>
+                  </header>
+                  <div class="settings-card dictionary-pack-manager-toolbar">
+                    <label class="dictionary-search-field"><span class="sr-only">언어팩 검색</span><input id="dictionary-pack-search" class="text-field" type="search" autocomplete="off" placeholder="설치할 언어 검색" /><kbd>/</kbd></label>
+                    <select id="dictionary-pack-filter" class="dictionary-compact-select" data-custom-select aria-label="설치 상태 필터"><option value="all">전체 상태</option><option value="installed">설치된 언어</option><option value="available">미설치 언어</option></select>
+                  </div>
+                  <div id="dictionary-pack-manager-list" class="dictionary-pack-manager-list" aria-live="polite"><p class="dictionary-empty">언어팩을 확인하고 있습니다.</p></div>
+                </section>
+              </section>
+
               <section class="settings-view" data-settings-view="convenience" aria-labelledby="convenience-heading" hidden>
                 <div class="panel-heading"><h2 id="convenience-heading">편의 기능</h2><p>설정창 테마, 시스템 시작 및 번역 단축키를 관리합니다.</p></div>
                 <article class="settings-card">
@@ -251,23 +351,12 @@
                     <div class="shortcut-editor"><input class="text-field" id="toggle-outgoing-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="outgoing-shortcut-help" readonly /><small id="outgoing-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
                   </div>
                 </article>
-                <article class="settings-card shortcut-card">
-                  <div class="card-heading"><span class="card-index card-index-icon" data-icon="send" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg></span><div><h3>메시지 입력 단축키</h3><p>Discord 메시지 입력창에서 통역 결과의 전송 방식을 선택합니다.</p></div></div>
-                  <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>즉시 전송</h3><p>전송 전 확인 설정과 관계없이 번역 후 바로 전송합니다.</p></div>
-                    <div class="shortcut-editor"><input class="text-field" id="send-immediately-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="send-immediately-shortcut-help" readonly /><small id="send-immediately-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
-                  </div>
-                  <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>항상 첨삭</h3><p>자동 전송 상태에서도 번역문을 입력창에 남겨 수정합니다.</p></div>
-                    <div class="shortcut-editor"><input class="text-field" id="review-before-send-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="review-before-send-shortcut-help" readonly /><small id="review-before-send-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
-                  </div>
-                </article>
               </section>
 
               <section class="settings-view" data-settings-view="about" aria-labelledby="app-heading" hidden>
                 <div class="panel-heading"><h2 id="app-heading">앱 정보</h2><p>앱 버전과 업데이트를 확인하고, 진단 로그·초기화·라이선스를 관리합니다.</p></div>
                 <div class="settings-card app-information">
-                      <div class="app-info-row app-info-product"><div class="app-info-product-brand"><img class="app-info-product-icon" src="./app-icon.png" alt="" width="34" height="34" /><div><h3>NudeNyang Discord Translator</h3><p><span data-i18n-key="버전">버전</span> <span id="app-version">0.5.22 Beta</span></p></div></div><div class="app-info-links" aria-label="프로젝트 링크"><span>© 2026</span><span aria-hidden="true">·</span><button class="app-link" id="author-link" type="button">NudeNyang</button><span aria-hidden="true">·</span><button class="app-link" id="github-link" type="button">GitHub</button></div></div>
+                      <div class="app-info-row app-info-product"><div class="app-info-product-brand"><img class="app-info-product-icon" src="./app-icon.png" alt="" width="34" height="34" /><div><h3>NudeNyang Discord Translator</h3><p><span data-i18n-key="버전">버전</span> <span id="app-version">0.6.0 Beta</span></p></div></div><div class="app-info-links" aria-label="프로젝트 링크"><span>© 2026</span><span aria-hidden="true">·</span><button class="app-link" id="author-link" type="button">NudeNyang</button><span aria-hidden="true">·</span><button class="app-link" id="github-link" type="button">GitHub</button></div></div>
                   <div class="app-info-row"><div><h3>자동 업데이트</h3><p id="update-status">새 버전을 자동으로 확인하고 사용할 수 있으면 알려드립니다.</p></div><button class="button secondary app-info-button" id="check-update" type="button">지금 확인</button></div>
                   <div class="app-info-row"><div><h3>진단 로그</h3><p>오류 확인에 필요한 기록을 개인정보와 인증 정보를 가린 하나의 파일에 저장합니다.</p></div><button class="button secondary app-info-button" id="open-diagnostic-log" type="button">로그 파일 찾기</button></div>
                   <div class="app-info-row"><div><h3>설정 초기화</h3><p>앱 설정과 단축키를 기본값으로 초기화합니다. 번역 기록, 다운로드한 모델 및 번역 서비스 인증 정보는 유지됩니다.</p></div><button class="button danger app-info-button" id="reset-settings" type="button">초기화</button></div>
@@ -290,6 +379,32 @@
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <h2 id="modal-title"></h2><p id="modal-message"></p>
         <div class="modal-actions"><button class="button secondary" id="modal-cancel" type="button">취소</button><button class="button primary" id="modal-accept" type="button"></button></div>
+      </section>
+    </div>
+    <div class="modal-layer dictionary-modal-layer" id="dictionary-editor-layer" hidden>
+      <section class="modal dictionary-editor-modal" role="dialog" aria-modal="true" aria-labelledby="dictionary-editor-title">
+        <header class="dictionary-modal-header"><div><span class="feature-badge">개인 사전</span><h2 id="dictionary-editor-title">용어 추가</h2></div></header>
+        <form id="dictionary-editor-form" class="dictionary-editor-form">
+          <div class="dictionary-editor-grid">
+            <label><span>원문 언어</span><select id="dictionary-source-language" class="dictionary-language-select" data-custom-select data-searchable aria-label="원문 언어"></select></label>
+            <label><span>대상 언어</span><select id="dictionary-target-language" class="dictionary-language-select" data-custom-select data-searchable aria-label="대상 언어"></select></label>
+            <label><span>원문 용어</span><input id="dictionary-source-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" required /></label>
+            <label><span>표시할 용어</span><input id="dictionary-target-term" class="text-field dictionary-text-field" type="text" maxlength="120" autocomplete="off" required /></label>
+            <label class="dictionary-wide-field"><span>태그 (쉼표로 구분)</span><input id="dictionary-tags" class="text-field dictionary-text-field" type="text" maxlength="420" autocomplete="off" placeholder="프로젝트, 인물, 자주 사용" /></label>
+            <label class="dictionary-wide-field"><span>메모 (선택)</span><textarea id="dictionary-note" class="text-field dictionary-textarea" maxlength="500"></textarea></label>
+          </div>
+          <div class="modal-actions"><button class="button secondary" id="dictionary-editor-cancel" type="button">취소</button><button class="button primary" id="dictionary-personal-save" type="button">저장</button></div>
+        </form>
+      </section>
+    </div>
+    <div class="modal-layer dictionary-modal-layer" id="dictionary-import-layer" hidden>
+      <section class="modal dictionary-import-modal" role="dialog" aria-modal="true" aria-labelledby="dictionary-import-title">
+        <header class="dictionary-modal-header"><div><span class="feature-badge">개인 사전</span><h2 id="dictionary-import-title">용어 가져오기</h2><p>JSON 백업이나 CSV, TSV 파일을 불러오거나 표의 내용을 붙여 넣을 수 있습니다.</p></div><button class="dictionary-modal-close" id="dictionary-import-close" type="button" aria-label="닫기">×</button></header>
+        <input id="dictionary-import-file" type="file" accept=".json,.csv,.tsv,.txt,application/json,text/csv,text/tab-separated-values,text/plain" hidden />
+        <div class="dictionary-import-controls"><button class="button secondary" id="dictionary-import-choose" type="button">파일 선택</button><label><span>기본 원문 언어</span><select id="dictionary-import-source" class="dictionary-compact-select" aria-label="기본 원문 언어"></select></label><label><span>기본 대상 언어</span><select id="dictionary-import-target" class="dictionary-compact-select" aria-label="기본 대상 언어"></select></label><label><span>중복 처리</span><select id="dictionary-import-overwrite" class="dictionary-compact-select" aria-label="중복 처리"><option value="skip">중복 건너뛰기</option><option value="overwrite">기존 항목 덮어쓰기</option></select></label></div>
+        <textarea id="dictionary-import-text" class="text-field dictionary-import-text" spellcheck="false" placeholder="원문,표시어,원문 언어,대상 언어,태그,메모"></textarea>
+        <p id="dictionary-import-preview" class="dictionary-import-preview">가져올 내용을 선택하거나 붙여 넣으십시오.</p>
+        <div class="modal-actions"><button class="button secondary" id="dictionary-import-cancel" type="button">취소</button><button class="button primary" id="dictionary-import-accept" type="button" disabled>가져오기</button></div>
       </section>
     </div>
     <script type="module" src="./app.js"></script>

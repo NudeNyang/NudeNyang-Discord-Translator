@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "packs": [
+    {
+      "id": "nudenyang-ko-opendict-reviewed-2026.08.21.1",
+      "language": "ko",
+      "version": "2026.08.21.1",
+      "title": "우리말샘 검토 보완층",
+      "sourceName": "우리말샘, 국립국어원",
+      "sourceUrl": "https://opendict.korean.go.kr/main",
+      "license": "CC-BY-SA-2.0-KR",
+      "edition": "practical",
+      "entries": [
+        {
+          "headword": "초기화",
+          "reading": "초기화",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "ko": "컴퓨터를 작동하는 데 필요한 모든 프로그램의 내용을 최초 설정한 값으로 복귀시키는 일."
+          },
+          "examples": {}
+        },
+        {
+          "headword": "초기화",
+          "reading": "초기화",
+          "partOfSpeech": "noun",
+          "senseRank": 1,
+          "glosses": {
+            "ko": "기억 매체의 기존 기억 내용을 제거하여 그 매체를 새롭게 사용 가능한 상태로 만드는 일."
+          },
+          "examples": {}
+        },
+        {
+          "headword": "초기화",
+          "reading": "초기화",
+          "partOfSpeech": "noun",
+          "senseRank": 2,
+          "glosses": {
+            "ko": "기계를 시동 가능한 상태로 만들기 위한 조작. 또는 데이터 매체를 사용하기 전이나 처리하기 전에 필요한 조작."
+          },
+          "examples": {}
+        }
+      ]
+    }
+  ]
+}

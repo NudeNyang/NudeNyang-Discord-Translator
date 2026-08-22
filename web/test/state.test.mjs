@@ -6,6 +6,7 @@ import {
   localModelStorageDisplay,
   manualDiscordRestartAvailability,
   modelPreparationBanner,
+  nextIncomingSourceLanguageSelection,
   normalizeConfig,
   providerOperationAvailability,
   resolveEnabledState,
@@ -122,15 +123,24 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.enabled, true);
   assert.equal(config.translator, "hymt_1_8b");
   assert.equal(config.outgoing_translator, "hymt_1_8b");
-  assert.equal(config.outgoing_confirm_send, true);
+  assert.equal(config.discord_verification_mode, false);
   assert.equal(config.discord_auto_restart_consent_granted, false);
   assert.equal(config.translation_history_retention_days, 30);
   assert.equal(config.hotkeys.toggle_translation, "F12");
   assert.equal(config.hotkeys.toggle_outgoing_translation, "F8");
-  assert.equal(config.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
-  assert.equal(config.hotkeys.review_outgoing_before_send, "Alt+Enter");
+  assert.equal(config.hotkeys.send_outgoing_immediately, undefined);
+  assert.equal(config.hotkeys.review_outgoing_before_send, undefined);
   assert.equal(config.ui_language, "auto");
   assert.equal(config.image_ocr_quality, "adaptive");
+  assert.equal(config.dictionary_enabled, true);
+  assert.equal(config.dictionary_external_provider, "wiktionary");
+});
+
+test("dictionary external lookup accepts only the supported privacy choices", () => {
+  for (const provider of ["wiktionary", "none"]) {
+    assert.equal(normalizeConfig({ dictionary_external_provider: provider }).dictionary_external_provider, provider);
+  }
+  assert.equal(normalizeConfig({ dictionary_external_provider: "unknown" }).dictionary_external_provider, "wiktionary");
 });
 
 test("image OCR quality keeps only supported execution policies", () => {
@@ -164,6 +174,56 @@ test("all supported display languages survive settings normalization", () => {
     assert.equal(normalizeConfig({ target_language: targetLanguage }).target_language, targetLanguage);
   }
   assert.equal(normalizeConfig({ target_language: "unsupported" }).target_language, "ko");
+});
+
+test("incoming source language filter defaults to all and normalizes selected languages", () => {
+  const defaults = normalizeConfig({});
+  assert.equal(defaults.incoming_language_mode, "all");
+  assert.deepEqual(defaults.incoming_source_languages, []);
+
+  const selected = normalizeConfig({
+    incoming_language_mode: "selected",
+    incoming_source_languages: ["ja", "invalid", "en", "ja"],
+  });
+  assert.equal(selected.incoming_language_mode, "selected");
+  assert.deepEqual(selected.incoming_source_languages, ["ja", "en"]);
+
+  const invalid = normalizeConfig({
+    incoming_language_mode: "exclude",
+    incoming_source_languages: "ja",
+  });
+  assert.equal(invalid.incoming_language_mode, "all");
+  assert.deepEqual(invalid.incoming_source_languages, []);
+});
+
+test("incoming source language selection changes only through explicit option clicks", () => {
+  const japanese = nextIncomingSourceLanguageSelection("all", [], "ja");
+  assert.deepEqual(japanese, {
+    incoming_language_mode: "selected",
+    incoming_source_languages: ["ja"],
+  });
+
+  const none = nextIncomingSourceLanguageSelection(
+    japanese.incoming_language_mode,
+    japanese.incoming_source_languages,
+    "ja",
+  );
+  assert.deepEqual(none, {
+    incoming_language_mode: "selected",
+    incoming_source_languages: [],
+  });
+
+  assert.deepEqual(
+    nextIncomingSourceLanguageSelection(
+      none.incoming_language_mode,
+      none.incoming_source_languages,
+      "all",
+    ),
+    {
+      incoming_language_mode: "all",
+      incoming_source_languages: [],
+    },
+  );
 });
 
 test("restart message contains countdown and data-loss warning", () => {

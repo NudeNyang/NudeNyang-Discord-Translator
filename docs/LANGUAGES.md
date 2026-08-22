@@ -25,6 +25,8 @@ Legacy or provider-specific aliases are normalized before storage. For example, 
 
 The interface language and the translation target are independent. Changing the interface does not change detection candidates or the selected translation provider. `UI Language` and `Auto (System)` remain in English so users can recover from an incorrect automatic interface choice.
 
+The selection dictionary uses the same 28-code catalog. Project-authored starter packs currently cover Korean, English, Japanese, Simplified Chinese, and Traditional Chinese. The other 23 entries represent an expansion and validation path, not completed dictionary-data support. See [DICTIONARY.md](DICTIONARY.md).
+
 ## Detection behavior
 
 Detection favors an unknown result over a confident-looking mistake.
@@ -36,6 +38,8 @@ Detection favors an unknown result over a confident-looking mistake.
 - Channel and category names use a separate server-navigation context and never influence message-language detection.
 
 When detection remains uncertain, NudeNyang uses the recent channel language or asks the user to choose, depending on the outgoing-translation settings.
+
+Incoming text translation uses all detected source languages by default. Users can instead select one or more source languages; messages, server names, and channel names detected as other languages remain unchanged. Unknown text also remains unchanged. This filter does not apply to image translation requested from an image button.
 
 ## Translation providers
 

@@ -229,12 +229,12 @@ test("provider actions use fixed icon buttons with localized accessible labels",
     styles,
     /\.provider-action-icon\s*\{[\s\S]*?width:\s*18px[\s\S]*?stroke:\s*currentColor[\s\S]*?stroke-width:\s*2/,
   );
-  const tooltipRule = styles.match(/\.provider-icon-button::after\s*\{[\s\S]*?\}/)?.[0] || "";
+  const tooltipRule = styles.match(/\[data-tooltip\]::after\s*\{[\s\S]*?\}/)?.[0] || "";
   assert.match(tooltipRule, /content:\s*attr\(data-tooltip\)/);
-  assert.match(tooltipRule, /right:\s*calc\(100% \+ 8px\)/);
+  assert.match(tooltipRule, /border:\s*0/);
   assert.match(
     styles,
-    /\.provider-icon-button:is\(:hover, :focus-visible\)::after\s*\{[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/,
+    /\[data-tooltip\]:is\(:hover, :focus-visible\)::after\s*\{[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/,
   );
   assert.match(
     styles,

@@ -36,10 +36,7 @@ const API_ENVIRONMENT_VARIABLES: [&str; 5] = [
 fn read_capped_output<R: Read>(mut reader: R, limit: usize) -> Vec<u8> {
     let mut output = Vec::with_capacity(limit.min(64 * 1024));
     let mut buffer = [0_u8; 16 * 1024];
-    loop {
-        let Ok(read) = reader.read(&mut buffer) else {
-            break;
-        };
+    while let Ok(read) = reader.read(&mut buffer) {
         if read == 0 {
             break;
         }
@@ -611,6 +608,8 @@ fn failure_category(error: &str) -> &'static str {
     }
 }
 
+// Keep diagnostics call sites explicit: each field is independently searchable in logs.
+#[allow(clippy::too_many_arguments)]
 fn log_cli_latency(
     provider: SubscriptionProvider,
     route: &str,
@@ -2565,6 +2564,9 @@ impl Drop for CodexAppServer {
     }
 }
 
+// The one-shot adapter mirrors the external CLI contract. A wrapper object would not be
+// reused elsewhere and would hide which process inputs are supplied.
+#[allow(clippy::too_many_arguments)]
 fn invoke_codex_once(
     executable: &Path,
     prompt: &str,

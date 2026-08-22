@@ -1,6 +1,6 @@
 [package]
 name = "nude-translator-tauri"
-version = "0.5.22-beta"
+version = "0.6.0-beta"
 description = "NudeNyang Discord Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
@@ -13,6 +13,7 @@ tauri-build = { version = "2", features = [] }
 ab_glyph = "0.2"
 base64 = "0.22"
 encoding_rs = "0.8"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 regex = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
@@ -38,6 +39,6 @@ tungstenite = "0.26"
 time = { version = "0.3", features = ["formatting"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Graphics_Dxgi", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Globalization", "Win32_Graphics_Dwm", "Win32_Graphics_Dxgi", "Win32_Media_Speech", "Win32_Security", "Win32_System_Com", "Win32_System_JobObjects", "Win32_System_Threading"] }
 windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Console", "Win32_System_Pipes", "Win32_System_Threading"] }
 winreg = "0.55"

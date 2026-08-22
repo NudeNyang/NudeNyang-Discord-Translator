@@ -74,6 +74,42 @@ button:focus-visible {
   outline-offset: -3px;
 }
 
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  position: absolute;
+  z-index: 20;
+  inset-inline-end: 10px;
+  bottom: calc(100% + 6px);
+  max-width: calc(100% - 20px);
+  padding: 6px 9px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 92%, var(--text));
+  box-shadow: 0 5px 16px rgb(2 12 16 / 0.24);
+  content: attr(data-tooltip);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  transform: translateY(3px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+[data-tooltip]:is(:hover, :focus-visible)::after {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
 .tray-panel {
   height: 100%;
   overflow: hidden;

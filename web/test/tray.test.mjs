@@ -168,6 +168,12 @@ test("tray window size hugs each menu view without clipping option lists", () =>
   assert.match(rustShell, /fn tray_menu_set_size/);
 });
 
+test("tray overflow hints use the shared borderless tooltip instead of native titles", () => {
+  assert.doesNotMatch(trayScript, /\.title\s*=/);
+  assert.match(trayScript, /closest\("button"\)\.dataset\.tooltip/);
+  assert.match(trayStyles, /\[data-tooltip\]::after\s*\{[^}]*border:\s*0;[^}]*content:\s*attr\(data-tooltip\)/s);
+});
+
 test("tray panel keeps a crisp border without a blurred outer shadow", () => {
   assert.match(trayStyles, /\.tray-panel \{[^}]*box-shadow: none;/s);
 });

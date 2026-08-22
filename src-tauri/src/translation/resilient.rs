@@ -365,7 +365,7 @@ pub fn translation_needs_repair(
             // discarded an otherwise complete translation and restored the whole English
             // source. Keep the strict floor for short messages, but judge long messages by
             // the untranslated share so that actual English clauses are still repaired.
-            let allowed_untranslated_latin = ((source_latin + 11) / 12).max(3);
+            let allowed_untranslated_latin = source_latin.div_ceil(12).max(3);
             return hangul > 0
                 && untranslated_latin > allowed_untranslated_latin
                 && remaining_latin >= 4;
