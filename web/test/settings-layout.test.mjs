@@ -177,6 +177,10 @@ test("settings apply immediately and the primary footer action only confirms", (
 });
 
 test("outgoing interpretation asks only when automatic language detection is uncertain", () => {
+  assert.match(
+    styles,
+    /\.settings-grid\.two-column\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);[^}]*align-items:\s*start;/s,
+  );
   assert.match(markup, /class="card-index message-direction-icon message-direction-icon--incoming" aria-hidden="true">↓<\/span>[\s\S]*?<h3>받는 메시지<\/h3>/);
   assert.match(markup, /class="card-index message-direction-icon message-direction-icon--outgoing" aria-hidden="true">↑<\/span>[\s\S]*?<h3>보내는 메시지<\/h3>/);
   assert.doesNotMatch(markup, /class="card-index" aria-hidden="true">0[123]<\/span>/);
