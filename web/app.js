@@ -184,9 +184,6 @@ const elements = {
   dictionaryTargetTerm: document.querySelector("#dictionary-target-term"),
   dictionaryTags: document.querySelector("#dictionary-tags"),
   dictionaryNote: document.querySelector("#dictionary-note"),
-  dictionaryPinned: document.querySelector("#dictionary-pinned"),
-  dictionaryCaseSensitive: document.querySelector("#dictionary-case-sensitive"),
-  dictionaryWholeWord: document.querySelector("#dictionary-whole-word"),
   dictionaryPersonalSave: document.querySelector("#dictionary-personal-save"),
   dictionaryPersonalList: document.querySelector("#dictionary-personal-list"),
   dictionaryEditorLayer: document.querySelector("#dictionary-editor-layer"),
@@ -843,9 +840,6 @@ function openDictionaryEditor(entry = null) {
   elements.dictionaryTargetTerm.value = value.targetTerm;
   elements.dictionaryTags.value = value.tags;
   elements.dictionaryNote.value = value.note;
-  elements.dictionaryPinned.checked = value.pinned;
-  elements.dictionaryCaseSensitive.checked = value.caseSensitive;
-  elements.dictionaryWholeWord.checked = value.wholeWord;
   elements.dictionaryEditorLayer.hidden = false;
   window.setTimeout(() => elements.dictionarySourceTerm.focus(), 0);
 }
@@ -854,7 +848,6 @@ function closeDictionaryEditor() {
   elements.dictionaryEditorLayer.hidden = true;
   state.dictionaryEditingEntry = null;
   elements.dictionaryEditorForm.reset();
-  elements.dictionaryWholeWord.checked = true;
 }
 
 async function saveDictionaryPersonalEntry() {
@@ -866,9 +859,6 @@ async function saveDictionaryPersonalEntry() {
     targetTerm: elements.dictionaryTargetTerm.value,
     note: elements.dictionaryNote.value,
     tags: elements.dictionaryTags.value,
-    pinned: elements.dictionaryPinned.checked,
-    caseSensitive: elements.dictionaryCaseSensitive.checked,
-    wholeWord: elements.dictionaryWholeWord.checked,
   });
   if (!entry.sourceTerm || !entry.targetTerm) throw new Error("원문 용어와 표시할 용어를 모두 입력하십시오.");
   elements.dictionaryPersonalSave.disabled = true;
