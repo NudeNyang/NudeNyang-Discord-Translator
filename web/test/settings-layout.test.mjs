@@ -202,6 +202,10 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.doesNotMatch(script, /speech_style/);
 });
 
+test("textareas inherit the same interface font as other form controls", () => {
+  assert.match(styles, /button,\s*input,\s*select,\s*textarea\s*\{[^}]*font:\s*inherit;/s);
+});
+
 test("incoming translation can be limited to selected source languages", () => {
   assert.match(markup, /<h3>번역할 원문 언어<\/h3>/);
   assert.match(markup, /id="source-language-select"/);
