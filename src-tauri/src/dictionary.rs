@@ -156,7 +156,13 @@ impl DictionaryLookupResult {
     }
 
     pub fn rerank_for_context(&mut self, context: &str) {
-        rank_entries_for_context(&mut self.entries, context);
+        rank_entries_for_context(&mut self.entries, context, None);
+    }
+
+    pub fn rerank_for_localized_context(&mut self, context: &str, focus: &str) {
+        let focus_language =
+            Language::try_from(self.target_language.as_str()).unwrap_or(Language::Unknown);
+        rank_entries_for_context(&mut self.entries, context, Some((focus, focus_language)));
     }
 }
 
@@ -401,7 +407,7 @@ impl DictionaryStore {
                 segmented = !(entries.is_empty() && personal_entries.is_empty());
             }
         }
-        rank_entries_for_context(&mut entries, context);
+        rank_entries_for_context(&mut entries, context, None);
 
         Ok(DictionaryLookupResult {
             query,
@@ -1436,9 +1442,16 @@ fn dictionary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<DictionaryEn
     })
 }
 
-fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
+fn rank_entries_for_context(
+    entries: &mut Vec<DictionaryEntry>,
+    context: &str,
+    localized_focus: Option<(&str, Language)>,
+) {
     let normalized_context = normalize_term(context);
     let context_language = detect_language(&normalized_context).language;
+    let (normalized_focus, focus_language) = localized_focus
+        .map(|(focus, language)| (normalize_term(focus), language))
+        .unwrap_or_else(|| (String::new(), Language::Unknown));
     let mut groups: Vec<Vec<DictionaryEntry>> = Vec::new();
     for mut entry in entries.drain(..) {
         entry.context_recommended = false;
@@ -1467,7 +1480,13 @@ fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
                 .map(|(index, entry)| {
                     (
                         index,
-                        contextual_sense_score(entry, &normalized_context, context_language),
+                        contextual_sense_score(
+                            entry,
+                            &normalized_context,
+                            context_language,
+                            &normalized_focus,
+                            focus_language,
+                        ),
                     )
                 })
                 .collect::<Vec<_>>();
@@ -1502,6 +1521,8 @@ fn contextual_sense_score(
     entry: &DictionaryEntry,
     context: &str,
     context_language: Language,
+    localized_focus: &str,
+    focus_language: Language,
 ) -> ContextualSenseScore {
     let displayed_language =
         Language::try_from(entry.definition_language.as_str()).unwrap_or(Language::Unknown);
@@ -1534,6 +1555,14 @@ fn contextual_sense_score(
                 score.evidence += 12;
             }
         }
+    }
+    if !localized_focus.is_empty()
+        && focus_language != Language::Unknown
+        && definition_language == focus_language
+    {
+        let focus_score = contextual_focus_score(&normalized_definition, localized_focus);
+        score.ranking += focus_score.ranking;
+        score.evidence += focus_score.evidence;
     }
     let historical = [
         "(역사)",
@@ -1611,6 +1640,42 @@ fn contextual_sense_score(
         } else {
             score.ranking -= 40;
         }
+    }
+    score
+}
+
+fn contextual_focus_score(definition: &str, focus: &str) -> ContextualSenseScore {
+    let focus_units = focus
+        .split(|character: char| !character.is_alphanumeric())
+        .filter(|unit| unit.chars().count() >= 2)
+        .collect::<Vec<_>>();
+    let definition_units = definition
+        .split(|character: char| !character.is_alphanumeric())
+        .filter(|unit| unit.chars().count() >= 2)
+        .collect::<Vec<_>>();
+    let mut score = ContextualSenseScore::default();
+    for focus_unit in focus_units {
+        let focus_chars = focus_unit.chars().count();
+        let mut best = 0;
+        for definition_unit in &definition_units {
+            let definition_chars = definition_unit.chars().count();
+            let shorter = focus_chars.min(definition_chars);
+            let longer = focus_chars.max(definition_chars);
+            let compact_script_focus =
+                focus_chars >= 2 && focus_unit.chars().any(|character| !character.is_ascii());
+            if focus_unit == *definition_unit {
+                best = best.max(60);
+            } else if compact_script_focus && definition_unit.contains(focus_unit) {
+                best = best.max(60);
+            } else if shorter >= 2
+                && shorter * 2 >= longer
+                && (focus_unit.contains(*definition_unit) || definition_unit.contains(focus_unit))
+            {
+                best = best.max(36);
+            }
+        }
+        score.ranking += best;
+        score.evidence += best;
     }
     score
 }
@@ -2123,9 +2188,9 @@ mod tests {
     use rusqlite::params;
 
     use super::{
-        lookup_spans, segment_lookup_terms, segmentation_candidate_is_plausible, DictionaryStore,
-        PersonalDictionaryBatch, PersonalDictionaryEntry, PersonalDictionaryQuery, StarterEntry,
-        StarterPack,
+        lookup_spans, segment_lookup_terms, segmentation_candidate_is_plausible, DictionaryEntry,
+        DictionaryLookupResult, DictionaryStore, PersonalDictionaryBatch, PersonalDictionaryEntry,
+        PersonalDictionaryQuery, StarterEntry, StarterPack,
     };
 
     fn temporary_store(name: &str) -> DictionaryStore {
@@ -2384,6 +2449,86 @@ mod tests {
             .unwrap();
         assert!(geological.entries[0].definition.contains("geological time"));
         assert!(geological.entries[0].context_recommended);
+    }
+
+    #[test]
+    fn localized_focus_promotes_the_matching_sense_without_language_specific_rules() {
+        let store = temporary_store("localized-focus-context");
+        let sense = |definition: &str, part_of_speech: &str, sense_rank| StarterEntry {
+            headword: "share".to_string(),
+            reading: "ʃeə".to_string(),
+            part_of_speech: part_of_speech.to_string(),
+            sense_rank,
+            source_priority: 0,
+            source_name: String::new(),
+            source_url: String::new(),
+            license: String::new(),
+            glosses: HashMap::from([("ko".to_string(), definition.to_string())]),
+            examples: HashMap::new(),
+        };
+        store
+            .install_pack(&StarterPack {
+                id: "test-en-localized-focus".to_string(),
+                language: "en".to_string(),
+                version: "2026.08.22.1".to_string(),
+                title: "Localized focus context test".to_string(),
+                source_name: "Test".to_string(),
+                source_url: "https://example.com".to_string(),
+                license: "Test".to_string(),
+                edition: "mini".to_string(),
+                entries: vec![
+                    sense("개인이나 집단이 소유하거나 기여한 자산.", "noun", 0),
+                    sense("다른 사람과 자료를 공유하다.", "verb", 1),
+                ],
+            })
+            .unwrap();
+
+        let mut result = store.lookup("share", Some("en"), "ko").unwrap();
+        result.rerank_for_localized_context("회원들과 자료를 나누다", "공유");
+
+        assert_eq!(result.entries[0].part_of_speech, "verb");
+        assert!(result.entries[0].context_recommended);
+    }
+
+    #[test]
+    fn localized_focus_uses_the_configured_locale_for_ambiguous_scripts() {
+        let entry = |entry_id, sense_rank, definition: &str| DictionaryEntry {
+            entry_id,
+            headword: "compartir".to_string(),
+            language: "es-419".to_string(),
+            reading: String::new(),
+            part_of_speech: if sense_rank == 0 { "noun" } else { "verb" }.to_string(),
+            sense_rank,
+            source_priority: 0,
+            context_recommended: false,
+            definition: definition.to_string(),
+            definition_language: "ja".to_string(),
+            definition_origin: "automatic".to_string(),
+            original_definition: String::new(),
+            original_definition_language: "es-419".to_string(),
+            example: String::new(),
+            source_name: "Test".to_string(),
+            source_url: String::new(),
+            license: "Test".to_string(),
+        };
+        let mut result = DictionaryLookupResult {
+            query: "compartir".to_string(),
+            source_language: "es-419".to_string(),
+            target_language: "ja".to_string(),
+            selection_translation: "共有".to_string(),
+            localization_pending: false,
+            segmented: false,
+            entries: vec![
+                entry(1, 0, "個人が所有する資産。"),
+                entry(2, 1, "他の人と情報を共有する。"),
+            ],
+            personal_entries: Vec::new(),
+        };
+
+        result.rerank_for_localized_context("他の人と情報を分ける", "共有");
+
+        assert_eq!(result.entries[0].part_of_speech, "verb");
+        assert!(result.entries[0].context_recommended);
     }
 
     #[test]

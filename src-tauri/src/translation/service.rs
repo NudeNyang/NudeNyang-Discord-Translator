@@ -136,6 +136,68 @@ impl TranslationService {
         self.translate_many_with_source_hints(texts, &source_hints, target, None)
     }
 
+    pub fn translate_span_with_context(
+        &mut self,
+        selection: &str,
+        context: &str,
+        source: Language,
+        target: Language,
+    ) -> Result<(String, String), String> {
+        let selection = collapse_context_whitespace(selection);
+        let context = collapse_context_whitespace(context);
+        if selection.is_empty() {
+            return Err("문맥 번역에서 선택한 표현이 비어 있습니다.".to_string());
+        }
+        if context.is_empty() || context == selection || source == target {
+            let translated = self.translate_with_source(&selection, source, target)?;
+            let localized_context = if context.is_empty() || context == selection {
+                translated.clone()
+            } else {
+                self.translate_with_source(&context, source, target)?
+            };
+            return Ok((translated, localized_context));
+        }
+
+        let Some(selection_start) = nearest_selection_start(&context, &selection) else {
+            let translated = self.translate_many_with_sources(
+                &[selection.clone(), context.clone()],
+                &[source, source],
+                target,
+            )?;
+            return Ok((translated[0].clone(), translated[1].clone()));
+        };
+        let selection_end = selection_start + selection.len();
+        let mut parts = Vec::with_capacity(3);
+        let mut selection_part = 0;
+        for (kind, part) in [
+            (0_u8, &context[..selection_start]),
+            (1_u8, &context[selection_start..selection_end]),
+            (2_u8, &context[selection_end..]),
+        ] {
+            let part = part.trim();
+            if part.is_empty() {
+                continue;
+            }
+            if kind == 1 {
+                selection_part = parts.len();
+            }
+            parts.push(part.to_string());
+        }
+        if parts.len() < 2 {
+            let translated = self.translate_with_source(&selection, source, target)?;
+            return Ok((translated.clone(), translated));
+        }
+
+        let hints = vec![Some(source); parts.len()];
+        let keys = vec![Some("message:dictionary-context".to_string()); parts.len()];
+        let translated = self.translate_contextual_pending(&parts, &hints, &keys, target, None)?;
+        let translated_selection = translated
+            .get(selection_part)
+            .cloned()
+            .ok_or_else(|| "문맥 번역에서 선택한 표현의 결과를 찾지 못했습니다.".to_string())?;
+        Ok((translated_selection, translated.join(" ")))
+    }
+
     fn translate_many_with_source_hints(
         &mut self,
         texts: &[String],
@@ -1031,6 +1093,18 @@ impl TranslationService {
     }
 }
 
+fn collapse_context_whitespace(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn nearest_selection_start(context: &str, selection: &str) -> Option<usize> {
+    let center = context.len().saturating_sub(selection.len()) / 2;
+    context
+        .match_indices(selection)
+        .map(|(start, _)| start)
+        .min_by_key(|start| start.abs_diff(center))
+}
+
 fn reconcile_one_merged_context_boundary(
     source_parts: &[&str],
     translated_parts: &[&str],
@@ -1497,7 +1571,13 @@ mod tests {
                 .replace(
                     "Permanent blocking and forced termination",
                     "영구 차단 및 강제 퇴장",
-                ))
+                )
+                .replace("Members", "회원은")
+                .replace("share", "공유")
+                .replace("photos.", "사진을 공유할 수 있습니다.")
+                .replace("写真を", "photos")
+                .replace("共有", "share")
+                .replace("してください", "please"))
         }
     }
 
@@ -1861,6 +1941,43 @@ mod tests {
         let recorded = inputs.lock().unwrap();
         assert_eq!(recorded.len(), 1);
         assert!(recorded[0].contains(MESSAGE_CONTEXT_SEPARATOR));
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn selected_span_is_translated_inside_context_for_different_source_scripts() {
+        let path = cache_path("selected-span-context");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(ContextAwareRuleTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+
+        let english = service
+            .translate_span_with_context(
+                "share",
+                "Members share photos.",
+                Language::English,
+                Language::Korean,
+            )
+            .unwrap();
+        let japanese = service
+            .translate_span_with_context(
+                "共有",
+                "写真を共有してください",
+                Language::Japanese,
+                Language::English,
+            )
+            .unwrap();
+
+        assert_eq!(english.0, "공유");
+        assert!(english.1.contains("공유"));
+        assert_eq!(japanese.0, "share");
+        assert!(japanese.1.contains("photos"));
+        assert_eq!(inputs.lock().unwrap().len(), 2);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
