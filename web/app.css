@@ -770,6 +770,15 @@ select:focus-visible,
   z-index: 20;
 }
 
+.settings-view[data-settings-view="convenience"] .setting-row {
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+}
+
+.settings-view[data-settings-view="convenience"] .setting-row > :last-child {
+  width: 100%;
+  justify-self: end;
+}
+
 .single-row .setting-row,
 .setting-row:last-of-type {
   border-bottom: 0;

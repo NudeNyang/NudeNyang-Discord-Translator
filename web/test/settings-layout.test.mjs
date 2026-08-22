@@ -330,6 +330,17 @@ test("convenience panel exposes global toggles and editable composer shortcuts",
   assert.match(script, /request-outgoing-translation-toggle/);
 });
 
+test("convenience controls stay compact in wider settings windows", () => {
+  assert.match(
+    styles,
+    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(230px,\s*300px\);/s,
+  );
+  assert.match(
+    styles,
+    /\.settings-view\[data-settings-view="convenience"\] \.setting-row\s*>\s*:\s*last-child\s*\{[^}]*width:\s*100%;[^}]*justify-self:\s*end;/s,
+  );
+});
+
 test("system autostart is a cross-platform convenience setting that defaults to off", () => {
   assert.match(markup, /<h3>시스템 시작 시 자동 실행<\/h3>/);
   assert.match(markup, /컴퓨터에 로그인하면 앱을 실행하고 Discord 번역 연결을 자동으로 준비합니다/);
