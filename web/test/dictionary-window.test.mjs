@@ -66,17 +66,18 @@ test("dictionary header omits the redundant close button and keeps Escape dismis
   assert.match(windowScript, /event\.key === "Escape"/);
 });
 
-test("dictionary pronunciation controls expose play pause and resume states", () => {
+test("dictionary pronunciation stops immediately and restarts from the beginning", () => {
   assert.match(windowScript, /createSpeechButton\(/);
-  assert.match(windowScript, /speechSynthesis\.pause\(\)/);
-  assert.match(windowScript, /speechSynthesis\.resume\(\)/);
   assert.match(windowScript, /invoke\("dictionary_speech_play"/);
-  assert.match(windowScript, /invoke\("dictionary_speech_pause"/);
-  assert.match(windowScript, /invoke\("dictionary_speech_resume"/);
-  assert.match(windowScript, /invoke\?\.\("dictionary_speech_stop"/);
+  assert.match(windowScript, /await invoke\("dictionary_speech_stop"/);
+  assert.match(windowScript, /speechSynthesis\.cancel\(\)/);
+  assert.doesNotMatch(windowScript, /dictionary_speech_pause/);
+  assert.doesNotMatch(windowScript, /dictionary_speech_resume/);
+  assert.doesNotMatch(windowScript, /speechSynthesis\.pause\(\)/);
+  assert.doesNotMatch(windowScript, /speechSynthesis\.resume\(\)/);
   assert.match(windowScript, /listen\("dictionary-speech-ended"/);
   assert.match(windowScript, /copy\("pausePronunciation"\)/);
-  assert.match(windowScript, /copy\("resumePronunciation"\)/);
+  assert.match(windowScript, /copy\("restartPronunciation"\)/);
 });
 
 test("dictionary result localization refresh keeps an active pronunciation request", () => {

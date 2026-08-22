@@ -8,17 +8,17 @@ const shell = document.querySelector("#dictionary-shell");
 const SCROLL_REVEAL_DISTANCE = 24;
 
 const BASE_COPIES = Object.freeze({
-  ko: { dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.", empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현", contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.", pronounce: "발음 듣기", pausePronunciation: "발음 일시정지", resumePronunciation: "발음 계속 듣기", external: "Wiktionary에서 더 보기", personal: "개인 사전", addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)", save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처", sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문", noun: "명사", verb: "동사", adjective: "형용사", adverb: "부사", other: "기타" },
-  en: { dictionary: "Dictionary", close: "Close", loading: "Looking up the selection.", empty: "No matching expression was found in installed dictionaries.", segmentedMatches: "Expressions found in the selection", contextMeaning: "Shown first for this context", otherMeanings: "Other meanings", failed: "The dictionary could not be searched.", pronounce: "Listen to pronunciation", pausePronunciation: "Pause pronunciation", resumePronunciation: "Resume pronunciation", external: "View more on Wiktionary", personal: "Personal dictionary", addPersonal: "Add to personal dictionary", targetTerm: "Meaning or translation to display", note: "Note (optional)", save: "Save", saved: "Saved to the personal dictionary.", cancel: "Cancel", source: "Source", sourceAndLicense: "Sources and licenses", automaticTranslation: "Reference translation", originalMeaning: "Dictionary source", noun: "Noun", verb: "Verb", adjective: "Adjective", adverb: "Adverb", other: "Other" },
-  ja: { dictionary: "辞書", close: "閉じる", loading: "選択範囲の意味を調べています。", empty: "インストール済みの辞書に一致する表現はありません。", segmentedMatches: "選択範囲で見つかった表現", contextMeaning: "文脈に合わせて優先表示", otherMeanings: "別の意味", failed: "辞書を検索できませんでした。", pronounce: "発音を聞く", pausePronunciation: "発音を一時停止", resumePronunciation: "発音を再開", external: "Wiktionaryで詳しく見る", personal: "個人辞書", addPersonal: "個人辞書に追加", targetTerm: "表示する意味または訳語", note: "メモ（任意）", save: "保存", saved: "個人辞書に保存しました。", cancel: "キャンセル", source: "出典", sourceAndLicense: "出典とライセンス", automaticTranslation: "参考用の自動翻訳", originalMeaning: "辞書の原文", noun: "名詞", verb: "動詞", adjective: "形容詞", adverb: "副詞", other: "その他" },
-  zh: { dictionary: "词典", close: "关闭", loading: "正在查询所选内容。", empty: "已安装的词典中没有匹配的词语。", segmentedMatches: "在所选范围内找到的词语", contextMeaning: "按当前语境优先显示", otherMeanings: "其他释义", failed: "无法查询词典。", pronounce: "听发音", pausePronunciation: "暂停发音", resumePronunciation: "继续发音", external: "在 Wiktionary 中查看更多", personal: "个人词典", addPersonal: "添加到个人词典", targetTerm: "要显示的释义或译词", note: "备注（可选）", save: "保存", saved: "已保存到个人词典。", cancel: "取消", source: "来源", sourceAndLicense: "来源与许可", automaticTranslation: "仅供参考的自动翻译", originalMeaning: "词典原文", noun: "名词", verb: "动词", adjective: "形容词", adverb: "副词", other: "其他" },
+  ko: { dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.", empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현", contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.", pronounce: "발음 듣기", pausePronunciation: "발음 정지", restartPronunciation: "처음부터 다시 듣기", external: "Wiktionary에서 더 보기", personal: "개인 사전", addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)", save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처", sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문", noun: "명사", verb: "동사", adjective: "형용사", adverb: "부사", other: "기타" },
+  en: { dictionary: "Dictionary", close: "Close", loading: "Looking up the selection.", empty: "No matching expression was found in installed dictionaries.", segmentedMatches: "Expressions found in the selection", contextMeaning: "Shown first for this context", otherMeanings: "Other meanings", failed: "The dictionary could not be searched.", pronounce: "Listen to pronunciation", pausePronunciation: "Stop pronunciation", restartPronunciation: "Play again from the beginning", external: "View more on Wiktionary", personal: "Personal dictionary", addPersonal: "Add to personal dictionary", targetTerm: "Meaning or translation to display", note: "Note (optional)", save: "Save", saved: "Saved to the personal dictionary.", cancel: "Cancel", source: "Source", sourceAndLicense: "Sources and licenses", automaticTranslation: "Reference translation", originalMeaning: "Dictionary source", noun: "Noun", verb: "Verb", adjective: "Adjective", adverb: "Adverb", other: "Other" },
+  ja: { dictionary: "辞書", close: "閉じる", loading: "選択範囲の意味を調べています。", empty: "インストール済みの辞書に一致する表現はありません。", segmentedMatches: "選択範囲で見つかった表現", contextMeaning: "文脈に合わせて優先表示", otherMeanings: "別の意味", failed: "辞書を検索できませんでした。", pronounce: "発音を聞く", pausePronunciation: "発音を停止", restartPronunciation: "最初からもう一度聞く", external: "Wiktionaryで詳しく見る", personal: "個人辞書", addPersonal: "個人辞書に追加", targetTerm: "表示する意味または訳語", note: "メモ（任意）", save: "保存", saved: "個人辞書に保存しました。", cancel: "キャンセル", source: "出典", sourceAndLicense: "出典とライセンス", automaticTranslation: "参考用の自動翻訳", originalMeaning: "辞書の原文", noun: "名詞", verb: "動詞", adjective: "形容詞", adverb: "副詞", other: "その他" },
+  zh: { dictionary: "词典", close: "关闭", loading: "正在查询所选内容。", empty: "已安装的词典中没有匹配的词语。", segmentedMatches: "在所选范围内找到的词语", contextMeaning: "按当前语境优先显示", otherMeanings: "其他释义", failed: "无法查询词典。", pronounce: "听发音", pausePronunciation: "停止发音", restartPronunciation: "从头重新播放", external: "在 Wiktionary 中查看更多", personal: "个人词典", addPersonal: "添加到个人词典", targetTerm: "要显示的释义或译词", note: "备注（可选）", save: "保存", saved: "已保存到个人词典。", cancel: "取消", source: "来源", sourceAndLicense: "来源与许可", automaticTranslation: "仅供参考的自动翻译", originalMeaning: "词典原文", noun: "名词", verb: "动词", adjective: "形容词", adverb: "副词", other: "其他" },
 });
 
 const KOREAN_COPIES = Object.freeze({
   dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.",
   empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현",
   contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.",
-  pronounce: "발음 듣기", pausePronunciation: "발음 일시정지", resumePronunciation: "발음 계속 듣기",
+  pronounce: "발음 듣기", pausePronunciation: "발음 정지", restartPronunciation: "처음부터 다시 듣기",
   external: "Wiktionary에서 더 보기", personal: "개인 사전",
   addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)",
   save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처",
@@ -61,7 +61,7 @@ function setSpeechButtonState(button, state, playLabel) {
   button.textContent = playing ? "Ⅱ" : "▶";
   button.classList.toggle("is-playing", playing);
   button.dataset.speechState = state;
-  const label = playing ? copy("pausePronunciation") : paused ? copy("resumePronunciation") : playLabel;
+  const label = playing ? copy("pausePronunciation") : paused ? copy("restartPronunciation") : playLabel;
   button.setAttribute("aria-label", label);
   button.title = label;
   button.setAttribute("aria-pressed", String(playing || paused));
@@ -110,6 +110,77 @@ function rebindActiveSpeechButton() {
   );
 }
 
+function nextSpeechRequestId() {
+  return crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+}
+
+async function startSpeechFromBeginning(speech) {
+  const requestGeneration = speechGeneration;
+  speech.requestId = nextSpeechRequestId();
+  speech.native = true;
+  speech.state = "starting";
+  speech.utterance = null;
+  setSpeechButtonState(speech.button, "playing", speech.playLabel);
+
+  const nativeStarted = invoke
+    ? await invoke("dictionary_speech_play", {
+      text: speech.text,
+      language: speech.language,
+      requestId: speech.requestId,
+    }).catch(() => false)
+    : false;
+  if (requestGeneration !== speechGeneration || activeSpeech !== speech) {
+    if (nativeStarted) invoke?.("dictionary_speech_stop").catch(() => {});
+    return false;
+  }
+  if (nativeStarted) {
+    speech.state = "playing";
+    setSpeechButtonState(speech.button, "playing", speech.playLabel);
+    return true;
+  }
+
+  speech.native = false;
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    activeSpeech = null;
+    setSpeechButtonState(speech.button, "idle", speech.playLabel);
+    return false;
+  }
+  const voice = await waitForSpeechVoice(speechSynthesis, speech.language);
+  if (requestGeneration !== speechGeneration || activeSpeech !== speech) return false;
+  if (!voice) {
+    activeSpeech = null;
+    setSpeechButtonState(speech.button, "idle", speech.playLabel);
+    return false;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(speech.text);
+  utterance.lang = speech.language;
+  utterance.voice = voice;
+  utterance.addEventListener("end", () => finishWebSpeech(utterance));
+  utterance.addEventListener("error", () => finishWebSpeech(utterance));
+  speech.utterance = utterance;
+  speech.state = "playing";
+  setSpeechButtonState(speech.button, "playing", speech.playLabel);
+  speechSynthesis.speak(utterance);
+  return true;
+}
+
+async function stopSpeechForRestart(speech) {
+  if (speech.native) {
+    const stopped = invoke
+      ? await invoke("dictionary_speech_stop").then(() => true).catch(() => false)
+      : false;
+    if (!stopped) return false;
+  } else {
+    speech.utterance = null;
+    speechSynthesis.cancel();
+  }
+  if (activeSpeech !== speech) return false;
+  speech.state = "paused";
+  setSpeechButtonState(speech.button, "paused", speech.playLabel);
+  return true;
+}
+
 function createSpeechButton(text, language, className, playLabel = copy("pronounce")) {
   const button = make("button", className, "▶");
   button.type = "button";
@@ -119,77 +190,27 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
     if (!text) return;
     if (activeSpeech?.button === button) {
       if (activeSpeech.state === "starting") return;
-      const nextState = activeSpeech.state === "paused" ? "playing" : "paused";
       if (activeSpeech.state === "paused") {
-        const resumed = activeSpeech.native
-          ? await invoke("dictionary_speech_resume").then(() => true).catch(() => false)
-          : (speechSynthesis.resume(), true);
-        if (!resumed) return;
+        await startSpeechFromBeginning(activeSpeech);
       } else {
-        const paused = activeSpeech.native
-          ? await invoke("dictionary_speech_pause").then(() => true).catch(() => false)
-          : (speechSynthesis.pause(), true);
-        if (!paused) return;
+        await stopSpeechForRestart(activeSpeech);
       }
-      activeSpeech.state = nextState;
-      setSpeechButtonState(button, nextState, playLabel);
       return;
     }
 
     cancelSpeech();
-    const requestGeneration = speechGeneration;
-    const requestedLanguage = canonicalSpeechLanguage(language || uiLanguage);
-    const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const speech = {
       button,
       native: true,
-      requestId,
+      requestId: "",
       state: "starting",
       playLabel,
       speechKey: button._speechKey,
+      text,
+      language: canonicalSpeechLanguage(language || uiLanguage),
     };
     activeSpeech = speech;
-    setSpeechButtonState(button, "playing", playLabel);
-    const nativeStarted = invoke
-      ? await invoke("dictionary_speech_play", {
-        text,
-        language: requestedLanguage,
-        requestId,
-      }).catch(() => false)
-      : false;
-    if (requestGeneration !== speechGeneration || activeSpeech !== speech) {
-      if (nativeStarted) invoke?.("dictionary_speech_stop").catch(() => {});
-      return;
-    }
-    if (nativeStarted) {
-      speech.state = "playing";
-      setSpeechButtonState(speech.button, "playing", playLabel);
-      return;
-    }
-
-    speech.native = false;
-    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
-      activeSpeech = null;
-      setSpeechButtonState(speech.button, "idle", playLabel);
-      return;
-    }
-    const voice = await waitForSpeechVoice(speechSynthesis, requestedLanguage);
-    if (requestGeneration !== speechGeneration || activeSpeech !== speech) return;
-    if (!voice) {
-      activeSpeech = null;
-      setSpeechButtonState(speech.button, "idle", playLabel);
-      return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = requestedLanguage;
-    utterance.voice = voice;
-    utterance.addEventListener("end", () => finishWebSpeech(utterance));
-    utterance.addEventListener("error", () => finishWebSpeech(utterance));
-    speech.utterance = utterance;
-    speech.state = "playing";
-    setSpeechButtonState(speech.button, "playing", playLabel);
-    speechSynthesis.speak(utterance);
+    await startSpeechFromBeginning(speech);
   });
   return button;
 }
