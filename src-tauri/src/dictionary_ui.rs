@@ -83,16 +83,17 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-selection:hover{border-color:var(--brand-500,#5865f2);transform:translateY(-1px)}
       #nt-dictionary-selection:active{transform:scale(.97)}
       #nt-dictionary-selection:focus-visible,#nt-dictionary-panel button:focus-visible,#nt-dictionary-panel input:focus-visible{outline:2px solid var(--brand-500,#5865f2);outline-offset:2px}
-      #nt-dictionary-panel{position:fixed;z-index:2147483645;display:none;width:min(420px,calc(100vw - 24px));max-height:min(610px,calc(100vh - 24px));overflow:hidden;border:1px solid color-mix(in srgb,var(--background-modifier-accent,#ffffff1a) 88%,transparent);border-radius:16px;background:color-mix(in srgb,var(--background-floating,#1e2329) 97%,transparent);box-shadow:0 24px 70px rgba(0,0,0,.44),inset 0 1px rgba(255,255,255,.08);color:var(--text-normal,#f2f3f5);font:400 14px/1.5 var(--font-primary,"Segoe UI",sans-serif);backdrop-filter:blur(22px) saturate(125%)}
+      #nt-dictionary-panel{position:fixed;z-index:2147483645;display:none;flex-direction:column;width:min(420px,calc(100vw - 24px));max-height:min(610px,calc(100vh - 24px));overflow:hidden;border:1px solid color-mix(in srgb,var(--background-modifier-accent,#ffffff1a) 88%,transparent);border-radius:16px;background:color-mix(in srgb,var(--background-floating,#1e2329) 97%,transparent);box-shadow:0 24px 70px rgba(0,0,0,.44),inset 0 1px rgba(255,255,255,.08);color:var(--text-normal,#f2f3f5);font:400 14px/1.5 var(--font-primary,"Segoe UI",sans-serif);backdrop-filter:blur(22px) saturate(125%)}
       #nt-dictionary-panel *{box-sizing:border-box}
-      #nt-dictionary-panel .nt-dict-scroll{width:100%;max-height:min(610px,calc(100vh - 24px));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+      #nt-dictionary-panel .nt-dict-scroll-frame{position:relative;display:flex;min-height:0;flex:1 1 auto;overflow:hidden}
+      #nt-dictionary-panel .nt-dict-scroll{width:100%;min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
       #nt-dictionary-panel .nt-dict-scroll::-webkit-scrollbar{width:0;height:0}
       #nt-dictionary-panel .nt-dict-scroll-indicator{position:absolute;z-index:5;top:8px;inset-inline-end:2px;bottom:8px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
       #nt-dictionary-panel .nt-dict-scroll-indicator:not(.scrollable){pointer-events:none}
       #nt-dictionary-panel .nt-dict-scroll-indicator.nt-scrolling,#nt-dictionary-panel .nt-dict-scroll-indicator.nt-scroll-near,#nt-dictionary-panel .nt-dict-scroll-indicator.nt-scroll-dragging,#nt-dictionary-panel .nt-dict-scroll-indicator:hover{opacity:1}
       #nt-dictionary-panel .nt-dict-scroll-thumb{position:absolute;top:0;inset-inline-end:3px;width:3px;min-height:32px;border-radius:3px;background:color-mix(in srgb,var(--brand-500,#5865f2) 58%,var(--text-muted,#949ba4));opacity:.5;transition:width 140ms ease,inset-inline-end 140ms ease,opacity 140ms ease}
       #nt-dictionary-panel .nt-dict-scroll-indicator:hover .nt-dict-scroll-thumb,#nt-dictionary-panel .nt-dict-scroll-indicator.nt-scroll-dragging .nt-dict-scroll-thumb{inset-inline-end:2px;width:6px;opacity:.95}
-      #nt-dictionary-panel .nt-dict-head{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;gap:10px;padding:17px 18px 13px;background:linear-gradient(180deg,color-mix(in srgb,var(--background-floating,#1e2329) 100%,transparent) 76%,color-mix(in srgb,var(--background-floating,#1e2329) 88%,transparent));border-bottom:1px solid var(--background-modifier-accent,#ffffff14)}
+      #nt-dictionary-panel .nt-dict-head{position:relative;z-index:2;display:flex;flex:none;align-items:flex-start;gap:10px;padding:17px 18px 13px;background:linear-gradient(180deg,color-mix(in srgb,var(--background-floating,#1e2329) 100%,transparent) 76%,color-mix(in srgb,var(--background-floating,#1e2329) 88%,transparent));border-bottom:1px solid var(--background-modifier-accent,#ffffff14)}
       #nt-dictionary-panel .nt-dict-title{min-width:0;flex:1}
       #nt-dictionary-panel .nt-dict-title small{display:block;color:var(--text-muted,#949ba4);font-size:11px;font-weight:650;letter-spacing:.04em}
       #nt-dictionary-panel .nt-dict-title strong{display:block;overflow-wrap:anywhere;color:var(--text-normal,#f2f3f5);font-size:22px;font-weight:720;letter-spacing:-.025em;line-height:1.2}
@@ -135,11 +136,12 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       #nt-dictionary-panel .nt-dict-other{margin-top:13px;border-top:1px solid var(--background-modifier-accent,#ffffff12)}
       #nt-dictionary-panel .nt-dict-other>summary{width:max-content;max-width:100%;padding-top:11px;color:var(--text-muted,#b5bac1);font-size:12px;font-weight:700;cursor:pointer}
       #nt-dictionary-panel .nt-dict-other-sense{margin-top:12px;padding-inline-start:12px;border-inline-start:2px solid var(--background-modifier-accent,#ffffff1f)}
-      #nt-dictionary-panel .nt-dict-actions{display:flex;flex-wrap:wrap;gap:7px;padding-top:14px}
+      #nt-dictionary-panel .nt-dict-footer{position:relative;z-index:2;flex:none;padding:11px 18px 14px;border-top:1px solid var(--background-modifier-accent,#ffffff14);background:color-mix(in srgb,var(--background-floating,#1e2329) 98%,transparent);box-shadow:0 -10px 22px rgba(0,0,0,.14)}
+      #nt-dictionary-panel .nt-dict-actions{display:flex;flex-wrap:wrap;gap:7px}
       #nt-dictionary-panel .nt-dict-action{min-height:32px;padding:0 11px;border:1px solid var(--background-modifier-accent,#ffffff18);border-radius:9px;background:var(--background-modifier-hover,#ffffff0b);color:var(--text-normal,#f2f3f5);font-size:12px;font-weight:650}
       #nt-dictionary-panel .nt-dict-action:hover{background:var(--background-modifier-selected,#ffffff14)}
       #nt-dictionary-panel .nt-dict-action.primary{border-color:color-mix(in srgb,var(--brand-500,#5865f2) 62%,transparent);background:color-mix(in srgb,var(--brand-500,#5865f2) 20%,var(--background-secondary,#2b2d31))}
-      #nt-dictionary-panel .nt-dict-form{display:grid;gap:9px;margin-top:13px;padding:13px;border-radius:12px;background:var(--background-secondary,#2b2d31)}
+      #nt-dictionary-panel .nt-dict-form{display:grid;gap:9px;margin-top:11px;padding:13px;border-radius:12px;background:var(--background-secondary,#2b2d31)}
       #nt-dictionary-panel .nt-dict-form input{width:100%;height:36px;padding:0 10px;border:1px solid var(--background-modifier-accent,#ffffff20);border-radius:8px;background:var(--input-background,#111214);color:var(--text-normal,#f2f3f5);font:400 13px var(--font-primary,"Segoe UI",sans-serif)}
       #nt-dictionary-panel .nt-dict-form input::placeholder{color:var(--text-muted,#737b86)}
       #nt-dictionary-panel .nt-dict-form-actions{display:flex;justify-content:flex-end;gap:7px}
@@ -245,12 +247,15 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
     scheduleUpdate();
     return () => { controller.abort(); resizeObserver?.disconnect(); clearTimeout(hideTimer); };
   };
-  const mountPanelContent = (...children) => {
+  const mountPanelContent = (head,body,footer=null) => {
     clearPanelScroll();
-    const scroll=make('div','nt-dict-scroll'); scroll.append(...children);
+    const scrollFrame=make('div','nt-dict-scroll-frame');
+    const scroll=make('div','nt-dict-scroll'); scroll.append(body);
     const indicator=make('div','nt-dict-scroll-indicator'); indicator.setAttribute('aria-hidden','true');
     const thumb=make('span','nt-dict-scroll-thumb'); indicator.append(thumb);
-    panel.replaceChildren(scroll,indicator);
+    scrollFrame.append(scroll,indicator);
+    panel.replaceChildren(head,scrollFrame);
+    if (footer) panel.append(footer);
     panel.__ntDictionaryScrollCleanup=bindPanelScrollIndicator(scroll,indicator,thumb);
     return scroll;
   };
@@ -263,10 +268,10 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
   const closePanel = () => { clearPanelScroll(); panel.style.display = 'none'; panel.replaceChildren(); };
   const closeSelection = () => { selectionButton.style.display = 'none'; };
   const positionPanel = rect => {
-    panel.style.display = 'block';
+    panel.style.display = 'flex';
     const inset = 12;
     const width = Math.min(420, innerWidth - inset * 2);
-    const height = Math.min(panel.scrollHeight || 420, innerHeight - inset * 2);
+    const height = Math.min(panel.offsetHeight || 420, innerHeight - inset * 2);
     let left = Math.max(inset, Math.min(innerWidth - width - inset, rect.left + rect.width / 2 - width / 2));
     let top = rect.bottom + 10;
     if (top + height > innerHeight - inset) top = Math.max(inset, rect.top - height - 10);
@@ -410,6 +415,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       }
       attribution.append(attributionList); body.append(attribution);
     }
+    const footer = make('footer','nt-dict-footer');
     const actions = make('div','nt-dict-actions');
     const external = make('button','nt-dict-action',copy('external')); external.type='button'; external.addEventListener('click',()=>queue({action:'open',query:result?.query || '',sourceLanguage:result?.sourceLanguage || ''}));
     const add = make('button','nt-dict-action primary',copy('addPersonal')); add.type='button';
@@ -432,7 +438,7 @@ const DICTIONARY_UI_SCRIPT: &str = r####"
       actions.after(form); target.focus();
     });
     if (externalEnabled) actions.append(external);
-    actions.append(add); body.append(actions); const scroll=mountPanelContent(head,body); scroll.scrollTop=previousScrollTop;
+    actions.append(add); footer.append(actions); const scroll=mountPanelContent(head,body,footer); scroll.scrollTop=previousScrollTop;
     positionPanel(JSON.parse(panel.dataset.anchor || '{"left":12,"right":12,"top":12,"bottom":12,"width":0,"height":0}'));
   };
   window.__ntDictionaryApply = (requestId,payload,error='') => {
@@ -655,6 +661,17 @@ mod tests {
         assert!(script.contains("setPointerCapture"));
         assert!(!script
             .contains("document.addEventListener('scroll',()=>{closeSelection();closePanel();}"));
+    }
+
+    #[test]
+    fn dictionary_actions_stay_outside_the_scrollable_meaning_list() {
+        let script = dictionary_ui_script(true, "ko", "ko", true);
+
+        assert!(script.contains("nt-dict-scroll-frame"));
+        assert!(script.contains("nt-dict-footer"));
+        assert!(script.contains("mountPanelContent(head,body,footer)"));
+        assert!(script.contains("footer.append(actions)"));
+        assert!(!script.contains("body.append(actions)"));
     }
 
     #[test]
