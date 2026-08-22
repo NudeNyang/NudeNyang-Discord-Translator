@@ -30,7 +30,7 @@ test("dictionary results use a frameless native tool window outside Discord", ()
       alwaysOnTop: true,
       skipTaskbar: true,
       width: 440,
-      height: 630,
+      height: 480,
       resizable: false,
     },
   );
@@ -59,4 +59,17 @@ test("native dictionary window preserves the previous popup design language", ()
   }
   assert.match(current, /grid-template-rows:autominmax\(0,1fr\)auto/);
   assert.match(windowStyle, /\.nt-dict-footer/);
+});
+
+test("dictionary header omits the redundant close button and keeps Escape dismissal", () => {
+  assert.doesNotMatch(windowScript, /const closeButton = make\("button"/);
+  assert.match(windowScript, /event\.key === "Escape"/);
+});
+
+test("dictionary pronunciation controls expose play pause and resume states", () => {
+  assert.match(windowScript, /createSpeechButton\(/);
+  assert.match(windowScript, /speechSynthesis\.pause\(\)/);
+  assert.match(windowScript, /speechSynthesis\.resume\(\)/);
+  assert.match(windowScript, /copy\("pausePronunciation"\)/);
+  assert.match(windowScript, /copy\("resumePronunciation"\)/);
 });

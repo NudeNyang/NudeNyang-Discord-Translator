@@ -1,4 +1,5 @@
 import { resolveUiLanguage } from "./i18n.mjs";
+import { canonicalSpeechLanguage, selectSpeechVoice } from "./dictionary-speech.mjs";
 import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 
 const invoke = window.__TAURI__?.core?.invoke;
@@ -7,17 +8,18 @@ const shell = document.querySelector("#dictionary-shell");
 const SCROLL_REVEAL_DISTANCE = 24;
 
 const BASE_COPIES = Object.freeze({
-  ko: { dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.", empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현", contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.", pronounce: "발음 듣기", external: "Wiktionary에서 더 보기", personal: "개인 사전", addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)", save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처", sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문", noun: "명사", verb: "동사", adjective: "형용사", adverb: "부사", other: "기타" },
-  en: { dictionary: "Dictionary", close: "Close", loading: "Looking up the selection.", empty: "No matching expression was found in installed dictionaries.", segmentedMatches: "Expressions found in the selection", contextMeaning: "Shown first for this context", otherMeanings: "Other meanings", failed: "The dictionary could not be searched.", pronounce: "Listen to pronunciation", external: "View more on Wiktionary", personal: "Personal dictionary", addPersonal: "Add to personal dictionary", targetTerm: "Meaning or translation to display", note: "Note (optional)", save: "Save", saved: "Saved to the personal dictionary.", cancel: "Cancel", source: "Source", sourceAndLicense: "Sources and licenses", automaticTranslation: "Reference translation", originalMeaning: "Dictionary source", noun: "Noun", verb: "Verb", adjective: "Adjective", adverb: "Adverb", other: "Other" },
-  ja: { dictionary: "辞書", close: "閉じる", loading: "選択範囲の意味を調べています。", empty: "インストール済みの辞書に一致する表現はありません。", segmentedMatches: "選択範囲で見つかった表現", contextMeaning: "文脈に合わせて優先表示", otherMeanings: "別の意味", failed: "辞書を検索できませんでした。", pronounce: "発音を聞く", external: "Wiktionaryで詳しく見る", personal: "個人辞書", addPersonal: "個人辞書に追加", targetTerm: "表示する意味または訳語", note: "メモ（任意）", save: "保存", saved: "個人辞書に保存しました。", cancel: "キャンセル", source: "出典", sourceAndLicense: "出典とライセンス", automaticTranslation: "参考用の自動翻訳", originalMeaning: "辞書の原文", noun: "名詞", verb: "動詞", adjective: "形容詞", adverb: "副詞", other: "その他" },
-  zh: { dictionary: "词典", close: "关闭", loading: "正在查询所选内容。", empty: "已安装的词典中没有匹配的词语。", segmentedMatches: "在所选范围内找到的词语", contextMeaning: "按当前语境优先显示", otherMeanings: "其他释义", failed: "无法查询词典。", pronounce: "听发音", external: "在 Wiktionary 中查看更多", personal: "个人词典", addPersonal: "添加到个人词典", targetTerm: "要显示的释义或译词", note: "备注（可选）", save: "保存", saved: "已保存到个人词典。", cancel: "取消", source: "来源", sourceAndLicense: "来源与许可", automaticTranslation: "仅供参考的自动翻译", originalMeaning: "词典原文", noun: "名词", verb: "动词", adjective: "形容词", adverb: "副词", other: "其他" },
+  ko: { dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.", empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현", contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.", pronounce: "발음 듣기", pausePronunciation: "발음 일시정지", resumePronunciation: "발음 계속 듣기", external: "Wiktionary에서 더 보기", personal: "개인 사전", addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)", save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처", sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문", noun: "명사", verb: "동사", adjective: "형용사", adverb: "부사", other: "기타" },
+  en: { dictionary: "Dictionary", close: "Close", loading: "Looking up the selection.", empty: "No matching expression was found in installed dictionaries.", segmentedMatches: "Expressions found in the selection", contextMeaning: "Shown first for this context", otherMeanings: "Other meanings", failed: "The dictionary could not be searched.", pronounce: "Listen to pronunciation", pausePronunciation: "Pause pronunciation", resumePronunciation: "Resume pronunciation", external: "View more on Wiktionary", personal: "Personal dictionary", addPersonal: "Add to personal dictionary", targetTerm: "Meaning or translation to display", note: "Note (optional)", save: "Save", saved: "Saved to the personal dictionary.", cancel: "Cancel", source: "Source", sourceAndLicense: "Sources and licenses", automaticTranslation: "Reference translation", originalMeaning: "Dictionary source", noun: "Noun", verb: "Verb", adjective: "Adjective", adverb: "Adverb", other: "Other" },
+  ja: { dictionary: "辞書", close: "閉じる", loading: "選択範囲の意味を調べています。", empty: "インストール済みの辞書に一致する表現はありません。", segmentedMatches: "選択範囲で見つかった表現", contextMeaning: "文脈に合わせて優先表示", otherMeanings: "別の意味", failed: "辞書を検索できませんでした。", pronounce: "発音を聞く", pausePronunciation: "発音を一時停止", resumePronunciation: "発音を再開", external: "Wiktionaryで詳しく見る", personal: "個人辞書", addPersonal: "個人辞書に追加", targetTerm: "表示する意味または訳語", note: "メモ（任意）", save: "保存", saved: "個人辞書に保存しました。", cancel: "キャンセル", source: "出典", sourceAndLicense: "出典とライセンス", automaticTranslation: "参考用の自動翻訳", originalMeaning: "辞書の原文", noun: "名詞", verb: "動詞", adjective: "形容詞", adverb: "副詞", other: "その他" },
+  zh: { dictionary: "词典", close: "关闭", loading: "正在查询所选内容。", empty: "已安装的词典中没有匹配的词语。", segmentedMatches: "在所选范围内找到的词语", contextMeaning: "按当前语境优先显示", otherMeanings: "其他释义", failed: "无法查询词典。", pronounce: "听发音", pausePronunciation: "暂停发音", resumePronunciation: "继续发音", external: "在 Wiktionary 中查看更多", personal: "个人词典", addPersonal: "添加到个人词典", targetTerm: "要显示的释义或译词", note: "备注（可选）", save: "保存", saved: "已保存到个人词典。", cancel: "取消", source: "来源", sourceAndLicense: "来源与许可", automaticTranslation: "仅供参考的自动翻译", originalMeaning: "词典原文", noun: "名词", verb: "动词", adjective: "形容词", adverb: "副词", other: "其他" },
 });
 
 const KOREAN_COPIES = Object.freeze({
   dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.",
   empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현",
   contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.",
-  pronounce: "발음 듣기", external: "Wiktionary에서 더 보기", personal: "개인 사전",
+  pronounce: "발음 듣기", pausePronunciation: "발음 일시정지", resumePronunciation: "발음 계속 듣기",
+  external: "Wiktionary에서 더 보기", personal: "개인 사전",
   addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)",
   save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처",
   sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문",
@@ -28,6 +30,7 @@ let payload = null;
 let uiLanguage = "en";
 let currentRequestId = "";
 let cleanupScroll = () => {};
+let activeSpeech = null;
 
 function copy(key) {
   const korean = KOREAN_COPIES[key];
@@ -51,16 +54,67 @@ function languageName(code) {
   catch { return code || ""; }
 }
 
-function speak(text, language) {
-  if (!("speechSynthesis" in window) || !text) return;
-  speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = language || uiLanguage;
-  speechSynthesis.speak(utterance);
+function setSpeechButtonState(button, state, playLabel) {
+  const playing = state === "playing";
+  const paused = state === "paused";
+  button.textContent = playing ? "Ⅱ" : "▶";
+  button.classList.toggle("is-playing", playing);
+  button.dataset.speechState = state;
+  const label = playing ? copy("pausePronunciation") : paused ? copy("resumePronunciation") : playLabel;
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  button.setAttribute("aria-pressed", String(playing || paused));
+}
+
+function cancelSpeech() {
+  const previous = activeSpeech;
+  activeSpeech = null;
+  window.speechSynthesis?.cancel?.();
+  if (previous?.button?.isConnected) setSpeechButtonState(previous.button, "idle", previous.playLabel);
+}
+
+function finishSpeech(utterance) {
+  if (activeSpeech?.utterance !== utterance) return;
+  const finished = activeSpeech;
+  activeSpeech = null;
+  if (finished.button.isConnected) setSpeechButtonState(finished.button, "idle", finished.playLabel);
+}
+
+function createSpeechButton(text, language, className, playLabel = copy("pronounce")) {
+  const button = make("button", className, "▶");
+  button.type = "button";
+  setSpeechButtonState(button, "idle", playLabel);
+  button.addEventListener("click", () => {
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window) || !text) return;
+    if (activeSpeech?.button === button) {
+      if (activeSpeech.state === "paused") {
+        speechSynthesis.resume();
+        activeSpeech.state = "playing";
+        setSpeechButtonState(button, "playing", playLabel);
+      } else {
+        speechSynthesis.pause();
+        activeSpeech.state = "paused";
+        setSpeechButtonState(button, "paused", playLabel);
+      }
+      return;
+    }
+
+    cancelSpeech();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = canonicalSpeechLanguage(language || uiLanguage);
+    const voice = selectSpeechVoice(speechSynthesis.getVoices(), utterance.lang);
+    if (voice) utterance.voice = voice;
+    utterance.addEventListener("end", () => finishSpeech(utterance));
+    utterance.addEventListener("error", () => finishSpeech(utterance));
+    activeSpeech = { button, utterance, state: "playing", playLabel };
+    setSpeechButtonState(button, "playing", playLabel);
+    speechSynthesis.speak(utterance);
+  });
+  return button;
 }
 
 function closeWindow() {
-  window.speechSynthesis?.cancel?.();
+  cancelSpeech();
   invoke?.("dictionary_window_hide").catch(() => {});
 }
 
@@ -83,19 +137,9 @@ function makeHeader(query, result = null) {
   }
   head.append(title);
   if (result) {
-    const listenButton = make("button", "nt-dict-icon-button", "▶");
-    listenButton.type = "button";
-    listenButton.setAttribute("aria-label", copy("pronounce"));
-    listenButton.title = copy("pronounce");
-    listenButton.addEventListener("click", () => speak(result.query, result.sourceLanguage));
+    const listenButton = createSpeechButton(result.query, result.sourceLanguage, "nt-dict-icon-button");
     head.append(listenButton);
   }
-  const closeButton = make("button", "nt-dict-icon-button", "×");
-  closeButton.type = "button";
-  closeButton.setAttribute("aria-label", copy("close"));
-  closeButton.title = copy("close");
-  closeButton.addEventListener("click", closeWindow);
-  head.append(closeButton);
   return head;
 }
 
@@ -339,11 +383,12 @@ function renderResult(result, error = "") {
       entryTitle.append(make("strong", "", entry.headword));
       if (entry.reading) entryTitle.append(make("span", "", entry.reading));
       const label = `${copy("pronounce")}: ${entry.headword}`;
-      const listenButton = make("button", "nt-dict-icon-button nt-dict-entry-listen", "▶");
-      listenButton.type = "button";
-      listenButton.setAttribute("aria-label", label);
-      listenButton.title = label;
-      listenButton.addEventListener("click", () => speak(entry.headword, entry.language || result.sourceLanguage));
+      const listenButton = createSpeechButton(
+        entry.headword,
+        entry.language || result.sourceLanguage,
+        "nt-dict-icon-button nt-dict-entry-listen",
+        label,
+      );
       entryTitle.append(listenButton);
       item.append(entryTitle);
     }
@@ -379,6 +424,7 @@ function renderResult(result, error = "") {
 function applyPayload(nextPayload) {
   if (!nextPayload) return;
   if (nextPayload.phase !== "loading" && currentRequestId && nextPayload.requestId !== currentRequestId) return;
+  cancelSpeech();
   payload = nextPayload;
   uiLanguage = resolveUiLanguage(nextPayload.uiLanguage);
   document.documentElement.lang = uiLanguage === "zh" ? "zh-CN" : uiLanguage === "zh-Hant" ? "zh-TW" : uiLanguage;
@@ -404,5 +450,5 @@ async function initialize() {
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") closeWindow();
 });
-window.addEventListener("beforeunload", cleanupScroll);
+window.addEventListener("beforeunload", () => { cleanupScroll(); cancelSpeech(); });
 initialize();

@@ -83,6 +83,7 @@ button { border: 0; color: inherit; cursor: pointer; }
 }
 
 .nt-dict-icon-button:hover { background: var(--background-modifier-selected); color: var(--text-normal); }
+.nt-dict-icon-button.is-playing { background: var(--background-modifier-selected); color: var(--text-normal); }
 .nt-dict-icon-button:active,
 .nt-dict-action:active { transform: scale(0.97); }
 .nt-dict-icon-button:focus-visible,
