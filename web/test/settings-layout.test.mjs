@@ -599,13 +599,21 @@ test("dictionary pack cards keep compact metadata and open consolidated source n
 
 test("dictionary packs expose only installed and not-installed states with comfortable note spacing", () => {
   assert.match(markup, /class="section-note dictionary-localization-note"/);
+  assert.match(markup, /id="dictionary-external-model-note"[^>]*hidden/);
+  assert.match(markup, /사전 뜻이 없으면 설정된 번역 모델로 보완합니다\./);
+  assert.match(markup, /선택한 텍스트가 해당 서비스로 전송될 수 있습니다\./);
+  assert.match(markup, /data-tooltip="주변 문맥은 PC 안에서만 처리됩니다\."/);
+  assert.doesNotMatch(markup, /선택한 구절 전체와 인터페이스 언어에 없는 사전 뜻은/);
   assert.match(markup, /<h3 id="dictionary-packs-heading">오프라인 사전<\/h3><p>확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다\.<\/p>/);
   const renderer = script.match(/function renderDictionaryPacks\(\) \{[\s\S]*?\n\}/)?.[0] || "";
   assert.match(renderer, /installedPractical \? "설치됨" : "미설치"/);
   assert.match(renderer, /installedPractical \? "삭제" : "설치"/);
   assert.match(renderer, /filter\(pack => pack\.installed && pack\.edition === "practical"\)\.length/);
   assert.doesNotMatch(renderer, /"실용팩"|"미니팩"|"실용팩 설치"|status\.installedPackCount/);
-  assert.match(styles, /\.dictionary-localization-note\s*\{[^}]*margin-bottom:\s*14px;/s);
+  assert.match(script, /function renderDictionaryLocalizationNotice\(\)/);
+  assert.match(script, /dictionaryExternalModelNote\.hidden = !EXTERNAL_PROVIDERS\.has\(selected\)/);
+  assert.match(script, /if \(field === "translator"\) renderDictionaryLocalizationNotice\(\)/);
+  assert.match(styles, /\.dictionary-localization-note\s*\{[^}]*margin-bottom:\s*28px;/s);
 });
 
 test("the settings window title shows only the product name", () => {

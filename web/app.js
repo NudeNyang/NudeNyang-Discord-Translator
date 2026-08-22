@@ -153,6 +153,7 @@ const elements = {
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
   dictionaryEnabled: document.querySelector("#dictionary-enabled"),
+  dictionaryExternalModelNote: document.querySelector("#dictionary-external-model-note"),
   settingsWorkspace: document.querySelector("#settings-workspace"),
   settingsNavigation: document.querySelector("#settings-navigation"),
   dictionaryOverview: document.querySelector("#dictionary-overview"),
@@ -570,6 +571,12 @@ function populateDictionaryLanguageSelects() {
   elements.dictionaryTargetLanguage.value = state.config.target_language || "ko";
   elements.dictionaryImportSource.value = "en";
   elements.dictionaryImportTarget.value = state.config.target_language || "ko";
+}
+
+function renderDictionaryLocalizationNotice() {
+  const selected = state.selectValues.translator || state.config.translator;
+  if (!elements.dictionaryExternalModelNote) return;
+  elements.dictionaryExternalModelNote.hidden = !EXTERNAL_PROVIDERS.has(selected);
 }
 
 function dictionarySelectOptionLabel(option) {
@@ -2151,6 +2158,7 @@ function setSelectValue(field, value) {
   for (const option of element.querySelectorAll(".select-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === String(value)));
   }
+  if (field === "translator") renderDictionaryLocalizationNotice();
   if (field === "outgoing_translator") renderOutgoingModelGuidance();
 }
 

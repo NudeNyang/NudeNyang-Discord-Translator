@@ -2122,7 +2122,40 @@ select:focus-visible,
 }
 
 .dictionary-localization-note {
-  margin-bottom: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 28px;
+  padding-inline: 8px;
+}
+
+.dictionary-localization-info {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: help;
+}
+
+.dictionary-localization-info:hover,
+.dictionary-localization-info:focus-visible {
+  color: var(--text);
+}
+
+.dictionary-localization-info svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .dictionary-pack-footer {
