@@ -29,6 +29,18 @@ test("Discord verification pauses the pipe and offers a neutral compatibility fl
   assert.doesNotMatch(`${markup}\n${script}\n${i18n}\n${generatedLocales}`, /누드냥/);
 });
 
+test("dismissing the verification banner keeps a persistent reconnect action", () => {
+  assert.match(markup, /id="verification-reconnect-header"[^>]*hidden/);
+  assert.match(script, /verificationReconnectHeader: document\.querySelector\("#verification-reconnect-header"\)/);
+  assert.match(script, /elements\.verificationReconnectHeader\.hidden = !active/);
+  assert.match(script, /elements\.verificationReconnectHeader\.disabled = disabled/);
+  assert.match(script, /elements\.verificationReconnectHeader\.addEventListener\("click", requestVerificationReconnect\)/);
+  assert.match(
+    script,
+    /state\.verificationBannerDismissed = true;[\s\S]*?renderVerificationMode\(\);/,
+  );
+});
+
 test("verification detection is read-only and CDP cannot synthesize account actions", () => {
   assert.match(verificationProduction, /hcaptcha\.com/);
   assert.match(verificationProduction, /one-time-code/);

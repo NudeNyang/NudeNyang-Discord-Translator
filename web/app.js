@@ -239,6 +239,7 @@ const elements = {
   discordRestartManual: document.querySelector("#discord-restart-manual"),
   verificationBanner: document.querySelector("#verification-banner"),
   verificationReconnect: document.querySelector("#verification-reconnect"),
+  verificationReconnectHeader: document.querySelector("#verification-reconnect-header"),
   verificationContinueVanilla: document.querySelector("#verification-continue-vanilla"),
   modalLayer: document.querySelector("#modal-layer"),
   modalTitle: document.querySelector("#modal-title"),
@@ -2553,6 +2554,10 @@ function renderVerificationMode(status = state.runtime) {
   elements.verificationBanner.hidden = !active || state.verificationBannerDismissed;
   const disabled = Boolean(state.repairActive || state.verificationPromptActive);
   elements.verificationReconnect.disabled = disabled;
+  elements.verificationReconnectHeader.hidden = !active;
+  elements.verificationReconnectHeader.disabled = disabled;
+  elements.verificationReconnectHeader.dataset.state = state.repairActive ? "working" : "idle";
+  elements.verificationReconnectHeader.setAttribute("aria-busy", String(state.repairActive));
   elements.verificationContinueVanilla.disabled = disabled;
 }
 
@@ -2849,9 +2854,11 @@ document.addEventListener("click", event => {
 document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
 elements.discordRestartManual.addEventListener("click", restartDiscordManually);
-elements.verificationReconnect.addEventListener("click", () => {
+const requestVerificationReconnect = () => {
   reconnectAfterVerification().catch(error => showError("NudeNyang 재연결 실패", String(error)));
-});
+};
+elements.verificationReconnect.addEventListener("click", requestVerificationReconnect);
+elements.verificationReconnectHeader.addEventListener("click", requestVerificationReconnect);
 elements.verificationContinueVanilla.addEventListener("click", () => {
   state.verificationBannerDismissed = true;
   renderVerificationMode();
