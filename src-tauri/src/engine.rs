@@ -1451,7 +1451,7 @@ fn scan_dictionary(
                     } else {
                         config.target_language.clone()
                     };
-                    store.upsert_personal(PersonalDictionaryEntry {
+                    let saved = store.upsert_personal(PersonalDictionaryEntry {
                         id: 0,
                         source_language,
                         target_language,
@@ -1467,6 +1467,9 @@ fn scan_dictionary(
                         created_at: 0.0,
                         updated_at: 0.0,
                     })?;
+                    if let Some(app) = app {
+                        let _ = app.emit("dictionary-personal-changed", &saved);
+                    }
                     apply_dictionary_saved_script(&request.id)
                 }),
             "open" => {

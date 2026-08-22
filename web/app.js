@@ -887,6 +887,7 @@ function openDictionaryEditor(entry = null) {
   const value = dictionaryEntryPayload(entry || {});
   state.dictionaryEditingEntry = entry ? value : null;
   setLocalizedText(elements.dictionaryEditorTitle, entry ? "용어 편집" : "용어 추가");
+  updateDictionaryEditorSecondaryAction();
   elements.dictionarySourceLanguage.value = value.sourceLanguage;
   elements.dictionaryTargetLanguage.value = value.targetLanguage;
   refreshDictionaryCustomSelect(elements.dictionarySourceLanguage);
@@ -899,10 +900,42 @@ function openDictionaryEditor(entry = null) {
   window.setTimeout(() => elements.dictionarySourceTerm.focus(), 0);
 }
 
+function updateDictionaryEditorSecondaryAction() {
+  const editing = Boolean(state.dictionaryEditingEntry);
+  elements.dictionaryEditorCancel.classList.toggle("secondary", !editing);
+  elements.dictionaryEditorCancel.classList.toggle("danger", editing);
+  setLocalizedText(elements.dictionaryEditorCancel, editing ? "삭제" : "취소");
+}
+
 function closeDictionaryEditor() {
   elements.dictionaryEditorLayer.hidden = true;
   state.dictionaryEditingEntry = null;
   elements.dictionaryEditorForm.reset();
+}
+
+async function deleteDictionaryEditingEntry() {
+  const entry = state.dictionaryEditingEntry;
+  if (!entry?.id) {
+    closeDictionaryEditor();
+    return;
+  }
+  const confirmed = await showModal({
+    title: "선택한 용어를 삭제하시겠습니까?",
+    message: `${entry.sourceTerm} → ${entry.targetTerm}`,
+    acceptText: "삭제",
+  });
+  if (!confirmed) return;
+  elements.dictionaryEditorCancel.disabled = true;
+  elements.dictionaryPersonalSave.disabled = true;
+  try {
+    await invoke("dictionary_personal_delete", { id: entry.id });
+    closeDictionaryEditor();
+    await reloadDictionaryPersonalData();
+    setLocalizedText(elements.saveStatus, "개인 사전 용어를 삭제했습니다.");
+  } finally {
+    elements.dictionaryEditorCancel.disabled = false;
+    elements.dictionaryPersonalSave.disabled = false;
+  }
 }
 
 async function saveDictionaryPersonalEntry() {
@@ -2895,7 +2928,13 @@ elements.dictionaryPackFilter.addEventListener("change", () => {
   renderDictionaryPacks();
 });
 elements.dictionaryManagerAdd.addEventListener("click", () => openDictionaryEditor());
-elements.dictionaryEditorCancel.addEventListener("click", closeDictionaryEditor);
+elements.dictionaryEditorCancel.addEventListener("click", () => {
+  if (!state.dictionaryEditingEntry) {
+    closeDictionaryEditor();
+    return;
+  }
+  deleteDictionaryEditingEntry().catch(error => showError("개인 사전 용어를 삭제하지 못했습니다", String(error)));
+});
 elements.dictionaryEditorLayer.addEventListener("click", event => {
   if (event.target === elements.dictionaryEditorLayer) closeDictionaryEditor();
 });
@@ -3224,6 +3263,9 @@ if (tauriListen) {
   });
   tauriListen("settings-changed", event => {
     if (state.settingsUpdatesPending === 0) renderConfig(event.payload);
+  });
+  tauriListen("dictionary-personal-changed", () => {
+    reloadDictionaryPersonalData().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
   });
   tauriListen("provider-connections-changed", loadProviderConnections);
   tauriListen("request-update-install", () => {

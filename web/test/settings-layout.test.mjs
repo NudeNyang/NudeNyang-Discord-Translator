@@ -480,6 +480,33 @@ test("personal dictionary management scales to searchable and portable collectio
   assert.doesNotMatch(styles, /\.dictionary-manager-row:hover \.dictionary-row-actions/);
 });
 
+test("editing a personal term replaces cancel with delete", () => {
+  assert.match(markup, /class="button secondary"[^>]*id="dictionary-editor-cancel"[^>]*>취소<\/button>/);
+  assert.match(
+    script,
+    /function updateDictionaryEditorSecondaryAction\(\)\s*\{[\s\S]*?Boolean\(state\.dictionaryEditingEntry\)[\s\S]*?classList\.toggle\("secondary", !editing\)[\s\S]*?classList\.toggle\("danger", editing\)[\s\S]*?editing \? "삭제" : "취소"/,
+  );
+  assert.match(
+    script,
+    /async function deleteDictionaryEditingEntry\(\)[\s\S]*?invoke\("dictionary_personal_delete", \{ id: entry\.id \}\)[\s\S]*?reloadDictionaryPersonalData\(\)[\s\S]*?"개인 사전 용어를 삭제했습니다\."/,
+  );
+  assert.match(
+    script,
+    /dictionaryEditorCancel\.addEventListener\("click", \(\) => \{[\s\S]*?state\.dictionaryEditingEntry[\s\S]*?deleteDictionaryEditingEntry\(\)/,
+  );
+});
+
+test("dictionary popup saves refresh the open settings dictionary immediately", () => {
+  assert.match(
+    rustEngine,
+    /store\.upsert_personal\([\s\S]*?app\.emit\("dictionary-personal-changed"/,
+  );
+  assert.match(
+    script,
+    /tauriListen\("dictionary-personal-changed", \(\) => \{[\s\S]*?reloadDictionaryPersonalData\(\)/,
+  );
+});
+
 test("personal dictionary selection uses a bottom action dock and clean row toggles", () => {
   const searchIndex = markup.indexOf('id="dictionary-personal-search"');
   const favoriteIndex = markup.indexOf('id="dictionary-filter-pinned"');
