@@ -40,5 +40,7 @@ test("dictionary notices can be opened without the unrelated application licence
   assert.match(DICTIONARY_NOTICES_TEXT, /Open English WordNet 2025/);
   assert.match(DICTIONARY_NOTICES_TEXT, /CC-CEDICT/);
   assert.match(DICTIONARY_NOTICES_TEXT, /JMdict/);
+  assert.match(DICTIONARY_NOTICES_TEXT, /브라질 포르투갈어/);
+  assert.match(DICTIONARY_NOTICES_TEXT, /rawdata\.html/);
   assert.doesNotMatch(DICTIONARY_NOTICES_TEXT, /Hy-MT2 내장 배포/);
 });

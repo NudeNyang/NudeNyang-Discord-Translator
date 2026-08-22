@@ -17,6 +17,8 @@
     "dictionary:merge": "node scripts/merge-dictionary-packs.mjs",
     "dictionary:build:english": "node scripts/build-oewn-pack.mjs",
     "dictionary:build:chinese": "node scripts/build-cedict-pack.mjs",
+    "dictionary:build:wiktionary": "node scripts/build-wiktionary-pack-set.mjs",
+    "dictionary:sync:wiktionary": "node scripts/sync-wiktionary-pack-metadata.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build --no-bundle"

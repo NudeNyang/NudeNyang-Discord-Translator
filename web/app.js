@@ -19,6 +19,7 @@ import { LANGUAGE_OPTIONS } from "./languages.mjs";
 import { filterLanguageOptions } from "./language-search.mjs";
 import {
   applyStaticTranslations,
+  resolveUiLanguage,
   translateCopy,
   translateDynamicCopy,
   translateUserFacingError,
@@ -136,6 +137,8 @@ const state = {
   dictionaryPersonalPage: { entries: [], total: 0, offset: 0, limit: 80 },
   dictionaryPersonalQuery: { search: "", sourceLanguage: "", targetLanguage: "", pinnedOnly: false, sort: "updated_desc", offset: 0, limit: 80 },
   dictionaryPersonalManagerOpen: false,
+  dictionaryPackManagerOpen: false,
+  dictionaryPackQuery: { search: "", filter: "all" },
   dictionaryPersonalSearchTimer: 0,
   dictionarySelectedIds: new Set(),
   dictionaryEditingEntry: null,
@@ -158,6 +161,14 @@ const elements = {
   settingsNavigation: document.querySelector("#settings-navigation"),
   dictionaryOverview: document.querySelector("#dictionary-overview"),
   dictionaryPersonalManager: document.querySelector("#dictionary-personal-manager"),
+  dictionaryPackManager: document.querySelector("#dictionary-pack-manager"),
+  dictionaryPackManagerOpen: document.querySelector("#dictionary-pack-manager-open"),
+  dictionaryPackManagerBack: document.querySelector("#dictionary-pack-manager-back"),
+  dictionaryPackManagerCount: document.querySelector("#dictionary-pack-manager-count"),
+  dictionaryPackManagerFolder: document.querySelector("#dictionary-pack-manager-folder"),
+  dictionaryPackManagerList: document.querySelector("#dictionary-pack-manager-list"),
+  dictionaryPackSearch: document.querySelector("#dictionary-pack-search"),
+  dictionaryPackFilter: document.querySelector("#dictionary-pack-filter"),
   dictionaryPersonalOpen: document.querySelector("#dictionary-personal-open"),
   dictionaryPersonalQuickAdd: document.querySelector("#dictionary-personal-quick-add"),
   dictionaryPersonalBack: document.querySelector("#dictionary-personal-back"),
@@ -834,6 +845,27 @@ function closeDictionaryManager() {
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
+function openDictionaryPackManager() {
+  state.dictionaryPackManagerOpen = true;
+  elements.settingsWorkspace.dataset.focusView = "dictionary-manager";
+  elements.settingsNavigation.hidden = true;
+  elements.dictionaryOverview.hidden = true;
+  elements.dictionaryPackManager.hidden = false;
+  elements.settingsScroll.scrollTop = 0;
+  renderDictionaryPacks();
+  window.requestAnimationFrame(updateScrollIndicator);
+}
+
+function closeDictionaryPackManager() {
+  state.dictionaryPackManagerOpen = false;
+  delete elements.settingsWorkspace.dataset.focusView;
+  elements.settingsNavigation.hidden = false;
+  elements.dictionaryPackManager.hidden = true;
+  elements.dictionaryOverview.hidden = false;
+  elements.settingsScroll.scrollTop = 0;
+  window.requestAnimationFrame(updateScrollIndicator);
+}
+
 function openDictionaryEditor(entry = null) {
   const value = dictionaryEntryPayload(entry || {});
   state.dictionaryEditingEntry = entry ? value : null;
@@ -1187,9 +1219,8 @@ function renderDictionaryPacks() {
   if (!container || !status) return;
   container.replaceChildren();
   const practical = status.packs.filter(pack => pack.availability === "practical");
-  const planned = status.packs.filter(pack => pack.availability !== "practical");
   const installedPackCount = practical.filter(pack => pack.installed && pack.edition === "practical").length;
-  for (const pack of practical) {
+  const createPackRow = pack => {
     const row = document.createElement("article");
     row.className = "dictionary-pack-row";
     const identity = document.createElement("div");
@@ -1231,25 +1262,42 @@ function renderDictionaryPacks() {
     });
     identity.append(title, detail);
     row.append(identity, stateBadge, action);
-    container.append(row);
+    return row;
+  };
+  const installed = practical.filter(pack => pack.installed && pack.edition === "practical");
+  if (installed.length) {
+    installed.forEach(pack => container.append(createPackRow(pack)));
+  } else {
+    const empty = document.createElement("p");
+    empty.className = "dictionary-empty";
+    setLocalizedText(empty, "설치된 확장 사전이 없습니다.");
+    container.append(empty);
   }
-  if (planned.length) {
-    const expansion = document.createElement("article");
-    const copy = document.createElement("div");
-    const title = document.createElement("strong");
-    const detail = document.createElement("span");
-    const badge = document.createElement("span");
-    expansion.className = "dictionary-pack-row dictionary-expansion-row";
-    setLocalizedText(title, "다음 언어팩");
-    detail.textContent = planned.map(pack => dictionaryLanguageLabel(pack.language)).join(" · ");
-    badge.className = "dictionary-pack-state planned";
-    badge.textContent = `${planned.length}/28`;
-    copy.append(title, detail);
-    expansion.append(copy, badge);
-    container.append(expansion);
-  }
-  const language = currentUiLanguage();
+  const language = resolveUiLanguage(currentUiLanguage());
   elements.dictionaryStorageSummary.textContent = `${translateCopy(language, "사전팩")} ${installedPackCount} · ${translateCopy(language, "개인 용어")} ${status.personalEntryCount} · ${translateCopy(language, "디스크 사용량")} ${formatStorageSize(status.databaseBytes)}`;
+  if (!elements.dictionaryPackManagerList) return;
+  const search = state.dictionaryPackQuery.search.toLocaleLowerCase(language);
+  const filtered = practical.filter(pack => {
+    const installedPractical = pack.installed && pack.edition === "practical";
+    if (state.dictionaryPackQuery.filter === "installed" && !installedPractical) return false;
+    if (state.dictionaryPackQuery.filter === "available" && installedPractical) return false;
+    if (!search) return true;
+    return `${dictionaryLanguageLabel(pack.language)} ${pack.language}`.toLocaleLowerCase(language).includes(search);
+  }).sort((left, right) => {
+    const leftInstalled = left.installed && left.edition === "practical";
+    const rightInstalled = right.installed && right.edition === "practical";
+    return Number(rightInstalled) - Number(leftInstalled)
+      || dictionaryLanguageLabel(left.language).localeCompare(dictionaryLanguageLabel(right.language), language);
+  });
+  elements.dictionaryPackManagerList.replaceChildren();
+  filtered.forEach(pack => elements.dictionaryPackManagerList.append(createPackRow(pack)));
+  if (!filtered.length) {
+    const empty = document.createElement("p");
+    empty.className = "dictionary-empty";
+    setLocalizedText(empty, "조건에 맞는 언어팩이 없습니다.");
+    elements.dictionaryPackManagerList.append(empty);
+  }
+  elements.dictionaryPackManagerCount.textContent = `${translateCopy(language, "설치됨")} ${installedPackCount}/${practical.length}`;
 }
 
 async function refreshDictionaryStatus() {
@@ -1283,6 +1331,7 @@ function activateSettingsPanel(panel) {
   const target = document.querySelector(`[data-settings-view="${panel}"]`);
   if (!target) return;
   if (panel !== "dictionary" && state.dictionaryPersonalManagerOpen) closeDictionaryManager();
+  if (panel !== "dictionary" && state.dictionaryPackManagerOpen) closeDictionaryPackManager();
   for (const view of document.querySelectorAll("[data-settings-view]")) {
     const active = view === target;
     view.hidden = !active;
@@ -2725,6 +2774,16 @@ elements.dictionaryEnabled.addEventListener("click", async () => {
 elements.dictionaryPersonalOpen.addEventListener("click", openDictionaryManager);
 elements.dictionaryPersonalQuickAdd.addEventListener("click", () => openDictionaryEditor());
 elements.dictionaryPersonalBack.addEventListener("click", closeDictionaryManager);
+elements.dictionaryPackManagerOpen.addEventListener("click", openDictionaryPackManager);
+elements.dictionaryPackManagerBack.addEventListener("click", closeDictionaryPackManager);
+elements.dictionaryPackSearch.addEventListener("input", () => {
+  state.dictionaryPackQuery.search = elements.dictionaryPackSearch.value.trim();
+  renderDictionaryPacks();
+});
+elements.dictionaryPackFilter.addEventListener("change", () => {
+  state.dictionaryPackQuery.filter = elements.dictionaryPackFilter.value;
+  renderDictionaryPacks();
+});
 elements.dictionaryManagerAdd.addEventListener("click", () => openDictionaryEditor());
 elements.dictionaryEditorCancel.addEventListener("click", closeDictionaryEditor);
 elements.dictionaryEditorLayer.addEventListener("click", event => {
@@ -2821,6 +2880,16 @@ document.addEventListener("keydown", event => {
       event.preventDefault();
       if (!elements.dictionaryImportLayer.hidden) closeDictionaryImport();
       else closeDictionaryEditor();
+    }
+    return;
+  }
+  if (state.dictionaryPackManagerOpen) {
+    const editing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+    if (event.key === "Escape") closeDictionaryPackManager();
+    else if ((!editing && event.key === "/") || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f")) {
+      event.preventDefault();
+      elements.dictionaryPackSearch.focus();
+      elements.dictionaryPackSearch.select();
     }
     return;
   }
@@ -2942,6 +3011,7 @@ elements.authorLink.addEventListener("click", () => {
 elements.githubLink.addEventListener("click", () => {
   openExternalUrl(APP_LINKS.repository).catch(error => showError("링크를 열지 못했습니다", String(error)));
 });
+elements.dictionaryPackManagerFolder.addEventListener("click", () => elements.dictionaryOpenFolder.click());
 elements.dictionaryPackLicenses.addEventListener("click", () => {
   showModal({
     title: "출처 및 라이선스",

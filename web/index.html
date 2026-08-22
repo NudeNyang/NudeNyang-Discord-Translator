@@ -275,7 +275,7 @@
                 </section>
 
                 <section aria-labelledby="dictionary-packs-heading">
-                  <div class="panel-subheading dictionary-pack-heading"><div><h3 id="dictionary-packs-heading">오프라인 사전</h3><p>확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.</p></div><button class="button secondary" id="dictionary-open-folder" type="button">데이터 폴더</button></div>
+                  <div class="panel-subheading dictionary-pack-heading"><div><h3 id="dictionary-packs-heading">오프라인 사전</h3><p>확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.</p></div><div class="dictionary-heading-actions"><button class="button secondary" id="dictionary-pack-manager-open" type="button">언어팩 관리</button><button class="button secondary" id="dictionary-open-folder" type="button">데이터 폴더</button></div></div>
                   <div id="dictionary-pack-list" class="dictionary-pack-list" aria-live="polite"><p class="dictionary-empty">사전팩 상태를 확인하고 있습니다.</p></div>
                   <div class="dictionary-pack-footer">
                     <p class="section-note" id="dictionary-storage-summary">사전 데이터는 앱 전용 SQLite 파일에 저장됩니다.</p>
@@ -298,6 +298,18 @@
                   <div id="dictionary-selection-bar" class="dictionary-selection-bar" role="toolbar" aria-labelledby="dictionary-selection-count" hidden><strong id="dictionary-selection-count">선택 없음</strong><span class="dictionary-selection-divider" aria-hidden="true"></span><div class="dictionary-selection-actions"><button class="dictionary-selection-action" id="dictionary-selection-all" type="button">전체 선택</button><button class="dictionary-selection-action" id="dictionary-selection-clear" type="button">선택 취소</button><button class="button danger dictionary-selection-delete" id="dictionary-selection-delete" type="button">선택 항목 삭제</button></div></div>
                   <div id="dictionary-manager-list" class="dictionary-manager-list" aria-live="polite"><p class="dictionary-empty">개인 사전을 확인하고 있습니다.</p></div>
                   <footer class="dictionary-pagination"><button class="button secondary dictionary-page-button" id="dictionary-page-prev" type="button" aria-label="이전" data-tooltip="이전"><svg class="dictionary-page-icon" data-icon="chevron-left" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6l6 6"/></svg></button><span id="dictionary-page-summary">1페이지</span><button class="button secondary dictionary-page-button" id="dictionary-page-next" type="button" aria-label="다음" data-tooltip="다음"><svg class="dictionary-page-icon" data-icon="chevron-right" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6l-6 6"/></svg></button></footer>
+                </section>
+
+                <section id="dictionary-pack-manager" class="dictionary-manager dictionary-pack-manager" aria-labelledby="dictionary-pack-manager-heading" hidden>
+                  <header class="dictionary-manager-header">
+                    <div class="dictionary-manager-title"><button class="dictionary-back-button" id="dictionary-pack-manager-back" type="button" aria-label="사전 설정으로 돌아가기"><svg class="dictionary-back-icon" data-icon="chevron-left" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6l6 6"/></svg></button><span class="feature-badge">오프라인 사전</span><h2 id="dictionary-pack-manager-heading">언어팩 관리</h2><p id="dictionary-pack-manager-count">언어팩을 확인하고 있습니다.</p></div>
+                    <div class="dictionary-manager-actions"><button class="button secondary" id="dictionary-pack-manager-folder" type="button">데이터 폴더</button></div>
+                  </header>
+                  <div class="settings-card dictionary-pack-manager-toolbar">
+                    <label class="dictionary-search-field"><span class="sr-only">언어팩 검색</span><input id="dictionary-pack-search" class="text-field" type="search" autocomplete="off" placeholder="설치할 언어 검색" /><kbd>/</kbd></label>
+                    <select id="dictionary-pack-filter" class="dictionary-compact-select" data-custom-select aria-label="설치 상태 필터"><option value="all">전체 상태</option><option value="installed">설치된 언어</option><option value="available">미설치 언어</option></select>
+                  </div>
+                  <div id="dictionary-pack-manager-list" class="dictionary-pack-manager-list" aria-live="polite"><p class="dictionary-empty">언어팩을 확인하고 있습니다.</p></div>
                 </section>
               </section>
 

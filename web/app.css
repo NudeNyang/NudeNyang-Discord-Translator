@@ -2089,6 +2089,7 @@ select:focus-visible,
 
 .dictionary-pack-list {
   gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .dictionary-pack-row {
@@ -2119,6 +2120,34 @@ select:focus-visible,
 
 .dictionary-row-action {
   min-width: 64px;
+}
+
+.dictionary-pack-manager-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px);
+  gap: 8px;
+  padding: 10px;
+}
+
+.dictionary-pack-manager-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.dictionary-pack-manager-list .dictionary-empty,
+.dictionary-pack-list .dictionary-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.dictionary-pack-manager-list .dictionary-pack-row {
+  min-height: 76px;
 }
 
 .section-note.dictionary-localization-note {
@@ -2885,6 +2914,15 @@ select:focus-visible,
   .dictionary-pack-row .dictionary-row-action {
     grid-column: 1 / -1;
     width: 100%;
+  }
+
+  .dictionary-pack-list,
+  .dictionary-pack-manager-list {
+    grid-template-columns: 1fr;
+  }
+
+  .dictionary-pack-manager-toolbar {
+    grid-template-columns: 1fr;
   }
 
   .dictionary-personal-heading {

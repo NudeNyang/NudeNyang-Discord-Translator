@@ -69,6 +69,20 @@ CC BY-SA 2.0 대한민국이 적용되며 용례와 매체 자료는 포함하�
 - CC BY-SA 4.0: <https://creativecommons.org/licenses/by-sa/4.0/legalcode>
 - GFDL 1.1 or later: <https://www.gnu.org/licenses/fdl-1.3.html>
 
+브라질 포르투갈어, 라틴 아메리카 스페인어, 독일어, 러시아어, 프랑스어, 이탈리아어,
+폴란드어, 네덜란드어와 체코어 확장팩은 2026-08-05 영어판 Wiktionary 덤프를
+Wiktextract/kaikki.org로 추출한 2026-08-20 구조화 자료에서 해당 언어의 표제어와 영어 뜻풀이를
+선별한 것이다. 지역 제품 코드인 `pt-BR`과 `es-419`는 각각 일반 포르투갈어·스페인어 자료를
+사용하므로, 자료에 지역 변종만 수록되었다는 의미는 아니다. 활용형·대체 표기만 설명하는 행,
+예문, 음성, 이미지와 별도 라이선스 매체는 포함하지 않는다. 원문 항목은 CC BY-SA 4.0과
+GFDL 1.1 이상으로 이중 라이선스되며 변환팩에는 동일한 조건이 적용된다.
+
+- Source and per-language downloads: <https://kaikki.org/dictionary/>
+- Raw extraction metadata: <https://kaikki.org/dictionary/rawdata.html>
+- English Wiktionary contributor attribution: <https://en.wiktionary.org/wiki/Wiktionary:Copyrights>
+- CC BY-SA 4.0: <https://creativecommons.org/licenses/by-sa/4.0/legalcode>
+- GFDL 1.1 or later: <https://www.gnu.org/licenses/fdl-1.3.html>
+
 영어 확장팩은 Open English WordNet 2025의 표제어, 발음과 synset 정의를 내부 형식으로
 재배열한 것이다. 원본과 변환팩에는 CC BY 4.0이 적용된다.
 

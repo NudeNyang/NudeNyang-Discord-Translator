@@ -10,10 +10,58 @@
       "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
       "license": "GPL-3.0-only",
       "entries": [
-        {"headword":"future","reading":"/ˈfjuːtʃər/","partOfSpeech":"noun","glosses":{"ko":"현재 이후의 시간 또는 앞으로 일어날 일.","en":"The time or events that come after the present."},"examples":{"ko":"우리는 더 나은 미래를 계획하고 있습니다.","en":"We are planning for a better future."}},
-        {"headword":"server","reading":"/ˈsɜːrvər/","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members."},"examples":{"ko":"친구의 서버에 참가했습니다.","en":"I joined my friend's server."}},
-        {"headword":"translate","reading":"/trænsˈleɪt/","partOfSpeech":"verb","glosses":{"ko":"말이나 글을 다른 언어로 옮기다.","en":"To express speech or writing in another language."},"examples":{"ko":"이 메시지를 한국어로 번역해 주세요.","en":"Please translate this message into Korean."}},
-        {"headword":"message","reading":"/ˈmesɪdʒ/","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"A piece of written or spoken information sent to someone."},"examples":{"ko":"새 메시지를 받았습니다.","en":"I received a new message."}}
+        {
+          "headword": "future",
+          "reading": "/ˈfjuːtʃər/",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "현재 이후의 시간 또는 앞으로 일어날 일.",
+            "en": "The time or events that come after the present."
+          },
+          "examples": {
+            "ko": "우리는 더 나은 미래를 계획하고 있습니다.",
+            "en": "We are planning for a better future."
+          }
+        },
+        {
+          "headword": "server",
+          "reading": "/ˈsɜːrvər/",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "Discord에서 여러 채널과 구성원이 모이는 공간.",
+            "en": "A Discord space that contains channels and members."
+          },
+          "examples": {
+            "ko": "친구의 서버에 참가했습니다.",
+            "en": "I joined my friend's server."
+          }
+        },
+        {
+          "headword": "translate",
+          "reading": "/trænsˈleɪt/",
+          "partOfSpeech": "verb",
+          "glosses": {
+            "ko": "말이나 글을 다른 언어로 옮기다.",
+            "en": "To express speech or writing in another language."
+          },
+          "examples": {
+            "ko": "이 메시지를 한국어로 번역해 주세요.",
+            "en": "Please translate this message into Korean."
+          }
+        },
+        {
+          "headword": "message",
+          "reading": "/ˈmesɪdʒ/",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "다른 사람에게 보내는 글이나 정보.",
+            "en": "A piece of written or spoken information sent to someone."
+          },
+          "examples": {
+            "ko": "새 메시지를 받았습니다.",
+            "en": "I received a new message."
+          }
+        }
       ]
     },
     {
@@ -25,10 +73,58 @@
       "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
       "license": "GPL-3.0-only",
       "entries": [
-        {"headword":"미래","reading":"[미ː래]","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come."},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future."}},
-        {"headword":"서버","reading":"[서버]","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members."},"examples":{"ko":"새 서버를 만들었습니다.","en":"I created a new server."}},
-        {"headword":"번역","reading":"[버녁]","partOfSpeech":"noun","glosses":{"ko":"말이나 글을 다른 언어의 말이나 글로 옮김.","en":"The act of expressing speech or writing in another language."},"examples":{"ko":"메시지 번역을 켰습니다.","en":"I turned on message translation."}},
-        {"headword":"메시지","reading":"[메시지]","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone."},"examples":{"ko":"메시지를 확인했습니다.","en":"I checked the message."}}
+        {
+          "headword": "미래",
+          "reading": "[미ː래]",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "앞으로 올 때 또는 앞으로 일어날 일.",
+            "en": "The time or events that are yet to come."
+          },
+          "examples": {
+            "ko": "미래를 준비합니다.",
+            "en": "We prepare for the future."
+          }
+        },
+        {
+          "headword": "서버",
+          "reading": "[서버]",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "Discord에서 여러 채널과 구성원이 모이는 공간.",
+            "en": "A Discord space that contains channels and members."
+          },
+          "examples": {
+            "ko": "새 서버를 만들었습니다.",
+            "en": "I created a new server."
+          }
+        },
+        {
+          "headword": "번역",
+          "reading": "[버녁]",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "말이나 글을 다른 언어의 말이나 글로 옮김.",
+            "en": "The act of expressing speech or writing in another language."
+          },
+          "examples": {
+            "ko": "메시지 번역을 켰습니다.",
+            "en": "I turned on message translation."
+          }
+        },
+        {
+          "headword": "메시지",
+          "reading": "[메시지]",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "다른 사람에게 보내는 글이나 정보.",
+            "en": "Written or spoken information sent to someone."
+          },
+          "examples": {
+            "ko": "메시지를 확인했습니다.",
+            "en": "I checked the message."
+          }
+        }
       ]
     },
     {
@@ -40,10 +136,66 @@
       "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
       "license": "GPL-3.0-only",
       "entries": [
-        {"headword":"未来","reading":"みらい","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come.","ja":"これから来る時、またはこれから起こること。"},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future.","ja":"未来に備えます。"}},
-        {"headword":"サーバー","reading":"サーバー","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members.","ja":"Discordで複数のチャンネルとメンバーが集まる場所。"},"examples":{"ko":"새 서버에 참가했습니다.","en":"I joined a new server.","ja":"新しいサーバーに参加しました。"}},
-        {"headword":"翻訳","reading":"ほんやく","partOfSpeech":"noun","glosses":{"ko":"말이나 글을 다른 언어로 옮김.","en":"The act of expressing speech or writing in another language.","ja":"話や文章を別の言語に置き換えること。"},"examples":{"ko":"메시지를 번역합니다.","en":"I translate the message.","ja":"メッセージを翻訳します。"}},
-        {"headword":"メッセージ","reading":"メッセージ","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone.","ja":"相手に送る文章や情報。"},"examples":{"ko":"메시지를 받았습니다.","en":"I received a message.","ja":"メッセージを受け取りました。"}}
+        {
+          "headword": "未来",
+          "reading": "みらい",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "앞으로 올 때 또는 앞으로 일어날 일.",
+            "en": "The time or events that are yet to come.",
+            "ja": "これから来る時、またはこれから起こること。"
+          },
+          "examples": {
+            "ko": "미래를 준비합니다.",
+            "en": "We prepare for the future.",
+            "ja": "未来に備えます。"
+          }
+        },
+        {
+          "headword": "サーバー",
+          "reading": "サーバー",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "Discord에서 여러 채널과 구성원이 모이는 공간.",
+            "en": "A Discord space that contains channels and members.",
+            "ja": "Discordで複数のチャンネルとメンバーが集まる場所。"
+          },
+          "examples": {
+            "ko": "새 서버에 참가했습니다.",
+            "en": "I joined a new server.",
+            "ja": "新しいサーバーに参加しました。"
+          }
+        },
+        {
+          "headword": "翻訳",
+          "reading": "ほんやく",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "말이나 글을 다른 언어로 옮김.",
+            "en": "The act of expressing speech or writing in another language.",
+            "ja": "話や文章を別の言語に置き換えること。"
+          },
+          "examples": {
+            "ko": "메시지를 번역합니다.",
+            "en": "I translate the message.",
+            "ja": "メッセージを翻訳します。"
+          }
+        },
+        {
+          "headword": "メッセージ",
+          "reading": "メッセージ",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "다른 사람에게 보내는 글이나 정보.",
+            "en": "Written or spoken information sent to someone.",
+            "ja": "相手に送る文章や情報。"
+          },
+          "examples": {
+            "ko": "메시지를 받았습니다.",
+            "en": "I received a message.",
+            "ja": "メッセージを受け取りました。"
+          }
+        }
       ]
     },
     {
@@ -55,10 +207,66 @@
       "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
       "license": "GPL-3.0-only",
       "entries": [
-        {"headword":"未来","reading":"wèilái","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come.","zh":"将要到来的时间或将要发生的事情。"},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future.","zh":"我们为未来做准备。"}},
-        {"headword":"服务器","reading":"fúwùqì","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members.","zh":"Discord 中包含频道和成员的空间。"},"examples":{"ko":"서버에 참가했습니다.","en":"I joined the server.","zh":"我加入了服务器。"}},
-        {"headword":"翻译","reading":"fānyì","partOfSpeech":"verb","glosses":{"ko":"말이나 글을 다른 언어로 옮기다.","en":"To express speech or writing in another language.","zh":"把语言或文字转换成另一种语言。"},"examples":{"ko":"메시지를 번역합니다.","en":"I translate the message.","zh":"我翻译这条消息。"}},
-        {"headword":"消息","reading":"xiāoxi","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone.","zh":"发送给他人的文字或信息。"},"examples":{"ko":"새 메시지를 받았습니다.","en":"I received a new message.","zh":"我收到了一条新消息。"}}
+        {
+          "headword": "未来",
+          "reading": "wèilái",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "앞으로 올 때 또는 앞으로 일어날 일.",
+            "en": "The time or events that are yet to come.",
+            "zh": "将要到来的时间或将要发生的事情。"
+          },
+          "examples": {
+            "ko": "미래를 준비합니다.",
+            "en": "We prepare for the future.",
+            "zh": "我们为未来做准备。"
+          }
+        },
+        {
+          "headword": "服务器",
+          "reading": "fúwùqì",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "Discord에서 여러 채널과 구성원이 모이는 공간.",
+            "en": "A Discord space that contains channels and members.",
+            "zh": "Discord 中包含频道和成员的空间。"
+          },
+          "examples": {
+            "ko": "서버에 참가했습니다.",
+            "en": "I joined the server.",
+            "zh": "我加入了服务器。"
+          }
+        },
+        {
+          "headword": "翻译",
+          "reading": "fānyì",
+          "partOfSpeech": "verb",
+          "glosses": {
+            "ko": "말이나 글을 다른 언어로 옮기다.",
+            "en": "To express speech or writing in another language.",
+            "zh": "把语言或文字转换成另一种语言。"
+          },
+          "examples": {
+            "ko": "메시지를 번역합니다.",
+            "en": "I translate the message.",
+            "zh": "我翻译这条消息。"
+          }
+        },
+        {
+          "headword": "消息",
+          "reading": "xiāoxi",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "다른 사람에게 보내는 글이나 정보.",
+            "en": "Written or spoken information sent to someone.",
+            "zh": "发送给他人的文字或信息。"
+          },
+          "examples": {
+            "ko": "새 메시지를 받았습니다.",
+            "en": "I received a new message.",
+            "zh": "我收到了一条新消息。"
+          }
+        }
       ]
     },
     {
@@ -70,10 +278,525 @@
       "sourceUrl": "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
       "license": "GPL-3.0-only",
       "entries": [
-        {"headword":"未來","reading":"wèilái","partOfSpeech":"noun","glosses":{"ko":"앞으로 올 때 또는 앞으로 일어날 일.","en":"The time or events that are yet to come.","zh-Hant":"將要到來的時間或將要發生的事情。"},"examples":{"ko":"미래를 준비합니다.","en":"We prepare for the future.","zh-Hant":"我們為未來做準備。"}},
-        {"headword":"伺服器","reading":"sìfúqì","partOfSpeech":"noun","glosses":{"ko":"Discord에서 여러 채널과 구성원이 모이는 공간.","en":"A Discord space that contains channels and members.","zh-Hant":"Discord 中包含頻道和成員的空間。"},"examples":{"ko":"서버에 참가했습니다.","en":"I joined the server.","zh-Hant":"我加入了伺服器。"}},
-        {"headword":"翻譯","reading":"fānyì","partOfSpeech":"verb","glosses":{"ko":"말이나 글을 다른 언어로 옮기다.","en":"To express speech or writing in another language.","zh-Hant":"把語言或文字轉換成另一種語言。"},"examples":{"ko":"메시지를 번역합니다.","en":"I translate the message.","zh-Hant":"我翻譯這則訊息。"}},
-        {"headword":"訊息","reading":"xùnxí","partOfSpeech":"noun","glosses":{"ko":"다른 사람에게 보내는 글이나 정보.","en":"Written or spoken information sent to someone.","zh-Hant":"傳送給他人的文字或資訊。"},"examples":{"ko":"새 메시지를 받았습니다.","en":"I received a new message.","zh-Hant":"我收到了一則新訊息。"}}
+        {
+          "headword": "未來",
+          "reading": "wèilái",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "앞으로 올 때 또는 앞으로 일어날 일.",
+            "en": "The time or events that are yet to come.",
+            "zh-Hant": "將要到來的時間或將要發生的事情。"
+          },
+          "examples": {
+            "ko": "미래를 준비합니다.",
+            "en": "We prepare for the future.",
+            "zh-Hant": "我們為未來做準備。"
+          }
+        },
+        {
+          "headword": "伺服器",
+          "reading": "sìfúqì",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "Discord에서 여러 채널과 구성원이 모이는 공간.",
+            "en": "A Discord space that contains channels and members.",
+            "zh-Hant": "Discord 中包含頻道和成員的空間。"
+          },
+          "examples": {
+            "ko": "서버에 참가했습니다.",
+            "en": "I joined the server.",
+            "zh-Hant": "我加入了伺服器。"
+          }
+        },
+        {
+          "headword": "翻譯",
+          "reading": "fānyì",
+          "partOfSpeech": "verb",
+          "glosses": {
+            "ko": "말이나 글을 다른 언어로 옮기다.",
+            "en": "To express speech or writing in another language.",
+            "zh-Hant": "把語言或文字轉換成另一種語言。"
+          },
+          "examples": {
+            "ko": "메시지를 번역합니다.",
+            "en": "I translate the message.",
+            "zh-Hant": "我翻譯這則訊息。"
+          }
+        },
+        {
+          "headword": "訊息",
+          "reading": "xùnxí",
+          "partOfSpeech": "noun",
+          "glosses": {
+            "ko": "다른 사람에게 보내는 글이나 정보.",
+            "en": "Written or spoken information sent to someone.",
+            "zh-Hant": "傳送給他人的文字或資訊。"
+          },
+          "examples": {
+            "ko": "새 메시지를 받았습니다.",
+            "en": "I received a new message.",
+            "zh-Hant": "我收到了一則新訊息。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-pt-BR",
+      "language": "pt-BR",
+      "version": "2026.08.20.1",
+      "title": "Dicionário expandido de português starter",
+      "sourceName": "Portuguese Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Portuguese/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "casa",
+          "reading": "/ˈka.zɐ/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house; structure serving as an abode of human beings"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "água",
+          "reading": "/ˈa.ɡwɐ/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water (H₂O)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "comer",
+          "reading": "/koˈme(ʁ)/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat; to consume meals"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "falar",
+          "reading": "/faˈla(ʁ)/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to speak; to talk (to say words out loud)"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-es-419",
+      "language": "es-419",
+      "version": "2026.08.20.1",
+      "title": "Diccionario ampliado de español starter",
+      "sourceName": "Spanish Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Spanish/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "casa",
+          "reading": "/ˈkasa/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "agua",
+          "reading": "/ˈaɡwa/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "comer",
+          "reading": "/koˈmeɾ/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "hablar",
+          "reading": "/aˈblaɾ/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to talk; to speak; to communicate using words"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-de",
+      "language": "de",
+      "version": "2026.08.20.1",
+      "title": "Erweitertes deutsches Wörterbuch starter",
+      "sourceName": "German Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/German/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "Haus",
+          "reading": "[haʊ̯s]",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house, building"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "Wasser",
+          "reading": "/ˈva.sər/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water (H₂O)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "essen",
+          "reading": "/ˈɛsən/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "sprechen",
+          "reading": "/ˈʃprɛçən/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to speak (some language, the truth, etc.)"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-ru",
+      "language": "ru",
+      "version": "2026.08.20.1",
+      "title": "Расширенный словарь русского языка starter",
+      "sourceName": "Russian Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Russian/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "дом",
+          "reading": "[dom]",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house, building (a residential building)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "вода",
+          "reading": "[vɐˈda]",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "есть",
+          "reading": "[jesʲtʲ]",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "говорить",
+          "reading": "[ɡəvɐˈrʲitʲ]",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to speak, to talk (perfective поговорить)"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-fr",
+      "language": "fr",
+      "version": "2026.08.20.1",
+      "title": "Dictionnaire français étendu starter",
+      "sourceName": "French Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/French/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "maison",
+          "reading": "/mɛ.zɔ̃/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "eau",
+          "reading": "/o/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water, a liquid that is transparent, colorless, odorless, and tasteless in its pure form, the primary constituent of lakes, rivers, seas, and oceans"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "manger",
+          "reading": "/mɑ̃.ʒe/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "parler",
+          "reading": "/paʁ.le/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to speak, talk"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-it",
+      "language": "it",
+      "version": "2026.08.20.1",
+      "title": "Dizionario italiano esteso starter",
+      "sourceName": "Italian Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Italian/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "casa",
+          "reading": "/ˈka.sa/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "acqua",
+          "reading": "/ˈak.kwa/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "mangiare",
+          "reading": "/manˈd͡ʒa.re/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "parlare",
+          "reading": "/parˈla.re/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to talk, to speak"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-pl",
+      "language": "pl",
+      "version": "2026.08.20.1",
+      "title": "Rozszerzony słownik polski starter",
+      "sourceName": "Polish Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Polish/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "dom",
+          "reading": "/ˈdɔm/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house (building for living)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "woda",
+          "reading": "/ˈvɔ.da/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water (clear liquid essential for life)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "jeść",
+          "reading": "/ˈjɛɕt͡ɕ/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat (to ingest)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "mówić",
+          "reading": "/ˈmu.vit͡ɕ/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to say, to tell (to vocalize using words)"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-nl",
+      "language": "nl",
+      "version": "2026.08.20.1",
+      "title": "Uitgebreid Nederlands woordenboek starter",
+      "sourceName": "Dutch Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Dutch/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "huis",
+          "reading": "/ɦœy̯s/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "a house, home; residence"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "water",
+          "reading": "/ˈʋaː.tər/",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water (H₂O)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "eten",
+          "reading": "/ˈeː.tə(n)/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "spreken",
+          "reading": "/ˈspreːkə(n)/",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to speak"
+          },
+          "examples": {}
+        }
+      ]
+    },
+    {
+      "id": "nudenyang-starter-cs",
+      "language": "cs",
+      "version": "2026.08.20.1",
+      "title": "Rozšířený český slovník starter",
+      "sourceName": "Czech Wiktionary via kaikki.org and Wiktextract",
+      "sourceUrl": "https://kaikki.org/dictionary/Czech/",
+      "license": "CC-BY-SA-4.0 AND GFDL-1.1-or-later",
+      "entries": [
+        {
+          "headword": "dům",
+          "reading": "[ˈduːm]",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "house (building, structure intended for housing)"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "voda",
+          "reading": "[ˈvoda]",
+          "partOfSpeech": "noun",
+          "senseRank": 0,
+          "glosses": {
+            "en": "water"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "jíst",
+          "reading": "[ˈjiːst]",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to eat"
+          },
+          "examples": {}
+        },
+        {
+          "headword": "mluvit",
+          "reading": "[ˈmluvɪt]",
+          "partOfSpeech": "verb",
+          "senseRank": 0,
+          "glosses": {
+            "en": "to speak"
+          },
+          "examples": {}
+        }
       ]
     }
   ]

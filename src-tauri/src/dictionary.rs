@@ -21,8 +21,17 @@ use crate::language::{detect_language, is_supported_language_code, Language, LAN
 const STARTER_PACKS_JSON: &str = include_str!("../dictionary-packs/starter.json");
 const PACK_CATALOG_JSON: &str = include_str!("../dictionary-packs/catalog.json");
 const PRACTICAL_EN_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/en.json.gz");
+const PRACTICAL_CS_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/cs.json.gz");
+const PRACTICAL_DE_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/de.json.gz");
+const PRACTICAL_ES_419_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/es-419.json.gz");
+const PRACTICAL_FR_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/fr.json.gz");
+const PRACTICAL_IT_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/it.json.gz");
 const PRACTICAL_JA_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/ja.json.gz");
 const PRACTICAL_KO_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/ko.json.gz");
+const PRACTICAL_NL_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/nl.json.gz");
+const PRACTICAL_PL_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/pl.json.gz");
+const PRACTICAL_PT_BR_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/pt-BR.json.gz");
+const PRACTICAL_RU_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/ru.json.gz");
 const PRACTICAL_ZH_GZIP: &[u8] = include_bytes!("../dictionary-packs/practical/zh.json.gz");
 const PRACTICAL_ZH_HANT_GZIP: &[u8] =
     include_bytes!("../dictionary-packs/practical/zh-Hant.json.gz");
@@ -1738,9 +1747,18 @@ fn pack_catalog() -> Result<PackCatalog, String> {
 
 fn practical_pack_bytes(language: &str) -> Option<&'static [u8]> {
     match language {
+        "cs" => Some(PRACTICAL_CS_GZIP),
+        "de" => Some(PRACTICAL_DE_GZIP),
         "en" => Some(PRACTICAL_EN_GZIP),
+        "es-419" => Some(PRACTICAL_ES_419_GZIP),
+        "fr" => Some(PRACTICAL_FR_GZIP),
+        "it" => Some(PRACTICAL_IT_GZIP),
         "ja" => Some(PRACTICAL_JA_GZIP),
         "ko" => Some(PRACTICAL_KO_GZIP),
+        "nl" => Some(PRACTICAL_NL_GZIP),
+        "pl" => Some(PRACTICAL_PL_GZIP),
+        "pt-BR" => Some(PRACTICAL_PT_BR_GZIP),
+        "ru" => Some(PRACTICAL_RU_GZIP),
         "zh" => Some(PRACTICAL_ZH_GZIP),
         "zh-Hant" => Some(PRACTICAL_ZH_HANT_GZIP),
         _ => None,
@@ -2777,7 +2795,7 @@ mod tests {
                 .iter()
                 .filter(|pack| pack.availability == "practical")
                 .count(),
-            5
+            14
         );
     }
 
@@ -2796,6 +2814,29 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["time", "hour", "period; class; lesson"]
         );
+    }
+
+    #[test]
+    fn reviewed_wiktionary_packs_cover_a_basic_word_in_every_new_language() {
+        for (language, word) in [
+            ("pt-BR", "casa"),
+            ("es-419", "casa"),
+            ("de", "Haus"),
+            ("ru", "дом"),
+            ("fr", "maison"),
+            ("it", "casa"),
+            ("pl", "dom"),
+            ("nl", "huis"),
+            ("cs", "dům"),
+        ] {
+            let catalog = super::practical_catalog(language).unwrap();
+            let pack = &catalog.packs[0];
+            assert_eq!(pack.edition, "practical", "{language}");
+            assert!(
+                pack.entries.iter().any(|entry| entry.headword == word),
+                "{language} practical pack must cover {word}"
+            );
+        }
     }
 
     #[test]

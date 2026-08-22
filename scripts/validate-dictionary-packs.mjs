@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 
 import { SUPPORTED_TARGET_LANGUAGES } from "../web/languages.mjs";
+import { WIKTIONARY_PACK_LANGUAGES } from "./dictionary-wiktionary-languages.mjs";
 
 const catalog = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-packs/catalog.json", import.meta.url), "utf8"));
 const starter = JSON.parse(readFileSync(new URL("../src-tauri/dictionary-packs/starter.json", import.meta.url), "utf8"));
@@ -28,7 +29,10 @@ assert.equal(catalogCodes.size, 28, "dictionary catalog language codes must be u
 const practicalCodes = new Set(
   catalog.languages.filter(language => language.availability === "practical").map(language => language.code),
 );
-assert.deepEqual([...practicalCodes].sort(), ["en", "ja", "ko", "zh", "zh-Hant"].sort());
+assert.deepEqual(
+  [...practicalCodes].sort(),
+  ["en", "ja", "ko", "zh", "zh-Hant", ...WIKTIONARY_PACK_LANGUAGES.map(item => item.productCode)].sort(),
+);
 assert.deepEqual(
   Object.keys(coreVocabulary.profiles).sort(),
   [...practicalCodes].sort(),
@@ -40,6 +44,7 @@ const minimumExpandedEntries = new Map([
   ["ja", 500_000],
   ["zh", 120_000],
   ["zh-Hant", 120_000],
+  ...WIKTIONARY_PACK_LANGUAGES.map(candidate => [candidate.productCode, candidate.minimumEntries]),
 ]);
 
 const ids = new Set();
@@ -175,6 +180,19 @@ assert.ok(!simplifiedChinese.packs[0].entries.some(entry => entry.headword === "
 const traditionalChinese = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/zh-Hant.json.gz", import.meta.url))));
 assert.ok(traditionalChinese.packs[0].entries.some(entry => entry.headword === "喜歡"), "Traditional Chinese pack must cover 喜歡");
 assert.ok(traditionalChinese.packs[0].entries.some(entry => entry.headword === "時間"), "Traditional Chinese pack must cover 時間");
+
+const german = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/de.json.gz", import.meta.url))));
+assert.match(
+  german.packs[0].entries.find(entry => entry.headword === "Wasser")?.glosses?.en || "",
+  /^water\b/i,
+  "German pack must rank the common water sense of Wasser first",
+);
+const italian = JSON.parse(gunzipSync(readFileSync(new URL("../src-tauri/dictionary-packs/practical/it.json.gz", import.meta.url))));
+assert.match(
+  italian.packs[0].entries.find(entry => entry.headword === "casa")?.glosses?.en || "",
+  /^house\b/i,
+  "Italian pack must rank the common house sense of casa first",
+);
 
 console.log(`Dictionary catalog: ${catalog.languages.length}/28 languages`);
 console.log(`Bundled starter packs: ${starter.packs.length} packs · ${starter.packs.reduce((sum, pack) => sum + pack.entries.length, 0)} entries`);

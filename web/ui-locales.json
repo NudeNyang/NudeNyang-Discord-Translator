@@ -563,7 +563,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "缺少的字典釋義會由已設定的翻譯模型補充。",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "選取的文字可能會傳送至該服務。",
     "주변 문맥은 PC 안에서만 처리됩니다.": "鄰近的上下文只會在這台 PC 上處理。",
-    "메시지를 통역하고 있습니다.": "正在翻譯訊息。"
+    "메시지를 통역하고 있습니다.": "正在翻譯訊息。",
+    "언어팩 관리": "管理語言套件",
+    "언어팩을 확인하고 있습니다.": "正在檢查語言套件。",
+    "언어팩 검색": "搜尋語言套件",
+    "설치할 언어 검색": "搜尋可安裝的語言",
+    "설치 상태 필터": "安裝狀態篩選",
+    "전체 상태": "所有狀態",
+    "설치된 언어": "已安裝的語言",
+    "미설치 언어": "可安裝的語言",
+    "설치된 확장 사전이 없습니다.": "尚未安裝任何擴充字典。",
+    "조건에 맞는 언어팩이 없습니다.": "沒有符合這些篩選條件的語言套件。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -1129,7 +1139,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Os significados ausentes no dicionário são complementados pelo modelo de tradução configurado.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "O texto selecionado pode ser enviado para esse serviço.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "O contexto próximo é processado apenas neste PC.",
-    "메시지를 통역하고 있습니다.": "Interpretando a mensagem."
+    "메시지를 통역하고 있습니다.": "Interpretando a mensagem.",
+    "언어팩 관리": "Gerenciar pacotes de idiomas",
+    "언어팩을 확인하고 있습니다.": "Verificando pacotes de idiomas.",
+    "언어팩 검색": "Pesquisar pacotes de idiomas",
+    "설치할 언어 검색": "Pesquisar idiomas disponíveis",
+    "설치 상태 필터": "Filtro de status da instalação",
+    "전체 상태": "Todos os status",
+    "설치된 언어": "Idiomas instalados",
+    "미설치 언어": "Disponíveis para instalação",
+    "설치된 확장 사전이 없습니다.": "Nenhum dicionário estendido está instalado.",
+    "조건에 맞는 언어팩이 없습니다.": "Nenhum pacote de idiomas corresponde a estes filtros."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1695,7 +1715,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "शब्दकोश में न मिले अर्थों को कॉन्फ़िगर किए गए अनुवाद मॉडल से पूरा किया जाता है।",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "चुना गया टेक्स्ट उस सेवा को भेजा जा सकता है।",
     "주변 문맥은 PC 안에서만 처리됩니다.": "आस-पास के संदर्भ को केवल इस PC पर प्रोसेस किया जाता है।",
-    "메시지를 통역하고 있습니다.": "संदेश का अनुवाद किया जा रहा है।"
+    "메시지를 통역하고 있습니다.": "संदेश का अनुवाद किया जा रहा है।",
+    "언어팩 관리": "भाषा पैक प्रबंधित करें",
+    "언어팩을 확인하고 있습니다.": "भाषा पैक की जाँच की जा रही है.",
+    "언어팩 검색": "भाषा पैक खोजें",
+    "설치할 언어 검색": "उपलब्ध भाषाएँ खोजें",
+    "설치 상태 필터": "इंस्टॉलेशन स्थिति फ़िल्टर",
+    "전체 상태": "सभी स्थितियाँ",
+    "설치된 언어": "इंस्टॉल की गई भाषाएँ",
+    "미설치 언어": "इंस्टॉल के लिए उपलब्ध",
+    "설치된 확장 사전이 없습니다.": "कोई विस्तारित शब्दकोश इंस्टॉल नहीं है.",
+    "조건에 맞는 언어팩이 없습니다.": "इन फ़िल्टर से मेल खाने वाला कोई भाषा पैक नहीं है."
   },
   "es-419": {
     "설정": "Configuración",
@@ -2261,7 +2291,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Los significados que falten en el diccionario se completarán con el modelo de traducción configurado.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "El texto seleccionado puede enviarse a ese servicio.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "El contexto cercano se procesa únicamente en esta PC.",
-    "메시지를 통역하고 있습니다.": "Interpretando el mensaje."
+    "메시지를 통역하고 있습니다.": "Interpretando el mensaje.",
+    "언어팩 관리": "Administrar paquetes de idioma",
+    "언어팩을 확인하고 있습니다.": "Comprobando paquetes de idioma.",
+    "언어팩 검색": "Buscar paquetes de idioma",
+    "설치할 언어 검색": "Buscar idiomas disponibles",
+    "설치 상태 필터": "Filtro de estado de instalación",
+    "전체 상태": "Todos los estados",
+    "설치된 언어": "Idiomas instalados",
+    "미설치 언어": "Disponibles para instalar",
+    "설치된 확장 사전이 없습니다.": "No hay diccionarios ampliados instalados.",
+    "조건에 맞는 언어팩이 없습니다.": "Ningún paquete de idioma coincide con estos filtros."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2827,7 +2867,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Fehlende Wörterbuchbedeutungen werden durch das konfigurierte Übersetzungsmodell ergänzt.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Der ausgewählte Text kann an diesen Dienst gesendet werden.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Der umgebende Kontext wird nur auf diesem PC verarbeitet.",
-    "메시지를 통역하고 있습니다.": "Nachricht wird übersetzt."
+    "메시지를 통역하고 있습니다.": "Nachricht wird übersetzt.",
+    "언어팩 관리": "Sprachpakete verwalten",
+    "언어팩을 확인하고 있습니다.": "Sprachpakete werden überprüft.",
+    "언어팩 검색": "Sprachpakete suchen",
+    "설치할 언어 검색": "Verfügbare Sprachen suchen",
+    "설치 상태 필터": "Installationsstatusfilter",
+    "전체 상태": "Alle Status",
+    "설치된 언어": "Installierte Sprachen",
+    "미설치 언어": "Zur Installation verfügbar",
+    "설치된 확장 사전이 없습니다.": "Keine erweiterten Wörterbücher installiert.",
+    "조건에 맞는 언어팩이 없습니다.": "Keine Sprachpakete entsprechen diesen Filtern."
   },
   "ru": {
     "설정": "Настройки",
@@ -3393,7 +3443,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Отсутствующие словарные значения дополняются настроенной моделью перевода.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Выделенный текст может быть отправлен в этот сервис.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Ближайший контекст обрабатывается только на этом ПК.",
-    "메시지를 통역하고 있습니다.": "Выполняется перевод сообщения."
+    "메시지를 통역하고 있습니다.": "Выполняется перевод сообщения.",
+    "언어팩 관리": "Управление языковыми пакетами",
+    "언어팩을 확인하고 있습니다.": "Проверка языковых пакетов.",
+    "언어팩 검색": "Поиск языковых пакетов",
+    "설치할 언어 검색": "Поиск доступных языков",
+    "설치 상태 필터": "Фильтр по статусу установки",
+    "전체 상태": "Все статусы",
+    "설치된 언어": "Установленные языки",
+    "미설치 언어": "Доступные для установки",
+    "설치된 확장 사전이 없습니다.": "Расширенные словари не установлены.",
+    "조건에 맞는 언어팩이 없습니다.": "Нет языковых пакетов, соответствующих этим фильтрам."
   },
   "id": {
     "설정": "Pengaturan",
@@ -3959,7 +4019,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Arti yang tidak ada dalam kamus akan dilengkapi oleh model terjemahan yang telah dikonfigurasi.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Teks yang dipilih mungkin dikirim ke layanan tersebut.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Konteks sekitar hanya diproses di PC ini.",
-    "메시지를 통역하고 있습니다.": "Sedang menerjemahkan pesan."
+    "메시지를 통역하고 있습니다.": "Sedang menerjemahkan pesan.",
+    "언어팩 관리": "Kelola paket bahasa",
+    "언어팩을 확인하고 있습니다.": "Memeriksa paket bahasa.",
+    "언어팩 검색": "Cari paket bahasa",
+    "설치할 언어 검색": "Cari bahasa yang tersedia",
+    "설치 상태 필터": "Filter status penginstalan",
+    "전체 상태": "Semua status",
+    "설치된 언어": "Bahasa terinstal",
+    "미설치 언어": "Tersedia untuk diinstal",
+    "설치된 확장 사전이 없습니다.": "Tidak ada kamus tambahan yang terinstal.",
+    "조건에 맞는 언어팩이 없습니다.": "Tidak ada paket bahasa yang cocok dengan filter ini."
   },
   "fr": {
     "설정": "Paramètres",
@@ -4525,7 +4595,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Les définitions manquantes du dictionnaire sont complétées par le modèle de traduction configuré.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Le texte sélectionné peut être envoyé à ce service.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Le contexte environnant est traité uniquement sur ce PC.",
-    "메시지를 통역하고 있습니다.": "Traduction du message en cours."
+    "메시지를 통역하고 있습니다.": "Traduction du message en cours.",
+    "언어팩 관리": "Gérer les packs linguistiques",
+    "언어팩을 확인하고 있습니다.": "Vérification des packs linguistiques.",
+    "언어팩 검색": "Rechercher des packs linguistiques",
+    "설치할 언어 검색": "Rechercher les langues disponibles",
+    "설치 상태 필터": "Filtre par état d’installation",
+    "전체 상태": "Tous les états",
+    "설치된 언어": "Langues installées",
+    "미설치 언어": "Langues disponibles à l’installation",
+    "설치된 확장 사전이 없습니다.": "Aucun dictionnaire étendu n’est installé.",
+    "조건에 맞는 언어팩이 없습니다.": "Aucun pack linguistique ne correspond à ces filtres."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -5091,7 +5171,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Eksik sözlük anlamları, yapılandırılmış çeviri modeliyle tamamlanır.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Seçilen metin bu hizmete gönderilebilir.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Yakındaki bağlam yalnızca bu PC'de işlenir.",
-    "메시지를 통역하고 있습니다.": "Mesaj çevriliyor."
+    "메시지를 통역하고 있습니다.": "Mesaj çevriliyor.",
+    "언어팩 관리": "Dil paketlerini yönet",
+    "언어팩을 확인하고 있습니다.": "Dil paketleri kontrol ediliyor.",
+    "언어팩 검색": "Dil paketlerinde ara",
+    "설치할 언어 검색": "Kullanılabilir dilleri ara",
+    "설치 상태 필터": "Kurulum durumu filtresi",
+    "전체 상태": "Tüm durumlar",
+    "설치된 언어": "Yüklü diller",
+    "미설치 언어": "Yüklenebilir diller",
+    "설치된 확장 사전이 없습니다.": "Yüklü genişletilmiş sözlük yok.",
+    "조건에 맞는 언어팩이 없습니다.": "Bu filtrelerle eşleşen dil paketi yok."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -5657,7 +5747,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "تُستكمل معاني القاموس المفقودة باستخدام نموذج الترجمة المُعدّ.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "قد يُرسل النص المحدد إلى تلك الخدمة.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "تُعالج السياقات المحيطة على هذا الكمبيوتر فقط.",
-    "메시지를 통역하고 있습니다.": "جارٍ ترجمة الرسالة."
+    "메시지를 통역하고 있습니다.": "جارٍ ترجمة الرسالة.",
+    "언어팩 관리": "إدارة حزم اللغات",
+    "언어팩을 확인하고 있습니다.": "جارٍ التحقق من حزم اللغات.",
+    "언어팩 검색": "البحث في حزم اللغات",
+    "설치할 언어 검색": "البحث عن اللغات المتاحة",
+    "설치 상태 필터": "عامل تصفية حالة التثبيت",
+    "전체 상태": "جميع الحالات",
+    "설치된 언어": "اللغات المثبّتة",
+    "미설치 언어": "متاحة للتثبيت",
+    "설치된 확장 사전이 없습니다.": "لا توجد قواميس موسّعة مثبّتة.",
+    "조건에 맞는 언어팩이 없습니다.": "لا توجد حزم لغات تطابق عوامل التصفية هذه."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -6223,7 +6323,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Các nghĩa còn thiếu trong từ điển sẽ được bổ sung bằng mô hình dịch đã cấu hình.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Văn bản đã chọn có thể được gửi đến dịch vụ đó.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Ngữ cảnh xung quanh chỉ được xử lý trên PC này.",
-    "메시지를 통역하고 있습니다.": "Đang phiên dịch tin nhắn."
+    "메시지를 통역하고 있습니다.": "Đang phiên dịch tin nhắn.",
+    "언어팩 관리": "Quản lý gói ngôn ngữ",
+    "언어팩을 확인하고 있습니다.": "Đang kiểm tra các gói ngôn ngữ.",
+    "언어팩 검색": "Tìm kiếm gói ngôn ngữ",
+    "설치할 언어 검색": "Tìm ngôn ngữ có sẵn",
+    "설치 상태 필터": "Bộ lọc trạng thái cài đặt",
+    "전체 상태": "Tất cả trạng thái",
+    "설치된 언어": "Ngôn ngữ đã cài đặt",
+    "미설치 언어": "Có thể cài đặt",
+    "설치된 확장 사전이 없습니다.": "Chưa cài đặt từ điển mở rộng nào.",
+    "조건에 맞는 언어팩이 없습니다.": "Không có gói ngôn ngữ nào khớp với các bộ lọc này."
   },
   "it": {
     "설정": "Impostazioni",
@@ -6789,7 +6899,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "I significati mancanti nel dizionario vengono integrati dal modello di traduzione configurato.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Il testo selezionato potrebbe essere inviato a quel servizio.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Il contesto circostante viene elaborato solo su questo PC.",
-    "메시지를 통역하고 있습니다.": "Interpretazione del messaggio."
+    "메시지를 통역하고 있습니다.": "Interpretazione del messaggio.",
+    "언어팩 관리": "Gestisci i pacchetti lingua",
+    "언어팩을 확인하고 있습니다.": "Controllo dei pacchetti lingua.",
+    "언어팩 검색": "Cerca pacchetti lingua",
+    "설치할 언어 검색": "Cerca lingue disponibili",
+    "설치 상태 필터": "Filtro stato di installazione",
+    "전체 상태": "Tutti gli stati",
+    "설치된 언어": "Lingue installate",
+    "미설치 언어": "Disponibili per l'installazione",
+    "설치된 확장 사전이 없습니다.": "Nessun dizionario esteso installato.",
+    "조건에 맞는 언어팩이 없습니다.": "Nessun pacchetto lingua corrisponde a questi filtri."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -7355,7 +7475,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Brakujące znaczenia słownikowe są uzupełniane przez skonfigurowany model tłumaczeniowy.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Zaznaczony tekst może zostać wysłany do tej usługi.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Otaczający kontekst jest przetwarzany wyłącznie na tym komputerze.",
-    "메시지를 통역하고 있습니다.": "Tłumaczenie wiadomości."
+    "메시지를 통역하고 있습니다.": "Tłumaczenie wiadomości.",
+    "언어팩 관리": "Zarządzaj pakietami językowymi",
+    "언어팩을 확인하고 있습니다.": "Sprawdzanie pakietów językowych.",
+    "언어팩 검색": "Wyszukaj pakiety językowe",
+    "설치할 언어 검색": "Wyszukaj dostępne języki",
+    "설치 상태 필터": "Filtr stanu instalacji",
+    "전체 상태": "Wszystkie stany",
+    "설치된 언어": "Zainstalowane języki",
+    "미설치 언어": "Dostępne do zainstalowania",
+    "설치된 확장 사전이 없습니다.": "Nie zainstalowano żadnych rozszerzonych słowników.",
+    "조건에 맞는 언어팩이 없습니다.": "Żadne pakiety językowe nie pasują do tych filtrów."
   },
   "uk": {
     "설정": "Налаштування",
@@ -7921,7 +8051,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Відсутні значення у словнику доповнюються налаштованою моделлю перекладу.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Вибраний текст може бути надіслано до цього сервісу.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Навколишній контекст обробляється лише на цьому ПК.",
-    "메시지를 통역하고 있습니다.": "Переклад повідомлення."
+    "메시지를 통역하고 있습니다.": "Переклад повідомлення.",
+    "언어팩 관리": "Керування мовними пакетами",
+    "언어팩을 확인하고 있습니다.": "Перевірка мовних пакетів.",
+    "언어팩 검색": "Пошук мовних пакетів",
+    "설치할 언어 검색": "Пошук доступних мов",
+    "설치 상태 필터": "Фільтр за станом встановлення",
+    "전체 상태": "Усі стани",
+    "설치된 언어": "Встановлені мови",
+    "미설치 언어": "Доступні для встановлення",
+    "설치된 확장 사전이 없습니다.": "Розширені словники не встановлено.",
+    "조건에 맞는 언어팩이 없습니다.": "Немає мовних пакетів, що відповідають цим фільтрам."
   },
   "ms": {
     "설정": "Tetapan",
@@ -8487,7 +8627,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Maksud kamus yang tiada akan dilengkapkan oleh model terjemahan yang dikonfigurasikan.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Teks yang dipilih mungkin dihantar kepada perkhidmatan tersebut.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Konteks berdekatan diproses hanya pada PC ini.",
-    "메시지를 통역하고 있습니다.": "Sedang mentafsir mesej."
+    "메시지를 통역하고 있습니다.": "Sedang mentafsir mesej.",
+    "언어팩 관리": "Urus pek bahasa",
+    "언어팩을 확인하고 있습니다.": "Sedang menyemak pek bahasa.",
+    "언어팩 검색": "Cari pek bahasa",
+    "설치할 언어 검색": "Cari bahasa yang tersedia",
+    "설치 상태 필터": "Penapis status pemasangan",
+    "전체 상태": "Semua status",
+    "설치된 언어": "Bahasa yang dipasang",
+    "미설치 언어": "Tersedia untuk dipasang",
+    "설치된 확장 사전이 없습니다.": "Tiada kamus lanjutan yang dipasang.",
+    "조건에 맞는 언어팩이 없습니다.": "Tiada pek bahasa yang sepadan dengan penapis ini."
   },
   "nl": {
     "설정": "Instellingen",
@@ -9053,7 +9203,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Ontbrekende woordenboekbetekenissen worden aangevuld door het ingestelde vertaalmodel.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "De geselecteerde tekst kan naar die service worden verzonden.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Omliggende context wordt alleen op deze pc verwerkt.",
-    "메시지를 통역하고 있습니다.": "Het bericht wordt vertaald."
+    "메시지를 통역하고 있습니다.": "Het bericht wordt vertaald.",
+    "언어팩 관리": "Taalpakketten beheren",
+    "언어팩을 확인하고 있습니다.": "Taalpakketten controleren.",
+    "언어팩 검색": "Taalpakketten zoeken",
+    "설치할 언어 검색": "Beschikbare talen zoeken",
+    "설치 상태 필터": "Filter op installatiestatus",
+    "전체 상태": "Alle statussen",
+    "설치된 언어": "Geïnstalleerde talen",
+    "미설치 언어": "Beschikbaar voor installatie",
+    "설치된 확장 사전이 없습니다.": "Er zijn geen uitgebreide woordenboeken geïnstalleerd.",
+    "조건에 맞는 언어팩이 없습니다.": "Geen taalpakketten gevonden die aan deze filters voldoen."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -9619,7 +9779,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "ความหมายที่ไม่มีในพจนานุกรมจะถูกเสริมด้วยโมเดลแปลภาษาที่กำหนดไว้",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "ข้อความที่เลือกอาจถูกส่งไปยังบริการนั้น",
     "주변 문맥은 PC 안에서만 처리됩니다.": "บริบทโดยรอบจะถูกประมวลผลเฉพาะบน PC เครื่องนี้เท่านั้น",
-    "메시지를 통역하고 있습니다.": "กำลังแปลข้อความ"
+    "메시지를 통역하고 있습니다.": "กำลังแปลข้อความ",
+    "언어팩 관리": "จัดการแพ็กภาษา",
+    "언어팩을 확인하고 있습니다.": "กำลังตรวจสอบแพ็กภาษา",
+    "언어팩 검색": "ค้นหาแพ็กภาษา",
+    "설치할 언어 검색": "ค้นหาภาษาที่พร้อมใช้งาน",
+    "설치 상태 필터": "ตัวกรองสถานะการติดตั้ง",
+    "전체 상태": "ทุกสถานะ",
+    "설치된 언어": "ภาษาที่ติดตั้งแล้ว",
+    "미설치 언어": "ภาษาที่ยังไม่ได้ติดตั้ง",
+    "설치된 확장 사전이 없습니다.": "ยังไม่ได้ติดตั้งพจนานุกรมเสริม",
+    "조건에 맞는 언어팩이 없습니다.": "ไม่พบแพ็กภาษาที่ตรงกับตัวกรองเหล่านี้"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -10185,7 +10355,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Ang mga kahulugang wala sa diksyunaryo ay dinaragdagan gamit ang naka-configure na modelo ng pagsasalin.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Maaaring ipadala sa serbisyong iyon ang napiling teksto.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Sa PC na ito lamang pinoproseso ang kalapit na konteksto.",
-    "메시지를 통역하고 있습니다.": "Isinasalin ang mensahe."
+    "메시지를 통역하고 있습니다.": "Isinasalin ang mensahe.",
+    "언어팩 관리": "Pamahalaan ang mga language pack",
+    "언어팩을 확인하고 있습니다.": "Sinusuri ang mga language pack.",
+    "언어팩 검색": "Maghanap ng mga language pack",
+    "설치할 언어 검색": "Maghanap ng mga available na wika",
+    "설치 상태 필터": "Filter ayon sa status ng pag-install",
+    "전체 상태": "Lahat ng status",
+    "설치된 언어": "Mga naka-install na wika",
+    "미설치 언어": "Mga puwedeng i-install na wika",
+    "설치된 확장 사전이 없습니다.": "Walang naka-install na pinalawak na diksyunaryo.",
+    "조건에 맞는 언어팩이 없습니다.": "Walang language pack na tumutugma sa mga filter na ito."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -10751,7 +10931,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "অভিধানে না থাকা অর্থ কনফিগার করা অনুবাদ মডেল দিয়ে পূরণ করা হয়।",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "নির্বাচিত লেখা ওই পরিষেবায় পাঠানো হতে পারে।",
     "주변 문맥은 PC 안에서만 처리됩니다.": "আশপাশের প্রসঙ্গ শুধু এই PC-তেই প্রক্রিয়া করা হয়।",
-    "메시지를 통역하고 있습니다.": "বার্তাটি অনুবাদ করা হচ্ছে।"
+    "메시지를 통역하고 있습니다.": "বার্তাটি অনুবাদ করা হচ্ছে।",
+    "언어팩 관리": "ভাষা প্যাক পরিচালনা করুন",
+    "언어팩을 확인하고 있습니다.": "ভাষা প্যাক পরীক্ষা করা হচ্ছে।",
+    "언어팩 검색": "ভাষা প্যাক খুঁজুন",
+    "설치할 언어 검색": "ইনস্টলের জন্য উপলভ্য ভাষা খুঁজুন",
+    "설치 상태 필터": "ইনস্টলেশনের অবস্থা ফিল্টার",
+    "전체 상태": "সব অবস্থা",
+    "설치된 언어": "ইনস্টল করা ভাষা",
+    "미설치 언어": "ইনস্টল করা যাবে",
+    "설치된 확장 사전이 없습니다.": "কোনো বর্ধিত অভিধান ইনস্টল করা নেই।",
+    "조건에 맞는 언어팩이 없습니다.": "এই ফিল্টারগুলোর সঙ্গে মেলে এমন কোনো ভাষা প্যাক নেই।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -11317,7 +11507,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "لغت میں موجود نہ ہونے والے معانی کو ترتیب دیے گئے ترجمہ ماڈل سے پورا کیا جاتا ہے۔",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "منتخب کردہ متن اس سروس کو بھیجا جا سکتا ہے۔",
     "주변 문맥은 PC 안에서만 처리됩니다.": "قریبی سیاق و سباق پر صرف اس PC میں کارروائی کی جاتی ہے۔",
-    "메시지를 통역하고 있습니다.": "پیغام کا ترجمہ کیا جا رہا ہے۔"
+    "메시지를 통역하고 있습니다.": "پیغام کا ترجمہ کیا جا رہا ہے۔",
+    "언어팩 관리": "لینگویج پیکس کا نظم کریں",
+    "언어팩을 확인하고 있습니다.": "لینگویج پیکس چیک کیے جا رہے ہیں۔",
+    "언어팩 검색": "لینگویج پیکس تلاش کریں",
+    "설치할 언어 검색": "دستیاب زبانیں تلاش کریں",
+    "설치 상태 필터": "انسٹالیشن کی حیثیت کا فلٹر",
+    "전체 상태": "تمام حیثیتیں",
+    "설치된 언어": "انسٹال شدہ زبانیں",
+    "미설치 언어": "انسٹالیشن کے لیے دستیاب",
+    "설치된 확장 사전이 없습니다.": "کوئی توسیعی لغت انسٹال نہیں ہے۔",
+    "조건에 맞는 언어팩이 없습니다.": "کوئی لینگویج پیک ان فلٹرز سے مطابقت نہیں رکھتا۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -11883,7 +12083,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "விடுபட்ட அகராதிப் பொருள்கள் உள்ளமைக்கப்பட்ட மொழிபெயர்ப்பு மாதிரியால் நிரப்பப்படும்.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "தேர்ந்தெடுக்கப்பட்ட உரை அந்தச் சேவைக்கு அனுப்பப்படலாம்.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "அருகிலுள்ள சூழல் இந்த PC-இல் மட்டுமே செயலாக்கப்படும்.",
-    "메시지를 통역하고 있습니다.": "செய்தியை மொழிபெயர்க்கிறது."
+    "메시지를 통역하고 있습니다.": "செய்தியை மொழிபெயர்க்கிறது.",
+    "언어팩 관리": "மொழித் தொகுப்புகளை நிர்வகி",
+    "언어팩을 확인하고 있습니다.": "மொழித் தொகுப்புகள் சரிபார்க்கப்படுகின்றன.",
+    "언어팩 검색": "மொழித் தொகுப்புகளைத் தேடு",
+    "설치할 언어 검색": "கிடைக்கும் மொழிகளைத் தேடு",
+    "설치 상태 필터": "நிறுவல் நிலை வடிகட்டி",
+    "전체 상태": "அனைத்து நிலைகளும்",
+    "설치된 언어": "நிறுவப்பட்ட மொழிகள்",
+    "미설치 언어": "நிறுவக் கிடைக்கும் மொழிகள்",
+    "설치된 확장 사전이 없습니다.": "நீட்டிக்கப்பட்ட அகராதிகள் எதுவும் நிறுவப்படவில்லை.",
+    "조건에 맞는 언어팩이 없습니다.": "இந்த வடிகட்டிகளுடன் பொருந்தும் மொழித் தொகுப்புகள் எதுவும் இல்லை."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -12449,7 +12659,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "معانیِ موجودنبودۀ واژه‌نامه با مدل ترجمهٔ پیکربندی‌شده تکمیل می‌شوند.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "ممکن است متن انتخاب‌شده به آن سرویس ارسال شود.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "بافت پیرامونی فقط در همین رایانه پردازش می‌شود.",
-    "메시지를 통역하고 있습니다.": "در حال ترجمهٔ پیام."
+    "메시지를 통역하고 있습니다.": "در حال ترجمهٔ پیام.",
+    "언어팩 관리": "مدیریت بسته‌های زبان",
+    "언어팩을 확인하고 있습니다.": "در حال بررسی بسته‌های زبان.",
+    "언어팩 검색": "جستجوی بسته‌های زبان",
+    "설치할 언어 검색": "جستجوی زبان‌های موجود",
+    "설치 상태 필터": "فیلتر وضعیت نصب",
+    "전체 상태": "همه وضعیت‌ها",
+    "설치된 언어": "زبان‌های نصب‌شده",
+    "미설치 언어": "آماده نصب",
+    "설치된 확장 사전이 없습니다.": "هیچ فرهنگ لغت توسعه‌یافته‌ای نصب نشده است.",
+    "조건에 맞는 언어팩이 없습니다.": "هیچ بسته زبانی با این فیلترها مطابقت ندارد."
   },
   "he": {
     "설정": "הגדרות",
@@ -13015,7 +13235,17 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "משמעויות חסרות במילון מושלמות באמצעות מודל התרגום שהוגדר.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "הטקסט שנבחר עשוי להישלח לשירות הזה.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "ההקשר הסמוך מעובד רק במחשב הזה.",
-    "메시지를 통역하고 있습니다.": "מפרש את ההודעה."
+    "메시지를 통역하고 있습니다.": "מפרש את ההודעה.",
+    "언어팩 관리": "ניהול חבילות שפה",
+    "언어팩을 확인하고 있습니다.": "בודק חבילות שפה.",
+    "언어팩 검색": "חיפוש חבילות שפה",
+    "설치할 언어 검색": "חיפוש שפות זמינות",
+    "설치 상태 필터": "סינון לפי מצב התקנה",
+    "전체 상태": "כל המצבים",
+    "설치된 언어": "שפות מותקנות",
+    "미설치 언어": "זמינות להתקנה",
+    "설치된 확장 사전이 없습니다.": "לא מותקנים מילונים מורחבים.",
+    "조건에 맞는 언어팩이 없습니다.": "אין חבילות שפה התואמות למסננים האלה."
   },
   "cs": {
     "설정": "Nastavení",
@@ -13581,6 +13811,16 @@
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Chybějící významy ve slovníku doplní nastavený překladový model.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Vybraný text může být odeslán dané službě.",
     "주변 문맥은 PC 안에서만 처리됩니다.": "Okolní kontext se zpracovává pouze na tomto počítači.",
-    "메시지를 통역하고 있습니다.": "Probíhá tlumočení zprávy."
+    "메시지를 통역하고 있습니다.": "Probíhá tlumočení zprávy.",
+    "언어팩 관리": "Spravovat jazykové balíčky",
+    "언어팩을 확인하고 있습니다.": "Kontrola jazykových balíčků.",
+    "언어팩 검색": "Hledat jazykové balíčky",
+    "설치할 언어 검색": "Hledat dostupné jazyky",
+    "설치 상태 필터": "Filtr stavu instalace",
+    "전체 상태": "Všechny stavy",
+    "설치된 언어": "Nainstalované jazyky",
+    "미설치 언어": "Dostupné k instalaci",
+    "설치된 확장 사전이 없습니다.": "Nejsou nainstalovány žádné rozšířené slovníky.",
+    "조건에 맞는 언어팩이 없습니다.": "Žádné jazykové balíčky neodpovídají těmto filtrům."
   }
 }

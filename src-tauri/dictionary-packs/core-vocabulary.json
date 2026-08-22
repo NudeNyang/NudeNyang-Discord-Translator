@@ -6,6 +6,15 @@
     "en": ["home", "work", "school", "food", "water", "friend", "family", "love", "good", "bad", "go", "come", "eat", "drink", "sleep", "wake", "morning", "today", "tomorrow", "yesterday"],
     "ja": ["家", "仕事", "学校", "食べ物", "水", "友達", "家族", "愛", "良い", "悪い", "行く", "来る", "食べる", "飲む", "寝る", "起きる", "朝", "今日", "明日", "昨日"],
     "zh": ["家", "工作", "学校", "食物", "水", "朋友", "家人", "爱", "好", "坏", "去", "来", "吃", "喝", "睡觉", "起床", "早上", "今天", "明天", "昨天"],
-    "zh-Hant": ["家", "工作", "學校", "食物", "水", "朋友", "家人", "愛", "好", "壞", "去", "來", "吃", "喝", "睡覺", "起床", "早上", "今天", "明天", "昨天"]
+    "zh-Hant": ["家", "工作", "學校", "食物", "水", "朋友", "家人", "愛", "好", "壞", "去", "來", "吃", "喝", "睡覺", "起床", "早上", "今天", "明天", "昨天"],
+    "pt-BR": ["casa", "água", "comer", "falar", "tempo", "amigo", "bom", "trabalho"],
+    "es-419": ["casa", "agua", "comer", "hablar", "tiempo", "amigo", "bueno", "trabajo"],
+    "de": ["Haus", "Wasser", "essen", "sprechen", "Zeit", "Freund", "gut", "Arbeit"],
+    "ru": ["дом", "вода", "есть", "говорить", "время", "друг", "хороший", "работа"],
+    "fr": ["maison", "eau", "manger", "parler", "temps", "ami", "bon", "travail"],
+    "it": ["casa", "acqua", "mangiare", "parlare", "tempo", "amico", "buono", "lavoro"],
+    "pl": ["dom", "woda", "jeść", "mówić", "czas", "przyjaciel", "dobry", "praca"],
+    "nl": ["huis", "water", "eten", "spreken", "tijd", "vriend", "goed", "werk"],
+    "cs": ["dům", "voda", "jíst", "mluvit", "čas", "přítel", "dobrý", "práce"]
   }
 }

@@ -597,6 +597,24 @@ test("dictionary pack cards keep compact metadata and open consolidated source n
   assert.doesNotMatch(renderer, /pack\.sourceName/);
 });
 
+test("offline dictionaries use an uncluttered installed summary and a full-width pack manager", () => {
+  assert.match(markup, /id="dictionary-pack-manager-open"[^>]*>언어팩 관리<\/button>/);
+  assert.match(markup, /id="dictionary-pack-manager"[^>]*class="dictionary-manager dictionary-pack-manager"[^>]*hidden/);
+  assert.match(markup, /id="dictionary-pack-search"[^>]*placeholder="설치할 언어 검색"/);
+  assert.match(markup, /id="dictionary-pack-filter"[^>]*data-custom-select/);
+  assert.match(script, /function openDictionaryPackManager\(\)/);
+  assert.match(script, /elements\.settingsNavigation\.hidden = true/);
+  assert.match(script, /const installed = practical\.filter\(pack => pack\.installed && pack\.edition === "practical"\)/);
+  assert.doesNotMatch(script, /setLocalizedText\(title, "다음 언어팩"\)/);
+  assert.match(styles, /\.dictionary-pack-list\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.dictionary-pack-manager-list\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
+});
+
+test("dictionary pack sorting resolves the automatic UI language before using locale APIs", () => {
+  assert.match(script, /resolveUiLanguage,/);
+  assert.match(script, /const language = resolveUiLanguage\(currentUiLanguage\(\)\);/);
+});
+
 test("dictionary packs expose only installed and not-installed states with comfortable note spacing", () => {
   assert.match(markup, /class="section-note dictionary-localization-note"/);
   assert.match(markup, /id="dictionary-external-model-note"[^>]*hidden/);
