@@ -189,7 +189,6 @@ const elements = {
   dictionaryEditorLayer: document.querySelector("#dictionary-editor-layer"),
   dictionaryEditorForm: document.querySelector("#dictionary-editor-form"),
   dictionaryEditorTitle: document.querySelector("#dictionary-editor-title"),
-  dictionaryEditorClose: document.querySelector("#dictionary-editor-close"),
   dictionaryEditorCancel: document.querySelector("#dictionary-editor-cancel"),
   dictionaryImportLayer: document.querySelector("#dictionary-import-layer"),
   dictionaryImportClose: document.querySelector("#dictionary-import-close"),
@@ -2719,7 +2718,6 @@ elements.dictionaryPersonalOpen.addEventListener("click", openDictionaryManager)
 elements.dictionaryPersonalQuickAdd.addEventListener("click", () => openDictionaryEditor());
 elements.dictionaryPersonalBack.addEventListener("click", closeDictionaryManager);
 elements.dictionaryManagerAdd.addEventListener("click", () => openDictionaryEditor());
-elements.dictionaryEditorClose.addEventListener("click", closeDictionaryEditor);
 elements.dictionaryEditorCancel.addEventListener("click", closeDictionaryEditor);
 elements.dictionaryEditorLayer.addEventListener("click", event => {
   if (event.target === elements.dictionaryEditorLayer) closeDictionaryEditor();

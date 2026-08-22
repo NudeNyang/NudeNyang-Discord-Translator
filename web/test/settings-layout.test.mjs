@@ -425,12 +425,14 @@ test("personal dictionary management scales to searchable and portable collectio
   assert.doesNotMatch(markup, /id="dictionary-filter-target"/);
   assert.match(markup, /id="dictionary-selection-bar"[^>]*hidden/);
   assert.match(markup, /id="dictionary-editor-layer"[^>]*hidden/);
+  assert.doesNotMatch(markup, /id="dictionary-editor-close"/);
   assert.match(markup, /id="dictionary-import-layer"[^>]*hidden/);
   assert.match(markup, /id="dictionary-tags"/);
   assert.doesNotMatch(markup, /id="dictionary-(?:pinned|case-sensitive|whole-word)"/);
   assert.doesNotMatch(markup, /class="dictionary-editor-options"/);
   assert.doesNotMatch(styles, /\.dictionary-editor-options/);
   assert.doesNotMatch(script, /elements\.dictionary(?:Pinned|CaseSensitive|WholeWord)/);
+  assert.doesNotMatch(script, /elements\.dictionaryEditorClose/);
   assert.match(script, /\.\.\.\(state\.dictionaryEditingEntry \|\| \{\}\)/);
   assert.match(script, /invoke\("dictionary_personal_query"/);
   assert.match(script, /invoke\("dictionary_personal_batch_upsert"/);
