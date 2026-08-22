@@ -78,3 +78,11 @@ test("dictionary pronunciation controls expose play pause and resume states", ()
   assert.match(windowScript, /copy\("pausePronunciation"\)/);
   assert.match(windowScript, /copy\("resumePronunciation"\)/);
 });
+
+test("dictionary result localization refresh keeps an active pronunciation request", () => {
+  assert.match(windowScript, /nextPayload\.phase === "ready"/);
+  assert.match(windowScript, /nextPayload\.requestId === currentRequestId/);
+  assert.match(windowScript, /if \(!preserveSpeech\) cancelSpeech\(\)/);
+  assert.match(windowScript, /if \(preserveSpeech\) rebindActiveSpeechButton\(\)/);
+  assert.match(windowScript, /activeSpeech\.button = replacement/);
+});

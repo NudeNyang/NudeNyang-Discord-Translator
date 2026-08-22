@@ -103,7 +103,7 @@ mod windows_speech {
     use super::{Receiver, SpeechCommand};
     use std::ptr;
     use std::sync::mpsc::RecvTimeoutError;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use tauri::Emitter;
     use windows::core::PCWSTR;
@@ -124,6 +124,7 @@ mod windows_speech {
         app: tauri::AppHandle,
         request_id: String,
         paused: bool,
+        started_at: Instant,
     }
 
     struct ComApartment;
@@ -255,6 +256,7 @@ mod windows_speech {
                             app,
                             request_id,
                             paused: false,
+                            started_at: Instant::now(),
                         });
                         Ok(true)
                     })();
@@ -296,7 +298,9 @@ mod windows_speech {
                 Err(RecvTimeoutError::Timeout) => {}
             }
 
-            let finished = if active.as_ref().is_some_and(|current| !current.paused) {
+            let finished = if active.as_ref().is_some_and(|current| {
+                !current.paused && current.started_at.elapsed() >= POLL_INTERVAL
+            }) {
                 let mut status = SPVOICESTATUS::default();
                 unsafe { voice.GetStatus(&mut status, ptr::null_mut()) }.is_ok()
                     && status.dwRunningState == SPRS_DONE.0 as u32
@@ -341,6 +345,33 @@ mod windows_speech {
             unsafe { voice.SetVoice(&token) }.unwrap();
             let sample = wide("Pronunciation test");
             unsafe { voice.Speak(PCWSTR(sample.as_ptr()), 0, None) }.unwrap();
+        }
+
+        #[test]
+        #[ignore = "requires an installed English Windows voice and audio output"]
+        fn installed_english_voice_speaks_a_long_sentence_asynchronously() {
+            unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }
+                .ok()
+                .unwrap();
+            let _com_apartment = ComApartment;
+            let category: ISpObjectTokenCategory =
+                unsafe { CoCreateInstance(&SpObjectTokenCategory, None, CLSCTX_ALL) }.unwrap();
+            unsafe { category.SetId(SPCAT_VOICES, false) }.unwrap();
+            let token = unsafe { voice_token(&category, "en-US") }.unwrap();
+            let voice: ISpVoice = unsafe { CoCreateInstance(&SpVoice, None, CLSCTX_ALL) }.unwrap();
+            unsafe { voice.SetVoice(&token) }.unwrap();
+
+            {
+                let sample = wide(
+                    "This is a longer pronunciation test that verifies a complete sentence can be spoken clearly without stopping early.",
+                );
+                unsafe { voice.Speak(PCWSTR(sample.as_ptr()), SPF_ASYNC.0 as u32, None) }.unwrap();
+            }
+
+            unsafe { voice.WaitUntilDone(30_000) }.unwrap();
+            let mut status = SPVOICESTATUS::default();
+            unsafe { voice.GetStatus(&mut status, ptr::null_mut()) }.unwrap();
+            assert_eq!(status.dwRunningState, SPRS_DONE.0 as u32);
         }
     }
 }

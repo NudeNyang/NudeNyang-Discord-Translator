@@ -90,13 +90,35 @@ function finishNativeSpeech(requestId) {
   if (finished.button.isConnected) setSpeechButtonState(finished.button, "idle", finished.playLabel);
 }
 
+function speechKey(text, language) {
+  return `${canonicalSpeechLanguage(language || uiLanguage)}\u0000${text}`;
+}
+
+function rebindActiveSpeechButton() {
+  if (!activeSpeech) return;
+  const replacement = [...shell.querySelectorAll(".nt-dict-icon-button")]
+    .find(button => button._speechKey === activeSpeech.speechKey);
+  if (!replacement) {
+    cancelSpeech();
+    return;
+  }
+  activeSpeech.button = replacement;
+  setSpeechButtonState(
+    replacement,
+    activeSpeech.state === "starting" ? "playing" : activeSpeech.state,
+    activeSpeech.playLabel,
+  );
+}
+
 function createSpeechButton(text, language, className, playLabel = copy("pronounce")) {
   const button = make("button", className, "▶");
   button.type = "button";
+  button._speechKey = speechKey(text, language);
   setSpeechButtonState(button, "idle", playLabel);
   button.addEventListener("click", async () => {
     if (!text) return;
     if (activeSpeech?.button === button) {
+      if (activeSpeech.state === "starting") return;
       const nextState = activeSpeech.state === "paused" ? "playing" : "paused";
       if (activeSpeech.state === "paused") {
         const resumed = activeSpeech.native
@@ -118,6 +140,16 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
     const requestGeneration = speechGeneration;
     const requestedLanguage = canonicalSpeechLanguage(language || uiLanguage);
     const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+    const speech = {
+      button,
+      native: true,
+      requestId,
+      state: "starting",
+      playLabel,
+      speechKey: button._speechKey,
+    };
+    activeSpeech = speech;
+    setSpeechButtonState(button, "playing", playLabel);
     const nativeStarted = invoke
       ? await invoke("dictionary_speech_play", {
         text,
@@ -125,21 +157,27 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
         requestId,
       }).catch(() => false)
       : false;
-    if (requestGeneration !== speechGeneration || !button.isConnected) {
+    if (requestGeneration !== speechGeneration || activeSpeech !== speech) {
       if (nativeStarted) invoke?.("dictionary_speech_stop").catch(() => {});
       return;
     }
     if (nativeStarted) {
-      activeSpeech = { button, native: true, requestId, state: "playing", playLabel };
-      setSpeechButtonState(button, "playing", playLabel);
+      speech.state = "playing";
+      setSpeechButtonState(speech.button, "playing", playLabel);
       return;
     }
 
-    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+    speech.native = false;
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+      activeSpeech = null;
+      setSpeechButtonState(speech.button, "idle", playLabel);
+      return;
+    }
     const voice = await waitForSpeechVoice(speechSynthesis, requestedLanguage);
-    if (requestGeneration !== speechGeneration || !button.isConnected) return;
+    if (requestGeneration !== speechGeneration || activeSpeech !== speech) return;
     if (!voice) {
-      setSpeechButtonState(button, "idle", playLabel);
+      activeSpeech = null;
+      setSpeechButtonState(speech.button, "idle", playLabel);
       return;
     }
 
@@ -148,8 +186,9 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
     utterance.voice = voice;
     utterance.addEventListener("end", () => finishWebSpeech(utterance));
     utterance.addEventListener("error", () => finishWebSpeech(utterance));
-    activeSpeech = { button, utterance, state: "playing", playLabel };
-    setSpeechButtonState(button, "playing", playLabel);
+    speech.utterance = utterance;
+    speech.state = "playing";
+    setSpeechButtonState(speech.button, "playing", playLabel);
     speechSynthesis.speak(utterance);
   });
   return button;
@@ -466,7 +505,12 @@ function renderResult(result, error = "") {
 function applyPayload(nextPayload) {
   if (!nextPayload) return;
   if (nextPayload.phase !== "loading" && currentRequestId && nextPayload.requestId !== currentRequestId) return;
-  cancelSpeech();
+  const preserveSpeech = Boolean(
+    activeSpeech
+    && nextPayload.phase === "ready"
+    && nextPayload.requestId === currentRequestId,
+  );
+  if (!preserveSpeech) cancelSpeech();
   payload = nextPayload;
   uiLanguage = resolveUiLanguage(nextPayload.uiLanguage);
   document.documentElement.lang = uiLanguage === "zh" ? "zh-CN" : uiLanguage === "zh-Hant" ? "zh-TW" : uiLanguage;
@@ -480,6 +524,7 @@ function applyPayload(nextPayload) {
   } else {
     renderResult({ query: nextPayload.query, entries: [], personalEntries: [], sourceLanguage: "", targetLanguage: nextPayload.targetLanguage }, nextPayload.error || copy("failed"));
   }
+  if (preserveSpeech) rebindActiveSpeechButton();
 }
 
 async function initialize() {
