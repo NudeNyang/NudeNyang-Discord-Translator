@@ -2121,7 +2121,7 @@ select:focus-visible,
   min-width: 64px;
 }
 
-.dictionary-localization-note {
+.section-note.dictionary-localization-note {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

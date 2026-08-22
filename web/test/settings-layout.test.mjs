@@ -613,7 +613,7 @@ test("dictionary packs expose only installed and not-installed states with comfo
   assert.match(script, /function renderDictionaryLocalizationNotice\(\)/);
   assert.match(script, /dictionaryExternalModelNote\.hidden = !EXTERNAL_PROVIDERS\.has\(selected\)/);
   assert.match(script, /if \(field === "translator"\) renderDictionaryLocalizationNotice\(\)/);
-  assert.match(styles, /\.dictionary-localization-note\s*\{[^}]*margin-bottom:\s*28px;/s);
+  assert.match(styles, /\.section-note\.dictionary-localization-note\s*\{[^}]*margin-bottom:\s*28px;/s);
 });
 
 test("the settings window title shows only the product name", () => {
