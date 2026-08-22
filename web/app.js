@@ -897,10 +897,10 @@ function renderDictionaryManagerEntries() {
     container.append(empty);
   }
   for (const entry of page.entries) container.append(createDictionaryManagerRow(entry));
-  const first = page.total ? page.offset + 1 : 0;
-  const last = Math.min(page.total, page.offset + page.entries.length);
+  const currentPage = page.total ? Math.floor(page.offset / page.limit) + 1 : 0;
+  const totalPages = page.total ? Math.ceil(page.total / page.limit) : 0;
   elements.dictionaryPersonalCount.textContent = `${page.total.toLocaleString()} ${translateCopy(currentUiLanguage(), "개인 용어")}`;
-  elements.dictionaryPageSummary.textContent = `${first.toLocaleString()}–${last.toLocaleString()} / ${page.total.toLocaleString()}`;
+  elements.dictionaryPageSummary.textContent = `${currentPage.toLocaleString()} / ${totalPages.toLocaleString()}`;
   elements.dictionaryPagePrev.disabled = page.offset <= 0;
   elements.dictionaryPageNext.disabled = page.offset + page.limit >= page.total;
   renderDictionarySelectionBar();

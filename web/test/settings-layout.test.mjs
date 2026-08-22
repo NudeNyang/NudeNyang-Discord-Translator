@@ -441,6 +441,10 @@ test("personal dictionary management scales to searchable and portable collectio
   assert.match(script, /dictionaryImportValue\(raw, "scope"/);
   assert.match(script, /dictionaryImportValue\(raw, "scopeValue"/);
   assert.match(script, /page\.offset >= page\.total/);
+  assert.match(script, /const currentPage = page\.total \? Math\.floor\(page\.offset \/ page\.limit\) \+ 1 : 0;/);
+  assert.match(script, /const totalPages = page\.total \? Math\.ceil\(page\.total \/ page\.limit\) : 0;/);
+  assert.match(script, /dictionaryPageSummary\.textContent = `\$\{currentPage\.toLocaleString\(\)\} \/ \$\{totalPages\.toLocaleString\(\)\}`/);
+  assert.doesNotMatch(script, /dictionaryPageSummary\.textContent = `\$\{first\.toLocaleString\(\)\}–\$\{last\.toLocaleString\(\)\}/);
   assert.match(script, /navigator\.clipboard\.writeText/);
   assert.match(styles, /\.dictionary-manager-toolbar\s*\{/);
   assert.match(styles, /\.dictionary-row-actions\s*\{[^}]*opacity:\s*1;/s);
