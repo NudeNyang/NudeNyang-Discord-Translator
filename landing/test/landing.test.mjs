@@ -227,6 +227,23 @@ test("로컬 AI 카드는 원래 높이를 유지하고 한국어 제목을 단�
   assert.doesNotMatch(css, /\.feature-outgoing\s*\{[^}]*min-height:\s*558px/s);
 });
 
+test("선택형 사전 기능을 간결한 텍스트 카드로 소개한다", () => {
+  const title = "모르는 표현은 선택해서 바로 확인할 수 있습니다.";
+  const description = "대화에서 표현을 선택하고 Aa 버튼을 누르면 뜻과 발음, 예문을 확인할 수 있습니다. 필요한 용어는 개인 사전에 저장해 언제든 다시 볼 수 있습니다.";
+
+  assert.ok(html.includes(title));
+  assert.ok(html.includes(description));
+  assert.match(html, /class="feature-card feature-dictionary reveal"/);
+  assert.doesNotMatch(html, /dictionary-lookup\.png/);
+  assert.match(css, /\.feature-dictionary\s*\{[^}]*min-height:\s*270px/s);
+  assert.doesNotMatch(css, /\.feature-dictionary-media/);
+
+  for (const [locale] of LANGUAGE_OPTIONS) {
+    assert.ok(LANDING_LOCALES[locale]?.[title], `${locale} 사전 기능 제목이 필요합니다.`);
+    assert.ok(LANDING_LOCALES[locale]?.[description], `${locale} 사전 기능 설명이 필요합니다.`);
+  }
+});
+
 test("이미지 번역 기능에 실제 번역 전후 화면을 함께 보여준다", async () => {
   const imageTitle = "이미지 속 글자까지 번역합니다.";
   const imageDescription = "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.";

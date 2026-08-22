@@ -119,6 +119,8 @@ const overrides = {
     "Beta 다운로드": "Beta download",
     "Windows Beta 다운로드": "Download Windows Beta",
     "주요 기능": "Key features",
+    "모르는 표현은 선택해서 바로 확인할 수 있습니다.": "Select unfamiliar expressions to look them up instantly.",
+    "대화에서 표현을 선택하고 Aa 버튼을 누르면 뜻과 발음, 예문을 확인할 수 있습니다. 필요한 용어는 개인 사전에 저장해 언제든 다시 볼 수 있습니다.": "Select an expression in the conversation and click the Aa button to see its meaning, pronunciation, and examples. Save useful terms to your personal dictionary and revisit them anytime.",
     "이미지 속 글자까지 번역합니다.": "Translate text inside images.",
     "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "Automatically detect text in photos and screenshots, then translate it into your selected language.",
     "Discord 실시간 번역": "Real-time Discord translation",
@@ -160,6 +162,8 @@ const overrides = {
     "NudeNyang Translator는 무료 오픈소스 프로그램입니다. 단, 선택한 외부 번역 서비스에 따라 별도의 구독이나 API 비용이 발생할 수 있습니다.": "NudeNyang Translator is free and open source. However, the external translation service you choose may require a separate subscription or charge API usage fees.",
   },
   ja: {
+    "모르는 표현은 선택해서 바로 확인할 수 있습니다.": "わからない表現は、選択してすぐに確認できます。",
+    "대화에서 표현을 선택하고 Aa 버튼을 누르면 뜻과 발음, 예문을 확인할 수 있습니다. 필요한 용어는 개인 사전에 저장해 언제든 다시 볼 수 있습니다.": "会話内の表現を選択してAaボタンを押すと、意味・発音・用例を確認できます。必要な用語は個人辞書に保存して、いつでも見返せます。",
     "이미지 속 글자까지 번역합니다.": "画像内の文字まで翻訳します。",
     "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "写真やスクリーンショットの文字を自動認識し、選択した言語に翻訳します。",
     "로컬 AI": "ローカルAI",
@@ -191,6 +195,8 @@ const overrides = {
     "NudeNyang Translator는 무료 오픈소스 프로그램입니다. 단, 선택한 외부 번역 서비스에 따라 별도의 구독이나 API 비용이 발생할 수 있습니다.": "NudeNyang Translatorは無料のオープンソースソフトウェアです。ただし、選択した外部翻訳サービスによっては、別途サブスクリプション料金やAPI利用料が発生する場合があります。",
   },
   zh: {
+    "모르는 표현은 선택해서 바로 확인할 수 있습니다.": "选中不熟悉的表达即可立即查询。",
+    "대화에서 표현을 선택하고 Aa 버튼을 누르면 뜻과 발음, 예문을 확인할 수 있습니다. 필요한 용어는 개인 사전에 저장해 언제든 다시 볼 수 있습니다.": "在对话中选中表达并点击 Aa 按钮，即可查看含义、发音和例句。需要的术语可保存到个人词典，随时再次查看。",
     "이미지 속 글자까지 번역합니다.": "连图片中的文字也能翻译。",
     "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "自动识别照片和截图中的文字，并翻译成您选择的语言。",
     "로컬 AI": "本地 AI",
@@ -223,6 +229,8 @@ const overrides = {
     "NudeNyang Translator는 무료 오픈소스 프로그램입니다. 단, 선택한 외부 번역 서비스에 따라 별도의 구독이나 API 비용이 발생할 수 있습니다.": "NudeNyang Translator 是一款免费开源软件。不过，根据所选的外部翻译服务，可能需要另外订阅或支付 API 使用费用。",
   },
   "zh-Hant": {
+    "모르는 표현은 선택해서 바로 확인할 수 있습니다.": "選取不熟悉的表達即可立即查詢。",
+    "대화에서 표현을 선택하고 Aa 버튼을 누르면 뜻과 발음, 예문을 확인할 수 있습니다. 필요한 용어는 개인 사전에 저장해 언제든 다시 볼 수 있습니다.": "在對話中選取表達並點擊 Aa 按鈕，即可查看含義、發音和例句。需要的術語可儲存到個人詞典，隨時再次查看。",
     "이미지 속 글자까지 번역합니다.": "連圖片中的文字也能翻譯。",
     "사진과 스크린샷의 글자를 자동으로 인식해 선택한 언어로 번역합니다.": "自動辨識照片和螢幕截圖中的文字，並翻譯成您選擇的語言。",
     "로컬 AI": "本機 AI",
