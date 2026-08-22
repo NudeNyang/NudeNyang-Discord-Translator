@@ -494,6 +494,10 @@ test("editing a personal term replaces cancel with delete", () => {
     script,
     /dictionaryEditorCancel\.addEventListener\("click", \(\) => \{[\s\S]*?state\.dictionaryEditingEntry[\s\S]*?deleteDictionaryEditingEntry\(\)/,
   );
+  assert.match(
+    styles,
+    /#dictionary-editor-cancel\.button\.danger\s*\{[\s\S]*?border-color:\s*var\(--danger\);[\s\S]*?color:\s*#ffffff;[\s\S]*?background:\s*var\(--danger\);/,
+  );
 });
 
 test("dictionary popup saves refresh the open settings dictionary immediately", () => {
@@ -503,7 +507,30 @@ test("dictionary popup saves refresh the open settings dictionary immediately", 
   );
   assert.match(
     script,
-    /tauriListen\("dictionary-personal-changed", \(\) => \{[\s\S]*?reloadDictionaryPersonalData\(\)/,
+    /function applyDictionaryPersonalOverviewChange\(entry\)[\s\S]*?state\.dictionaryPersonalEntries[\s\S]*?slice\(0, 3\)[\s\S]*?renderDictionaryPersonalEntries\(\)/,
+  );
+  assert.match(
+    script,
+    /const saved = await invoke\("dictionary_personal_upsert", \{ entry \}\);[\s\S]*?applyDictionaryPersonalOverviewChange\(saved\)[\s\S]*?reloadDictionaryPersonalData\(\)/,
+  );
+  assert.match(
+    script,
+    /tauriListen\("dictionary-personal-changed", event => \{[\s\S]*?applyDictionaryPersonalOverviewChange\(event\.payload\)[\s\S]*?reloadDictionaryPersonalData\(\)/,
+  );
+  assert.match(
+    script,
+    /if \(panel === "dictionary"\) loadDictionaryData\(true\)/,
+  );
+});
+
+test("personal term deletion confirmation opens above the editor", () => {
+  assert.match(
+    script,
+    /async function deleteDictionaryEditingEntry\(\)[\s\S]*?showModal\(\{[\s\S]*?variant:\s*"dictionary-action"/,
+  );
+  assert.match(
+    styles,
+    /\.modal-layer\[data-variant="dictionary-action"\]\s*\{\s*z-index:\s*1200;/,
   );
 });
 

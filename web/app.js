@@ -238,7 +238,6 @@ const elements = {
   engineStateLabel: document.querySelector("#engine-state-label"),
   discordRestartManual: document.querySelector("#discord-restart-manual"),
   verificationBanner: document.querySelector("#verification-banner"),
-  verificationReconnect: document.querySelector("#verification-reconnect"),
   verificationReconnectHeader: document.querySelector("#verification-reconnect-header"),
   verificationContinueVanilla: document.querySelector("#verification-continue-vanilla"),
   modalLayer: document.querySelector("#modal-layer"),
@@ -807,6 +806,16 @@ function renderDictionaryPersonalEntries() {
   }
 }
 
+function applyDictionaryPersonalOverviewChange(entry) {
+  const saved = dictionaryEntryPayload(entry || {});
+  if (!saved.id) return;
+  const entries = state.dictionaryPersonalEntries.filter(current => current.id !== saved.id);
+  entries.push(saved);
+  entries.sort((left, right) => right.updatedAt - left.updatedAt || right.id - left.id);
+  state.dictionaryPersonalEntries = entries.slice(0, 3);
+  renderDictionaryPersonalEntries();
+}
+
 function dictionaryEntryPayload(entry = {}) {
   return {
     id: Number(entry.id || 0),
@@ -923,6 +932,7 @@ async function deleteDictionaryEditingEntry() {
     title: "선택한 용어를 삭제하시겠습니까?",
     message: `${entry.sourceTerm} → ${entry.targetTerm}`,
     acceptText: "삭제",
+    variant: "dictionary-action",
   });
   if (!confirmed) return;
   elements.dictionaryEditorCancel.disabled = true;
@@ -951,7 +961,8 @@ async function saveDictionaryPersonalEntry() {
   if (!entry.sourceTerm || !entry.targetTerm) throw new Error("원문 용어와 표시할 용어를 모두 입력하십시오.");
   elements.dictionaryPersonalSave.disabled = true;
   try {
-    await invoke("dictionary_personal_upsert", { entry });
+    const saved = await invoke("dictionary_personal_upsert", { entry });
+    applyDictionaryPersonalOverviewChange(saved);
     closeDictionaryEditor();
     await reloadDictionaryPersonalData();
     setLocalizedText(elements.saveStatus, "개인 사전에 저장했습니다.");
@@ -1395,7 +1406,7 @@ function activateSettingsPanel(panel) {
   }
   elements.settingsScroll.scrollTop = 0;
   closeAllSelects();
-  if (panel === "dictionary") loadDictionaryData().catch(() => {});
+  if (panel === "dictionary") loadDictionaryData(true).catch(() => {});
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -2586,8 +2597,7 @@ function renderVerificationMode(status = state.runtime) {
   if (!active) state.verificationBannerDismissed = false;
   elements.verificationBanner.hidden = !active || state.verificationBannerDismissed;
   const disabled = Boolean(state.repairActive || state.verificationPromptActive);
-  elements.verificationReconnect.disabled = disabled;
-  elements.verificationReconnectHeader.hidden = !active;
+  elements.verificationReconnectHeader.hidden = !active || !state.verificationBannerDismissed;
   elements.verificationReconnectHeader.disabled = disabled;
   elements.verificationReconnectHeader.dataset.state = state.repairActive ? "working" : "idle";
   elements.verificationReconnectHeader.setAttribute("aria-busy", String(state.repairActive));
@@ -2890,7 +2900,6 @@ elements.discordRestartManual.addEventListener("click", restartDiscordManually);
 const requestVerificationReconnect = () => {
   reconnectAfterVerification().catch(error => showError("NudeNyang 재연결 실패", String(error)));
 };
-elements.verificationReconnect.addEventListener("click", requestVerificationReconnect);
 elements.verificationReconnectHeader.addEventListener("click", requestVerificationReconnect);
 elements.verificationContinueVanilla.addEventListener("click", () => {
   state.verificationBannerDismissed = true;
@@ -3264,7 +3273,8 @@ if (tauriListen) {
   tauriListen("settings-changed", event => {
     if (state.settingsUpdatesPending === 0) renderConfig(event.payload);
   });
-  tauriListen("dictionary-personal-changed", () => {
+  tauriListen("dictionary-personal-changed", event => {
+    applyDictionaryPersonalOverviewChange(event.payload);
     reloadDictionaryPersonalData().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
   });
   tauriListen("provider-connections-changed", loadProviderConnections);

@@ -2485,6 +2485,16 @@ select:focus-visible,
   background: color-mix(in srgb, var(--danger-soft) 94%, var(--danger));
 }
 
+#dictionary-editor-cancel.button.danger {
+  border-color: var(--danger);
+  color: #ffffff;
+  background: var(--danger);
+}
+
+#dictionary-editor-cancel.button.danger:hover {
+  background: color-mix(in srgb, var(--danger) 86%, #000000);
+}
+
 .section-note {
   padding: 9px 4px 0;
   font-size: 12px;
@@ -2716,6 +2726,10 @@ select:focus-visible,
   place-items: center;
   padding: 24px;
   background: rgb(2 12 16 / 0.62);
+}
+
+.modal-layer[data-variant="dictionary-action"] {
+  z-index: 1200;
 }
 
 .modal-layer[hidden] {
