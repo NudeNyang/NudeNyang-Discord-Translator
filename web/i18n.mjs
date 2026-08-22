@@ -135,7 +135,7 @@ export const COPY = Object.freeze({
   "다음 메시지는 번역하지 않고 전송합니다.": ["The next message will be sent without translation.", "次のメッセージは翻訳せずに送信します。", "下一条消息将不翻译并直接发送。"],
   "전송 언어를 선택하십시오.": ["Select an outgoing language.", "送信言語を選択してください。", "请选择发送语言。"],
   "원문을 전송합니다.": ["Sending the original message.", "原文を送信します。", "正在发送原文。"],
-  "메시지를 번역하고 있습니다.": ["Translating the message.", "メッセージを翻訳しています。", "正在翻译消息。"],
+  "메시지를 통역하고 있습니다.": ["Interpreting the message.", "メッセージを通訳しています。", "正在转译消息。"],
   "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": ["The conversation language could not be determined. Select an outgoing language.", "会話の言語を判定できませんでした。送信言語を選択してください。", "无法判断对话语言。请选择发送语言。"],
   "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": ["Detected {language}. You can change it from the outgoing language menu.", "{language}と判定しました。送信言語メニューから変更できます。", "已检测为{language}。可在发送语言菜单中更改。"],
   "원문 전송": ["Send original", "原文を送信", "发送原文"],

@@ -33,7 +33,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 43;
+  const CONTROLLER_VERSION = 44;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
@@ -43,7 +43,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     ko: {
       auto:'자동 감지', outgoingLanguage:'전송', selectLanguage:'전송 언어 선택', originalOnce:'이번 메시지만 원문으로 전송',
       nextOriginal:'다음 메시지는 번역하지 않고 전송합니다.', selectLanguageFormal:'전송 언어를 선택하십시오.', sendingOriginal:'원문을 전송합니다.',
-      translating:'메시지를 번역하고 있습니다.', detectionFailed:'대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.',
+      translating:'메시지를 통역하고 있습니다.', detectionFailed:'대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.',
       detectedLanguage:'{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.',
       sendOriginal:'원문 전송', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
       pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', sendingParts:'번역문을 분할 전송하고 있습니다. ({part}/{total})',
@@ -53,7 +53,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     en: {
       auto:'Auto detect', outgoingLanguage:'Send', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
       nextOriginal:'The next message will be sent without translation.', selectLanguageFormal:'Select an outgoing language.', sendingOriginal:'Sending the original message.',
-      translating:'Translating the message.', detectionFailed:'The conversation language could not be determined. Select an outgoing language.',
+      translating:'Interpreting the message.', detectionFailed:'The conversation language could not be determined. Select an outgoing language.',
       detectedLanguage:'Detected {language}. You can change it from the outgoing language menu.',
       sendOriginal:'Send original', translationFailed:'The message could not be translated. The original message has been preserved.',
       pending:'The previous message is still being processed. Try again shortly.', sendingParts:'Sending the translated message in parts. ({part}/{total})',
@@ -63,7 +63,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     ja: {
       auto:'自動検出', outgoingLanguage:'送信', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
       nextOriginal:'次のメッセージは翻訳せずに送信します。', selectLanguageFormal:'送信言語を選択してください。', sendingOriginal:'原文を送信します。',
-      translating:'メッセージを翻訳しています。', detectionFailed:'会話の言語を判定できませんでした。送信言語を選択してください。',
+      translating:'メッセージを通訳しています。', detectionFailed:'会話の言語を判定できませんでした。送信言語を選択してください。',
       detectedLanguage:'{language}と判定しました。送信言語メニューから変更できます。',
       sendOriginal:'原文を送信', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
       pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', sendingParts:'翻訳文を分割して送信しています。({part}/{total})',
@@ -73,7 +73,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     zh: {
       auto:'自动检测', outgoingLanguage:'发送', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
       nextOriginal:'下一条消息将不翻译并直接发送。', selectLanguageFormal:'请选择发送语言。', sendingOriginal:'正在发送原文。',
-      translating:'正在翻译消息。', detectionFailed:'无法判断对话语言。请选择发送语言。',
+      translating:'正在转译消息。', detectionFailed:'无法判断对话语言。请选择发送语言。',
       detectedLanguage:'已检测为{language}。可在发送语言菜单中更改。',
       sendOriginal:'发送原文', translationFailed:'无法翻译消息。原文已保持不变。',
       pending:'上一条消息仍在处理中。请稍后重试。', sendingParts:'正在分段发送译文。({part}/{total})',
@@ -635,14 +635,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         document.getElementById(`${ROOT_ID}-style`)?.remove();
         if (window[GLOBAL] === this) delete window[GLOBAL];
       },
-      setStatus(message, error = false) {
+      setStatus(message, error = false, persistent = false) {
         if (!this.root) return;
         const status = this.root.querySelector('.nt-outgoing-status');
         status.textContent = message;
         status.dataset.error = String(error);
         status.hidden = !message;
         clearTimeout(this.statusTimer);
-        if (message) this.statusTimer = setTimeout(() => { status.hidden = true; }, 5000);
+        this.statusTimer = 0;
+        if (message && !persistent) this.statusTimer = setTimeout(() => {
+          status.hidden = true;
+          this.statusTimer = 0;
+        }, 5000);
       },
       reposition() {
         if (!this.root) return;
@@ -828,7 +832,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const item = this.pending.get(id);
         if (!item) return;
         this.queue.push({...item, selected_language: language});
-        this.setStatus(language === 'original' ? copy('sendingOriginal') : copy('translating'));
+        if (language === 'original') this.setStatus(copy('sendingOriginal'));
+        else this.setStatus(copy('translating'), false, true);
       },
       suggest(id, language) {
         const item = this.pending.get(id);
@@ -837,7 +842,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       detected(id, language) {
         if (!this.pending.has(id) || !languageLabels[language]) return;
-        this.setStatus(formatCopy('detectedLanguage', {language:languageLabels[language]}));
+        this.setStatus(copy('translating'), false, true);
       },
       fail(id, message) {
         this.pending.delete(id);
@@ -850,15 +855,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       prunePending() {
         const now = Date.now();
+        let timedOutTranslation = false;
         for (const [id, item] of this.pending) {
           if (item.review_ready && item.editor?.isConnected) continue;
           if (now - item.created_at < PENDING_TIMEOUT_MS) continue;
           this.pending.delete(id);
+          if (item.selected_language !== 'original') timedOutTranslation = true;
           if (this.activeRequest === id) {
             this.activeRequest = '';
             this.bypass = 0;
           }
         }
+        if (timedOutTranslation) this.setStatus(copy('translationFailed'), true);
       },
       pendingForEditor(editor) {
         for (const entry of this.pending.entries()) {
@@ -1005,7 +1013,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const expired = Date.now() - previousItem.created_at >= 30000;
           const changed = (previousItem.original_text || previousItem.text) !== originalText;
           if (!expired && !changed) {
-            this.setStatus(copy('pending'));
+            this.setStatus(copy('pending'), false, true);
             return;
           }
           this.pending.delete(previousId);
@@ -1033,7 +1041,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         };
         this.pending.set(id, {...item, editor});
         this.queue.push(item);
-        this.setStatus(selected === 'original' ? copy('sendingOriginal') : copy('translating'));
+        this.setStatus(
+          selected === 'original' ? copy('sendingOriginal') : copy('translating'),
+          false,
+          selected !== 'original',
+        );
       },
       prepare(id, replace, continuation = false, finalPart = true, partNumber = 1, totalParts = 1, sendAfter = true) {
         const item = this.pending.get(id);
@@ -1586,7 +1598,7 @@ pub fn outgoing_ui_script(
         ("nextOriginal", "다음 메시지는 번역하지 않고 전송합니다."),
         ("selectLanguageFormal", "전송 언어를 선택하십시오."),
         ("sendingOriginal", "원문을 전송합니다."),
-        ("translating", "메시지를 번역하고 있습니다."),
+        ("translating", "메시지를 통역하고 있습니다."),
         (
             "detectionFailed",
             "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.",

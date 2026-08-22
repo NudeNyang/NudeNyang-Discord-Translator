@@ -76,6 +76,16 @@ test("configured outgoing defaults and confirmation policy reach Discord", () =>
   assert.match(engine, /enqueue_outgoing_translation/);
 });
 
+test("outgoing interpretation status stays visible until the request finishes", () => {
+  assert.match(outgoing, /translating:'메시지를 통역하고 있습니다\.'/);
+  assert.doesNotMatch(outgoing, /translating:'메시지를 번역하고 있습니다\.'/);
+  assert.match(outgoing, /setStatus\(message, error = false, persistent = false\)/);
+  assert.match(outgoing, /if \(message && !persistent\) this\.statusTimer = setTimeout/);
+  assert.match(outgoing, /setStatus\(copy\('translating'\), false, true\)/);
+  assert.match(outgoing, /selected !== 'original'/);
+  assert.match(outgoing, /detected\(id, language\)[\s\S]*?setStatus\(copy\('translating'\), false, true\)/);
+});
+
 test("long outgoing translations use one text attachment instead of notification spam", () => {
   assert.match(outgoing, /prepareAttachment/);
   assert.match(outgoing, /attachTextFile/);
@@ -193,7 +203,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 43/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 44/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);

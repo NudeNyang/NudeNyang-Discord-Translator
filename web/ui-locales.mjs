@@ -322,7 +322,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "下一則訊息將不翻譯直接傳送。",
     "전송 언어를 선택하십시오.": "請選擇傳送語言。",
     "원문을 전송합니다.": "正在傳送原始訊息。",
-    "메시지를 번역하고 있습니다.": "正在翻譯訊息。",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "無法判斷對話語言。請選擇傳送語言。",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "偵測到 {language}。你可以在傳送語言選單中變更。",
     "원문 전송": "傳送原文",
@@ -564,7 +563,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "從我的最愛中移除",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "缺少的字典釋義會由已設定的翻譯模型補充。",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "選取的文字可能會傳送至該服務。",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "鄰近的上下文只會在這台 PC 上處理。"
+    "주변 문맥은 PC 안에서만 처리됩니다.": "鄰近的上下文只會在這台 PC 上處理。",
+    "메시지를 통역하고 있습니다.": "正在翻譯訊息。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -888,7 +888,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "A próxima mensagem será enviada sem tradução.",
     "전송 언어를 선택하십시오.": "Selecione um idioma de envio.",
     "원문을 전송합니다.": "Enviando a mensagem original.",
-    "메시지를 번역하고 있습니다.": "Traduzindo a mensagem.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Não foi possível determinar o idioma da conversa. Selecione um idioma de envio.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Idioma detectado: {language}. Você pode alterá-lo no menu de idioma de envio.",
     "원문 전송": "Enviar original",
@@ -1130,7 +1129,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Remover dos favoritos",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Os significados ausentes no dicionário são complementados pelo modelo de tradução configurado.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "O texto selecionado pode ser enviado para esse serviço.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "O contexto próximo é processado apenas neste PC."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "O contexto próximo é processado apenas neste PC.",
+    "메시지를 통역하고 있습니다.": "Interpretando a mensagem."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1454,7 +1454,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "अगला संदेश बिना अनुवाद के भेजा जाएगा।",
     "전송 언어를 선택하십시오.": "भेजने की भाषा चुनें।",
     "원문을 전송합니다.": "मूल संदेश भेजा जा रहा है।",
-    "메시지를 번역하고 있습니다.": "संदेश का अनुवाद हो रहा है।",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "बातचीत की भाषा निर्धारित नहीं की जा सकी। भेजने की भाषा चुनें।",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "{language} का पता चला। इसे भेजने की भाषा वाले मेन्यू से बदल सकते हैं।",
     "원문 전송": "मूल संदेश भेजें",
@@ -1696,7 +1695,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "पसंदीदा से हटाएँ",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "शब्दकोश में न मिले अर्थों को कॉन्फ़िगर किए गए अनुवाद मॉडल से पूरा किया जाता है।",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "चुना गया टेक्स्ट उस सेवा को भेजा जा सकता है।",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "आस-पास के संदर्भ को केवल इस PC पर प्रोसेस किया जाता है।"
+    "주변 문맥은 PC 안에서만 처리됩니다.": "आस-पास के संदर्भ को केवल इस PC पर प्रोसेस किया जाता है।",
+    "메시지를 통역하고 있습니다.": "संदेश का अनुवाद किया जा रहा है।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -2020,7 +2020,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "El siguiente mensaje se enviará sin traducir.",
     "전송 언어를 선택하십시오.": "Selecciona un idioma de salida.",
     "원문을 전송합니다.": "Enviando el mensaje original.",
-    "메시지를 번역하고 있습니다.": "Traduciendo el mensaje.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "No se pudo determinar el idioma de la conversación. Selecciona un idioma de salida.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Se detectó {language}. Puedes cambiarlo en el menú de idioma de salida.",
     "원문 전송": "Enviar original",
@@ -2262,7 +2261,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Quitar de favoritos",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Los significados que falten en el diccionario se completarán con el modelo de traducción configurado.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "El texto seleccionado puede enviarse a ese servicio.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "El contexto cercano se procesa únicamente en esta PC."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "El contexto cercano se procesa únicamente en esta PC.",
+    "메시지를 통역하고 있습니다.": "Interpretando el mensaje."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2586,7 +2586,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Die nächste Nachricht wird unübersetzt gesendet.",
     "전송 언어를 선택하십시오.": "Wähle eine Ausgangssprache aus.",
     "원문을 전송합니다.": "Originalnachricht wird gesendet.",
-    "메시지를 번역하고 있습니다.": "Nachricht wird übersetzt.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Die Konversationssprache konnte nicht ermittelt werden. Wähle eine Ausgangssprache aus.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Als {language} erkannt. Du kannst dies im Menü für die Ausgangssprache ändern.",
     "원문 전송": "Original senden",
@@ -2828,7 +2827,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Aus Favoriten entfernen",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Fehlende Wörterbuchbedeutungen werden durch das konfigurierte Übersetzungsmodell ergänzt.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Der ausgewählte Text kann an diesen Dienst gesendet werden.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Der umgebende Kontext wird nur auf diesem PC verarbeitet."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Der umgebende Kontext wird nur auf diesem PC verarbeitet.",
+    "메시지를 통역하고 있습니다.": "Nachricht wird übersetzt."
   },
   "ru": {
     "설정": "Настройки",
@@ -3152,7 +3152,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Следующее сообщение будет отправлено без перевода.",
     "전송 언어를 선택하십시오.": "Выберите язык отправки.",
     "원문을 전송합니다.": "Отправка исходного сообщения.",
-    "메시지를 번역하고 있습니다.": "Перевод сообщения.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Не удалось определить язык беседы. Выберите язык отправки.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Определён язык: {language}. Его можно изменить в меню языка отправки.",
     "원문 전송": "Отправить оригинал",
@@ -3394,7 +3393,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Удалить из избранного",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Отсутствующие словарные значения дополняются настроенной моделью перевода.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Выделенный текст может быть отправлен в этот сервис.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Ближайший контекст обрабатывается только на этом ПК."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Ближайший контекст обрабатывается только на этом ПК.",
+    "메시지를 통역하고 있습니다.": "Выполняется перевод сообщения."
   },
   "id": {
     "설정": "Pengaturan",
@@ -3718,7 +3718,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Pesan berikutnya akan dikirim tanpa terjemahan.",
     "전송 언어를 선택하십시오.": "Pilih bahasa tujuan.",
     "원문을 전송합니다.": "Mengirim pesan asli.",
-    "메시지를 번역하고 있습니다.": "Menerjemahkan pesan.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Bahasa percakapan tidak dapat ditentukan. Pilih bahasa tujuan.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Terdeteksi sebagai {language}. Kamu dapat mengubahnya dari menu bahasa tujuan.",
     "원문 전송": "Kirim pesan asli",
@@ -3960,7 +3959,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Hapus dari favorit",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Arti yang tidak ada dalam kamus akan dilengkapi oleh model terjemahan yang telah dikonfigurasi.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Teks yang dipilih mungkin dikirim ke layanan tersebut.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Konteks sekitar hanya diproses di PC ini."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Konteks sekitar hanya diproses di PC ini.",
+    "메시지를 통역하고 있습니다.": "Sedang menerjemahkan pesan."
   },
   "fr": {
     "설정": "Paramètres",
@@ -4284,7 +4284,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Le prochain message sera envoyé sans traduction.",
     "전송 언어를 선택하십시오.": "Sélectionnez une langue d’envoi.",
     "원문을 전송합니다.": "Envoi du message original.",
-    "메시지를 번역하고 있습니다.": "Traduction du message.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Impossible de déterminer la langue de la conversation. Sélectionnez une langue d’envoi.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Langue détectée : {language}. Vous pouvez la modifier dans le menu de langue d’envoi.",
     "원문 전송": "Envoyer l’original",
@@ -4526,7 +4525,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Retirer des favoris",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Les définitions manquantes du dictionnaire sont complétées par le modèle de traduction configuré.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Le texte sélectionné peut être envoyé à ce service.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Le contexte environnant est traité uniquement sur ce PC."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Le contexte environnant est traité uniquement sur ce PC.",
+    "메시지를 통역하고 있습니다.": "Traduction du message en cours."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -4850,7 +4850,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Sonraki mesaj çevrilmeden gönderilecek.",
     "전송 언어를 선택하십시오.": "Bir gönderim dili seç.",
     "원문을 전송합니다.": "Orijinal mesaj gönderiliyor.",
-    "메시지를 번역하고 있습니다.": "Mesaj çevriliyor.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Konuşma dili belirlenemedi. Bir gönderim dili seç.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "{language} olarak algılandı. Gönderim dili menüsünden değiştirebilirsin.",
     "원문 전송": "Orijinali gönder",
@@ -5092,7 +5091,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Favorilerden kaldır",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Eksik sözlük anlamları, yapılandırılmış çeviri modeliyle tamamlanır.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Seçilen metin bu hizmete gönderilebilir.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Yakındaki bağlam yalnızca bu PC'de işlenir."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Yakındaki bağlam yalnızca bu PC'de işlenir.",
+    "메시지를 통역하고 있습니다.": "Mesaj çevriliyor."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -5416,7 +5416,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "ستُرسل الرسالة التالية من دون ترجمة.",
     "전송 언어를 선택하십시오.": "حدّد لغة الإرسال.",
     "원문을 전송합니다.": "جارٍ إرسال الرسالة الأصلية.",
-    "메시지를 번역하고 있습니다.": "جارٍ ترجمة الرسالة.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "تعذّر تحديد لغة المحادثة. حدّد لغة الإرسال.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "تم اكتشاف {language}. يمكنك تغييرها من قائمة لغة الإرسال.",
     "원문 전송": "إرسال الأصل",
@@ -5658,7 +5657,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "إزالة من المفضلة",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "تُستكمل معاني القاموس المفقودة باستخدام نموذج الترجمة المُعدّ.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "قد يُرسل النص المحدد إلى تلك الخدمة.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "تُعالج السياقات المحيطة على هذا الكمبيوتر فقط."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "تُعالج السياقات المحيطة على هذا الكمبيوتر فقط.",
+    "메시지를 통역하고 있습니다.": "جارٍ ترجمة الرسالة."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -5982,7 +5982,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Tin nhắn tiếp theo sẽ được gửi mà không dịch.",
     "전송 언어를 선택하십시오.": "Chọn ngôn ngữ gửi đi.",
     "원문을 전송합니다.": "Đang gửi tin nhắn gốc.",
-    "메시지를 번역하고 있습니다.": "Đang dịch tin nhắn.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Không thể xác định ngôn ngữ cuộc trò chuyện. Hãy chọn ngôn ngữ gửi đi.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Đã phát hiện {language}. Bạn có thể thay đổi trong menu ngôn ngữ gửi đi.",
     "원문 전송": "Gửi bản gốc",
@@ -6224,7 +6223,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Xóa khỏi mục yêu thích",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Các nghĩa còn thiếu trong từ điển sẽ được bổ sung bằng mô hình dịch đã cấu hình.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Văn bản đã chọn có thể được gửi đến dịch vụ đó.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Ngữ cảnh xung quanh chỉ được xử lý trên PC này."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Ngữ cảnh xung quanh chỉ được xử lý trên PC này.",
+    "메시지를 통역하고 있습니다.": "Đang phiên dịch tin nhắn."
   },
   "it": {
     "설정": "Impostazioni",
@@ -6548,7 +6548,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Il prossimo messaggio verrà inviato senza traduzione.",
     "전송 언어를 선택하십시오.": "Seleziona una lingua di invio.",
     "원문을 전송합니다.": "Invio del messaggio originale.",
-    "메시지를 번역하고 있습니다.": "Traduzione del messaggio.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Impossibile determinare la lingua della conversazione. Seleziona una lingua di invio.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Lingua rilevata: {language}. Puoi cambiarla dal menu della lingua di invio.",
     "원문 전송": "Invia originale",
@@ -6790,7 +6789,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Rimuovi dai preferiti",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "I significati mancanti nel dizionario vengono integrati dal modello di traduzione configurato.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Il testo selezionato potrebbe essere inviato a quel servizio.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Il contesto circostante viene elaborato solo su questo PC."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Il contesto circostante viene elaborato solo su questo PC.",
+    "메시지를 통역하고 있습니다.": "Interpretazione del messaggio."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -7114,7 +7114,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Następna wiadomość zostanie wysłana bez tłumaczenia.",
     "전송 언어를 선택하십시오.": "Wybierz język wiadomości wychodzących.",
     "원문을 전송합니다.": "Wysyłanie oryginalnej wiadomości.",
-    "메시지를 번역하고 있습니다.": "Tłumaczenie wiadomości.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Nie udało się określić języka rozmowy. Wybierz język wiadomości wychodzących.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Wykryto język: {language}. Możesz go zmienić w menu języka wiadomości wychodzących.",
     "원문 전송": "Wyślij oryginał",
@@ -7356,7 +7355,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Usuń z ulubionych",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Brakujące znaczenia słownikowe są uzupełniane przez skonfigurowany model tłumaczeniowy.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Zaznaczony tekst może zostać wysłany do tej usługi.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Otaczający kontekst jest przetwarzany wyłącznie na tym komputerze."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Otaczający kontekst jest przetwarzany wyłącznie na tym komputerze.",
+    "메시지를 통역하고 있습니다.": "Tłumaczenie wiadomości."
   },
   "uk": {
     "설정": "Налаштування",
@@ -7680,7 +7680,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Наступне повідомлення буде надіслано без перекладу.",
     "전송 언어를 선택하십시오.": "Виберіть мову надсилання.",
     "원문을 전송합니다.": "Надсилання оригінального повідомлення.",
-    "메시지를 번역하고 있습니다.": "Переклад повідомлення.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Не вдалося визначити мову розмови. Виберіть мову надсилання.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Визначено мову: {language}. Її можна змінити в меню мови надсилання.",
     "원문 전송": "Надіслати оригінал",
@@ -7922,7 +7921,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Видалити з обраного",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Відсутні значення у словнику доповнюються налаштованою моделлю перекладу.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Вибраний текст може бути надіслано до цього сервісу.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Навколишній контекст обробляється лише на цьому ПК."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Навколишній контекст обробляється лише на цьому ПК.",
+    "메시지를 통역하고 있습니다.": "Переклад повідомлення."
   },
   "ms": {
     "설정": "Tetapan",
@@ -8246,7 +8246,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Mesej seterusnya akan dihantar tanpa terjemahan.",
     "전송 언어를 선택하십시오.": "Pilih bahasa penghantaran.",
     "원문을 전송합니다.": "Menghantar mesej asal.",
-    "메시지를 번역하고 있습니다.": "Menterjemah mesej.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Bahasa perbualan tidak dapat dikenal pasti. Pilih bahasa penghantaran.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Dikesan sebagai {language}. Anda boleh mengubahnya dalam menu bahasa penghantaran.",
     "원문 전송": "Hantar mesej asal",
@@ -8488,7 +8487,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Alih keluar daripada kegemaran",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Maksud kamus yang tiada akan dilengkapkan oleh model terjemahan yang dikonfigurasikan.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Teks yang dipilih mungkin dihantar kepada perkhidmatan tersebut.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Konteks berdekatan diproses hanya pada PC ini."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Konteks berdekatan diproses hanya pada PC ini.",
+    "메시지를 통역하고 있습니다.": "Sedang mentafsir mesej."
   },
   "nl": {
     "설정": "Instellingen",
@@ -8812,7 +8812,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Het volgende bericht wordt zonder vertaling verzonden.",
     "전송 언어를 선택하십시오.": "Selecteer een uitgaande taal.",
     "원문을 전송합니다.": "Het oorspronkelijke bericht wordt verzonden.",
-    "메시지를 번역하고 있습니다.": "Het bericht wordt vertaald.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "De gesprekstaal kon niet worden bepaald. Selecteer een uitgaande taal.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Gedetecteerd als {language}. Je kunt dit wijzigen in het menu voor de uitgaande taal.",
     "원문 전송": "Origineel verzenden",
@@ -9054,7 +9053,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Verwijderen uit favorieten",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Ontbrekende woordenboekbetekenissen worden aangevuld door het ingestelde vertaalmodel.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "De geselecteerde tekst kan naar die service worden verzonden.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Omliggende context wordt alleen op deze pc verwerkt."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Omliggende context wordt alleen op deze pc verwerkt.",
+    "메시지를 통역하고 있습니다.": "Het bericht wordt vertaald."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -9067,7 +9067,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "ข้อความถัดไปจะถูกส่งโดยไม่แปล",
     "전송 언어를 선택하십시오.": "เลือกภาษาที่ใช้ส่ง",
     "원문을 전송합니다.": "กำลังส่งข้อความต้นฉบับ",
-    "메시지를 번역하고 있습니다.": "กำลังแปลข้อความ",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "ไม่สามารถระบุภาษาของการสนทนาได้ เลือกภาษาที่ใช้ส่ง",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "ตรวจพบว่าเป็น {language} เปลี่ยนได้จากเมนูภาษาที่ใช้ส่ง",
     "원문 전송": "ส่งต้นฉบับ",
@@ -9620,7 +9619,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "นำออกจากรายการโปรด",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "ความหมายที่ไม่มีในพจนานุกรมจะถูกเสริมด้วยโมเดลแปลภาษาที่กำหนดไว้",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "ข้อความที่เลือกอาจถูกส่งไปยังบริการนั้น",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "บริบทโดยรอบจะถูกประมวลผลเฉพาะบน PC เครื่องนี้เท่านั้น"
+    "주변 문맥은 PC 안에서만 처리됩니다.": "บริบทโดยรอบจะถูกประมวลผลเฉพาะบน PC เครื่องนี้เท่านั้น",
+    "메시지를 통역하고 있습니다.": "กำลังแปลข้อความ"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -9633,7 +9633,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Ipapadala ang susunod na mensahe nang walang pagsasalin.",
     "전송 언어를 선택하십시오.": "Pumili ng wikang gagamitin sa pagpapadala.",
     "원문을 전송합니다.": "Ipinapadala ang orihinal na mensahe.",
-    "메시지를 번역하고 있습니다.": "Isinasalin ang mensahe.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Hindi matukoy ang wika ng usapan. Pumili ng wikang gagamitin sa pagpapadala.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Natukoy ang {language}. Maaari mo itong baguhin sa menu ng wikang gagamitin sa pagpapadala.",
     "원문 전송": "Ipadala ang orihinal",
@@ -10186,7 +10185,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Alisin sa mga paborito",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Ang mga kahulugang wala sa diksyunaryo ay dinaragdagan gamit ang naka-configure na modelo ng pagsasalin.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Maaaring ipadala sa serbisyong iyon ang napiling teksto.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Sa PC na ito lamang pinoproseso ang kalapit na konteksto."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Sa PC na ito lamang pinoproseso ang kalapit na konteksto.",
+    "메시지를 통역하고 있습니다.": "Isinasalin ang mensahe."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -10199,7 +10199,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "পরবর্তী বার্তাটি অনুবাদ ছাড়াই পাঠানো হবে।",
     "전송 언어를 선택하십시오.": "পাঠানোর ভাষা নির্বাচন করুন।",
     "원문을 전송합니다.": "মূল বার্তা পাঠানো হচ্ছে।",
-    "메시지를 번역하고 있습니다.": "বার্তাটি অনুবাদ করা হচ্ছে।",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "কথোপকথনের ভাষা নির্ধারণ করা যায়নি। পাঠানোর ভাষা নির্বাচন করুন।",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "{language} শনাক্ত হয়েছে। পাঠানোর ভাষা মেনু থেকে এটি পরিবর্তন করতে পারবেন।",
     "원문 전송": "মূল বার্তা পাঠান",
@@ -10752,7 +10751,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "পছন্দের তালিকা থেকে সরান",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "অভিধানে না থাকা অর্থ কনফিগার করা অনুবাদ মডেল দিয়ে পূরণ করা হয়।",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "নির্বাচিত লেখা ওই পরিষেবায় পাঠানো হতে পারে।",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "আশপাশের প্রসঙ্গ শুধু এই PC-তেই প্রক্রিয়া করা হয়।"
+    "주변 문맥은 PC 안에서만 처리됩니다.": "আশপাশের প্রসঙ্গ শুধু এই PC-তেই প্রক্রিয়া করা হয়।",
+    "메시지를 통역하고 있습니다.": "বার্তাটি অনুবাদ করা হচ্ছে।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -10765,7 +10765,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "اگلا پیغام ترجمے کے بغیر بھیجا جائے گا۔",
     "전송 언어를 선택하십시오.": "ارسال کی زبان منتخب کریں۔",
     "원문을 전송합니다.": "اصل پیغام بھیجا جا رہا ہے۔",
-    "메시지를 번역하고 있습니다.": "پیغام کا ترجمہ کیا جا رہا ہے۔",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "گفتگو کی زبان کا تعین نہیں ہو سکا۔ ارسال کی زبان منتخب کریں۔",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "{language} کی شناخت ہوئی۔ آپ اسے ارسال کی زبان کے مینو سے تبدیل کر سکتے ہیں۔",
     "원문 전송": "اصل بھیجیں",
@@ -11318,7 +11317,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "پسندیدہ سے ہٹائیں",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "لغت میں موجود نہ ہونے والے معانی کو ترتیب دیے گئے ترجمہ ماڈل سے پورا کیا جاتا ہے۔",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "منتخب کردہ متن اس سروس کو بھیجا جا سکتا ہے۔",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "قریبی سیاق و سباق پر صرف اس PC میں کارروائی کی جاتی ہے۔"
+    "주변 문맥은 PC 안에서만 처리됩니다.": "قریبی سیاق و سباق پر صرف اس PC میں کارروائی کی جاتی ہے۔",
+    "메시지를 통역하고 있습니다.": "پیغام کا ترجمہ کیا جا رہا ہے۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -11331,7 +11331,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "அடுத்த செய்தி மொழிபெயர்க்கப்படாமல் அனுப்பப்படும்.",
     "전송 언어를 선택하십시오.": "அனுப்பும் மொழியைத் தேர்ந்தெடுக்கவும்.",
     "원문을 전송합니다.": "அசல் செய்தி அனுப்பப்படுகிறது.",
-    "메시지를 번역하고 있습니다.": "செய்தி மொழிபெயர்க்கப்படுகிறது.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "உரையாடல் மொழியைக் கண்டறிய முடியவில்லை. அனுப்பும் மொழியைத் தேர்ந்தெடுக்கவும்.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "{language} எனக் கண்டறியப்பட்டது. அனுப்பும் மொழி மெனுவில் இதை மாற்றலாம்.",
     "원문 전송": "அசலை அனுப்பு",
@@ -11884,7 +11883,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "பிடித்தவைகளிலிருந்து நீக்கு",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "விடுபட்ட அகராதிப் பொருள்கள் உள்ளமைக்கப்பட்ட மொழிபெயர்ப்பு மாதிரியால் நிரப்பப்படும்.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "தேர்ந்தெடுக்கப்பட்ட உரை அந்தச் சேவைக்கு அனுப்பப்படலாம்.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "அருகிலுள்ள சூழல் இந்த PC-இல் மட்டுமே செயலாக்கப்படும்."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "அருகிலுள்ள சூழல் இந்த PC-இல் மட்டுமே செயலாக்கப்படும்.",
+    "메시지를 통역하고 있습니다.": "செய்தியை மொழிபெயர்க்கிறது."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -11897,7 +11897,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "پیام بعدی بدون ترجمه ارسال خواهد شد.",
     "전송 언어를 선택하십시오.": "زبان خروجی را انتخاب کنید.",
     "원문을 전송합니다.": "در حال ارسال پیام اصلی.",
-    "메시지를 번역하고 있습니다.": "در حال ترجمه پیام.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "زبان گفتگو تشخیص داده نشد. زبان خروجی را انتخاب کنید.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "زبان {language} تشخیص داده شد. می‌توانید آن را از منوی زبان خروجی تغییر دهید.",
     "원문 전송": "ارسال متن اصلی",
@@ -12450,7 +12449,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "حذف از علاقه‌مندی‌ها",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "معانیِ موجودنبودۀ واژه‌نامه با مدل ترجمهٔ پیکربندی‌شده تکمیل می‌شوند.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "ممکن است متن انتخاب‌شده به آن سرویس ارسال شود.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "بافت پیرامونی فقط در همین رایانه پردازش می‌شود."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "بافت پیرامونی فقط در همین رایانه پردازش می‌شود.",
+    "메시지를 통역하고 있습니다.": "در حال ترجمهٔ پیام."
   },
   "he": {
     "설정": "הגדרות",
@@ -12463,7 +12463,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "ההודעה הבאה תישלח ללא תרגום.",
     "전송 언어를 선택하십시오.": "יש לבחור שפה לשליחה.",
     "원문을 전송합니다.": "ההודעה המקורית נשלחת.",
-    "메시지를 번역하고 있습니다.": "ההודעה מתורגמת.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "לא ניתן לזהות את שפת השיחה. יש לבחור שפה לשליחה.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "זוהתה {language}. ניתן לשנות זאת מתפריט השפה לשליחה.",
     "원문 전송": "שליחת המקור",
@@ -13016,7 +13015,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "הסרה מהמועדפים",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "משמעויות חסרות במילון מושלמות באמצעות מודל התרגום שהוגדר.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "הטקסט שנבחר עשוי להישלח לשירות הזה.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "ההקשר הסמוך מעובד רק במחשב הזה."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "ההקשר הסמוך מעובד רק במחשב הזה.",
+    "메시지를 통역하고 있습니다.": "מפרש את ההודעה."
   },
   "cs": {
     "설정": "Nastavení",
@@ -13029,7 +13029,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "다음 메시지는 번역하지 않고 전송합니다.": "Další zpráva bude odeslána bez překladu.",
     "전송 언어를 선택하십시오.": "Vyberte jazyk odchozích zpráv.",
     "원문을 전송합니다.": "Odesílá se původní zpráva.",
-    "메시지를 번역하고 있습니다.": "Zpráva se překládá.",
     "대화 언어를 판단하지 못했습니다. 전송 언어를 선택하십시오.": "Jazyk konverzace se nepodařilo určit. Vyberte jazyk odchozích zpráv.",
     "{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.": "Rozpoznán jazyk: {language}. Můžete ho změnit v nabídce jazyka odchozích zpráv.",
     "원문 전송": "Odeslat originál",
@@ -13582,6 +13581,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "즐겨찾기 해제": "Odebrat z oblíbených",
     "사전 뜻이 없으면 설정된 번역 모델로 보완합니다.": "Chybějící významy ve slovníku doplní nastavený překladový model.",
     "선택한 텍스트가 해당 서비스로 전송될 수 있습니다.": "Vybraný text může být odeslán dané službě.",
-    "주변 문맥은 PC 안에서만 처리됩니다.": "Okolní kontext se zpracovává pouze na tomto počítači."
+    "주변 문맥은 PC 안에서만 처리됩니다.": "Okolní kontext se zpracovává pouze na tomto počítači.",
+    "메시지를 통역하고 있습니다.": "Probíhá tlumočení zprávy."
   }
 });
