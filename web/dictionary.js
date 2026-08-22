@@ -63,7 +63,7 @@ function setSpeechButtonState(button, state, playLabel) {
   button.dataset.speechState = state;
   const label = playing ? copy("pausePronunciation") : paused ? copy("restartPronunciation") : playLabel;
   button.setAttribute("aria-label", label);
-  button.title = label;
+  button.dataset.tooltip = label;
   button.setAttribute("aria-pressed", String(playing || paused));
 }
 

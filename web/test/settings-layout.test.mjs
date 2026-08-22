@@ -512,7 +512,7 @@ test("personal dictionary controls use localized custom selects and center the b
   );
   assert.match(
     markup,
-    /id="dictionary-sort"[^>]*data-custom-select[^>]*>[\s\S]*?data-i18n-key="최근 수정순"/,
+    /id="dictionary-sort"[^>]*data-custom-select[^>]*>[\s\S]*?data-i18n-key="최근 수정순"[\s\S]*?data-i18n-key="오래된 수정순"[\s\S]*?data-i18n-key="원문 오름차순"[\s\S]*?data-i18n-key="표시어 오름차순"/,
   );
   assert.match(script, /function initializeDictionaryCustomSelect\(select, \{ searchable = false \} = \{\}\)/);
   assert.match(script, /function refreshDictionaryCustomSelects\(\{ rebuild = false \} = \{\}\)/);

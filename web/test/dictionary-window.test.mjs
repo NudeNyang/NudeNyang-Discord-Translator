@@ -80,6 +80,13 @@ test("dictionary pronunciation stops immediately and restarts from the beginning
   assert.match(windowScript, /copy\("restartPronunciation"\)/);
 });
 
+test("dictionary pronunciation uses the borderless product tooltip", () => {
+  assert.match(windowScript, /button\.dataset\.tooltip = label/);
+  assert.doesNotMatch(windowScript, /button\.title = label/);
+  assert.match(windowStyle, /\.nt-dict-icon-button\[data-tooltip\]::after\s*\{[^}]*border:\s*0;[^}]*content:\s*attr\(data-tooltip\);/s);
+  assert.match(windowStyle, /\.nt-dict-icon-button\[data-tooltip\]:is\(:hover, :focus-visible\)::after/);
+});
+
 test("dictionary result localization refresh keeps an active pronunciation request", () => {
   assert.match(windowScript, /nextPayload\.phase === "ready"/);
   assert.match(windowScript, /nextPayload\.requestId === currentRequestId/);

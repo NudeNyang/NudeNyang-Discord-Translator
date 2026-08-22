@@ -88,7 +88,7 @@ test("UI Language and Auto (System) stay universal", () => {
 });
 
 test("personal dictionary sort choices follow every selected interface language", () => {
-  const keys = ["최근 수정순", "원문순", "표시어순", "오래된순"];
+  const keys = ["최근 수정순", "오래된 수정순", "원문 오름차순", "표시어 오름차순"];
   for (const language of SUPPORTED_TARGET_LANGUAGES.filter(value => value !== "ko")) {
     for (const key of keys) {
       const localized = translateCopy(language, key);
