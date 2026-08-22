@@ -71,12 +71,20 @@ function cancelSpeech() {
   speechGeneration += 1;
   const previous = activeSpeech;
   activeSpeech = null;
+  if (previous?.native) invoke?.("dictionary_speech_stop").catch(() => {});
   window.speechSynthesis?.cancel?.();
   if (previous?.button?.isConnected) setSpeechButtonState(previous.button, "idle", previous.playLabel);
 }
 
-function finishSpeech(utterance) {
+function finishWebSpeech(utterance) {
   if (activeSpeech?.utterance !== utterance) return;
+  const finished = activeSpeech;
+  activeSpeech = null;
+  if (finished.button.isConnected) setSpeechButtonState(finished.button, "idle", finished.playLabel);
+}
+
+function finishNativeSpeech(requestId) {
+  if (!activeSpeech?.native || activeSpeech.requestId !== requestId) return;
   const finished = activeSpeech;
   activeSpeech = null;
   if (finished.button.isConnected) setSpeechButtonState(finished.button, "idle", finished.playLabel);
@@ -87,23 +95,47 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
   button.type = "button";
   setSpeechButtonState(button, "idle", playLabel);
   button.addEventListener("click", async () => {
-    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window) || !text) return;
+    if (!text) return;
     if (activeSpeech?.button === button) {
+      const nextState = activeSpeech.state === "paused" ? "playing" : "paused";
       if (activeSpeech.state === "paused") {
-        speechSynthesis.resume();
-        activeSpeech.state = "playing";
-        setSpeechButtonState(button, "playing", playLabel);
+        const resumed = activeSpeech.native
+          ? await invoke("dictionary_speech_resume").then(() => true).catch(() => false)
+          : (speechSynthesis.resume(), true);
+        if (!resumed) return;
       } else {
-        speechSynthesis.pause();
-        activeSpeech.state = "paused";
-        setSpeechButtonState(button, "paused", playLabel);
+        const paused = activeSpeech.native
+          ? await invoke("dictionary_speech_pause").then(() => true).catch(() => false)
+          : (speechSynthesis.pause(), true);
+        if (!paused) return;
       }
+      activeSpeech.state = nextState;
+      setSpeechButtonState(button, nextState, playLabel);
       return;
     }
 
     cancelSpeech();
     const requestGeneration = speechGeneration;
     const requestedLanguage = canonicalSpeechLanguage(language || uiLanguage);
+    const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+    const nativeStarted = invoke
+      ? await invoke("dictionary_speech_play", {
+        text,
+        language: requestedLanguage,
+        requestId,
+      }).catch(() => false)
+      : false;
+    if (requestGeneration !== speechGeneration || !button.isConnected) {
+      if (nativeStarted) invoke?.("dictionary_speech_stop").catch(() => {});
+      return;
+    }
+    if (nativeStarted) {
+      activeSpeech = { button, native: true, requestId, state: "playing", playLabel };
+      setSpeechButtonState(button, "playing", playLabel);
+      return;
+    }
+
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
     const voice = await waitForSpeechVoice(speechSynthesis, requestedLanguage);
     if (requestGeneration !== speechGeneration || !button.isConnected) return;
     if (!voice) {
@@ -114,8 +146,8 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = requestedLanguage;
     utterance.voice = voice;
-    utterance.addEventListener("end", () => finishSpeech(utterance));
-    utterance.addEventListener("error", () => finishSpeech(utterance));
+    utterance.addEventListener("end", () => finishWebSpeech(utterance));
+    utterance.addEventListener("error", () => finishWebSpeech(utterance));
     activeSpeech = { button, utterance, state: "playing", playLabel };
     setSpeechButtonState(button, "playing", playLabel);
     speechSynthesis.speak(utterance);
@@ -453,6 +485,7 @@ function applyPayload(nextPayload) {
 async function initialize() {
   if (!invoke || !listen) return;
   await listen("dictionary-window-state", event => applyPayload(event.payload));
+  await listen("dictionary-speech-ended", event => finishNativeSpeech(String(event.payload || "")));
   const initial = await invoke("dictionary_window_state_get").catch(() => null);
   if (initial) applyPayload(initial);
 }

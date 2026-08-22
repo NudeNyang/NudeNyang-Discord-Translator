@@ -70,6 +70,11 @@ test("dictionary pronunciation controls expose play pause and resume states", ()
   assert.match(windowScript, /createSpeechButton\(/);
   assert.match(windowScript, /speechSynthesis\.pause\(\)/);
   assert.match(windowScript, /speechSynthesis\.resume\(\)/);
+  assert.match(windowScript, /invoke\("dictionary_speech_play"/);
+  assert.match(windowScript, /invoke\("dictionary_speech_pause"/);
+  assert.match(windowScript, /invoke\("dictionary_speech_resume"/);
+  assert.match(windowScript, /invoke\?\.\("dictionary_speech_stop"/);
+  assert.match(windowScript, /listen\("dictionary-speech-ended"/);
   assert.match(windowScript, /copy\("pausePronunciation"\)/);
   assert.match(windowScript, /copy\("resumePronunciation"\)/);
 });

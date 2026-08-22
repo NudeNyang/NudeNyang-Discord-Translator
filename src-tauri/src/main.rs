@@ -17,6 +17,7 @@ mod engine;
 pub mod image_translation;
 pub mod invite_assist;
 pub mod language;
+mod native_speech;
 pub mod ocr;
 pub mod outgoing;
 mod providers;
@@ -801,6 +802,38 @@ fn diagnostic_log_reveal(app: AppHandle) -> Result<String, String> {
 #[tauri::command]
 fn diagnostic_log_write(level: String, component: String, message: String) {
     diagnostics::record(&level, &component, &message);
+}
+
+#[tauri::command]
+fn dictionary_speech_play(
+    app: AppHandle,
+    state: State<'_, native_speech::NativeSpeechState>,
+    text: String,
+    language: String,
+    request_id: String,
+) -> Result<bool, String> {
+    state.play(app, text, language, request_id)
+}
+
+#[tauri::command]
+fn dictionary_speech_pause(
+    state: State<'_, native_speech::NativeSpeechState>,
+) -> Result<(), String> {
+    state.pause()
+}
+
+#[tauri::command]
+fn dictionary_speech_resume(
+    state: State<'_, native_speech::NativeSpeechState>,
+) -> Result<(), String> {
+    state.resume()
+}
+
+#[tauri::command]
+fn dictionary_speech_stop(
+    state: State<'_, native_speech::NativeSpeechState>,
+) -> Result<(), String> {
+    state.stop()
 }
 
 #[tauri::command]
@@ -1606,6 +1639,7 @@ fn main() {
         .manage(config)
         .manage(engine)
         .manage(dictionary_window::DictionaryWindowStore::default())
+        .manage(native_speech::NativeSpeechState::default())
         .setup(|app| {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
             create_tray(app)?;
@@ -1693,6 +1727,10 @@ fn main() {
             update_install,
             diagnostic_log_reveal,
             diagnostic_log_write,
+            dictionary_speech_play,
+            dictionary_speech_pause,
+            dictionary_speech_resume,
+            dictionary_speech_stop,
             storage_status_get,
             system_memory_status_get,
             autostart_get,

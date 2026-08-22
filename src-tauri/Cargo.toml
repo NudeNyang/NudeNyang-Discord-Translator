@@ -39,6 +39,6 @@ tungstenite = "0.26"
 time = { version = "0.3", features = ["formatting"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Graphics_Dxgi", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Globalization", "Win32_Graphics_Dwm", "Win32_Graphics_Dxgi", "Win32_Media_Speech", "Win32_Security", "Win32_System_Com", "Win32_System_JobObjects", "Win32_System_Threading"] }
 windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Console", "Win32_System_Pipes", "Win32_System_Threading"] }
 winreg = "0.55"
