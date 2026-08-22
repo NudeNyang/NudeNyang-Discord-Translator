@@ -2619,11 +2619,8 @@ fn localize_dictionary_result(
         targets.push(LocalizationTarget::Selection);
     }
 
-    let mut visible_groups = HashSet::new();
     for (index, entry) in result.entries.iter().enumerate() {
-        let group = (entry.language.clone(), entry.headword.clone());
-        if !visible_groups.insert(group)
-            || entry.definition.is_empty()
+        if entry.definition.is_empty()
             || entry.definition_origin != "original"
             || entry.definition_language == result.target_language
         {
@@ -3240,8 +3237,9 @@ mod tests {
             self.items.fetch_add(items.len(), Ordering::SeqCst);
             Ok(items
                 .iter()
-                .map(|(_, source)| match source {
+                .map(|(text, source)| match source {
                     Language::Japanese => "출시 기념으로 할인합니다".to_string(),
+                    Language::English if text.contains("release") => "출시; 발매".to_string(),
                     Language::English => "판매; 할인 판매".to_string(),
                     _ => "번역 결과".to_string(),
                 })
@@ -3399,7 +3397,7 @@ mod tests {
     }
 
     #[test]
-    fn dictionary_localization_batches_selection_and_visible_senses_once() {
+    fn dictionary_localization_batches_selection_and_all_visible_senses_once() {
         let cache_path = std::env::temp_dir().join(format!(
             "nudenyang-dictionary-batch-localization-cache-{}.db",
             std::process::id()
@@ -3449,13 +3447,14 @@ mod tests {
         let localized = localize_dictionary_result(&mut service, result, Language::Korean);
 
         assert_eq!(calls.load(Ordering::SeqCst), 1);
-        assert_eq!(items.load(Ordering::SeqCst), 2);
+        assert_eq!(items.load(Ordering::SeqCst), 3);
         assert!(!localized.localization_pending);
         assert_eq!(localized.selection_translation, "출시 기념으로 할인합니다");
         assert_eq!(localized.entries[0].definition, "판매; 할인 판매");
         assert_eq!(localized.entries[0].definition_origin, "automatic");
-        assert_eq!(localized.entries[1].definition, "release; publication");
-        assert_eq!(localized.entries[1].definition_origin, "original");
+        assert_eq!(localized.entries[1].definition, "출시; 발매");
+        assert_eq!(localized.entries[1].definition_language, "ko");
+        assert_eq!(localized.entries[1].definition_origin, "automatic");
     }
 
     #[test]
