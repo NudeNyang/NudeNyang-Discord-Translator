@@ -139,6 +139,7 @@ test("settings window keeps a readable minimum width without horizontal navigati
 test("wider settings window lets localized descriptions use the available width", () => {
   assert.match(styles, /\.app-shell\s*\{[^}]*width:\s*min\(100%,\s*1120px\)/s);
   assert.match(styles, /\.setting-copy p\s*\{[^}]*max-width:\s*68ch;/s);
+  assert.match(styles, /\.feature-copy p\s*\{[^}]*max-width:\s*72ch;/s);
 });
 
 test("settings navigation adapts to long localized labels", () => {

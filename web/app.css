@@ -656,7 +656,7 @@ select:focus-visible,
 }
 
 .feature-copy p {
-  max-width: 58ch;
+  max-width: 72ch;
   margin-top: 7px;
   color: var(--muted);
   font-size: 12px;
