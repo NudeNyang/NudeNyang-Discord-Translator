@@ -536,6 +536,10 @@ test("personal term deletion confirmation opens above the editor", () => {
     styles,
     /\.modal-layer\[data-variant="dictionary-action"\]\s*\{\s*z-index:\s*1200;/,
   );
+  assert.match(
+    styles,
+    /\.modal-layer\[data-variant="dictionary-action"\]\s+#modal-accept\s*\{[\s\S]*?border-color:\s*var\(--danger\);[\s\S]*?color:\s*#ffffff;[\s\S]*?background:\s*var\(--danger\);/,
+  );
 });
 
 test("personal dictionary selection uses a bottom action dock and clean row toggles", () => {

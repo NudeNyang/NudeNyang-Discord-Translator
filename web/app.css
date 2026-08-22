@@ -2732,6 +2732,16 @@ select:focus-visible,
   z-index: 1200;
 }
 
+.modal-layer[data-variant="dictionary-action"] #modal-accept {
+  border-color: var(--danger);
+  color: #ffffff;
+  background: var(--danger);
+}
+
+.modal-layer[data-variant="dictionary-action"] #modal-accept:hover {
+  background: color-mix(in srgb, var(--danger) 86%, #000000);
+}
+
 .modal-layer[hidden] {
   display: none;
 }
