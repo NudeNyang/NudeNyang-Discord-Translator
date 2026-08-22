@@ -1468,7 +1468,7 @@ fn scan_dictionary(
                         updated_at: 0.0,
                     })?;
                     if let Some(app) = app {
-                        let _ = app.emit("dictionary-personal-changed", &saved);
+                        let _ = app.emit_to("main", "dictionary-personal-changed", &saved);
                     }
                     apply_dictionary_saved_script(&request.id)
                 }),

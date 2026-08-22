@@ -451,13 +451,17 @@ async fn dictionary_personal_query(
 
 #[tauri::command]
 async fn dictionary_personal_upsert(
+    app: AppHandle,
     entry: dictionary::PersonalDictionaryEntry,
 ) -> Result<dictionary::PersonalDictionaryEntry, String> {
-    tauri::async_runtime::spawn_blocking(move || {
+    let saved = tauri::async_runtime::spawn_blocking(move || {
         dictionary::DictionaryStore::open_default()?.upsert_personal(entry)
     })
     .await
-    .map_err(|error| format!("개인 사전 저장 작업을 기다리지 못했습니다: {error}"))?
+    .map_err(|error| format!("개인 사전 저장 작업을 기다리지 못했습니다: {error}"))??;
+    app.emit_to("main", "dictionary-personal-changed", &saved)
+        .map_err(|error| format!("개인 사전 변경을 설정 창에 알리지 못했습니다: {error}"))?;
+    Ok(saved)
 }
 
 #[tauri::command]

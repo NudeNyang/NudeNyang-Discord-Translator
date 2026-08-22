@@ -18,6 +18,10 @@ import { DICTIONARY_NOTICES_TEXT, LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
 import { LANGUAGE_OPTIONS } from "./languages.mjs";
 import { filterLanguageOptions } from "./language-search.mjs";
 import {
+  createLatestDictionaryRequestGate,
+  dictionaryOverviewFingerprint,
+} from "./dictionary-sync.mjs";
+import {
   applyStaticTranslations,
   resolveUiLanguage,
   translateCopy,
@@ -152,6 +156,7 @@ const localizedText = new Map();
 const localizedErrors = new Map();
 const localizedBackendText = new Map();
 const dictionaryCustomSelects = new Map();
+const dictionaryOverviewRequests = createLatestDictionaryRequestGate();
 
 const elements = {
   form: document.querySelector("#settings-form"),
@@ -810,6 +815,7 @@ function renderDictionaryPersonalEntries() {
 function applyDictionaryPersonalOverviewChange(entry) {
   const saved = dictionaryEntryPayload(entry || {});
   if (!saved.id) return;
+  dictionaryOverviewRequests.invalidate();
   const entries = state.dictionaryPersonalEntries.filter(current => current.id !== saved.id);
   entries.push(saved);
   entries.sort((left, right) => right.updatedAt - left.updatedAt || right.id - left.id);
@@ -1101,11 +1107,15 @@ async function reloadDictionaryPersonalData() {
 }
 
 async function refreshDictionaryOverviewEntries() {
+  const requestRevision = dictionaryOverviewRequests.begin();
   const page = await invoke("dictionary_personal_query", {
     query: { search: "", sourceLanguage: "", targetLanguage: "", pinnedOnly: false, sort: "updated_desc", offset: 0, limit: 3 },
   });
+  if (!dictionaryOverviewRequests.isCurrent(requestRevision)) return false;
+  if (dictionaryOverviewFingerprint(state.dictionaryPersonalEntries) === dictionaryOverviewFingerprint(page.entries)) return true;
   state.dictionaryPersonalEntries = page.entries;
   renderDictionaryPersonalEntries();
+  return true;
 }
 
 function openDictionaryImport() {
@@ -1370,6 +1380,7 @@ async function refreshDictionaryStatus() {
 async function loadDictionaryData(force = false) {
   if (state.dictionaryLoading || (state.dictionaryLoaded && !force)) return;
   state.dictionaryLoading = true;
+  const overviewRequestRevision = dictionaryOverviewRequests.begin();
   try {
     const [status, page] = await Promise.all([
       invoke("dictionary_status_get"),
@@ -1378,15 +1389,29 @@ async function loadDictionaryData(force = false) {
       }),
     ]);
     state.dictionaryStatus = status;
-    state.dictionaryPersonalEntries = page.entries;
+    if (dictionaryOverviewRequests.isCurrent(overviewRequestRevision)) {
+      state.dictionaryPersonalEntries = page.entries;
+      renderDictionaryPersonalEntries();
+    }
     state.dictionaryLoaded = true;
     renderDictionaryPacks();
-    renderDictionaryPersonalEntries();
   } catch (error) {
     setLocalizedError(elements.dictionaryStorageSummary, error);
   } finally {
     state.dictionaryLoading = false;
   }
+}
+
+function dictionarySettingsPanelIsVisible() {
+  const panel = document.querySelector('[data-settings-view="dictionary"]');
+  return Boolean(panel && !panel.hidden);
+}
+
+function syncVisibleDictionaryPersonalData() {
+  if (!dictionarySettingsPanelIsVisible()) return;
+  refreshDictionaryOverviewEntries().catch(error => {
+    writeDiagnostic("warn", `dictionary-overview-sync: ${String(error)}`);
+  });
 }
 
 function activateSettingsPanel(panel) {
@@ -3303,6 +3328,12 @@ if (tauriListen) {
     renderDictionaryPacks();
   });
 }
+
+window.addEventListener("focus", syncVisibleDictionaryPersonalData);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syncVisibleDictionaryPersonalData();
+});
+window.setInterval(syncVisibleDictionaryPersonalData, 1500);
 
 bindOverlayScrollIndicator();
 new ResizeObserver(updateScrollIndicator).observe(elements.settingsScroll);

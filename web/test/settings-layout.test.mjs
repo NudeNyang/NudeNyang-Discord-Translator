@@ -503,8 +503,9 @@ test("editing a personal term replaces cancel with delete", () => {
 test("dictionary popup saves refresh the open settings dictionary immediately", () => {
   assert.match(
     rustEngine,
-    /store\.upsert_personal\([\s\S]*?app\.emit\("dictionary-personal-changed"/,
+    /store\.upsert_personal\([\s\S]*?app\.emit_to\("main", "dictionary-personal-changed"/,
   );
+  assert.match(rustMain, /dictionary_personal_upsert\([\s\S]*?AppHandle[\s\S]*?emit_to\("main", "dictionary-personal-changed"/);
   assert.match(
     script,
     /function applyDictionaryPersonalOverviewChange\(entry\)[\s\S]*?state\.dictionaryPersonalEntries[\s\S]*?slice\(0, 3\)[\s\S]*?renderDictionaryPersonalEntries\(\)/,
@@ -521,6 +522,9 @@ test("dictionary popup saves refresh the open settings dictionary immediately", 
     script,
     /if \(panel === "dictionary"\) loadDictionaryData\(true\)/,
   );
+  assert.match(script, /dictionaryOverviewRequests\.begin\(\)[\s\S]*?dictionaryOverviewRequests\.isCurrent/);
+  assert.match(script, /window\.addEventListener\("focus", syncVisibleDictionaryPersonalData\)/);
+  assert.match(script, /setInterval\([\s\S]*?syncVisibleDictionaryPersonalData[\s\S]*?1500/);
 });
 
 test("personal term deletion confirmation opens above the editor", () => {
