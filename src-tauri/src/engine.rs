@@ -202,6 +202,7 @@ struct OutgoingTranslationBatch {
 struct DictionaryLocalizationBatch {
     request_id: String,
     target: Language,
+    context: String,
     result: DictionaryLookupResult,
     queued_at: Instant,
 }
@@ -1273,6 +1274,7 @@ fn scan_dictionary(
                                 DictionaryLocalizationBatch {
                                     request_id: request.id.clone(),
                                     target,
+                                    context: request.context.clone(),
                                     result,
                                     queued_at: Instant::now(),
                                 },
@@ -2536,28 +2538,31 @@ fn run_translation_worker(
                 });
             }
             WorkerCommand::LocalizeDictionary(batch) => {
-                let selection_count = usize::from(batch.result.needs_selection_translation());
+                let DictionaryLocalizationBatch {
+                    request_id,
+                    target,
+                    context,
+                    result,
+                    queued_at,
+                } = batch;
+                let selection_count = usize::from(result.needs_selection_translation());
                 log_worker_queue(
                     "dictionary",
-                    batch.queued_at,
-                    batch.result.entries.len() + selection_count,
-                    batch
-                        .result
+                    queued_at,
+                    result.entries.len() + selection_count,
+                    result
                         .entries
                         .iter()
                         .map(|entry| entry.definition.chars().count())
                         .sum::<usize>()
                         + if selection_count == 1 {
-                            batch.result.query.chars().count()
+                            result.query.chars().count()
                         } else {
                             0
                         },
                 );
-                let result = localize_dictionary_result(&mut service, batch.result, batch.target);
-                let _ = results.send(WorkerResult::DictionaryLocalized {
-                    request_id: batch.request_id,
-                    result,
-                });
+                let result = localize_dictionary_result(&mut service, result, &context, target);
+                let _ = results.send(WorkerResult::DictionaryLocalized { request_id, result });
             }
             WorkerCommand::DiscardDisplayBefore { .. } => {}
             WorkerCommand::Activate {
@@ -2601,6 +2606,7 @@ fn run_translation_worker(
 fn localize_dictionary_result(
     service: &mut TranslationService,
     mut result: DictionaryLookupResult,
+    context: &str,
     target: Language,
 ) -> DictionaryLookupResult {
     const DICTIONARY_LOCALIZATION_BATCH_ITEMS: usize = 2;
@@ -2608,6 +2614,7 @@ fn localize_dictionary_result(
     #[derive(Clone, Copy)]
     enum LocalizationTarget {
         Selection,
+        Context,
         Entry(usize),
     }
 
@@ -2615,11 +2622,33 @@ fn localize_dictionary_result(
     let mut texts = Vec::new();
     let mut sources = Vec::new();
     let mut targets = Vec::new();
+    let context = context.trim();
+    let context_matches_selection = !context.is_empty() && context == result.query.trim();
+    let detected_context_language = detect_language(context).language;
+    let context_source = if detected_context_language == Language::Unknown {
+        Language::try_from(result.source_language.as_str()).unwrap_or(Language::Unknown)
+    } else {
+        detected_context_language
+    };
+    let mut localized_context = if !context.is_empty() && context_source == target {
+        context.to_string()
+    } else {
+        String::new()
+    };
     if result.needs_selection_translation() {
         texts.push(result.query.clone());
         sources
             .push(Language::try_from(result.source_language.as_str()).unwrap_or(Language::Unknown));
         targets.push(LocalizationTarget::Selection);
+    }
+    if !context.is_empty()
+        && !context_matches_selection
+        && context_source != Language::Unknown
+        && context_source != target
+    {
+        texts.push(context.to_string());
+        sources.push(context_source);
+        targets.push(LocalizationTarget::Context);
     }
 
     for (index, entry) in result.entries.iter().enumerate() {
@@ -2690,10 +2719,25 @@ fn localize_dictionary_result(
                 LocalizationTarget::Selection => {
                     if dictionary_translation_is_acceptable(&result.query, &translated, target) {
                         result.selection_translation = translated.trim().to_string();
+                        if context_matches_selection {
+                            localized_context = result.selection_translation.clone();
+                        }
                     } else {
                         log_rejected_dictionary_translation(
                             "selection",
                             &result.query,
+                            &translated,
+                            target,
+                        );
+                    }
+                }
+                LocalizationTarget::Context => {
+                    if dictionary_translation_is_acceptable(context, &translated, target) {
+                        localized_context = translated.trim().to_string();
+                    } else {
+                        log_rejected_dictionary_translation(
+                            "context",
+                            context,
                             &translated,
                             target,
                         );
@@ -2718,9 +2762,8 @@ fn localize_dictionary_result(
             }
         }
     }
-    if !result.selection_translation.is_empty() {
-        let translated_context = result.selection_translation.clone();
-        result.rerank_for_context(&translated_context);
+    if !localized_context.is_empty() {
+        result.rerank_for_context(&localized_context);
     }
     result
 }
@@ -3251,6 +3294,36 @@ mod tests {
         items: Arc<AtomicUsize>,
     }
 
+    struct ContextDictionaryTranslator;
+
+    impl Translator for ContextDictionaryTranslator {
+        fn display_name(&self) -> &str {
+            "Context dictionary test translator"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "dictionary-context-test:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            Ok(match text {
+                "bank" => "둑",
+                "He sat on the river bank and watched the water." => {
+                    "그는 강의 물가에 앉아 물을 바라봤다"
+                }
+                "a financial institution that holds money" => "돈을 보관하는 금융 기관",
+                "sloping land beside a river" => "강의 물가에 있는 경사진 땅",
+                _ => text,
+            }
+            .to_string())
+        }
+    }
+
     impl Translator for CountingDictionaryBatchTranslator {
         fn display_name(&self) -> &str {
             "Counting dictionary batch translator"
@@ -3379,7 +3452,8 @@ mod tests {
             personal_entries: Vec::new(),
         };
 
-        let localized = localize_dictionary_result(&mut service, result, Language::Japanese);
+        let localized =
+            localize_dictionary_result(&mut service, result, "future", Language::Japanese);
         assert_eq!(
             localized.entries[0].definition,
             "現在より後の時間、またはこれから起こる出来事。"
@@ -3434,7 +3508,8 @@ mod tests {
             personal_entries: Vec::new(),
         };
 
-        let localized = localize_dictionary_result(&mut service, result, Language::Korean);
+        let localized =
+            localize_dictionary_result(&mut service, result, "日本時間", Language::Korean);
         assert_eq!(localized.entries[0].definition, "시간");
         assert_eq!(localized.entries[0].definition_language, "ko");
         assert_eq!(localized.entries[0].definition_origin, "automatic");
@@ -3488,7 +3563,12 @@ mod tests {
             personal_entries: Vec::new(),
         };
 
-        let localized = localize_dictionary_result(&mut service, result, Language::Korean);
+        let localized = localize_dictionary_result(
+            &mut service,
+            result,
+            "発売記念でセールします",
+            Language::Korean,
+        );
 
         assert_eq!(calls.load(Ordering::SeqCst), 2);
         assert_eq!(items.load(Ordering::SeqCst), 3);
@@ -3499,6 +3579,63 @@ mod tests {
         assert_eq!(localized.entries[1].definition, "출시; 발매");
         assert_eq!(localized.entries[1].definition_language, "ko");
         assert_eq!(localized.entries[1].definition_origin, "automatic");
+    }
+
+    #[test]
+    fn dictionary_localization_reranks_with_the_full_translated_context() {
+        let cache_path = std::env::temp_dir().join(format!(
+            "nudenyang-dictionary-context-localization-cache-{}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&cache_path);
+        let cache = TranslationCache::open(cache_path, 16).unwrap();
+        let mut service = TranslationService::new(Box::new(ContextDictionaryTranslator), cache);
+        let sense = |entry_id, sense_rank, definition: &str| DictionaryEntry {
+            entry_id,
+            headword: "bank".to_string(),
+            language: "en".to_string(),
+            reading: String::new(),
+            part_of_speech: "noun".to_string(),
+            sense_rank,
+            source_priority: 0,
+            context_recommended: false,
+            definition: definition.to_string(),
+            definition_language: "en".to_string(),
+            definition_origin: "original".to_string(),
+            original_definition: definition.to_string(),
+            original_definition_language: "en".to_string(),
+            example: String::new(),
+            source_name: "Test".to_string(),
+            source_url: String::new(),
+            license: "Test".to_string(),
+        };
+        let result = DictionaryLookupResult {
+            query: "bank".to_string(),
+            source_language: "en".to_string(),
+            target_language: "ko".to_string(),
+            selection_translation: String::new(),
+            localization_pending: true,
+            segmented: false,
+            entries: vec![
+                sense(1, 0, "a financial institution that holds money"),
+                sense(2, 1, "sloping land beside a river"),
+            ],
+            personal_entries: Vec::new(),
+        };
+
+        let localized = localize_dictionary_result(
+            &mut service,
+            result,
+            "He sat on the river bank and watched the water.",
+            Language::Korean,
+        );
+
+        assert_eq!(localized.selection_translation, "둑");
+        assert_eq!(
+            localized.entries[0].definition,
+            "강의 물가에 있는 경사진 땅"
+        );
+        assert!(localized.entries[0].context_recommended);
     }
 
     #[test]
@@ -3872,6 +4009,7 @@ mod tests {
                     DictionaryLocalizationBatch {
                         request_id: request_id.to_string(),
                         target: Language::Korean,
+                        context: String::new(),
                         result: DictionaryLookupResult {
                             query: request_id.to_string(),
                             source_language: "ja".to_string(),

@@ -1454,18 +1454,37 @@ fn rank_entries_for_context(entries: &mut Vec<DictionaryEntry>, context: &str) {
     }
     for group in &mut groups {
         group.sort_by(|left, right| {
-            contextual_sense_score(right, &normalized_context, context_language)
-                .ranking
-                .cmp(&contextual_sense_score(left, &normalized_context, context_language).ranking)
-                .then_with(|| left.source_priority.cmp(&right.source_priority))
+            left.source_priority
+                .cmp(&right.source_priority)
                 .then_with(|| left.sense_rank.cmp(&right.sense_rank))
                 .then_with(|| left.entry_id.cmp(&right.entry_id))
         });
         if group.len() > 1 {
-            let first = contextual_sense_score(&group[0], &normalized_context, context_language);
-            let second = contextual_sense_score(&group[1], &normalized_context, context_language);
-            if first.evidence >= 24 && first.ranking.saturating_sub(second.ranking) >= 12 {
-                group[0].context_recommended = true;
+            let mut scored = group
+                .iter()
+                .enumerate()
+                .map(|(index, entry)| {
+                    (
+                        index,
+                        contextual_sense_score(entry, &normalized_context, context_language),
+                    )
+                })
+                .collect::<Vec<_>>();
+            scored.sort_by(|(left_index, left), (right_index, right)| {
+                right
+                    .ranking
+                    .cmp(&left.ranking)
+                    .then_with(|| left_index.cmp(right_index))
+            });
+            let (best_index, best) = scored[0];
+            let second = scored[1].1;
+            if best.ranking > 0
+                && best.evidence >= 24
+                && best.ranking.saturating_sub(second.ranking) >= 12
+            {
+                let mut preferred = group.remove(best_index);
+                preferred.context_recommended = true;
+                group.insert(0, preferred);
             }
         }
     }
@@ -1501,11 +1520,15 @@ fn contextual_sense_score(
         && context_language == definition_language;
     let mut score = ContextualSenseScore::default();
     if comparable_language {
+        let context_tokens = context
+            .split(|character: char| !character.is_alphanumeric())
+            .filter(|token| contextual_token_is_informative(token, definition_language))
+            .collect::<HashSet<_>>();
         for token in normalized_definition
             .split(|character: char| !character.is_alphanumeric())
             .filter(|token| contextual_token_is_informative(token, definition_language))
         {
-            if context.contains(token) {
+            if context_tokens.contains(token) {
                 score.ranking += 12;
                 score.evidence += 12;
             }
@@ -1614,7 +1637,8 @@ fn contextual_token_is_informative(token: &str, language: Language) -> bool {
         .as_slice(),
         Language::English => [
             "the", "and", "that", "this", "with", "from", "into", "person", "thing", "be", "is",
-            "are", "or",
+            "are", "or", "an", "of", "to", "in", "for", "on", "by", "as", "at", "it", "its",
+            "which", "when", "during",
         ]
         .as_slice(),
         _ => &[],
@@ -2299,6 +2323,64 @@ mod tests {
             .unwrap();
         assert!(historical.entries[0].definition.contains("궁궐"));
         assert!(historical.entries[0].context_recommended);
+    }
+
+    #[test]
+    fn weak_english_function_word_overlap_does_not_promote_an_unrelated_sense() {
+        let store = temporary_store("english-context-confidence");
+        let sense = |definition: &str, sense_rank| StarterEntry {
+            headword: "period".to_string(),
+            reading: "ˈpɪə.rɪ.əd".to_string(),
+            part_of_speech: "noun".to_string(),
+            sense_rank,
+            source_priority: 0,
+            source_name: String::new(),
+            source_url: String::new(),
+            license: String::new(),
+            glosses: HashMap::from([("en".to_string(), definition.to_string())]),
+            examples: HashMap::new(),
+        };
+        store
+            .install_pack(&StarterPack {
+                id: "test-en-context-confidence".to_string(),
+                language: "en".to_string(),
+                version: "2026.08.22.1".to_string(),
+                title: "English context confidence test".to_string(),
+                source_name: "Test".to_string(),
+                source_url: "https://example.com".to_string(),
+                license: "Test".to_string(),
+                edition: "mini".to_string(),
+                entries: vec![
+                    sense("an amount of time", 0),
+                    sense(
+                        "a unit of geological time during which a system of rocks formed",
+                        1,
+                    ),
+                ],
+            })
+            .unwrap();
+
+        let event = store
+            .lookup_with_context(
+                "period",
+                "Submissions must be made during the event period.",
+                Some("en"),
+                "en",
+            )
+            .unwrap();
+        assert_eq!(event.entries[0].definition, "an amount of time");
+        assert!(!event.entries[0].context_recommended);
+
+        let geological = store
+            .lookup_with_context(
+                "period",
+                "This geological period formed a system of rocks.",
+                Some("en"),
+                "en",
+            )
+            .unwrap();
+        assert!(geological.entries[0].definition.contains("geological time"));
+        assert!(geological.entries[0].context_recommended);
     }
 
     #[test]
