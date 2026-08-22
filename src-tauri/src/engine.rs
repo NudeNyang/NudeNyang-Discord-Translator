@@ -2603,6 +2603,9 @@ fn localize_dictionary_result(
     mut result: DictionaryLookupResult,
     target: Language,
 ) -> DictionaryLookupResult {
+    const DICTIONARY_LOCALIZATION_BATCH_ITEMS: usize = 2;
+
+    #[derive(Clone, Copy)]
     enum LocalizationTarget {
         Selection,
         Entry(usize),
@@ -2633,49 +2636,87 @@ fn localize_dictionary_result(
         targets.push(LocalizationTarget::Entry(index));
     }
 
-    match service.translate_many_with_sources(&texts, &sources, target) {
-        Ok(translated) => {
-            for (target_item, translated) in targets.into_iter().zip(translated) {
-                match target_item {
-                    LocalizationTarget::Selection => {
-                        if dictionary_translation_is_acceptable(&result.query, &translated, target)
-                        {
-                            result.selection_translation = translated.trim().to_string();
-                        } else {
-                            log_rejected_dictionary_translation(
-                                "selection",
-                                &result.query,
-                                &translated,
-                                target,
-                            );
+    for chunk_start in (0..texts.len()).step_by(DICTIONARY_LOCALIZATION_BATCH_ITEMS) {
+        let chunk_end = (chunk_start + DICTIONARY_LOCALIZATION_BATCH_ITEMS).min(texts.len());
+        let chunk_texts = &texts[chunk_start..chunk_end];
+        let chunk_sources = &sources[chunk_start..chunk_end];
+        let translated = match service.translate_many_with_sources(
+            chunk_texts,
+            chunk_sources,
+            target,
+        ) {
+            Ok(translated) => translated.into_iter().map(Some).collect::<Vec<_>>(),
+            Err(error) => {
+                crate::diagnostics::warn(
+                    "dictionary",
+                    &format!(
+                        "dictionary localization batch failed; retrying items separately: items={}; error={error}",
+                        chunk_texts.len()
+                    ),
+                );
+                chunk_texts
+                    .iter()
+                    .zip(chunk_sources)
+                    .map(|(text, source)| {
+                        match service.translate_many_with_sources(
+                            std::slice::from_ref(text),
+                            std::slice::from_ref(source),
+                            target,
+                        ) {
+                            Ok(mut translated) => translated.pop(),
+                            Err(item_error) => {
+                                crate::diagnostics::warn(
+                                    "dictionary",
+                                    &format!(
+                                        "dictionary localization item kept as original: chars={}; source={}; target={}; error={item_error}",
+                                        text.chars().count(),
+                                        source.code(),
+                                        target.code()
+                                    ),
+                                );
+                                None
+                            }
                         }
+                    })
+                    .collect()
+            }
+        };
+
+        for (offset, translated) in translated.into_iter().enumerate() {
+            let Some(translated) = translated else {
+                continue;
+            };
+            match targets[chunk_start + offset] {
+                LocalizationTarget::Selection => {
+                    if dictionary_translation_is_acceptable(&result.query, &translated, target) {
+                        result.selection_translation = translated.trim().to_string();
+                    } else {
+                        log_rejected_dictionary_translation(
+                            "selection",
+                            &result.query,
+                            &translated,
+                            target,
+                        );
                     }
-                    LocalizationTarget::Entry(index) => {
-                        let entry = &mut result.entries[index];
-                        if dictionary_translation_is_acceptable(
+                }
+                LocalizationTarget::Entry(index) => {
+                    let entry = &mut result.entries[index];
+                    if dictionary_translation_is_acceptable(&entry.definition, &translated, target)
+                    {
+                        entry.definition = translated.trim().to_string();
+                        entry.definition_language = result.target_language.clone();
+                        entry.definition_origin = "automatic".to_string();
+                    } else {
+                        log_rejected_dictionary_translation(
+                            "gloss",
                             &entry.definition,
                             &translated,
                             target,
-                        ) {
-                            entry.definition = translated.trim().to_string();
-                            entry.definition_language = result.target_language.clone();
-                            entry.definition_origin = "automatic".to_string();
-                        } else {
-                            log_rejected_dictionary_translation(
-                                "gloss",
-                                &entry.definition,
-                                &translated,
-                                target,
-                            );
-                        }
+                        );
                     }
                 }
             }
         }
-        Err(error) => crate::diagnostics::warn(
-            "dictionary",
-            &format!("dictionary batch translation failed: {error}"),
-        ),
     }
     if !result.selection_translation.is_empty() {
         let translated_context = result.selection_translation.clone();
@@ -3235,6 +3276,9 @@ mod tests {
         ) -> Result<Vec<String>, String> {
             self.calls.fetch_add(1, Ordering::SeqCst);
             self.items.fetch_add(items.len(), Ordering::SeqCst);
+            if items.len() > 2 {
+                return Err("Hy-MT2 테스트 서버가 큰 사전 묶음을 거부했습니다.".to_string());
+            }
             Ok(items
                 .iter()
                 .map(|(text, source)| match source {
@@ -3397,7 +3441,7 @@ mod tests {
     }
 
     #[test]
-    fn dictionary_localization_batches_selection_and_all_visible_senses_once() {
+    fn dictionary_localization_splits_selection_and_all_visible_senses_into_safe_batches() {
         let cache_path = std::env::temp_dir().join(format!(
             "nudenyang-dictionary-batch-localization-cache-{}.db",
             std::process::id()
@@ -3446,7 +3490,7 @@ mod tests {
 
         let localized = localize_dictionary_result(&mut service, result, Language::Korean);
 
-        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
         assert_eq!(items.load(Ordering::SeqCst), 3);
         assert!(!localized.localization_pending);
         assert_eq!(localized.selection_translation, "출시 기념으로 할인합니다");
