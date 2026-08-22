@@ -866,6 +866,19 @@ function closeDictionaryPackManager() {
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
+function handleDictionaryMouseBack(event) {
+  if (event.button !== 3) return;
+  let handled = true;
+  if (!elements.dictionaryImportLayer.hidden) closeDictionaryImport();
+  else if (!elements.dictionaryEditorLayer.hidden) closeDictionaryEditor();
+  else if (state.dictionaryPackManagerOpen) closeDictionaryPackManager();
+  else if (state.dictionaryPersonalManagerOpen) closeDictionaryManager();
+  else handled = false;
+  if (!handled) return;
+  event.preventDefault();
+  event.stopPropagation();
+}
+
 function openDictionaryEditor(entry = null) {
   const value = dictionaryEntryPayload(entry || {});
   state.dictionaryEditingEntry = entry ? value : null;
@@ -2751,6 +2764,7 @@ initializeDictionaryCustomSelects();
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });
+document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
 elements.discordRestartManual.addEventListener("click", restartDiscordManually);
 elements.outgoingTranslation.addEventListener("click", async () => {

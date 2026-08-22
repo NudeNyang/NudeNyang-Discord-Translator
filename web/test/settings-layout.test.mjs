@@ -615,6 +615,14 @@ test("dictionary pack sorting resolves the automatic UI language before using lo
   assert.match(script, /const language = resolveUiLanguage\(currentUiLanguage\(\)\);/);
 });
 
+test("mouse back closes either full-width dictionary manager", () => {
+  assert.match(script, /function handleDictionaryMouseBack\(event\)/);
+  assert.match(script, /if \(event\.button !== 3\) return;/);
+  assert.match(script, /state\.dictionaryPackManagerOpen[\s\S]*?closeDictionaryPackManager\(\)/);
+  assert.match(script, /state\.dictionaryPersonalManagerOpen[\s\S]*?closeDictionaryManager\(\)/);
+  assert.match(script, /document\.addEventListener\("mousedown", handleDictionaryMouseBack, true\)/);
+});
+
 test("dictionary packs expose only installed and not-installed states with comfortable note spacing", () => {
   assert.match(markup, /class="section-note dictionary-localization-note"/);
   assert.match(markup, /id="dictionary-external-model-note"[^>]*hidden/);
