@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canonicalSpeechLanguage, selectSpeechVoice } from "../dictionary-speech.mjs";
+import {
+  canonicalSpeechLanguage,
+  selectSpeechVoice,
+  waitForSpeechVoice,
+} from "../dictionary-speech.mjs";
 
 const voice = (lang, name, localService = true, isDefault = false) => ({
   lang,
@@ -43,4 +47,35 @@ test("dictionary speech selects a voice from the source language instead of the 
 
 test("dictionary speech does not force an unrelated installed voice", () => {
   assert.equal(selectSpeechVoice([voice("en-US", "English")], "ko"), null);
+});
+
+test("dictionary speech waits until the requested WebView voice becomes available", async () => {
+  let voices = [];
+  const listeners = new Set();
+  const synthesis = {
+    getVoices: () => voices,
+    addEventListener: (type, listener) => {
+      if (type === "voiceschanged") listeners.add(listener);
+    },
+    removeEventListener: (type, listener) => {
+      if (type === "voiceschanged") listeners.delete(listener);
+    },
+  };
+
+  const pending = waitForSpeechVoice(synthesis, "en", { timeoutMs: 100 });
+  voices = [voice("ko-KR", "Korean"), voice("en-US", "Microsoft Zira")];
+  for (const listener of listeners) listener();
+
+  assert.equal((await pending)?.name, "Microsoft Zira");
+  assert.equal(listeners.size, 0);
+});
+
+test("dictionary speech never falls back to an unrelated default voice after waiting", async () => {
+  const synthesis = {
+    getVoices: () => [voice("ko-KR", "Korean default", true, true)],
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  };
+
+  assert.equal(await waitForSpeechVoice(synthesis, "en", { timeoutMs: 1 }), null);
 });

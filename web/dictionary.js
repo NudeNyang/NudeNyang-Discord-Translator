@@ -1,5 +1,5 @@
 import { resolveUiLanguage } from "./i18n.mjs";
-import { canonicalSpeechLanguage, selectSpeechVoice } from "./dictionary-speech.mjs";
+import { canonicalSpeechLanguage, waitForSpeechVoice } from "./dictionary-speech.mjs";
 import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 
 const invoke = window.__TAURI__?.core?.invoke;
@@ -31,6 +31,7 @@ let uiLanguage = "en";
 let currentRequestId = "";
 let cleanupScroll = () => {};
 let activeSpeech = null;
+let speechGeneration = 0;
 
 function copy(key) {
   const korean = KOREAN_COPIES[key];
@@ -67,6 +68,7 @@ function setSpeechButtonState(button, state, playLabel) {
 }
 
 function cancelSpeech() {
+  speechGeneration += 1;
   const previous = activeSpeech;
   activeSpeech = null;
   window.speechSynthesis?.cancel?.();
@@ -84,7 +86,7 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
   const button = make("button", className, "▶");
   button.type = "button";
   setSpeechButtonState(button, "idle", playLabel);
-  button.addEventListener("click", () => {
+  button.addEventListener("click", async () => {
     if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window) || !text) return;
     if (activeSpeech?.button === button) {
       if (activeSpeech.state === "paused") {
@@ -100,10 +102,18 @@ function createSpeechButton(text, language, className, playLabel = copy("pronoun
     }
 
     cancelSpeech();
+    const requestGeneration = speechGeneration;
+    const requestedLanguage = canonicalSpeechLanguage(language || uiLanguage);
+    const voice = await waitForSpeechVoice(speechSynthesis, requestedLanguage);
+    if (requestGeneration !== speechGeneration || !button.isConnected) return;
+    if (!voice) {
+      setSpeechButtonState(button, "idle", playLabel);
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = canonicalSpeechLanguage(language || uiLanguage);
-    const voice = selectSpeechVoice(speechSynthesis.getVoices(), utterance.lang);
-    if (voice) utterance.voice = voice;
+    utterance.lang = requestedLanguage;
+    utterance.voice = voice;
     utterance.addEventListener("end", () => finishSpeech(utterance));
     utterance.addEventListener("error", () => finishSpeech(utterance));
     activeSpeech = { button, utterance, state: "playing", playLabel };

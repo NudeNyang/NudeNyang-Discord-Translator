@@ -74,3 +74,39 @@ export function selectSpeechVoice(voices, language) {
 
   return best;
 }
+
+export function waitForSpeechVoice(synthesis, language, { timeoutMs = 1500 } = {}) {
+  if (!synthesis?.getVoices) return Promise.resolve(null);
+
+  const findVoice = () => selectSpeechVoice(synthesis.getVoices(), language);
+  const readyVoice = findVoice();
+  if (readyVoice) return Promise.resolve(readyVoice);
+
+  return new Promise(resolve => {
+    let settled = false;
+    let timer = 0;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      synthesis.removeEventListener?.("voiceschanged", handleVoicesChanged);
+    };
+    const finish = voice => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(voice || null);
+    };
+    const handleVoicesChanged = () => {
+      const voice = findVoice();
+      if (voice) finish(voice);
+    };
+
+    synthesis.addEventListener?.("voiceschanged", handleVoicesChanged);
+    const voiceAfterListening = findVoice();
+    if (voiceAfterListening) {
+      finish(voiceAfterListening);
+      return;
+    }
+    timer = setTimeout(() => finish(findVoice()), timeoutMs);
+  });
+}
