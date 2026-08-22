@@ -203,8 +203,6 @@ export const COPY = Object.freeze({
   "최근 대화 언어를 기준으로 번역합니다.": ["Translate using the language of recent messages.", "最近の会話言語を基準に翻訳します。", "根据最近对话的语言进行翻译。"],
   "기본 전송 언어": ["Default outgoing language", "既定の送信言語", "默认发送语言"],
   "채널별 선택이 없을 때 적용합니다.": ["Used when a channel has no saved selection.", "チャンネル別の選択がない場合に適用します。", "频道没有保存的选择时使用。"],
-  "첫 Enter로 번역문을 입력창에 준비하고, 다음 Enter는 사용자가 직접 전송합니다.": ["The first Enter prepares the translation in the message box; you press Enter again to send it yourself.", "最初のEnterで翻訳文を入力欄に用意し、次のEnterはユーザー自身が押して送信します。", "第一次按 Enter 会在输入框中准备译文；再由你按一次 Enter 发送。"],
-  "사용자 전송": ["User-controlled sending", "ユーザーによる送信", "由用户发送"],
   "언어를 판단하기 어려울 때만 전송 언어를 확인합니다.": ["Ask for the outgoing language only when it cannot be determined.", "言語を判定しにくい場合のみ、送信言語を確認します。", "仅在难以判断语言时确认发送语言。"],
   "받은 메시지는 빠른 로컬 모델로, 보낼 메시지는 문맥과 말투에 강한 CLI 모델로 번역하는 구성을 권장합니다.": ["For the recommended setup, use a fast local model for received messages and a CLI model strong at context and tone for outgoing messages.", "受信メッセージには高速なローカルモデルを、送信メッセージには文脈と文体に強いCLIモデルを使用する構成を推奨します。", "建议使用快速的本地模型翻译收到的消息，并使用擅长处理语境和语气的 CLI 模型翻译发送的消息。"],
   "번역 모델": ["Translation model", "翻訳モデル", "翻译模型"],

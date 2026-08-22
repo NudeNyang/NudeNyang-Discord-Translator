@@ -187,7 +187,7 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.doesNotMatch(markup, /채널별 첫 감지 확인/);
   assert.doesNotMatch(markup, /id="outgoing-confirm-language"/);
   assert.doesNotMatch(markup, /id="outgoing-confirm-send"/);
-  assert.match(markup, /첫 Enter로 번역문을 입력창에 준비하고, 다음 Enter는 사용자가 직접 전송합니다/);
+  assert.doesNotMatch(markup, /사용자 전송|첫 Enter로 번역문을 입력창에 준비하고/);
   assert.doesNotMatch(markup, /<div class="privacy-note"><strong>자동 감지<\/strong>/);
   assert.match(markup, /id="outgoing-auto-help"/);
   assert.match(markup, /언어를 판단하기 어려울 때만 전송 언어를 확인합니다/);
