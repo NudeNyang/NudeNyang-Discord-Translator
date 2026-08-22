@@ -117,6 +117,7 @@ mod windows_speech {
     };
 
     const POLL_INTERVAL: Duration = Duration::from_millis(40);
+    const STARTUP_TIMEOUT: Duration = Duration::from_secs(3);
     const WINDOW_LABEL: &str = "dictionary";
     const ENDED_EVENT: &str = "dictionary-speech-ended";
 
@@ -125,6 +126,7 @@ mod windows_speech {
         request_id: String,
         paused: bool,
         started_at: Instant,
+        observed_running: bool,
     }
 
     struct ComApartment;
@@ -169,6 +171,19 @@ mod windows_speech {
     unsafe fn purge(voice: &ISpVoice) -> Result<(), String> {
         unsafe { voice.Speak(PCWSTR::null(), SPF_PURGEBEFORESPEAK.0 as u32, None) }
             .map_err(|error| format!("음성 재생을 중지하지 못했습니다: {error}"))
+    }
+
+    fn speech_finished(
+        observed_running: &mut bool,
+        running_state: u32,
+        startup_timed_out: bool,
+    ) -> bool {
+        if running_state != SPRS_DONE.0 as u32 {
+            *observed_running = true;
+            false
+        } else {
+            *observed_running || startup_timed_out
+        }
     }
 
     fn failed_worker(receiver: Receiver<SpeechCommand>, error: String) {
@@ -257,6 +272,7 @@ mod windows_speech {
                             request_id,
                             paused: false,
                             started_at: Instant::now(),
+                            observed_running: false,
                         });
                         Ok(true)
                     })();
@@ -298,12 +314,18 @@ mod windows_speech {
                 Err(RecvTimeoutError::Timeout) => {}
             }
 
-            let finished = if active.as_ref().is_some_and(|current| {
-                !current.paused && current.started_at.elapsed() >= POLL_INTERVAL
-            }) {
+            let finished = if active.as_ref().is_some_and(|current| !current.paused) {
                 let mut status = SPVOICESTATUS::default();
-                unsafe { voice.GetStatus(&mut status, ptr::null_mut()) }.is_ok()
-                    && status.dwRunningState == SPRS_DONE.0 as u32
+                if unsafe { voice.GetStatus(&mut status, ptr::null_mut()) }.is_ok() {
+                    let current = active.as_mut().expect("active speech should exist");
+                    speech_finished(
+                        &mut current.observed_running,
+                        status.dwRunningState,
+                        current.started_at.elapsed() >= STARTUP_TIMEOUT,
+                    )
+                } else {
+                    false
+                }
             } else {
                 false
             };
@@ -328,6 +350,35 @@ mod windows_speech {
             assert_eq!(language_attribute("en-US").unwrap(), "Language=409");
             assert_eq!(language_attribute("ko-KR").unwrap(), "Language=412");
             assert_eq!(language_attribute("ja-JP").unwrap(), "Language=411");
+        }
+
+        #[test]
+        fn initial_done_state_does_not_end_speech_before_sapi_starts() {
+            let mut observed_running = false;
+
+            assert!(!speech_finished(
+                &mut observed_running,
+                SPRS_DONE.0 as u32,
+                false
+            ));
+            assert!(!speech_finished(&mut observed_running, 2, false));
+            assert!(observed_running);
+            assert!(speech_finished(
+                &mut observed_running,
+                SPRS_DONE.0 as u32,
+                false
+            ));
+        }
+
+        #[test]
+        fn speech_start_timeout_recovers_if_sapi_never_runs() {
+            let mut observed_running = false;
+
+            assert!(speech_finished(
+                &mut observed_running,
+                SPRS_DONE.0 as u32,
+                true
+            ));
         }
 
         #[test]
