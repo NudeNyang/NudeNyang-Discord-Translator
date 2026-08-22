@@ -12,18 +12,21 @@ const verification = readFileSync(
 );
 const verificationProduction = verification.split("#[cfg(test)]")[0];
 const cdp = readFileSync(new URL("../../src-tauri/src/cdp.rs", import.meta.url), "utf8");
+const i18n = readFileSync(new URL("../i18n.mjs", import.meta.url), "utf8");
+const generatedLocales = readFileSync(new URL("../ui-locales.json", import.meta.url), "utf8");
 
 test("Discord verification pauses the pipe and offers a neutral compatibility flow", () => {
   assert.match(markup, /id="verification-banner"/);
-  assert.match(markup, /Discord 인증을 완료한 후 누드냥을 다시 연결할 수 있습니다/);
+  assert.match(markup, /Discord 인증을 완료한 후 NudeNyang을 다시 연결할 수 있습니다/);
   assert.match(markup, /id="verification-continue-vanilla"[^>]*>현재 Discord에서 인증 계속/);
-  assert.match(markup, /id="verification-reconnect"[^>]*>누드냥 다시 연결/);
+  assert.match(markup, /id="verification-reconnect"[^>]*>NudeNyang 다시 연결/);
   assert.match(script, /invoke\("discord_restart_vanilla"/);
   assert.match(script, /invoke\("discord_restart"/);
   assert.match(script, /tauriListen\("discord-verification-required"/);
   assert.match(state, /verificationRequired/);
   assert.match(engine, /disconnect_current_guardian\(\)/);
   assert.match(engine, /discord_verification_mode/);
+  assert.doesNotMatch(`${markup}\n${script}\n${i18n}\n${generatedLocales}`, /누드냥/);
 });
 
 test("verification detection is read-only and CDP cannot synthesize account actions", () => {

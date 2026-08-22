@@ -2583,7 +2583,7 @@ async function handleVerificationRequired() {
     const confirmed = await showModal({
       title: "Discord 추가 인증이 필요합니다",
       message:
-        "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 누드냥의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
+        "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
       acceptText: "일반 Discord로 다시 시작",
       cancelText: "현재 Discord에서 인증 계속",
       variant: "verification",
@@ -2603,9 +2603,9 @@ async function reconnectAfterVerification() {
   renderVerificationMode();
   try {
     const confirmed = await showModal({
-      title: "누드냥을 다시 연결하시겠습니까?",
+      title: "NudeNyang을 다시 연결하시겠습니까?",
       message:
-        "누드냥을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
+        "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
       acceptText: "Discord를 다시 시작하고 연결",
     });
     if (!confirmed) return;
@@ -2618,7 +2618,7 @@ async function reconnectAfterVerification() {
     state.verificationBannerDismissed = false;
     await pollRuntime();
   } catch (error) {
-    await showError("누드냥 재연결 실패", String(error));
+    await showError("NudeNyang 재연결 실패", String(error));
   } finally {
     state.repairActive = false;
     state.promptActive = false;
@@ -2850,7 +2850,7 @@ document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
 elements.discordRestartManual.addEventListener("click", restartDiscordManually);
 elements.verificationReconnect.addEventListener("click", () => {
-  reconnectAfterVerification().catch(error => showError("누드냥 재연결 실패", String(error)));
+  reconnectAfterVerification().catch(error => showError("NudeNyang 재연결 실패", String(error)));
 });
 elements.verificationContinueVanilla.addEventListener("click", () => {
   state.verificationBannerDismissed = true;

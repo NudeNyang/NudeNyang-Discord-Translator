@@ -2593,7 +2593,7 @@ mod tests {
                 source_language: "en".into(),
                 target_language: "ko".into(),
                 source_term: "BugCat".into(),
-                target_term: "누드냥".into(),
+                target_term: "NudeNyang".into(),
                 note: "캐릭터명".into(),
                 tags: "Discord, 캐릭터".into(),
                 pinned: true,
@@ -2607,7 +2607,7 @@ mod tests {
             .unwrap();
         assert!(saved.id > 0);
         let result = store.lookup("BugCat", Some("en"), "ko").unwrap();
-        assert_eq!(result.personal_entries[0].target_term, "누드냥");
+        assert_eq!(result.personal_entries[0].target_term, "NudeNyang");
         assert!(store.delete_personal(saved.id).unwrap());
     }
 
