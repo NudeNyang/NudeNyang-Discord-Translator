@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
@@ -20,6 +20,7 @@ use crate::dictionary_ui::{
     dictionary_ui_script, parse_dictionary_requests, DICTIONARY_CLEANUP_SCRIPT,
 };
 use crate::dictionary_window;
+use crate::discord_verification::{parse_verification_observation, VERIFICATION_DETECTION_SCRIPT};
 use crate::dom::{
     apply_script, parse_snapshot, DomChange, DomPart, CLEAR_TEXT_REGISTRY_SCRIPT,
     INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
@@ -35,14 +36,11 @@ use crate::language::{detect_language, is_han_only, is_supported_language_code, 
 use crate::ocr::OcrQualityMode;
 use crate::outgoing::{
     apply_outgoing_detected_script, apply_outgoing_error_script, apply_outgoing_review_script,
-    apply_outgoing_suggestion_script, attach_outgoing_text_file_script,
-    capture_outgoing_send_script, finish_outgoing_review_script, outgoing_originals_ui_script,
-    outgoing_ui_script, parse_outgoing_bindings, parse_outgoing_requests,
-    prepare_outgoing_attachment_script, prepare_outgoing_reviewed_send_script,
-    prepare_outgoing_send_script, suggest_recent_language, OutgoingRequest,
-    OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
+    apply_outgoing_suggestion_script, finish_outgoing_review_script, outgoing_originals_ui_script,
+    outgoing_ui_script, parse_outgoing_bindings, parse_outgoing_requests, suggest_recent_language,
+    OutgoingRequest, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
+    OUTGOING_ORIGINALS_UI_VERSION,
 };
-use crate::text_split::split_for_discord;
 use crate::translation::{
     DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationCancellation,
     ModelPreparationProgress, ModelProgressObserver, OriginalTranslator, ResilientTranslator,
@@ -53,10 +51,10 @@ const MAX_BATCH_ITEMS: usize = 32;
 const CPU_MAX_BATCH_ITEMS: usize = 6;
 const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
 const DISPLAY_VIEW_SETTLE_DELAY: Duration = Duration::from_millis(250);
-const DISCORD_MESSAGE_UTF16_LIMIT: usize = 1900;
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
 const MAX_IMAGE_BASE64_BYTES: usize = (MAX_IMAGE_BYTES * 4 / 3) + 8;
+const VERIFICATION_SIGNAL_PREFIX: &str = "__NUDENYANG_VERIFICATION__:";
 
 type Locator = (String, String, usize);
 type PendingKey = (u64, u64, String, String, usize, String);
@@ -71,6 +69,8 @@ pub struct RuntimeStatus {
     pub cdp_connected: bool,
     pub connection_issue: String,
     pub discord_process_id: Option<u32>,
+    pub verification_required: bool,
+    pub verification_kind: String,
     pub engine: String,
     pub target_language: String,
     pub configured_translator: String,
@@ -94,6 +94,8 @@ impl RuntimeStatus {
             cdp_connected: false,
             connection_issue: String::new(),
             discord_process_id: None,
+            verification_required: config.discord_verification_mode,
+            verification_kind: String::new(),
             engine: "rust-native".to_string(),
             target_language: config.target_language.clone(),
             configured_translator: config.translator.clone(),
@@ -121,6 +123,7 @@ enum Control {
     SetEnabled(bool),
     CancelModelPreparation,
     ReplaceCdp(CdpClient, mpsc::Sender<Result<(), String>>),
+    PauseForVerification(String, mpsc::Sender<Result<(), String>>),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     AttachApp(AppHandle),
     UiReady,
@@ -196,7 +199,6 @@ struct OutgoingTranslationBatch {
     target: Language,
     request_id: String,
     text: String,
-    send_immediately: bool,
     queued_at: Instant,
 }
 
@@ -334,7 +336,6 @@ enum WorkerResult {
         generation: u64,
         request_id: String,
         value: Result<String, String>,
-        send_immediately: bool,
     },
     DictionaryLocalized {
         request_id: String,
@@ -499,6 +500,16 @@ impl RustEngine {
             .map_err(|_| "Discord 보안 연결 검증 결과를 기다리지 못했습니다.".to_string())?
     }
 
+    pub fn pause_for_verification(&self, kind: &str) -> Result<(), String> {
+        let (result_tx, result_rx) = mpsc::channel();
+        self.controls
+            .send(Control::PauseForVerification(kind.to_string(), result_tx))
+            .map_err(|_| "Discord 인증을 위해 번역 연결을 중지하지 못했습니다.".to_string())?;
+        result_rx
+            .recv_timeout(Duration::from_secs(10))
+            .map_err(|_| "Discord 인증 보호 모드 전환 결과를 기다리지 못했습니다.".to_string())?
+    }
+
     pub fn attach_app(&self, app: AppHandle) -> Result<(), String> {
         self.controls
             .send(Control::AttachApp(app))
@@ -583,6 +594,7 @@ fn run_controller(
     let mut outgoing_ui_needs_cleanup = true;
     let mut dictionary_ui_needs_cleanup = true;
     let mut app_handle: Option<AppHandle> = None;
+    let mut verification_paused = config.discord_verification_mode;
     let mut ui_ready = false;
     let mut stopped = false;
     let mut pending_control = None;
@@ -861,6 +873,17 @@ fn run_controller(
                         });
                         connection_issue_reported = true;
                     } else {
+                        verification_paused = false;
+                        config.discord_verification_mode = false;
+                        if let Some(app) = app_handle.as_ref() {
+                            if let Ok(updated) = app
+                                .state::<ConfigStore>()
+                                .update(json!({"discord_verification_mode": false}))
+                            {
+                                config = updated.clone();
+                                let _ = app.emit("settings-changed", updated);
+                            }
+                        }
                         client = Some(replacement);
                         states.clear();
                         pending.clear();
@@ -873,8 +896,48 @@ fn run_controller(
                         dictionary_ui_needs_cleanup = true;
                         consecutive_connection_failures = 0;
                         connection_issue_reported = false;
+                        update_status(&status, |runtime| {
+                            runtime.verification_required = false;
+                            runtime.verification_kind.clear();
+                        });
                     }
                     let _ = result_tx.send(prepare_result);
+                }
+                Control::PauseForVerification(kind, result_tx) => {
+                    config.discord_verification_mode = true;
+                    restore(&mut client, &states, false);
+                    if let Some(active) = client.as_mut() {
+                        let _ = active.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+                        let _ = active.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
+                    }
+                    if let Some(mut active) = client.take() {
+                        active.close();
+                    }
+                    let guardian_result = crate::discord::disconnect_current_guardian();
+                    verification_paused = true;
+                    states.clear();
+                    pending.clear();
+                    image_pending.clear();
+                    outgoing_pending.clear();
+                    generation += 1;
+                    update_status(&status, |runtime| {
+                        runtime.cdp_connected = false;
+                        runtime.connection_issue.clear();
+                        runtime.verification_required = true;
+                        runtime.verification_kind = kind.clone();
+                        runtime.notice =
+                            "Discord 추가 인증을 위해 번역 연결을 일시 중지했습니다.".to_string();
+                    });
+                    if let Some(app) = app_handle.as_ref() {
+                        if let Ok(updated) = app
+                            .state::<ConfigStore>()
+                            .update(json!({"discord_verification_mode": true}))
+                        {
+                            config = updated.clone();
+                            let _ = app.emit("settings-changed", updated);
+                        }
+                    }
+                    let _ = result_tx.send(guardian_result);
                 }
                 Control::ClearCache(result_tx) => {
                     let result = outgoing_original_store
@@ -1013,6 +1076,9 @@ fn run_controller(
 
         let had_client = client.is_some();
         let result = (|| -> Result<(), String> {
+            if verification_paused {
+                return Ok(());
+            }
             if client.is_none() {
                 return Err(
                     "Discord가 보안 연결로 열리지 않았어. Discord 재시작을 진행해줘.".to_string(),
@@ -1025,6 +1091,15 @@ fn run_controller(
                 runtime.cdp_connected = true;
                 runtime.connection_issue.clear();
             });
+            let verification = parse_verification_observation(
+                client
+                    .as_mut()
+                    .expect("connected CDP client")
+                    .evaluate(VERIFICATION_DETECTION_SCRIPT, false)?,
+            )?;
+            if verification.required {
+                return Err(format!("{VERIFICATION_SIGNAL_PREFIX}{}", verification.kind));
+            }
             if !prepare_display_view_for_dom(
                 client.as_mut().expect("connected CDP client"),
                 &mut pending,
@@ -1090,9 +1165,6 @@ fn run_controller(
                             &config.outgoing_target_language,
                             &config.ui_language,
                             &outgoing_channel_languages,
-                            config.outgoing_confirm_send,
-                            &config.hotkeys.send_outgoing_immediately,
-                            &config.hotkeys.review_outgoing_before_send,
                         ),
                         false,
                     )?;
@@ -1174,28 +1246,76 @@ fn run_controller(
             Ok(())
         })();
         if let Err(error) = result {
-            if !had_client
-                && (config.enabled
-                    || config.outgoing_translation_enabled
-                    || config.dictionary_enabled)
-                && !connection_issue_reported
-            {
-                consecutive_connection_failures += 1;
-                if consecutive_connection_failures >= 2 {
-                    connection_issue_reported = true;
-                    crate::diagnostics::error("discord-connection", &error);
-                    update_status(&status, |runtime| {
-                        runtime.connection_issue = error.clone();
-                    });
+            if let Some(kind) = error.strip_prefix(VERIFICATION_SIGNAL_PREFIX) {
+                config.discord_verification_mode = true;
+                restore(&mut client, &states, false);
+                if let Some(active) = client.as_mut() {
+                    let _ = active.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+                    let _ = active.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
                 }
-            }
-            if let Some(mut disconnected) = client.take() {
-                disconnected.close();
+                if let Some(mut disconnected) = client.take() {
+                    disconnected.close();
+                }
+                if let Err(guardian_error) = crate::discord::disconnect_current_guardian() {
+                    crate::diagnostics::warn("verification-guard", &guardian_error);
+                }
+                verification_paused = true;
+                states.clear();
+                pending.clear();
+                image_pending.clear();
+                outgoing_pending.clear();
+                generation += 1;
+                update_status(&status, |runtime| {
+                    runtime.cdp_connected = false;
+                    runtime.connection_issue.clear();
+                    runtime.verification_required = true;
+                    runtime.verification_kind = kind.to_string();
+                    runtime.notice =
+                        "Discord 추가 인증을 위해 번역 연결을 일시 중지했습니다.".to_string();
+                });
+                if let Some(app) = app_handle.as_ref() {
+                    if let Ok(updated) = app
+                        .state::<ConfigStore>()
+                        .update(json!({"discord_verification_mode": true}))
+                    {
+                        config = updated.clone();
+                        let _ = app.emit("settings-changed", updated);
+                    }
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                    }
+                    let _ = app.emit("discord-verification-required", json!({"kind": kind}));
+                }
+                crate::diagnostics::warn(
+                    "verification-guard",
+                    &format!("Discord verification detected; kind={kind}"),
+                );
+            } else {
+                if !had_client
+                    && (config.enabled
+                        || config.outgoing_translation_enabled
+                        || config.dictionary_enabled)
+                    && !connection_issue_reported
+                {
+                    consecutive_connection_failures += 1;
+                    if consecutive_connection_failures >= 2 {
+                        connection_issue_reported = true;
+                        crate::diagnostics::error("discord-connection", &error);
+                        update_status(&status, |runtime| {
+                            runtime.connection_issue = error.clone();
+                        });
+                    }
+                }
+                if let Some(mut disconnected) = client.take() {
+                    disconnected.close();
+                }
+                update_status(&status, |runtime| runtime.cdp_connected = false);
             }
             image_ui_needs_cleanup = true;
             outgoing_ui_needs_cleanup = true;
             dictionary_ui_needs_cleanup = true;
-            update_status(&status, |runtime| runtime.cdp_connected = false);
         }
 
         let interval = if client.is_some() {
@@ -1833,9 +1953,6 @@ fn scan_outgoing(
             &config.outgoing_target_language,
             &config.ui_language,
             channel_languages,
-            config.outgoing_confirm_send,
-            &config.hotkeys.send_outgoing_immediately,
-            &config.hotkeys.review_outgoing_before_send,
         ),
         false,
     )?)?;
@@ -1866,13 +1983,6 @@ fn scan_outgoing(
         if request.id.is_empty() || request.text.trim().is_empty() {
             continue;
         }
-        if request.action == "send-reviewed" {
-            if let Err(error) = dispatch_outgoing_reviewed_send(client, &request.id, &request.text)
-            {
-                client.evaluate(&apply_outgoing_error_script(&request.id, &error)?, false)?;
-            }
-            continue;
-        }
         if request.selected_language == "auto" {
             let suggestion = suggest_recent_language(&request.recent_messages);
             if let Some(target) = suggestion {
@@ -1881,20 +1991,6 @@ fn scan_outgoing(
                 continue;
             }
             client.evaluate(&apply_outgoing_suggestion_script(&request.id, None)?, false)?;
-            continue;
-        }
-        if request.selected_language == "original" {
-            if let Err(error) = dispatch_outgoing_send(client, &request.id, None) {
-                client.evaluate(
-                    &apply_outgoing_error_script(
-                        &request.id,
-                        &format!(
-                            "메시지를 전송하지 못했습니다. 번역하지 않고 원문을 유지합니다. {error}"
-                        ),
-                    )?,
-                    false,
-                )?;
-            }
             continue;
         }
         let target = match Language::try_from(request.selected_language.as_str()) {
@@ -1932,100 +2028,9 @@ fn enqueue_outgoing_translation(
             target,
             request_id: request.id,
             text: request.text,
-            send_immediately: request.send_immediately,
             queued_at: Instant::now(),
         }))
         .map_err(|_| "전송 메시지 통역 작업을 시작하지 못했습니다.".to_string())
-}
-
-fn dispatch_outgoing_send(
-    client: &mut CdpClient,
-    request_id: &str,
-    replacement: Option<&str>,
-) -> Result<(), String> {
-    if let Some(text) = replacement {
-        let utf16_units = text.encode_utf16().count();
-        crate::diagnostics::info(
-            "outgoing-translation",
-            &format!(
-                "dispatch prepared; utf16_units={utf16_units}; delivery={}",
-                if utf16_units > DISCORD_MESSAGE_UTF16_LIMIT {
-                    "attachment"
-                } else {
-                    "single-message"
-                }
-            ),
-        );
-    }
-    if let Some(text) =
-        replacement.filter(|text| text.encode_utf16().count() > DISCORD_MESSAGE_UTF16_LIMIT)
-    {
-        if dispatch_outgoing_text_file(client, request_id, text)? {
-            return Ok(());
-        }
-        return Err(
-            "장문 번역문을 텍스트 파일로 첨부하지 못했습니다. 원문은 입력창에 유지됩니다."
-                .to_string(),
-        );
-    }
-
-    let parts = replacement
-        .map(|text| split_for_discord(text, DISCORD_MESSAGE_UTF16_LIMIT))
-        .unwrap_or_else(|| vec![String::new()]);
-    if parts.is_empty() || replacement.is_some_and(str::is_empty) {
-        return Err("전송할 번역문이 없습니다.".to_string());
-    }
-
-    for (index, part) in parts.iter().enumerate() {
-        let continuation = index > 0;
-        let final_part = index + 1 == parts.len();
-        let deadline = Instant::now() + Duration::from_secs(5);
-        let prepared = loop {
-            let prepared = client.evaluate(
-                &prepare_outgoing_send_script(
-                    request_id,
-                    replacement.is_some(),
-                    continuation,
-                    final_part,
-                    index + 1,
-                    parts.len(),
-                )?,
-                false,
-            )?;
-            if prepared.as_bool() == Some(true) {
-                break true;
-            }
-            if Instant::now() >= deadline {
-                break false;
-            }
-            thread::sleep(Duration::from_millis(40));
-        };
-        if !prepared {
-            return if index == 0 {
-                Err(
-                    "Discord 메시지 입력창을 찾을 수 없습니다. 원문은 입력창에 유지됩니다."
-                        .to_string(),
-                )
-            } else {
-                Err(format!(
-                    "분할된 번역문 {}개 중 {index}개를 전송했습니다. 나머지 메시지는 입력창 상태를 확인한 후 다시 전송하십시오.",
-                    parts.len()
-                ))
-            };
-        }
-        if replacement.is_some() {
-            client.call("Input.insertText", json!({"text": part}))?;
-        }
-        let captured = client.evaluate(&capture_outgoing_send_script(request_id)?, false)?;
-        if captured.as_bool() != Some(true) {
-            return Err("전송 직전 메시지 내용을 보존하지 못했습니다.".to_string());
-        }
-        dispatch_enter(client)?;
-        if !final_part {
-            thread::sleep(Duration::from_millis(250));
-        }
-    }
-    Ok(())
 }
 
 fn dispatch_outgoing_review(
@@ -2045,106 +2050,6 @@ fn dispatch_outgoing_review(
     if finished.as_bool() != Some(true) {
         return Err("번역문을 입력했지만 전송 대기 상태를 확정하지 못했습니다.".to_string());
     }
-    Ok(())
-}
-
-fn dispatch_outgoing_reviewed_send(
-    client: &mut CdpClient,
-    request_id: &str,
-    text: &str,
-) -> Result<(), String> {
-    if text.encode_utf16().count() > DISCORD_MESSAGE_UTF16_LIMIT {
-        if dispatch_outgoing_text_file(client, request_id, text)? {
-            return Ok(());
-        }
-        return Err("첨삭한 장문을 텍스트 파일로 전송하지 못했습니다.".to_string());
-    }
-    let prepared = client.evaluate(&prepare_outgoing_reviewed_send_script(request_id)?, false)?;
-    if prepared.as_bool() != Some(true) {
-        return Err("확인한 번역문을 전송할 입력창을 찾지 못했습니다.".to_string());
-    }
-    let captured = client.evaluate(&capture_outgoing_send_script(request_id)?, false)?;
-    if captured.as_bool() != Some(true) {
-        return Err("첨삭한 번역문의 전송 기록을 보존하지 못했습니다.".to_string());
-    }
-    dispatch_enter(client)
-}
-
-fn dispatch_outgoing_text_file(
-    client: &mut CdpClient,
-    request_id: &str,
-    content: &str,
-) -> Result<bool, String> {
-    let prepared = client.evaluate(&prepare_outgoing_attachment_script(request_id)?, false)?;
-    if prepared.as_bool() != Some(true) {
-        return Ok(false);
-    }
-
-    dispatch_backspace(client)?;
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let filename = format!("NudeNyangDiscordTranslator-translation-{timestamp}.txt");
-    let attached = client.evaluate(
-        &attach_outgoing_text_file_script(request_id, content, &filename)?,
-        false,
-    )?;
-    if attached.as_bool() != Some(true) {
-        return Ok(false);
-    }
-
-    // Discord가 change 이벤트로 첨부 파일을 읽고 전송 대기열을 만드는 시간을 확보합니다.
-    thread::sleep(Duration::from_millis(700));
-    dispatch_enter(client)?;
-    Ok(true)
-}
-
-fn dispatch_backspace(client: &mut CdpClient) -> Result<(), String> {
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "rawKeyDown",
-            "key": "Backspace",
-            "code": "Backspace",
-            "windowsVirtualKeyCode": 8,
-            "nativeVirtualKeyCode": 8
-        }),
-    )?;
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "keyUp",
-            "key": "Backspace",
-            "code": "Backspace",
-            "windowsVirtualKeyCode": 8,
-            "nativeVirtualKeyCode": 8
-        }),
-    )?;
-    Ok(())
-}
-
-fn dispatch_enter(client: &mut CdpClient) -> Result<(), String> {
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "rawKeyDown",
-            "key": "Enter",
-            "code": "Enter",
-            "windowsVirtualKeyCode": 13,
-            "nativeVirtualKeyCode": 13
-        }),
-    )?;
-    client.call(
-        "Input.dispatchKeyEvent",
-        json!({
-            "type": "keyUp",
-            "key": "Enter",
-            "code": "Enter",
-            "windowsVirtualKeyCode": 13,
-            "nativeVirtualKeyCode": 13
-        }),
-    )?;
     Ok(())
 }
 
@@ -2290,7 +2195,6 @@ fn drain_worker_results(
                 generation: result_generation,
                 request_id,
                 value,
-                send_immediately,
             } => {
                 outgoing_pending.remove(&(result_generation, request_id.clone()));
                 if result_generation != *generation || !config.outgoing_translation_enabled {
@@ -2301,16 +2205,12 @@ fn drain_worker_results(
                 };
                 match value {
                     Ok(translated) => {
-                        let delivery = if send_immediately {
-                            dispatch_outgoing_send(client, &request_id, Some(&translated))
-                        } else {
-                            dispatch_outgoing_review(client, &request_id, &translated)
-                        };
+                        let delivery = dispatch_outgoing_review(client, &request_id, &translated);
                         if let Err(error) = delivery {
                             crate::diagnostics::error("outgoing-translation", &error);
                             if let Ok(script) = apply_outgoing_error_script(
                                 &request_id,
-                                &format!("번역문을 모두 전송하지 못했습니다. {error}"),
+                                &format!("번역문을 입력창에 준비하지 못했습니다. {error}"),
                             ) {
                                 let _ = client.evaluate(&script, false);
                             }
@@ -3011,13 +2911,11 @@ fn run_outgoing_translation_worker(
         match command {
             OutgoingWorkerCommand::Translate(batch) => {
                 log_worker_queue("outgoing", batch.queued_at, 1, batch.text.chars().count());
-                let send_immediately = batch.send_immediately;
                 let value = service.translate_for_discord(&batch.text, batch.target);
                 let _ = results.send(WorkerResult::OutgoingTranslated {
                     generation: batch.generation,
                     request_id: batch.request_id,
                     value,
-                    send_immediately,
                 });
             }
             OutgoingWorkerCommand::Activate {
@@ -4190,7 +4088,6 @@ mod tests {
                 target: Language::Japanese,
                 request_id: "outgoing-priority".to_string(),
                 text: "안녕하세요".to_string(),
-                send_immediately: true,
                 queued_at: Instant::now(),
             }))
             .unwrap();

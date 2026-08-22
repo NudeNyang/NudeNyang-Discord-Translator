@@ -4,7 +4,6 @@ export const DEFAULT_CONFIG = Object.freeze({
   enabled: false,
   outgoing_translation_enabled: false,
   outgoing_target_language: "auto",
-  outgoing_confirm_send: true,
   dictionary_enabled: true,
   dictionary_external_provider: "wiktionary",
   target_language: "ko",
@@ -19,12 +18,11 @@ export const DEFAULT_CONFIG = Object.freeze({
   ui_theme: "system",
   ui_language: "auto",
   discord_auto_restart_consent_granted: false,
+  discord_verification_mode: false,
   translation_history_retention_days: 30,
   hotkeys: {
     toggle_translation: "F12",
     toggle_outgoing_translation: "F8",
-    send_outgoing_immediately: "Ctrl+Enter",
-    review_outgoing_before_send: "Alt+Enter",
   },
 });
 
@@ -147,6 +145,7 @@ export function restartCountdownMessage(seconds) {
 export function shouldPromptRestart(status, flags) {
   return Boolean(
     (status?.controllerEnabled ?? status?.enabled) &&
+      !status?.verificationRequired &&
       status?.connectionIssue &&
       !status?.cdpConnected &&
       !flags.promptActive &&
@@ -160,7 +159,7 @@ export function manualDiscordRestartAvailability(status = {}, flags = {}) {
     flags.manualRestartRequired ||
       (flags.restartAttempted && status.connectionIssue),
   );
-  const visible = Boolean(recoveryRequired && !status.cdpConnected);
+  const visible = Boolean(recoveryRequired && !status.cdpConnected && !status.verificationRequired);
   return {
     visible,
     disabled: visible && Boolean(flags.repairActive || flags.promptActive),
@@ -187,6 +186,7 @@ export function resolveEnabledState(reportedEnabled, pendingEnabled) {
 
 export function discordConnectionLabel(status = {}) {
   if (status.cdpConnected) return "Discord 연결됨";
+  if (status.verificationRequired) return "인증 호환 모드";
   if (status.connectionIssue) return "연결 확인 필요";
   return (status.controllerEnabled ?? status.enabled) ? "Discord 연결 중" : "번역 대기 중";
 }

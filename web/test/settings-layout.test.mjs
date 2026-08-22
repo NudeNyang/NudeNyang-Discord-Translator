@@ -170,11 +170,7 @@ test("settings apply immediately and the primary footer action only confirms", (
   assert.match(script, /async function applySettingsPatch\(patch/);
   assert.match(script, /applySettingsPatch\(\{ \[field\]: value \}\)/);
   assert.doesNotMatch(script, /outgoing_confirm_language/);
-  assert.match(script, /outgoing_confirm_send: enabled/);
-  assert.match(
-    script,
-    /function renderConfig[\s\S]*?elements\.outgoingConfirmSend[\s\S]*?state\.config\.outgoing_confirm_send[\s\S]*?async function applySettingsPatch/,
-  );
+  assert.doesNotMatch(script, /outgoing_confirm_send/);
   assert.match(script, /keep_local_model_warm: enabled/);
   assert.match(script, /scheduleCaptureFpsUpdate/);
   assert.match(script, /applyShortcutImmediately/);
@@ -190,9 +186,8 @@ test("outgoing interpretation asks only when automatic language detection is unc
   assert.match(markup, /data-field="outgoing_target_language"/);
   assert.doesNotMatch(markup, /채널별 첫 감지 확인/);
   assert.doesNotMatch(markup, /id="outgoing-confirm-language"/);
-  assert.match(markup, /<h3>전송 전 확인<\/h3>/);
-  assert.match(markup, /id="outgoing-confirm-send"/);
-  assert.match(markup, /켜면 번역문을 입력창에 남겨 확인하거나 수정할 수 있습니다/);
+  assert.doesNotMatch(markup, /id="outgoing-confirm-send"/);
+  assert.match(markup, /첫 Enter로 번역문을 입력창에 준비하고, 다음 Enter는 사용자가 직접 전송합니다/);
   assert.doesNotMatch(markup, /<div class="privacy-note"><strong>자동 감지<\/strong>/);
   assert.match(markup, /id="outgoing-auto-help"/);
   assert.match(markup, /언어를 판단하기 어려울 때만 전송 언어를 확인합니다/);
@@ -203,7 +198,7 @@ test("outgoing interpretation asks only when automatic language detection is unc
     /elements\.outgoingAutoHelp\.hidden = state\.config\.outgoing_target_language !== "auto"/,
   );
   assert.doesNotMatch(script, /outgoing_confirm_language/);
-  assert.match(script, /outgoing_confirm_send/);
+  assert.doesNotMatch(script, /outgoing_confirm_send/);
   assert.match(markup, /id="translation-shortcut-hint">F12<\/kbd>/);
   assert.match(markup, /id="outgoing-shortcut-hint">F8<\/kbd>/);
   assert.match(script, /elements\.translationShortcutHint\.textContent = state\.config\.hotkeys\.toggle_translation/);
@@ -308,25 +303,25 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
 });
 
-test("convenience panel exposes global toggles and editable composer shortcuts", () => {
+test("convenience panel exposes only the two global translation toggles", () => {
   assert.match(markup, /<h3>UI Language<\/h3>/);
   assert.match(script, /\["auto", "Auto \(System\)", "", "System language"\]/);
   assert.match(markup, /data-field="ui_language"/);
   assert.match(markup, /id="toggle-shortcut"/);
   assert.match(markup, /id="toggle-outgoing-shortcut"/);
-  assert.match(markup, /id="send-immediately-shortcut"/);
-  assert.match(markup, /id="review-before-send-shortcut"/);
+  assert.doesNotMatch(markup, /id="send-immediately-shortcut"/);
+  assert.doesNotMatch(markup, /id="review-before-send-shortcut"/);
   assert.match(markup, /<h3>실시간 번역 켜기·끄기<\/h3>/);
   assert.match(markup, /<h3>전송 메시지 통역 켜기·끄기<\/h3>/);
-  assert.match(markup, /<h3>즉시 전송<\/h3>/);
-  assert.match(markup, /<h3>항상 첨삭<\/h3>/);
+  assert.doesNotMatch(markup, /<h3>즉시 전송<\/h3>/);
+  assert.doesNotMatch(markup, /<h3>항상 첨삭<\/h3>/);
   assert.match(markup, /data-icon="keyboard" aria-hidden="true"><svg[^>]*>[\s\S]*?<\/svg><\/span><div><h3>전역 단축키<\/h3>/);
-  assert.match(markup, /data-icon="send" aria-hidden="true"><svg[^>]*>[\s\S]*?<\/svg><\/span><div><h3>메시지 입력 단축키<\/h3>/);
+  assert.doesNotMatch(markup, /<h3>메시지 입력 단축키<\/h3>/);
   assert.doesNotMatch(markup, /<span class="card-index" aria-hidden="true">(?:K|↵)<\/span>/);
   assert.match(styles, /\.card-index-icon svg\s*\{[\s\S]*?stroke-width:\s*2/);
   assert.match(script, /toggle_outgoing_translation/);
-  assert.match(script, /send_outgoing_immediately/);
-  assert.match(script, /review_outgoing_before_send/);
+  assert.doesNotMatch(script, /send_outgoing_immediately/);
+  assert.doesNotMatch(script, /review_outgoing_before_send/);
   assert.match(script, /request-outgoing-translation-toggle/);
 });
 
@@ -408,7 +403,7 @@ test("footer action labels stay on one line", () => {
   assert.match(styles, /\.footer-actions \.button[\s\S]*white-space:\s*nowrap/);
   assert.match(styles, /\.form-footer\s*\{[\s\S]*position:\s*sticky[\s\S]*bottom:\s*0/);
   assert.match(styles, /\.form-footer\s*\{[\s\S]*min-height:\s*68px/);
-  assert.match(styles, /grid-template-areas:\s*"update"\s*"workspace"\s*"footer"/);
+  assert.match(styles, /grid-template-areas:\s*"update"\s*"verification"\s*"workspace"\s*"footer"/);
   assert.match(styles, /\.settings-workspace\s*\{\s*grid-area:\s*workspace/);
 });
 

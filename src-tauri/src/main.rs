@@ -12,6 +12,7 @@ pub mod dictionary_ui;
 pub mod dictionary_window;
 mod discord;
 mod discord_startup;
+mod discord_verification;
 pub mod dom;
 mod engine;
 pub mod image_translation;
@@ -570,8 +571,6 @@ fn settings_update(
     if !shortcuts_are_unique(&[
         &preview.hotkeys.toggle_translation,
         &preview.hotkeys.toggle_outgoing_translation,
-        &preview.hotkeys.send_outgoing_immediately,
-        &preview.hotkeys.review_outgoing_before_send,
     ]) {
         return Err("편의 기능의 각 동작에는 서로 다른 단축키를 지정하십시오.".to_string());
     }
@@ -708,12 +707,6 @@ fn runtime_status(
         object.insert(
             "configuredTranslator".to_string(),
             Value::String(current_config.translator),
-        );
-        object.insert(
-            "discordProcessId".to_string(),
-            discord::current_process()
-                .map(|process| Value::from(process.process_id))
-                .unwrap_or(Value::Null),
         );
         let configured = shortcut
             .toggle_translation
@@ -911,6 +904,17 @@ fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
 }
 
 fn start_pipe_discord_for_autostart(app: AppHandle) {
+    if app
+        .state::<ConfigStore>()
+        .get()
+        .is_ok_and(|config| config.discord_verification_mode)
+    {
+        diagnostics::info(
+            "discord-startup",
+            "인증 호환 모드가 활성화되어 Discord 번역 연결을 자동 시작하지 않습니다.",
+        );
+        return;
+    }
     let engine = app.state::<RustEngine>().inner().clone();
     tauri::async_runtime::spawn(async move {
         let result = tauri::async_runtime::spawn_blocking(|| {
@@ -1143,6 +1147,30 @@ async fn discord_restart(
     let _ = client.set_enabled(display_was_enabled);
     replace_result?;
     Ok(json!({"connected": true, "process": process}))
+}
+
+#[tauri::command]
+async fn discord_restart_vanilla(
+    engine: State<'_, RustEngine>,
+    expected_process_id: Option<u32>,
+) -> Result<Value, String> {
+    let client = engine.inner().clone();
+    let kind = client.status()?.verification_kind;
+    let pause_kind = if kind.is_empty() {
+        "account-verification"
+    } else {
+        kind.as_str()
+    };
+    let pause_client = client.clone();
+    let pause_kind = pause_kind.to_string();
+    tauri::async_runtime::spawn_blocking(move || pause_client.pause_for_verification(&pause_kind))
+        .await
+        .map_err(|error| format!("인증 호환 모드 전환 작업을 기다리지 못했습니다: {error}"))??;
+    let process =
+        tauri::async_runtime::spawn_blocking(move || discord::restart_vanilla(expected_process_id))
+            .await
+            .map_err(|error| format!("일반 Discord 전환 작업을 기다리지 못했습니다: {error}"))??;
+    Ok(json!({"connected": false, "verificationMode": true, "process": process}))
 }
 
 #[tauri::command]
@@ -1745,6 +1773,7 @@ fn main() {
             provider_login_open,
             provider_disconnect,
             discord_restart,
+            discord_restart_vanilla,
             main_window_show,
             main_window_hide,
             tray_menu_hide,

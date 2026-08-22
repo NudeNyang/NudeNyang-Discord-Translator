@@ -108,6 +108,9 @@ const state = {
   repairActive: false,
   restartAttempted: false,
   manualRestartRequired: false,
+  verificationPromptActive: false,
+  verificationPromptShown: false,
+  verificationBannerDismissed: false,
   polling: false,
   updateCheckActive: false,
   availableUpdateVersion: "",
@@ -154,7 +157,6 @@ const elements = {
   form: document.querySelector("#settings-form"),
   enabled: document.querySelector("#enabled"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
-  outgoingConfirmSend: document.querySelector("#outgoing-confirm-send"),
   dictionaryEnabled: document.querySelector("#dictionary-enabled"),
   dictionaryExternalModelNote: document.querySelector("#dictionary-external-model-note"),
   settingsWorkspace: document.querySelector("#settings-workspace"),
@@ -230,13 +232,14 @@ const elements = {
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
   outgoingShortcut: document.querySelector("#toggle-outgoing-shortcut"),
-  sendImmediatelyShortcut: document.querySelector("#send-immediately-shortcut"),
-  reviewBeforeSendShortcut: document.querySelector("#review-before-send-shortcut"),
   resetSettings: document.querySelector("#reset-settings"),
   saveStatus: document.querySelector("#save-status"),
   engineState: document.querySelector("#engine-state"),
   engineStateLabel: document.querySelector("#engine-state-label"),
   discordRestartManual: document.querySelector("#discord-restart-manual"),
+  verificationBanner: document.querySelector("#verification-banner"),
+  verificationReconnect: document.querySelector("#verification-reconnect"),
+  verificationContinueVanilla: document.querySelector("#verification-continue-vanilla"),
   modalLayer: document.querySelector("#modal-layer"),
   modalTitle: document.querySelector("#modal-title"),
   modalMessage: document.querySelector("#modal-message"),
@@ -2344,12 +2347,6 @@ function renderConfig(config) {
     "켜짐",
     "꺼짐",
   );
-  setSwitch(
-    elements.outgoingConfirmSend,
-    state.config.outgoing_confirm_send,
-    "확인",
-    "즉시",
-  );
   setSwitch(elements.dictionaryEnabled, state.config.dictionary_enabled, "켜짐", "꺼짐");
   if (!state.dictionaryLoaded && !elements.dictionarySourceTerm.value && !elements.dictionaryTargetTerm.value) {
     elements.dictionaryTargetLanguage.value = state.config.target_language;
@@ -2360,8 +2357,6 @@ function renderConfig(config) {
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
   elements.translationShortcutHint.textContent = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcutHint.textContent = state.config.hotkeys.toggle_outgoing_translation;
-  elements.sendImmediatelyShortcut.value = state.config.hotkeys.send_outgoing_immediately;
-  elements.reviewBeforeSendShortcut.value = state.config.hotkeys.review_outgoing_before_send;
   applyTheme(state.config.ui_theme);
   applyUiLanguage(state.config.ui_language);
 }
@@ -2538,6 +2533,7 @@ function updateEngineState(status) {
     ? `${connectionLabel} · ${modelLabel}`
     : connectionLabel;
   renderManualDiscordRestart(status);
+  renderVerificationMode(status);
   state.config.enabled = enabledState.enabled;
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   if (status.notice) setLocalizedBackendText(elements.saveStatus, status.notice);
@@ -2549,6 +2545,86 @@ function renderManualDiscordRestart(status = state.runtime) {
   elements.discordRestartManual.disabled = availability.disabled;
   elements.discordRestartManual.dataset.state = state.repairActive ? "working" : "idle";
   elements.discordRestartManual.setAttribute("aria-busy", String(state.repairActive));
+}
+
+function renderVerificationMode(status = state.runtime) {
+  const active = Boolean(status?.verificationRequired || state.config.discord_verification_mode);
+  if (!active) state.verificationBannerDismissed = false;
+  elements.verificationBanner.hidden = !active || state.verificationBannerDismissed;
+  const disabled = Boolean(state.repairActive || state.verificationPromptActive);
+  elements.verificationReconnect.disabled = disabled;
+  elements.verificationContinueVanilla.disabled = disabled;
+}
+
+async function restartVanillaForVerification(status = state.runtime) {
+  if (state.repairActive) return;
+  state.repairActive = true;
+  renderVerificationMode(status);
+  try {
+    setLocalizedText(elements.engineStateLabel, "일반 Discord로 전환 중");
+    await invoke("discord_restart_vanilla", {
+      expectedProcessId: status?.discordProcessId ?? null,
+    });
+    await pollRuntime();
+  } catch (error) {
+    await showError("일반 Discord 전환 실패", String(error));
+  } finally {
+    state.repairActive = false;
+    renderVerificationMode();
+  }
+}
+
+async function handleVerificationRequired() {
+  if (state.verificationPromptActive || state.promptActive || state.repairActive) return;
+  state.verificationPromptActive = true;
+  state.promptActive = true;
+  renderVerificationMode();
+  try {
+    const confirmed = await showModal({
+      title: "Discord 추가 인증이 필요합니다",
+      message:
+        "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 누드냥의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
+      acceptText: "일반 Discord로 다시 시작",
+      cancelText: "현재 Discord에서 인증 계속",
+      variant: "verification",
+    });
+    if (confirmed) await restartVanillaForVerification(state.runtime);
+  } finally {
+    state.promptActive = false;
+    state.verificationPromptActive = false;
+    renderVerificationMode();
+  }
+}
+
+async function reconnectAfterVerification() {
+  if (state.verificationPromptActive || state.promptActive || state.repairActive) return;
+  state.verificationPromptActive = true;
+  state.promptActive = true;
+  renderVerificationMode();
+  try {
+    const confirmed = await showModal({
+      title: "누드냥을 다시 연결하시겠습니까?",
+      message:
+        "누드냥을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.",
+      acceptText: "Discord를 다시 시작하고 연결",
+    });
+    if (!confirmed) return;
+    state.repairActive = true;
+    renderVerificationMode();
+    const status = state.runtime || await invoke("runtime_status");
+    await invoke("discord_restart", {
+      expectedProcessId: status?.discordProcessId ?? null,
+    });
+    state.verificationBannerDismissed = false;
+    await pollRuntime();
+  } catch (error) {
+    await showError("누드냥 재연결 실패", String(error));
+  } finally {
+    state.repairActive = false;
+    state.promptActive = false;
+    state.verificationPromptActive = false;
+    renderVerificationMode();
+  }
 }
 
 function localizeRuntimeLabel(label, language) {
@@ -2575,6 +2651,12 @@ async function pollRuntime() {
     const status = await invoke("runtime_status");
     state.runtime = status;
     updateEngineState(status);
+    if (status.verificationRequired && !state.verificationPromptShown) {
+      state.verificationPromptShown = true;
+      await handleVerificationRequired();
+    } else if (!status.verificationRequired) {
+      state.verificationPromptShown = false;
+    }
     if (shouldPromptRestart(status, state)) await handleRestartRequired(status);
   } catch (error) {
     elements.engineState.dataset.state = "error";
@@ -2767,6 +2849,13 @@ document.addEventListener("click", event => {
 document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
 elements.discordRestartManual.addEventListener("click", restartDiscordManually);
+elements.verificationReconnect.addEventListener("click", () => {
+  reconnectAfterVerification().catch(error => showError("누드냥 재연결 실패", String(error)));
+});
+elements.verificationContinueVanilla.addEventListener("click", () => {
+  state.verificationBannerDismissed = true;
+  renderVerificationMode();
+});
 elements.outgoingTranslation.addEventListener("click", async () => {
   const enabled = elements.outgoingTranslation.getAttribute("aria-checked") !== "true";
   try {
@@ -2927,14 +3016,6 @@ elements.dictionaryOpenFolder.addEventListener("click", async () => {
     await showError("사전 데이터 폴더를 열지 못했습니다", String(error));
   }
 });
-elements.outgoingConfirmSend.addEventListener("click", () => {
-  const enabled = elements.outgoingConfirmSend.getAttribute("aria-checked") !== "true";
-  setSwitch(elements.outgoingConfirmSend, enabled, "확인", "즉시");
-  applySettingsPatch({ outgoing_confirm_send: enabled }).catch(async error => {
-    setSwitch(elements.outgoingConfirmSend, !enabled, "확인", "즉시");
-    await showError("전송 전 확인 설정을 적용하지 못했습니다", String(error));
-  });
-});
 elements.keepWarm.addEventListener("click", () => {
   const enabled = elements.keepWarm.getAttribute("aria-checked") !== "true";
   setSwitch(elements.keepWarm, enabled, "켜짐", "꺼짐");
@@ -2952,8 +3033,6 @@ async function applyShortcutImmediately(element, configKey, shortcut, help, fall
   const hotkeys = {
     toggle_translation: elements.shortcut.value.trim() || "F12",
     toggle_outgoing_translation: elements.outgoingShortcut.value.trim() || "F8",
-    send_outgoing_immediately: elements.sendImmediatelyShortcut.value.trim() || "Ctrl+Enter",
-    review_outgoing_before_send: elements.reviewBeforeSendShortcut.value.trim() || "Alt+Enter",
     [configKey]: shortcut,
   };
   try {
@@ -3002,18 +3081,6 @@ bindShortcutEditor(
   "toggle_outgoing_translation",
   "outgoing-shortcut-help",
   "F8",
-);
-bindShortcutEditor(
-  elements.sendImmediatelyShortcut,
-  "send_outgoing_immediately",
-  "send-immediately-shortcut-help",
-  "Ctrl+Enter",
-);
-bindShortcutEditor(
-  elements.reviewBeforeSendShortcut,
-  "review_outgoing_before_send",
-  "review-before-send-shortcut-help",
-  "Alt+Enter",
 );
 
 for (const item of document.querySelectorAll("[data-settings-panel]")) {
@@ -3138,6 +3205,12 @@ elements.form.addEventListener("submit", async event => {
 if (tauriListen) {
   tauriListen("request-translation-toggle", toggleTranslation);
   tauriListen("request-outgoing-translation-toggle", toggleOutgoingTranslation);
+  tauriListen("discord-verification-required", () => {
+    state.verificationPromptShown = true;
+    pollRuntime()
+      .then(handleVerificationRequired)
+      .catch(error => showError("Discord 인증 보호 모드를 열지 못했습니다", String(error)));
+  });
   tauriListen("translation-state-changed", event => {
     state.runtime = event.payload;
     updateEngineState(event.payload);

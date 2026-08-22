@@ -43,8 +43,6 @@ impl Default for RegionConfig {
 pub struct HotkeyConfig {
     pub toggle_translation: String,
     pub toggle_outgoing_translation: String,
-    pub send_outgoing_immediately: String,
-    pub review_outgoing_before_send: String,
     pub toggle_original: String,
     pub hide_overlay: String,
     pub copy_current: String,
@@ -55,8 +53,6 @@ impl Default for HotkeyConfig {
         Self {
             toggle_translation: "F12".to_string(),
             toggle_outgoing_translation: "F8".to_string(),
-            send_outgoing_immediately: "Ctrl+Enter".to_string(),
-            review_outgoing_before_send: "Alt+Enter".to_string(),
             toggle_original: "Ctrl+Alt+O".to_string(),
             hide_overlay: "Ctrl+Alt+H".to_string(),
             copy_current: "Ctrl+Alt+C".to_string(),
@@ -73,7 +69,6 @@ pub struct AppConfig {
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
-    pub outgoing_confirm_send: bool,
     pub dictionary_enabled: bool,
     pub dictionary_external_provider: String,
     pub show_original: bool,
@@ -97,6 +92,7 @@ pub struct AppConfig {
     pub auto_update: bool,
     pub update_repository: String,
     pub discord_auto_restart_consent_granted: bool,
+    pub discord_verification_mode: bool,
     pub translation_history_retention_days: u32,
     pub chat_region: RegionConfig,
     pub hotkeys: HotkeyConfig,
@@ -111,7 +107,6 @@ impl Default for AppConfig {
             enabled: true,
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
-            outgoing_confirm_send: true,
             dictionary_enabled: true,
             dictionary_external_provider: "wiktionary".to_string(),
             show_original: false,
@@ -135,6 +130,7 @@ impl Default for AppConfig {
             auto_update: true,
             update_repository: DEFAULT_UPDATE_REPOSITORY.to_string(),
             discord_auto_restart_consent_granted: false,
+            discord_verification_mode: false,
             translation_history_retention_days: 30,
             chat_region: RegionConfig::default(),
             hotkeys: HotkeyConfig::default(),
@@ -539,11 +535,9 @@ mod tests {
         assert_eq!(restored.image_ocr_quality, "adaptive");
         assert!(!restored.outgoing_translation_enabled);
         assert_eq!(restored.outgoing_target_language, "auto");
-        assert!(restored.outgoing_confirm_send);
+        assert!(!restored.discord_verification_mode);
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
         assert_eq!(restored.hotkeys.toggle_outgoing_translation, "F8");
-        assert_eq!(restored.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
-        assert_eq!(restored.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert!(restored.disabled_providers.is_empty());
         assert_eq!(restored.translation_history_retention_days, 30);
         assert!(restored.dictionary_enabled);
@@ -675,8 +669,6 @@ mod tests {
 
         assert_eq!(updated.hotkeys.toggle_translation, "Ctrl+Alt+T");
         assert_eq!(updated.hotkeys.toggle_outgoing_translation, "F8");
-        assert_eq!(updated.hotkeys.send_outgoing_immediately, "Ctrl+Enter");
-        assert_eq!(updated.hotkeys.review_outgoing_before_send, "Alt+Enter");
         assert_eq!(updated.hotkeys.toggle_original, "Ctrl+Alt+O");
         assert!(!updated.keep_local_model_warm);
         let restored = ConfigStore::load(path.clone())

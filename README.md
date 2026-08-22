@@ -82,7 +82,7 @@ There are three translation paths:
 | Path | What happens |
 |---|---|
 | Incoming text | Visible messages and channel names are detected, translated, and replaced in the current DOM. The original nodes are kept for restoration. |
-| Outgoing text | Enter or a configured shortcut translates the composer text before sending. Results over 1,900 UTF-16 units are attached as one UTF-8 text file instead of being split into message spam. |
+| Outgoing text | The first physical Enter translates the composer text and leaves it editable. A second physical Enter is passed untouched to Discord, so only the user sends the message. Long results remain in the composer for manual shortening or attachment. |
 | Images | Rust reads the image locally, runs PP-OCR, translates the extracted text, creates a replacement PNG, and swaps only the displayed image source. Original and translated views remain switchable. |
 
 ## Security boundary
@@ -98,8 +98,14 @@ sequenceDiagram
     Note over App,Discord: Inherited anonymous pipe handles only — no TCP debug port
     App->>Discord: Verify PID handoff and the discord.com target
     App->>Discord: Read and update the rendered DOM
-    App->>Guard: Leave app-side pipe handles for reconnect
-    App-->>Discord: Restore saved DOM on normal shutdown
+    alt CAPTCHA or account verification becomes visible
+        Discord-->>App: Show verification UI
+        App-->>Discord: Detach CDP and the pipe guardian
+        Note over App,Discord: Reconnection stays paused until the user explicitly requests it
+    else Normal application shutdown
+        App->>Guard: Leave app-side pipe handles for reconnect
+        App-->>Discord: Restore saved DOM
+    end
 ```
 
 The boundary is intentionally narrow:
@@ -110,6 +116,8 @@ The boundary is intentionally narrow:
 | Connection | Uses inherited anonymous pipe handles. It does not open a TCP debugging port. |
 | Process trust | Checks the normalized executable path, the original process, a same-install PID handoff, guardian arguments, and an `https://discord.com` page target. |
 | Client changes | Changes the current renderer only. It does not patch Discord installation files or write server-side data. |
+| Sending | Places translated text with `Input.insertText` only. It does not synthesize Enter, mouse actions, file attachments, or split-message sends. |
+| Verification | Detects visible CAPTCHA or additional account verification, detaches the translation pipe, and offers a standard Discord restart. Reconnection requires an explicit user action. |
 | External translation | Sends extracted text only when an external provider is selected. Image pixels, authentication tokens, and the cache database stay local. |
 | Credentials | Stores the DeepL key in Windows Credential Manager, not in settings JSON, logs, or the translation cache. Subscription connections use each provider's official local CLI authentication. |
 | Diagnostics | Redacts home paths and secrets. Message bodies and local-model prompts are not written to the log. |

@@ -42,6 +42,17 @@
             <button class="button primary" id="update-banner-install" type="button">업데이트 설치</button>
           </div>
         </aside>
+        <aside class="verification-banner" id="verification-banner" hidden role="status" aria-live="polite">
+          <span class="verification-banner-mark" aria-hidden="true">✓</span>
+          <div class="verification-banner-copy">
+            <strong>인증 호환 모드</strong>
+            <p>Discord 인증을 완료한 후 누드냥을 다시 연결할 수 있습니다.</p>
+          </div>
+          <div class="verification-banner-actions">
+            <button class="button secondary" id="verification-continue-vanilla" type="button">현재 Discord에서 인증 계속</button>
+            <button class="button primary" id="verification-reconnect" type="button">누드냥 다시 연결</button>
+          </div>
+        </aside>
         <div id="settings-workspace" class="settings-workspace">
           <nav id="settings-navigation" class="settings-navigation" aria-label="설정 분류">
             <p>설정</p>
@@ -121,8 +132,7 @@
                       </div>
                     </div>
                     <div class="setting-row compact-row">
-                      <div class="setting-copy"><h3>전송 전 확인</h3><p>켜면 번역문을 입력창에 남겨 확인하거나 수정할 수 있습니다.</p></div>
-                      <button class="switch" id="outgoing-confirm-send" type="button" role="switch" aria-checked="true"><span></span><b>확인</b></button>
+                      <div class="setting-copy"><h3>사용자 전송</h3><p>첫 Enter로 번역문을 입력창에 준비하고, 다음 Enter는 사용자가 직접 전송합니다.</p></div>
                     </div>
                   </article>
                 </div>
@@ -338,17 +348,6 @@
                   <div class="setting-row compact-row">
                     <div class="setting-copy"><h3>전송 메시지 통역 켜기·끄기</h3><p>입력 메시지의 번역 전송 상태를 전환합니다.</p></div>
                     <div class="shortcut-editor"><input class="text-field" id="toggle-outgoing-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="outgoing-shortcut-help" readonly /><small id="outgoing-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
-                  </div>
-                </article>
-                <article class="settings-card shortcut-card">
-                  <div class="card-heading"><span class="card-index card-index-icon" data-icon="send" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg></span><div><h3>메시지 입력 단축키</h3><p>Discord 메시지 입력창에서 통역 결과의 전송 방식을 선택합니다.</p></div></div>
-                  <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>즉시 전송</h3><p>전송 전 확인 설정과 관계없이 번역 후 바로 전송합니다.</p></div>
-                    <div class="shortcut-editor"><input class="text-field" id="send-immediately-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="send-immediately-shortcut-help" readonly /><small id="send-immediately-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
-                  </div>
-                  <div class="setting-row compact-row">
-                    <div class="setting-copy"><h3>항상 첨삭</h3><p>자동 전송 상태에서도 번역문을 입력창에 남겨 수정합니다.</p></div>
-                    <div class="shortcut-editor"><input class="text-field" id="review-before-send-shortcut" type="text" maxlength="24" autocomplete="off" aria-describedby="review-before-send-shortcut-help" readonly /><small id="review-before-send-shortcut-help">입력란을 선택한 뒤 원하는 단축키를 누르십시오.</small></div>
                   </div>
                 </article>
               </section>
