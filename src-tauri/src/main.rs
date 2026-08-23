@@ -1142,7 +1142,7 @@ async fn discord_target_switch(
     config: State<'_, ConfigStore>,
 ) -> Result<Value, String> {
     enum SwitchResult {
-        Connected(discord::DiscordProcess, cdp::CdpClient),
+        Connected(discord::DiscordProcess, Box<cdp::CdpClient>),
         RestartRequired(discord::DiscordProcess),
     }
 
@@ -1150,7 +1150,7 @@ async fn discord_target_switch(
     let switch_result = tauri::async_runtime::spawn_blocking(move || {
         if let Some(process) = discord::current_pipe_process(discord_variant) {
             return match discord::connect_guarded_pipe(&process) {
-                Ok(cdp) => Ok(SwitchResult::Connected(process, cdp)),
+                Ok(cdp) => Ok(SwitchResult::Connected(process, Box::new(cdp))),
                 Err(_) => Ok(SwitchResult::RestartRequired(process)),
             };
         }
@@ -1158,7 +1158,7 @@ async fn discord_target_switch(
             return Ok(SwitchResult::RestartRequired(process));
         }
         discord::restart_pipe(None, discord_variant)
-            .map(|(process, cdp)| SwitchResult::Connected(process, cdp))
+            .map(|(process, cdp)| SwitchResult::Connected(process, Box::new(cdp)))
     })
     .await
     .map_err(|error| format!("Discord 연결 대상 전환을 기다리지 못했습니다: {error}"))??;
@@ -1169,7 +1169,7 @@ async fn discord_target_switch(
         }
         SwitchResult::Connected(process, cdp) => {
             let client = engine.inner().clone();
-            tauri::async_runtime::spawn_blocking(move || client.replace_cdp(cdp))
+            tauri::async_runtime::spawn_blocking(move || client.replace_cdp(*cdp))
                 .await
                 .map_err(|error| format!("Discord 연결 검증을 기다리지 못했습니다: {error}"))??;
             Ok(json!({"connected": true, "restartRequired": false, "process": process}))

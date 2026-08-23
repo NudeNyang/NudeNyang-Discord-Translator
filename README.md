@@ -203,6 +203,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 | [PRIVACY.md](PRIVACY.md) | Local data handling and optional external-provider transfers |
 | [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | Release provenance, signing roles, and verification policy |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Model, runtime, and dependency notices |
+| [docs/releases/0.6.1-beta.md](docs/releases/0.6.1-beta.md) | New features and fixes in 0.6.1 Beta |
 | [docs/releases/0.6.0-beta.md](docs/releases/0.6.0-beta.md) | New features and fixes in 0.6.0 Beta |
 
 ## License
