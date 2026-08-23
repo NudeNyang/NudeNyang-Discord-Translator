@@ -66,7 +66,7 @@ pub struct AppConfig {
     pub target_language: String,
     pub incoming_language_mode: String,
     pub incoming_source_languages: Vec<String>,
-    pub preserve_nicknames: bool,
+    pub translate_nicknames: bool,
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
@@ -106,7 +106,7 @@ impl Default for AppConfig {
             target_language: "ko".to_string(),
             incoming_language_mode: "all".to_string(),
             incoming_source_languages: Vec::new(),
-            preserve_nicknames: true,
+            translate_nicknames: true,
             enabled: true,
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
@@ -223,6 +223,7 @@ impl AppConfig {
             );
         }
         object.remove("speech_style");
+        object.remove("preserve_nicknames");
         if object
             .get("ui_theme")
             .and_then(Value::as_str)
@@ -528,6 +529,7 @@ mod tests {
             "kanana_device": "cuda",
             "update_repository": "NudeNyang/DiscordTranslateOverlay",
             "speech_style": "casual",
+            "preserve_nicknames": false,
             "ui_theme": "invalid"
         }))
         .expect("legacy config should migrate");
@@ -539,10 +541,9 @@ mod tests {
             restored.update_repository,
             "NudeNyang/NudeNyang-Discord-Translator"
         );
-        assert!(serde_json::to_value(&restored)
-            .expect("serialize migrated config")
-            .get("speech_style")
-            .is_none());
+        let serialized = serde_json::to_value(&restored).expect("serialize migrated config");
+        assert!(serialized.get("speech_style").is_none());
+        assert!(serialized.get("preserve_nicknames").is_none());
         assert_eq!(restored.ui_theme, "system");
         assert_eq!(restored.ui_language, "auto");
         assert!(restored.keep_local_model_warm);
@@ -558,7 +559,7 @@ mod tests {
         assert_eq!(restored.dictionary_external_provider, "wiktionary");
         assert_eq!(restored.incoming_language_mode, "all");
         assert!(restored.incoming_source_languages.is_empty());
-        assert!(restored.preserve_nicknames);
+        assert!(restored.translate_nicknames);
         assert_eq!(restored.discord_variant, "auto");
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))

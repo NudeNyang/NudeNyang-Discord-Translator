@@ -620,7 +620,7 @@ fn run_controller(
                     let incoming_languages_changed = updated.incoming_language_mode
                         != config.incoming_language_mode
                         || updated.incoming_source_languages != config.incoming_source_languages
-                        || updated.preserve_nicknames != config.preserve_nicknames;
+                        || updated.translate_nicknames != config.translate_nicknames;
                     let image_ocr_quality_changed =
                         updated.image_ocr_quality != config.image_ocr_quality;
                     let mut requested_preparation = translator_preparation_plan(&config, &updated);
@@ -1221,7 +1221,7 @@ fn run_controller(
                     generation,
                     target,
                     incoming_allowed_sources(&config),
-                    config.preserve_nicknames,
+                    config.translate_nicknames,
                     display_batch_item_limit(&config),
                     &worker_tx,
                 )?;
@@ -1776,12 +1776,12 @@ fn scan_dom(
     generation: u64,
     target: Language,
     allowed_sources: Option<HashSet<Language>>,
-    preserve_nicknames: bool,
+    translate_nicknames: bool,
     max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
 ) -> Result<bool, String> {
     let mut snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
-    retain_enabled_dom_parts(&mut snapshot.parts, preserve_nicknames);
+    retain_enabled_dom_parts(&mut snapshot.parts, translate_nicknames);
     let context_scope = snapshot.url.clone();
     if display_view.observe(&snapshot.url, Instant::now()) == DisplayViewObservation::Changed {
         discard_stale_display_work(pending, display_view, generation, worker)?;
@@ -1815,8 +1815,8 @@ fn scan_dom(
     Ok(true)
 }
 
-fn retain_enabled_dom_parts(parts: &mut Vec<DomPart>, preserve_nicknames: bool) {
-    if preserve_nicknames {
+fn retain_enabled_dom_parts(parts: &mut Vec<DomPart>, translate_nicknames: bool) {
+    if !translate_nicknames {
         parts.retain(|part| part.kind != "nickname");
     }
 }
@@ -3917,7 +3917,7 @@ mod tests {
     }
 
     #[test]
-    fn nickname_parts_are_skipped_only_when_preservation_is_enabled() {
+    fn nickname_parts_are_included_only_when_translation_is_enabled() {
         let nickname = DomPart {
             kind: "nickname".to_string(),
             item_id: "nickname-1".to_string(),
@@ -3935,13 +3935,13 @@ mod tests {
             displayed_text: None,
         };
 
-        let mut preserved = vec![nickname.clone(), message.clone()];
-        retain_enabled_dom_parts(&mut preserved, true);
-        assert_eq!(preserved, vec![message.clone()]);
-
         let mut translated = vec![nickname.clone(), message.clone()];
-        retain_enabled_dom_parts(&mut translated, false);
-        assert_eq!(translated, vec![nickname, message]);
+        retain_enabled_dom_parts(&mut translated, true);
+        assert_eq!(translated, vec![nickname.clone(), message.clone()]);
+
+        let mut preserved = vec![nickname, message.clone()];
+        retain_enabled_dom_parts(&mut preserved, false);
+        assert_eq!(preserved, vec![message]);
     }
 
     #[test]

@@ -580,9 +580,9 @@
     "NudeNyang 재연결 실패": "無法重新連線 NudeNyang",
     "Discord 선택": "選擇 Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "選擇要套用翻譯的 Discord 應用程式。",
-    "닉네임 번역하지 않기": "不要翻譯暱稱",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "保留訊息作者的原始暱稱。",
-    "닉네임 번역 설정을 변경하지 못했습니다": "無法變更暱稱翻譯設定"
+    "닉네임 번역 설정을 변경하지 못했습니다": "無法變更暱稱翻譯設定",
+    "닉네임 번역하기": "翻譯暱稱",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "將訊息作者的暱稱也翻譯成顯示語言。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -1165,9 +1165,9 @@
     "NudeNyang 재연결 실패": "Não foi possível reconectar o NudeNyang",
     "Discord 선택": "Selecionar Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Selecione o aplicativo Discord ao qual aplicar as traduções.",
-    "닉네임 번역하지 않기": "Não traduzir apelidos",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Exibir os apelidos dos autores das mensagens sem alterações.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Não foi possível alterar a configuração de tradução de apelidos"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Não foi possível alterar a configuração de tradução de apelidos",
+    "닉네임 번역하기": "Traduzir apelidos",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduz os apelidos dos autores das mensagens para o idioma de exibição."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1750,9 +1750,9 @@
     "NudeNyang 재연결 실패": "NudeNyang को फिर से कनेक्ट नहीं किया जा सका",
     "Discord 선택": "Discord चुनें",
     "번역을 적용할 Discord 앱을 선택합니다.": "अनुवाद लागू करने के लिए Discord ऐप चुनें।",
-    "닉네임 번역하지 않기": "उपनामों का अनुवाद न करें",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "संदेश लिखने वालों के उपनाम बिना बदले दिखाएँ।",
-    "닉네임 번역 설정을 변경하지 못했습니다": "उपनाम अनुवाद सेटिंग बदली नहीं जा सकी"
+    "닉네임 번역 설정을 변경하지 못했습니다": "उपनाम अनुवाद सेटिंग बदली नहीं जा सकी",
+    "닉네임 번역하기": "उपनामों का अनुवाद करें",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "संदेश भेजने वालों के उपनामों का भी प्रदर्शन भाषा में अनुवाद करें।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -2335,9 +2335,9 @@
     "NudeNyang 재연결 실패": "No se pudo volver a conectar NudeNyang",
     "Discord 선택": "Seleccionar Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Selecciona la aplicación de Discord a la que se aplicarán las traducciones.",
-    "닉네임 번역하지 않기": "No traducir los apodos",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Mostrar los apodos de los autores de los mensajes sin cambios.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "No se pudo cambiar la configuración de traducción de apodos"
+    "닉네임 번역 설정을 변경하지 못했습니다": "No se pudo cambiar la configuración de traducción de apodos",
+    "닉네임 번역하기": "Traducir apodos",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduce los apodos de los autores de los mensajes al idioma de visualización."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2920,9 +2920,9 @@
     "NudeNyang 재연결 실패": "NudeNyang konnte nicht erneut verbunden werden",
     "Discord 선택": "Discord auswählen",
     "번역을 적용할 Discord 앱을 선택합니다.": "Wähle die Discord-App aus, auf die Übersetzungen angewendet werden sollen.",
-    "닉네임 번역하지 않기": "Nicknames nicht übersetzen",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Nicknames der Nachrichtenautoren unverändert anzeigen.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Einstellung für die Nickname-Übersetzung konnte nicht geändert werden"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Einstellung für die Nickname-Übersetzung konnte nicht geändert werden",
+    "닉네임 번역하기": "Spitznamen übersetzen",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Spitznamen von Nachrichtenautoren in die Anzeigesprache übersetzen."
   },
   "ru": {
     "설정": "Настройки",
@@ -3505,9 +3505,9 @@
     "NudeNyang 재연결 실패": "Не удалось повторно подключить NudeNyang",
     "Discord 선택": "Выбрать Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Выберите приложение Discord, к которому будут применяться переводы.",
-    "닉네임 번역하지 않기": "Не переводить никнеймы",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Отображать никнеймы авторов сообщений без изменений.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Не удалось изменить настройку перевода никнеймов"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Не удалось изменить настройку перевода никнеймов",
+    "닉네임 번역하기": "Переводить никнеймы",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Переводить никнеймы авторов сообщений на язык интерфейса."
   },
   "id": {
     "설정": "Pengaturan",
@@ -4090,9 +4090,9 @@
     "NudeNyang 재연결 실패": "Tidak dapat menghubungkan kembali NudeNyang",
     "Discord 선택": "Pilih Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Pilih aplikasi Discord yang akan diberi terjemahan.",
-    "닉네임 번역하지 않기": "Jangan terjemahkan nama panggilan",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Tampilkan nama panggilan penulis pesan tanpa perubahan.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Tidak dapat mengubah pengaturan penerjemahan nama panggilan"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Tidak dapat mengubah pengaturan penerjemahan nama panggilan",
+    "닉네임 번역하기": "Terjemahkan nama panggilan",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Terjemahkan nama panggilan penulis pesan ke bahasa tampilan."
   },
   "fr": {
     "설정": "Paramètres",
@@ -4675,9 +4675,9 @@
     "NudeNyang 재연결 실패": "Impossible de reconnecter NudeNyang",
     "Discord 선택": "Sélectionner Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Sélectionnez l’application Discord à laquelle appliquer les traductions.",
-    "닉네임 번역하지 않기": "Ne pas traduire les pseudonymes",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Afficher les pseudonymes des auteurs des messages sans les modifier.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Impossible de modifier le paramètre de traduction des pseudonymes"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Impossible de modifier le paramètre de traduction des pseudonymes",
+    "닉네임 번역하기": "Traduire les pseudos",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduit les pseudos des auteurs des messages dans la langue d’affichage."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -5260,9 +5260,9 @@
     "NudeNyang 재연결 실패": "NudeNyang yeniden bağlanamadı",
     "Discord 선택": "Discord'u Seç",
     "번역을 적용할 Discord 앱을 선택합니다.": "Çevirilerin uygulanacağı Discord uygulamasını seçin.",
-    "닉네임 번역하지 않기": "Takma adları çevirme",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Mesaj yazarlarının takma adlarını değiştirmeden göster.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Takma ad çevirisi ayarı değiştirilemedi"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Takma ad çevirisi ayarı değiştirilemedi",
+    "닉네임 번역하기": "Takma adları çevir",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Mesaj yazarlarının takma adlarını görüntüleme diline çevir."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -5845,9 +5845,9 @@
     "NudeNyang 재연결 실패": "تعذرت إعادة توصيل NudeNyang",
     "Discord 선택": "تحديد Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "حدد تطبيق Discord لتطبيق الترجمات عليه.",
-    "닉네임 번역하지 않기": "عدم ترجمة الأسماء المستعارة",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "عرض الأسماء المستعارة لمؤلفي الرسائل دون تغيير.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "تعذّر تغيير إعداد ترجمة الأسماء المستعارة"
+    "닉네임 번역 설정을 변경하지 못했습니다": "تعذّر تغيير إعداد ترجمة الأسماء المستعارة",
+    "닉네임 번역하기": "ترجمة الأسماء المستعارة",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "ترجمة الأسماء المستعارة لمؤلفي الرسائل إلى لغة العرض."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -6430,9 +6430,9 @@
     "NudeNyang 재연결 실패": "Không thể kết nối lại NudeNyang",
     "Discord 선택": "Chọn Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Chọn ứng dụng Discord để áp dụng bản dịch.",
-    "닉네임 번역하지 않기": "Không dịch biệt danh",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Hiển thị nguyên trạng biệt danh của người gửi tin nhắn.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Không thể thay đổi cài đặt dịch biệt danh"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Không thể thay đổi cài đặt dịch biệt danh",
+    "닉네임 번역하기": "Dịch biệt danh",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Dịch biệt danh của tác giả tin nhắn sang ngôn ngữ hiển thị."
   },
   "it": {
     "설정": "Impostazioni",
@@ -7015,9 +7015,9 @@
     "NudeNyang 재연결 실패": "Impossibile riconnettere NudeNyang",
     "Discord 선택": "Seleziona Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Seleziona l'app Discord a cui applicare le traduzioni.",
-    "닉네임 번역하지 않기": "Non tradurre i nickname",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Visualizza invariati i nickname degli autori dei messaggi.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Impossibile modificare l'impostazione di traduzione dei nickname"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Impossibile modificare l'impostazione di traduzione dei nickname",
+    "닉네임 번역하기": "Traduci i nickname",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduce i nickname degli autori dei messaggi nella lingua di visualizzazione."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -7600,9 +7600,9 @@
     "NudeNyang 재연결 실패": "Nie udało się ponownie połączyć NudeNyang",
     "Discord 선택": "Wybierz Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Wybierz aplikację Discord, w której mają być stosowane tłumaczenia.",
-    "닉네임 번역하지 않기": "Nie tłumacz pseudonimów",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Wyświetlaj pseudonimy autorów wiadomości bez zmian.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Nie udało się zmienić ustawienia tłumaczenia pseudonimów"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Nie udało się zmienić ustawienia tłumaczenia pseudonimów",
+    "닉네임 번역하기": "Tłumacz pseudonimy",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Tłumacz pseudonimy autorów wiadomości na język wyświetlania."
   },
   "uk": {
     "설정": "Налаштування",
@@ -8185,9 +8185,9 @@
     "NudeNyang 재연결 실패": "Не вдалося повторно підключити NudeNyang",
     "Discord 선택": "Вибрати Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Виберіть застосунок Discord, до якого слід застосувати переклади.",
-    "닉네임 번역하지 않기": "Не перекладати псевдоніми",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Відображати псевдоніми авторів повідомлень без змін.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Не вдалося змінити налаштування перекладу псевдонімів"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Не вдалося змінити налаштування перекладу псевдонімів",
+    "닉네임 번역하기": "Перекладати псевдоніми",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Перекладати псевдоніми авторів повідомлень мовою інтерфейсу."
   },
   "ms": {
     "설정": "Tetapan",
@@ -8770,9 +8770,9 @@
     "NudeNyang 재연결 실패": "Tidak dapat menyambungkan semula NudeNyang",
     "Discord 선택": "Pilih Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Pilih aplikasi Discord untuk menggunakan terjemahan.",
-    "닉네임 번역하지 않기": "Jangan terjemahkan nama panggilan",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Paparkan nama panggilan pengarang mesej tanpa perubahan.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Tidak dapat mengubah tetapan terjemahan nama panggilan"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Tidak dapat mengubah tetapan terjemahan nama panggilan",
+    "닉네임 번역하기": "Terjemahkan nama panggilan",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Terjemahkan nama panggilan pengarang mesej kepada bahasa paparan."
   },
   "nl": {
     "설정": "Instellingen",
@@ -9355,9 +9355,9 @@
     "NudeNyang 재연결 실패": "NudeNyang kon niet opnieuw worden verbonden",
     "Discord 선택": "Discord selecteren",
     "번역을 적용할 Discord 앱을 선택합니다.": "Selecteer de Discord-app waarop je vertalingen wilt toepassen.",
-    "닉네임 번역하지 않기": "Bijnamen niet vertalen",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Bijnamen van berichtauteurs ongewijzigd weergeven.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "De instelling voor het vertalen van bijnamen kon niet worden gewijzigd"
+    "닉네임 번역 설정을 변경하지 못했습니다": "De instelling voor het vertalen van bijnamen kon niet worden gewijzigd",
+    "닉네임 번역하기": "Bijnamen vertalen",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Vertaal de bijnamen van berichtauteurs naar de weergavetaal."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -9940,9 +9940,9 @@
     "NudeNyang 재연결 실패": "ไม่สามารถเชื่อมต่อ NudeNyang อีกครั้งได้",
     "Discord 선택": "เลือก Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "เลือกแอป Discord ที่จะใช้คำแปล",
-    "닉네임 번역하지 않기": "ไม่แปลชื่อเล่น",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "แสดงชื่อเล่นของผู้ส่งข้อความตามต้นฉบับ",
-    "닉네임 번역 설정을 변경하지 못했습니다": "ไม่สามารถเปลี่ยนการตั้งค่าการแปลชื่อเล่นได้"
+    "닉네임 번역 설정을 변경하지 못했습니다": "ไม่สามารถเปลี่ยนการตั้งค่าการแปลชื่อเล่นได้",
+    "닉네임 번역하기": "แปลชื่อเล่น",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "แปลชื่อเล่นของผู้ส่งข้อความเป็นภาษาที่ใช้แสดงผล"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -10525,9 +10525,9 @@
     "NudeNyang 재연결 실패": "Hindi maikonekta muli ang NudeNyang",
     "Discord 선택": "Piliin ang Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Piliin ang Discord app na lalagyan ng mga pagsasalin.",
-    "닉네임 번역하지 않기": "Huwag isalin ang mga palayaw",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Ipakita nang hindi binabago ang mga palayaw ng mga nagpadala ng mensahe.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Hindi mabago ang setting ng pagsasalin ng palayaw"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Hindi mabago ang setting ng pagsasalin ng palayaw",
+    "닉네임 번역하기": "Isalin ang mga palayaw",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Isalin sa ipinapakitang wika ang mga palayaw ng mga may-akda ng mensahe."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -11110,9 +11110,9 @@
     "NudeNyang 재연결 실패": "NudeNyang আবার সংযুক্ত করা যায়নি",
     "Discord 선택": "Discord নির্বাচন করুন",
     "번역을 적용할 Discord 앱을 선택합니다.": "অনুবাদ প্রয়োগ করতে Discord অ্যাপটি নির্বাচন করুন।",
-    "닉네임 번역하지 않기": "ডাকনাম অনুবাদ করবেন না",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "বার্তা লেখকদের ডাকনাম অপরিবর্তিতভাবে দেখান।",
-    "닉네임 번역 설정을 변경하지 못했습니다": "ডাকনাম অনুবাদের সেটিং পরিবর্তন করা যায়নি"
+    "닉네임 번역 설정을 변경하지 못했습니다": "ডাকনাম অনুবাদের সেটিং পরিবর্তন করা যায়নি",
+    "닉네임 번역하기": "ডাকনাম অনুবাদ করুন",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "বার্তা লেখকদের ডাকনামও প্রদর্শনের ভাষায় অনুবাদ করুন।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -11695,9 +11695,9 @@
     "NudeNyang 재연결 실패": "NudeNyang کو دوبارہ منسلک نہیں کیا جا سکا",
     "Discord 선택": "Discord منتخب کریں",
     "번역을 적용할 Discord 앱을 선택합니다.": "وہ Discord ایپ منتخب کریں جس پر ترجمے لاگو کرنے ہیں۔",
-    "닉네임 번역하지 않기": "عرفی ناموں کا ترجمہ نہ کریں",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "پیغامات کے مصنفین کے عرفی نام بغیر تبدیلی کے دکھائیں۔",
-    "닉네임 번역 설정을 변경하지 못했습니다": "عرفی نام کے ترجمے کی ترتیب تبدیل نہیں ہو سکی"
+    "닉네임 번역 설정을 변경하지 못했습니다": "عرفی نام کے ترجمے کی ترتیب تبدیل نہیں ہو سکی",
+    "닉네임 번역하기": "عرفی ناموں کا ترجمہ کریں",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "پیغام لکھنے والوں کے عرفی ناموں کا بھی ڈسپلے کی زبان میں ترجمہ کریں۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -12280,9 +12280,9 @@
     "NudeNyang 재연결 실패": "NudeNyang-ஐ மீண்டும் இணைக்க முடியவில்லை",
     "Discord 선택": "Discord-ஐத் தேர்ந்தெடுக்கவும்",
     "번역을 적용할 Discord 앱을 선택합니다.": "மொழிபெயர்ப்புகளைப் பயன்படுத்த வேண்டிய Discord செயலியைத் தேர்ந்தெடுக்கவும்.",
-    "닉네임 번역하지 않기": "புனைப்பெயர்களை மொழிபெயர்க்க வேண்டாம்",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "செய்தி எழுதியவர்களின் புனைப்பெயர்களை மாற்றமின்றிக் காட்டவும்.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "புனைப்பெயர் மொழிபெயர்ப்பு அமைப்பை மாற்ற முடியவில்லை"
+    "닉네임 번역 설정을 변경하지 못했습니다": "புனைப்பெயர் மொழிபெயர்ப்பு அமைப்பை மாற்ற முடியவில்லை",
+    "닉네임 번역하기": "புனைப்பெயர்களை மொழிபெயர்",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "செய்தி எழுதியவர்களின் புனைப்பெயர்களைக் காட்சி மொழிக்கு மொழிபெயர்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -12865,9 +12865,9 @@
     "NudeNyang 재연결 실패": "اتصال مجدد NudeNyang ممکن نشد",
     "Discord 선택": "انتخاب Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "برنامه Discord را برای اعمال ترجمه‌ها انتخاب کنید.",
-    "닉네임 번역하지 않기": "نام‌های مستعار را ترجمه نکن",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "نام‌های مستعار نویسندگان پیام‌ها را بدون تغییر نمایش بده.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "تنظیم ترجمه نام مستعار تغییر نکرد"
+    "닉네임 번역 설정을 변경하지 못했습니다": "تنظیم ترجمه نام مستعار تغییر نکرد",
+    "닉네임 번역하기": "ترجمه نام‌های مستعار",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "نام‌های مستعار نویسندگان پیام را به زبان نمایش ترجمه می‌کند."
   },
   "he": {
     "설정": "הגדרות",
@@ -13450,9 +13450,9 @@
     "NudeNyang 재연결 실패": "לא ניתן היה להתחבר מחדש ל-NudeNyang",
     "Discord 선택": "בחירת Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "בחר את אפליקציית Discord שעליה יוחלו התרגומים.",
-    "닉네임 번역하지 않기": "אין לתרגם כינויים",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "הצג את כינויי מחברי ההודעות ללא שינוי.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "לא ניתן לשנות את הגדרת תרגום הכינויים"
+    "닉네임 번역 설정을 변경하지 못했습니다": "לא ניתן לשנות את הגדרת תרגום הכינויים",
+    "닉네임 번역하기": "תרגום כינויים",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "תרגום הכינויים של מחברי ההודעות לשפת התצוגה."
   },
   "cs": {
     "설정": "Nastavení",
@@ -14035,8 +14035,8 @@
     "NudeNyang 재연결 실패": "NudeNyang se nepodařilo znovu připojit",
     "Discord 선택": "Vybrat Discord",
     "번역을 적용할 Discord 앱을 선택합니다.": "Vyberte aplikaci Discord, ve které se mají překlady použít.",
-    "닉네임 번역하지 않기": "Nepřekládat přezdívky",
-    "메시지 작성자의 닉네임을 원문 그대로 표시합니다.": "Zobrazovat přezdívky autorů zpráv beze změny.",
-    "닉네임 번역 설정을 변경하지 못했습니다": "Nastavení překladu přezdívek se nepodařilo změnit"
+    "닉네임 번역 설정을 변경하지 못했습니다": "Nastavení překladu přezdívek se nepodařilo změnit",
+    "닉네임 번역하기": "Překládat přezdívky",
+    "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Překládat přezdívky autorů zpráv do jazyka zobrazení."
   }
 }

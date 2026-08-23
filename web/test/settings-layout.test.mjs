@@ -176,13 +176,14 @@ test("settings apply immediately and the primary footer action only confirms", (
   assert.match(script, /applyShortcutImmediately/);
 });
 
-test("received message settings preserve nicknames by default and save immediately", () => {
+test("received message nickname translation defaults on and saves immediately", () => {
   const incomingCard = markup.match(/<article class="settings-card">[\s\S]*?<h3>받는 메시지<\/h3>[\s\S]*?<\/article>/)?.[0] || "";
-  assert.match(incomingCard, /id="preserve-nicknames"/);
-  assert.match(incomingCard, /닉네임 번역하지 않기/);
-  assert.ok(incomingCard.indexOf("source-language-select") < incomingCard.indexOf("preserve-nicknames"));
-  assert.match(script, /applySettingsPatch\(\{ preserve_nicknames: enabled \}\)/);
-  assert.match(rustEngine, /preserve_nicknames/);
+  assert.match(incomingCard, /id="translate-nicknames"/);
+  assert.match(incomingCard, /닉네임 번역하기/);
+  assert.match(incomingCard, /id="translate-nicknames"[^>]*aria-checked="true"/);
+  assert.ok(incomingCard.indexOf("source-language-select") < incomingCard.indexOf("translate-nicknames"));
+  assert.match(script, /applySettingsPatch\(\{ translate_nicknames: enabled \}\)/);
+  assert.match(rustEngine, /translate_nicknames/);
 });
 
 test("outgoing interpretation asks only when automatic language detection is uncertain", () => {

@@ -167,7 +167,7 @@ const dictionaryOverviewRequests = createLatestDictionaryRequestGate();
 const elements = {
   form: document.querySelector("#settings-form"),
   enabled: document.querySelector("#enabled"),
-  preserveNicknames: document.querySelector("#preserve-nicknames"),
+  translateNicknames: document.querySelector("#translate-nicknames"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   dictionaryEnabled: document.querySelector("#dictionary-enabled"),
   dictionaryExternalModelNote: document.querySelector("#dictionary-external-model-note"),
@@ -2423,7 +2423,7 @@ function renderConfig(config) {
   renderSourceLanguagePicker();
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
-  setSwitch(elements.preserveNicknames, state.config.preserve_nicknames, "켜짐", "꺼짐");
+  setSwitch(elements.translateNicknames, state.config.translate_nicknames, "켜짐", "꺼짐");
   setSwitch(
     elements.outgoingTranslation,
     state.config.outgoing_translation_enabled,
@@ -2978,13 +2978,13 @@ document.addEventListener("click", event => {
 });
 document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
-elements.preserveNicknames.addEventListener("click", async () => {
-  const enabled = elements.preserveNicknames.getAttribute("aria-checked") !== "true";
-  setSwitch(elements.preserveNicknames, enabled, "켜짐", "꺼짐");
+elements.translateNicknames.addEventListener("click", async () => {
+  const enabled = elements.translateNicknames.getAttribute("aria-checked") !== "true";
+  setSwitch(elements.translateNicknames, enabled, "켜짐", "꺼짐");
   try {
-    await applySettingsPatch({ preserve_nicknames: enabled });
+    await applySettingsPatch({ translate_nicknames: enabled });
   } catch (error) {
-    setSwitch(elements.preserveNicknames, state.config.preserve_nicknames, "켜짐", "꺼짐");
+    setSwitch(elements.translateNicknames, state.config.translate_nicknames, "켜짐", "꺼짐");
     await showError("닉네임 번역 설정을 변경하지 못했습니다", String(error));
   }
 });
