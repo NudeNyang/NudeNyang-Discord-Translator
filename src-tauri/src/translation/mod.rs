@@ -18,7 +18,7 @@ pub use hymt::{
 };
 pub use mock::{MockTranslator, OriginalTranslator};
 pub use resilient::{translation_needs_repair, ResilientTranslator};
-pub use service::TranslationService;
+pub use service::{outgoing_can_passthrough, TranslationService};
 pub use subscription_cli::{
     connect_subscription_interactively_with_observer, install_subscription_cli,
     probe_subscription_connection, CliConnectionProbe, LoginBrowserGate, LoginProcessObserver,

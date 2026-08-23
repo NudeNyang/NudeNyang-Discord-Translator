@@ -35,16 +35,17 @@ use crate::invite_assist::{invite_assist_script, parse_invite_open_request};
 use crate::language::{detect_language, is_han_only, is_supported_language_code, Language};
 use crate::ocr::OcrQualityMode;
 use crate::outgoing::{
-    apply_outgoing_detected_script, apply_outgoing_error_script, apply_outgoing_review_script,
-    apply_outgoing_suggestion_script, finish_outgoing_review_script, outgoing_originals_ui_script,
-    outgoing_ui_script, parse_outgoing_bindings, parse_outgoing_requests, suggest_recent_language,
-    OutgoingRequest, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
-    OUTGOING_ORIGINALS_UI_VERSION,
+    apply_outgoing_classification_script, apply_outgoing_detected_script,
+    apply_outgoing_error_script, apply_outgoing_review_script, apply_outgoing_suggestion_script,
+    finish_outgoing_review_script, outgoing_originals_ui_script, outgoing_ui_script,
+    parse_outgoing_bindings, parse_outgoing_requests, suggest_recent_language, OutgoingRequest,
+    OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
 };
 use crate::translation::{
-    DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator, ModelPreparationCancellation,
-    ModelPreparationProgress, ModelProgressObserver, OriginalTranslator, ResilientTranslator,
-    SubscriptionCliTranslator, TranslationService, Translator,
+    outgoing_can_passthrough, DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator,
+    ModelPreparationCancellation, ModelPreparationProgress, ModelProgressObserver,
+    OriginalTranslator, ResilientTranslator, SubscriptionCliTranslator, TranslationService,
+    Translator,
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
@@ -618,7 +619,8 @@ fn run_controller(
                     let target_changed = updated.target_language != config.target_language;
                     let incoming_languages_changed = updated.incoming_language_mode
                         != config.incoming_language_mode
-                        || updated.incoming_source_languages != config.incoming_source_languages;
+                        || updated.incoming_source_languages != config.incoming_source_languages
+                        || updated.preserve_nicknames != config.preserve_nicknames;
                     let image_ocr_quality_changed =
                         updated.image_ocr_quality != config.image_ocr_quality;
                     let mut requested_preparation = translator_preparation_plan(&config, &updated);
@@ -1219,6 +1221,7 @@ fn run_controller(
                     generation,
                     target,
                     incoming_allowed_sources(&config),
+                    config.preserve_nicknames,
                     display_batch_item_limit(&config),
                     &worker_tx,
                 )?;
@@ -1773,10 +1776,12 @@ fn scan_dom(
     generation: u64,
     target: Language,
     allowed_sources: Option<HashSet<Language>>,
+    preserve_nicknames: bool,
     max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
 ) -> Result<bool, String> {
-    let snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
+    let mut snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
+    retain_enabled_dom_parts(&mut snapshot.parts, preserve_nicknames);
     let context_scope = snapshot.url.clone();
     if display_view.observe(&snapshot.url, Instant::now()) == DisplayViewObservation::Changed {
         discard_stale_display_work(pending, display_view, generation, worker)?;
@@ -1808,6 +1813,12 @@ fn scan_dom(
             .map_err(|_| "Rust 번역 작업 스레드가 종료되었습니다.".to_string())?;
     }
     Ok(true)
+}
+
+fn retain_enabled_dom_parts(parts: &mut Vec<DomPart>, preserve_nicknames: bool) {
+    if preserve_nicknames {
+        parts.retain(|part| part.kind != "nickname");
+    }
 }
 
 fn prepare_display_view_for_dom(
@@ -1997,6 +2008,21 @@ fn scan_outgoing(
                 )?;
             }
             channel_languages.insert(request.channel_key, request.selected_language);
+            continue;
+        }
+        if request.action == "classify" {
+            let target = if request.selected_language == "auto" {
+                suggest_recent_language(&request.recent_messages)
+            } else {
+                Language::try_from(request.selected_language.as_str())
+                    .ok()
+                    .filter(|target| *target != Language::Unknown)
+            };
+            let can_pass = outgoing_can_passthrough(&request.text, target);
+            client.evaluate(
+                &apply_outgoing_classification_script(&request.id, can_pass)?,
+                false,
+            )?;
             continue;
         }
         if request.id.is_empty() || request.text.trim().is_empty() {
@@ -3268,12 +3294,13 @@ mod tests {
         display_batch_item_limit, display_preparation_is_required, display_translation_is_ready,
         display_view_scope, incoming_context_key, initial_model_preparation_progress,
         localize_dictionary_result, next_worker_command, plan_dom_updates, poll_interval,
-        preparation_plan_for_active_lanes, run_outgoing_translation_worker,
-        stage_dictionary_lookup_result, translator_activation_notice, translator_label,
-        translator_preparation_plan, DictionaryLocalizationBatch, DisplayViewObservation,
-        DisplayViewState, OutgoingTranslationBatch, OutgoingWorkerCommand, PartState,
-        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
-        WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
+        preparation_plan_for_active_lanes, retain_enabled_dom_parts,
+        run_outgoing_translation_worker, stage_dictionary_lookup_result,
+        translator_activation_notice, translator_label, translator_preparation_plan,
+        DictionaryLocalizationBatch, DisplayViewObservation, DisplayViewState,
+        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
+        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
+        CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
     };
     use crate::cache::TranslationCache;
     use crate::cdp::{discord_target, CdpClient};
@@ -3887,6 +3914,34 @@ mod tests {
                 INSTALL_TEXT_RESTORE_SCRIPT,
             ]
         );
+    }
+
+    #[test]
+    fn nickname_parts_are_skipped_only_when_preservation_is_enabled() {
+        let nickname = DomPart {
+            kind: "nickname".to_string(),
+            item_id: "nickname-1".to_string(),
+            context_id: None,
+            index: 0,
+            text: "Neko".to_string(),
+            displayed_text: None,
+        };
+        let message = DomPart {
+            kind: "message".to_string(),
+            item_id: "message-1".to_string(),
+            context_id: None,
+            index: 0,
+            text: "hello".to_string(),
+            displayed_text: None,
+        };
+
+        let mut preserved = vec![nickname.clone(), message.clone()];
+        retain_enabled_dom_parts(&mut preserved, true);
+        assert_eq!(preserved, vec![message.clone()]);
+
+        let mut translated = vec![nickname.clone(), message.clone()];
+        retain_enabled_dom_parts(&mut translated, false);
+        assert_eq!(translated, vec![nickname, message]);
     }
 
     #[test]

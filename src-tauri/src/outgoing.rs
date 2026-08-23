@@ -30,7 +30,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 44;
+  const CONTROLLER_VERSION = 45;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -154,6 +154,15 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   }
   function composerHasText(editor) {
     return Boolean(composerText(editor).trim());
+  }
+  function activeComposer() {
+    return [...document.querySelectorAll(composerSelector)].filter(editor => {
+      const bounds = editor.getBoundingClientRect();
+      return bounds.width > 120
+        && bounds.height > 24
+        && bounds.top > window.innerHeight * 0.4
+        && bounds.bottom <= window.innerHeight + 1;
+    }).sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top).at(-1) || null;
   }
   function selectionCoversComposer(editor) {
     const selection = getSelection();
@@ -532,6 +541,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       enabled: false,
       queue: [],
       pending: new Map(),
+      draftChecks: new Map(),
       sent: [],
       bindings: [],
       sequence: 0,
@@ -574,6 +584,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           document.execCommand('insertText', false, original);
         }
         this.pending.clear();
+        this.draftChecks.clear();
         this.queue.length = 0;
 
         window.__nudeTranslatorRestoreTranslatedText?.();
@@ -627,14 +638,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       reposition() {
         if (!this.root) return;
-        const editors = [...document.querySelectorAll(composerSelector)].filter(editor => {
-          const bounds = editor.getBoundingClientRect();
-          return bounds.width > 120
-            && bounds.height > 24
-            && bounds.top > window.innerHeight * 0.4
-            && bounds.bottom <= window.innerHeight + 1;
-        });
-        const editor = editors.sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top).at(-1);
+        const editor = activeComposer();
         const composer = editor?.closest('form') || editor?.closest('[class*="channelTextArea"]') || editor?.parentElement || null;
         const visibleAnchors = selector => [...document.querySelectorAll(selector)].filter(anchor => {
           const bounds = anchor.getBoundingClientRect();
@@ -687,6 +691,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       rememberLanguage(key, language) {
         if (!key) return;
         this.channelLanguages[key] = language;
+        this.draftChecks.clear();
         this.queue.push({
           id:`outgoing-language-${Date.now()}-${++this.sequence}`,
           channel_key:key,
@@ -904,10 +909,51 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       onInput(event) {
         const editor = event.target.closest?.(composerSelector);
-        if (!editor || composerHasText(editor)) return;
+        if (!editor) return;
+        this.queueDraftCheck(editor);
+        if (composerHasText(editor)) return;
         const inputType = String(event.inputType || '');
         if (inputType && !inputType.startsWith('delete')) return;
         this.cancelReview(editor);
+      },
+      draftKey(channelKey, language, text) {
+        return JSON.stringify([channelKey, language, text]);
+      },
+      queueDraftCheck(editor = activeComposer()) {
+        if (!this.enabled || !editor?.isConnected) return;
+        const channelKey = currentChannelKey();
+        if (!channelKey) return;
+        const selected = this.oneShotOriginal
+          ? 'original'
+          : selectedLanguageForChannel(channelKey, this.defaultLanguage, this.channelLanguages);
+        if (selected === 'original') return;
+        const mentionPlan = prefixMentionPlan(editor);
+        if (mentionPlan && !mentionPlan.supported) return;
+        const text = mentionPlan ? mentionPlan.text : composerText(editor);
+        if (!text.trim() || text.startsWith('/')) return;
+        const key = this.draftKey(channelKey, selected, text);
+        const existing = this.draftChecks.get(key);
+        if (existing && Date.now() - existing.created_at < 60000) return;
+        const id = `outgoing-check-${Date.now()}-${++this.sequence}`;
+        this.draftChecks.set(key, {id, pass:false, resolved:false, created_at:Date.now()});
+        while (this.draftChecks.size > 24) this.draftChecks.delete(this.draftChecks.keys().next().value);
+        this.queue.push({
+          id,
+          channel_key:channelKey,
+          text,
+          action:'classify',
+          selected_language:selected,
+          recent_messages:recentMessages(),
+        });
+      },
+      classified(id, canPass) {
+        for (const decision of this.draftChecks.values()) {
+          if (decision.id !== id) continue;
+          decision.pass = Boolean(canPass);
+          decision.resolved = true;
+          return true;
+        }
+        return false;
       },
       keydown(event) {
         if (Date.now() - this.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
@@ -957,6 +1003,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           : selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
         this.oneShotOriginal = false;
         if (selected === 'original') return;
+        const draftDecision = this.draftChecks.get(this.draftKey(key, selected, text));
+        if (draftDecision?.resolved && draftDecision.pass) {
+          this.setStatus('');
+          return;
+        }
         const previous = this.pendingForEditor(editor);
         if (previous) {
           const [previousId, previousItem] = previous;
@@ -1051,6 +1102,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   window.__nudeTranslatorApplyOutgoingOriginals?.();
   controller.updateLabel();
   controller.reposition();
+  controller.queueDraftCheck();
   return enabled || displayEnabled ? controller.queue.splice(0, 8).map(item => {
     const {editor, ...plain} = item;
     return plain;
@@ -1627,6 +1679,17 @@ pub fn apply_outgoing_detected_script(
         .map_err(|error| format!("감지 언어를 인코딩하지 못했습니다: {error}"))?;
     Ok(format!(
         "window.__nudeTranslatorOutgoing?.detected({id},{code})"
+    ))
+}
+
+pub fn apply_outgoing_classification_script(
+    request_id: &str,
+    can_pass: bool,
+) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 초안 식별자를 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.classified({id},{can_pass})"
     ))
 }
 

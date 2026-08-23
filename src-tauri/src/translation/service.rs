@@ -33,6 +33,47 @@ const MAX_MESSAGE_CONTEXT_CHARS: usize = 320;
 const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
 const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
 
+pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
+    let segments = DiscordFormatTemplate::parse(text).translatable_texts();
+    let meaningful = segments
+        .iter()
+        .filter(|segment| protect_text(segment).has_translatable_text())
+        .collect::<Vec<_>>();
+    if meaningful.is_empty() {
+        return true;
+    }
+    let Some(target) = target.filter(|target| *target != Language::Unknown) else {
+        return false;
+    };
+
+    meaningful.into_iter().all(|segment| {
+        let detection = detect_language(segment);
+        if detection.language == Language::Unknown {
+            return true;
+        }
+        if detection.language != target {
+            return false;
+        }
+        if target != Language::Korean {
+            return true;
+        }
+
+        let has_japanese_fragment = JAPANESE_FRAGMENT_RE.find_iter(segment).any(|found| {
+            let fragment = found.as_str();
+            protect_text(fragment).has_translatable_text()
+                && detect_language(fragment).language == Language::Japanese
+        });
+        let has_english_fragment = ENGLISH_FRAGMENT_RE.find_iter(segment).any(|found| {
+            let fragment = found.as_str();
+            let detection = detect_language(fragment);
+            protect_text(fragment).has_translatable_text()
+                && detection.language == Language::English
+                && detection.confidence >= 0.99
+        });
+        !has_japanese_fragment && !has_english_fragment
+    })
+}
+
 pub struct TranslationService {
     translator: Box<dyn Translator>,
     cache: TranslationCache,
@@ -1322,8 +1363,8 @@ mod tests {
     use std::time::Instant;
 
     use super::{
-        has_terminal_punctuation, preferred_navigation_translation, preserve_terminal_punctuation,
-        source_hash, TranslationService, MESSAGE_CONTEXT_SEPARATOR,
+        has_terminal_punctuation, outgoing_can_passthrough, preferred_navigation_translation,
+        preserve_terminal_punctuation, source_hash, TranslationService, MESSAGE_CONTEXT_SEPARATOR,
     };
     use crate::cache::TranslationCache;
     use crate::language::{detect_language, Language};
@@ -1335,6 +1376,29 @@ mod tests {
 
     struct CountingTranslator {
         calls: Arc<Mutex<usize>>,
+    }
+
+    #[test]
+    fn outgoing_passthrough_covers_native_text_symbols_and_kaomoji() {
+        assert!(outgoing_can_passthrough(
+            "안녕하세요",
+            Some(Language::Korean)
+        ));
+        assert!(outgoing_can_passthrough("!?", Some(Language::Korean)));
+        assert!(outgoing_can_passthrough(
+            "ヾ(｡>﹏<｡)ﾉﾞ✧*。, (づ￣ ³￣)づ~♡",
+            Some(Language::Korean),
+        ));
+        assert!(outgoing_can_passthrough("!?", None));
+        assert!(!outgoing_can_passthrough(
+            "안녕하세요 this is a full English phrase",
+            Some(Language::Korean),
+        ));
+        assert!(!outgoing_can_passthrough(
+            "Hello there",
+            Some(Language::Korean),
+        ));
+        assert!(!outgoing_can_passthrough("안녕하세요", None));
     }
 
     struct RecordingIdentityTranslator {

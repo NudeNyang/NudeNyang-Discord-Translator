@@ -176,6 +176,15 @@ test("settings apply immediately and the primary footer action only confirms", (
   assert.match(script, /applyShortcutImmediately/);
 });
 
+test("received message settings preserve nicknames by default and save immediately", () => {
+  const incomingCard = markup.match(/<article class="settings-card">[\s\S]*?<h3>받는 메시지<\/h3>[\s\S]*?<\/article>/)?.[0] || "";
+  assert.match(incomingCard, /id="preserve-nicknames"/);
+  assert.match(incomingCard, /닉네임 번역하지 않기/);
+  assert.ok(incomingCard.indexOf("source-language-select") < incomingCard.indexOf("preserve-nicknames"));
+  assert.match(script, /applySettingsPatch\(\{ preserve_nicknames: enabled \}\)/);
+  assert.match(rustEngine, /preserve_nicknames/);
+});
+
 test("outgoing interpretation asks only when automatic language detection is uncertain", () => {
   assert.match(
     styles,

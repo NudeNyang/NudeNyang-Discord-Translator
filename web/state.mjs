@@ -9,6 +9,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   target_language: "ko",
   incoming_language_mode: "all",
   incoming_source_languages: [],
+  preserve_nicknames: true,
   translator: "hymt_1_8b",
   outgoing_translator: "hymt_1_8b",
   hymt_device: "auto",

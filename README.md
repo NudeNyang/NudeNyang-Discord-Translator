@@ -81,8 +81,8 @@ There are three translation paths:
 
 | Path | What happens |
 |---|---|
-| Incoming text | Visible messages and channel names are detected, translated, and replaced in the current DOM. The original nodes are kept for restoration. |
-| Outgoing text | The first physical Enter translates the composer text and leaves it editable. A second physical Enter is passed untouched to Discord, so only the user sends the message. Long results remain in the composer for manual shortening or attachment. |
+| Incoming text | Visible messages and channel names are detected, translated, and replaced in the current DOM. Nicknames remain unchanged by default, and the original nodes are kept for restoration. |
+| Outgoing text | Drafts already in the selected target language, symbol-only text, and kaomoji pass through the first physical Enter unchanged. Other drafts are translated and left editable; a second physical Enter is passed untouched to Discord, so only the user sends the message. Long results remain in the composer for manual shortening or attachment. |
 | Images | Rust reads the image locally, runs PP-OCR, translates the extracted text, creates a replacement PNG, and swaps only the displayed image source. Original and translated views remain switchable. |
 
 ## Security boundary

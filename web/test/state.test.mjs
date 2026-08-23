@@ -135,6 +135,7 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.dictionary_enabled, true);
   assert.equal(config.dictionary_external_provider, "wiktionary");
   assert.equal(config.discord_variant, "auto");
+  assert.equal(config.preserve_nicknames, true);
 });
 
 test("Discord variant selection accepts stable, PTB, and Canary", () => {

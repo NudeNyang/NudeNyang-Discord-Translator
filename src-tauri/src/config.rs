@@ -66,6 +66,7 @@ pub struct AppConfig {
     pub target_language: String,
     pub incoming_language_mode: String,
     pub incoming_source_languages: Vec<String>,
+    pub preserve_nicknames: bool,
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
@@ -105,6 +106,7 @@ impl Default for AppConfig {
             target_language: "ko".to_string(),
             incoming_language_mode: "all".to_string(),
             incoming_source_languages: Vec::new(),
+            preserve_nicknames: true,
             enabled: true,
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
@@ -556,6 +558,7 @@ mod tests {
         assert_eq!(restored.dictionary_external_provider, "wiktionary");
         assert_eq!(restored.incoming_language_mode, "all");
         assert!(restored.incoming_source_languages.is_empty());
+        assert!(restored.preserve_nicknames);
         assert_eq!(restored.discord_variant, "auto");
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))

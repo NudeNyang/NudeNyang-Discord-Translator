@@ -116,6 +116,18 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const id = ensureRootId(root, 'data-dto-reply-id', 'reply');
     out.push(...parts('reply', id, root));
   }
+  const nicknameRoots = new Set(document.querySelectorAll('[id^="message-username-"]'));
+  for (const row of document.querySelectorAll(
+    '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]'
+  )) {
+    for (const root of row.querySelectorAll('[class*="username_"]')) nicknameRoots.add(root);
+  }
+  for (const root of nicknameRoots) {
+    if (!isVisible(root) || !root.textContent?.trim()) continue;
+    if (root.closest('[class*="embed_"]')) continue;
+    const id = ensureRootId(root, 'data-dto-nickname-id', 'nickname');
+    out.push(...parts('nickname', id, root));
+  }
   const embedContainerSelector = [
     'article[class*="embed_"]',
     '[class*="embedFull_"]',
@@ -227,6 +239,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
   ].join(',');
   for (const root of document.querySelectorAll(headingSelector)) {
     if (!isVisible(root)) continue;
+    if (root.closest('[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]')) continue;
     const id = ensureRootId(root, 'data-dto-heading-id', 'heading');
     out.push(...parts('heading', id, root));
   }
@@ -443,6 +456,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
     else if (change.kind === 'event-context') root = document.querySelector(`[data-dto-event-context-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'browse-channel') root = document.querySelector(`[data-dto-browse-channel-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'nickname') root = document.querySelector(`[data-dto-nickname-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'channel') {
       const channel = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"]`);
       return channel?.querySelector('div[aria-hidden="true"] > span,[class*="name__"][aria-hidden="true"] > div') || null;
@@ -513,6 +527,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
       else if (change.kind === 'event-context') root = document.querySelector(`[data-dto-event-context-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'browse-channel') root = document.querySelector(`[data-dto-browse-channel-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'nickname') root = document.querySelector(`[data-dto-nickname-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'channel') {
         const channel = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"]`);
         return channel?.querySelector('div[aria-hidden="true"] > span,[class*="name__"][aria-hidden="true"] > div') || null;
@@ -686,6 +701,9 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     else if (change.kind === 'context') root = document.querySelector(
       `[data-dto-context-id="${{CSS.escape(change.id)}}"]`
     );
+    else if (change.kind === 'nickname') root = document.querySelector(
+      `[data-dto-nickname-id="${{CSS.escape(change.id)}}"]`
+    );
     else if (change.kind === 'channel') {{
       const channel = document.querySelector(
         `[data-list-item-id="${{CSS.escape(change.id)}}"]`
@@ -774,6 +792,24 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("[id^=\"chat-messages-\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id^=\"chat-messages___\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"messageContent_\"]"));
+    }
+
+    #[test]
+    fn snapshot_and_apply_scripts_support_message_nicknames() {
+        assert!(SNAPSHOT_SCRIPT.contains("[id^=\"message-username-\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"username_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("parts('nickname'"));
+
+        let script = apply_script(&[DomChange {
+            kind: "nickname".to_string(),
+            id: "dto-nickname-1".to_string(),
+            index: 0,
+            text: "Neko".to_string(),
+        }])
+        .expect("nickname change script");
+        assert!(script.contains("data-dto-nickname-id"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("data-dto-nickname-id"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("data-dto-nickname-id"));
     }
 
     #[test]

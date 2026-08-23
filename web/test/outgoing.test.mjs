@@ -64,7 +64,7 @@ test("confirming an automatic suggestion remembers it for the channel", () => {
   assert.match(cache, /outgoing_channel_languages/);
 });
 
-test("configured outgoing defaults always reach the review-before-send path", () => {
+test("configured outgoing defaults preflight drafts before the review-before-send path", () => {
   assert.match(outgoing, /__DEFAULT_LANGUAGE__/);
   assert.match(engine, /outgoing_target_language/);
   assert.doesNotMatch(engine, /outgoing_confirm_language/);
@@ -73,6 +73,11 @@ test("configured outgoing defaults always reach the review-before-send path", ()
   assert.doesNotMatch(engine, /review_outgoing_before_send/);
   assert.match(engine, /outgoing_translator/);
   assert.match(engine, /enqueue_outgoing_translation/);
+  assert.match(outgoing, /action:'classify'/);
+  assert.match(outgoing, /draftChecks/);
+  assert.match(outgoing, /draftDecision\?\.resolved && draftDecision\.pass/);
+  assert.match(engine, /outgoing_can_passthrough/);
+  assert.match(engine, /apply_outgoing_classification_script/);
   assert.match(engine, /dispatch_outgoing_review\(client, &request_id, &translated\)/);
 });
 
@@ -203,7 +208,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 44/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 45/);
   assert.match(outgoing, /HEARTBEAT_TIMEOUT_MS = 5000/);
   assert.match(outgoing, /document\.addEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
   assert.match(outgoing, /document\.removeEventListener\('beforeinput', controller\.beforeInputListener, true\)/);
