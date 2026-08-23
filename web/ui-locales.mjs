@@ -578,7 +578,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord 要求進行身分驗證。為避免驗證期間發生輸入衝突，NudeNyang 已暫停翻譯連線。建議以標準版 Discord 重新啟動以完成驗證。\n\n重新啟動 Discord 可能會中斷進行中的通話，並捨棄尚未送出的訊息。",
     "NudeNyang을 다시 연결하시겠습니까?": "要重新連線 NudeNyang 嗎？",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "必須重新啟動 Discord 一次，才能重新連線 NudeNyang。進行中的通話可能會中斷，尚未送出的訊息也可能會遺失。",
-    "NudeNyang 재연결 실패": "無法重新連線 NudeNyang"
+    "NudeNyang 재연결 실패": "無法重新連線 NudeNyang",
+    "Discord 선택": "選擇 Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "選擇要套用翻譯的 Discord 應用程式。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -1158,7 +1160,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "O Discord solicitou a verificação de identidade. O NudeNyang pausou a conexão de tradução para evitar conflitos de entrada durante a verificação. Recomendamos reiniciar no Discord padrão para concluí-la.\n\nReiniciar o Discord pode encerrar chamadas ativas e descartar mensagens em andamento.",
     "NudeNyang을 다시 연결하시겠습니까?": "Reconectar o NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "O Discord precisa ser reiniciado uma vez para reconectar o NudeNyang. Chamadas ativas e mensagens em andamento podem ser encerradas.",
-    "NudeNyang 재연결 실패": "Não foi possível reconectar o NudeNyang"
+    "NudeNyang 재연결 실패": "Não foi possível reconectar o NudeNyang",
+    "Discord 선택": "Selecionar Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Selecione o aplicativo Discord ao qual aplicar as traduções."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1738,7 +1742,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord ने पहचान सत्यापन का अनुरोध किया। सत्यापन के दौरान इनपुट टकराव रोकने के लिए NudeNyang ने अपना अनुवाद कनेक्शन रोक दिया है। इसे पूरा करने के लिए हम मानक Discord में पुनः आरंभ करने की सलाह देते हैं।\n\nDiscord को पुनः आरंभ करने पर चल रही कॉल समाप्त हो सकती हैं और लिखे जा रहे संदेश हट सकते हैं।",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang को फिर से कनेक्ट करें?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "NudeNyang को फिर से कनेक्ट करने के लिए Discord को एक बार पुनः आरंभ करना होगा। चल रही कॉल और लिखे जा रहे संदेश समाप्त हो सकते हैं।",
-    "NudeNyang 재연결 실패": "NudeNyang को फिर से कनेक्ट नहीं किया जा सका"
+    "NudeNyang 재연결 실패": "NudeNyang को फिर से कनेक्ट नहीं किया जा सका",
+    "Discord 선택": "Discord चुनें",
+    "번역을 적용할 Discord 앱을 선택합니다.": "अनुवाद लागू करने के लिए Discord ऐप चुनें।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -2318,7 +2324,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord solicitó verificar tu identidad. NudeNyang pausó la conexión de traducción para evitar conflictos de entrada durante la verificación. Recomendamos reiniciar en la versión estándar de Discord para completarla.\n\nAl reiniciar Discord, podrían finalizar las llamadas activas y descartarse los mensajes en curso.",
     "NudeNyang을 다시 연결하시겠습니까?": "¿Volver a conectar NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord debe reiniciarse una vez para volver a conectar NudeNyang. Las llamadas activas y los mensajes en curso podrían finalizar.",
-    "NudeNyang 재연결 실패": "No se pudo volver a conectar NudeNyang"
+    "NudeNyang 재연결 실패": "No se pudo volver a conectar NudeNyang",
+    "Discord 선택": "Seleccionar Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Selecciona la aplicación de Discord a la que se aplicarán las traducciones."
   },
   "de": {
     "설정": "Einstellungen",
@@ -2898,7 +2906,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord hat eine Identitätsprüfung angefordert. NudeNyang hat seine Übersetzungsverbindung pausiert, um Eingabekonflikte während der Verifizierung zu vermeiden. Wir empfehlen, Discord im Standardmodus neu zu starten, um die Verifizierung abzuschließen.\n\nBeim Neustart von Discord können aktive Anrufe beendet und in Bearbeitung befindliche Nachrichten verworfen werden.",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang erneut verbinden?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord muss einmal neu gestartet werden, um NudeNyang erneut zu verbinden. Aktive Anrufe und in Bearbeitung befindliche Nachrichten können dabei verloren gehen.",
-    "NudeNyang 재연결 실패": "NudeNyang konnte nicht erneut verbunden werden"
+    "NudeNyang 재연결 실패": "NudeNyang konnte nicht erneut verbunden werden",
+    "Discord 선택": "Discord auswählen",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Wähle die Discord-App aus, auf die Übersetzungen angewendet werden sollen."
   },
   "ru": {
     "설정": "Настройки",
@@ -3478,7 +3488,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord запросил подтверждение личности. NudeNyang приостановил подключение к переводу, чтобы избежать конфликтов ввода во время проверки. Рекомендуем перезапустить обычный Discord и завершить проверку.\n\nПри перезапуске Discord текущие звонки могут завершиться, а набираемые сообщения — потеряться.",
     "NudeNyang을 다시 연결하시겠습니까?": "Повторно подключить NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Чтобы повторно подключить NudeNyang, необходимо один раз перезапустить Discord. Текущие звонки могут завершиться, а набираемые сообщения — потеряться.",
-    "NudeNyang 재연결 실패": "Не удалось повторно подключить NudeNyang"
+    "NudeNyang 재연결 실패": "Не удалось повторно подключить NudeNyang",
+    "Discord 선택": "Выбрать Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Выберите приложение Discord, к которому будут применяться переводы."
   },
   "id": {
     "설정": "Pengaturan",
@@ -4058,7 +4070,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord meminta verifikasi identitas. NudeNyang menjeda koneksi terjemahannya untuk mencegah konflik input selama verifikasi. Sebaiknya mulai ulang dalam mode Discord standar untuk menyelesaikannya.\n\nMemulai ulang Discord dapat mengakhiri panggilan aktif dan membuang pesan yang sedang ditulis.",
     "NudeNyang을 다시 연결하시겠습니까?": "Hubungkan kembali NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord harus dimulai ulang sekali untuk menghubungkan kembali NudeNyang. Panggilan aktif dan pesan yang sedang ditulis mungkin akan berakhir.",
-    "NudeNyang 재연결 실패": "Tidak dapat menghubungkan kembali NudeNyang"
+    "NudeNyang 재연결 실패": "Tidak dapat menghubungkan kembali NudeNyang",
+    "Discord 선택": "Pilih Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Pilih aplikasi Discord yang akan diberi terjemahan."
   },
   "fr": {
     "설정": "Paramètres",
@@ -4638,7 +4652,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord a demandé une vérification d’identité. NudeNyang a suspendu sa connexion de traduction pour éviter les conflits de saisie pendant la vérification. Nous vous recommandons de redémarrer avec la version standard de Discord pour la terminer.\n\nLe redémarrage de Discord peut mettre fin aux appels en cours et supprimer les messages en cours de rédaction.",
     "NudeNyang을 다시 연결하시겠습니까?": "Reconnecter NudeNyang ?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord doit redémarrer une fois pour reconnecter NudeNyang. Les appels en cours peuvent être interrompus et les messages en cours de rédaction supprimés.",
-    "NudeNyang 재연결 실패": "Impossible de reconnecter NudeNyang"
+    "NudeNyang 재연결 실패": "Impossible de reconnecter NudeNyang",
+    "Discord 선택": "Sélectionner Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Sélectionnez l’application Discord à laquelle appliquer les traductions."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -5218,7 +5234,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord kimlik doğrulaması istedi. NudeNyang, doğrulama sırasında giriş çakışmalarını önlemek için çeviri bağlantısını duraklattı. Doğrulamayı tamamlamak için standart Discord'u yeniden başlatmanızı öneririz.\n\nDiscord'u yeniden başlatmak etkin aramaları sonlandırabilir ve yazılmakta olan mesajların kaybolmasına neden olabilir.",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang yeniden bağlansın mı?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "NudeNyang'ı yeniden bağlamak için Discord'un bir kez yeniden başlatılması gerekir. Etkin aramalar sonlanabilir ve yazılmakta olan mesajlar kaybolabilir.",
-    "NudeNyang 재연결 실패": "NudeNyang yeniden bağlanamadı"
+    "NudeNyang 재연결 실패": "NudeNyang yeniden bağlanamadı",
+    "Discord 선택": "Discord'u Seç",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Çevirilerin uygulanacağı Discord uygulamasını seçin."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -5798,7 +5816,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "طلب Discord التحقق من الهوية. أوقف NudeNyang اتصال الترجمة مؤقتًا لمنع تعارض الإدخال أثناء التحقق. نوصي بإعادة التشغيل في Discord القياسي لإكمال التحقق.\n\nقد تؤدي إعادة تشغيل Discord إلى إنهاء المكالمات النشطة وحذف الرسائل قيد الكتابة.",
     "NudeNyang을 다시 연결하시겠습니까?": "إعادة توصيل NudeNyang؟",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "يجب إعادة تشغيل Discord مرة واحدة لإعادة توصيل NudeNyang. قد تنتهي المكالمات النشطة والرسائل قيد الكتابة.",
-    "NudeNyang 재연결 실패": "تعذرت إعادة توصيل NudeNyang"
+    "NudeNyang 재연결 실패": "تعذرت إعادة توصيل NudeNyang",
+    "Discord 선택": "تحديد Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "حدد تطبيق Discord لتطبيق الترجمات عليه."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -6378,7 +6398,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord yêu cầu xác minh danh tính. NudeNyang đã tạm dừng kết nối dịch để tránh xung đột nhập liệu trong quá trình xác minh. Bạn nên khởi động lại bằng Discord tiêu chuẩn để hoàn tất xác minh.\n\nViệc khởi động lại Discord có thể kết thúc các cuộc gọi đang diễn ra và làm mất các tin nhắn đang soạn.",
     "NudeNyang을 다시 연결하시겠습니까?": "Kết nối lại NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord phải khởi động lại một lần để kết nối lại NudeNyang. Các cuộc gọi đang diễn ra có thể bị kết thúc và các tin nhắn đang soạn có thể bị mất.",
-    "NudeNyang 재연결 실패": "Không thể kết nối lại NudeNyang"
+    "NudeNyang 재연결 실패": "Không thể kết nối lại NudeNyang",
+    "Discord 선택": "Chọn Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Chọn ứng dụng Discord để áp dụng bản dịch."
   },
   "it": {
     "설정": "Impostazioni",
@@ -6958,7 +6980,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord ha richiesto la verifica dell'identità. NudeNyang ha sospeso la connessione di traduzione per evitare conflitti di input durante la verifica. Ti consigliamo di riavviare Discord in modalità standard per completarla.\n\nIl riavvio di Discord potrebbe terminare le chiamate attive e scartare i messaggi in corso.",
     "NudeNyang을 다시 연결하시겠습니까?": "Riconnettere NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord deve essere riavviato una volta per riconnettere NudeNyang. Le chiamate attive e i messaggi in corso potrebbero andare persi.",
-    "NudeNyang 재연결 실패": "Impossibile riconnettere NudeNyang"
+    "NudeNyang 재연결 실패": "Impossibile riconnettere NudeNyang",
+    "Discord 선택": "Seleziona Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Seleziona l'app Discord a cui applicare le traduzioni."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -7538,7 +7562,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord poprosił o weryfikację tożsamości. NudeNyang wstrzymał połączenie tłumaczenia, aby zapobiec konfliktom podczas wprowadzania danych w trakcie weryfikacji. Zalecamy ponowne uruchomienie w standardowej wersji Discord, aby ją ukończyć.\n\nPonowne uruchomienie Discord może zakończyć trwające rozmowy i odrzucić pisane wiadomości.",
     "NudeNyang을 다시 연결하시겠습니까?": "Połączyć ponownie NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Aby ponownie połączyć NudeNyang, Discord musi zostać raz uruchomiony ponownie. Trwające rozmowy i pisane wiadomości mogą zostać zakończone.",
-    "NudeNyang 재연결 실패": "Nie udało się ponownie połączyć NudeNyang"
+    "NudeNyang 재연결 실패": "Nie udało się ponownie połączyć NudeNyang",
+    "Discord 선택": "Wybierz Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Wybierz aplikację Discord, w której mają być stosowane tłumaczenia."
   },
   "uk": {
     "설정": "Налаштування",
@@ -8118,7 +8144,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord запросив підтвердження особи. NudeNyang призупинив з’єднання для перекладу, щоб запобігти конфліктам введення під час перевірки. Рекомендуємо перезапустити звичайний Discord, щоб завершити її.\n\nПерезапуск Discord може завершити активні виклики та видалити незавершені повідомлення.",
     "NudeNyang을 다시 연결하시겠습니까?": "Повторно підключити NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Щоб повторно підключити NudeNyang, потрібно один раз перезапустити Discord. Активні виклики та незавершені повідомлення можуть бути втрачені.",
-    "NudeNyang 재연결 실패": "Не вдалося повторно підключити NudeNyang"
+    "NudeNyang 재연결 실패": "Не вдалося повторно підключити NudeNyang",
+    "Discord 선택": "Вибрати Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Виберіть застосунок Discord, до якого слід застосувати переклади."
   },
   "ms": {
     "설정": "Tetapan",
@@ -8698,7 +8726,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord meminta pengesahan identiti. NudeNyang menjeda sambungan terjemahannya untuk mengelakkan konflik input semasa pengesahan. Kami mengesyorkan agar Discord dimulakan semula dalam mod standard untuk melengkapkannya.\n\nMemulakan semula Discord mungkin menamatkan panggilan aktif dan membuang mesej yang sedang ditaip.",
     "NudeNyang을 다시 연결하시겠습니까?": "Sambungkan semula NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord mesti dimulakan semula sekali untuk menyambungkan semula NudeNyang. Panggilan aktif mungkin tamat dan mesej yang sedang ditaip mungkin hilang.",
-    "NudeNyang 재연결 실패": "Tidak dapat menyambungkan semula NudeNyang"
+    "NudeNyang 재연결 실패": "Tidak dapat menyambungkan semula NudeNyang",
+    "Discord 선택": "Pilih Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Pilih aplikasi Discord untuk menggunakan terjemahan."
   },
   "nl": {
     "설정": "Instellingen",
@@ -9278,7 +9308,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord heeft om identiteitsverificatie gevraagd. NudeNyang heeft de vertaalverbinding onderbroken om invoerconflicten tijdens de verificatie te voorkomen. We raden aan opnieuw op te starten in de standaardversie van Discord om de verificatie te voltooien.\n\nAls je Discord opnieuw opstart, kunnen actieve gesprekken worden beëindigd en niet-verzonden berichten verloren gaan.",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang opnieuw verbinden?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord moet één keer opnieuw worden opgestart om NudeNyang opnieuw te verbinden. Actieve gesprekken kunnen worden beëindigd en niet-verzonden berichten kunnen verloren gaan.",
-    "NudeNyang 재연결 실패": "NudeNyang kon niet opnieuw worden verbonden"
+    "NudeNyang 재연결 실패": "NudeNyang kon niet opnieuw worden verbonden",
+    "Discord 선택": "Discord selecteren",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Selecteer de Discord-app waarop je vertalingen wilt toepassen."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -9858,7 +9890,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord ขอให้ยืนยันตัวตน NudeNyang จึงหยุดการเชื่อมต่อการแปลชั่วคราวเพื่อป้องกันความขัดแย้งในการป้อนข้อมูลระหว่างการยืนยัน ขอแนะนำให้เปิด Discord แบบมาตรฐานใหม่เพื่อดำเนินการให้เสร็จสิ้น\n\nการเปิด Discord ใหม่อาจยุติสายที่กำลังสนทนาและละทิ้งข้อความที่กำลังเขียน",
     "NudeNyang을 다시 연결하시겠습니까?": "เชื่อมต่อ NudeNyang อีกครั้งหรือไม่?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "ต้องเปิด Discord ใหม่หนึ่งครั้งเพื่อเชื่อมต่อ NudeNyang อีกครั้ง สายที่กำลังสนทนาและข้อความที่กำลังเขียนอาจสิ้นสุดลง",
-    "NudeNyang 재연결 실패": "ไม่สามารถเชื่อมต่อ NudeNyang อีกครั้งได้"
+    "NudeNyang 재연결 실패": "ไม่สามารถเชื่อมต่อ NudeNyang อีกครั้งได้",
+    "Discord 선택": "เลือก Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "เลือกแอป Discord ที่จะใช้คำแปล"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -10438,7 +10472,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Humiling ang Discord ng pagpapatunay ng pagkakakilanlan. Pansamantalang itinigil ng NudeNyang ang koneksyon nito sa pagsasalin upang maiwasan ang salungatan sa pag-input habang nagpapatunay. Inirerekomenda naming i-restart sa karaniwang Discord upang makumpleto ito.\n\nKapag ni-restart ang Discord, maaaring maputol ang mga kasalukuyang tawag at mawala ang mga mensaheng ginagawa pa.",
     "NudeNyang을 다시 연결하시겠습니까?": "Muling ikonekta ang NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Kailangang i-restart nang isang beses ang Discord upang muling ikonekta ang NudeNyang. Maaaring maputol ang mga kasalukuyang tawag at mawala ang mga mensaheng ginagawa pa.",
-    "NudeNyang 재연결 실패": "Hindi maikonekta muli ang NudeNyang"
+    "NudeNyang 재연결 실패": "Hindi maikonekta muli ang NudeNyang",
+    "Discord 선택": "Piliin ang Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Piliin ang Discord app na lalagyan ng mga pagsasalin."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -11018,7 +11054,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord পরিচয় যাচাইয়ের অনুরোধ করেছে। যাচাইকরণের সময় ইনপুটের সংঘর্ষ এড়াতে NudeNyang-এর অনুবাদ সংযোগ সাময়িকভাবে বন্ধ করা হয়েছে। এটি সম্পন্ন করতে সাধারণ Discord-এ পুনরায় চালু করার পরামর্শ দিচ্ছি।\n\nDiscord পুনরায় চালু করলে চলমান কল শেষ হতে পারে এবং লেখা হচ্ছে এমন বার্তা বাতিল হয়ে যেতে পারে।",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang আবার সংযুক্ত করবেন?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "NudeNyang আবার সংযুক্ত করতে Discord একবার পুনরায় চালু করতে হবে। চলমান কল ও লেখা হচ্ছে এমন বার্তা শেষ হয়ে যেতে পারে।",
-    "NudeNyang 재연결 실패": "NudeNyang আবার সংযুক্ত করা যায়নি"
+    "NudeNyang 재연결 실패": "NudeNyang আবার সংযুক্ত করা যায়নি",
+    "Discord 선택": "Discord নির্বাচন করুন",
+    "번역을 적용할 Discord 앱을 선택합니다.": "অনুবাদ প্রয়োগ করতে Discord অ্যাপটি নির্বাচন করুন।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -11598,7 +11636,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord نے شناخت کی تصدیق کی درخواست کی ہے۔ تصدیق کے دوران ان پٹ کے ٹکراؤ سے بچنے کے لیے NudeNyang نے اپنا ترجمہ کنکشن عارضی طور پر روک دیا ہے۔ اسے مکمل کرنے کے لیے ہم معیاری Discord میں دوبارہ شروع کرنے کی تجویز دیتے ہیں۔\n\nDiscord کو دوبارہ شروع کرنے سے جاری کالیں ختم اور زیرِ تحریر پیغامات ضائع ہو سکتے ہیں۔",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang کو دوبارہ منسلک کریں؟",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "NudeNyang کو دوبارہ منسلک کرنے کے لیے Discord کو ایک بار دوبارہ شروع کرنا ہوگا۔ جاری کالیں اور زیرِ تحریر پیغامات ختم ہو سکتے ہیں۔",
-    "NudeNyang 재연결 실패": "NudeNyang کو دوبارہ منسلک نہیں کیا جا سکا"
+    "NudeNyang 재연결 실패": "NudeNyang کو دوبارہ منسلک نہیں کیا جا سکا",
+    "Discord 선택": "Discord منتخب کریں",
+    "번역을 적용할 Discord 앱을 선택합니다.": "وہ Discord ایپ منتخب کریں جس پر ترجمے لاگو کرنے ہیں۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -12178,7 +12218,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord அடையாளச் சரிபார்ப்பைக் கோரியது. சரிபார்ப்பின்போது உள்ளீட்டு முரண்பாடுகளைத் தவிர்க்க, NudeNyang தனது மொழிபெயர்ப்பு இணைப்பை இடைநிறுத்தியது. இதை முடிக்க வழக்கமான Discord-ஐ மறுதொடக்கம் செய்யப் பரிந்துரைக்கிறோம்.\n\nDiscord-ஐ மறுதொடக்கம் செய்வதால் செயலில் உள்ள அழைப்புகள் முடிவடையலாம், எழுதிக்கொண்டிருக்கும் செய்திகள் கைவிடப்படலாம்.",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang-ஐ மீண்டும் இணைக்கவா?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "NudeNyang-ஐ மீண்டும் இணைக்க Discord-ஐ ஒருமுறை மறுதொடக்கம் செய்ய வேண்டும். செயலில் உள்ள அழைப்புகளும் எழுதிக்கொண்டிருக்கும் செய்திகளும் முடிவடையலாம்.",
-    "NudeNyang 재연결 실패": "NudeNyang-ஐ மீண்டும் இணைக்க முடியவில்லை"
+    "NudeNyang 재연결 실패": "NudeNyang-ஐ மீண்டும் இணைக்க முடியவில்லை",
+    "Discord 선택": "Discord-ஐத் தேர்ந்தெடுக்கவும்",
+    "번역을 적용할 Discord 앱을 선택합니다.": "மொழிபெயர்ப்புகளைப் பயன்படுத்த வேண்டிய Discord செயலியைத் தேர்ந்தெடுக்கவும்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -12758,7 +12800,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord درخواست تأیید هویت کرد. NudeNyang برای جلوگیری از تداخل ورودی هنگام تأیید، اتصال ترجمه را موقتاً متوقف کرد. توصیه می‌کنیم برای تکمیل آن، برنامه را در حالت استاندارد Discord دوباره راه‌اندازی کنید.\n\nراه‌اندازی مجدد Discord ممکن است تماس‌های فعال را پایان دهد و پیام‌های در حال نگارش را حذف کند.",
     "NudeNyang을 다시 연결하시겠습니까?": "NudeNyang دوباره متصل شود؟",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "برای اتصال مجدد NudeNyang، Discord باید یک‌بار دوباره راه‌اندازی شود. ممکن است تماس‌های فعال پایان یابند و پیام‌های در حال نگارش از دست بروند.",
-    "NudeNyang 재연결 실패": "اتصال مجدد NudeNyang ممکن نشد"
+    "NudeNyang 재연결 실패": "اتصال مجدد NudeNyang ممکن نشد",
+    "Discord 선택": "انتخاب Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "برنامه Discord را برای اعمال ترجمه‌ها انتخاب کنید."
   },
   "he": {
     "설정": "הגדרות",
@@ -13338,7 +13382,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord ביקש אימות זהות. NudeNyang השהה את חיבור התרגום כדי למנוע התנגשויות קלט במהלך האימות. מומלץ להפעיל מחדש את Discord במצב רגיל כדי להשלים את האימות.\n\nהפעלה מחדש של Discord עלולה לסיים שיחות פעילות ולמחוק הודעות שנמצאות בתהליך כתיבה.",
     "NudeNyang을 다시 연결하시겠습니까?": "להתחבר מחדש ל-NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "יש להפעיל מחדש את Discord פעם אחת כדי להתחבר מחדש ל-NudeNyang. שיחות פעילות והודעות שנמצאות בתהליך כתיבה עלולות להימחק.",
-    "NudeNyang 재연결 실패": "לא ניתן היה להתחבר מחדש ל-NudeNyang"
+    "NudeNyang 재연결 실패": "לא ניתן היה להתחבר מחדש ל-NudeNyang",
+    "Discord 선택": "בחירת Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "בחר את אפליקציית Discord שעליה יוחלו התרגומים."
   },
   "cs": {
     "설정": "Nastavení",
@@ -13918,6 +13964,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "Discord에서 본인 확인이 요청되었습니다. 인증 과정에서 입력 충돌을 방지하기 위해 NudeNyang의 번역 연결을 일시 중지했습니다. 일반 Discord로 다시 시작하여 인증을 완료하는 것을 권장합니다.\n\nDiscord를 다시 시작하면 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Discord požádal o ověření totožnosti. NudeNyang pozastavil připojení k překladu, aby během ověřování nedocházelo ke konfliktům při zadávání. Pro dokončení ověření doporučujeme restartovat běžný Discord.\n\nRestartování Discord může ukončit probíhající hovory a zahodit rozepsané zprávy.",
     "NudeNyang을 다시 연결하시겠습니까?": "Znovu připojit NudeNyang?",
     "NudeNyang을 다시 연결하려면 Discord를 한 번 다시 시작해야 합니다. 진행 중인 통화와 작성 중인 메시지가 종료될 수 있습니다.": "Pro opětovné připojení NudeNyang je nutné jednou restartovat Discord. Probíhající hovory mohou být ukončeny a rozepsané zprávy ztraceny.",
-    "NudeNyang 재연결 실패": "NudeNyang se nepodařilo znovu připojit"
+    "NudeNyang 재연결 실패": "NudeNyang se nepodařilo znovu připojit",
+    "Discord 선택": "Vybrat Discord",
+    "번역을 적용할 Discord 앱을 선택합니다.": "Vyberte aplikaci Discord, ve které se mají překlady použít."
   }
 });

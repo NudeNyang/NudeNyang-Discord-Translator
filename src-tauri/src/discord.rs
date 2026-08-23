@@ -99,6 +99,10 @@ fn guardian_state_matches_process(state: &PipeGuardianState, process: &DiscordPr
         && normalized_path(&state.discord_executable) == normalized_path(&process.executable)
 }
 
+fn guardian_state_belongs_to_installation(state: &PipeGuardianState, executable: &Path) -> bool {
+    same_discord_installation(&state.discord_executable, executable)
+}
+
 pub fn current_process(variant: DiscordVariant) -> Option<DiscordProcess> {
     let mut system = System::new();
     system.refresh_processes_specifics(
@@ -632,10 +636,10 @@ fn is_main_discord_arguments(arguments: &[std::ffi::OsString]) -> bool {
 mod windows_pipe_launcher {
     use super::configure_background;
     use super::{
-        discord_debug_arguments, guardian_executable_path, guardian_state_matches_process,
-        guardian_state_path, integration_root, is_discord_name, is_main_discord_arguments,
-        normalized_path, validate_discord_executable, DiscordProcess, PipeGuardianState,
-        GUARDIAN_COPY_SEQUENCE, GUARDIAN_STATE_VERSION,
+        discord_debug_arguments, guardian_executable_path, guardian_state_belongs_to_installation,
+        guardian_state_matches_process, guardian_state_path, integration_root, is_discord_name,
+        is_main_discord_arguments, normalized_path, validate_discord_executable, DiscordProcess,
+        PipeGuardianState, GUARDIAN_COPY_SEQUENCE, GUARDIAN_STATE_VERSION,
     };
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -687,7 +691,7 @@ mod windows_pipe_launcher {
     }
 
     pub(super) fn launch(executable: &Path) -> Result<PipeLaunch, String> {
-        prepare_guardian_session();
+        prepare_guardian_session(executable);
         let helper = std::env::current_exe()
             .map_err(|error| format!("보안 파이프 헬퍼 경로를 찾지 못했습니다: {error}"))?;
         let mut command = Command::new(helper);
@@ -787,7 +791,7 @@ mod windows_pipe_launcher {
         wait_for_guardian_state(discord_process_id, guardian_process_id)
     }
 
-    fn prepare_guardian_session() {
+    fn prepare_guardian_session(executable: &Path) {
         let root = integration_root();
         let Ok(entries) = std::fs::read_dir(root) else {
             return;
@@ -797,9 +801,13 @@ mod windows_pipe_launcher {
             if path.file_name().is_some_and(|name| {
                 let name = name.to_string_lossy();
                 name.starts_with("cdp-pipe-guardian-") && name.ends_with(".json")
-            }) {
+            }) && std::fs::read_to_string(&path)
+                .ok()
+                .and_then(|contents| serde_json::from_str::<PipeGuardianState>(&contents).ok())
+                .is_some_and(|state| guardian_state_belongs_to_installation(&state, executable))
+            {
                 // Removing the state file is also the authenticated shutdown signal
-                // for an older guardian left by the Discord instance we just stopped.
+                // for an older guardian left by the selected Discord installation.
                 let _ = std::fs::remove_file(path);
             }
         }
@@ -1310,14 +1318,15 @@ pub fn run_pipe_guardian(
 #[cfg(test)]
 mod tests {
     use super::{
-        discord_debug_arguments, guardian_executable_path, guardian_state_matches_process,
-        installed_executable_for, installed_executable_in, is_discord_name,
-        is_main_discord_arguments, restart_executable_from, same_discord_installation,
-        validate_discord_executable, DiscordProcess, DiscordVariant, PipeGuardianState,
-        GUARDIAN_STATE_VERSION,
+        discord_debug_arguments, guardian_executable_path, guardian_state_belongs_to_installation,
+        guardian_state_matches_process, installed_executable_for, installed_executable_in,
+        is_discord_name, is_main_discord_arguments, restart_executable_from,
+        same_discord_installation, validate_discord_executable, DiscordProcess, DiscordVariant,
+        PipeGuardianState, GUARDIAN_STATE_VERSION,
     };
     use std::ffi::OsString;
     use std::fs;
+    use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -1534,6 +1543,29 @@ mod tests {
         };
 
         assert!(!guardian_state_matches_process(&state, &canary));
+    }
+
+    #[test]
+    fn guardian_cleanup_keeps_other_discord_release_channels_running() {
+        let stable = PathBuf::from(r"C:\Users\test\AppData\Local\Discord\app-1.0.0\Discord.exe");
+        let newer_stable =
+            PathBuf::from(r"C:\Users\test\AppData\Local\Discord\app-2.0.0\Discord.exe");
+        let canary =
+            PathBuf::from(r"C:\Users\test\AppData\Local\DiscordCanary\app-1.0.0\DiscordCanary.exe");
+        let state = PipeGuardianState {
+            version: GUARDIAN_STATE_VERSION,
+            guardian_process_id: 10,
+            discord_process_id: 20,
+            discord_executable: stable,
+            reader_handle: 30,
+            writer_handle: 40,
+        };
+
+        assert!(guardian_state_belongs_to_installation(
+            &state,
+            &newer_stable
+        ));
+        assert!(!guardian_state_belongs_to_installation(&state, &canary));
     }
 
     #[test]

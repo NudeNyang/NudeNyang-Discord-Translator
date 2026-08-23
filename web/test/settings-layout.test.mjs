@@ -308,7 +308,8 @@ test("display translation and outgoing interpretation present role-appropriate m
 });
 
 test("convenience panel exposes the Discord target and global translation toggles", () => {
-  assert.match(markup, /<h3>Discord<\/h3>/);
+  assert.match(markup, /<h3>Discord 선택<\/h3>/);
+  assert.match(markup, /번역을 적용할 Discord 앱을 선택합니다\./);
   assert.match(markup, /data-field="discord_variant"/);
   assert.match(script, /\["stable", "Discord"\]/);
   assert.match(script, /\["ptb", "Discord PTB"\]/);

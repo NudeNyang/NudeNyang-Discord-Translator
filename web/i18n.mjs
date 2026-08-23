@@ -181,6 +181,8 @@ export const COPY = Object.freeze({
   "받는 메시지와 보내는 메시지의 번역 방식을 설정합니다.": ["Configure translation for received and outgoing messages.", "受信メッセージと送信メッセージの翻訳方法を設定します。", "设置接收消息和发送消息的翻译方式。"],
   "받는 메시지": ["Received messages", "受信メッセージ", "接收消息"],
   "Discord에서 표시할 번역을 설정합니다.": ["Configure translations displayed in Discord.", "Discordに表示する翻訳を設定します。", "设置在 Discord 中显示的翻译。"],
+  "Discord 선택": ["Select Discord", "Discord を選択", "选择 Discord"],
+  "번역을 적용할 Discord 앱을 선택합니다.": ["Select the Discord app to apply translations to.", "翻訳を適用する Discord アプリを選択します。", "选择要应用翻译的 Discord 应用。"],
   "실시간 번역": ["Real-time translation", "リアルタイム翻訳", "实时翻译"],
   "메시지 통역": ["Message interpretation", "メッセージ通訳", "消息翻译"],
   "단축키": ["Shortcut", "ショートカット", "快捷键"],
