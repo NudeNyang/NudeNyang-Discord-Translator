@@ -1562,7 +1562,7 @@ fn dictionary_source_language(
     if selected_language != Language::Unknown {
         return Some(selected_language.code().to_string());
     }
-    (contextual_language != Language::Unknown).then(|| contextual_language.code().to_string())
+    None
 }
 
 fn handle_invite_assist(
@@ -3463,6 +3463,16 @@ mod tests {
             "日本時間3/17の午後にSuRroomはシステムによって自動的に変更されました。",
         );
         assert_eq!(language.as_deref(), Some("ja"));
+    }
+
+    #[test]
+    fn dictionary_lookup_does_not_treat_mixed_context_as_a_latin_language_filter() {
+        let language = dictionary_source_language(
+            "",
+            "Event",
+            "2026년 8월 25일 Event Rewards Frost Moon Meme Master",
+        );
+        assert_eq!(language, None);
     }
 
     #[test]

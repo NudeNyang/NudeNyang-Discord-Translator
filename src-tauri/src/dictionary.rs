@@ -403,6 +403,9 @@ impl DictionaryStore {
                     &inflection_terms,
                     4,
                 )?;
+            } else if detected.is_empty() {
+                (entries, personal_entries) =
+                    lookup_ambiguous_inflection_terms(&connection, target_language, &normalized)?;
             }
         }
 
@@ -417,10 +420,13 @@ impl DictionaryStore {
             }
         }
         rank_entries_for_context(&mut entries, context, None);
+        let source_language =
+            resolve_lookup_language(&detected, context, &entries, &personal_entries);
+        prioritize_lookup_language(&mut entries, &mut personal_entries, &source_language);
 
         Ok(DictionaryLookupResult {
             query,
-            source_language: detected,
+            source_language,
             target_language: target_language.to_string(),
             selection_translation: String::new(),
             localization_pending: false,
@@ -1057,6 +1063,85 @@ fn lookup_personal_terms(
 
 fn inflection_lookup_terms(normalized_term: &str, detected_language: &str) -> Vec<String> {
     inflection_terms(normalized_term, detected_language)
+}
+
+fn lookup_ambiguous_inflection_terms(
+    connection: &Connection,
+    target_language: &str,
+    normalized_term: &str,
+) -> Result<(Vec<DictionaryEntry>, Vec<PersonalDictionaryEntry>), String> {
+    let mut entries = Vec::new();
+    let mut personal_entries = Vec::new();
+    let mut known_entry_ids = HashSet::new();
+    let mut known_personal_ids = HashSet::new();
+
+    for language in LANGUAGE_MENU_ORDER {
+        let language_code = language.code();
+        let terms = inflection_lookup_terms(normalized_term, language_code);
+        if terms.is_empty() {
+            continue;
+        }
+        entries.extend(
+            lookup_dictionary_terms(connection, target_language, language_code, &terms, 12)?
+                .into_iter()
+                .filter(|entry| known_entry_ids.insert(entry.entry_id)),
+        );
+        personal_entries.extend(
+            lookup_personal_terms(connection, target_language, language_code, &terms, 4)?
+                .into_iter()
+                .filter(|entry| known_personal_ids.insert(entry.id)),
+        );
+    }
+
+    Ok((entries, personal_entries))
+}
+
+fn resolve_lookup_language(
+    detected_language: &str,
+    context: &str,
+    entries: &[DictionaryEntry],
+    personal_entries: &[PersonalDictionaryEntry],
+) -> String {
+    if !detected_language.is_empty() {
+        return detected_language.to_string();
+    }
+
+    let mut candidates = entries
+        .iter()
+        .map(|entry| entry.language.as_str())
+        .chain(
+            personal_entries
+                .iter()
+                .map(|entry| entry.source_language.as_str()),
+        )
+        .filter(|language| is_supported_language_code(language));
+    let Some(first) = candidates.next() else {
+        return String::new();
+    };
+    let first = first.to_string();
+    let mut candidate_languages = HashSet::from([first.clone()]);
+    candidate_languages.extend(candidates.map(str::to_string));
+
+    let contextual_language = detect_language(context).language;
+    if contextual_language != Language::Unknown
+        && candidate_languages.contains(contextual_language.code())
+    {
+        contextual_language.code().to_string()
+    } else {
+        first
+    }
+}
+
+fn prioritize_lookup_language(
+    entries: &mut [DictionaryEntry],
+    personal_entries: &mut [PersonalDictionaryEntry],
+    language: &str,
+) {
+    if language.is_empty() {
+        return;
+    }
+    entries.sort_by_key(|entry| entry.language != language);
+    personal_entries.sort_by_key(|entry| entry.source_language != language);
 }
 
 fn should_merge_inflection_candidates(
@@ -2227,6 +2312,58 @@ mod tests {
             license: String::new(),
             glosses: HashMap::from([("ko".to_string(), definition.to_string())]),
             examples: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn ambiguous_latin_selection_uses_installed_english_entries_before_mixed_context() {
+        let store = temporary_store("ambiguous-latin-mixed-context");
+        store
+            .install_pack(&StarterPack {
+                id: "test-en-ambiguous-latin".to_string(),
+                language: "en".to_string(),
+                version: "2026.08.23.1".to_string(),
+                title: "Ambiguous Latin lookup test".to_string(),
+                source_name: "Test".to_string(),
+                source_url: "https://example.com".to_string(),
+                license: "Test".to_string(),
+                edition: "mini".to_string(),
+                entries: vec![
+                    test_sense("event", "행사 또는 사건.", 0),
+                    test_sense("duration", "지속되는 기간.", 0),
+                    test_sense("reward", "보상 또는 상.", 0),
+                ],
+            })
+            .unwrap();
+
+        let cases = [
+            (
+                "Event",
+                "2026년 8월 25일 Event Rewards Frost Moon Meme Master",
+                "event",
+            ),
+            (
+                "Duration",
+                "Event Duration Submission Period 2026년 7월 30일",
+                "duration",
+            ),
+            (
+                "Rewards",
+                "2026년 8월 25일 Event Rewards Frost Moon Meme Master",
+                "reward",
+            ),
+        ];
+
+        for (query, context, expected_headword) in cases {
+            let result = store
+                .lookup_with_context(query, context, None, "ko")
+                .unwrap();
+            assert_eq!(result.source_language, "en", "query={query}");
+            assert_eq!(
+                result.entries.first().map(|entry| entry.headword.as_str()),
+                Some(expected_headword),
+                "query={query}"
+            );
         }
     }
 
