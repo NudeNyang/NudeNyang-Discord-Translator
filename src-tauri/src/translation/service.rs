@@ -848,7 +848,10 @@ impl TranslationService {
             } else {
                 self.incoming_detector.recent_language_for(text)
             };
-            hints.push(recent);
+            let nickname_fallback = (message_key == "nickname-navigation"
+                && family == ScriptFamily::Latin)
+                .then_some(Language::English);
+            hints.push(recent.or(nickname_fallback));
         }
         Ok(hints)
     }
@@ -1239,7 +1242,10 @@ fn navigation_context_scope(context_scope: &str) -> String {
 }
 
 fn is_navigation_context_key(message_key: &str) -> bool {
-    matches!(message_key, "navigation" | "browse-navigation")
+    matches!(
+        message_key,
+        "navigation" | "browse-navigation" | "nickname-navigation"
+    )
 }
 
 fn is_message_context_key(message_key: &str) -> bool {
@@ -2377,6 +2383,33 @@ mod tests {
                         format!("[ko] {label}")
                     }
                 })
+                .collect::<Vec<_>>()
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn nickname_context_translates_ambiguous_latin_names_consistently() {
+        let path = cache_path("nickname-latin-context");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+        let source = ["Ceciliaya", "Kaselia", "NyungNyang"]
+            .map(str::to_string)
+            .to_vec();
+        let nickname_keys = vec![Some("nickname-navigation".to_string()); source.len()];
+
+        assert_eq!(
+            service
+                .translate_many_for_incoming_contextual(
+                    &source,
+                    &nickname_keys,
+                    "/channels/guild/current",
+                    Language::Korean,
+                )
+                .unwrap(),
+            source
+                .iter()
+                .map(|name| format!("[ko] {name}"))
                 .collect::<Vec<_>>()
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());

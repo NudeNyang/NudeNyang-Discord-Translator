@@ -12,7 +12,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const style = getComputedStyle(node);
     return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
   }
-  function eligibleTextNodes(root, allowLinkText = false) {
+  function eligibleTextNodes(root, allowLinkText = false, excludeNicknameDecorations = false) {
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
@@ -29,6 +29,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
+      if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
       nodes.push(node);
     }
     return nodes;
@@ -62,7 +63,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     return typeof stored?.text === 'string' ? stored.text : displayed;
   }
   function parts(kind, id, root, allowLinkText = false, contextId = null) {
-    return eligibleTextNodes(root, allowLinkText).map((node, index) => ({
+    return eligibleTextNodes(root, allowLinkText, kind === 'nickname').map((node, index) => ({
       kind,
       id,
       contextId,
@@ -120,10 +121,14 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     '[id^="message-username-"]',
     '[class*="username_"]',
     '[class*="nickname_"]',
+    'a[data-list-item-id^="private-channels-"][href^="/channels/@me/"] [class*="nameAndDecorators_"] > [class*="name_"] > [class*="overflowTooltip_"]',
     '[class*="panels_"] [class*="nameTag_"] [class*="panelTitleContainer_"] > [class*="title_"]',
     '[class*="panels_"] [class*="nameTag_"] [class*="panelSubtextContainer_"] [class*="hovered_"]'
   ].join(',');
-  const nicknameRoots = new Set(document.querySelectorAll(nicknameSelector));
+  const nicknameCandidates = [...new Set(document.querySelectorAll(nicknameSelector))];
+  const nicknameRoots = nicknameCandidates.filter(root =>
+    !nicknameCandidates.some(candidate => candidate !== root && root.contains(candidate))
+  );
   for (const root of nicknameRoots) {
     if (!isVisible(root) || !root.textContent?.trim()) continue;
     if (root.closest('[class*="embed_"]')) continue;
@@ -427,7 +432,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
   }
   const locators = window.__nudeTranslatorOriginalsByLocator;
   if (!(locators instanceof Map)) return {restored, remaining: 0};
-  function eligibleTextNodes(root, allowLinkText = false) {
+  function eligibleTextNodes(root, allowLinkText = false, excludeNicknameDecorations = false) {
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
@@ -444,6 +449,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
+      if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
       nodes.push(node);
     }
     return nodes;
@@ -468,7 +474,11 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       const category = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"][role="button"]`);
       return category?.querySelector('h3 > div') || null;
     }
-    return root ? eligibleTextNodes(root, change.kind === 'embed')[change.index] || null : null;
+    return root ? eligibleTextNodes(
+      root,
+      change.kind === 'embed',
+      change.kind === 'nickname'
+    )[change.index] || null : null;
   }
   for (const [key, change] of [...locators]) {
     const node = target(change);
@@ -498,7 +508,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
     }
     const locators = window.__nudeTranslatorOriginalsByLocator;
     if (!(locators instanceof Map)) return {restored, remaining: 0};
-    function eligibleTextNodes(root, allowLinkText = false) {
+    function eligibleTextNodes(root, allowLinkText = false, excludeNicknameDecorations = false) {
       const nodes = [];
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {
@@ -515,6 +525,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
         if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
         const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
         if (hiddenParent && hiddenParent !== root) continue;
+        if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
         nodes.push(node);
       }
       return nodes;
@@ -539,7 +550,11 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
         const category = document.querySelector(`[data-list-item-id="${CSS.escape(change.id)}"][role="button"]`);
         return category?.querySelector('h3 > div') || null;
       }
-      return root ? eligibleTextNodes(root, change.kind === 'embed')[change.index] || null : null;
+      return root ? eligibleTextNodes(
+        root,
+        change.kind === 'embed',
+        change.kind === 'nickname'
+      )[change.index] || null : null;
     }
     for (const [key, change] of [...locators]) {
       const node = target(change);
@@ -641,7 +656,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     const key = JSON.stringify([change.kind, change.id, change.index]);
     if (!originalLocators.has(key)) originalLocators.set(key, {{...change, text}});
   }}
-  function eligibleTextNodes(root, allowLinkText = false) {{
+  function eligibleTextNodes(root, allowLinkText = false, excludeNicknameDecorations = false) {{
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {{
@@ -658,6 +673,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
+      if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
       nodes.push(node);
     }}
     return nodes;
@@ -736,7 +752,11 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       }}
     }}
     if (!root || (change.kind === 'message' && isOutgoingMessage(root))) continue;
-    const nodes = eligibleTextNodes(root, change.kind === 'embed');
+    const nodes = eligibleTextNodes(
+      root,
+      change.kind === 'embed',
+      change.kind === 'nickname'
+    );
     const node = nodes[change.index];
     if (!node) continue;
     remember(node, node.nodeValue, change);
@@ -826,6 +846,11 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("root.closest('[data-dto-nickname-id]')"));
         assert!(SNAPSHOT_SCRIPT.contains("root.querySelector('[data-dto-nickname-id]')"));
         assert!(SNAPSHOT_SCRIPT.contains("parent.closest('[data-dto-nickname-id]')"));
+        assert!(SNAPSHOT_SCRIPT
+            .contains("a[data-list-item-id^=\"private-channels-\"][href^=\"/channels/@me/\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("nameAndDecorators_"));
+        assert!(SNAPSHOT_SCRIPT.contains("root.contains(candidate)"));
+        assert!(SNAPSHOT_SCRIPT.contains("excludeNicknameDecorations"));
     }
 
     #[test]
@@ -1005,9 +1030,8 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"embedDescription_\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("embedRoots.add(outerEmbedRoot(root))"));
         assert!(SNAPSHOT_SCRIPT.contains("parts('embed', id, root, true)"));
-        assert!(RESTORE_TEXT_SCRIPT.contains("eligibleTextNodes(root, change.kind === 'embed')"));
-        assert!(INSTALL_TEXT_RESTORE_SCRIPT
-            .contains("eligibleTextNodes(root, change.kind === 'embed')"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("change.kind === 'embed'"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("change.kind === 'embed'"));
         assert!(SNAPSHOT_SCRIPT.contains(
             "allowLinkText\n        ? 'code,pre,[contenteditable=\"true\"],textarea,input'"
         ));
@@ -1024,7 +1048,7 @@ mod tests {
             displayed_text: None,
         };
         let script = apply_script(&[DomChange::new(&part, "#카푸치아바타즈")]).unwrap();
-        assert!(script.contains("eligibleTextNodes(root, change.kind === 'embed')"));
+        assert!(script.contains("change.kind === 'embed'"));
     }
 
     #[test]

@@ -2928,6 +2928,7 @@ fn incoming_context_key(part: &DomPart) -> Option<String> {
         "invite-context" => Some("invite-context".to_string()),
         "event-context" => Some("event-context".to_string()),
         "browse-channel" => Some("browse-navigation".to_string()),
+        "nickname" => Some("nickname-navigation".to_string()),
         _ => None,
     }
 }
@@ -3942,6 +3943,18 @@ mod tests {
         let mut preserved = vec![nickname, message.clone()];
         retain_enabled_dom_parts(&mut preserved, false);
         assert_eq!(preserved, vec![message]);
+        assert_eq!(
+            incoming_context_key(&DomPart {
+                kind: "nickname".to_string(),
+                item_id: "nickname-2".to_string(),
+                context_id: None,
+                index: 0,
+                text: "Kaselia".to_string(),
+                displayed_text: None,
+            })
+            .as_deref(),
+            Some("nickname-navigation")
+        );
     }
 
     #[test]
