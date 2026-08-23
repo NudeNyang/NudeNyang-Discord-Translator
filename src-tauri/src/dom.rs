@@ -116,12 +116,13 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const id = ensureRootId(root, 'data-dto-reply-id', 'reply');
     out.push(...parts('reply', id, root));
   }
-  const nicknameRoots = new Set(document.querySelectorAll('[id^="message-username-"]'));
-  for (const row of document.querySelectorAll(
-    '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]'
-  )) {
-    for (const root of row.querySelectorAll('[class*="username_"]')) nicknameRoots.add(root);
-  }
+  const nicknameSelector = [
+    '[id^="message-username-"]',
+    '[class*="username_"]',
+    '[class*="nickname_"]',
+    '[class*="panels_"] [class*="nameTag_"] [class*="panelTitle_"]'
+  ].join(',');
+  const nicknameRoots = new Set(document.querySelectorAll(nicknameSelector));
   for (const root of nicknameRoots) {
     if (!isVisible(root) || !root.textContent?.trim()) continue;
     if (root.closest('[class*="embed_"]')) continue;
@@ -240,6 +241,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
   for (const root of document.querySelectorAll(headingSelector)) {
     if (!isVisible(root)) continue;
     if (root.closest('[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]')) continue;
+    if (root.closest('[data-dto-nickname-id]') || root.querySelector('[data-dto-nickname-id]')) continue;
     const id = ensureRootId(root, 'data-dto-heading-id', 'heading');
     out.push(...parts('heading', id, root));
   }
@@ -810,6 +812,15 @@ mod tests {
         assert!(script.contains("data-dto-nickname-id"));
         assert!(RESTORE_TEXT_SCRIPT.contains("data-dto-nickname-id"));
         assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("data-dto-nickname-id"));
+    }
+
+    #[test]
+    fn snapshot_classifies_account_panel_name_only_as_nickname() {
+        assert!(SNAPSHOT_SCRIPT
+            .contains("[class*=\"panels_\"] [class*=\"nameTag_\"] [class*=\"panelTitle_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"nickname_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("root.closest('[data-dto-nickname-id]')"));
+        assert!(SNAPSHOT_SCRIPT.contains("root.querySelector('[data-dto-nickname-id]')"));
     }
 
     #[test]
