@@ -120,7 +120,8 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     '[id^="message-username-"]',
     '[class*="username_"]',
     '[class*="nickname_"]',
-    '[class*="panels_"] [class*="nameTag_"] [class*="panelTitle_"]'
+    '[class*="panels_"] [class*="nameTag_"] [class*="panelTitleContainer_"] > [class*="title_"]',
+    '[class*="panels_"] [class*="nameTag_"] [class*="panelSubtextContainer_"] [class*="hovered_"]'
   ].join(',');
   const nicknameRoots = new Set(document.querySelectorAll(nicknameSelector));
   for (const root of nicknameRoots) {
@@ -268,6 +269,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
         '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"],' +
         '[contenteditable="true"],textarea,input,code,pre,[aria-hidden="true"]'
       )) continue;
+      if (parent.closest('[data-dto-nickname-id]')) continue;
       if (!allowControlText && parent.closest('a,button,[role="button"]')) continue;
       roots.add(parent);
     }
@@ -817,10 +819,13 @@ mod tests {
     #[test]
     fn snapshot_classifies_account_panel_name_only_as_nickname() {
         assert!(SNAPSHOT_SCRIPT
-            .contains("[class*=\"panels_\"] [class*=\"nameTag_\"] [class*=\"panelTitle_\"]"));
+            .contains("[class*=\"panels_\"] [class*=\"nameTag_\"] [class*=\"panelTitleContainer_\"] > [class*=\"title_\"]"));
+        assert!(SNAPSHOT_SCRIPT
+            .contains("[class*=\"panels_\"] [class*=\"nameTag_\"] [class*=\"panelSubtextContainer_\"] [class*=\"hovered_\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"nickname_\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("root.closest('[data-dto-nickname-id]')"));
         assert!(SNAPSHOT_SCRIPT.contains("root.querySelector('[data-dto-nickname-id]')"));
+        assert!(SNAPSHOT_SCRIPT.contains("parent.closest('[data-dto-nickname-id]')"));
     }
 
     #[test]
