@@ -17,6 +17,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   image_ocr_quality: "adaptive",
   ui_theme: "system",
   ui_language: "auto",
+  discord_variant: "auto",
   discord_auto_restart_consent_granted: false,
   discord_verification_mode: false,
   translation_history_retention_days: 30,
@@ -93,6 +94,9 @@ export function normalizeConfig(value = {}) {
   )
     ? value.dictionary_external_provider
     : DEFAULT_CONFIG.dictionary_external_provider;
+  const discordVariant = ["auto", "stable", "ptb", "canary"].includes(value.discord_variant)
+    ? value.discord_variant
+    : DEFAULT_CONFIG.discord_variant;
   return {
     ...DEFAULT_CONFIG,
     ...value,
@@ -104,6 +108,7 @@ export function normalizeConfig(value = {}) {
     translation_history_retention_days: retentionDays,
     image_ocr_quality: imageOcrQuality,
     dictionary_external_provider: dictionaryExternalProvider,
+    discord_variant: discordVariant,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),

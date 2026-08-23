@@ -79,9 +79,11 @@ fn select_discord_target(targets: Vec<CdpTarget>) -> Result<CdpTarget, String> {
 fn discord_page_url(value: &str) -> Option<Url> {
     let url = Url::parse(value).ok()?;
     (url.scheme() == "https"
-        && url
-            .host_str()
-            .is_some_and(|host| host.eq_ignore_ascii_case("discord.com"))
+        && url.host_str().is_some_and(|host| {
+            ["discord.com", "ptb.discord.com", "canary.discord.com"]
+                .iter()
+                .any(|allowed| host.eq_ignore_ascii_case(allowed))
+        })
         && url.port_or_known_default() == Some(443))
     .then_some(url)
 }
@@ -453,6 +455,24 @@ mod tests {
     }
 
     #[test]
+    fn official_discord_release_hosts_are_accepted() {
+        for (id, host) in [
+            ("stable", "discord.com"),
+            ("ptb", "ptb.discord.com"),
+            ("canary", "canary.discord.com"),
+        ] {
+            let selected = select_discord_target(vec![target(
+                id,
+                "page",
+                "Discord",
+                &format!("https://{host}/channels/1/2"),
+            )])
+            .expect("official Discord release host");
+            assert_eq!(selected.target_id, id);
+        }
+    }
+
+    #[test]
     fn non_page_and_lookalike_origins_are_rejected() {
         let error = select_discord_target(vec![
             target(
@@ -466,6 +486,12 @@ mod tests {
                 "page",
                 "Discord",
                 "https://discord.com.evil.example/channels/1/2",
+            ),
+            target(
+                "canary-evil",
+                "page",
+                "Discord",
+                "https://canary.discord.com.evil.example/channels/1/2",
             ),
         ])
         .unwrap_err();

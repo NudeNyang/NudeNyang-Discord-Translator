@@ -914,7 +914,11 @@ fn run_controller(
                     if let Some(mut active) = client.take() {
                         active.close();
                     }
-                    let guardian_result = crate::discord::disconnect_current_guardian();
+                    let discord_variant =
+                        crate::discord::DiscordVariant::from_config(&config.discord_variant)
+                            .unwrap_or(crate::discord::DiscordVariant::Auto);
+                    let guardian_result =
+                        crate::discord::disconnect_current_guardian(discord_variant);
                     verification_paused = true;
                     states.clear();
                     pending.clear();
@@ -1257,7 +1261,12 @@ fn run_controller(
                 if let Some(mut disconnected) = client.take() {
                     disconnected.close();
                 }
-                if let Err(guardian_error) = crate::discord::disconnect_current_guardian() {
+                let discord_variant =
+                    crate::discord::DiscordVariant::from_config(&config.discord_variant)
+                        .unwrap_or(crate::discord::DiscordVariant::Auto);
+                if let Err(guardian_error) =
+                    crate::discord::disconnect_current_guardian(discord_variant)
+                {
                     crate::diagnostics::warn("verification-guard", &guardian_error);
                 }
                 verification_paused = true;

@@ -45,7 +45,7 @@ test("cancelled or failed automatic recovery exposes a quiet manual Discord rest
   assert.match(rustMain, /let display_was_enabled = client\.status\(\)\?\.enabled;/);
   assert.match(rustMain, /client\.set_enabled\(display_was_enabled\)/);
   const restartCommand = rustMain.match(/async fn discord_restart\([\s\S]*?\n\}/)?.[0] || "";
-  assert.match(restartCommand, /discord::restart_pipe\(expected_process_id\)/);
+  assert.match(restartCommand, /discord::restart_pipe\(expected_process_id, discord_variant\)/);
   assert.doesNotMatch(restartCommand, /connect_or_restart_pipe/);
   assert.match(rustEngine, /ReplaceCdp\(CdpClient, mpsc::Sender<Result<\(\), String>>\)/);
   assert.match(rustEngine, /recv_timeout\(Duration::from_secs\(30\)\)/);
@@ -307,7 +307,15 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
 });
 
-test("convenience panel exposes only the two global translation toggles", () => {
+test("convenience panel exposes the Discord target and global translation toggles", () => {
+  assert.match(markup, /<h3>Discord<\/h3>/);
+  assert.match(markup, /data-field="discord_variant"/);
+  assert.match(script, /\["stable", "Discord"\]/);
+  assert.match(script, /\["ptb", "Discord PTB"\]/);
+  assert.match(script, /\["canary", "Discord Canary"\]/);
+  assert.match(script, /invoke\("discord_target_switch"\)/);
+  assert.match(script, /applySettingsPatch\(\{ discord_variant: value \}\)/);
+  assert.match(rustMain, /async fn discord_target_switch\(/);
   assert.match(markup, /<h3>UI Language<\/h3>/);
   assert.match(script, /\["auto", "Auto \(System\)", "", "System language"\]/);
   assert.match(markup, /data-field="ui_language"/);

@@ -71,6 +71,12 @@ const SELECT_GROUP_LABELS = Object.freeze({
 });
 
 const OPTIONS = {
+  discord_variant: [
+    ["auto", "자동 (권장)"],
+    ["stable", "Discord"],
+    ["ptb", "Discord PTB"],
+    ["canary", "Discord Canary"],
+  ],
   target_language: LANGUAGE_OPTIONS,
   translator: DISPLAY_TRANSLATOR_OPTIONS,
   outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
@@ -2247,7 +2253,11 @@ function renderSelect(element) {
             throw new Error("선택한 외부 번역 서비스를 먼저 연결하십시오.");
           }
         }
-        await applySettingsPatch({ [field]: value });
+        if (field === "discord_variant") {
+          await applyDiscordVariantSelection(value, previous);
+        } else {
+          await applySettingsPatch({ [field]: value });
+        }
         if (field === "translation_history_retention_days") {
           window.setTimeout(() => loadStorageStatus().catch(() => {}), 250);
         }
@@ -2454,6 +2464,49 @@ async function applySettingsPatch(patch, { status = true } = {}) {
     throw error;
   } finally {
     state.settingsUpdatesPending = Math.max(0, state.settingsUpdatesPending - 1);
+  }
+}
+
+async function applyDiscordVariantSelection(value, previous) {
+  let saved = false;
+  try {
+    await applySettingsPatch({ discord_variant: value });
+    saved = true;
+    const result = await invoke("discord_target_switch");
+    if (!result?.restartRequired) {
+      await pollRuntime();
+      return;
+    }
+
+    const confirmed = await showModal({
+      title: "Discord를 다시 시작하시겠습니까?",
+      message:
+        "Discord를 다시 시작하면 작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n연결을 다시 준비하려면 Discord를 다시 시작하십시오.",
+      acceptText: "Discord 재시작",
+    });
+    if (!confirmed) {
+      await applySettingsPatch({ discord_variant: previous });
+      return;
+    }
+
+    state.repairActive = true;
+    elements.engineState.dataset.state = "loading";
+    setLocalizedText(elements.engineStateLabel, "Discord 재시작 중");
+    await invoke("discord_restart", {
+      expectedProcessId: result.process?.processId ?? null,
+    });
+    await pollRuntime();
+  } catch (error) {
+    if (saved && state.config.discord_variant !== previous) {
+      await applySettingsPatch(
+        { discord_variant: previous },
+        { status: false },
+      ).catch(() => {});
+    }
+    throw error;
+  } finally {
+    state.repairActive = false;
+    renderManualDiscordRestart();
   }
 }
 

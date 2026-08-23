@@ -24,7 +24,7 @@ test("Discord verification pauses the pipe and offers a neutral compatibility fl
   assert.match(script, /invoke\("discord_restart"/);
   assert.match(script, /tauriListen\("discord-verification-required"/);
   assert.match(state, /verificationRequired/);
-  assert.match(engine, /disconnect_current_guardian\(\)/);
+  assert.match(engine, /disconnect_current_guardian\(discord_variant\)/);
   assert.match(engine, /discord_verification_mode/);
   assert.doesNotMatch(`${markup}\n${script}\n${i18n}\n${generatedLocales}`, /누드냥/);
 });

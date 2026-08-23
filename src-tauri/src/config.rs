@@ -91,6 +91,7 @@ pub struct AppConfig {
     pub keep_local_model_warm: bool,
     pub auto_update: bool,
     pub update_repository: String,
+    pub discord_variant: String,
     pub discord_auto_restart_consent_granted: bool,
     pub discord_verification_mode: bool,
     pub translation_history_retention_days: u32,
@@ -129,6 +130,7 @@ impl Default for AppConfig {
             keep_local_model_warm: true,
             auto_update: true,
             update_repository: DEFAULT_UPDATE_REPOSITORY.to_string(),
+            discord_variant: "auto".to_string(),
             discord_auto_restart_consent_granted: false,
             discord_verification_mode: false,
             translation_history_retention_days: 30,
@@ -232,6 +234,16 @@ impl AppConfig {
             .is_some_and(|value| value != "auto" && !is_supported_language_code(value))
         {
             object.insert("ui_language".to_string(), Value::String("auto".to_string()));
+        }
+        if object
+            .get("discord_variant")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "auto" | "stable" | "ptb" | "canary"))
+        {
+            object.insert(
+                "discord_variant".to_string(),
+                Value::String("auto".to_string()),
+            );
         }
         if object
             .get("hymt_device")
@@ -544,6 +556,7 @@ mod tests {
         assert_eq!(restored.dictionary_external_provider, "wiktionary");
         assert_eq!(restored.incoming_language_mode, "all");
         assert!(restored.incoming_source_languages.is_empty());
+        assert_eq!(restored.discord_variant, "auto");
 
         let claude = AppConfig::from_value(json!({"translator": "claude"}))
             .expect("Claude subscription config should remain available");
@@ -561,6 +574,19 @@ mod tests {
             restored.update_repository,
             "NudeNyang/NudeNyang-Discord-Translator"
         );
+    }
+
+    #[test]
+    fn discord_variant_accepts_supported_releases_and_resets_invalid_values() {
+        for variant in ["auto", "stable", "ptb", "canary"] {
+            let config = AppConfig::from_value(json!({"discord_variant": variant}))
+                .expect("supported Discord variant");
+            assert_eq!(config.discord_variant, variant);
+        }
+
+        let invalid = AppConfig::from_value(json!({"discord_variant": "development"}))
+            .expect("invalid Discord variant should reset");
+        assert_eq!(invalid.discord_variant, "auto");
     }
 
     #[test]

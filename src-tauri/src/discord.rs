@@ -22,6 +22,49 @@ const RESTART_LEASE_FILE: &str = "accessibility-restart.lock";
 const GUARDIAN_STATE_VERSION: u32 = 2;
 static GUARDIAN_COPY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiscordVariant {
+    Auto,
+    Stable,
+    Ptb,
+    Canary,
+}
+
+impl DiscordVariant {
+    pub fn from_config(value: &str) -> Result<Self, String> {
+        match value {
+            "auto" => Ok(Self::Auto),
+            "stable" => Ok(Self::Stable),
+            "ptb" => Ok(Self::Ptb),
+            "canary" => Ok(Self::Canary),
+            _ => Err("지원하지 않는 Discord 종류입니다.".to_string()),
+        }
+    }
+
+    fn install(self) -> Option<(&'static str, &'static str)> {
+        match self {
+            Self::Auto => None,
+            Self::Stable => Some(DISCORD_INSTALLS[0]),
+            Self::Ptb => Some(DISCORD_INSTALLS[1]),
+            Self::Canary => Some(DISCORD_INSTALLS[2]),
+        }
+    }
+
+    fn matches_name(self, name: &str) -> bool {
+        self.install()
+            .is_none_or(|(_, executable)| executable.eq_ignore_ascii_case(name))
+    }
+
+    fn display_name(self) -> &'static str {
+        match self {
+            Self::Auto => "Discord",
+            Self::Stable => "Discord",
+            Self::Ptb => "Discord PTB",
+            Self::Canary => "Discord Canary",
+        }
+    }
+}
+
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -56,7 +99,7 @@ fn guardian_state_matches_process(state: &PipeGuardianState, process: &DiscordPr
         && normalized_path(&state.discord_executable) == normalized_path(&process.executable)
 }
 
-pub fn current_process() -> Option<DiscordProcess> {
+pub fn current_process(variant: DiscordVariant) -> Option<DiscordProcess> {
     let mut system = System::new();
     system.refresh_processes_specifics(
         ProcessesToUpdate::All,
@@ -65,10 +108,10 @@ pub fn current_process() -> Option<DiscordProcess> {
             .with_exe(UpdateKind::Always)
             .with_cmd(UpdateKind::Always),
     );
-    current_process_from_system(&system)
+    current_process_from_system(&system, variant)
 }
 
-pub fn current_pipe_process() -> Option<DiscordProcess> {
+pub fn current_pipe_process(variant: DiscordVariant) -> Option<DiscordProcess> {
     let mut system = System::new();
     system.refresh_processes_specifics(
         ProcessesToUpdate::All,
@@ -81,6 +124,7 @@ pub fn current_pipe_process() -> Option<DiscordProcess> {
         .processes()
         .values()
         .filter(|process| is_discord_name(&process.name().to_string_lossy()))
+        .filter(|process| variant.matches_name(&process.name().to_string_lossy()))
         .filter(|process| is_main_discord_arguments(process.cmd()))
         .filter(|process| {
             process
@@ -101,11 +145,12 @@ pub fn current_pipe_process() -> Option<DiscordProcess> {
         .map(|(_, process)| process)
 }
 
-fn current_process_from_system(system: &System) -> Option<DiscordProcess> {
+fn current_process_from_system(system: &System, variant: DiscordVariant) -> Option<DiscordProcess> {
     system
         .processes()
         .values()
         .filter(|process| is_discord_name(&process.name().to_string_lossy()))
+        .filter(|process| variant.matches_name(&process.name().to_string_lossy()))
         .filter(|process| is_main_discord_arguments(process.cmd()))
         .filter_map(|process| {
             Some((
@@ -122,19 +167,21 @@ fn current_process_from_system(system: &System) -> Option<DiscordProcess> {
 
 pub fn restart_pipe(
     expected_process_id: Option<u32>,
+    variant: DiscordVariant,
 ) -> Result<(DiscordProcess, CdpClient), String> {
     let _restart_guard = pipe_restart_lock()
         .lock()
         .map_err(|_| "Discord 보안 파이프 재시작 잠금이 손상되었습니다.".to_string())?;
     let _restart_lease = acquire_restart_lease(Duration::from_secs(15))?;
-    let current = current_process();
+    let current = current_process(variant);
     let current_id = current.as_ref().map(|process| process.process_id);
     if expected_process_id != current_id {
         return Err(
             "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
         );
     }
-    let executable = restart_executable_from(current.as_ref(), local_app_data().as_deref())?;
+    let executable =
+        restart_executable_from(current.as_ref(), local_app_data().as_deref(), variant)?;
     stop_installation_processes(&executable, current.as_ref())?;
 
     #[cfg(windows)]
@@ -174,8 +221,8 @@ pub fn restart_pipe(
     }
 }
 
-pub fn disconnect_current_guardian() -> Result<(), String> {
-    let Some(process) = current_pipe_process() else {
+pub fn disconnect_current_guardian(variant: DiscordVariant) -> Result<(), String> {
+    let Some(process) = current_pipe_process(variant) else {
         return Ok(());
     };
     #[cfg(windows)]
@@ -189,18 +236,22 @@ pub fn disconnect_current_guardian() -> Result<(), String> {
     }
 }
 
-pub fn restart_vanilla(expected_process_id: Option<u32>) -> Result<DiscordProcess, String> {
+pub fn restart_vanilla(
+    expected_process_id: Option<u32>,
+    variant: DiscordVariant,
+) -> Result<DiscordProcess, String> {
     let _restart_guard = pipe_restart_lock()
         .lock()
         .map_err(|_| "Discord 재시작 잠금이 손상되었습니다.".to_string())?;
     let _restart_lease = acquire_restart_lease(Duration::from_secs(15))?;
-    let current = current_process();
+    let current = current_process(variant);
     let current_id = current.as_ref().map(|process| process.process_id);
     if expected_process_id != current_id {
         return Err("Discord가 확인 중에 다시 실행되어 일반 모드 전환을 취소했습니다.".to_string());
     }
-    let executable = restart_executable_from(current.as_ref(), local_app_data().as_deref())?;
-    disconnect_current_guardian()?;
+    let executable =
+        restart_executable_from(current.as_ref(), local_app_data().as_deref(), variant)?;
+    disconnect_current_guardian(variant)?;
     stop_installation_processes(&executable, current.as_ref())?;
 
     let launch_executable = launchable_windows_path(&executable);
@@ -226,8 +277,9 @@ pub fn connect_guarded_pipe(process: &DiscordProcess) -> Result<CdpClient, Strin
 
 pub fn connect_or_restart_pipe(
     expected_process_id: Option<u32>,
+    variant: DiscordVariant,
 ) -> Result<(DiscordProcess, CdpClient), String> {
-    if let Some(process) = current_pipe_process() {
+    if let Some(process) = current_pipe_process(variant) {
         if expected_process_id.is_some_and(|expected| expected != process.process_id) {
             return Err(
                 "Discord가 카운트다운 도중 다시 실행되어 자동 재시작을 취소했습니다.".to_string(),
@@ -236,9 +288,9 @@ pub fn connect_or_restart_pipe(
         if let Ok(client) = connect_guarded_pipe(&process) {
             return Ok((process, client));
         }
-        return restart_pipe(Some(process.process_id));
+        return restart_pipe(Some(process.process_id), variant);
     }
-    restart_pipe(expected_process_id)
+    restart_pipe(expected_process_id, variant)
 }
 
 fn pipe_restart_lock() -> &'static Mutex<()> {
@@ -381,20 +433,32 @@ fn local_app_data() -> Option<PathBuf> {
 fn restart_executable_from(
     current: Option<&DiscordProcess>,
     local_app_data: Option<&Path>,
+    variant: DiscordVariant,
 ) -> Result<PathBuf, String> {
-    let preferred_name = current
-        .and_then(|process| process.executable.file_name())
-        .and_then(|name| name.to_str())
-        .filter(|name| is_discord_name(name));
+    let preferred_name = variant
+        .install()
+        .map(|(_, executable)| executable)
+        .or_else(|| {
+            current
+                .and_then(|process| process.executable.file_name())
+                .and_then(|name| name.to_str())
+                .filter(|name| is_discord_name(name))
+        });
     let mut candidates = Vec::new();
-    if let Some(process) = current {
+    if let Some(process) = current.filter(|process| {
+        process
+            .executable
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| variant.matches_name(name))
+    }) {
         candidates.push(process.executable.clone());
         if let Some(replacement) = replacement_executable(&process.executable) {
             candidates.push(replacement);
         }
     }
     if let Some(local_app_data) = local_app_data {
-        if let Some(installed) = installed_executable_in_preferred(local_app_data, preferred_name) {
+        if let Some(installed) = installed_executable_for(local_app_data, variant, preferred_name) {
             candidates.push(installed);
         }
     }
@@ -408,27 +472,33 @@ fn restart_executable_from(
         }
     }
 
-    Err(
-        "Discord 설치 경로를 찾지 못했습니다. Discord를 완전히 종료한 뒤 공식 설치본을 다시 실행하고 재시도하십시오."
-            .to_string(),
-    )
+    Err(format!(
+        "{} 설치 경로를 찾지 못했습니다. 선택한 Discord를 설치하거나 한 번 직접 실행한 뒤 재시도하십시오.",
+        variant.display_name()
+    ))
 }
 
 #[cfg(test)]
 fn installed_executable_in(local_app_data: &Path) -> Option<PathBuf> {
-    installed_executable_in_preferred(local_app_data, None)
+    installed_executable_for(local_app_data, DiscordVariant::Auto, None)
 }
 
-fn installed_executable_in_preferred(
+fn installed_executable_for(
     local_app_data: &Path,
+    variant: DiscordVariant,
     preferred_name: Option<&str>,
 ) -> Option<PathBuf> {
-    let mut installs = DISCORD_INSTALLS.to_vec();
-    if let Some(preferred_name) = preferred_name {
-        installs.sort_by_key(|(_, executable_name)| {
-            !executable_name.eq_ignore_ascii_case(preferred_name)
-        });
+    if let Some((directory, executable_name)) = variant.install() {
+        return latest_executable_in(&local_app_data.join(directory), executable_name);
     }
+    if let Some(preferred_name) = preferred_name {
+        let (directory, executable_name) = DISCORD_INSTALLS
+            .iter()
+            .copied()
+            .find(|(_, executable)| executable.eq_ignore_ascii_case(preferred_name))?;
+        return latest_executable_in(&local_app_data.join(directory), executable_name);
+    }
+    let installs = DISCORD_INSTALLS.to_vec();
     installs
         .into_iter()
         .find_map(|(directory, executable_name)| {
@@ -1241,9 +1311,10 @@ pub fn run_pipe_guardian(
 mod tests {
     use super::{
         discord_debug_arguments, guardian_executable_path, guardian_state_matches_process,
-        installed_executable_in, is_discord_name, is_main_discord_arguments,
-        restart_executable_from, same_discord_installation, validate_discord_executable,
-        DiscordProcess, PipeGuardianState, GUARDIAN_STATE_VERSION,
+        installed_executable_for, installed_executable_in, is_discord_name,
+        is_main_discord_arguments, restart_executable_from, same_discord_installation,
+        validate_discord_executable, DiscordProcess, DiscordVariant, PipeGuardianState,
+        GUARDIAN_STATE_VERSION,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1262,6 +1333,11 @@ mod tests {
         assert!(is_discord_name("discord.exe"));
         assert!(is_discord_name("DiscordCanary.exe"));
         assert!(!is_discord_name("DiscordHelper.exe"));
+        assert!(DiscordVariant::Stable.matches_name("discord.exe"));
+        assert!(DiscordVariant::Ptb.matches_name("DiscordPTB.exe"));
+        assert!(DiscordVariant::Canary.matches_name("discordcanary.exe"));
+        assert!(!DiscordVariant::Stable.matches_name("DiscordCanary.exe"));
+        assert!(DiscordVariant::Auto.matches_name("DiscordCanary.exe"));
     }
 
     #[test]
@@ -1311,7 +1387,8 @@ mod tests {
             executable: stale,
         };
 
-        let selected = restart_executable_from(Some(&current), Some(&root)).unwrap();
+        let selected =
+            restart_executable_from(Some(&current), Some(&root), DiscordVariant::Auto).unwrap();
 
         assert_eq!(selected, latest.canonicalize().unwrap());
         let _ = fs::remove_dir_all(root);
@@ -1342,9 +1419,50 @@ mod tests {
             executable: stale,
         };
 
-        let selected = restart_executable_from(Some(&current), Some(&root)).unwrap();
+        let selected =
+            restart_executable_from(Some(&current), Some(&root), DiscordVariant::Auto).unwrap();
 
         assert_eq!(selected, canary.canonicalize().unwrap());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn explicit_discord_variant_never_falls_back_to_another_release() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("nude-translator-discord-target-{nonce}"));
+        let stable = root.join("Discord").join("app-9.0.0").join("Discord.exe");
+        fs::create_dir_all(stable.parent().unwrap()).unwrap();
+        fs::write(&stable, b"test").unwrap();
+
+        assert!(installed_executable_for(&root, DiscordVariant::Canary, None).is_none());
+        assert!(restart_executable_from(None, Some(&root), DiscordVariant::Canary).is_err());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn explicit_discord_variant_selects_only_its_installation() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("nude-translator-discord-ptb-{nonce}"));
+        let stable = root.join("Discord").join("app-9.0.0").join("Discord.exe");
+        let ptb = root
+            .join("DiscordPTB")
+            .join("app-1.0.0")
+            .join("DiscordPTB.exe");
+        for executable in [&stable, &ptb] {
+            fs::create_dir_all(executable.parent().unwrap()).unwrap();
+            fs::write(executable, b"test").unwrap();
+        }
+
+        let selected = restart_executable_from(None, Some(&root), DiscordVariant::Ptb).unwrap();
+        assert_eq!(selected, ptb.canonicalize().unwrap());
+
         let _ = fs::remove_dir_all(root);
     }
 

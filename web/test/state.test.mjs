@@ -134,6 +134,14 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.image_ocr_quality, "adaptive");
   assert.equal(config.dictionary_enabled, true);
   assert.equal(config.dictionary_external_provider, "wiktionary");
+  assert.equal(config.discord_variant, "auto");
+});
+
+test("Discord variant selection accepts stable, PTB, and Canary", () => {
+  for (const variant of ["auto", "stable", "ptb", "canary"]) {
+    assert.equal(normalizeConfig({ discord_variant: variant }).discord_variant, variant);
+  }
+  assert.equal(normalizeConfig({ discord_variant: "development" }).discord_variant, "auto");
 });
 
 test("dictionary external lookup accepts only the supported privacy choices", () => {

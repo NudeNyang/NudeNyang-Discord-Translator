@@ -34,7 +34,12 @@ Before attaching, the app checks:
 - the normalized Discord executable path;
 - the original process and any same-install PID handoff;
 - the local guardian process and its startup arguments;
-- that the selected renderer belongs to `https://discord.com`.
+- that the selected renderer belongs to `https://discord.com`, `https://ptb.discord.com`, or
+  `https://canary.discord.com`.
+
+The saved connection target can be automatic, Discord, Discord PTB, or Discord Canary. When
+multiple release variants are running, NudeNyang connects to and restarts only the explicitly
+selected installation. Other Discord processes remain untouched.
 
 A small local guardian retains the app-side pipe handles when NudeNyang closes. Reopening the app can reconnect to the same Discord process without interrupting a call or chat session. The guardian exits after the matching Discord process is gone.
 

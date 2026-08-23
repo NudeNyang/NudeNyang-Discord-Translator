@@ -114,7 +114,7 @@ The boundary is intentionally narrow:
 |---|---|
 | Discord identity | Does not read a user token and does not call Discord as a user account. |
 | Connection | Uses inherited anonymous pipe handles. It does not open a TCP debugging port. |
-| Process trust | Checks the normalized executable path, the original process, a same-install PID handoff, guardian arguments, and an `https://discord.com` page target. |
+| Process trust | Checks the normalized executable path, the original process, a same-install PID handoff, guardian arguments, and official Stable, PTB, or Canary Discord page targets. |
 | Client changes | Changes the current renderer only. It does not patch Discord installation files or write server-side data. |
 | Sending | Places translated text with `Input.insertText` only. It does not synthesize Enter, mouse actions, file attachments, or split-message sends. |
 | Verification compatibility | Detects visible additional verification, detaches the translation pipe, and offers a standard Discord restart. Reconnection requires an explicit user action. |

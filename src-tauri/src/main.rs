@@ -685,6 +685,8 @@ fn runtime_status(
         .map_err(|error| format!("Rust 번역 상태를 변환하지 못했습니다: {error}"))?;
     if let Some(object) = status.as_object_mut() {
         let current_config = config.get()?;
+        let discord_variant =
+            discord::DiscordVariant::from_config(&current_config.discord_variant)?;
         object.insert("enabled".to_string(), Value::Bool(current_config.enabled));
         object.insert(
             "controllerEnabled".to_string(),
@@ -704,7 +706,7 @@ fn runtime_status(
         );
         object.insert(
             "discordProcessId".to_string(),
-            discord::current_process()
+            discord::current_process(discord_variant)
                 .map(|process| Value::from(process.process_id))
                 .unwrap_or(Value::Null),
         );
@@ -908,30 +910,34 @@ fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
 }
 
 fn start_pipe_discord_for_autostart(app: AppHandle) {
-    if app
-        .state::<ConfigStore>()
-        .get()
-        .is_ok_and(|config| config.discord_verification_mode)
-    {
+    let Ok(config) = app.state::<ConfigStore>().get() else {
+        diagnostics::warn("discord-startup", "Discord 종류 설정을 읽지 못했습니다.");
+        return;
+    };
+    if config.discord_verification_mode {
         diagnostics::info(
             "discord-startup",
             "인증 호환 모드가 활성화되어 Discord 번역 연결을 자동 시작하지 않습니다.",
         );
         return;
     }
+    let Ok(discord_variant) = discord::DiscordVariant::from_config(&config.discord_variant) else {
+        diagnostics::warn("discord-startup", "Discord 종류 설정이 올바르지 않습니다.");
+        return;
+    };
     let engine = app.state::<RustEngine>().inner().clone();
     tauri::async_runtime::spawn(async move {
-        let result = tauri::async_runtime::spawn_blocking(|| {
-            if let Some(process) = discord::current_pipe_process() {
+        let result = tauri::async_runtime::spawn_blocking(move || {
+            if let Some(process) = discord::current_pipe_process(discord_variant) {
                 return discord::connect_guarded_pipe(&process).map(|cdp| (process, cdp));
             }
-            if discord::current_process().is_some() {
+            if discord::current_process(discord_variant).is_some() {
                 return Err(
                     "Discord가 일반 모드로 실행 중이어서 사용자 재시작 동의를 기다립니다."
                         .to_string(),
                 );
             }
-            discord::restart_pipe(None)
+            discord::restart_pipe(None, discord_variant)
         })
         .await;
         match result {
@@ -950,7 +956,13 @@ fn start_pipe_discord_for_autostart(app: AppHandle) {
 }
 
 fn initialize_autostart(app: AppHandle) {
-    if discord::current_pipe_process().is_some() {
+    let discord_variant = app
+        .state::<ConfigStore>()
+        .get()
+        .ok()
+        .and_then(|config| discord::DiscordVariant::from_config(&config.discord_variant).ok())
+        .unwrap_or(discord::DiscordVariant::Auto);
+    if discord::current_pipe_process(discord_variant).is_some() {
         start_pipe_discord_for_autostart(app);
         return;
     }
@@ -1125,17 +1137,61 @@ fn provider_disconnect(
 }
 
 #[tauri::command]
+async fn discord_target_switch(
+    engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
+) -> Result<Value, String> {
+    enum SwitchResult {
+        Connected(discord::DiscordProcess, cdp::CdpClient),
+        RestartRequired(discord::DiscordProcess),
+    }
+
+    let discord_variant = discord::DiscordVariant::from_config(&config.get()?.discord_variant)?;
+    let switch_result = tauri::async_runtime::spawn_blocking(move || {
+        if let Some(process) = discord::current_pipe_process(discord_variant) {
+            return match discord::connect_guarded_pipe(&process) {
+                Ok(cdp) => Ok(SwitchResult::Connected(process, cdp)),
+                Err(_) => Ok(SwitchResult::RestartRequired(process)),
+            };
+        }
+        if let Some(process) = discord::current_process(discord_variant) {
+            return Ok(SwitchResult::RestartRequired(process));
+        }
+        discord::restart_pipe(None, discord_variant)
+            .map(|(process, cdp)| SwitchResult::Connected(process, cdp))
+    })
+    .await
+    .map_err(|error| format!("Discord 연결 대상 전환을 기다리지 못했습니다: {error}"))??;
+
+    match switch_result {
+        SwitchResult::RestartRequired(process) => {
+            Ok(json!({"connected": false, "restartRequired": true, "process": process}))
+        }
+        SwitchResult::Connected(process, cdp) => {
+            let client = engine.inner().clone();
+            tauri::async_runtime::spawn_blocking(move || client.replace_cdp(cdp))
+                .await
+                .map_err(|error| format!("Discord 연결 검증을 기다리지 못했습니다: {error}"))??;
+            Ok(json!({"connected": true, "restartRequired": false, "process": process}))
+        }
+    }
+}
+
+#[tauri::command]
 async fn discord_restart(
     engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
     expected_process_id: Option<u32>,
 ) -> Result<Value, String> {
+    let discord_variant = discord::DiscordVariant::from_config(&config.get()?.discord_variant)?;
     let client = engine.inner().clone();
     let display_was_enabled = client.status()?.enabled;
     let _ = client.set_enabled(false);
-    let restart_result =
-        tauri::async_runtime::spawn_blocking(move || discord::restart_pipe(expected_process_id))
-            .await
-            .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
+    let restart_result = tauri::async_runtime::spawn_blocking(move || {
+        discord::restart_pipe(expected_process_id, discord_variant)
+    })
+    .await
+    .map_err(|error| format!("Discord 재시작 작업을 기다리지 못했습니다: {error}"))?;
     let (process, cdp) = match restart_result {
         Ok(result) => result,
         Err(error) => {
@@ -1156,8 +1212,10 @@ async fn discord_restart(
 #[tauri::command]
 async fn discord_restart_vanilla(
     engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
     expected_process_id: Option<u32>,
 ) -> Result<Value, String> {
+    let discord_variant = discord::DiscordVariant::from_config(&config.get()?.discord_variant)?;
     let client = engine.inner().clone();
     let kind = client.status()?.verification_kind;
     let pause_kind = if kind.is_empty() {
@@ -1170,10 +1228,11 @@ async fn discord_restart_vanilla(
     tauri::async_runtime::spawn_blocking(move || pause_client.pause_for_verification(&pause_kind))
         .await
         .map_err(|error| format!("인증 호환 모드 전환 작업을 기다리지 못했습니다: {error}"))??;
-    let process =
-        tauri::async_runtime::spawn_blocking(move || discord::restart_vanilla(expected_process_id))
-            .await
-            .map_err(|error| format!("일반 Discord 전환 작업을 기다리지 못했습니다: {error}"))??;
+    let process = tauri::async_runtime::spawn_blocking(move || {
+        discord::restart_vanilla(expected_process_id, discord_variant)
+    })
+    .await
+    .map_err(|error| format!("일반 Discord 전환 작업을 기다리지 못했습니다: {error}"))??;
     Ok(json!({"connected": false, "verificationMode": true, "process": process}))
 }
 
@@ -1573,8 +1632,10 @@ fn main() {
         .get(1)
         .is_some_and(|argument| argument == "--verify-discord-cdp-pipe")
     {
-        let expected_process_id = discord::current_process().map(|process| process.process_id);
-        match discord::connect_or_restart_pipe(expected_process_id).and_then(
+        let discord_variant = discord::DiscordVariant::Auto;
+        let expected_process_id =
+            discord::current_process(discord_variant).map(|process| process.process_id);
+        match discord::connect_or_restart_pipe(expected_process_id, discord_variant).and_then(
             |(process, mut client)| {
             let marker = client.evaluate(
                 "(() => { const root = document.documentElement; const name = 'data-nudenyang-pipe-verify'; root.setAttribute(name, 'ok'); const value = root.getAttribute(name); root.removeAttribute(name); return value; })()",
@@ -1777,6 +1838,7 @@ fn main() {
             provider_login_open,
             provider_disconnect,
             discord_restart,
+            discord_target_switch,
             discord_restart_vanilla,
             main_window_show,
             main_window_hide,
