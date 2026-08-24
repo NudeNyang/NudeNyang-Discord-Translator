@@ -47,3 +47,18 @@ test("Firefox 패키지는 전용 매니페스트와 라이선스를 XPI 루트�
   assert.match(packager, /popup-locales\.js/);
   assert.match(packager, /'_locales'/);
 });
+
+test("AMO 비공개 서명 패키지는 생성 코드 원본과 검토자 안내를 함께 제공한다", () => {
+  const amoScript = fs.readFileSync(new URL("../../scripts/package_firefox_amo.ps1", import.meta.url), "utf8");
+  const reviewerNotes = fs.readFileSync(new URL("../../docs/FIREFOX_AMO_REVIEW.md", import.meta.url), "utf8");
+
+  assert.match(amoScript, /\$BaseName-source\.zip/);
+  assert.match(amoScript, /Get-ChildItem.+extension/);
+  assert.match(amoScript, /generate-extension-locales\.mjs/);
+  assert.match(amoScript, /ui-locales\.mjs/);
+  assert.match(amoScript, /FIREFOX_AMO_REVIEW\.md/);
+  assert.match(reviewerNotes, /self-distributed/i);
+  assert.match(reviewerNotes, /web-translator@nudenyang\.github\.io/);
+  assert.match(reviewerNotes, /nativeMessaging/);
+  assert.match(reviewerNotes, /npm run extension:locales/);
+});
