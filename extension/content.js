@@ -7,6 +7,8 @@
     isElementNearViewport,
     initialTranslationEnabled,
     isQuickToggleShortcut,
+    isUrlLikeLinkText,
+    registerTranslationBlock,
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,
@@ -177,6 +179,10 @@
         }
         const parent = node.parentElement;
         if (!parent || parent.closest(excluded)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        const anchor = parent.closest("a[href]");
+        if (anchor && isUrlLikeLinkText(anchor.textContent, anchor.href)) {
           return NodeFilter.FILTER_REJECT;
         }
         const state = nodeStates.get(node);
@@ -422,13 +428,7 @@
   }
 
   function observeBlock(block) {
-    if (!observedBlocks.has(block)) {
-      observedBlocks.add(block);
-      intersectionObserver.observe(block);
-    }
-    if (isElementNearViewport(block, innerHeight)) {
-      enqueueBlock(block);
-    }
+    registerTranslationBlock(block, observedBlocks, intersectionObserver);
   }
 
   function scan(root = document) {

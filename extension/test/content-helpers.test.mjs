@@ -8,6 +8,8 @@ const {
   isElementNearViewport,
   initialTranslationEnabled,
   isQuickToggleShortcut,
+  isUrlLikeLinkText,
+  registerTranslationBlock,
   runtimeMessageFailure,
   scanRootForAddedNode,
   takeTranslationBatch,
@@ -24,6 +26,7 @@ test("범용 사이트는 저장된 전역 설정과 무관하게 사용자가 �
 
 test("보조키 없는 F4만 빠른 번역 전환으로 판정한다", () => {
   assert.equal(isQuickToggleShortcut({ key: "F4" }), true);
+  assert.equal(isQuickToggleShortcut({ key: "Unidentified", code: "F4" }), true);
   assert.equal(isQuickToggleShortcut({ key: "F4", ctrlKey: true }), false);
   assert.equal(isQuickToggleShortcut({ key: "F4", altKey: true }), false);
   assert.equal(isQuickToggleShortcut({ key: "F4", shiftKey: true }), false);
@@ -31,6 +34,25 @@ test("보조키 없는 F4만 빠른 번역 전환으로 판정한다", () => {
   assert.equal(isQuickToggleShortcut({ key: "F4", repeat: true }), false);
   assert.equal(isQuickToggleShortcut({ key: "F4", isComposing: true }), false);
   assert.equal(isQuickToggleShortcut({ key: "F5" }), false);
+});
+
+test("주소와 도메인으로 표시된 링크만 번역에서 보호한다", () => {
+  assert.equal(isUrlLikeLinkText("https://example.com/path", "https://example.com/path"), true);
+  assert.equal(isUrlLikeLinkText("photopea.com", "https://www.photopea.com/"), true);
+  assert.equal(isUrlLikeLinkText("sci-hub.se", "https://sci-hub.se/"), true);
+  assert.equal(isUrlLikeLinkText("GitHub", "https://github.com/"), false);
+  assert.equal(isUrlLikeLinkText("developer platform", "https://example.com/platform"), false);
+});
+
+test("긴 문서의 블록 등록은 위치를 동기 계산하지 않고 관찰자에 한 번만 맡긴다", () => {
+  const block = {};
+  const observed = new WeakSet();
+  const calls = [];
+  const observer = { observe(value) { calls.push(value); } };
+
+  assert.equal(registerTranslationBlock(block, observed, observer), true);
+  assert.equal(registerTranslationBlock(block, observed, observer), false);
+  assert.deepEqual(calls, [block]);
 });
 
 test("React가 교체한 텍스트 노드는 현재 문단을 다시 스캔한다", () => {

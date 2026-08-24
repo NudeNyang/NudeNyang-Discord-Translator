@@ -45,6 +45,30 @@
     return rect.bottom >= -margin && rect.top <= viewportHeight + margin;
   }
 
+  function registerTranslationBlock(block, observedBlocks, observer) {
+    if (!block || observedBlocks.has(block)) return false;
+    observedBlocks.add(block);
+    observer.observe(block);
+    return true;
+  }
+
+  function isUrlLikeLinkText(text, href = "") {
+    const compact = String(text ?? "").trim().replace(/\s+/gu, "");
+    if (!compact || compact.length > 2048) return false;
+    if (/^(?:https?:\/\/|www\.|mailto:)/iu.test(compact)) return true;
+    if (/^[^\s@]+@[^\s@]+\.[\p{L}]{2,24}$/u.test(compact)) return true;
+    if (/^[\p{L}\p{N}](?:[\p{L}\p{N}-]*\.)+[\p{L}]{2,24}(?::\d+)?(?:[/?#][^\s]*)?$/u.test(compact)) {
+      return true;
+    }
+    try {
+      const host = new URL(String(href ?? "")).hostname.toLocaleLowerCase().replace(/^www\./u, "");
+      const label = compact.toLocaleLowerCase().replace(/^www\./u, "").replace(/\/$/u, "");
+      return Boolean(host && (label === host || label.startsWith(`${host}/`)));
+    } catch {
+      return false;
+    }
+  }
+
   function takeTranslationBatch(queue, options) {
     const batch = [];
     let chars = 0;
@@ -119,7 +143,7 @@
   }
 
   function isQuickToggleShortcut(event) {
-    return event?.key === "F4"
+    return (event?.key === "F4" || event?.code === "F4")
       && !event.repeat
       && !event.isComposing
       && !event.ctrlKey
@@ -153,6 +177,8 @@
     isElementNearViewport,
     initialTranslationEnabled,
     isQuickToggleShortcut,
+    isUrlLikeLinkText,
+    registerTranslationBlock,
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,
