@@ -333,6 +333,12 @@ test("display translation and outgoing interpretation present role-appropriate m
 });
 
 test("convenience panel exposes the Discord target and global translation toggles", () => {
+  const uiLanguageIndex = markup.indexOf("<h3>UI Language</h3>");
+  const settingsThemeIndex = markup.indexOf("<h3>설정창 테마</h3>");
+  const discordSelectionIndex = markup.indexOf("<h3>Discord 선택</h3>");
+
+  assert.ok(uiLanguageIndex < settingsThemeIndex);
+  assert.ok(settingsThemeIndex < discordSelectionIndex);
   assert.match(markup, /<h3>Discord 선택<\/h3>/);
   assert.match(markup, /번역을 적용할 Discord 앱을 선택합니다\./);
   assert.match(markup, /data-field="discord_variant"/);
