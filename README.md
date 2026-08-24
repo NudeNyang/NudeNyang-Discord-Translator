@@ -26,7 +26,7 @@
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
-NudeNyang works with the Discord window that is already on screen. It does not use a Discord user token, an unofficial Discord API, or a self-bot. A Tauri/Rust app reads the current renderer through a private CDP pipe and replaces only the rendered DOM. Turning translation off restores the saved original content. An optional Chrome and Naver Whale prototype uses the same Windows translation engine for supported web pages while preserving their text-node layout.
+NudeNyang works with the Discord window that is already on screen. It does not use a Discord user token, an unofficial Discord API, or a self-bot. A Tauri/Rust app reads the current renderer through a private CDP pipe and replaces only the rendered DOM. Turning translation off restores the saved original content. Optional Chrome, Naver Whale, and Firefox extensions use the same Windows translation engine for supported web pages while preserving their text-node layout.
 
 > [!IMPORTANT]
 > This is an unofficial beta. A Discord update can change the renderer and temporarily break translation. When Discord shows additional verification, verification compatibility mode pauses the translation connection until the user completes verification and explicitly reconnects NudeNyang.
@@ -135,7 +135,7 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 - Local image translation with adaptive PP-OCR recognition and original/translated toggling
 - Selection dictionary with a separate result window, speech, contextual sense ordering, personal terms, and install-on-demand practical packs
 - Verification compatibility mode that pauses translation during additional Discord verification and reconnects only on request
-- Optional Chrome and Naver Whale web-translation prototype for GitHub, BOOTH, Google Search, YouTube, and X
+- Optional Chrome, Naver Whale, and Firefox web translation for GitHub, BOOTH, Google Search, YouTube, X, and general HTTP(S) pages
 - Paragraph-context translation that changes individual text nodes and restores the exact original page text
 - Memory and SQLite caching separated by engine, language, prompt, register, and renderer version
 - Automatic GPU fallback to a RAM-conscious CPU mode when acceleration is unavailable

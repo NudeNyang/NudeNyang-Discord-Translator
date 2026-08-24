@@ -1,4 +1,5 @@
-const api = globalThis.chrome ?? globalThis.whale;
+const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
+const { isQuickToggleShortcut } = globalThis.NudeNyangContentHelpers;
 const enabled = document.querySelector("#enabled");
 const site = document.querySelector("#site");
 const connection = document.querySelector("#connection");
@@ -186,6 +187,22 @@ async function initialize() {
   renderPageStatus(status);
   renderConnection(await nativeRequest({ type: "status", requestId: `popup-${Date.now()}` }));
   renderCommandShortcut(await commandsPromise);
+
+  async function handleQuickToggle(event) {
+    if (!isQuickToggleShortcut(event)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!tab?.id) return;
+    const updated = await tabMessage(tab.id, { type: "nudenyang-toggle-enabled" });
+    if (updated) {
+      status = updated;
+      renderPageStatus(status);
+    } else {
+      site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
+    }
+  }
+
+  document.addEventListener("keydown", handleQuickToggle, true);
 
   enabled.addEventListener("change", async () => {
     if (!tab?.id) return;

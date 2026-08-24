@@ -178,6 +178,8 @@ test("settings apply immediately and the primary footer action only confirms", (
 });
 
 test("web translation panel owns browser batching, usage protection, and site policies", () => {
+  assert.match(markup, /Chrome, Whale과 Firefox/);
+  assert.match(script, /firefox:\s*"Mozilla Firefox"/);
   assert.match(markup, /id="web-translation-enabled"/);
   assert.match(markup, /data-field="web_target_language"/);
   assert.match(markup, /data-field="web_processing_mode"/);

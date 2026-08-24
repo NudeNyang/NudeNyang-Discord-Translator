@@ -1,5 +1,5 @@
 (() => {
-  const api = globalThis.chrome ?? globalThis.whale;
+  const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
   const adapters = globalThis.NudeNyangSiteAdapters;
   const {
     createScanBatch,

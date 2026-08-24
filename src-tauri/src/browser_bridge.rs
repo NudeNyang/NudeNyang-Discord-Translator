@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
@@ -18,7 +19,8 @@ use crate::engine::{BrowserTranslationRequest, RustEngine};
 const PROTOCOL_VERSION: u8 = 1;
 const MAX_NATIVE_MESSAGE_BYTES: usize = 1024 * 1024;
 const BRIDGE_FILE_NAME: &str = "browser-bridge.json";
-pub const EXTENSION_ID: &str = "bdkkgjjmocmdknffadjgbljmnhdcchjl";
+pub const CHROMIUM_EXTENSION_ID: &str = "bdkkgjjmocmdknffadjgbljmnhdcchjl";
+pub const FIREFOX_EXTENSION_ID: &str = "web-translator@nudenyang.github.io";
 const NATIVE_HOST_NAME: &str = "com.nudenyang.translator";
 
 static BROWSER_CLIENTS: OnceLock<Mutex<BTreeMap<String, BrowserClientInfo>>> = OnceLock::new();
@@ -48,12 +50,21 @@ struct BridgeDescriptor {
 }
 
 #[derive(Serialize)]
-struct NativeHostManifest {
+struct ChromiumNativeHostManifest {
     name: &'static str,
     description: &'static str,
     path: String,
     r#type: &'static str,
     allowed_origins: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct FirefoxNativeHostManifest {
+    name: &'static str,
+    description: &'static str,
+    path: String,
+    r#type: &'static str,
+    allowed_extensions: Vec<&'static str>,
 }
 
 pub struct BrowserBridgeState {
@@ -172,7 +183,7 @@ fn record_browser_client(request: &Value) {
     let browser = client
         .get("browser")
         .and_then(Value::as_str)
-        .filter(|value| matches!(*value, "chrome" | "whale"))
+        .filter(|value| matches!(*value, "chrome" | "whale" | "firefox"))
         .unwrap_or_default();
     if browser.is_empty() {
         return;
@@ -392,33 +403,48 @@ pub fn register_native_messaging_host() -> Result<PathBuf, String> {
 
     let executable = std::env::current_exe()
         .map_err(|error| format!("Windows 앱 실행 경로를 확인하지 못했습니다: {error}"))?;
-    let manifest_path = native_host_manifest_path();
-    let parent = manifest_path
+    let chromium_manifest_path = chromium_native_host_manifest_path();
+    let firefox_manifest_path = firefox_native_host_manifest_path();
+    let parent = chromium_manifest_path
         .parent()
         .ok_or_else(|| "브라우저 연결 구성요소 폴더가 올바르지 않습니다.".to_string())?;
     fs::create_dir_all(parent)
         .map_err(|error| format!("브라우저 연결 구성요소 폴더를 만들지 못했습니다: {error}"))?;
-    let manifest = NativeHostManifest {
+    let executable_path = executable.to_string_lossy().into_owned();
+    let chromium_manifest = ChromiumNativeHostManifest {
         name: NATIVE_HOST_NAME,
         description: "NudeNyang Web Translator native messaging host",
-        path: executable.to_string_lossy().into_owned(),
+        path: executable_path.clone(),
         r#type: "stdio",
-        allowed_origins: vec![format!("chrome-extension://{EXTENSION_ID}/")],
+        allowed_origins: vec![format!("chrome-extension://{CHROMIUM_EXTENSION_ID}/")],
     };
-    let encoded = serde_json::to_vec_pretty(&manifest)
+    let firefox_manifest = FirefoxNativeHostManifest {
+        name: NATIVE_HOST_NAME,
+        description: "NudeNyang Web Translator native messaging host",
+        path: executable_path,
+        r#type: "stdio",
+        allowed_extensions: vec![FIREFOX_EXTENSION_ID],
+    };
+    let chromium_encoded = serde_json::to_vec_pretty(&chromium_manifest)
         .map_err(|error| format!("브라우저 연결 구성요소 정보를 만들지 못했습니다: {error}"))?;
-    fs::write(&manifest_path, encoded)
+    let firefox_encoded = serde_json::to_vec_pretty(&firefox_manifest)
+        .map_err(|error| format!("Firefox 연결 구성요소 정보를 만들지 못했습니다: {error}"))?;
+    fs::write(&chromium_manifest_path, chromium_encoded)
         .map_err(|error| format!("브라우저 연결 구성요소 정보를 저장하지 못했습니다: {error}"))?;
+    fs::write(&firefox_manifest_path, firefox_encoded)
+        .map_err(|error| format!("Firefox 연결 구성요소 정보를 저장하지 못했습니다: {error}"))?;
 
     let current_user = RegKey::predef(HKEY_CURRENT_USER);
-    for browser_key in native_host_registry_keys() {
+    for (browser_key, manifest_path) in
+        native_host_registry_entries(&chromium_manifest_path, &firefox_manifest_path)
+    {
         let (key, _) = current_user
             .create_subkey(browser_key)
             .map_err(|error| format!("브라우저 연결 레지스트리를 만들지 못했습니다: {error}"))?;
         key.set_value("", &manifest_path.to_string_lossy().as_ref())
             .map_err(|error| format!("브라우저 연결 레지스트리를 저장하지 못했습니다: {error}"))?;
     }
-    Ok(manifest_path)
+    Ok(chromium_manifest_path)
 }
 
 #[cfg(not(windows))]
@@ -443,13 +469,21 @@ pub fn unregister_native_messaging_host() -> Result<(), String> {
             }
         }
     }
-    match fs::remove_file(native_host_manifest_path()) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(format!(
-            "브라우저 연결 구성요소 정보를 제거하지 못했습니다: {error}"
-        )),
+    for manifest_path in [
+        chromium_native_host_manifest_path(),
+        firefox_native_host_manifest_path(),
+    ] {
+        match fs::remove_file(manifest_path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(format!(
+                    "브라우저 연결 구성요소 정보를 제거하지 못했습니다: {error}"
+                ))
+            }
+        }
     }
+    Ok(())
 }
 
 #[cfg(not(windows))]
@@ -458,21 +492,58 @@ pub fn unregister_native_messaging_host() -> Result<(), String> {
 }
 
 #[cfg(windows)]
-fn native_host_registry_keys() -> [&'static str; 2] {
+fn native_host_registry_keys() -> [&'static str; 3] {
     [
         "Software\\Google\\Chrome\\NativeMessagingHosts\\com.nudenyang.translator",
         "Software\\Naver\\Naver Whale\\NativeMessagingHosts\\com.nudenyang.translator",
+        "Software\\Mozilla\\NativeMessagingHosts\\com.nudenyang.translator",
     ]
 }
 
-fn native_host_manifest_path() -> PathBuf {
+#[cfg(windows)]
+fn native_host_registry_entries<'a>(
+    chromium_manifest_path: &'a std::path::Path,
+    firefox_manifest_path: &'a std::path::Path,
+) -> [(&'static str, &'a std::path::Path); 3] {
+    [
+        (native_host_registry_keys()[0], chromium_manifest_path),
+        (native_host_registry_keys()[1], chromium_manifest_path),
+        (native_host_registry_keys()[2], firefox_manifest_path),
+    ]
+}
+
+fn native_host_manifest_directory() -> PathBuf {
     default_config_path()
         .parent()
-        .map(|path| {
-            path.join("native-messaging")
-                .join(format!("{NATIVE_HOST_NAME}.json"))
-        })
-        .unwrap_or_else(|| PathBuf::from(format!("{NATIVE_HOST_NAME}.json")))
+        .map(|path| path.join("native-messaging"))
+        .unwrap_or_default()
+}
+
+fn chromium_native_host_manifest_path() -> PathBuf {
+    native_host_manifest_directory().join(format!("{NATIVE_HOST_NAME}.json"))
+}
+
+fn firefox_native_host_manifest_path() -> PathBuf {
+    native_host_manifest_directory().join(format!("{NATIVE_HOST_NAME}.firefox.json"))
+}
+
+pub fn is_native_messaging_host_invocation(arguments: &[OsString]) -> bool {
+    let Some(first_argument) = arguments.get(1).and_then(|value| value.to_str()) else {
+        return false;
+    };
+    if first_argument == "--browser-native-host"
+        || first_argument.starts_with("chrome-extension://")
+        || first_argument.starts_with("whale-extension://")
+    {
+        return true;
+    }
+    let firefox_manifest_path = firefox_native_host_manifest_path();
+    let firefox_manifest = firefox_manifest_path.to_string_lossy();
+    first_argument.eq_ignore_ascii_case(&firefox_manifest)
+        && arguments
+            .get(2)
+            .and_then(|value| value.to_str())
+            .is_some_and(|value| value == FIREFOX_EXTENSION_ID)
 }
 
 fn forward_to_running_app(request: Value) -> Result<Value, String> {
@@ -610,8 +681,13 @@ fn tokens_equal(left: &str, right: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{read_native_message, tokens_equal, write_native_message};
+    use super::{
+        firefox_native_host_manifest_path, is_native_messaging_host_invocation,
+        read_native_message, tokens_equal, write_native_message, ChromiumNativeHostManifest,
+        FirefoxNativeHostManifest, CHROMIUM_EXTENSION_ID, FIREFOX_EXTENSION_ID, NATIVE_HOST_NAME,
+    };
     use serde_json::json;
+    use std::ffi::OsString;
     use std::io::Cursor;
 
     #[test]
@@ -634,5 +710,48 @@ mod tests {
         assert!(tokens_equal("0011aabb", "0011aabb"));
         assert!(!tokens_equal("0011aabb", "0011aabc"));
         assert!(!tokens_equal("0011aabb", "0011aabb00"));
+    }
+
+    #[test]
+    fn native_manifests_use_browser_specific_allow_lists() {
+        let chromium = serde_json::to_value(ChromiumNativeHostManifest {
+            name: NATIVE_HOST_NAME,
+            description: "test",
+            path: "C:\\NudeNyang.exe".to_string(),
+            r#type: "stdio",
+            allowed_origins: vec![format!("chrome-extension://{CHROMIUM_EXTENSION_ID}/")],
+        })
+        .unwrap();
+        let firefox = serde_json::to_value(FirefoxNativeHostManifest {
+            name: NATIVE_HOST_NAME,
+            description: "test",
+            path: "C:\\NudeNyang.exe".to_string(),
+            r#type: "stdio",
+            allowed_extensions: vec![FIREFOX_EXTENSION_ID],
+        })
+        .unwrap();
+
+        assert_eq!(
+            chromium["allowed_origins"],
+            json!([format!("chrome-extension://{CHROMIUM_EXTENSION_ID}/")])
+        );
+        assert!(chromium.get("allowed_extensions").is_none());
+        assert_eq!(firefox["allowed_extensions"], json!([FIREFOX_EXTENSION_ID]));
+        assert!(firefox.get("allowed_origins").is_none());
+    }
+
+    #[test]
+    fn firefox_native_host_arguments_enter_stdio_mode_only_for_the_known_addon() {
+        let manifest = firefox_native_host_manifest_path().into_os_string();
+        assert!(is_native_messaging_host_invocation(&[
+            OsString::from("NudeNyang.exe"),
+            manifest.clone(),
+            OsString::from(FIREFOX_EXTENSION_ID),
+        ]));
+        assert!(!is_native_messaging_host_invocation(&[
+            OsString::from("NudeNyang.exe"),
+            manifest,
+            OsString::from("unknown@example.org"),
+        ]));
     }
 }

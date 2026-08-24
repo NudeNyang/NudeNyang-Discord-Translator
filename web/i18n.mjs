@@ -166,7 +166,7 @@ export const COPY = Object.freeze({
   "번역": ["Translation", "翻訳", "翻译"],
   "번역 엔진": ["Translation engine", "翻訳エンジン", "翻译引擎"],
   "웹 번역": ["Web translation", "ウェブ翻訳", "网页翻译"],
-  "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": ["Manage webpage translation behavior and external service usage for Chrome and Whale.", "ChromeとWhaleのウェブページ翻訳方法と外部サービスの使用量を管理します。", "管理 Chrome 和 Whale 的网页翻译方式及外部服务用量。"],
+  "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": ["Manage webpage translation behavior and external service usage for Chrome, Whale, and Firefox.", "Chrome、Whale、Firefoxのウェブページ翻訳方法と外部サービスの使用量を管理します。", "管理 Chrome、Whale 和 Firefox 的网页翻译方式及外部服务用量。"],
   "웹페이지 번역 사용": ["Enable webpage translation", "ウェブページ翻訳を使用", "启用网页翻译"],
   "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": ["Allow the extension to translate paragraphs on the current page.", "拡張機能で現在のページの段落を翻訳できるようにします。", "允许扩展程序翻译当前页面中的段落。"],
   "기본 번역 언어": ["Default translation language", "既定の翻訳言語", "默认翻译语言"],

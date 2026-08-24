@@ -43,7 +43,7 @@ const temporaryDirectory = mkdtempSync(join(tmpdir(), "nudenyang-ui-locales-"));
 
 const protectedTokens = [
   "NudeNyang Discord Translator", "Discord", "Hy-MT2", "TranslateGemma", "ChatGPT", "Claude",
-  "Gemini", "DeepL", "Antigravity", "API", "CLI", "GPU", "CPU", "RAM", "VRAM",
+  "Gemini", "DeepL", "Antigravity", "Chrome", "Whale", "Firefox", "API", "CLI", "GPU", "CPU", "RAM", "VRAM",
   "F1", "F8", "F12", "F24", "Ctrl", "Alt", "Shift", "Enter", "Esc", "OAuth",
 ];
 const moduleOutputPath = fileURLToPath(new URL("../web/ui-locales.mjs", import.meta.url));

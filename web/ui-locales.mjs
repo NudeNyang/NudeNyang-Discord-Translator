@@ -585,7 +585,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "翻譯暱稱",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "將訊息作者的暱稱也翻譯成顯示語言。",
     "웹 번역": "網頁翻譯",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "管理 Chrome 和 Whale 的網頁翻譯方式與外部服務用量。",
     "웹페이지 번역 사용": "啟用網頁翻譯",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "允許擴充功能翻譯目前頁面上的段落。",
     "기본 번역 언어": "預設翻譯語言",
@@ -607,7 +606,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 個字元",
     "25,000자 (권장)": "25,000 個字元（建議）",
     "50,000자": "50,000 個字元",
-    "언어 감지": "偵測語言"
+    "언어 감지": "偵測語言",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "管理 Chrome、Whale 和 Firefox 的網頁翻譯行為與外部服務使用量。"
   },
   "pt-BR": {
     "설정": "Configurações",
@@ -1194,7 +1194,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Traduzir apelidos",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduz os apelidos dos autores das mensagens para o idioma de exibição.",
     "웹 번역": "Tradução da Web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Gerencie o comportamento da tradução de páginas da Web e o uso de serviços externos no Chrome e Whale.",
     "웹페이지 번역 사용": "Ativar tradução de páginas da Web",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Permita que a extensão traduza parágrafos na página atual.",
     "기본 번역 언어": "Idioma de tradução padrão",
@@ -1216,7 +1215,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10.000 caracteres",
     "25,000자 (권장)": "25.000 caracteres (recomendado)",
     "50,000자": "50.000 caracteres",
-    "언어 감지": "Detectar idioma"
+    "언어 감지": "Detectar idioma",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Gerencie o comportamento da tradução de páginas da web e o uso de serviços externos no Chrome, Whale e Firefox."
   },
   "hi": {
     "설정": "सेटिंग्स",
@@ -1803,7 +1803,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "उपनामों का अनुवाद करें",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "संदेश भेजने वालों के उपनामों का भी प्रदर्शन भाषा में अनुवाद करें।",
     "웹 번역": "वेब अनुवाद",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome और Whale के लिए वेबपेज अनुवाद का व्यवहार और बाहरी सेवाओं का उपयोग प्रबंधित करें।",
     "웹페이지 번역 사용": "वेबपेज अनुवाद चालू करें",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "एक्सटेंशन को मौजूदा पेज के अनुच्छेदों का अनुवाद करने दें।",
     "기본 번역 언어": "डिफ़ॉल्ट अनुवाद भाषा",
@@ -1825,7 +1824,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 वर्ण",
     "25,000자 (권장)": "25,000 वर्ण (अनुशंसित)",
     "50,000자": "50,000 वर्ण",
-    "언어 감지": "भाषा पहचानें"
+    "언어 감지": "भाषा पहचानें",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome, Whale और Firefox के लिए वेबपेज अनुवाद का व्यवहार और बाहरी सेवाओं का उपयोग प्रबंधित करें।"
   },
   "es-419": {
     "설정": "Configuración",
@@ -2412,7 +2412,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Traducir apodos",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduce los apodos de los autores de los mensajes al idioma de visualización.",
     "웹 번역": "Traducción web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Administra el comportamiento de la traducción de páginas web y el uso de servicios externos en Chrome y Whale.",
     "웹페이지 번역 사용": "Activar la traducción de páginas web",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Permite que la extensión traduzca párrafos de la página actual.",
     "기본 번역 언어": "Idioma de traducción predeterminado",
@@ -2434,7 +2433,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 caracteres",
     "25,000자 (권장)": "25,000 caracteres (recomendado)",
     "50,000자": "50,000 caracteres",
-    "언어 감지": "Detectar idioma"
+    "언어 감지": "Detectar idioma",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Administra el funcionamiento de la traducción de páginas web y el uso de servicios externos para Chrome, Whale y Firefox."
   },
   "de": {
     "설정": "Einstellungen",
@@ -3021,7 +3021,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Spitznamen übersetzen",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Spitznamen von Nachrichtenautoren in die Anzeigesprache übersetzen.",
     "웹 번역": "Webübersetzung",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Verhalten der Webseitenübersetzung und Nutzung externer Dienste für Chrome und Whale verwalten.",
     "웹페이지 번역 사용": "Webseitenübersetzung aktivieren",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Der Erweiterung erlauben, Absätze auf der aktuellen Seite zu übersetzen.",
     "기본 번역 언어": "Standardübersetzungssprache",
@@ -3043,7 +3042,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10.000 Zeichen",
     "25,000자 (권장)": "25.000 Zeichen (empfohlen)",
     "50,000자": "50.000 Zeichen",
-    "언어 감지": "Sprache erkennen"
+    "언어 감지": "Sprache erkennen",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Verwalte das Verhalten der Webseitenübersetzung und die Nutzung externer Dienste für Chrome, Whale und Firefox."
   },
   "ru": {
     "설정": "Настройки",
@@ -3630,7 +3630,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Переводить никнеймы",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Переводить никнеймы авторов сообщений на язык интерфейса.",
     "웹 번역": "Веб-перевод",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Управляйте переводом веб-страниц и использованием внешних сервисов в Chrome и Whale.",
     "웹페이지 번역 사용": "Включить перевод веб-страниц",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Разрешить расширению переводить абзацы на текущей странице.",
     "기본 번역 언어": "Язык перевода по умолчанию",
@@ -3652,7 +3651,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10 000 символов",
     "25,000자 (권장)": "25 000 символов (рекомендуется)",
     "50,000자": "50 000 символов",
-    "언어 감지": "Определить язык"
+    "언어 감지": "Определить язык",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Управляйте переводом веб-страниц и использованием внешних сервисов в Chrome, Whale и Firefox."
   },
   "id": {
     "설정": "Pengaturan",
@@ -4239,7 +4239,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Terjemahkan nama panggilan",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Terjemahkan nama panggilan penulis pesan ke bahasa tampilan.",
     "웹 번역": "Terjemahan web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Kelola perilaku penerjemahan halaman web dan penggunaan layanan eksternal untuk Chrome dan Whale.",
     "웹페이지 번역 사용": "Aktifkan penerjemahan halaman web",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Izinkan ekstensi menerjemahkan paragraf di halaman saat ini.",
     "기본 번역 언어": "Bahasa terjemahan default",
@@ -4261,7 +4260,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10.000 karakter",
     "25,000자 (권장)": "25.000 karakter (disarankan)",
     "50,000자": "50.000 karakter",
-    "언어 감지": "Deteksi bahasa"
+    "언어 감지": "Deteksi bahasa",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Kelola perilaku penerjemahan halaman web dan penggunaan layanan eksternal untuk Chrome, Whale, dan Firefox."
   },
   "fr": {
     "설정": "Paramètres",
@@ -4848,7 +4848,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Traduire les pseudos",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduit les pseudos des auteurs des messages dans la langue d’affichage.",
     "웹 번역": "Traduction web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Gérez le comportement de la traduction des pages web et l’utilisation des services externes pour Chrome et Whale.",
     "웹페이지 번역 사용": "Activer la traduction des pages web",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Autorisez l’extension à traduire les paragraphes de la page actuelle.",
     "기본 번역 언어": "Langue de traduction par défaut",
@@ -4870,7 +4869,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10 000 caractères",
     "25,000자 (권장)": "25 000 caractères (recommandé)",
     "50,000자": "50 000 caractères",
-    "언어 감지": "Détecter la langue"
+    "언어 감지": "Détecter la langue",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Gérez le comportement de traduction des pages web et l’utilisation des services externes pour Chrome, Whale et Firefox."
   },
   "tr": {
     "설정": "Ayarlar",
@@ -5457,7 +5457,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Takma adları çevir",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Mesaj yazarlarının takma adlarını görüntüleme diline çevir.",
     "웹 번역": "Web çevirisi",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome ve Whale için web sayfası çeviri davranışını ve harici servis kullanımını yönetin.",
     "웹페이지 번역 사용": "Web sayfası çevirisini etkinleştir",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Uzantının geçerli sayfadaki paragrafları çevirmesine izin verin.",
     "기본 번역 언어": "Varsayılan çeviri dili",
@@ -5479,7 +5478,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10.000 karakter",
     "25,000자 (권장)": "25.000 karakter (önerilen)",
     "50,000자": "50.000 karakter",
-    "언어 감지": "Dili algıla"
+    "언어 감지": "Dili algıla",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome, Whale ve Firefox için web sayfası çeviri davranışını ve harici hizmet kullanımını yönetin."
   },
   "ar": {
     "설정": "الإعدادات",
@@ -6066,7 +6066,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "ترجمة الأسماء المستعارة",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "ترجمة الأسماء المستعارة لمؤلفي الرسائل إلى لغة العرض.",
     "웹 번역": "ترجمة الويب",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "إدارة سلوك ترجمة صفحات الويب واستخدام الخدمات الخارجية في Chrome وWhale.",
     "웹페이지 번역 사용": "تفعيل ترجمة صفحات الويب",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "السماح للإضافة بترجمة فقرات الصفحة الحالية.",
     "기본 번역 언어": "لغة الترجمة الافتراضية",
@@ -6088,7 +6087,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 حرف",
     "25,000자 (권장)": "25,000 حرف (موصى به)",
     "50,000자": "50,000 حرف",
-    "언어 감지": "اكتشاف اللغة"
+    "언어 감지": "اكتشاف اللغة",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "إدارة سلوك ترجمة صفحات الويب واستخدام الخدمات الخارجية في Chrome وWhale وFirefox."
   },
   "vi": {
     "설정": "Cài đặt",
@@ -6675,7 +6675,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Dịch biệt danh",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Dịch biệt danh của tác giả tin nhắn sang ngôn ngữ hiển thị.",
     "웹 번역": "Dịch web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Quản lý cách dịch trang web và mức sử dụng dịch vụ bên ngoài cho Chrome và Whale.",
     "웹페이지 번역 사용": "Bật dịch trang web",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Cho phép tiện ích dịch các đoạn văn trên trang hiện tại.",
     "기본 번역 언어": "Ngôn ngữ dịch mặc định",
@@ -6697,7 +6696,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10.000 ký tự",
     "25,000자 (권장)": "25.000 ký tự (khuyên dùng)",
     "50,000자": "50.000 ký tự",
-    "언어 감지": "Phát hiện ngôn ngữ"
+    "언어 감지": "Phát hiện ngôn ngữ",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Quản lý cách dịch trang web và việc sử dụng dịch vụ bên ngoài cho Chrome, Whale và Firefox."
   },
   "it": {
     "설정": "Impostazioni",
@@ -7284,7 +7284,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Traduci i nickname",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Traduce i nickname degli autori dei messaggi nella lingua di visualizzazione.",
     "웹 번역": "Traduzione web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Gestisci il comportamento della traduzione delle pagine web e l'uso di servizi esterni per Chrome e Whale.",
     "웹페이지 번역 사용": "Abilita traduzione delle pagine web",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Consenti all'estensione di tradurre i paragrafi della pagina corrente.",
     "기본 번역 언어": "Lingua di traduzione predefinita",
@@ -7306,7 +7305,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10.000 caratteri",
     "25,000자 (권장)": "25.000 caratteri (consigliato)",
     "50,000자": "50.000 caratteri",
-    "언어 감지": "Rileva lingua"
+    "언어 감지": "Rileva lingua",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Gestisci il comportamento della traduzione delle pagine web e l'utilizzo dei servizi esterni per Chrome, Whale e Firefox."
   },
   "pl": {
     "설정": "Ustawienia",
@@ -7893,7 +7893,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Tłumacz pseudonimy",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Tłumacz pseudonimy autorów wiadomości na język wyświetlania.",
     "웹 번역": "Tłumaczenie stron internetowych",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Zarządzaj sposobem tłumaczenia stron internetowych oraz użyciem usług zewnętrznych w Chrome i Whale.",
     "웹페이지 번역 사용": "Włącz tłumaczenie stron internetowych",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Zezwól rozszerzeniu na tłumaczenie akapitów na bieżącej stronie.",
     "기본 번역 언어": "Domyślny język tłumaczenia",
@@ -7915,7 +7914,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10 000 znaków",
     "25,000자 (권장)": "25 000 znaków (zalecane)",
     "50,000자": "50 000 znaków",
-    "언어 감지": "Wykryj język"
+    "언어 감지": "Wykryj język",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Zarządzaj działaniem tłumaczenia stron internetowych oraz użyciem usług zewnętrznych w Chrome, Whale i Firefox."
   },
   "uk": {
     "설정": "Налаштування",
@@ -8502,7 +8502,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Перекладати псевдоніми",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Перекладати псевдоніми авторів повідомлень мовою інтерфейсу.",
     "웹 번역": "Вебпереклад",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Керуйте перекладом вебсторінок і використанням зовнішніх сервісів у Chrome та Whale.",
     "웹페이지 번역 사용": "Увімкнути переклад вебсторінок",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Дозволити розширенню перекладати абзаци на поточній сторінці.",
     "기본 번역 언어": "Мова перекладу за замовчуванням",
@@ -8524,7 +8523,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10 000 символів",
     "25,000자 (권장)": "25 000 символів (рекомендовано)",
     "50,000자": "50 000 символів",
-    "언어 감지": "Визначити мову"
+    "언어 감지": "Визначити мову",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Керуйте перекладом вебсторінок і використанням зовнішніх сервісів у Chrome, Whale та Firefox."
   },
   "ms": {
     "설정": "Tetapan",
@@ -9111,7 +9111,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Terjemahkan nama panggilan",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Terjemahkan nama panggilan pengarang mesej kepada bahasa paparan.",
     "웹 번역": "Terjemahan web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Urus cara terjemahan laman web dan penggunaan perkhidmatan luaran untuk Chrome dan Whale.",
     "웹페이지 번역 사용": "Dayakan terjemahan laman web",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Benarkan sambungan menterjemah perenggan pada halaman semasa.",
     "기본 번역 언어": "Bahasa terjemahan lalai",
@@ -9133,7 +9132,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 aksara",
     "25,000자 (권장)": "25,000 aksara (disyorkan)",
     "50,000자": "50,000 aksara",
-    "언어 감지": "Kesan bahasa"
+    "언어 감지": "Kesan bahasa",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Urus cara terjemahan halaman web dan penggunaan perkhidmatan luaran untuk Chrome, Whale dan Firefox."
   },
   "nl": {
     "설정": "Instellingen",
@@ -9720,7 +9720,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Bijnamen vertalen",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Vertaal de bijnamen van berichtauteurs naar de weergavetaal.",
     "웹 번역": "Webvertaling",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Beheer de vertaling van webpagina's en het gebruik van externe diensten voor Chrome en Whale.",
     "웹페이지 번역 사용": "Webpaginavertaling inschakelen",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Sta toe dat de extensie alinea's op de huidige pagina vertaalt.",
     "기본 번역 언어": "Standaard vertaaltaal",
@@ -9742,7 +9741,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10.000 tekens",
     "25,000자 (권장)": "25.000 tekens (aanbevolen)",
     "50,000자": "50.000 tekens",
-    "언어 감지": "Taal detecteren"
+    "언어 감지": "Taal detecteren",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Beheer het vertaalgedrag van webpagina's en het gebruik van externe diensten voor Chrome, Whale en Firefox."
   },
   "th": {
     "설정": "การตั้งค่า",
@@ -10329,7 +10329,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "แปลชื่อเล่น",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "แปลชื่อเล่นของผู้ส่งข้อความเป็นภาษาที่ใช้แสดงผล",
     "웹 번역": "การแปลเว็บ",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "จัดการรูปแบบการแปลหน้าเว็บและการใช้บริการภายนอกสำหรับ Chrome และ Whale",
     "웹페이지 번역 사용": "เปิดใช้การแปลหน้าเว็บ",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "อนุญาตให้ส่วนขยายแปลย่อหน้าในหน้าปัจจุบัน",
     "기본 번역 언어": "ภาษาแปลเริ่มต้น",
@@ -10351,7 +10350,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 อักขระ",
     "25,000자 (권장)": "25,000 อักขระ (แนะนำ)",
     "50,000자": "50,000 อักขระ",
-    "언어 감지": "ตรวจหาภาษา"
+    "언어 감지": "ตรวจหาภาษา",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "จัดการลักษณะการแปลหน้าเว็บและการใช้งานบริการภายนอกสำหรับ Chrome, Whale และ Firefox"
   },
   "fil": {
     "설정": "Mga Setting",
@@ -10938,7 +10938,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Isalin ang mga palayaw",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Isalin sa ipinapakitang wika ang mga palayaw ng mga may-akda ng mensahe.",
     "웹 번역": "Pagsasalin sa web",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Pamahalaan ang paraan ng pagsasalin ng mga webpage at paggamit ng mga external na serbisyo para sa Chrome at Whale.",
     "웹페이지 번역 사용": "I-enable ang pagsasalin ng webpage",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Payagan ang extension na isalin ang mga talata sa kasalukuyang page.",
     "기본 번역 언어": "Default na wika ng pagsasalin",
@@ -10960,7 +10959,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 character",
     "25,000자 (권장)": "25,000 character (inirerekomenda)",
     "50,000자": "50,000 character",
-    "언어 감지": "Tukuyin ang wika"
+    "언어 감지": "Tukuyin ang wika",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Pamahalaan ang pagsasalin ng mga webpage at paggamit ng mga external na serbisyo para sa Chrome, Whale, at Firefox."
   },
   "bn": {
     "설정": "সেটিংস",
@@ -11547,7 +11547,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "ডাকনাম অনুবাদ করুন",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "বার্তা লেখকদের ডাকনামও প্রদর্শনের ভাষায় অনুবাদ করুন।",
     "웹 번역": "ওয়েব অনুবাদ",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome ও Whale-এর ওয়েবপেজ অনুবাদের ধরন এবং বাহ্যিক পরিষেবার ব্যবহার পরিচালনা করুন।",
     "웹페이지 번역 사용": "ওয়েবপেজ অনুবাদ চালু করুন",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "এক্সটেনশনটিকে বর্তমান পৃষ্ঠার অনুচ্ছেদগুলো অনুবাদ করার অনুমতি দিন।",
     "기본 번역 언어": "ডিফল্ট অনুবাদের ভাষা",
@@ -11569,7 +11568,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 অক্ষর",
     "25,000자 (권장)": "25,000 অক্ষর (প্রস্তাবিত)",
     "50,000자": "50,000 অক্ষর",
-    "언어 감지": "ভাষা শনাক্ত করুন"
+    "언어 감지": "ভাষা শনাক্ত করুন",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome, Whale এবং Firefox-এর ওয়েবপেজ অনুবাদের আচরণ ও বাহ্যিক পরিষেবার ব্যবহার নিয়ন্ত্রণ করুন।"
   },
   "ur": {
     "설정": "ترتیبات",
@@ -12156,7 +12156,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "عرفی ناموں کا ترجمہ کریں",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "پیغام لکھنے والوں کے عرفی ناموں کا بھی ڈسپلے کی زبان میں ترجمہ کریں۔",
     "웹 번역": "ویب ترجمہ",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome اور Whale کے لیے ویب صفحات کے ترجمے کا طرزِ عمل اور بیرونی سروسز کا استعمال منظم کریں۔",
     "웹페이지 번역 사용": "ویب صفحات کا ترجمہ فعال کریں",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "ایکسٹینشن کو موجودہ صفحے کے پیراگراف کا ترجمہ کرنے کی اجازت دیں۔",
     "기본 번역 언어": "ڈیفالٹ ترجمے کی زبان",
@@ -12178,7 +12177,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 حروف",
     "25,000자 (권장)": "25,000 حروف (تجویز کردہ)",
     "50,000자": "50,000 حروف",
-    "언어 감지": "زبان کا پتا لگائیں"
+    "언어 감지": "زبان کا پتا لگائیں",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome، Whale اور Firefox کے لیے ویب صفحہ ترجمے کا طریقہ اور بیرونی سروسز کا استعمال منظم کریں۔"
   },
   "ta": {
     "설정": "அமைப்புகள்",
@@ -12765,7 +12765,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "புனைப்பெயர்களை மொழிபெயர்",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "செய்தி எழுதியவர்களின் புனைப்பெயர்களைக் காட்சி மொழிக்கு மொழிபெயர்.",
     "웹 번역": "இணைய மொழிபெயர்ப்பு",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome மற்றும் Whale-க்கான இணையப்பக்க மொழிபெயர்ப்பு செயல்பாட்டையும் வெளிச் சேவை பயன்பாட்டையும் நிர்வகிக்கவும்.",
     "웹페이지 번역 사용": "இணையப்பக்க மொழிபெயர்ப்பை இயக்கு",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "தற்போதைய பக்கத்திலுள்ள பத்திகளை மொழிபெயர்க்க நீட்டிப்பை அனுமதிக்கவும்.",
     "기본 번역 언어": "இயல்புநிலை மொழிபெயர்ப்பு மொழி",
@@ -12787,7 +12786,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 எழுத்துகள்",
     "25,000자 (권장)": "25,000 எழுத்துகள் (பரிந்துரைக்கப்பட்டது)",
     "50,000자": "50,000 எழுத்துகள்",
-    "언어 감지": "மொழியைக் கண்டறி"
+    "언어 감지": "மொழியைக் கண்டறி",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Chrome, Whale மற்றும் Firefox-க்கான வலைப்பக்க மொழிபெயர்ப்பு செயல்முறையையும் வெளிப்புறச் சேவைப் பயன்பாட்டையும் நிர்வகிக்கவும்."
   },
   "fa": {
     "설정": "تنظیمات",
@@ -13374,7 +13374,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "ترجمه نام‌های مستعار",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "نام‌های مستعار نویسندگان پیام را به زبان نمایش ترجمه می‌کند.",
     "웹 번역": "ترجمه وب",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "رفتار ترجمه صفحات وب و میزان استفاده از سرویس‌های خارجی را برای Chrome و Whale مدیریت کنید.",
     "웹페이지 번역 사용": "فعال‌سازی ترجمه صفحات وب",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "به افزونه اجازه دهید پاراگراف‌های صفحه فعلی را ترجمه کند.",
     "기본 번역 언어": "زبان پیش‌فرض ترجمه",
@@ -13396,7 +13395,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "۱۰٬۰۰۰ نویسه",
     "25,000자 (권장)": "۲۵٬۰۰۰ نویسه (پیشنهادی)",
     "50,000자": "۵۰٬۰۰۰ نویسه",
-    "언어 감지": "تشخیص زبان"
+    "언어 감지": "تشخیص زبان",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "رفتار ترجمهٔ صفحات وب و میزان استفاده از سرویس‌های خارجی را برای Chrome، Whale و Firefox مدیریت کنید."
   },
   "he": {
     "설정": "הגדרות",
@@ -13983,7 +13983,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "תרגום כינויים",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "תרגום הכינויים של מחברי ההודעות לשפת התצוגה.",
     "웹 번역": "תרגום אינטרנט",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "ניהול אופן התרגום של דפי אינטרנט והשימוש בשירותים חיצוניים עבור Chrome ו-Whale.",
     "웹페이지 번역 사용": "הפעלת תרגום דפי אינטרנט",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "לאפשר לתוסף לתרגם פסקאות בדף הנוכחי.",
     "기본 번역 언어": "שפת תרגום כברירת מחדל",
@@ -14005,7 +14004,8 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10,000 תווים",
     "25,000자 (권장)": "25,000 תווים (מומלץ)",
     "50,000자": "50,000 תווים",
-    "언어 감지": "זיהוי שפה"
+    "언어 감지": "זיהוי שפה",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "ניהול התנהגות תרגום דפי אינטרנט והשימוש בשירותים חיצוניים עבור Chrome, Whale ו-Firefox."
   },
   "cs": {
     "설정": "Nastavení",
@@ -14592,7 +14592,6 @@ export const UI_LOCALE_COPY = Object.freeze({
     "닉네임 번역하기": "Překládat přezdívky",
     "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": "Překládat přezdívky autorů zpráv do jazyka zobrazení.",
     "웹 번역": "Webový překlad",
-    "Chrome과 Whale의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Spravujte chování překladu webových stránek a využití externích služeb v prohlížečích Chrome a Whale.",
     "웹페이지 번역 사용": "Povolit překlad webových stránek",
     "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.": "Povolte rozšíření překládat odstavce na aktuální stránce.",
     "기본 번역 언어": "Výchozí jazyk překladu",
@@ -14614,6 +14613,7 @@ export const UI_LOCALE_COPY = Object.freeze({
     "10,000자": "10 000 znaků",
     "25,000자 (권장)": "25 000 znaků (doporučeno)",
     "50,000자": "50 000 znaků",
-    "언어 감지": "Rozpoznat jazyk"
+    "언어 감지": "Rozpoznat jazyk",
+    "Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.": "Spravujte chování překladu webových stránek a využití externích služeb pro Chrome, Whale a Firefox."
   }
 });

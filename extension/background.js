@@ -1,9 +1,15 @@
-importScripts("native-client.js");
+if (!globalThis.NudeNyangNativeClient && typeof importScripts === "function") {
+  importScripts("native-client.js");
+}
 
-const api = globalThis.chrome ?? globalThis.whale;
+const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
 const HOST_NAME = "com.nudenyang.translator";
 const CLIENT = Object.freeze({
-  browser: navigator.userAgent.includes("Whale") ? "whale" : "chrome",
+  browser: navigator.userAgent.includes("Firefox")
+    ? "firefox"
+    : navigator.userAgent.includes("Whale")
+      ? "whale"
+      : "chrome",
   extensionVersion: api.runtime.getManifest().version,
 });
 const nativeClient = globalThis.NudeNyangNativeClient.createNativeClient(api, HOST_NAME, CLIENT);

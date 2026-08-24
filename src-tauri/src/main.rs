@@ -1586,14 +1586,8 @@ fn main() {
         }
         return;
     }
-    let native_messaging_requested = process_arguments
-        .get(1)
-        .and_then(|value| value.to_str())
-        .is_some_and(|argument| {
-            argument == "--browser-native-host"
-                || argument.starts_with("chrome-extension://")
-                || argument.starts_with("whale-extension://")
-        });
+    let native_messaging_requested =
+        browser_bridge::is_native_messaging_host_invocation(&process_arguments);
     if native_messaging_requested {
         if let Err(error) = browser_bridge::run_native_messaging_host() {
             eprintln!("{error}");

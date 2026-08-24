@@ -33,6 +33,14 @@ test("F4는 지원 페이지에서 번역과 원문을 직접 전환한다", () 
   assert.match(contentJs, /removeEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
 });
 
+test("팝업에 포커스가 있어도 F4는 현재 페이지 번역을 전환한다", () => {
+  assert.match(popupJs, /document\.addEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
+  assert.match(popupJs, /isQuickToggleShortcut\(event\)/);
+  assert.match(popupJs, /type:\s*"nudenyang-toggle-enabled"/);
+  assert.match(popupJs, /event\.preventDefault\(\)/);
+  assert.match(popupJs, /event\.stopImmediatePropagation\(\)/);
+});
+
 test("차단 페이지에서는 보조 단축키도 번역 설정을 바꾸지 않는다", () => {
   assert.match(contentJs, /async function setEnabled\(value\) \{\s*if \(!adapter\) \{\s*return status\(\);/);
 });

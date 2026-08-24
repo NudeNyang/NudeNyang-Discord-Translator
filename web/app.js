@@ -1458,7 +1458,10 @@ function renderBrowserClients() {
     const name = document.createElement("strong");
     const version = document.createElement("span");
     const status = document.createElement("span");
-    name.textContent = client.browser === "whale" ? "Naver Whale" : "Google Chrome";
+    name.textContent = {
+      whale: "Naver Whale",
+      firefox: "Mozilla Firefox",
+    }[client.browser] ?? "Google Chrome";
     version.textContent = client.extensionVersion ? `v${client.extensionVersion}` : "";
     setLocalizedText(status, "연결됨");
     status.className = "web-client-status";
