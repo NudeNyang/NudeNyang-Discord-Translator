@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app_paths;
+mod browser_bridge;
 pub mod cache;
 pub mod cdp;
 mod config;
@@ -1564,6 +1565,44 @@ fn main() {
     let process_arguments = std::env::args_os().collect::<Vec<_>>();
     if process_arguments
         .get(1)
+        .is_some_and(|argument| argument == "--register-browser-native-host")
+    {
+        match browser_bridge::register_native_messaging_host() {
+            Ok(path) => println!("{}", path.display()),
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    if process_arguments
+        .get(1)
+        .is_some_and(|argument| argument == "--unregister-browser-native-host")
+    {
+        if let Err(error) = browser_bridge::unregister_native_messaging_host() {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
+    let native_messaging_requested = process_arguments
+        .get(1)
+        .and_then(|value| value.to_str())
+        .is_some_and(|argument| {
+            argument == "--browser-native-host"
+                || argument.starts_with("chrome-extension://")
+                || argument.starts_with("whale-extension://")
+        });
+    if native_messaging_requested {
+        if let Err(error) = browser_bridge::run_native_messaging_host() {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
+    if process_arguments
+        .get(1)
         .is_some_and(|argument| argument == "--discord-cdp-pipe-guardian")
     {
         let parsed = (|| -> Result<(u32, std::path::PathBuf, usize, usize), String> {
@@ -1735,6 +1774,9 @@ fn main() {
         .manage(native_speech::NativeSpeechState::default())
         .setup(|app| {
             app.state::<RustEngine>().attach_app(app.handle().clone())?;
+            app.manage(browser_bridge::BrowserBridgeState::start(
+                app.handle().clone(),
+            )?);
             create_tray(app)?;
             let handle = app.handle().clone();
             initialize_autostart_in_background(app.handle().clone());
@@ -1856,6 +1898,7 @@ fn main() {
     app.run(move |handle, event| match event {
         tauri::RunEvent::ExitRequested { .. } => shutdown_translation(handle),
         tauri::RunEvent::Exit => {
+            handle.state::<browser_bridge::BrowserBridgeState>().stop();
             handle.state::<RustEngine>().stop();
         }
         _ => {}

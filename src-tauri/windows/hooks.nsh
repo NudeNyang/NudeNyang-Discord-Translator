@@ -91,9 +91,11 @@ FunctionEnd
     Delete "$SMPROGRAMS\Nude Translator (Tauri).lnk"
 
   shortcut_migration_done:
+  ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --register-browser-native-host'
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
+  ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --unregister-browser-native-host'
   ExecWait '"$INSTDIR\${MAINBINARYNAME}.exe" --restore-discord-startup'
 !macroend
 

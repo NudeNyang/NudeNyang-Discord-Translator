@@ -5,9 +5,10 @@
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
-    "test": "npm run test:web && npm run test:landing && npm run test:dictionaries",
+    "test": "npm run test:web && npm run test:landing && npm run test:extension && npm run test:dictionaries",
     "test:web": "node --test web/test/*.test.mjs",
     "test:landing": "node --test landing/test/*.test.mjs",
+    "test:extension": "node --test extension/test/*.test.mjs",
     "landing:locales": "node scripts/generate-landing-locales.mjs",
     "landing:serve": "node scripts/serve-landing.mjs",
     "test:locales": "node scripts/validate-ui-locales.mjs",

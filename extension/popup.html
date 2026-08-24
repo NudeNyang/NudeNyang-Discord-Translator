@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NudeNyang Web Translator</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <div class="heading">
+        <div>
+          <p class="eyebrow">NUDENYANG</p>
+          <h1>웹페이지 번역</h1>
+        </div>
+        <label class="switch" aria-label="웹페이지 번역 사용">
+          <input id="enabled" type="checkbox">
+          <span></span>
+        </label>
+      </div>
+      <p id="site" class="site">지원 사이트를 확인하고 있습니다.</p>
+      <div id="connection" class="connection waiting">
+        <span class="dot"></span>
+        <span id="connection-text">Windows 앱에 연결하는 중입니다…</span>
+      </div>
+      <p id="detail" class="detail"></p>
+      <button id="restore" type="button">이 페이지 원문으로 복원</button>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

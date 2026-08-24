@@ -867,10 +867,12 @@ impl TranslationService {
             return Ok(Vec::new());
         }
         let mut results: Vec<Option<String>> = vec![None; texts.len()];
-        let mut pending = Vec::new();
+        let mut pending = Vec::<(Vec<usize>, String, ProtectedText, Language, String)>::new();
+        let mut pending_by_source = HashMap::<(String, Language), usize>::new();
         let started = Instant::now();
         let mut cache_hits = 0_usize;
         let mut passthrough = 0_usize;
+        let mut uncached_items = 0_usize;
         for (index, text) in texts.iter().enumerate() {
             let protected = protect_text(text);
             if !protected.has_translatable_text() {
@@ -927,7 +929,14 @@ impl TranslationService {
                     ),
                 );
             }
-            pending.push((index, text.clone(), protected, source, source_hash));
+            uncached_items += 1;
+            let source_key = (text.clone(), source);
+            if let Some(pending_index) = pending_by_source.get(&source_key).copied() {
+                pending[pending_index].0.push(index);
+            } else {
+                pending_by_source.insert(source_key, pending.len());
+                pending.push((vec![index], text.clone(), protected, source, source_hash));
+            }
         }
 
         let provider_items = pending.len();
@@ -940,7 +949,7 @@ impl TranslationService {
             if translated.len() != pending.len() {
                 return Err("번역 엔진이 요청한 메시지 수와 다른 결과를 반환했습니다.".to_string());
             }
-            for ((index, text, protected, source, hash), translated) in
+            for ((indices, text, protected, source, hash), translated) in
                 pending.into_iter().zip(translated)
             {
                 let restored = protected.restore(&translated);
@@ -960,18 +969,21 @@ impl TranslationService {
                         self.translator.cache_namespace(),
                     )?;
                 }
-                results[index] = Some(restored);
+                for index in indices {
+                    results[index] = Some(restored.clone());
+                }
             }
         }
 
         crate::diagnostics::info(
             "translation-batch",
             &format!(
-                "translator={}; items={}; chars={}; cache_hits={cache_hits}; passthrough={passthrough}; provider_items={}; elapsed_ms={}",
+                "translator={}; items={}; chars={}; cache_hits={cache_hits}; passthrough={passthrough}; provider_items={}; deduplicated={}; elapsed_ms={}",
                 self.translator.display_name(),
                 texts.len(),
                 texts.iter().map(|text| text.chars().count()).sum::<usize>(),
                 provider_items,
+                uncached_items.saturating_sub(provider_items),
                 started.elapsed().as_millis(),
             ),
         );
@@ -1249,7 +1261,7 @@ fn is_navigation_context_key(message_key: &str) -> bool {
 }
 
 fn is_message_context_key(message_key: &str) -> bool {
-    ["message:", "reply:", "embed:"]
+    ["message:", "reply:", "embed:", "web:"]
         .iter()
         .any(|prefix| message_key.starts_with(prefix))
 }
@@ -2836,6 +2848,63 @@ mod tests {
             .unwrap();
         assert!(first.contains("@everyone 👋"));
         assert_eq!(first, second);
+        assert_eq!(*calls.lock().unwrap(), 1);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn duplicate_uncached_items_share_one_provider_translation() {
+        for target in [Language::Arabic, Language::German, Language::Korean] {
+            let path = cache_path(&format!("duplicate-uncached-batch-{}", target.code()));
+            let calls = Arc::new(Mutex::new(0));
+            let cache = TranslationCache::open(path.clone(), 32).unwrap();
+            let mut service = TranslationService::new(
+                Box::new(CountingTranslator {
+                    calls: calls.clone(),
+                }),
+                cache,
+            );
+
+            let translated = service
+                .translate_many(
+                    &[
+                        "Hello from the same card".to_string(),
+                        "Hello from the same card".to_string(),
+                    ],
+                    target,
+                )
+                .unwrap();
+
+            assert_eq!(translated[0], translated[1]);
+            assert_eq!(*calls.lock().unwrap(), 1);
+            let _ = fs::remove_dir_all(path.parent().unwrap());
+        }
+    }
+
+    #[test]
+    fn best_effort_duplicate_items_share_one_isolated_translation() {
+        let path = cache_path("duplicate-best-effort-batch");
+        let calls = Arc::new(Mutex::new(0));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(CountingTranslator {
+                calls: calls.clone(),
+            }),
+            cache,
+        );
+        let texts = vec![
+            "Repeated dynamic card".to_string(),
+            "Repeated dynamic card".to_string(),
+        ];
+
+        let translated = service.translate_many_best_effort_with_hints(
+            &texts,
+            &[None, None],
+            Language::Japanese,
+            None,
+        );
+
+        assert_eq!(translated[0], translated[1]);
         assert_eq!(*calls.lock().unwrap(), 1);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }

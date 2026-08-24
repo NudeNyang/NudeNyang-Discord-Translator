@@ -9,6 +9,7 @@ NudeNyang Discord Translator is a Tauri 2 desktop application with a Rust core. 
 | Settings and migration | `src-tauri/src/config.rs` |
 | Tray, windows, and shortcuts | `src-tauri/src/main.rs` |
 | Discord process lifecycle | `src-tauri/src/discord.rs` |
+| Browser Native Messaging and loopback bridge | `src-tauri/src/browser_bridge.rs` |
 | CDP transport | `src-tauri/src/cdp.rs` |
 | DOM snapshots, updates, and restoration | `src-tauri/src/dom.rs`, `engine.rs` |
 | Outgoing translation | `src-tauri/src/outgoing.rs`, `engine.rs` |
@@ -24,6 +25,26 @@ NudeNyang Discord Translator is a Tauri 2 desktop application with a Rust core. 
 Engine work runs outside the UI thread. Incoming and outgoing translation can use different providers. When a provider changes, the engine advances its generation and ignores late results from the previous generation.
 
 Only one local GGUF model is active at a time. If GPU startup fails in automatic mode, the engine retries with a memory-conscious CPU configuration.
+
+Browser translation requests enter the same display translation worker as Discord DOM requests. The browser path therefore does not create a second local model runtime or a second provider session.
+
+## Browser extension connection
+
+The optional Manifest V3 extension supports Chrome and Naver Whale from one source tree. It extracts only eligible visible text nodes from supported sites and sends bounded batches through the browser's Native Messaging API.
+
+The installed Tauri executable also serves as the native host when the browser launches it with an extension origin. That short-lived host reads an ephemeral descriptor created by the running desktop app and forwards the request to an authenticated `127.0.0.1` listener. The listener binds to an operating-system-selected port and uses a new random 256-bit token on every app start. The descriptor stays in the user's local application-data directory and is removed on a normal shutdown.
+
+The extension never replaces a content container's `innerHTML` or `textContent`. It records each exact text-node value, groups sibling nodes under a paragraph context key for translation, and changes only the corresponding node value. Turning the site toggle off restores the recorded originals. Mutation and intersection observers handle virtualized feeds and single-page navigation without scanning hidden or unrelated page areas. Translation work is viewport-first: blocks outside a 500-pixel margin wait for intersection, nested mutation roots are coalesced, and disconnected or newly offscreen queue entries are discarded before they reach the Windows engine.
+
+Site adapters apply conservative allowlists:
+
+- GitHub prose in Markdown, issue, pull-request, comment, and release areas; code and diffs are excluded.
+- BOOTH product descriptions and notices; price, cart, order, account, and payment areas are excluded.
+- Google Search result titles, snippets, and information panels; query forms and account UI are excluded.
+- YouTube titles, descriptions, comments, and opened transcript segments; inputs, channel identities, and Studio are excluded.
+- X post and quote text; compose surfaces, direct messages, handles, and hashtag links are excluded.
+
+The native host manifest limits access to the extension's stable ID. Requests are limited to 32 nodes, 4,000 characters per node, 32,000 characters per batch, and the browser protocol's one-megabyte envelope.
 
 ## Discord connection
 
@@ -67,7 +88,7 @@ NudeNyang does not send these items to external translation providers:
 
 DeepL credentials are stored in Windows Credential Manager. Subscription providers use their official local CLI authentication. Diagnostic logs redact home paths and secret values and do not include message bodies or local-model prompts.
 
-Translation results are cached in memory and SQLite. Cache namespaces include the engine, target language, prompt/register version, and relevant renderer version so incompatible results are not reused.
+Translation results are cached in memory and SQLite. Cache namespaces include the engine, target language, prompt/register version, and relevant renderer version so incompatible results are not reused. Within one uncached batch, identical source text resolved to the same source language is translated once and fanned out to every matching result slot. This reduces cold-cache work without sharing results across incompatible target languages or engine namespaces.
 
 ## Image translation
 

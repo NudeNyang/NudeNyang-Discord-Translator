@@ -1,0 +1,24 @@
+:root { color-scheme: dark; font-family: Inter, Pretendard, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 330px; background: #111214; color: #f5f3ee; }
+main { padding: 20px; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.eyebrow { margin: 0 0 4px; color: #beff6b; font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+h1 { margin: 0; font-size: 21px; letter-spacing: -.04em; }
+.site { margin: 17px 0 10px; color: #aaa9a4; font-size: 13px; }
+.connection { display: flex; align-items: center; gap: 9px; padding: 12px; border: 1px solid #2d2f32; border-radius: 10px; background: #191b1e; font-size: 13px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #d2a951; box-shadow: 0 0 0 4px #d2a95118; }
+.connection.ready .dot { background: #87df61; box-shadow: 0 0 0 4px #87df6118; }
+.connection.error .dot { background: #ff7169; box-shadow: 0 0 0 4px #ff716918; }
+.detail { min-height: 34px; margin: 10px 2px 14px; color: #7f817f; font-size: 12px; line-height: 1.45; }
+button { width: 100%; border: 1px solid #35373a; border-radius: 9px; padding: 10px 12px; background: transparent; color: #d9d8d3; cursor: pointer; }
+button:hover { border-color: #686b70; background: #1b1d20; }
+button:disabled { border-color: #2a2c2f; color: #6e706f; cursor: not-allowed; opacity: .72; }
+button:disabled:hover { background: transparent; }
+.switch { position: relative; width: 44px; height: 25px; }
+.switch input { position: absolute; opacity: 0; }
+.switch span { position: absolute; inset: 0; border-radius: 99px; background: #35373b; transition: .18s; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: #eee; transition: .18s; }
+.switch input:checked + span { background: #87df61; }
+.switch input:checked + span::after { transform: translateX(19px); background: #101210; }
+.switch input:disabled + span { cursor: not-allowed; opacity: .5; }

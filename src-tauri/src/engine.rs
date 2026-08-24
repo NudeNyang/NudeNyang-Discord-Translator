@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
@@ -85,6 +85,38 @@ pub struct RuntimeStatus {
     pub notice: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserTranslationItem {
+    pub id: String,
+    pub block_id: String,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserTranslationRequest {
+    pub request_id: String,
+    pub page_id: String,
+    #[serde(default)]
+    pub target_language: Option<String>,
+    pub items: Vec<BrowserTranslationItem>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserTranslationResultItem {
+    pub id: String,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserTranslationResponse {
+    pub request_id: String,
+    pub items: Vec<BrowserTranslationResultItem>,
+}
+
 impl RuntimeStatus {
     fn new(config: &AppConfig) -> Self {
         Self {
@@ -129,6 +161,10 @@ enum Control {
     ReplaceCdp(CdpClient, mpsc::Sender<Result<(), String>>),
     PauseForVerification(String, mpsc::Sender<Result<(), String>>),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
+    TranslateBrowser(
+        BrowserTranslationRequest,
+        mpsc::Sender<Result<BrowserTranslationResponse, String>>,
+    ),
     AttachApp(AppHandle),
     UiReady,
     Stop,
@@ -214,8 +250,17 @@ struct DictionaryLocalizationBatch {
     queued_at: Instant,
 }
 
+struct BrowserTranslationBatch {
+    request: BrowserTranslationRequest,
+    target: Language,
+    allowed_sources: Option<HashSet<Language>>,
+    queued_at: Instant,
+    reply: mpsc::Sender<Result<BrowserTranslationResponse, String>>,
+}
+
 enum WorkerCommand {
     Translate(TranslationBatch),
+    TranslateBrowser(BrowserTranslationBatch),
     TranslateImage(ImageTranslationBatch),
     LocalizeDictionary(DictionaryLocalizationBatch),
     DiscardDisplayBefore {
@@ -254,7 +299,9 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
         | WorkerCommand::ClearCacheMemory
         | WorkerCommand::DiscardDisplayBefore { .. }
         | WorkerCommand::Stop => 0,
-        WorkerCommand::LocalizeDictionary(_) | WorkerCommand::Translate(_) => 1,
+        WorkerCommand::LocalizeDictionary(_)
+        | WorkerCommand::Translate(_)
+        | WorkerCommand::TranslateBrowser(_) => 1,
         WorkerCommand::TranslateImage(_) => 2,
     }
 }
@@ -538,6 +585,22 @@ impl RustEngine {
             .map_err(|_| "번역 기록 정리 결과를 기다리지 못했습니다.".to_string())?
     }
 
+    pub fn translate_browser(
+        &self,
+        request: BrowserTranslationRequest,
+    ) -> Result<BrowserTranslationResponse, String> {
+        validate_browser_translation_request(&request)?;
+        let (result_tx, result_rx) = mpsc::channel();
+        self.controls
+            .send(Control::TranslateBrowser(request, result_tx))
+            .map_err(|_| {
+                "Rust 번역 엔진이 종료되어 웹페이지 번역을 시작하지 못했습니다.".to_string()
+            })?;
+        result_rx
+            .recv_timeout(Duration::from_secs(180))
+            .map_err(|_| "웹페이지 번역 결과를 기다리는 시간이 초과됐습니다.".to_string())?
+    }
+
     pub fn status(&self) -> Result<RuntimeStatus, String> {
         let mut status = self
             .status
@@ -556,6 +619,46 @@ impl RustEngine {
             }
         }
     }
+}
+
+fn validate_browser_translation_request(request: &BrowserTranslationRequest) -> Result<(), String> {
+    const MAX_BROWSER_ITEMS: usize = 32;
+    const MAX_BROWSER_ITEM_CHARS: usize = 4_000;
+    const MAX_BROWSER_TOTAL_CHARS: usize = 32_000;
+
+    if request.request_id.is_empty() || request.request_id.len() > 160 {
+        return Err("웹페이지 번역 요청 식별자가 올바르지 않습니다.".to_string());
+    }
+    if request.page_id.is_empty() || request.page_id.len() > 240 {
+        return Err("웹페이지 번역 페이지 식별자가 올바르지 않습니다.".to_string());
+    }
+    if request.items.is_empty() || request.items.len() > MAX_BROWSER_ITEMS {
+        return Err(format!(
+            "웹페이지 번역은 한 번에 1~{MAX_BROWSER_ITEMS}개 항목을 요청해야 합니다."
+        ));
+    }
+    let mut total_chars = 0_usize;
+    let mut ids = HashSet::new();
+    for item in &request.items {
+        let chars = item.text.chars().count();
+        if item.id.is_empty()
+            || item.id.len() > 160
+            || item.block_id.is_empty()
+            || item.block_id.len() > 200
+            || chars == 0
+            || chars > MAX_BROWSER_ITEM_CHARS
+        {
+            return Err("웹페이지 번역 항목의 형식이나 길이가 올바르지 않습니다.".to_string());
+        }
+        if !ids.insert(item.id.as_str()) {
+            return Err("웹페이지 번역 항목 식별자가 중복됐습니다.".to_string());
+        }
+        total_chars += chars;
+    }
+    if total_chars > MAX_BROWSER_TOTAL_CHARS {
+        return Err("웹페이지 번역 요청의 전체 텍스트가 허용 길이를 초과했습니다.".to_string());
+    }
+    Ok(())
 }
 
 fn run_controller(
@@ -603,6 +706,7 @@ fn run_controller(
     let mut stopped = false;
     let mut pending_control = None;
     let mut last_history_cleanup_at = None;
+    let mut browser_active_until: Option<Instant> = None;
 
     while !stopped {
         let started = Instant::now();
@@ -957,6 +1061,63 @@ fn run_controller(
                     }
                     let _ = result_tx.send(result);
                 }
+                Control::TranslateBrowser(request, result_tx) => {
+                    browser_active_until = Some(Instant::now() + Duration::from_secs(5 * 60));
+                    let target_code = request
+                        .target_language
+                        .as_deref()
+                        .unwrap_or(&config.target_language);
+                    let target = match Language::try_from(target_code) {
+                        Ok(target) if target != Language::Unknown => target,
+                        _ => {
+                            let _ = result_tx.send(Err(
+                                "웹페이지 번역 대상 언어가 지원되지 않습니다.".to_string(),
+                            ));
+                            continue;
+                        }
+                    };
+                    let display_ready = status
+                        .lock()
+                        .is_ok_and(|runtime| runtime.active_translator == config.translator);
+                    if display_ready {
+                        let command = WorkerCommand::TranslateBrowser(BrowserTranslationBatch {
+                            request,
+                            target,
+                            allowed_sources: incoming_allowed_sources(&config),
+                            queued_at: Instant::now(),
+                            reply: result_tx,
+                        });
+                        if let Err(error) = worker_tx.send(command) {
+                            if let WorkerCommand::TranslateBrowser(batch) = error.0 {
+                                let _ = batch
+                                    .reply
+                                    .send(Err("웹페이지 번역 작업자가 종료됐습니다.".to_string()));
+                            }
+                        }
+                    } else {
+                        let needs_preparation = status.lock().is_ok_and(|runtime| {
+                            display_preparation_is_required(&runtime, &config)
+                        });
+                        if needs_preparation {
+                            request_translator_preparation(
+                                &config,
+                                TranslatorPreparationPlan {
+                                    display: true,
+                                    outgoing: false,
+                                },
+                                &preparation_tx,
+                                &progress_result_tx,
+                                &status,
+                                &mut preparation_generation,
+                                &mut preparation_cancellation,
+                            );
+                        }
+                        let _ = result_tx.send(Err(
+                            "웹페이지 번역 모델을 준비하고 있습니다. 잠시 후 다시 시도하십시오."
+                                .to_string(),
+                        ));
+                    }
+                }
                 Control::AttachApp(app) => app_handle = Some(app),
                 Control::UiReady => {
                     if !ui_ready {
@@ -1062,6 +1223,7 @@ fn run_controller(
 
         let target =
             Language::try_from(config.target_language.as_str()).unwrap_or(Language::Korean);
+        let browser_active = browser_active_until.is_some_and(|until| Instant::now() < until);
         drain_worker_results(
             &worker_result_rx,
             &worker_tx,
@@ -1079,6 +1241,7 @@ fn run_controller(
             &status,
             dictionary_store.as_ref(),
             app_handle.as_ref(),
+            browser_active,
         );
 
         let had_client = client.is_some();
@@ -2116,6 +2279,7 @@ fn drain_worker_results(
     status: &Arc<Mutex<RuntimeStatus>>,
     dictionary_store: Option<&DictionaryStore>,
     app: Option<&AppHandle>,
+    browser_active: bool,
 ) {
     let mut changes = Vec::new();
     while let Ok(result) = results.try_recv() {
@@ -2317,7 +2481,7 @@ fn drain_worker_results(
                 update_status(status, |runtime| {
                     runtime.active_translator = name;
                 });
-                finish_activation_status(status, config, worker, outgoing_worker);
+                finish_activation_status(status, config, worker, outgoing_worker, browser_active);
             }
             WorkerResult::OutgoingActivated {
                 generation: activated_generation,
@@ -2331,7 +2495,7 @@ fn drain_worker_results(
                 update_status(status, |runtime| {
                     runtime.active_outgoing_translator = name;
                 });
-                finish_activation_status(status, config, worker, outgoing_worker);
+                finish_activation_status(status, config, worker, outgoing_worker, browser_active);
             }
             WorkerResult::ActivationFailed {
                 generation: failed_generation,
@@ -2402,6 +2566,7 @@ fn finish_activation_status(
     config: &AppConfig,
     worker: &mpsc::Sender<WorkerCommand>,
     outgoing_worker: &mpsc::Sender<OutgoingWorkerCommand>,
+    browser_active: bool,
 ) {
     let mut release = false;
     update_status(status, |runtime| {
@@ -2423,7 +2588,8 @@ fn finish_activation_status(
             || config.enabled
             || config.dictionary_enabled
             || config.outgoing_translation_enabled
-            || config.keep_local_model_warm;
+            || config.keep_local_model_warm
+            || browser_active;
         runtime.notice = if runtime.local_model_device == "vram-protected" {
             "다른 프로그램을 위해 VRAM을 확보하고 CPU/RAM으로 전환했습니다.".to_string()
         } else if runtime.local_model_device == "cpu-fallback" {
@@ -2442,7 +2608,8 @@ fn finish_activation_status(
             && !config.enabled
             && !config.dictionary_enabled
             && !config.outgoing_translation_enabled
-            && !config.keep_local_model_warm;
+            && !config.keep_local_model_warm
+            && !browser_active;
     });
     if release {
         let _ = worker.send(WorkerCommand::Release);
@@ -2512,6 +2679,61 @@ fn run_translation_worker(
                     parts: batch.parts,
                     values,
                 });
+            }
+            WorkerCommand::TranslateBrowser(batch) => {
+                let BrowserTranslationBatch {
+                    request,
+                    target,
+                    allowed_sources,
+                    queued_at,
+                    reply,
+                } = batch;
+                let BrowserTranslationRequest {
+                    request_id,
+                    page_id,
+                    target_language: _,
+                    items,
+                } = request;
+                log_worker_queue(
+                    "browser",
+                    queued_at,
+                    items.len(),
+                    items.iter().map(|item| item.text.chars().count()).sum(),
+                );
+                let texts = items
+                    .iter()
+                    .map(|item| item.text.clone())
+                    .collect::<Vec<_>>();
+                let message_keys = items
+                    .iter()
+                    .map(|item| Some(format!("web:{page_id}:{}", item.block_id)))
+                    .collect::<Vec<_>>();
+                let translated = service
+                    .translate_many_for_incoming_contextual_filtered(
+                        &texts,
+                        &message_keys,
+                        &page_id,
+                        target,
+                        allowed_sources.as_ref(),
+                    )
+                    .and_then(|values| {
+                        if values.len() != items.len() {
+                            return Err("번역 서비스가 요청한 문장 수와 다른 결과를 반환했습니다."
+                                .to_string());
+                        }
+                        Ok(BrowserTranslationResponse {
+                            request_id,
+                            items: items
+                                .into_iter()
+                                .zip(values)
+                                .map(|(item, text)| BrowserTranslationResultItem {
+                                    id: item.id,
+                                    text,
+                                })
+                                .collect(),
+                        })
+                    });
+                let _ = reply.send(translated);
             }
             WorkerCommand::TranslateImage(batch) => {
                 log_worker_queue("image", batch.queued_at, 1, batch.image_bytes.len());
@@ -3298,6 +3520,7 @@ mod tests {
         preparation_plan_for_active_lanes, retain_enabled_dom_parts,
         run_outgoing_translation_worker, stage_dictionary_lookup_result,
         translator_activation_notice, translator_label, translator_preparation_plan,
+        validate_browser_translation_request, BrowserTranslationItem, BrowserTranslationRequest,
         DictionaryLocalizationBatch, DisplayViewObservation, DisplayViewState,
         OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
         TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
@@ -3320,6 +3543,76 @@ mod tests {
     use std::time::{Duration, Instant};
 
     struct DictionaryTestTranslator;
+
+    fn browser_request(items: Vec<(&str, &str, &str)>) -> BrowserTranslationRequest {
+        BrowserTranslationRequest {
+            request_id: "browser-test-request".to_string(),
+            page_id: "github:https://github.com/example/project".to_string(),
+            target_language: Some("ko".to_string()),
+            items: items
+                .into_iter()
+                .map(|(id, block_id, text)| BrowserTranslationItem {
+                    id: id.to_string(),
+                    block_id: block_id.to_string(),
+                    text: text.to_string(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn browser_translation_request_rejects_duplicate_ids_and_oversized_batches() {
+        let duplicate = browser_request(vec![
+            ("item-1", "paragraph-1", "Hello"),
+            ("item-1", "paragraph-1", "world"),
+        ]);
+        assert!(validate_browser_translation_request(&duplicate)
+            .unwrap_err()
+            .contains("중복"));
+
+        let oversized = browser_request(
+            (0..33)
+                .map(|index| {
+                    let id = Box::leak(format!("item-{index}").into_boxed_str());
+                    (id as &str, "paragraph", "text")
+                })
+                .collect(),
+        );
+        assert!(validate_browser_translation_request(&oversized)
+            .unwrap_err()
+            .contains("1~32개"));
+    }
+
+    #[test]
+    fn browser_translation_uses_the_existing_display_worker() {
+        let engine = RustEngine::start(AppConfig {
+            enabled: false,
+            translator: "mock".to_string(),
+            target_language: "ko".to_string(),
+            keep_local_model_warm: false,
+            ..Default::default()
+        });
+        let request = browser_request(vec![
+            ("item-1", "paragraph-1", "Hello "),
+            ("item-2", "paragraph-1", "world"),
+        ]);
+        let first = engine.translate_browser(request.clone());
+        assert!(first.unwrap_err().contains("준비"));
+        wait_for_translator(&engine, "mock");
+
+        let response = engine.translate_browser(request).unwrap();
+        engine.stop();
+        assert_eq!(response.request_id, "browser-test-request");
+        assert_eq!(response.items.len(), 2);
+        assert_eq!(response.items[0].id, "item-1");
+        assert_eq!(response.items[1].id, "item-2");
+        assert!(response.items[0].text.starts_with("[ko] "));
+        assert_eq!(response.items[1].text, "world");
+        assert!(response
+            .items
+            .iter()
+            .all(|item| !item.text.contains("NTSPLIT")));
+    }
 
     impl Translator for DictionaryTestTranslator {
         fn display_name(&self) -> &str {
