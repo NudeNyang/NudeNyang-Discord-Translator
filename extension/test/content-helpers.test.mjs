@@ -5,10 +5,22 @@ import "../content-helpers.js";
 const {
   createScanBatch,
   isElementNearViewport,
+  isQuickToggleShortcut,
   runtimeMessageFailure,
   scanRootForAddedNode,
   takeTranslationBatch,
 } = globalThis.NudeNyangContentHelpers;
+
+test("보조키 없는 F4만 빠른 번역 전환으로 판정한다", () => {
+  assert.equal(isQuickToggleShortcut({ key: "F4" }), true);
+  assert.equal(isQuickToggleShortcut({ key: "F4", ctrlKey: true }), false);
+  assert.equal(isQuickToggleShortcut({ key: "F4", altKey: true }), false);
+  assert.equal(isQuickToggleShortcut({ key: "F4", shiftKey: true }), false);
+  assert.equal(isQuickToggleShortcut({ key: "F4", metaKey: true }), false);
+  assert.equal(isQuickToggleShortcut({ key: "F4", repeat: true }), false);
+  assert.equal(isQuickToggleShortcut({ key: "F4", isComposing: true }), false);
+  assert.equal(isQuickToggleShortcut({ key: "F5" }), false);
+});
 
 test("React가 교체한 텍스트 노드는 현재 문단을 다시 스캔한다", () => {
   const block = { kind: "block" };

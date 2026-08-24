@@ -5,11 +5,14 @@ import test from "node:test";
 const popupJs = fs.readFileSync(new URL("../popup.js", import.meta.url), "utf8");
 const popupHtml = fs.readFileSync(new URL("../popup.html", import.meta.url), "utf8");
 const popupCss = fs.readFileSync(new URL("../popup.css", import.meta.url), "utf8");
+const backgroundJs = fs.readFileSync(new URL("../background.js", import.meta.url), "utf8");
+const contentJs = fs.readFileSync(new URL("../content.js", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 
 test("팝업의 사용자 문구는 공식체를 사용한다", () => {
   const productCopy = `${popupHtml}\n${popupJs}`;
   assert.doesNotMatch(productCopy, /아니야|해줘|복원했어|있어\./);
+  assert.doesNotMatch(productCopy, /[—–]/);
   assert.match(productCopy, /지원되지 않습니다/);
   assert.match(productCopy, /실행해 주십시오/);
 });
@@ -20,6 +23,34 @@ test("팝업은 마지막으로 사용한 브라우저 창의 활성 탭을 조�
 
 test("탭 응답 실패를 미지원 페이지와 구분해 안내한다", () => {
   assert.match(popupJs, /페이지와 연결할 수 없습니다/);
+});
+
+test("F4는 지원 페이지에서 번역과 원문을 직접 전환한다", () => {
+  assert.match(contentJs, /addEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
+  assert.match(contentJs, /isQuickToggleShortcut\(event\)/);
+  assert.match(contentJs, /event\.stopImmediatePropagation\(\)/);
+  assert.match(contentJs, /setEnabled\(!enabled\)/);
+  assert.match(contentJs, /removeEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
+});
+
+test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호출한다", () => {
+  assert.deepEqual(manifest.commands, {
+    "toggle-page-translation": {
+      suggested_key: { windows: "Ctrl+Shift+L" },
+      description: "현재 페이지의 번역과 원문을 전환합니다.",
+    },
+  });
+  assert.match(backgroundJs, /commands\.onCommand\.addListener/);
+  assert.match(backgroundJs, /toggle-page-translation/);
+  assert.match(backgroundJs, /nudenyang-toggle-enabled/);
+  assert.match(contentJs, /nudenyang-toggle-enabled/);
+});
+
+test("팝업은 빠른 단축키와 실제 등록된 보조 단축키를 안내한다", () => {
+  assert.match(popupHtml, /<kbd class="primary-key">F4<\/kbd>/);
+  assert.match(popupHtml, /id="command-shortcut"/);
+  assert.match(popupJs, /commands\.getAll/);
+  assert.match(popupCss, /\.shortcut-row/);
 });
 
 test("팝업은 메인 앱의 파란색 다크 테마 토큰을 사용한다", () => {

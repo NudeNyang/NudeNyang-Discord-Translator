@@ -4,6 +4,7 @@ const site = document.querySelector("#site");
 const connection = document.querySelector("#connection");
 const connectionText = document.querySelector("#connection-text");
 const detail = document.querySelector("#detail");
+const commandShortcut = document.querySelector("#command-shortcut");
 const restore = document.querySelector("#restore");
 
 function queryTabs(query) {
@@ -26,6 +27,25 @@ function tabMessage(tabId, message) {
 
 function nativeRequest(request) {
   return new Promise((resolve) => api.runtime.sendMessage({ type: "nudenyang-native-request", request }, resolve));
+}
+
+function extensionCommands() {
+  return new Promise((resolve) => {
+    if (!api.commands?.getAll) {
+      resolve([]);
+      return;
+    }
+    api.commands.getAll((commands) => {
+      void api.runtime.lastError;
+      resolve(commands ?? []);
+    });
+  });
+}
+
+function renderCommandShortcut(commands) {
+  const shortcut = commands.find((command) => command.name === "toggle-page-translation")?.shortcut ?? "";
+  commandShortcut.textContent = shortcut ? shortcut.replaceAll("+", " + ") : "미지정";
+  commandShortcut.classList.toggle("unassigned", !shortcut);
 }
 
 function wait(milliseconds) {
@@ -69,10 +89,12 @@ function renderConnection(response) {
 }
 
 async function initialize() {
+  const commandsPromise = extensionCommands();
   const tab = await activeTab();
   let status = tab?.id ? await pageStatus(tab.id) : null;
   renderPageStatus(status);
   renderConnection(await nativeRequest({ type: "status", requestId: `popup-${Date.now()}` }));
+  renderCommandShortcut(await commandsPromise);
 
   enabled.addEventListener("change", async () => {
     if (!tab?.id) return;

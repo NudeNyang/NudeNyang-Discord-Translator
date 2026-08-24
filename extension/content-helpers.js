@@ -67,6 +67,16 @@
     return batch;
   }
 
+  function isQuickToggleShortcut(event) {
+    return event?.key === "F4"
+      && !event.repeat
+      && !event.isComposing
+      && !event.ctrlKey
+      && !event.altKey
+      && !event.shiftKey
+      && !event.metaKey;
+  }
+
   function runtimeMessageFailure(requestId, error) {
     const detail = error?.message ?? String(error ?? "unknown");
     const invalidated = /extension context invalidated/i.test(detail);
@@ -85,6 +95,7 @@
   const api = Object.freeze({
     createScanBatch,
     isElementNearViewport,
+    isQuickToggleShortcut,
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,

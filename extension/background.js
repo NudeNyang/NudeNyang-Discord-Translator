@@ -34,3 +34,29 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   nativeRequest(message.request).then(sendResponse);
   return true;
 });
+
+function sendPageToggle(tabId) {
+  if (typeof tabId !== "number") {
+    return;
+  }
+  try {
+    api.tabs.sendMessage(tabId, { type: "nudenyang-toggle-enabled" }, () => {
+      void api.runtime.lastError;
+    });
+  } catch {
+    // 브라우저 내부 페이지처럼 콘텐츠 스크립트가 없는 탭에서는 조용히 무시한다.
+  }
+}
+
+api.commands.onCommand.addListener((command, tab) => {
+  if (command !== "toggle-page-translation") {
+    return;
+  }
+  if (typeof tab?.id === "number") {
+    sendPageToggle(tab.id);
+    return;
+  }
+  api.tabs.query({ active: true, lastFocusedWindow: true }, ([activeTab]) => {
+    sendPageToggle(activeTab?.id);
+  });
+});

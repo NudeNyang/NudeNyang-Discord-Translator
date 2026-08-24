@@ -116,6 +116,61 @@ h1 {
   line-height: 1.45;
 }
 
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 2px 14px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.shortcut-label {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.shortcut-keys {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.shortcut-or {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+kbd {
+  min-width: 26px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-control);
+  color: var(--text);
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+kbd.primary-key {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--border));
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+kbd.unassigned {
+  color: var(--muted);
+  background: var(--control);
+}
+
 button {
   width: 100%;
   padding: 10px 12px;

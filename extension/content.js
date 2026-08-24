@@ -4,6 +4,7 @@
   const {
     createScanBatch,
     isElementNearViewport,
+    isQuickToggleShortcut,
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,
@@ -245,6 +246,7 @@
     pendingScanBatch.clear();
     clearTimeout(rescanTimer);
     clearInterval(navigationTimer);
+    window.removeEventListener("keydown", handleQuickToggle, true);
     rescanTimer = undefined;
     navigationTimer = undefined;
     restoreOriginals();
@@ -320,6 +322,19 @@
     return status();
   }
 
+  function toggleEnabled() {
+    return setEnabled(!enabled);
+  }
+
+  function handleQuickToggle(event) {
+    if (!adapter || !isQuickToggleShortcut(event)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void toggleEnabled();
+  }
+
   function status() {
     return {
       enabled,
@@ -349,12 +364,18 @@
       setEnabled(message.enabled).then(sendResponse);
       return true;
     }
+    if (message?.type === "nudenyang-toggle-enabled") {
+      toggleEnabled().then(sendResponse);
+      return true;
+    }
     if (message?.type === "nudenyang-restore") {
       setEnabled(false).then(sendResponse);
       return true;
     }
     return false;
   });
+
+  window.addEventListener("keydown", handleQuickToggle, true);
 
   async function start() {
     ({ enabled } = await storageGet({ enabled: true }));
