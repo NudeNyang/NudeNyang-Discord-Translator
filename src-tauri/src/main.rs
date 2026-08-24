@@ -321,8 +321,17 @@ fn terminate_process_tree(process_id: u32) {
 #[cfg(windows)]
 #[link(name = "user32")]
 extern "system" {
+    fn DisableProcessWindowsGhosting();
     fn GetAsyncKeyState(virtual_key: i32) -> i16;
 }
+
+#[cfg(windows)]
+fn disable_process_window_ghosting() {
+    unsafe { DisableProcessWindowsGhosting() };
+}
+
+#[cfg(not(windows))]
+fn disable_process_window_ghosting() {}
 
 fn requested_window_theme(
     window: &tauri::WebviewWindow,
@@ -1709,6 +1718,8 @@ fn main() {
         }
         return;
     }
+    // 응답이 지연돼도 Windows가 프레임리스 창을 제목 표시줄이 있는 대체 창으로 바꾸지 않게 한다.
+    disable_process_window_ghosting();
     let data_directory_migration = app_paths::migrate_legacy_data_directory();
     let _ = diagnostics::initialize(env!("CARGO_PKG_VERSION"));
     match data_directory_migration {

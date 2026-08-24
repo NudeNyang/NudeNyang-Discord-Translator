@@ -178,6 +178,20 @@ test("tray panel keeps a crisp border without a blurred outer shadow", () => {
   assert.match(trayStyles, /\.tray-panel \{[^}]*box-shadow: none;/s);
 });
 
+test("Windows does not replace the frameless tray with a decorated ghost window", () => {
+  const trayWindow = tauriConfig.app.windows.find(window => window.label === "tray-menu");
+  const disableCall = rustShell.indexOf("disable_process_window_ghosting();");
+  const builder = rustShell.indexOf("let app = tauri::Builder::default()");
+
+  assert.equal(trayWindow.decorations, false);
+  assert.match(
+    rustShell,
+    /fn disable_process_window_ghosting\(\) \{\s*unsafe \{ DisableProcessWindowsGhosting\(\) \};\s*\}/s,
+  );
+  assert.ok(disableCall >= 0);
+  assert.ok(disableCall < builder);
+});
+
 test("a deferred update remains available from the tray menu", () => {
   assert.match(trayMarkup, /id="install-update"[^>]*hidden/);
   assert.match(trayMarkup, /id="tray-update-version"/);
