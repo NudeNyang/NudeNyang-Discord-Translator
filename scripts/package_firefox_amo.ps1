@@ -65,7 +65,38 @@ $SourceArchive = Join-Path $ResolvedOutput "$BaseName-source.zip"
 $PackagePath = Join-Path $ResolvedOutput "$BaseName.xpi"
 $ChecksumPath = Join-Path $ResolvedOutput "$BaseName-SHA256SUMS.txt"
 Remove-Item -LiteralPath $SourceArchive, $ChecksumPath -Force -ErrorAction SilentlyContinue
-Compress-Archive -Path (Join-Path $ResolvedStaging '*') -DestinationPath $SourceArchive -CompressionLevel Optimal
+
+# The built-in PowerShell archiver stores Windows separators in ZIP entry names.
+# AMO rejects those entries, so write portable ZIP entry names explicitly.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$ArchiveStream = [System.IO.File]::Open($SourceArchive, [System.IO.FileMode]::CreateNew)
+try {
+    $Archive = [System.IO.Compression.ZipArchive]::new(
+        $ArchiveStream,
+        [System.IO.Compression.ZipArchiveMode]::Create,
+        $false
+    )
+    try {
+        Get-ChildItem -LiteralPath $ResolvedStaging -Recurse -File |
+            Sort-Object FullName |
+            ForEach-Object {
+                $RelativePath = $_.FullName.Substring($ResolvedStaging.Length).TrimStart([char[]]'\/')
+                $EntryName = $RelativePath.Replace('\', '/')
+                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                    $Archive,
+                    $_.FullName,
+                    $EntryName,
+                    [System.IO.Compression.CompressionLevel]::Optimal
+                ) | Out-Null
+            }
+    }
+    finally {
+        $Archive.Dispose()
+    }
+}
+finally {
+    $ArchiveStream.Dispose()
+}
 
 $ChecksumLines = @($PackagePath, $SourceArchive) | ForEach-Object {
     $Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash.ToLowerInvariant()

@@ -57,6 +57,8 @@ test("AMO 비공개 서명 패키지는 생성 코드 원본과 검토자 안내
   assert.match(amoScript, /generate-extension-locales\.mjs/);
   assert.match(amoScript, /ui-locales\.mjs/);
   assert.match(amoScript, /FIREFOX_AMO_REVIEW\.md/);
+  assert.doesNotMatch(amoScript, /Compress-Archive/);
+  assert.match(amoScript, /\.Replace\('\\', '\/'\)/);
   assert.match(reviewerNotes, /self-distributed/i);
   assert.match(reviewerNotes, /web-translator@nudenyang\.github\.io/);
   assert.match(reviewerNotes, /nativeMessaging/);
