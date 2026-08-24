@@ -308,6 +308,7 @@ const elements = {
   outgoingModelGuidanceDetail: document.querySelector("#outgoing-model-guidance-detail"),
   outgoingModelGuidanceAction: document.querySelector("#outgoing-model-guidance-action"),
   vramProtectionNote: document.querySelector("#vram-protection-note"),
+  providerConnections: document.querySelector("#provider-connections"),
   providerRows: [...document.querySelectorAll(".provider-row")],
 };
 
@@ -1469,6 +1470,23 @@ function renderBrowserClients() {
     row.append(identity, status);
     elements.webBrowserClients.append(row);
   }
+}
+
+function observeProviderConnections() {
+  if (!elements.providerConnections) return;
+  if (typeof IntersectionObserver !== "function") {
+    loadProviderConnections();
+    return;
+  }
+  const observer = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting)) return;
+    observer.disconnect();
+    loadProviderConnections();
+  }, {
+    root: elements.settingsScroll,
+    rootMargin: "160px 0px",
+  });
+  observer.observe(elements.providerConnections);
 }
 
 async function loadBrowserClients() {
@@ -3537,7 +3555,7 @@ initializeSettingsUi().catch(error => {
   elements.engineState.dataset.state = "error";
   setLocalizedText(elements.engineStateLabel, "엔진 연결 실패");
 });
-loadProviderConnections();
+observeProviderConnections();
 loadStorageStatus().catch(error => showError("저장 공간 정보를 확인하지 못했습니다", String(error)));
 loadSystemMemoryStatus().catch(error => {
   writeDiagnostic("warn", `system-memory-status: ${String(error)}`);

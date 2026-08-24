@@ -153,6 +153,13 @@ test("normal child processes stay in the background without console flashes", ()
   assert.doesNotMatch(hymt, /\.show_window\(/);
 });
 
+test("provider CLI probes wait until the connection section enters the viewport", () => {
+  assert.match(script, /function observeProviderConnections\(\)/);
+  assert.match(script, /new IntersectionObserver/);
+  assert.match(script, /observer\.observe\(elements\.providerConnections\)/);
+  assert.doesNotMatch(script, /\nloadProviderConnections\(\);\s*\nloadStorageStatus/);
+});
+
 test("the private Discord pipe inherits only its two anonymous pipe handles", () => {
   assert.match(discord, /--remote-debugging-pipe/);
   assert.match(discord, /remote-debugging-io-pipes/);

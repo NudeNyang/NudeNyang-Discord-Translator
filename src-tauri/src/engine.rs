@@ -469,9 +469,7 @@ fn preparation_plan_for_active_lanes(
             && (config.enabled
                 || config.dictionary_enabled
                 || !is_local_model_name(&config.translator)),
-        outgoing: plan.outgoing
-            && (config.outgoing_translation_enabled
-                || !is_local_model_name(&config.outgoing_translator)),
+        outgoing: plan.outgoing && config.outgoing_translation_enabled,
     }
 }
 
@@ -4329,7 +4327,7 @@ mod tests {
     }
 
     #[test]
-    fn inactive_local_lanes_are_deferred_until_the_feature_uses_them() {
+    fn inactive_translation_lanes_are_deferred_until_the_feature_uses_them() {
         let display_inactive = AppConfig {
             enabled: false,
             dictionary_enabled: false,
@@ -4372,6 +4370,24 @@ mod tests {
         };
         assert_eq!(
             preparation_plan_for_active_lanes(&outgoing_inactive, TranslatorPreparationPlan::all()),
+            TranslatorPreparationPlan {
+                display: true,
+                outgoing: false,
+            }
+        );
+
+        let outgoing_external_inactive = AppConfig {
+            enabled: true,
+            outgoing_translation_enabled: false,
+            translator: "hymt_1_8b".to_string(),
+            outgoing_translator: "chatgpt".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            preparation_plan_for_active_lanes(
+                &outgoing_external_inactive,
+                TranslatorPreparationPlan::all(),
+            ),
             TranslatorPreparationPlan {
                 display: true,
                 outgoing: false,
