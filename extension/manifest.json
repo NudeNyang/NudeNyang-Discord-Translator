@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NudeNyang Web Translator",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "NudeNyang Windows 앱의 번역 엔진으로 웹페이지 문단을 원래 레이아웃 그대로 번역합니다.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA34X/w0LL7jIbaoW183UEUIqjSatg/bScrlLnbcrQaVYDk21HKYguqekQ6OIoHNo1TuR051ga7sXiCBAa+yy8M/Q70pVhaQ0zA9PkoSYZ9kLIHJQtV+oDsYtAmjNx5ZNsTvuDFJUMXc1mUkpy2vF2sC5iXVW9Y5iqGAaOgS7y0ebnoCbEpRJSfRJZaAvSEpvr859cudAEAet20lM0CZVq1XeBYjnUQ6atFJ3ZaD3dhn7cFO/895CzOVv746Ajw8Xfr2idUIlM+aAZsx3G2rkEkikG0uVNgIDIdmUJuR19iy4E8qix+k5C4xwtV09FpCJaBapxPSIPfsSybE9w4y3qEQIDAQAB",
   "permissions": ["nativeMessaging", "storage", "activeTab"],
@@ -41,15 +41,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://github.com/*",
-        "https://booth.pm/*",
-        "https://*.booth.pm/*",
-        "https://x.com/*",
-        "https://twitter.com/*",
-        "https://www.google.com/*",
-        "https://www.google.co.kr/*",
-        "https://www.google.co.jp/*",
-        "https://www.youtube.com/*"
+        "http://*/*",
+        "https://*/*"
       ],
       "js": ["site-adapters.js", "content-helpers.js", "content.js"],
       "run_at": "document_idle"

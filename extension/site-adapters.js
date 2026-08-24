@@ -1,10 +1,32 @@
 (function exposeSiteAdapters(root) {
   const COMMON_EXCLUDES = [
     "script", "style", "noscript", "svg", "canvas", "iframe",
-    "input", "textarea", "select", "option", "button",
-    "pre", "code", "kbd", "samp", "[contenteditable='true']",
-    "[aria-hidden='true']", "[data-nudenyang-ignore]",
+    "input", "textarea", "select", "option", "button", "form", "label",
+    "pre", "code", "kbd", "samp", "[contenteditable]",
+    "nav", "header", "footer", "aside",
+    "[role='navigation']", "[role='search']", "[role='textbox']",
+    "[role='button']", "[role='menu']", "[role='menubar']", "[role='toolbar']",
+    "[role='dialog']", "[role='alertdialog']", "[role='alert']", "[role='status']",
+    "[aria-live]", "[aria-modal='true']", "[aria-hidden='true']",
+    "[translate='no']", ".notranslate", "[data-nudenyang-ignore]",
+    "[class~='price']", "[class^='price-']", "[class*=' price-']",
+    "[data-price]", "[itemprop='price']",
+    "[class*='cookie']", "[id*='cookie']", "[class*='consent']", "[id*='consent']",
   ];
+
+  const UNIVERSAL_BLOCKED_PATH_SEGMENTS = new Set([
+    "account", "accounts", "admin", "billing", "cart", "checkout", "compose",
+    "dashboard", "dm", "dms", "inbox", "login", "log-in", "logout", "log-out",
+    "mail", "message", "messages", "order", "orders", "payment", "payments",
+    "register", "settings", "signin", "sign-in", "signup", "sign-up", "wallet",
+  ]);
+
+  const UNIVERSAL_BLOCKED_HOSTS = new Set([
+    "discord.com", "ptb.discord.com", "canary.discord.com",
+    "mail.google.com", "messages.google.com", "app.slack.com",
+    "teams.microsoft.com", "web.whatsapp.com", "web.telegram.org",
+    "messenger.com", "www.messenger.com", "outlook.live.com", "outlook.office.com",
+  ]);
 
   const ADAPTERS = [
     {
@@ -80,20 +102,53 @@
     },
   ];
 
+  const UNIVERSAL_ADAPTER = Object.freeze({
+    id: "web",
+    manualOnly: true,
+    blocks: [
+      "body h1", "body h2", "body h3", "body h4", "body h5", "body h6",
+      "body p", "body li", "body blockquote", "body figcaption", "body dt", "body dd",
+    ],
+    excludes: [],
+  });
+
+  function isSpecificHost(adapter, host) {
+    return adapter.hosts.includes(host) || (adapter.id === "booth" && host.endsWith(".booth.pm"));
+  }
+
+  function pathSegments(locationLike) {
+    const pathAndHash = `${locationLike?.pathname ?? "/"}/${locationLike?.hash ?? ""}`;
+    return pathAndHash.split(/[\/#?&=]+/u).map((segment) => {
+      try {
+        return decodeURIComponent(segment).toLowerCase();
+      } catch {
+        return segment.toLowerCase();
+      }
+    }).filter(Boolean);
+  }
+
+  function isUniversalLocationAllowed(locationLike, host) {
+    const protocol = String(locationLike?.protocol ?? "").toLowerCase();
+    return (protocol === "http:" || protocol === "https:")
+      && !UNIVERSAL_BLOCKED_HOSTS.has(host)
+      && !pathSegments(locationLike).some((segment) => UNIVERSAL_BLOCKED_PATH_SEGMENTS.has(segment));
+  }
+
   function adapterForLocation(locationLike) {
     const host = String(locationLike?.hostname ?? "").toLowerCase();
     const path = String(locationLike?.pathname ?? "/");
-    return ADAPTERS.find((adapter) =>
-      (adapter.hosts.includes(host) || (adapter.id === "booth" && host.endsWith(".booth.pm")))
-      && !(adapter.blockedPaths ?? []).some((prefix) => path.startsWith(prefix))
-    ) ?? null;
+    const specific = ADAPTERS.find((adapter) => isSpecificHost(adapter, host));
+    if (specific) {
+      return (specific.blockedPaths ?? []).some((prefix) => path.startsWith(prefix)) ? null : specific;
+    }
+    return isUniversalLocationAllowed(locationLike, host) ? UNIVERSAL_ADAPTER : null;
   }
 
   function exclusionSelector(adapter) {
     return [...COMMON_EXCLUDES, ...(adapter?.excludes ?? [])].join(",");
   }
 
-  const api = Object.freeze({ ADAPTERS, adapterForLocation, exclusionSelector });
+  const api = Object.freeze({ ADAPTERS, UNIVERSAL_ADAPTER, adapterForLocation, exclusionSelector });
   root.NudeNyangSiteAdapters = api;
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

@@ -33,6 +33,10 @@ test("F4는 지원 페이지에서 번역과 원문을 직접 전환한다", () 
   assert.match(contentJs, /removeEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
 });
 
+test("차단 페이지에서는 보조 단축키도 번역 설정을 바꾸지 않는다", () => {
+  assert.match(contentJs, /async function setEnabled\(value\) \{\s*if \(!adapter\) \{\s*return status\(\);/);
+});
+
 test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호출한다", () => {
   assert.deepEqual(manifest.commands, {
     "toggle-page-translation": {
@@ -51,6 +55,10 @@ test("팝업은 빠른 단축키와 실제 등록된 보조 단축키를 안내�
   assert.match(popupHtml, /id="command-shortcut"/);
   assert.match(popupJs, /commands\.getAll/);
   assert.match(popupCss, /\.shortcut-row/);
+});
+
+test("범용 사이트의 수동 시작 안내를 공식체로 표시한다", () => {
+  assert.match(popupJs, /F4 또는 토글을 켜면 번역을 시작합니다\./);
 });
 
 test("팝업은 메인 앱의 파란색 다크 테마 토큰을 사용한다", () => {

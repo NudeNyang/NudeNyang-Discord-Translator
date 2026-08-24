@@ -30,7 +30,7 @@ Browser translation requests enter the same display translation worker as Discor
 
 ## Browser extension connection
 
-The optional Manifest V3 extension supports Chrome and Naver Whale from one source tree. It extracts only eligible visible text nodes from supported sites and sends bounded batches through the browser's Native Messaging API.
+The optional Manifest V3 extension supports Chrome and Naver Whale from one source tree. It extracts only eligible visible text nodes from supported sites and user-activated ordinary HTTP/HTTPS pages, then sends bounded batches through the browser's Native Messaging API. Generic pages start inert on every load and require an explicit F4 or popup-toggle action before extraction begins.
 
 The installed Tauri executable also serves as the native host when the browser launches it with an extension origin. That short-lived host reads an ephemeral descriptor created by the running desktop app and forwards the request to an authenticated `127.0.0.1` listener. The listener binds to an operating-system-selected port and uses a new random 256-bit token on every app start. The descriptor stays in the user's local application-data directory and is removed on a normal shutdown.
 
@@ -43,6 +43,9 @@ Site adapters apply conservative allowlists:
 - Google Search result titles, snippets, and information panels; query forms and account UI are excluded.
 - YouTube titles, descriptions, comments, and opened transcript segments; inputs, channel identities, and Studio are excluded.
 - X post and quote text; compose surfaces, direct messages, handles, and hashtag links are excluded.
+- Generic HTTP/HTTPS pages use semantic headings, paragraphs, lists, quotations, and captions. Forms, navigation, dialogs, live regions, editable surfaces, code, prices, cookie consent UI, and sensitive account, payment, order, administration, and private-message routes are excluded.
+
+The manifest injects an isolated, initially inert content script into ordinary HTTP and HTTPS pages so the direct F4 shortcut works without a prior extension-popup gesture. Browser-internal URLs, local files, and non-HTTP schemes are outside the match patterns. This broad match scope can produce a browser host-access warning even though generic text extraction remains opt-in and route-filtered.
 
 The native host manifest limits access to the extension's stable ID. Requests are limited to 32 nodes, 4,000 characters per node, 32,000 characters per batch, and the browser protocol's one-megabyte envelope.
 

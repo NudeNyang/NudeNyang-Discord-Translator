@@ -4,6 +4,7 @@
   const {
     createScanBatch,
     isElementNearViewport,
+    initialTranslationEnabled,
     isQuickToggleShortcut,
     runtimeMessageFailure,
     scanRootForAddedNode,
@@ -306,14 +307,23 @@
     pendingScanBatch.clear();
     clearTimeout(rescanTimer);
     rescanTimer = undefined;
-    adapter = adapters.adapterForLocation(location);
+    const nextAdapter = adapters.adapterForLocation(location);
+    if (nextAdapter?.manualOnly && adapter?.id !== nextAdapter.id) {
+      enabled = false;
+    }
+    adapter = nextAdapter;
     lastError = "";
     scheduleScan(document);
   }
 
   async function setEnabled(value) {
+    if (!adapter) {
+      return status();
+    }
     enabled = Boolean(value);
-    await storageSet({ enabled });
+    if (!adapter?.manualOnly) {
+      await storageSet({ enabled });
+    }
     if (enabled) {
       scan(document);
     } else {
@@ -340,6 +350,7 @@
       enabled,
       supported: Boolean(adapter),
       site: adapter?.id ?? "",
+      manualOnly: Boolean(adapter?.manualOnly),
       translatedNodes: [...trackedNodes].filter((node) => nodeStates.get(node)?.translated != null).length,
       lastError,
     };
@@ -378,10 +389,14 @@
   window.addEventListener("keydown", handleQuickToggle, true);
 
   async function start() {
-    ({ enabled } = await storageGet({ enabled: true }));
+    const stored = await storageGet({ enabled: true });
+    enabled = initialTranslationEnabled(stored.enabled, adapter);
     configureIntersectionObserver();
     observer = new MutationObserver((mutations) => {
       handleNavigation();
+      if (!enabled) {
+        return;
+      }
       const blockSelector = adapter?.blocks.join(",") ?? "body";
       for (const mutation of mutations) {
         if (mutation.type === "childList") {

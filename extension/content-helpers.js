@@ -77,6 +77,10 @@
       && !event.metaKey;
   }
 
+  function initialTranslationEnabled(storedEnabled, adapter) {
+    return Boolean(storedEnabled && adapter && !adapter.manualOnly);
+  }
+
   function runtimeMessageFailure(requestId, error) {
     const detail = error?.message ?? String(error ?? "unknown");
     const invalidated = /extension context invalidated/i.test(detail);
@@ -95,6 +99,7 @@
   const api = Object.freeze({
     createScanBatch,
     isElementNearViewport,
+    initialTranslationEnabled,
     isQuickToggleShortcut,
     runtimeMessageFailure,
     scanRootForAddedNode,

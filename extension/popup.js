@@ -67,6 +67,8 @@ function renderPageStatus(status) {
   restore.disabled = !status?.supported;
   if (!status) {
     site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
+  } else if (status.supported && status.manualOnly && !status.enabled) {
+    site.textContent = "F4 또는 토글을 켜면 번역을 시작합니다.";
   } else if (status.supported) {
     site.textContent = `${status.site.toUpperCase()} · 번역된 텍스트 ${status.translatedNodes}개`;
   } else {

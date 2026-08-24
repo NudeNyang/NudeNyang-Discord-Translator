@@ -5,11 +5,20 @@ import "../content-helpers.js";
 const {
   createScanBatch,
   isElementNearViewport,
+  initialTranslationEnabled,
   isQuickToggleShortcut,
   runtimeMessageFailure,
   scanRootForAddedNode,
   takeTranslationBatch,
 } = globalThis.NudeNyangContentHelpers;
+
+test("범용 사이트는 저장된 전역 설정과 무관하게 사용자가 켜기 전까지 대기한다", () => {
+  assert.equal(initialTranslationEnabled(true, { id: "web", manualOnly: true }), false);
+  assert.equal(initialTranslationEnabled(false, { id: "web", manualOnly: true }), false);
+  assert.equal(initialTranslationEnabled(true, { id: "github" }), true);
+  assert.equal(initialTranslationEnabled(false, { id: "github" }), false);
+  assert.equal(initialTranslationEnabled(true, null), false);
+});
 
 test("보조키 없는 F4만 빠른 번역 전환으로 판정한다", () => {
   assert.equal(isQuickToggleShortcut({ key: "F4" }), true);
