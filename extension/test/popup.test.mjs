@@ -34,7 +34,7 @@ test("확장과 툴바는 제품의 육구 아이콘을 사용한다", () => {
   assert.deepEqual(manifest.icons, {
     16: "icons/paw-16.png",
     32: "icons/paw-32.png",
-    48: "icons/paw-48.png",
+    48: "icons/paw-256.png",
     60: "icons/paw-60.png",
     72: "icons/paw-72.png",
     96: "icons/paw-96.png",
@@ -49,6 +49,13 @@ test("확장과 툴바는 제품의 육구 아이콘을 사용한다", () => {
     24: "icons/paw-24.png",
     32: "icons/paw-32.png",
   });
+});
+
+test("Whale 관리 화면의 48 슬롯은 확대에 견디는 고해상도 원본을 사용한다", () => {
+  const managerIconPath = manifest.icons[48];
+  const png = fs.readFileSync(new URL(`../${managerIconPath}`, import.meta.url));
+  assert.equal(png.readUInt32BE(16), 256);
+  assert.equal(png.readUInt32BE(20), 256);
 });
 
 test("화면 배율별 육구 PNG는 선언한 실제 픽셀 크기를 가진다", () => {
