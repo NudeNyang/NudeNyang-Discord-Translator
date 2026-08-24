@@ -42,7 +42,7 @@ Site adapters apply conservative allowlists:
 
 - GitHub prose in Markdown, issue, pull-request, comment, and release areas; code and diffs are excluded.
 - BOOTH product descriptions and notices; price, cart, order, account, and payment areas are excluded.
-- DLsite circle-report titles, product metadata, descriptions, and the cart button label; navigation, account, cart, and payment pages remain excluded.
+- DLsite circle-report titles, product metadata, descriptions, categories, static footer guidance, and the cart button label; account, cart, and payment pages remain excluded.
 - Google Search result titles, snippets, and information panels; query forms and account UI are excluded.
 - YouTube titles, descriptions, comments, and opened transcript segments; inputs, channel identities, and Studio are excluded.
 - X post and quote text; compose surfaces, direct messages, handles, and hashtag links are excluded.

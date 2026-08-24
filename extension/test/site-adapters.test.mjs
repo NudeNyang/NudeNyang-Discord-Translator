@@ -33,6 +33,22 @@ test("DLsite 서클 리포트의 div 기반 작품 소개와 구매 버튼 문�
   );
 });
 
+test("특집형 상품 페이지의 카테고리와 정적 하단 안내를 번역한다", () => {
+  const report = adapterForLocation(new URL(
+    "https://www.dlsite.com/maniax/circle/report/=/report/202607202",
+  ));
+
+  assert.ok(report.blocks.includes("#left .left_module h3"));
+  assert.ok(report.blocks.includes("#left .list_head h4"));
+  assert.ok(report.blocks.includes("#left .list_content_text_item > a"));
+  assert.ok(report.blocks.includes("#left .list_text_indent > a"));
+  assert.ok(report.blocks.includes("#footer .floor_list_item > a"));
+  assert.ok(report.blocks.includes("#footer .label"));
+  assert.ok(report.blocks.includes("#footer .link_list_item > a"));
+  assert.ok(report.blocks.includes("#footer .img_list_text"));
+  assert.ok(report.blocks.includes("#footer .recruit a"));
+});
+
 test("범용 어댑터는 일반 HTTP 문서를 지원하고 브라우저 내부 페이지는 건드리지 않는다", () => {
   assert.equal(adapterForLocation(new URL("http://example.com/news/today")).id, "web");
   assert.equal(adapterForLocation(new URL("https://developer.mozilla.org/docs/Web/API")).id, "web");
