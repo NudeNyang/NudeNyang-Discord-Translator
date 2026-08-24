@@ -4,6 +4,7 @@ import "../content-helpers.js";
 
 const {
   createScanBatch,
+  groupTranslationApplications,
   isElementNearViewport,
   initialTranslationEnabled,
   isQuickToggleShortcut,
@@ -199,6 +200,86 @@ test("문자 제한을 넘는 다음 작업은 대기열에 보존한다", () =>
 
   assert.deepEqual(batch, [first]);
   assert.deepEqual(queue, [next]);
+});
+
+test("인라인 링크가 많은 한 문단은 항목 제한 때문에 요청 중간에서 잘리지 않는다", () => {
+  const paragraph = Array.from({ length: 27 }, (_, index) => ({
+    id: `paragraph-${index}`,
+    blockId: "paragraph",
+    text: `fragment-${index}`,
+  }));
+  const nextParagraph = [
+    { id: "next-1", blockId: "next", text: "next fragment 1" },
+    { id: "next-2", blockId: "next", text: "next fragment 2" },
+  ];
+  const queue = [...paragraph, ...nextParagraph];
+
+  const batch = takeTranslationBatch(queue, {
+    maxItems: 24,
+    maxChars: 16000,
+    isCurrent: () => true,
+    isNearViewport: () => true,
+    onDiscard: () => assert.fail("현재 문단을 버리면 안 된다"),
+  });
+
+  assert.deepEqual(batch, paragraph);
+  assert.deepEqual(queue, nextParagraph);
+});
+
+test("다음 문단 전체가 한도를 넘으면 현재 요청에 일부만 끼워 넣지 않는다", () => {
+  const first = [
+    { id: "first-1", blockId: "first", text: "1234" },
+    { id: "first-2", blockId: "first", text: "5678" },
+  ];
+  const next = [
+    { id: "next-1", blockId: "next", text: "abcd" },
+    { id: "next-2", blockId: "next", text: "efgh" },
+  ];
+  const queue = [...first, ...next];
+
+  const batch = takeTranslationBatch(queue, {
+    maxItems: 20,
+    maxChars: 12,
+    isCurrent: () => true,
+    isNearViewport: () => true,
+    onDiscard: () => assert.fail("현재 문단을 버리면 안 된다"),
+  });
+
+  assert.deepEqual(batch, first);
+  assert.deepEqual(queue, next);
+});
+
+test("번역 응답은 원래 요청 순서를 유지한 문단 묶음으로 구성한다", () => {
+  const batch = [
+    { id: "a-1", blockId: "a" },
+    { id: "a-2", blockId: "a" },
+    { id: "b-1", blockId: "b" },
+    { id: "b-2", blockId: "b" },
+  ];
+  const results = new Map([
+    ["a-1", "번역 A1"],
+    ["a-2", "번역 A2"],
+    ["b-1", "번역 B1"],
+  ]);
+
+  assert.deepEqual(groupTranslationApplications(batch, results), {
+    blocks: [
+      {
+        blockId: "a",
+        applications: [
+          { item: batch[0], translated: "번역 A1" },
+          { item: batch[1], translated: "번역 A2" },
+        ],
+      },
+      {
+        blockId: "b",
+        applications: [
+          { item: batch[2], translated: "번역 B1" },
+        ],
+      },
+    ],
+    missing: [batch[3]],
+  });
 });
 
 test("확장 재로딩으로 무효화된 콘텐츠 스크립트는 재시도하지 않는다", () => {

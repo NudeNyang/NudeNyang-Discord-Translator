@@ -49,23 +49,58 @@
     const batch = [];
     let chars = 0;
     while (queue.length > 0 && batch.length < options.maxItems) {
-      const next = queue.shift();
-      if (!options.isCurrent(next) || !options.isNearViewport(next)) {
-        options.onDiscard(next);
+      const blockKey = queue[0].blockId ?? queue[0].id;
+      const block = [];
+      while (queue.length > 0 && (queue[0].blockId ?? queue[0].id) === blockKey) {
+        block.push(queue.shift());
+      }
+      const current = [];
+      for (const item of block) {
+        if (!options.isCurrent(item) || !options.isNearViewport(item)) {
+          options.onDiscard(item);
+        } else {
+          current.push(item);
+        }
+      }
+      if (current.length === 0) {
         continue;
       }
-      if (batch.length === 0 && next.text.length > options.maxChars && options.discardOversize) {
-        options.onDiscard(next);
+      const blockChars = current.reduce((total, item) => total + item.text.length, 0);
+      if (batch.length === 0 && blockChars > options.maxChars && options.discardOversize) {
+        for (const item of current) options.onDiscard(item);
         continue;
       }
-      if (batch.length > 0 && chars + next.text.length > options.maxChars) {
-        queue.unshift(next);
+      const exceedsItemLimit = batch.length > 0 && batch.length + current.length > options.maxItems;
+      const exceedsCharLimit = batch.length > 0 && chars + blockChars > options.maxChars;
+      if (exceedsItemLimit || exceedsCharLimit) {
+        queue.unshift(...current);
         break;
       }
-      batch.push(next);
-      chars += next.text.length;
+      batch.push(...current);
+      chars += blockChars;
     }
     return batch;
+  }
+
+  function groupTranslationApplications(batch, results) {
+    const blocks = [];
+    const byBlock = new Map();
+    const missing = [];
+    for (const item of batch) {
+      const translated = results.get(item.id);
+      if (translated == null) {
+        missing.push(item);
+        continue;
+      }
+      let block = byBlock.get(item.blockId);
+      if (!block) {
+        block = { blockId: item.blockId, applications: [] };
+        byBlock.set(item.blockId, block);
+        blocks.push(block);
+      }
+      block.applications.push({ item, translated });
+    }
+    return { blocks, missing };
   }
 
   function webSchedulingProfile(mode, externalProvider) {
@@ -114,6 +149,7 @@
 
   const api = Object.freeze({
     createScanBatch,
+    groupTranslationApplications,
     isElementNearViewport,
     initialTranslationEnabled,
     isQuickToggleShortcut,

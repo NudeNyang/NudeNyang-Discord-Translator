@@ -3,6 +3,7 @@
   const adapters = globalThis.NudeNyangSiteAdapters;
   const {
     createScanBatch,
+    groupTranslationApplications,
     isElementNearViewport,
     initialTranslationEnabled,
     isQuickToggleShortcut,
@@ -20,7 +21,7 @@
     externalPageCharLimit: 25000,
     sitePolicies: {},
   });
-  const APPLY_CHUNK_SIZE = 12;
+  const APPLY_BLOCKS_PER_FRAME = 2;
   const trackedNodes = new Set();
   const nodeStates = new WeakMap();
   let blockIds = new WeakMap();
@@ -232,26 +233,42 @@
       scheduleApplications();
       return;
     }
-    let applied = 0;
-    for (let count = 0; count < APPLY_CHUNK_SIZE && pendingApplications.length > 0; count += 1) {
-      const { item, translated } = pendingApplications.shift();
-      const state = nodeStates.get(item.node);
-      if (
-        translated != null
-        && state?.itemId === item.id
-        && state.epoch === pageEpoch
-        && item.node.isConnected
-        && item.node.nodeValue === state.original
-      ) {
-        state.pending = false;
-        state.translated = translated;
-        item.node.nodeValue = translated;
-        applied += 1;
-      } else if (state?.itemId === item.id) {
-        state.pending = false;
+    let appliedBlocks = 0;
+    let appliedNodes = 0;
+    for (let count = 0; count < APPLY_BLOCKS_PER_FRAME && pendingApplications.length > 0; count += 1) {
+      const block = pendingApplications.shift();
+      const writes = [];
+      for (const { item, translated } of block.applications) {
+        const state = nodeStates.get(item.node);
+        if (
+          translated != null
+          && state?.itemId === item.id
+          && state.epoch === pageEpoch
+          && item.node.isConnected
+          && item.node.nodeValue === state.original
+        ) {
+          state.pending = false;
+          state.translated = translated;
+          writes.push({ node: item.node, translated });
+        } else if (state?.itemId === item.id) {
+          state.pending = false;
+        }
+      }
+      for (const write of writes) {
+        write.node.nodeValue = write.translated;
+      }
+      if (writes.length > 0) {
+        appliedBlocks += 1;
+        appliedNodes += writes.length;
       }
     }
-    if (applied > 0) logDiagnostic("dom-chunk-applied", { applied, remaining: pendingApplications.length });
+    if (appliedBlocks > 0) {
+      logDiagnostic("dom-blocks-applied", {
+        appliedBlocks,
+        appliedNodes,
+        remainingBlocks: pendingApplications.length,
+      });
+    }
     if (pendingApplications.length > 0) {
       applyingFrame = requestAnimationFrame(applyApplicationChunk);
     }
@@ -315,24 +332,19 @@
       if (response.translator) externalProvider = EXTERNAL_TRANSLATORS.has(response.translator);
       if (response.webSettings) applyWebSettings(response.webSettings);
       const results = new Map(response.items.map((item) => [item.id, item.text]));
-      const rejected = {
-        missingResult: 0,
-      };
-      for (const item of batch) {
-        const translated = results.get(item.id);
-        if (translated == null) rejected.missingResult += 1;
-        if (translated == null) releasePending(item);
-        else pendingApplications.push({ item, translated });
-      }
+      const applications = groupTranslationApplications(batch, results);
+      for (const item of applications.missing) releasePending(item);
+      pendingApplications.push(...applications.blocks);
       scheduleApplications();
       logDiagnostic("batch-applied", {
         requested: batch.length,
         returned: response.items.length,
-        queuedForApply: batch.length - rejected.missingResult,
+        queuedForApply: batch.length - applications.missing.length,
+        queuedBlocks: applications.blocks.length,
         requestCount,
         sentChars,
         epoch: pageEpoch,
-        rejected,
+        rejected: { missingResult: applications.missing.length },
       });
       lastError = "";
     } else {
