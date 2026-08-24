@@ -208,7 +208,7 @@ export const COPY = Object.freeze({
   "메시지 작성자의 닉네임도 표시 언어로 번역합니다.": ["Translate message authors' nicknames into the display language.", "メッセージ投稿者のニックネームも表示言語に翻訳します。", "将消息发送者的昵称也翻译为显示语言。"],
   "닉네임 번역 설정을 변경하지 못했습니다": ["Could not change the nickname translation setting", "ニックネーム翻訳設定を変更できませんでした", "无法更改昵称翻译设置"],
   "Discord에서 표시할 번역을 설정합니다.": ["Configure translations displayed in Discord.", "Discordに表示する翻訳を設定します。", "设置在 Discord 中显示的翻译。"],
-  "Discord 선택": ["Select Discord", "Discord を選択", "选择 Discord"],
+  "Discord 선택": ["Select Discord", "Discordを選択", "选择 Discord"],
   "번역을 적용할 Discord 앱을 선택합니다.": ["Select the Discord app to apply translations to.", "翻訳を適用する Discord アプリを選択します。", "选择要应用翻译的 Discord 应用。"],
   "실시간 번역": ["Real-time translation", "リアルタイム翻訳", "实时翻译"],
   "메시지 통역": ["Message interpretation", "メッセージ通訳", "消息翻译"],

@@ -80,6 +80,10 @@ test("settings header describes message, image, and app behavior configuration",
   );
 });
 
+test("Japanese Discord selection heading has no unnecessary spacing", () => {
+  assert.equal(translateCopy("ja", "Discord 선택"), "Discordを選択");
+});
+
 test("UI Language and Auto (System) stay universal", () => {
   for (const language of SUPPORTED_TARGET_LANGUAGES) {
     assert.equal(translateCopy(language, "UI Language"), "UI Language");
