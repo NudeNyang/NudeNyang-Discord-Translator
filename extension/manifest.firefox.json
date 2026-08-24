@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "NudeNyang Web Translator",
-  "version": "0.1.18",
-  "description": "NudeNyang Windows 앱의 번역 엔진으로 웹페이지 문단을 원래 레이아웃 그대로 번역합니다.",
+  "name": "__MSG_extensionName__",
+  "version": "0.1.19",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "permissions": ["nativeMessaging", "storage", "activeTab"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "browser_specific_settings": {
@@ -30,7 +31,7 @@
     "256": "icons/paw-256.png"
   },
   "action": {
-    "default_title": "NudeNyang Web Translator",
+    "default_title": "__MSG_extensionName__",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/paw-16.png",
@@ -44,7 +45,7 @@
       "suggested_key": {
         "windows": "Ctrl+Shift+L"
       },
-      "description": "현재 페이지의 번역과 원문을 전환합니다."
+      "description": "__MSG_togglePageTranslation__"
     }
   },
   "content_scripts": [

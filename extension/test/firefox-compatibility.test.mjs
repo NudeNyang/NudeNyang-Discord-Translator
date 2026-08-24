@@ -44,4 +44,6 @@ test("Firefox 패키지는 전용 매니페스트와 라이선스를 XPI 루트�
   assert.match(packager, /manifest\.firefox\.json[^\n]+manifest\.json/);
   assert.match(packager, /LICENSE[^\n]+LICENSE\.txt/);
   assert.match(packager, /NudeNyang-Web-Translator-Firefox-/);
+  assert.match(packager, /popup-locales\.js/);
+  assert.match(packager, /'_locales'/);
 });

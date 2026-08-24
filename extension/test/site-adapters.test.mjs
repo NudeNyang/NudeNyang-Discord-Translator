@@ -74,6 +74,14 @@ test("GitHub Markdown 표의 셀도 번역 블록에 포함한다", () => {
   assert.ok(github.blocks.includes(".markdown-body table td"));
 });
 
+test("X 프로필은 소개만 번역하고 표시 이름과 핸들은 제외한다", () => {
+  const x = adapterForLocation(new URL("https://x.com/nudenyang"));
+  const selector = exclusionSelector(x);
+
+  assert.ok(x.blocks.includes("[data-testid='UserDescription']"));
+  assert.match(selector, /\[data-testid='UserName'\]/);
+});
+
 test("BOOTH Tailwind order 레이아웃 클래스는 주문 영역으로 오인하지 않는다", () => {
   const booth = adapterForLocation(new URL("https://booth.pm/ko/items/123"));
   const selector = exclusionSelector(booth);

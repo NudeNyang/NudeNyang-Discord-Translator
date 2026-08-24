@@ -26,6 +26,7 @@ $SharedFiles = @(
     'native-client.js',
     'popup.css',
     'popup.html',
+    'popup-locales.js',
     'popup.js',
     'site-adapters.js'
 )
@@ -33,6 +34,7 @@ foreach ($File in $SharedFiles) {
     Copy-Item -LiteralPath (Join-Path $ExtensionDirectory $File) -Destination $ResolvedStaging -Force
 }
 Copy-Item -LiteralPath (Join-Path $ExtensionDirectory 'icons') -Destination $ResolvedStaging -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $ExtensionDirectory '_locales') -Destination $ResolvedStaging -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $ExtensionDirectory 'manifest.firefox.json') -Destination (Join-Path $ResolvedStaging 'manifest.json') -Force
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE') -Destination (Join-Path $ResolvedStaging 'LICENSE.txt') -Force
 

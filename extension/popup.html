@@ -11,56 +11,57 @@
       <div class="heading">
         <div>
           <p class="eyebrow">NUDENYANG</p>
-          <h1>웹페이지 번역</h1>
+          <h1 data-i18n="webTranslation">웹 번역</h1>
         </div>
-        <label class="switch" aria-label="웹페이지 번역 사용">
+        <label class="switch" aria-label="웹페이지 번역 사용" data-i18n-aria-label="enableWebTranslation">
           <input id="enabled" type="checkbox">
           <span></span>
         </label>
       </div>
-      <p id="site" class="site">지원 사이트를 확인하고 있습니다.</p>
+      <p id="site" class="site" data-i18n="checking">확인 중</p>
       <div id="connection" class="connection waiting">
         <span class="dot"></span>
-        <span id="connection-text">Windows 앱에 연결하는 중입니다…</span>
+        <span id="connection-text" data-i18n="connecting">엔진 연결 중</span>
       </div>
       <p id="detail" class="detail"></p>
       <div class="quick-controls">
         <div class="quick-select-row">
-          <span>현재 페이지 언어</span>
+          <span data-i18n="translationLanguage">번역 언어</span>
           <div id="target-language" class="language-picker">
             <button id="target-language-trigger" class="language-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span id="target-language-label">앱 설정 따르기</span>
+              <span id="target-language-label" data-i18n="defaultTranslationLanguage">기본 번역 언어</span>
             </button>
             <div id="target-language-menu" class="language-menu" hidden>
               <div class="language-search-shell">
-                <input id="target-language-search" class="language-search" type="search" placeholder="언어 검색" aria-label="언어 검색" autocomplete="off">
+                <input id="target-language-search" class="language-search" type="search" placeholder="언어 검색" aria-label="언어 검색" data-i18n-placeholder="searchLanguage" data-i18n-aria-label="searchLanguage" autocomplete="off">
               </div>
-              <div id="target-language-options" class="language-options" role="listbox" aria-label="현재 페이지 언어"></div>
-              <p id="target-language-empty" class="language-empty" hidden>일치하는 언어가 없습니다.</p>
+              <div id="target-language-options" class="language-options" role="listbox" aria-label="번역 언어" data-i18n-aria-label="translationLanguage"></div>
+              <p id="target-language-empty" class="language-empty" data-i18n="noSearchResults" hidden>검색 결과가 없습니다.</p>
             </div>
           </div>
         </div>
         <label class="quick-switch-row">
-          <span>이 사이트 항상 번역</span>
+          <span data-i18n="alwaysTranslate">항상 번역</span>
           <span class="switch compact-switch">
             <input id="always-translate-site" type="checkbox">
             <span></span>
           </span>
         </label>
       </div>
-      <p id="usage" class="usage">이 페이지 요청 0회 · 전송 0자</p>
-      <div class="shortcut-row" aria-label="번역과 원문을 전환하는 단축키">
-        <span class="shortcut-label">번역/원문 전환</span>
+      <p id="usage" class="usage">번역 0 · 전송 0</p>
+      <div class="shortcut-row" aria-label="번역 / 원문">
+        <span class="shortcut-label"><span data-i18n="translation">번역</span> / <span data-i18n="original">원문</span></span>
         <span class="shortcut-keys">
           <kbd class="primary-key">F4</kbd>
-          <span class="shortcut-or">또는</span>
+          <span class="shortcut-or">/</span>
           <kbd id="command-shortcut">Ctrl + Shift + L</kbd>
         </span>
       </div>
-      <button id="restore" type="button">이 페이지 원문으로 복원</button>
-      <button id="open-settings" class="secondary-action" type="button">웹 번역 설정 열기</button>
+      <button id="restore" type="button" data-i18n="viewOriginal">원문 보기</button>
+      <button id="open-settings" class="secondary-action" type="button"><span data-i18n="webTranslation">웹 번역</span> <span data-i18n="settings">설정</span> <span data-i18n="open">열기</span></button>
     </main>
     <script src="content-helpers.js"></script>
+    <script src="popup-locales.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

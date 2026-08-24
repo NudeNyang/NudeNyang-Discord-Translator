@@ -64,7 +64,7 @@
       hosts: ["x.com", "twitter.com"],
       blocks: [
         "article [data-testid='tweetText']", "article [data-testid='card.layoutLarge.detail']",
-        "article [data-testid='card.layoutSmall.detail']",
+        "article [data-testid='card.layoutSmall.detail']", "[data-testid='UserDescription']",
       ],
       excludes: [
         "[data-testid='tweetTextarea_0']", "[data-testid='DMDrawer']",

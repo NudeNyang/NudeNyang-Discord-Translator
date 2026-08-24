@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "拡張機能で現在のページの段落を翻訳できるようにします。"
+  },
+  "togglePageTranslation": {
+    "message": "ウェブページ翻訳を使用"
+  }
+}

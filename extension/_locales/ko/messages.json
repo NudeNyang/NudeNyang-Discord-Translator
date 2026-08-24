@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다."
+  },
+  "togglePageTranslation": {
+    "message": "웹페이지 번역 사용"
+  }
+}

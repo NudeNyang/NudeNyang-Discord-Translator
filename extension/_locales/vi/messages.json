@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "Cho phép tiện ích dịch các đoạn văn trên trang hiện tại."
+  },
+  "togglePageTranslation": {
+    "message": "Bật dịch trang web"
+  }
+}

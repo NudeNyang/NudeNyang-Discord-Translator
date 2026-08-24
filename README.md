@@ -136,6 +136,7 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 - Selection dictionary with a separate result window, speech, contextual sense ordering, personal terms, and install-on-demand practical packs
 - Verification compatibility mode that pauses translation during additional Discord verification and reconnects only on request
 - Optional Chrome, Naver Whale, and Firefox web translation for GitHub, BOOTH, Google Search, YouTube, X, and general HTTP(S) pages
+- Extension popup localization follows the desktop app's interface-language setting across the same 28 supported languages
 - Paragraph-context translation that changes individual text nodes and restores the exact original page text
 - Memory and SQLite caching separated by engine, language, prompt, register, and renderer version
 - Automatic GPU fallback to a RAM-conscious CPU mode when acceleration is unavailable

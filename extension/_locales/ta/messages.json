@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "தற்போதைய பக்கத்திலுள்ள பத்திகளை மொழிபெயர்க்க நீட்டிப்பை அனுமதிக்கவும்."
+  },
+  "togglePageTranslation": {
+    "message": "இணையப்பக்க மொழிபெயர்ப்பை இயக்கு"
+  }
+}

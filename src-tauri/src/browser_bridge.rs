@@ -234,6 +234,13 @@ fn web_settings_value(config: &crate::config::AppConfig) -> Value {
     })
 }
 
+fn interface_language_value(configured: &str) -> (&str, &'static str) {
+    (
+        configured,
+        crate::ui_locale::resolve_ui_language(configured),
+    )
+}
+
 fn update_web_settings(app: &AppHandle, patch: Value) -> Result<Value, String> {
     let allowed = [
         "web_translation_enabled",
@@ -272,18 +279,24 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
             let config = app.state::<ConfigStore>().get();
             let status = app.state::<RustEngine>().status();
             match (config, status) {
-                (Ok(config), Ok(status)) => json!({
-                    "type": "status",
-                    "requestId": request_id,
-                    "protocolVersion": PROTOCOL_VERSION,
-                    "appVersion": env!("CARGO_PKG_VERSION"),
-                    "ready": status.active_translator == config.translator,
-                    "targetLanguage": config.target_language,
-                    "translator": config.translator,
-                    "activeTranslator": status.active_translator,
-                    "translatorState": status.translator_state,
-                    "webSettings": web_settings_value(&config),
-                }),
+                (Ok(config), Ok(status)) => {
+                    let (ui_language, resolved_ui_language) =
+                        interface_language_value(&config.ui_language);
+                    json!({
+                        "type": "status",
+                        "requestId": request_id,
+                        "protocolVersion": PROTOCOL_VERSION,
+                        "appVersion": env!("CARGO_PKG_VERSION"),
+                        "ready": status.active_translator == config.translator,
+                        "uiLanguage": ui_language,
+                        "resolvedUiLanguage": resolved_ui_language,
+                        "targetLanguage": config.target_language,
+                        "translator": config.translator,
+                        "activeTranslator": status.active_translator,
+                        "translatorState": status.translator_state,
+                        "webSettings": web_settings_value(&config),
+                    })
+                }
                 (Err(error), _) | (_, Err(error)) => {
                     error_response(&request_id, "app_state_unavailable", &error, true)
                 }
@@ -682,9 +695,10 @@ fn tokens_equal(left: &str, right: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        firefox_native_host_manifest_path, is_native_messaging_host_invocation,
-        read_native_message, tokens_equal, write_native_message, ChromiumNativeHostManifest,
-        FirefoxNativeHostManifest, CHROMIUM_EXTENSION_ID, FIREFOX_EXTENSION_ID, NATIVE_HOST_NAME,
+        firefox_native_host_manifest_path, interface_language_value,
+        is_native_messaging_host_invocation, read_native_message, tokens_equal,
+        write_native_message, ChromiumNativeHostManifest, FirefoxNativeHostManifest,
+        CHROMIUM_EXTENSION_ID, FIREFOX_EXTENSION_ID, NATIVE_HOST_NAME,
     };
     use serde_json::json;
     use std::ffi::OsString;
@@ -753,5 +767,15 @@ mod tests {
             manifest,
             OsString::from("unknown@example.org"),
         ]));
+    }
+
+    #[test]
+    fn browser_status_uses_the_configured_and_resolved_app_interface_language() {
+        assert_eq!(interface_language_value("ja"), ("ja", "ja"));
+        assert_eq!(interface_language_value("zh-TW"), ("zh-TW", "zh-Hant"));
+        assert_eq!(
+            interface_language_value("unsupported"),
+            ("unsupported", "en")
+        );
     }
 }

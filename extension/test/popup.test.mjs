@@ -13,8 +13,8 @@ test("팝업의 사용자 문구는 공식체를 사용한다", () => {
   const productCopy = `${popupHtml}\n${popupJs}`;
   assert.doesNotMatch(productCopy, /아니야|해줘|복원했어|있어\./);
   assert.doesNotMatch(productCopy, /[—–]/);
-  assert.match(productCopy, /지원되지 않습니다/);
-  assert.match(productCopy, /실행해 주십시오/);
+  assert.match(productCopy, /data-i18n="webTranslation"/);
+  assert.match(productCopy, /data-i18n="viewOriginal"/);
 });
 
 test("팝업은 마지막으로 사용한 브라우저 창의 활성 탭을 조회한다", () => {
@@ -22,7 +22,7 @@ test("팝업은 마지막으로 사용한 브라우저 창의 활성 탭을 조�
 });
 
 test("탭 응답 실패를 미지원 페이지와 구분해 안내한다", () => {
-  assert.match(popupJs, /페이지와 연결할 수 없습니다/);
+  assert.match(popupJs, /copy\("unableToProcess"\)/);
 });
 
 test("F4는 지원 페이지에서 번역과 원문을 직접 전환한다", () => {
@@ -49,7 +49,7 @@ test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호
   assert.deepEqual(manifest.commands, {
     "toggle-page-translation": {
       suggested_key: { windows: "Ctrl+Shift+L" },
-      description: "현재 페이지의 번역과 원문을 전환합니다.",
+      description: "__MSG_togglePageTranslation__",
     },
   });
   assert.match(backgroundJs, /commands\.onCommand\.addListener/);
@@ -66,7 +66,8 @@ test("팝업은 빠른 단축키와 실제 등록된 보조 단축키를 안내�
 });
 
 test("범용 사이트의 수동 시작 안내를 공식체로 표시한다", () => {
-  assert.match(popupJs, /F4 또는 토글을 켜면 번역을 시작합니다\./);
+  assert.match(popupJs, /copy\("manualStart"\)/);
+  assert.match(popupJs, /· F4/);
 });
 
 test("팝업은 현재 페이지 언어, 사이트 정책, 사용량과 본체 설정 이동을 제공한다", () => {

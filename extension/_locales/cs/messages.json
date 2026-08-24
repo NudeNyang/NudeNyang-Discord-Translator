@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "Povolte rozšíření překládat odstavce na aktuální stránce."
+  },
+  "togglePageTranslation": {
+    "message": "Povolit překlad webových stránek"
+  }
+}

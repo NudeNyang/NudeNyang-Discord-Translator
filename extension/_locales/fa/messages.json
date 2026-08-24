@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "به افزونه اجازه دهید پاراگراف‌های صفحه فعلی را ترجمه کند."
+  },
+  "togglePageTranslation": {
+    "message": "فعال‌سازی ترجمه صفحات وب"
+  }
+}

@@ -1,5 +1,6 @@
 const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
 const { isQuickToggleShortcut } = globalThis.NudeNyangContentHelpers;
+const popupLocales = globalThis.NudeNyangPopupLocales;
 const enabled = document.querySelector("#enabled");
 const site = document.querySelector("#site");
 const connection = document.querySelector("#connection");
@@ -28,6 +29,33 @@ const LANGUAGE_OPTIONS = [
 ];
 let appStatus = null;
 let targetLanguageValue = "";
+let uiLanguage = popupLocales.resolve(
+  "auto",
+  api.i18n?.getUILanguage?.() || globalThis.navigator?.language,
+);
+
+function copy(id) {
+  return popupLocales.message(uiLanguage, id);
+}
+
+function formatNumber(value) {
+  return Number(value ?? 0).toLocaleString(uiLanguage);
+}
+
+function applyUiLanguage(language) {
+  uiLanguage = popupLocales.resolve(language || uiLanguage);
+  document.documentElement.lang = uiLanguage;
+  document.documentElement.dir = ["ar", "ur", "fa", "he"].includes(uiLanguage) ? "rtl" : "ltr";
+  for (const element of document.querySelectorAll("[data-i18n]")) {
+    element.textContent = copy(element.dataset.i18n);
+  }
+  for (const element of document.querySelectorAll("[data-i18n-placeholder]")) {
+    element.placeholder = copy(element.dataset.i18nPlaceholder);
+  }
+  for (const element of document.querySelectorAll("[data-i18n-aria-label]")) {
+    element.setAttribute("aria-label", copy(element.dataset.i18nAriaLabel));
+  }
+}
 
 function normalizeLanguageSearch(value) {
   return String(value ?? "")
@@ -37,13 +65,13 @@ function normalizeLanguageSearch(value) {
 }
 
 function targetLanguageEntries() {
-  return [["", "앱 설정 따르기"], ...LANGUAGE_OPTIONS];
+  return [["", copy("defaultTranslationLanguage")], ...LANGUAGE_OPTIONS];
 }
 
 function setTargetLanguageValue(value) {
   targetLanguageValue = LANGUAGE_OPTIONS.some(([code]) => code === value) ? value : "";
   targetLanguageLabel.textContent = targetLanguageEntries().find(([code]) => code === targetLanguageValue)?.[1]
-    ?? "앱 설정 따르기";
+    ?? copy("defaultTranslationLanguage");
   for (const option of targetLanguageOptions.querySelectorAll(".language-option")) {
     option.setAttribute("aria-selected", String(option.dataset.value === targetLanguageValue));
   }
@@ -122,7 +150,7 @@ function extensionCommands() {
 
 function renderCommandShortcut(commands) {
   const shortcut = commands.find((command) => command.name === "toggle-page-translation")?.shortcut ?? "";
-  commandShortcut.textContent = shortcut ? shortcut.replaceAll("+", " + ") : "미지정";
+  commandShortcut.textContent = shortcut ? shortcut.replaceAll("+", " + ") : "-";
   commandShortcut.classList.toggle("unassigned", !shortcut);
 }
 
@@ -144,17 +172,17 @@ function renderPageStatus(status) {
   enabled.disabled = !status?.supported;
   restore.disabled = !status?.supported;
   if (!status) {
-    site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
+    site.textContent = copy("unableToProcess");
   } else if (status.supported && status.manualOnly && !status.enabled) {
-    site.textContent = "F4 또는 토글을 켜면 번역을 시작합니다.";
+    site.textContent = `${copy("manualStart")} · F4`;
   } else if (status.supported) {
-    site.textContent = `${status.site.toUpperCase()} · 번역된 텍스트 ${status.translatedNodes}개`;
+    site.textContent = `${status.site.toUpperCase()} · ${copy("translation")} ${formatNumber(status.translatedNodes)}`;
   } else {
-    site.textContent = "이 페이지는 아직 지원되지 않습니다.";
+    site.textContent = copy("unableToProcess");
   }
-  if (status?.lastError) detail.textContent = status.lastError;
-  usage.textContent = `이 페이지 요청 ${status?.requestCount ?? 0}회 · 전송 ${(status?.sentChars ?? 0).toLocaleString()}자`;
-  if (status?.usageLimit) usage.textContent += ` / 한도 ${Number(status.usageLimit).toLocaleString()}자`;
+  if (status?.lastError) detail.textContent = copy("error");
+  usage.textContent = `${copy("translation")} ${formatNumber(status?.requestCount)} · ${copy("send")} ${formatNumber(status?.sentChars)}`;
+  if (status?.usageLimit) usage.textContent += ` · ${copy("pageLimit")} ${formatNumber(status.usageLimit)}`;
   usage.classList.toggle("warning", Boolean(status?.usageLimited));
   setTargetLanguageValue(status?.targetLanguage && status.targetLanguage !== "display"
     ? status.targetLanguage
@@ -170,22 +198,28 @@ function renderConnection(response) {
   if (response?.type === "status") {
     appStatus = response;
     connection.classList.add(response.ready ? "ready" : "waiting");
-    connectionText.textContent = response.ready ? "Windows 앱 연결됨" : "번역 모델 준비 중";
-    detail.textContent = `${response.translator} · ${response.targetLanguage.toUpperCase()} 번역`;
+    connectionText.textContent = response.ready ? copy("connected") : copy("preparing");
+    detail.textContent = `${response.translator} · ${response.targetLanguage.toUpperCase()} · ${copy("translation")}`;
   } else {
     connection.classList.add("error");
-    connectionText.textContent = "Windows 앱 연결 필요";
-    detail.textContent = response?.message ?? "NudeNyang Windows 앱을 먼저 실행해 주십시오.";
+    connectionText.textContent = copy("connectionRequired");
+    detail.textContent = copy("error");
   }
 }
 
 async function initialize() {
+  applyUiLanguage(uiLanguage);
   renderTargetLanguageOptions();
   const commandsPromise = extensionCommands();
   const tab = await activeTab();
   let status = tab?.id ? await pageStatus(tab.id) : null;
+  const nativeStatus = await nativeRequest({ type: "status", requestId: `popup-${Date.now()}` });
+  if (nativeStatus?.type === "status") {
+    applyUiLanguage(nativeStatus.resolvedUiLanguage || nativeStatus.uiLanguage);
+    renderTargetLanguageOptions();
+  }
   renderPageStatus(status);
-  renderConnection(await nativeRequest({ type: "status", requestId: `popup-${Date.now()}` }));
+  renderConnection(nativeStatus);
   renderCommandShortcut(await commandsPromise);
 
   async function handleQuickToggle(event) {
@@ -198,7 +232,7 @@ async function initialize() {
       status = updated;
       renderPageStatus(status);
     } else {
-      site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
+      site.textContent = copy("unableToProcess");
     }
   }
 
@@ -213,7 +247,7 @@ async function initialize() {
       renderPageStatus(status);
     } else {
       enabled.checked = previous;
-      site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
+      site.textContent = copy("unableToProcess");
     }
   });
   restore.addEventListener("click", async () => {
@@ -222,9 +256,9 @@ async function initialize() {
       if (updated) {
         status = updated;
         renderPageStatus(status);
-        site.textContent = `${status.site.toUpperCase()} · 원문으로 복원되었습니다.`;
+        site.textContent = `${status.site.toUpperCase()} · ${copy("original")}`;
       } else {
-        site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
+        site.textContent = copy("unableToProcess");
       }
     }
   });
@@ -258,7 +292,7 @@ async function initialize() {
       renderPageStatus(status);
     } else {
       setTargetLanguageValue(previous);
-      site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
+      site.textContent = copy("unableToProcess");
     }
   });
   document.addEventListener("click", (event) => {
@@ -277,7 +311,7 @@ async function initialize() {
     });
     if (response?.type !== "webSettings") {
       alwaysTranslateSite.checked = status?.sitePolicy === "always";
-      detail.textContent = response?.message ?? "사이트 설정을 변경하지 못했습니다.";
+      detail.textContent = copy("error");
       return;
     }
     appStatus.webSettings = response.webSettings;
@@ -293,7 +327,7 @@ async function initialize() {
   openSettings.addEventListener("click", async () => {
     const response = await nativeRequest({ type: "openWebSettings", requestId: `settings-${Date.now()}` });
     if (response?.type !== "opened") {
-      detail.textContent = response?.message ?? "웹 번역 설정을 열지 못했습니다.";
+      detail.textContent = copy("error");
     }
   });
 }

@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "Izinkan ekstensi menerjemahkan paragraf di halaman saat ini."
+  },
+  "togglePageTranslation": {
+    "message": "Aktifkan penerjemahan halaman web"
+  }
+}

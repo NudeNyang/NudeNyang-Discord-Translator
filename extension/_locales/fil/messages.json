@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "Payagan ang extension na isalin ang mga talata sa kasalukuyang page."
+  },
+  "togglePageTranslation": {
+    "message": "I-enable ang pagsasalin ng webpage"
+  }
+}

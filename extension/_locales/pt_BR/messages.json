@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "Permita que a extensão traduza parágrafos na página atual."
+  },
+  "togglePageTranslation": {
+    "message": "Ativar tradução de páginas da Web"
+  }
+}

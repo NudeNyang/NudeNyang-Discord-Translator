@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "לאפשר לתוסף לתרגם פסקאות בדף הנוכחי."
+  },
+  "togglePageTranslation": {
+    "message": "הפעלת תרגום דפי אינטרנט"
+  }
+}

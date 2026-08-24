@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "NudeNyang Web Translator"
+  },
+  "extensionDescription": {
+    "message": "ایکسٹینشن کو موجودہ صفحے کے پیراگراف کا ترجمہ کرنے کی اجازت دیں۔"
+  },
+  "togglePageTranslation": {
+    "message": "ویب صفحات کا ترجمہ فعال کریں"
+  }
+}
