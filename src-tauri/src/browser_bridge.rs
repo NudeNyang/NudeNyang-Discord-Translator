@@ -357,8 +357,21 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
                 .get_webview_window("main")
                 .ok_or_else(|| "설정창을 찾지 못했습니다.".to_string())
                 .and_then(|window| {
-                    window.show().map_err(|error| error.to_string())?;
-                    window.set_focus().map_err(|error| error.to_string())?;
+                    activate_settings_window(
+                        || window.show().map_err(|error| error.to_string()),
+                        || window.unminimize().map_err(|error| error.to_string()),
+                        || {
+                            window
+                                .set_always_on_top(true)
+                                .map_err(|error| error.to_string())
+                        },
+                        || window.set_focus().map_err(|error| error.to_string()),
+                        || {
+                            window
+                                .set_always_on_top(false)
+                                .map_err(|error| error.to_string())
+                        },
+                    )?;
                     app.emit_to("main", "open-settings-panel", "web")
                         .map_err(|error| error.to_string())
                 });
@@ -387,6 +400,90 @@ fn error_response(request_id: &str, code: &str, message: &str, retryable: bool) 
         "message": message,
         "retryable": retryable,
     })
+}
+
+fn activate_settings_window<Show, Unminimize, Raise, Focus, Lower>(
+    show: Show,
+    unminimize: Unminimize,
+    raise: Raise,
+    focus: Focus,
+    lower: Lower,
+) -> Result<(), String>
+where
+    Show: FnOnce() -> Result<(), String>,
+    Unminimize: FnOnce() -> Result<(), String>,
+    Raise: FnOnce() -> Result<(), String>,
+    Focus: FnOnce() -> Result<(), String>,
+    Lower: FnOnce() -> Result<(), String>,
+{
+    show()?;
+    unminimize()?;
+    raise()?;
+    let focus_result = focus();
+    let lower_result = lower();
+    focus_result?;
+    lower_result
+}
+
+#[cfg(test)]
+mod window_activation_tests {
+    use std::cell::RefCell;
+
+    use super::activate_settings_window;
+
+    #[test]
+    fn settings_window_is_restored_and_raised_before_focus() {
+        let calls = RefCell::new(Vec::new());
+        activate_settings_window(
+            || {
+                calls.borrow_mut().push("show");
+                Ok(())
+            },
+            || {
+                calls.borrow_mut().push("unminimize");
+                Ok(())
+            },
+            || {
+                calls.borrow_mut().push("raise");
+                Ok(())
+            },
+            || {
+                calls.borrow_mut().push("focus");
+                Ok(())
+            },
+            || {
+                calls.borrow_mut().push("lower");
+                Ok(())
+            },
+        )
+        .expect("settings window activation should succeed");
+
+        assert_eq!(
+            calls.into_inner(),
+            ["show", "unminimize", "raise", "focus", "lower"]
+        );
+    }
+
+    #[test]
+    fn settings_window_is_lowered_even_when_focus_fails() {
+        let calls = RefCell::new(Vec::new());
+        let result = activate_settings_window(
+            || Ok(()),
+            || Ok(()),
+            || {
+                calls.borrow_mut().push("raise");
+                Ok(())
+            },
+            || Err("focus denied".to_string()),
+            || {
+                calls.borrow_mut().push("lower");
+                Ok(())
+            },
+        );
+
+        assert_eq!(result, Err("focus denied".to_string()));
+        assert_eq!(calls.into_inner(), ["raise", "lower"]);
+    }
 }
 
 pub fn run_native_messaging_host() -> Result<(), String> {

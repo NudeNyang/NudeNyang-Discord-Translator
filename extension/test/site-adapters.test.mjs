@@ -17,6 +17,22 @@ test("지원 사이트와 차단 경로를 구분한다", () => {
   assert.equal(adapterForLocation(new URL("https://example.com/articles/hello")).id, "web");
 });
 
+test("DLsite 서클 리포트의 div 기반 작품 소개와 구매 버튼 문구를 번역한다", () => {
+  const report = adapterForLocation(new URL(
+    "https://www.dlsite.com/maniax/circle/report/=/report/202607202",
+  ));
+
+  assert.equal(report.id, "dlsite-report");
+  assert.ok(report.blocks.includes("article.circle_report .work_name"));
+  assert.ok(report.blocks.includes("article.circle_report .catchphrase"));
+  assert.ok(report.blocks.includes("article.circle_report .report_section .content"));
+  assert.ok(report.blocks.includes("article.circle_report .btn_report.type_cart"));
+  assert.equal(
+    adapterForLocation(new URL("https://www.dlsite.com/maniax/work/=/product_id/RJ01669233.html")).id,
+    "web",
+  );
+});
+
 test("범용 어댑터는 일반 HTTP 문서를 지원하고 브라우저 내부 페이지는 건드리지 않는다", () => {
   assert.equal(adapterForLocation(new URL("http://example.com/news/today")).id, "web");
   assert.equal(adapterForLocation(new URL("https://developer.mozilla.org/docs/Web/API")).id, "web");

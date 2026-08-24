@@ -69,6 +69,12 @@ const SELECT_GROUP_LABELS = Object.freeze({
   "local-limited": "로컬 및 실험 모델",
   testing: "테스트 모델",
 });
+const WEB_SITE_POLICY_OPTIONS = Object.freeze([
+  ["always", "항상 번역"],
+  ["manual", "직접 시작"],
+  ["never", "사용 안 함"],
+]);
+const WEB_SITE_POLICY_SEARCH_THRESHOLD = 6;
 
 const OPTIONS = {
   discord_variant: [
@@ -170,6 +176,7 @@ const state = {
   dictionaryImportEntries: [],
   dictionaryPackProgress: new Map(),
   browserClients: [],
+  webSitePolicySearch: "",
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
@@ -1494,41 +1501,126 @@ async function loadBrowserClients() {
   renderBrowserClients();
 }
 
+async function updateWebSitePolicy(hostname, policy) {
+  const next = { ...state.config.web_site_policies, [hostname]: policy };
+  try {
+    await applySettingsPatch({ web_site_policies: next });
+  } catch (error) {
+    renderWebSitePolicies();
+    await showError("설정을 적용하지 못했습니다", String(error));
+  }
+}
+
+function createWebPolicySelect(hostname, policy) {
+  const wrapper = document.createElement("div");
+  const trigger = document.createElement("button");
+  const triggerLabel = document.createElement("span");
+  const menu = document.createElement("div");
+  wrapper.className = "custom-select web-policy-select";
+  trigger.type = "button";
+  trigger.className = "select-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  triggerLabel.className = "select-trigger-label";
+  triggerLabel.textContent = translateCopy(
+    currentUiLanguage(),
+    WEB_SITE_POLICY_OPTIONS.find(([value]) => value === policy)?.[1] || policy,
+  );
+  trigger.append(triggerLabel);
+  menu.className = "select-menu";
+  menu.setAttribute("role", "listbox");
+
+  for (const [value, label] of WEB_SITE_POLICY_OPTIONS) {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "select-option";
+    option.dataset.value = value;
+    option.dataset.i18nKey = label;
+    option.textContent = translateCopy(currentUiLanguage(), label);
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(value === policy));
+    option.addEventListener("click", async () => {
+      closeSelect(wrapper);
+      trigger.focus();
+      if (value !== policy) await updateWebSitePolicy(hostname, value);
+    });
+    option.addEventListener("keydown", event => {
+      const options = [...menu.querySelectorAll(".select-option")];
+      const index = options.indexOf(option);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelect(wrapper);
+        trigger.focus();
+      } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? options.length - 1
+            : event.key === "ArrowDown"
+              ? Math.min(index + 1, options.length - 1)
+              : Math.max(index - 1, 0);
+        options[next]?.focus();
+      }
+    });
+    menu.append(option);
+  }
+
+  trigger.addEventListener("click", () => {
+    const opening = !wrapper.classList.contains("open");
+    closeAllSelects();
+    if (opening) openSelect(wrapper);
+  });
+  trigger.addEventListener("keydown", event => {
+    if (!["ArrowDown", "ArrowUp", "Escape"].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === "Escape") {
+      closeSelect(wrapper);
+      return;
+    }
+    openSelect(wrapper);
+    const options = [...menu.querySelectorAll(".select-option")];
+    const selected = Math.max(0, options.findIndex(option => option.dataset.value === policy));
+    const next = event.key === "ArrowDown"
+      ? Math.min(selected + 1, options.length - 1)
+      : Math.max(selected - 1, 0);
+    options[next]?.focus();
+  });
+
+  wrapper.append(trigger, menu);
+  return wrapper;
+}
+
 function renderWebSitePolicies() {
   elements.webSitePolicies.replaceChildren();
   const policies = Object.entries(state.config.web_site_policies || {}).sort(([left], [right]) => left.localeCompare(right));
   if (!policies.length) {
+    state.webSitePolicySearch = "";
     const empty = document.createElement("p");
     empty.className = "web-empty";
     setLocalizedText(empty, "등록된 사이트 설정이 없습니다.");
     elements.webSitePolicies.append(empty);
     return;
   }
+
+  const list = document.createElement("div");
+  const emptySearch = document.createElement("p");
+  const rows = [];
+  list.className = "web-site-policy-list";
+  if (policies.length >= WEB_SITE_POLICY_SEARCH_THRESHOLD) list.classList.add("is-scrollable");
+  emptySearch.className = "web-site-policy-empty-search";
+  setLocalizedText(emptySearch, "일치하는 사이트가 없습니다.");
+  emptySearch.hidden = true;
+
   for (const [hostname, policy] of policies) {
     const row = document.createElement("div");
     row.className = "web-site-row";
+    row.dataset.hostname = hostname.toLocaleLowerCase();
     const host = document.createElement("strong");
     const controls = document.createElement("div");
-    const select = document.createElement("select");
+    const policySelect = createWebPolicySelect(hostname, policy);
     const remove = document.createElement("button");
     host.textContent = hostname;
-    select.className = "web-policy-select";
-    for (const [value, label] of [["always", "항상 번역"], ["manual", "직접 시작"], ["never", "사용 안 함"]]) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = translateCopy(currentUiLanguage(), label);
-      option.selected = value === policy;
-      select.append(option);
-    }
-    select.addEventListener("change", async () => {
-      const next = { ...state.config.web_site_policies, [hostname]: select.value };
-      try {
-        await applySettingsPatch({ web_site_policies: next });
-      } catch (error) {
-        renderWebSitePolicies();
-        await showError("설정을 적용하지 못했습니다", String(error));
-      }
-    });
     remove.type = "button";
     remove.className = "button secondary web-policy-remove";
     setLocalizedText(remove, "삭제");
@@ -1541,10 +1633,45 @@ function renderWebSitePolicies() {
         await showError("설정을 적용하지 못했습니다", String(error));
       }
     });
-    controls.append(select, remove);
+    controls.append(policySelect, remove);
     row.append(host, controls);
-    elements.webSitePolicies.append(row);
+    rows.push(row);
+    list.append(row);
   }
+
+  if (policies.length >= WEB_SITE_POLICY_SEARCH_THRESHOLD) {
+    const toolbar = document.createElement("div");
+    const search = document.createElement("input");
+    toolbar.className = "web-site-policy-toolbar";
+    search.className = "text-field web-site-policy-search";
+    search.type = "search";
+    search.autocomplete = "off";
+    search.spellcheck = false;
+    search.value = state.webSitePolicySearch;
+    search.placeholder = translateCopy(currentUiLanguage(), "사이트 검색");
+    search.setAttribute("aria-label", translateCopy(currentUiLanguage(), "사이트 검색"));
+    search.dataset.i18nPlaceholder = "사이트 검색";
+    search.dataset.i18nAriaLabel = "사이트 검색";
+    const applySearch = () => {
+      state.webSitePolicySearch = search.value.trim().toLocaleLowerCase();
+      let visible = 0;
+      for (const row of rows) {
+        row.hidden = Boolean(state.webSitePolicySearch)
+          && !row.dataset.hostname.includes(state.webSitePolicySearch);
+        if (!row.hidden) visible += 1;
+      }
+      emptySearch.hidden = visible > 0;
+      list.scrollTop = 0;
+    };
+    search.addEventListener("input", applySearch);
+    toolbar.append(search);
+    elements.webSitePolicies.append(toolbar);
+    applySearch();
+  } else {
+    state.webSitePolicySearch = "";
+  }
+
+  elements.webSitePolicies.append(list, emptySearch);
 }
 
 function activateSettingsPanel(panel) {
@@ -2258,7 +2385,8 @@ function openSelect(element) {
   element.classList.add("open");
   trigger.setAttribute("aria-expanded", "true");
 
-  const selectViewport = element.closest(".dictionary-editor-modal, .dictionary-import-modal");
+  const selectViewport = element.closest(".web-site-policy-list.is-scrollable")
+    ?? element.closest(".dictionary-editor-modal, .dictionary-import-modal");
   const viewportBounds = selectViewport
     ? selectViewport.getBoundingClientRect()
     : elements.settingsScroll.getBoundingClientRect();

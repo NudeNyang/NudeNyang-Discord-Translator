@@ -331,7 +331,9 @@ async function initialize() {
   });
   openSettings.addEventListener("click", async () => {
     const response = await nativeRequest({ type: "openWebSettings", requestId: `settings-${Date.now()}` });
-    if (response?.type !== "opened") {
+    if (response?.type === "opened") {
+      window.close();
+    } else {
       detail.textContent = copy("error");
     }
   });

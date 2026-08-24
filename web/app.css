@@ -2732,9 +2732,12 @@ select:focus-visible,
   z-index: 1200;
 }
 
-.web-browser-clients,
-.web-site-policies {
+.web-browser-clients {
   overflow: hidden;
+}
+
+.web-site-policies {
+  overflow: visible;
 }
 
 .web-empty {
@@ -2756,6 +2759,55 @@ select:focus-visible,
 .web-client-row + .web-client-row,
 .web-site-row + .web-site-row {
   border-top: 1px solid var(--border);
+}
+
+.web-site-policy-toolbar {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.web-site-policy-search {
+  min-height: 38px;
+}
+
+.web-site-policy-list.is-scrollable {
+  max-height: 348px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.web-site-policy-list::-webkit-scrollbar {
+  width: 3px;
+}
+
+.web-site-policy-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.web-site-policy-list.is-scrollable:hover {
+  scrollbar-color: var(--scroll) transparent;
+}
+
+.web-site-policy-list.is-scrollable:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+.web-site-policy-list.is-scrollable:hover::-webkit-scrollbar-thumb {
+  background: var(--scroll);
+}
+
+.web-site-policy-empty-search {
+  margin: 0;
+  padding: 24px 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.web-site-policy-empty-search[hidden] {
+  display: none;
 }
 
 .web-client-row > div:first-child {
@@ -2788,13 +2840,18 @@ select:focus-visible,
 }
 
 .web-policy-select {
-  min-width: 132px;
-  height: 36px;
-  padding: 0 32px 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  color: var(--text);
-  background: var(--control);
+  width: 152px;
+}
+
+.web-policy-select .select-trigger {
+  min-height: 36px;
+  padding-inline: 12px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.web-policy-select .select-menu {
+  min-width: 152px;
 }
 
 .web-policy-remove {

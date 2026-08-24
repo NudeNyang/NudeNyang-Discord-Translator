@@ -138,6 +138,8 @@ export const COPY = Object.freeze({
   "자동(시스템)": ["Automatic (system)", "自動（システム）", "自动（系统）"],
   "언어 검색": ["Search languages", "言語を検索", "搜索语言"],
   "검색 결과 없음": ["No matching languages", "一致する言語がありません", "没有匹配的语言"],
+  "사이트 검색": ["Search sites", "サイトを検索", "搜索网站"],
+  "일치하는 사이트가 없습니다.": ["No matching sites.", "一致するサイトがありません。", "没有匹配的网站。"],
   "자동 감지": ["Auto detect", "自動検出", "自动检测"],
   "전송": ["Send", "送信", "发送"],
   "전송 언어 선택": ["Select outgoing language", "送信言語を選択", "选择发送语言"],

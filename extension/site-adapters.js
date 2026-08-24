@@ -30,6 +30,21 @@
 
   const ADAPTERS = [
     {
+      id: "dlsite-report",
+      hosts: ["www.dlsite.com"],
+      pathPattern: /^\/[^/]+\/circle\/report(?:\/|$)/u,
+      blocks: [
+        "article.circle_report .work_name",
+        "article.circle_report .catchphrase",
+        "article.circle_report .report_info .label",
+        "article.circle_report .report_info .content",
+        "article.circle_report .report_title",
+        "article.circle_report .report_section .content",
+        "article.circle_report .btn_report.type_cart",
+      ],
+      excludes: [],
+    },
+    {
       id: "github",
       hosts: ["github.com"],
       blocks: [
@@ -137,7 +152,10 @@
   function adapterForLocation(locationLike) {
     const host = String(locationLike?.hostname ?? "").toLowerCase();
     const path = String(locationLike?.pathname ?? "/");
-    const specific = ADAPTERS.find((adapter) => isSpecificHost(adapter, host));
+    const specific = ADAPTERS.find((adapter) => (
+      isSpecificHost(adapter, host)
+      && (!adapter.pathPattern || adapter.pathPattern.test(path))
+    ));
     if (specific) {
       return (specific.blockedPaths ?? []).some((prefix) => path.startsWith(prefix)) ? null : specific;
     }

@@ -191,6 +191,20 @@ test("web translation panel owns browser batching, usage protection, and site po
   assert.match(script, /web_target_language: \[\["display", "언어 감지"\]/);
 });
 
+test("사이트별 동작은 제품형 셀렉트와 대량 목록 검색을 사용한다", () => {
+  const renderPolicies = script.match(/function renderWebSitePolicies\(\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(script, /function createWebPolicySelect\(/);
+  assert.match(script, /className = "custom-select web-policy-select"/);
+  assert.doesNotMatch(renderPolicies, /createElement\("select"\)/);
+  assert.match(script, /WEB_SITE_POLICY_SEARCH_THRESHOLD\s*=\s*6/);
+  assert.match(script, /web-site-policy-search/);
+  assert.match(script, /web-site-policy-list/);
+  assert.match(script, /web-site-policy-empty-search/);
+  assert.match(script, /closest\("\.web-site-policy-list\.is-scrollable/);
+  assert.match(styles, /\.web-site-policy-list\.is-scrollable\s*\{[^}]*max-height:[^}]*overflow-y:\s*auto/s);
+  assert.match(styles, /\.web-site-policy-list::-webkit-scrollbar-thumb/);
+});
+
 test("received message nickname translation defaults on and saves immediately", () => {
   const incomingCard = markup.match(/<article class="settings-card">[\s\S]*?<h3>받는 메시지<\/h3>[\s\S]*?<\/article>/)?.[0] || "";
   assert.match(incomingCard, /id="translate-nicknames"/);

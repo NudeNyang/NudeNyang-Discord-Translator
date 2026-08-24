@@ -99,6 +99,7 @@ test("팝업은 현재 페이지 언어, 사이트 정책, 사용량과 본체 �
   assert.match(popupJs, /nudenyang-set-target-language/);
   assert.match(popupJs, /webSettingsUpdate/);
   assert.match(popupJs, /openWebSettings/);
+  assert.match(popupJs, /response\?\.type === "opened"[\s\S]*?window\.close\(\)/);
   assert.match(popupJs, /requestCount/);
   assert.match(popupJs, /sentChars/);
 });
