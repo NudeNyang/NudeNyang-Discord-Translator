@@ -80,10 +80,10 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.6.1-beta");
-  assert.match(tauriConfig, /"version": "0\.6\.1-beta"/);
-  assert.match(cargoManifest, /^version = "0\.6\.1-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.6\.1 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.6.2-beta");
+  assert.match(tauriConfig, /"version": "0\.6\.2-beta"/);
+  assert.match(cargoManifest, /^version = "0\.6\.2-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.6\.2 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 
@@ -95,19 +95,20 @@ test("the installer migrates legacy shortcuts to the NudeNyang Discord Translato
   assert.match(installerHooks, /Delete "\$SMPROGRAMS\\Nude Translator\.lnk"/);
 });
 
-test("settings use seven uniform navigation categories", () => {
-  for (const panel of ["translation", "engine", "storage", "image", "dictionary", "convenience", "about"]) {
+test("settings use eight uniform navigation categories including web translation", () => {
+  for (const panel of ["translation", "engine", "web", "storage", "image", "dictionary", "convenience", "about"]) {
     assert.match(markup, new RegExp(`data-settings-panel="${panel}"`));
     assert.match(markup, new RegExp(`data-settings-view="${panel}"`));
   }
   assert.match(markup, /<span>번역<\/span>/);
   assert.match(markup, /<span>번역 엔진<\/span>/);
+  assert.match(markup, /<span>웹 번역<\/span>/);
   assert.match(markup, /<span>저장 공간<\/span>/);
   assert.match(markup, /<span>이미지 번역<\/span>/);
   assert.match(markup, /<span>사전<\/span>/);
   assert.match(markup, /<span>편의 기능<\/span>/);
   assert.match(markup, /<span>앱 정보<\/span>/);
-  for (const icon of ["language", "cpu", "photo", "book", "adjustments-horizontal", "database", "info-circle"]) {
+  for (const icon of ["language", "cpu", "world", "photo", "book", "adjustments-horizontal", "database", "info-circle"]) {
     assert.match(markup, new RegExp(`class="settings-nav-icon" data-icon="${icon}" aria-hidden="true"`));
   }
   assert.match(styles, /\.settings-nav-item\.active \.settings-nav-icon\s*\{[\s\S]*?background:\s*var\(--accent\)/);
@@ -174,6 +175,17 @@ test("settings apply immediately and the primary footer action only confirms", (
   assert.match(script, /keep_local_model_warm: enabled/);
   assert.match(script, /scheduleCaptureFpsUpdate/);
   assert.match(script, /applyShortcutImmediately/);
+});
+
+test("web translation panel owns browser batching, usage protection, and site policies", () => {
+  assert.match(markup, /id="web-translation-enabled"/);
+  assert.match(markup, /data-field="web_target_language"/);
+  assert.match(markup, /data-field="web_processing_mode"/);
+  assert.match(markup, /data-field="web_external_page_char_limit"/);
+  assert.match(markup, /id="web-browser-clients"/);
+  assert.match(markup, /id="web-site-policies"/);
+  assert.match(script, /browser_clients_status/);
+  assert.match(script, /web_site_policies/);
 });
 
 test("received message nickname translation defaults on and saves immediately", () => {

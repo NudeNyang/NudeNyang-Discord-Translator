@@ -21,11 +21,8 @@
       },
       drain(documentRoot) {
         if (roots.size === 0) return [];
-        const pending = [...roots];
+        const pending = [...roots].filter((scanRoot) => scanRoot === documentRoot || scanRoot?.isConnected);
         roots.clear();
-        if (pending.some((scanRoot) => !scanRoot?.isConnected)) {
-          return [documentRoot];
-        }
         return pending;
       },
     });
@@ -57,6 +54,10 @@
         options.onDiscard(next);
         continue;
       }
+      if (batch.length === 0 && next.text.length > options.maxChars && options.discardOversize) {
+        options.onDiscard(next);
+        continue;
+      }
       if (batch.length > 0 && chars + next.text.length > options.maxChars) {
         queue.unshift(next);
         break;
@@ -65,6 +66,21 @@
       chars += next.text.length;
     }
     return batch;
+  }
+
+  function webSchedulingProfile(mode, externalProvider) {
+    const profiles = {
+      responsive: externalProvider
+        ? { collectDelayMs: 260, applyDelayMs: 180, viewportMargin: 180, maxItems: 24, maxChars: 24000 }
+        : { collectDelayMs: 140, applyDelayMs: 120, viewportMargin: 240, maxItems: 16, maxChars: 10000 },
+      balanced: externalProvider
+        ? { collectDelayMs: 420, applyDelayMs: 240, viewportMargin: 180, maxItems: 32, maxChars: 32000 }
+        : { collectDelayMs: 280, applyDelayMs: 180, viewportMargin: 220, maxItems: 24, maxChars: 16000 },
+      economy: externalProvider
+        ? { collectDelayMs: 700, applyDelayMs: 320, viewportMargin: 120, maxItems: 32, maxChars: 32000 }
+        : { collectDelayMs: 500, applyDelayMs: 260, viewportMargin: 160, maxItems: 32, maxChars: 24000 },
+    };
+    return { ...(profiles[mode] ?? profiles.balanced) };
   }
 
   function isQuickToggleShortcut(event) {
@@ -104,6 +120,7 @@
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,
+    webSchedulingProfile,
   });
   root.NudeNyangContentHelpers = api;
   if (typeof module !== "undefined" && module.exports) {

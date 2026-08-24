@@ -1838,6 +1838,7 @@ fn main() {
             engine_ui_ready,
             shortcut_capture_set_active,
             settings_get,
+            browser_bridge::browser_clients_status,
             dictionary_status_get,
             dictionary_personal_list,
             dictionary_personal_query,

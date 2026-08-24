@@ -10,6 +10,7 @@ const {
   runtimeMessageFailure,
   scanRootForAddedNode,
   takeTranslationBatch,
+  webSchedulingProfile,
 } = globalThis.NudeNyangContentHelpers;
 
 test("범용 사이트는 저장된 전역 설정과 무관하게 사용자가 켜기 전까지 대기한다", () => {
@@ -64,13 +65,33 @@ test("연속 DOM 변경의 재스캔 루트를 취소하지 않고 모두 보존
   assert.deepEqual(batch.drain({ isDocument: true }), []);
 });
 
-test("끊어진 변경 루트는 문서 전체 재스캔으로 대체한다", () => {
+test("끊어진 변경 루트는 가상 스크롤 문서 전체를 다시 훑지 않고 버린다", () => {
   const batch = createScanBatch();
   const documentRoot = { isDocument: true };
   batch.add({ isConnected: false });
   batch.add({ isConnected: false });
 
-  assert.deepEqual(batch.drain(documentRoot), [documentRoot]);
+  assert.deepEqual(batch.drain(documentRoot), []);
+});
+
+test("웹 처리 모드는 Discord와 무관한 유휴 배치 프로필로 변환된다", () => {
+  assert.deepEqual(webSchedulingProfile("balanced", false), {
+    collectDelayMs: 280,
+    applyDelayMs: 180,
+    viewportMargin: 220,
+    maxItems: 24,
+    maxChars: 16000,
+  });
+  assert.deepEqual(webSchedulingProfile("balanced", true), {
+    collectDelayMs: 420,
+    applyDelayMs: 240,
+    viewportMargin: 180,
+    maxItems: 32,
+    maxChars: 32000,
+  });
+  assert.equal(webSchedulingProfile("responsive", false).collectDelayMs, 140);
+  assert.equal(webSchedulingProfile("economy", true).collectDelayMs, 700);
+  assert.equal(webSchedulingProfile("invalid", true).collectDelayMs, 420);
 });
 
 test("중첩된 DOM 변경은 가장 바깥쪽 루트만 다시 스캔한다", () => {

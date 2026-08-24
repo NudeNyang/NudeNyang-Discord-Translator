@@ -146,6 +146,47 @@ test("Discord variant selection accepts stable, PTB, and Canary", () => {
   assert.equal(normalizeConfig({ discord_variant: "development" }).discord_variant, "auto");
 });
 
+test("web translation settings receive safe defaults and reject invalid policies", () => {
+  const defaults = normalizeConfig({});
+  assert.equal(defaults.web_translation_enabled, true);
+  assert.equal(defaults.web_target_language, "display");
+  assert.equal(defaults.web_processing_mode, "balanced");
+  assert.equal(defaults.web_external_page_char_limit, 25000);
+  assert.deepEqual(defaults.web_site_policies, {});
+
+  const normalized = normalizeConfig({
+    web_target_language: "ar",
+    web_processing_mode: "economy",
+    web_external_page_char_limit: 50000,
+    web_site_policies: {
+      "github.com": "always",
+      "example.com": "manual",
+      "accounts.example.com": "never",
+      "bad host": "always",
+      "invalid.example": "sometimes",
+    },
+  });
+  assert.equal(normalized.web_target_language, "ar");
+  assert.equal(normalized.web_processing_mode, "economy");
+  assert.equal(normalized.web_external_page_char_limit, 50000);
+  assert.deepEqual(normalized.web_site_policies, {
+    "github.com": "always",
+    "example.com": "manual",
+    "accounts.example.com": "never",
+  });
+
+  const invalid = normalizeConfig({
+    web_target_language: "unknown",
+    web_processing_mode: "fastest",
+    web_external_page_char_limit: 123,
+    web_site_policies: [],
+  });
+  assert.equal(invalid.web_target_language, "display");
+  assert.equal(invalid.web_processing_mode, "balanced");
+  assert.equal(invalid.web_external_page_char_limit, 25000);
+  assert.deepEqual(invalid.web_site_policies, {});
+});
+
 test("dictionary external lookup accepts only the supported privacy choices", () => {
   for (const provider of ["wiktionary", "none"]) {
     assert.equal(normalizeConfig({ dictionary_external_provider: provider }).dictionary_external_provider, provider);

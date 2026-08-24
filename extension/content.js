@@ -9,16 +9,24 @@
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,
+    webSchedulingProfile,
   } = globalThis.NudeNyangContentHelpers;
-  const MAX_ITEMS = 32;
   const MAX_ITEM_CHARS = 4000;
-  const MAX_TOTAL_CHARS = 32000;
+  const EXTERNAL_TRANSLATORS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
+  const DEFAULT_WEB_SETTINGS = Object.freeze({
+    enabled: true,
+    targetLanguage: "display",
+    processingMode: "balanced",
+    externalPageCharLimit: 25000,
+    sitePolicies: {},
+  });
+  const APPLY_CHUNK_SIZE = 12;
   const trackedNodes = new Set();
   const nodeStates = new WeakMap();
   let blockIds = new WeakMap();
   let observedBlocks = new WeakSet();
   const queue = [];
-  let enabled = true;
+  let enabled = false;
   let translating = false;
   let sequence = 0;
   let pageEpoch = 0;
@@ -28,15 +36,24 @@
   let intersectionObserver;
   let rescanTimer;
   let navigationTimer;
+  let flushTimer;
+  let applyTimer;
+  let applyingFrame;
   const pendingScanBatch = createScanBatch();
+  const pendingApplications = [];
   let lastError = "";
+  let webSettings = { ...DEFAULT_WEB_SETTINGS };
+  let sitePolicy = "default";
+  let pageTargetLanguage = "";
+  let externalProvider = false;
+  let scheduling = webSchedulingProfile("balanced", false);
+  let viewportActiveUntil = 0;
+  let requestCount = 0;
+  let sentChars = 0;
+  let usageLimited = false;
 
   function storageGet(defaults) {
     return new Promise((resolve) => api.storage.local.get(defaults, resolve));
-  }
-
-  function storageSet(values) {
-    return new Promise((resolve) => api.storage.local.set(values, resolve));
   }
 
   function nativeRequest(request) {
@@ -60,6 +77,83 @@
 
   function logDiagnostic(event, detail = {}) {
     console.info("[NudeNyang Web Translator]", event, detail);
+  }
+
+  function currentHostname() {
+    return location.hostname.toLowerCase().replace(/^www\./, "");
+  }
+
+  function normalizeWebSettings(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const policies = source.sitePolicies && typeof source.sitePolicies === "object"
+      ? source.sitePolicies
+      : {};
+    return {
+      enabled: source.enabled !== false,
+      targetLanguage: typeof source.targetLanguage === "string" ? source.targetLanguage : "display",
+      processingMode: ["responsive", "balanced", "economy"].includes(source.processingMode)
+        ? source.processingMode
+        : "balanced",
+      externalPageCharLimit: [0, 10000, 25000, 50000].includes(Number(source.externalPageCharLimit))
+        ? Number(source.externalPageCharLimit)
+        : 25000,
+      sitePolicies: policies,
+    };
+  }
+
+  function refreshSchedulingProfile() {
+    scheduling = webSchedulingProfile(webSettings.processingMode, externalProvider);
+  }
+
+  function applyAppStatus(response) {
+    if (response?.type !== "status") return;
+    externalProvider = EXTERNAL_TRANSLATORS.has(response.translator);
+    applyWebSettings(response.webSettings);
+  }
+
+  function applyWebSettings(value) {
+    webSettings = normalizeWebSettings(value);
+    sitePolicy = webSettings.sitePolicies[currentHostname()] ?? "default";
+    refreshSchedulingProfile();
+  }
+
+  function initialEnabled(storedEnabled) {
+    if (!adapter || !webSettings.enabled || sitePolicy === "never" || sitePolicy === "manual") {
+      return false;
+    }
+    if (sitePolicy === "always") return true;
+    return initialTranslationEnabled(storedEnabled, adapter);
+  }
+
+  function resetPageUsage() {
+    requestCount = 0;
+    sentChars = 0;
+    usageLimited = false;
+  }
+
+  function effectiveTargetLanguage() {
+    if (pageTargetLanguage) return pageTargetLanguage;
+    return webSettings.targetLanguage === "display" ? undefined : webSettings.targetLanguage;
+  }
+
+  function releasePending(item) {
+    const state = nodeStates.get(item.node);
+    if (state?.itemId === item.id) state.pending = false;
+  }
+
+  function pruneDisconnectedNodes() {
+    for (const node of trackedNodes) {
+      if (!node.isConnected) {
+        trackedNodes.delete(node);
+        nodeStates.delete(node);
+      }
+    }
+  }
+
+  function stopForUsageLimit() {
+    usageLimited = true;
+    lastError = "이 페이지의 외부 번역 서비스 전송 한도에 도달했습니다.";
+    while (queue.length > 0) releasePending(queue.shift());
   }
 
   function blockId(block) {
@@ -99,7 +193,7 @@
   }
 
   function enqueueBlock(block) {
-    if (!enabled || !adapter || !isElementNearViewport(block, innerHeight)) {
+    if (!enabled || !adapter || usageLimited || !isElementNearViewport(block, innerHeight, scheduling.viewportMargin)) {
       return;
     }
     const id = blockId(block);
@@ -110,23 +204,82 @@
       trackedNodes.add(node);
       queue.push({ id: itemId, blockId: id, text: original, node, block, epoch: pageEpoch });
     }
-    void flushQueue();
+    scheduleFlush();
+  }
+
+  function scheduleFlush(delay = scheduling.collectDelayMs) {
+    clearTimeout(flushTimer);
+    flushTimer = setTimeout(() => {
+      flushTimer = undefined;
+      void flushQueue();
+    }, Math.max(0, delay));
+  }
+
+  function scheduleApplications() {
+    clearTimeout(applyTimer);
+    if (pendingApplications.length === 0) return;
+    const remaining = Math.max(0, viewportActiveUntil - performance.now());
+    applyTimer = setTimeout(() => {
+      applyTimer = undefined;
+      if (applyingFrame) cancelAnimationFrame(applyingFrame);
+      applyingFrame = requestAnimationFrame(applyApplicationChunk);
+    }, remaining);
+  }
+
+  function applyApplicationChunk() {
+    applyingFrame = undefined;
+    if (performance.now() < viewportActiveUntil) {
+      scheduleApplications();
+      return;
+    }
+    let applied = 0;
+    for (let count = 0; count < APPLY_CHUNK_SIZE && pendingApplications.length > 0; count += 1) {
+      const { item, translated } = pendingApplications.shift();
+      const state = nodeStates.get(item.node);
+      if (
+        translated != null
+        && state?.itemId === item.id
+        && state.epoch === pageEpoch
+        && item.node.isConnected
+        && item.node.nodeValue === state.original
+      ) {
+        state.pending = false;
+        state.translated = translated;
+        item.node.nodeValue = translated;
+        applied += 1;
+      } else if (state?.itemId === item.id) {
+        state.pending = false;
+      }
+    }
+    if (applied > 0) logDiagnostic("dom-chunk-applied", { applied, remaining: pendingApplications.length });
+    if (pendingApplications.length > 0) {
+      applyingFrame = requestAnimationFrame(applyApplicationChunk);
+    }
+  }
+
+  function noteViewportActivity() {
+    viewportActiveUntil = performance.now() + scheduling.applyDelayMs;
+    if (queue.length > 0) scheduleFlush();
+    if (pendingApplications.length > 0) scheduleApplications();
   }
 
   async function flushQueue() {
-    if (translating || !enabled || queue.length === 0) {
+    if (translating || !enabled || usageLimited || queue.length === 0) {
       return;
     }
     translating = true;
-    const releasePending = (item) => {
-      const state = nodeStates.get(item.node);
-      if (state?.itemId === item.id) {
-        state.pending = false;
-      }
-    };
+    const remainingBudget = externalProvider && webSettings.externalPageCharLimit > 0
+      ? Math.max(0, webSettings.externalPageCharLimit - sentChars)
+      : scheduling.maxChars;
+    if (remainingBudget === 0) {
+      translating = false;
+      stopForUsageLimit();
+      return;
+    }
     const batch = takeTranslationBatch(queue, {
-      maxItems: MAX_ITEMS,
-      maxChars: MAX_TOTAL_CHARS,
+      maxItems: scheduling.maxItems,
+      maxChars: Math.min(scheduling.maxChars, remainingBudget),
+      discardOversize: externalProvider && webSettings.externalPageCharLimit > 0,
       isCurrent(item) {
         const state = nodeStates.get(item.node);
         return item.epoch === pageEpoch
@@ -136,60 +289,48 @@
           && item.node.nodeValue === state.original;
       },
       isNearViewport(item) {
-        return isElementNearViewport(item.block, innerHeight);
+        return isElementNearViewport(item.block, innerHeight, scheduling.viewportMargin);
       },
       onDiscard: releasePending,
     });
     if (batch.length === 0) {
       translating = false;
+      if (externalProvider && webSettings.externalPageCharLimit > 0 && remainingBudget < MAX_ITEM_CHARS) {
+        stopForUsageLimit();
+      }
       return;
     }
     const requestId = `web-${Date.now()}-${++sequence}`;
+    const batchChars = batch.reduce((total, item) => total + item.text.length, 0);
+    requestCount += 1;
+    sentChars += batchChars;
     const response = await nativeRequest({
       type: "translate",
       requestId,
       pageId: `${adapter.id}:${location.origin}${location.pathname}`.slice(0, 240),
+      targetLanguage: effectiveTargetLanguage(),
       items: batch.map(({ id, blockId: itemBlockId, text }) => ({ id, blockId: itemBlockId, text })),
     });
     if (response?.type === "translationResult") {
+      if (response.translator) externalProvider = EXTERNAL_TRANSLATORS.has(response.translator);
+      if (response.webSettings) applyWebSettings(response.webSettings);
       const results = new Map(response.items.map((item) => [item.id, item.text]));
-      let applied = 0;
       const rejected = {
         missingResult: 0,
-        missingState: 0,
-        itemChanged: 0,
-        epochChanged: 0,
-        disconnected: 0,
-        sourceChanged: 0,
       };
       for (const item of batch) {
-        const state = nodeStates.get(item.node);
         const translated = results.get(item.id);
         if (translated == null) rejected.missingResult += 1;
-        if (!state) rejected.missingState += 1;
-        if (state && state.itemId !== item.id) rejected.itemChanged += 1;
-        if (state && state.epoch !== pageEpoch) rejected.epochChanged += 1;
-        if (!item.node.isConnected) rejected.disconnected += 1;
-        if (state && item.node.nodeValue !== state.original) rejected.sourceChanged += 1;
-        if (
-          translated != null
-          && state?.itemId === item.id
-          && state.epoch === pageEpoch
-          && item.node.isConnected
-          && item.node.nodeValue === state.original
-        ) {
-          state.pending = false;
-          state.translated = translated;
-          item.node.nodeValue = translated;
-          applied += 1;
-        } else if (state?.itemId === item.id) {
-          state.pending = false;
-        }
+        if (translated == null) releasePending(item);
+        else pendingApplications.push({ item, translated });
       }
+      scheduleApplications();
       logDiagnostic("batch-applied", {
         requested: batch.length,
         returned: response.items.length,
-        applied,
+        queuedForApply: batch.length - rejected.missingResult,
+        requestCount,
+        sentChars,
         epoch: pageEpoch,
         rejected,
       });
@@ -222,13 +363,24 @@
       }
     }
     translating = false;
+    if (externalProvider && webSettings.externalPageCharLimit > 0 && sentChars >= webSettings.externalPageCharLimit) {
+      stopForUsageLimit();
+      return;
+    }
     if (queue.length > 0) {
-      void flushQueue();
+      scheduleFlush();
     }
   }
 
   function restoreOriginals() {
     queue.length = 0;
+    pendingApplications.length = 0;
+    clearTimeout(flushTimer);
+    clearTimeout(applyTimer);
+    if (applyingFrame) cancelAnimationFrame(applyingFrame);
+    flushTimer = undefined;
+    applyTimer = undefined;
+    applyingFrame = undefined;
     for (const node of trackedNodes) {
       const state = nodeStates.get(node);
       if (state && node.isConnected && state.translated != null && node.nodeValue === state.translated) {
@@ -246,7 +398,11 @@
     intersectionObserver?.disconnect();
     pendingScanBatch.clear();
     clearTimeout(rescanTimer);
+    clearTimeout(flushTimer);
+    clearTimeout(applyTimer);
+    if (applyingFrame) cancelAnimationFrame(applyingFrame);
     clearInterval(navigationTimer);
+    document.removeEventListener("scroll", noteViewportActivity, true);
     window.removeEventListener("keydown", handleQuickToggle, true);
     rescanTimer = undefined;
     navigationTimer = undefined;
@@ -278,6 +434,7 @@
     for (const block of root.querySelectorAll(selector)) {
       observeBlock(block);
     }
+    pruneDisconnectedNodes();
   }
 
   function scheduleScan(root) {
@@ -300,6 +457,8 @@
     currentUrl = location.href;
     pageEpoch += 1;
     restoreOriginals();
+    resetPageUsage();
+    pageTargetLanguage = "";
     blockIds = new WeakMap();
     observedBlocks = new WeakSet();
     intersectionObserver.disconnect();
@@ -308,10 +467,15 @@
     clearTimeout(rescanTimer);
     rescanTimer = undefined;
     const nextAdapter = adapters.adapterForLocation(location);
-    if (nextAdapter?.manualOnly && adapter?.id !== nextAdapter.id) {
+    adapter = nextAdapter;
+    sitePolicy = webSettings.sitePolicies[currentHostname()] ?? "default";
+    if (sitePolicy === "never" || sitePolicy === "manual" || !webSettings.enabled) {
+      enabled = false;
+    } else if (sitePolicy === "always") {
+      enabled = true;
+    } else if (adapter?.manualOnly) {
       enabled = false;
     }
-    adapter = nextAdapter;
     lastError = "";
     scheduleScan(document);
   }
@@ -320,10 +484,13 @@
     if (!adapter) {
       return status();
     }
-    enabled = Boolean(value);
-    if (!adapter?.manualOnly) {
-      await storageSet({ enabled });
+    if (value && !webSettings.enabled) {
+      lastError = "Windows 앱에서 웹 번역 사용이 꺼져 있습니다.";
+      return status();
     }
+    enabled = Boolean(value);
+    usageLimited = false;
+    lastError = "";
     if (enabled) {
       scan(document);
     } else {
@@ -352,18 +519,26 @@
       site: adapter?.id ?? "",
       manualOnly: Boolean(adapter?.manualOnly),
       translatedNodes: [...trackedNodes].filter((node) => nodeStates.get(node)?.translated != null).length,
+      requestCount,
+      sentChars,
+      usageLimit: externalProvider ? webSettings.externalPageCharLimit : 0,
+      usageLimited,
+      targetLanguage: pageTargetLanguage || webSettings.targetLanguage,
+      sitePolicy,
+      processingMode: webSettings.processingMode,
       lastError,
     };
   }
 
   function configureIntersectionObserver() {
     intersectionObserver = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) noteViewportActivity();
       for (const entry of entries) {
         if (entry.isIntersecting) {
           enqueueBlock(entry.target);
         }
       }
-    }, { rootMargin: "500px 0px" });
+    }, { rootMargin: `${scheduling.viewportMargin}px 0px` });
   }
 
   api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -383,6 +558,30 @@
       setEnabled(false).then(sendResponse);
       return true;
     }
+    if (message?.type === "nudenyang-set-target-language") {
+      pageTargetLanguage = typeof message.targetLanguage === "string" ? message.targetLanguage : "";
+      pageEpoch += 1;
+      restoreOriginals();
+      resetPageUsage();
+      if (enabled) scan(document);
+      sendResponse(status());
+      return false;
+    }
+    if (message?.type === "nudenyang-apply-web-settings") {
+      applyWebSettings(message.webSettings);
+      intersectionObserver?.disconnect();
+      observedBlocks = new WeakSet();
+      configureIntersectionObserver();
+      if (!webSettings.enabled || sitePolicy === "never" || sitePolicy === "manual") {
+        enabled = false;
+        restoreOriginals();
+      } else if (sitePolicy === "always") {
+        enabled = true;
+        scan(document);
+      }
+      sendResponse(status());
+      return false;
+    }
     return false;
   });
 
@@ -390,7 +589,9 @@
 
   async function start() {
     const stored = await storageGet({ enabled: true });
-    enabled = initialTranslationEnabled(stored.enabled, adapter);
+    const appStatus = await nativeRequest({ type: "status", requestId: `content-${Date.now()}` });
+    applyAppStatus(appStatus);
+    enabled = initialEnabled(stored.enabled);
     configureIntersectionObserver();
     observer = new MutationObserver((mutations) => {
       handleNavigation();
@@ -418,6 +619,7 @@
       }
     });
     observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    document.addEventListener("scroll", noteViewportActivity, { capture: true, passive: true });
     navigationTimer = setInterval(handleNavigation, 500);
     scan(document);
   }

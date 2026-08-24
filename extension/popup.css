@@ -38,7 +38,7 @@
 }
 
 body {
-  min-width: 330px;
+  min-width: 360px;
   margin: 0;
   color: var(--text);
   background: var(--bg);
@@ -114,6 +114,53 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.quick-controls {
+  margin: 0 0 10px;
+  padding: 2px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.quick-select-row,
+.quick-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.quick-select-row + .quick-switch-row {
+  border-top: 1px solid var(--border);
+}
+
+.quick-select-row select {
+  max-width: 178px;
+  min-width: 132px;
+  height: 32px;
+  padding: 0 26px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  background: var(--control);
+  font: inherit;
+  font-size: 12px;
+}
+
+.usage {
+  min-height: 18px;
+  margin: 8px 2px 13px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.usage.warning {
+  color: var(--danger);
 }
 
 .shortcut-row {
@@ -208,6 +255,12 @@ button:disabled {
 
 button:disabled:hover {
   background: var(--control);
+}
+
+.secondary-action {
+  margin-top: 8px;
+  color: var(--muted);
+  background: transparent;
 }
 
 .switch {

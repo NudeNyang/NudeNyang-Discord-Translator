@@ -80,6 +80,8 @@ pub struct TranslationService {
     detector: LanguageDetector,
     incoming_detector: LanguageDetector,
     incoming_context_scope: String,
+    web_detector: LanguageDetector,
+    web_context_scope: String,
     navigation_context_scope: String,
     navigation_languages: HashMap<ScriptFamily, Language>,
 }
@@ -92,6 +94,8 @@ impl TranslationService {
             detector: LanguageDetector::default(),
             incoming_detector: LanguageDetector::default(),
             incoming_context_scope: String::new(),
+            web_detector: LanguageDetector::default(),
+            web_context_scope: String::new(),
             navigation_context_scope: String::new(),
             navigation_languages: HashMap::new(),
         }
@@ -409,6 +413,63 @@ impl TranslationService {
             .map(|translated| {
                 translated.ok_or_else(|| {
                     "번역 엔진이 일부 텍스트의 결과를 반환하지 않았습니다.".to_string()
+                })
+            })
+            .collect()
+    }
+
+    pub fn translate_many_for_web_contextual_filtered(
+        &mut self,
+        texts: &[String],
+        block_keys: &[Option<String>],
+        page_scope: &str,
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+    ) -> Result<Vec<String>, String> {
+        let source_hints = self.web_source_hints(texts, block_keys, page_scope)?;
+        let mut results = vec![None; texts.len()];
+        let mut pending_indices = Vec::new();
+        let mut pending_texts = Vec::new();
+        let mut pending_hints = Vec::new();
+        let mut pending_keys = Vec::new();
+
+        for (index, ((text, block_key), source_hint)) in
+            texts.iter().zip(block_keys).zip(&source_hints).enumerate()
+        {
+            let detected = detect_explicit_language(text);
+            let source = if detected == Language::Unknown {
+                source_hint.unwrap_or(Language::Unknown)
+            } else {
+                detected
+            };
+            if allowed_sources.is_some_and(|allowed| !allowed.contains(&source)) {
+                results[index] = Some(text.clone());
+                continue;
+            }
+            pending_indices.push(index);
+            pending_texts.push(text.clone());
+            pending_hints.push(*source_hint);
+            pending_keys.push(block_key.clone());
+        }
+
+        let translated = self.translate_contextual_pending(
+            &pending_texts,
+            &pending_hints,
+            &pending_keys,
+            target,
+            allowed_sources,
+        )?;
+        if translated.len() != pending_indices.len() {
+            return Err("번역 엔진이 일부 웹 텍스트의 결과를 반환하지 않았습니다.".to_string());
+        }
+        for (index, translated) in pending_indices.into_iter().zip(translated) {
+            results[index] = Some(translated);
+        }
+        results
+            .into_iter()
+            .map(|translated| {
+                translated.ok_or_else(|| {
+                    "번역 엔진이 일부 웹 텍스트의 결과를 반환하지 않았습니다.".to_string()
                 })
             })
             .collect()
@@ -852,6 +913,75 @@ impl TranslationService {
                 && family == ScriptFamily::Latin)
                 .then_some(Language::English);
             hints.push(recent.or(nickname_fallback));
+        }
+        Ok(hints)
+    }
+
+    fn web_source_hints(
+        &mut self,
+        texts: &[String],
+        block_keys: &[Option<String>],
+        page_scope: &str,
+    ) -> Result<Vec<Option<Language>>, String> {
+        if texts.len() != block_keys.len() {
+            return Err("웹 문맥 정보의 개수가 원문 개수와 다릅니다.".to_string());
+        }
+        if self.web_context_scope != page_scope {
+            self.web_context_scope = page_scope.to_string();
+            self.web_detector = LanguageDetector::default();
+        }
+
+        let mut grouped_text = HashMap::<(String, ScriptFamily), String>::new();
+        for (text, block_key) in texts.iter().zip(block_keys) {
+            let (Some(block_key), Some(family)) =
+                (block_key.as_ref(), detection_script_family(text))
+            else {
+                continue;
+            };
+            let aggregate = grouped_text.entry((block_key.clone(), family)).or_default();
+            if !aggregate.is_empty() {
+                aggregate.push('\n');
+            }
+            aggregate.push_str(text);
+        }
+        let grouped_languages = grouped_text
+            .into_iter()
+            .filter_map(|(key, text)| {
+                let language = detect_explicit_language(&text);
+                (language_script_family(language) == Some(key.1)).then_some((key, language))
+            })
+            .collect::<HashMap<_, _>>();
+
+        let mut remembered_groups = HashSet::new();
+        let mut hints = Vec::with_capacity(texts.len());
+        for (text, block_key) in texts.iter().zip(block_keys) {
+            let direct = detect_explicit_language(text);
+            if direct != Language::Unknown {
+                if let (Some(block_key), Some(family)) =
+                    (block_key.as_ref(), detection_script_family(text))
+                {
+                    if remembered_groups.insert((block_key.clone(), family)) {
+                        self.web_detector.remember(direct);
+                    }
+                }
+                hints.push(None);
+                continue;
+            }
+            let (Some(block_key), Some(family)) =
+                (block_key.as_ref(), detection_script_family(text))
+            else {
+                hints.push(None);
+                continue;
+            };
+            let group_key = (block_key.clone(), family);
+            if let Some(language) = grouped_languages.get(&group_key).copied() {
+                if remembered_groups.insert(group_key) {
+                    self.web_detector.remember(language);
+                }
+                hints.push(Some(language));
+            } else {
+                hints.push(self.web_detector.recent_language_for(text));
+            }
         }
         Ok(hints)
     }
@@ -2541,6 +2671,39 @@ mod tests {
                 .unwrap(),
             vec!["thx".to_string()]
         );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn web_context_scope_is_independent_from_discord_channel_memory() {
+        let path = cache_path("web-discord-context-isolation");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MockTranslator), cache);
+
+        service
+            .translate_many_for_web_contextual_filtered(
+                &["This paragraph belongs to a web page".to_string()],
+                &[Some("paragraph-1".to_string())],
+                "web:github.com/readme",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+        assert_eq!(service.web_context_scope, "web:github.com/readme");
+        assert!(service.incoming_context_scope.is_empty());
+        assert!(service.navigation_context_scope.is_empty());
+
+        service
+            .translate_many_for_incoming_contextual(
+                &["This message belongs to Discord".to_string()],
+                &[Some("message-1".to_string())],
+                "/channels/guild/channel",
+                Language::Korean,
+            )
+            .unwrap();
+        assert_eq!(service.incoming_context_scope, "/channels/guild/channel");
+        assert_eq!(service.web_context_scope, "web:github.com/readme");
+
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

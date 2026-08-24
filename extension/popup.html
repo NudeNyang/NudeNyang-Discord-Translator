@@ -24,6 +24,22 @@
         <span id="connection-text">Windows 앱에 연결하는 중입니다…</span>
       </div>
       <p id="detail" class="detail"></p>
+      <div class="quick-controls">
+        <label class="quick-select-row" for="target-language">
+          <span>현재 페이지 언어</span>
+          <select id="target-language">
+            <option value="">앱 설정 따르기</option>
+          </select>
+        </label>
+        <label class="quick-switch-row">
+          <span>이 사이트 항상 번역</span>
+          <span class="switch compact-switch">
+            <input id="always-translate-site" type="checkbox">
+            <span></span>
+          </span>
+        </label>
+      </div>
+      <p id="usage" class="usage">이 페이지 요청 0회 · 전송 0자</p>
       <div class="shortcut-row" aria-label="번역과 원문을 전환하는 단축키">
         <span class="shortcut-label">번역/원문 전환</span>
         <span class="shortcut-keys">
@@ -33,6 +49,7 @@
         </span>
       </div>
       <button id="restore" type="button">이 페이지 원문으로 복원</button>
+      <button id="open-settings" class="secondary-action" type="button">웹 번역 설정 열기</button>
     </main>
     <script src="popup.js"></script>
   </body>

@@ -10,6 +10,11 @@ export const DEFAULT_CONFIG = Object.freeze({
   incoming_language_mode: "all",
   incoming_source_languages: [],
   translate_nicknames: true,
+  web_translation_enabled: true,
+  web_target_language: "display",
+  web_processing_mode: "balanced",
+  web_external_page_char_limit: 25000,
+  web_site_policies: {},
   translator: "hymt_1_8b",
   outgoing_translator: "hymt_1_8b",
   hymt_device: "auto",
@@ -98,6 +103,34 @@ export function normalizeConfig(value = {}) {
   const discordVariant = ["auto", "stable", "ptb", "canary"].includes(value.discord_variant)
     ? value.discord_variant
     : DEFAULT_CONFIG.discord_variant;
+  const webTargetLanguage = ["display", ...SUPPORTED_TARGET_LANGUAGES].includes(
+    value.web_target_language,
+  )
+    ? value.web_target_language
+    : DEFAULT_CONFIG.web_target_language;
+  const webProcessingMode = ["responsive", "balanced", "economy"].includes(
+    value.web_processing_mode,
+  )
+    ? value.web_processing_mode
+    : DEFAULT_CONFIG.web_processing_mode;
+  const webExternalPageCharLimit = [0, 10000, 25000, 50000].includes(
+    Number(value.web_external_page_char_limit),
+  )
+    ? Number(value.web_external_page_char_limit)
+    : DEFAULT_CONFIG.web_external_page_char_limit;
+  const webSitePolicies = Object.fromEntries(
+    Object.entries(
+      value.web_site_policies && !Array.isArray(value.web_site_policies)
+        ? value.web_site_policies
+        : {},
+    )
+      .map(([hostname, policy]) => [hostname.trim().replace(/^www\./i, "").toLowerCase(), policy])
+      .filter(([hostname, policy]) => {
+        if (!/^(?=.{1,253}$)(?!\.)(?!.*\.$)[a-z0-9.-]+$/.test(hostname)) return false;
+        return hostname.split(".").every(label => /^(?!-)[a-z0-9-]{1,63}(?<!-)$/.test(label))
+          && ["always", "manual", "never"].includes(policy);
+      }),
+  );
   return {
     ...DEFAULT_CONFIG,
     ...value,
@@ -110,6 +143,10 @@ export function normalizeConfig(value = {}) {
     image_ocr_quality: imageOcrQuality,
     dictionary_external_provider: dictionaryExternalProvider,
     discord_variant: discordVariant,
+    web_target_language: webTargetLanguage,
+    web_processing_mode: webProcessingMode,
+    web_external_page_char_limit: webExternalPageCharLimit,
+    web_site_policies: webSitePolicies,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,
       ...(value.hotkeys || {}),

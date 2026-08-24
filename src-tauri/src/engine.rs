@@ -2709,7 +2709,7 @@ fn run_translation_worker(
                     .map(|item| Some(format!("web:{page_id}:{}", item.block_id)))
                     .collect::<Vec<_>>();
                 let translated = service
-                    .translate_many_for_incoming_contextual_filtered(
+                    .translate_many_for_web_contextual_filtered(
                         &texts,
                         &message_keys,
                         &page_id,

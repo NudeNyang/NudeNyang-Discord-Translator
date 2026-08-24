@@ -1,15 +1,16 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::config::{default_config_path, ConfigStore};
 use crate::engine::{BrowserTranslationRequest, RustEngine};
@@ -19,6 +20,16 @@ const MAX_NATIVE_MESSAGE_BYTES: usize = 1024 * 1024;
 const BRIDGE_FILE_NAME: &str = "browser-bridge.json";
 pub const EXTENSION_ID: &str = "bdkkgjjmocmdknffadjgbljmnhdcchjl";
 const NATIVE_HOST_NAME: &str = "com.nudenyang.translator";
+
+static BROWSER_CLIENTS: OnceLock<Mutex<BTreeMap<String, BrowserClientInfo>>> = OnceLock::new();
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserClientInfo {
+    browser: String,
+    extension_version: String,
+    last_seen_at: u64,
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -154,7 +165,92 @@ fn handle_bridge_connection(
         .map_err(|error| format!("브라우저 번역 응답을 전송하지 못했습니다: {error}"))
 }
 
+fn record_browser_client(request: &Value) {
+    let Some(client) = request.get("client") else {
+        return;
+    };
+    let browser = client
+        .get("browser")
+        .and_then(Value::as_str)
+        .filter(|value| matches!(*value, "chrome" | "whale"))
+        .unwrap_or_default();
+    if browser.is_empty() {
+        return;
+    }
+    let extension_version = client
+        .get("extensionVersion")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .chars()
+        .take(32)
+        .collect::<String>();
+    let last_seen_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .min(u64::MAX as u128) as u64;
+    if let Ok(mut clients) = BROWSER_CLIENTS
+        .get_or_init(|| Mutex::new(BTreeMap::new()))
+        .lock()
+    {
+        clients.insert(
+            browser.to_string(),
+            BrowserClientInfo {
+                browser: browser.to_string(),
+                extension_version,
+                last_seen_at,
+            },
+        );
+    }
+}
+
+#[tauri::command]
+pub fn browser_clients_status() -> Vec<BrowserClientInfo> {
+    BROWSER_CLIENTS
+        .get_or_init(|| Mutex::new(BTreeMap::new()))
+        .lock()
+        .map(|clients| clients.values().cloned().collect())
+        .unwrap_or_default()
+}
+
+fn web_settings_value(config: &crate::config::AppConfig) -> Value {
+    json!({
+        "enabled": config.web_translation_enabled,
+        "targetLanguage": config.web_target_language,
+        "processingMode": config.web_processing_mode,
+        "externalPageCharLimit": config.web_external_page_char_limit,
+        "sitePolicies": config.web_site_policies,
+    })
+}
+
+fn update_web_settings(app: &AppHandle, patch: Value) -> Result<Value, String> {
+    let allowed = [
+        "web_translation_enabled",
+        "web_target_language",
+        "web_processing_mode",
+        "web_external_page_char_limit",
+        "web_site_policies",
+    ];
+    let patch = patch
+        .as_object()
+        .ok_or_else(|| "웹 번역 설정 형식이 올바르지 않습니다.".to_string())?;
+    if patch.keys().any(|key| !allowed.contains(&key.as_str())) {
+        return Err("확장 프로그램에서 변경할 수 없는 설정이 포함되어 있습니다.".to_string());
+    }
+    let previous = app.state::<ConfigStore>().get()?;
+    let updated = app
+        .state::<ConfigStore>()
+        .update(Value::Object(patch.clone()))?;
+    if let Err(error) = app.state::<RustEngine>().apply_config(updated.clone()) {
+        let _ = app.state::<ConfigStore>().replace(previous);
+        return Err(error);
+    }
+    let _ = app.emit("settings-changed", updated.clone());
+    Ok(web_settings_value(&updated))
+}
+
 fn dispatch_request(app: &AppHandle, request: Value) -> Value {
+    record_browser_client(&request);
     let request_id = request
         .get("requestId")
         .and_then(Value::as_str)
@@ -175,6 +271,7 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
                     "translator": config.translator,
                     "activeTranslator": status.active_translator,
                     "translatorState": status.translator_state,
+                    "webSettings": web_settings_value(&config),
                 }),
                 (Err(error), _) | (_, Err(error)) => {
                     error_response(&request_id, "app_state_unavailable", &error, true)
@@ -183,11 +280,20 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
         }
         Some("translate") => match serde_json::from_value::<BrowserTranslationRequest>(request) {
             Ok(request) => match app.state::<RustEngine>().translate_browser(request) {
-                Ok(response) => json!({
-                    "type": "translationResult",
-                    "requestId": response.request_id,
-                    "items": response.items,
-                }),
+                Ok(response) => {
+                    let config = app.state::<ConfigStore>().get().ok();
+                    let web_settings = config
+                        .as_ref()
+                        .map(web_settings_value)
+                        .unwrap_or(Value::Null);
+                    json!({
+                        "type": "translationResult",
+                        "requestId": response.request_id,
+                        "items": response.items,
+                        "webSettings": web_settings,
+                        "translator": config.as_ref().map(|config| config.translator.as_str()),
+                    })
+                }
                 Err(error) => {
                     let preparing = error.contains("준비하고 있습니다");
                     error_response(
@@ -209,6 +315,36 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
                 false,
             ),
         },
+        Some("webSettingsUpdate") => {
+            let patch = request.get("patch").cloned().unwrap_or(Value::Null);
+            match update_web_settings(app, patch) {
+                Ok(web_settings) => json!({
+                    "type": "webSettings",
+                    "requestId": request_id,
+                    "webSettings": web_settings,
+                }),
+                Err(error) => {
+                    error_response(&request_id, "web_settings_update_failed", &error, false)
+                }
+            }
+        }
+        Some("openWebSettings") => {
+            let result = app
+                .get_webview_window("main")
+                .ok_or_else(|| "설정창을 찾지 못했습니다.".to_string())
+                .and_then(|window| {
+                    window.show().map_err(|error| error.to_string())?;
+                    window.set_focus().map_err(|error| error.to_string())?;
+                    app.emit_to("main", "open-settings-panel", "web")
+                        .map_err(|error| error.to_string())
+                });
+            match result {
+                Ok(()) => json!({ "type": "opened", "requestId": request_id }),
+                Err(error) => {
+                    error_response(&request_id, "settings_window_unavailable", &error, true)
+                }
+            }
+        }
         Some("cancel") => json!({ "type": "cancelled", "requestId": request_id }),
         _ => error_response(
             &request_id,

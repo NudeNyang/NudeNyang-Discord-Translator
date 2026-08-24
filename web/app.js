@@ -108,6 +108,18 @@ const OPTIONS = {
     [90, "90일 보관"],
     [180, "180일 보관"],
   ],
+  web_target_language: [["display", "표시 번역 언어 따르기"], ...LANGUAGE_OPTIONS],
+  web_processing_mode: [
+    ["balanced", "자동 (권장)"],
+    ["responsive", "반응 우선"],
+    ["economy", "사용량 절약"],
+  ],
+  web_external_page_char_limit: [
+    [10000, "10,000자"],
+    [25000, "25,000자 (권장)"],
+    [50000, "50,000자"],
+    [0, "사용 안 함"],
+  ],
 };
 
 const state = {
@@ -157,6 +169,7 @@ const state = {
   dictionaryEditingEntry: null,
   dictionaryImportEntries: [],
   dictionaryPackProgress: new Map(),
+  browserClients: [],
 };
 const localizedText = new Map();
 const localizedErrors = new Map();
@@ -169,6 +182,9 @@ const elements = {
   enabled: document.querySelector("#enabled"),
   translateNicknames: document.querySelector("#translate-nicknames"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
+  webTranslationEnabled: document.querySelector("#web-translation-enabled"),
+  webBrowserClients: document.querySelector("#web-browser-clients"),
+  webSitePolicies: document.querySelector("#web-site-policies"),
   dictionaryEnabled: document.querySelector("#dictionary-enabled"),
   dictionaryExternalModelNote: document.querySelector("#dictionary-external-model-note"),
   settingsWorkspace: document.querySelector("#settings-workspace"),
@@ -1421,6 +1437,95 @@ function syncVisibleDictionaryPersonalData() {
   });
 }
 
+function webSettingsPanelIsVisible() {
+  const panel = document.querySelector('[data-settings-view="web"]');
+  return Boolean(panel && !panel.hidden);
+}
+
+function renderBrowserClients() {
+  elements.webBrowserClients.replaceChildren();
+  if (!state.browserClients.length) {
+    const empty = document.createElement("p");
+    empty.className = "web-empty";
+    setLocalizedText(empty, "연결된 브라우저를 기다리고 있습니다.");
+    elements.webBrowserClients.append(empty);
+    return;
+  }
+  for (const client of state.browserClients) {
+    const row = document.createElement("div");
+    row.className = "web-client-row";
+    const identity = document.createElement("div");
+    const name = document.createElement("strong");
+    const version = document.createElement("span");
+    const status = document.createElement("span");
+    name.textContent = client.browser === "whale" ? "Naver Whale" : "Google Chrome";
+    version.textContent = client.extensionVersion ? `v${client.extensionVersion}` : "";
+    setLocalizedText(status, "연결됨");
+    status.className = "web-client-status";
+    identity.append(name, version);
+    row.append(identity, status);
+    elements.webBrowserClients.append(row);
+  }
+}
+
+async function loadBrowserClients() {
+  state.browserClients = await invoke("browser_clients_status");
+  renderBrowserClients();
+}
+
+function renderWebSitePolicies() {
+  elements.webSitePolicies.replaceChildren();
+  const policies = Object.entries(state.config.web_site_policies || {}).sort(([left], [right]) => left.localeCompare(right));
+  if (!policies.length) {
+    const empty = document.createElement("p");
+    empty.className = "web-empty";
+    setLocalizedText(empty, "등록된 사이트 설정이 없습니다.");
+    elements.webSitePolicies.append(empty);
+    return;
+  }
+  for (const [hostname, policy] of policies) {
+    const row = document.createElement("div");
+    row.className = "web-site-row";
+    const host = document.createElement("strong");
+    const controls = document.createElement("div");
+    const select = document.createElement("select");
+    const remove = document.createElement("button");
+    host.textContent = hostname;
+    select.className = "web-policy-select";
+    for (const [value, label] of [["always", "항상 번역"], ["manual", "직접 시작"], ["never", "사용 안 함"]]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = translateCopy(currentUiLanguage(), label);
+      option.selected = value === policy;
+      select.append(option);
+    }
+    select.addEventListener("change", async () => {
+      const next = { ...state.config.web_site_policies, [hostname]: select.value };
+      try {
+        await applySettingsPatch({ web_site_policies: next });
+      } catch (error) {
+        renderWebSitePolicies();
+        await showError("설정을 적용하지 못했습니다", String(error));
+      }
+    });
+    remove.type = "button";
+    remove.className = "button secondary web-policy-remove";
+    setLocalizedText(remove, "삭제");
+    remove.addEventListener("click", async () => {
+      const next = { ...state.config.web_site_policies };
+      delete next[hostname];
+      try {
+        await applySettingsPatch({ web_site_policies: next });
+      } catch (error) {
+        await showError("설정을 적용하지 못했습니다", String(error));
+      }
+    });
+    controls.append(select, remove);
+    row.append(host, controls);
+    elements.webSitePolicies.append(row);
+  }
+}
+
 function activateSettingsPanel(panel) {
   const target = document.querySelector(`[data-settings-view="${panel}"]`);
   if (!target) return;
@@ -1440,6 +1545,7 @@ function activateSettingsPanel(panel) {
   elements.settingsScroll.scrollTop = 0;
   closeAllSelects();
   if (panel === "dictionary") loadDictionaryData(true).catch(() => {});
+  if (panel === "web") loadBrowserClients().catch(() => {});
   window.requestAnimationFrame(updateScrollIndicator);
 }
 
@@ -2097,6 +2203,8 @@ function applyUiLanguage(language) {
   renderStorageStatus();
   renderLocalResourceGuidance();
   renderSourceLanguagePicker();
+  renderBrowserClients();
+  renderWebSitePolicies();
   refreshDictionaryCustomSelects({ rebuild: true });
   window.requestAnimationFrame(updateScrollIndicator);
 }
@@ -2150,7 +2258,7 @@ function openSelect(element) {
 
 function renderSelect(element) {
   const field = element.dataset.field;
-  const languageField = ["target_language", "outgoing_target_language", "ui_language"].includes(field);
+  const languageField = ["target_language", "outgoing_target_language", "web_target_language", "ui_language"].includes(field);
   const trigger = document.createElement("button");
   const triggerLabel = document.createElement("span");
   const menu = document.createElement("div");
@@ -2423,6 +2531,7 @@ function renderConfig(config) {
   renderSourceLanguagePicker();
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
+  setSwitch(elements.webTranslationEnabled, state.config.web_translation_enabled, "켜짐", "꺼짐");
   setSwitch(elements.translateNicknames, state.config.translate_nicknames, "켜짐", "꺼짐");
   setSwitch(
     elements.outgoingTranslation,
@@ -2440,6 +2549,7 @@ function renderConfig(config) {
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
   elements.translationShortcutHint.textContent = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcutHint.textContent = state.config.hotkeys.toggle_outgoing_translation;
+  renderWebSitePolicies();
   applyTheme(state.config.ui_theme);
   applyUiLanguage(state.config.ui_language);
 }
@@ -2978,6 +3088,16 @@ document.addEventListener("click", event => {
 });
 document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
+elements.webTranslationEnabled.addEventListener("click", async () => {
+  const enabled = elements.webTranslationEnabled.getAttribute("aria-checked") !== "true";
+  setSwitch(elements.webTranslationEnabled, enabled, "켜짐", "꺼짐");
+  try {
+    await applySettingsPatch({ web_translation_enabled: enabled });
+  } catch (error) {
+    setSwitch(elements.webTranslationEnabled, state.config.web_translation_enabled, "켜짐", "꺼짐");
+    await showError("설정을 적용하지 못했습니다", String(error));
+  }
+});
 elements.translateNicknames.addEventListener("click", async () => {
   const enabled = elements.translateNicknames.getAttribute("aria-checked") !== "true";
   setSwitch(elements.translateNicknames, enabled, "켜짐", "꺼짐");
@@ -3366,6 +3486,9 @@ if (tauriListen) {
   tauriListen("settings-changed", event => {
     if (state.settingsUpdatesPending === 0) renderConfig(event.payload);
   });
+  tauriListen("open-settings-panel", event => {
+    if (event.payload === "web") activateSettingsPanel("web");
+  });
   tauriListen("dictionary-personal-changed", event => {
     applyDictionaryPersonalOverviewChange(event.payload);
     reloadDictionaryPersonalData().catch(error => showError("개인 사전을 불러오지 못했습니다", String(error)));
@@ -3399,6 +3522,9 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden) syncVisibleDictionaryPersonalData();
 });
 window.setInterval(syncVisibleDictionaryPersonalData, 1500);
+window.setInterval(() => {
+  if (webSettingsPanelIsVisible()) loadBrowserClients().catch(() => {});
+}, 5000);
 
 bindOverlayScrollIndicator();
 new ResizeObserver(updateScrollIndicator).observe(elements.settingsScroll);

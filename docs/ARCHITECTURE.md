@@ -26,7 +26,7 @@ Engine work runs outside the UI thread. Incoming and outgoing translation can us
 
 Only one local GGUF model is active at a time. If GPU startup fails in automatic mode, the engine retries with a memory-conscious CPU configuration.
 
-Browser translation requests enter the same display translation worker as Discord DOM requests. The browser path therefore does not create a second local model runtime or a second provider session.
+Browser translation requests enter the same display translation worker as Discord DOM requests, so the browser path does not create a second local model runtime or provider session. Web source detection and paragraph context are separate from Discord channel memory, however, so browser navigation and batching cannot change Discord language preferences or conversation context.
 
 ## Browser extension connection
 
@@ -34,7 +34,9 @@ The optional Manifest V3 extension supports Chrome and Naver Whale from one sour
 
 The installed Tauri executable also serves as the native host when the browser launches it with an extension origin. That short-lived host reads an ephemeral descriptor created by the running desktop app and forwards the request to an authenticated `127.0.0.1` listener. The listener binds to an operating-system-selected port and uses a new random 256-bit token on every app start. The descriptor stays in the user's local application-data directory and is removed on a normal shutdown.
 
-The extension never replaces a content container's `innerHTML` or `textContent`. It records each exact text-node value, groups sibling nodes under a paragraph context key for translation, and changes only the corresponding node value. Turning the site toggle off restores the recorded originals. Mutation and intersection observers handle virtualized feeds and single-page navigation without scanning hidden or unrelated page areas. Translation work is viewport-first: blocks outside a 500-pixel margin wait for intersection, nested mutation roots are coalesced, and disconnected or newly offscreen queue entries are discarded before they reach the Windows engine.
+The extension never replaces a content container's `innerHTML` or `textContent`. It records each exact text-node value, groups sibling nodes under a paragraph context key for translation, and changes only the corresponding node value. Turning the site toggle off restores the recorded originals. Mutation and intersection observers handle virtualized feeds and single-page navigation without scanning hidden or unrelated page areas. Translation work is viewport-first and scroll-idle: the selected web mode controls a 120-240 pixel observation margin, 140-700 millisecond collection delay, and batch size. Nested mutation roots are coalesced, disconnected or newly offscreen queue entries are discarded, and translated DOM writes are frame-budgeted after scrolling becomes quiet.
+
+The Windows app is the canonical owner of persistent web settings. It stores the global web switch, default target language, scheduling mode, external-provider character guard, and per-host policies. Chrome and Whale report their extension version through each Native Messaging request. The extension popup owns only current-page controls and diagnostics, while forwarding persistent site-policy changes to the running app.
 
 Site adapters apply conservative allowlists:
 
@@ -47,7 +49,7 @@ Site adapters apply conservative allowlists:
 
 The manifest injects an isolated, initially inert content script into ordinary HTTP and HTTPS pages so the direct F4 shortcut works without a prior extension-popup gesture. Browser-internal URLs, local files, and non-HTTP schemes are outside the match patterns. This broad match scope can produce a browser host-access warning even though generic text extraction remains opt-in and route-filtered.
 
-The native host manifest limits access to the extension's stable ID. Requests are limited to 32 nodes, 4,000 characters per node, 32,000 characters per batch, and the browser protocol's one-megabyte envelope.
+The native host manifest limits access to the extension's stable ID. Requests are limited to 32 nodes, 4,000 characters per node, 32,000 characters per batch, and the browser protocol's one-megabyte envelope. When an external provider is active, a configurable per-page source-character guard stops additional sends before unbounded scrolling can create unexpected usage. Local-model requests are not subject to that guard.
 
 ## Discord connection
 

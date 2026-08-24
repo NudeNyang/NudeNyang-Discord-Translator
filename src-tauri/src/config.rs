@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -67,6 +67,11 @@ pub struct AppConfig {
     pub incoming_language_mode: String,
     pub incoming_source_languages: Vec<String>,
     pub translate_nicknames: bool,
+    pub web_translation_enabled: bool,
+    pub web_target_language: String,
+    pub web_processing_mode: String,
+    pub web_external_page_char_limit: u32,
+    pub web_site_policies: BTreeMap<String, String>,
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
     pub outgoing_target_language: String,
@@ -107,6 +112,11 @@ impl Default for AppConfig {
             incoming_language_mode: "all".to_string(),
             incoming_source_languages: Vec::new(),
             translate_nicknames: true,
+            web_translation_enabled: true,
+            web_target_language: "display".to_string(),
+            web_processing_mode: "balanced".to_string(),
+            web_external_page_char_limit: 25_000,
+            web_site_policies: BTreeMap::new(),
             enabled: true,
             outgoing_translation_enabled: false,
             outgoing_target_language: "auto".to_string(),
@@ -266,6 +276,55 @@ impl AppConfig {
             );
         }
         if object
+            .get("web_target_language")
+            .and_then(Value::as_str)
+            .is_some_and(|value| value != "display" && !is_supported_language_code(value))
+        {
+            object.insert(
+                "web_target_language".to_string(),
+                Value::String("display".to_string()),
+            );
+        }
+        if object
+            .get("web_processing_mode")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !matches!(value, "responsive" | "balanced" | "economy"))
+        {
+            object.insert(
+                "web_processing_mode".to_string(),
+                Value::String("balanced".to_string()),
+            );
+        }
+        if object
+            .get("web_external_page_char_limit")
+            .is_some_and(|value| {
+                !value
+                    .as_u64()
+                    .is_some_and(|value| matches!(value, 0 | 10_000 | 25_000 | 50_000))
+            })
+        {
+            object.insert(
+                "web_external_page_char_limit".to_string(),
+                Value::from(25_000),
+            );
+        }
+        if let Some(policies) = object.get("web_site_policies") {
+            let normalized = policies
+                .as_object()
+                .into_iter()
+                .flatten()
+                .filter_map(|(hostname, policy)| {
+                    let hostname = hostname.trim().to_ascii_lowercase();
+                    let hostname = hostname.trim_start_matches("www.").to_string();
+                    let policy = policy.as_str()?;
+                    (valid_web_hostname(&hostname)
+                        && matches!(policy, "always" | "manual" | "never"))
+                    .then(|| (hostname, Value::String(policy.to_string())))
+                })
+                .collect();
+            object.insert("web_site_policies".to_string(), Value::Object(normalized));
+        }
+        if object
             .get("incoming_language_mode")
             .and_then(Value::as_str)
             .is_some_and(|value| !matches!(value, "all" | "selected"))
@@ -340,6 +399,7 @@ impl AppConfig {
     }
 
     pub fn patched(&self, mut patch: Value) -> Result<Self, String> {
+        let replacement_web_site_policies = patch.get("web_site_policies").cloned();
         if let Some(patch) = patch.as_object_mut() {
             let display_selection = patch
                 .get("translator")
@@ -366,12 +426,33 @@ impl AppConfig {
         let mut current = serde_json::to_value(self)
             .map_err(|error| format!("현재 설정을 변환하지 못했습니다: {error}"))?;
         merge_patch(&mut current, &patch);
+        if let (Some(current), Some(policies)) =
+            (current.as_object_mut(), replacement_web_site_policies)
+        {
+            current.insert("web_site_policies".to_string(), policies);
+        }
         Self::from_value(current)
     }
 }
 
 fn is_local_translator(value: &str) -> bool {
     HyMtModelSize::from_config_id(value).is_some()
+}
+
+fn valid_web_hostname(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 253
+        && !value.starts_with('.')
+        && !value.ends_with('.')
+        && value.split('.').all(|label| {
+            !label.is_empty()
+                && label.len() <= 63
+                && !label.starts_with('-')
+                && !label.ends_with('-')
+                && label
+                    .chars()
+                    .all(|character| character.is_ascii_alphanumeric() || character == '-')
+        })
 }
 
 pub struct ConfigStore {
@@ -554,6 +635,11 @@ mod tests {
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
         assert_eq!(restored.hotkeys.toggle_outgoing_translation, "F8");
         assert!(restored.disabled_providers.is_empty());
+        assert!(restored.web_translation_enabled);
+        assert_eq!(restored.web_target_language, "display");
+        assert_eq!(restored.web_processing_mode, "balanced");
+        assert_eq!(restored.web_external_page_char_limit, 25_000);
+        assert!(restored.web_site_policies.is_empty());
         assert_eq!(restored.translation_history_retention_days, 30);
         assert!(restored.dictionary_enabled);
         assert_eq!(restored.dictionary_external_provider, "wiktionary");
@@ -578,6 +664,58 @@ mod tests {
             restored.update_repository,
             "NudeNyang/NudeNyang-Discord-Translator"
         );
+    }
+
+    #[test]
+    fn web_translation_settings_normalize_language_mode_limit_and_site_rules() {
+        let config = AppConfig::from_value(json!({
+            "web_target_language": "ar",
+            "web_processing_mode": "economy",
+            "web_external_page_char_limit": 50_000,
+            "web_site_policies": {
+                "WWW.GitHub.com": "always",
+                "example.com": "manual",
+                "accounts.example.com": "never",
+                "bad host": "always",
+                "invalid.example": "sometimes"
+            }
+        }))
+        .expect("web settings should normalize");
+
+        assert_eq!(config.web_target_language, "ar");
+        assert_eq!(config.web_processing_mode, "economy");
+        assert_eq!(config.web_external_page_char_limit, 50_000);
+        assert_eq!(
+            config.web_site_policies.get("github.com"),
+            Some(&"always".to_string())
+        );
+        assert_eq!(
+            config.web_site_policies.get("example.com"),
+            Some(&"manual".to_string())
+        );
+        assert_eq!(
+            config.web_site_policies.get("accounts.example.com"),
+            Some(&"never".to_string())
+        );
+        assert!(!config.web_site_policies.contains_key("bad host"));
+        assert!(!config.web_site_policies.contains_key("invalid.example"));
+
+        let invalid = AppConfig::from_value(json!({
+            "web_target_language": "invalid",
+            "web_processing_mode": "fastest",
+            "web_external_page_char_limit": 123,
+            "web_site_policies": []
+        }))
+        .expect("invalid values should fall back");
+        assert_eq!(invalid.web_target_language, "display");
+        assert_eq!(invalid.web_processing_mode, "balanced");
+        assert_eq!(invalid.web_external_page_char_limit, 25_000);
+        assert!(invalid.web_site_policies.is_empty());
+
+        let cleared = config
+            .patched(json!({ "web_site_policies": {} }))
+            .expect("site policy map should be replaceable");
+        assert!(cleared.web_site_policies.is_empty());
     }
 
     #[test]

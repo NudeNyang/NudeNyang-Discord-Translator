@@ -61,6 +61,18 @@ test("범용 사이트의 수동 시작 안내를 공식체로 표시한다", ()
   assert.match(popupJs, /F4 또는 토글을 켜면 번역을 시작합니다\./);
 });
 
+test("팝업은 현재 페이지 언어, 사이트 정책, 사용량과 본체 설정 이동을 제공한다", () => {
+  assert.match(popupHtml, /id="target-language"/);
+  assert.match(popupHtml, /id="always-translate-site"/);
+  assert.match(popupHtml, /id="usage"/);
+  assert.match(popupHtml, /id="open-settings"/);
+  assert.match(popupJs, /nudenyang-set-target-language/);
+  assert.match(popupJs, /webSettingsUpdate/);
+  assert.match(popupJs, /openWebSettings/);
+  assert.match(popupJs, /requestCount/);
+  assert.match(popupJs, /sentChars/);
+});
+
 test("팝업은 메인 앱의 파란색 다크 테마 토큰을 사용한다", () => {
   assert.match(popupCss, /--bg:\s*#08141d/);
   assert.match(popupCss, /--surface:\s*#0f202c/);

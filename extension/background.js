@@ -1,9 +1,13 @@
 const api = globalThis.chrome ?? globalThis.whale;
 const HOST_NAME = "com.nudenyang.translator";
+const CLIENT = Object.freeze({
+  browser: navigator.userAgent.includes("Whale") ? "whale" : "chrome",
+  extensionVersion: api.runtime.getManifest().version,
+});
 
 function nativeRequest(request) {
   return new Promise((resolve) => {
-    api.runtime.sendNativeMessage(HOST_NAME, request, (response) => {
+    api.runtime.sendNativeMessage(HOST_NAME, { ...request, client: CLIENT }, (response) => {
       const error = api.runtime.lastError;
       if (error) {
         resolve({
