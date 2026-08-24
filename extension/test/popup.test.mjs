@@ -7,6 +7,7 @@ const popupHtml = fs.readFileSync(new URL("../popup.html", import.meta.url), "ut
 const popupCss = fs.readFileSync(new URL("../popup.css", import.meta.url), "utf8");
 const backgroundJs = fs.readFileSync(new URL("../background.js", import.meta.url), "utf8");
 const contentJs = fs.readFileSync(new URL("../content.js", import.meta.url), "utf8");
+const browserBridgeRs = fs.readFileSync(new URL("../../src-tauri/src/browser_bridge.rs", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 
 test("팝업의 사용자 문구는 공식체를 사용한다", () => {
@@ -23,6 +24,15 @@ test("팝업은 마지막으로 사용한 브라우저 창의 활성 탭을 조�
 
 test("탭 응답 실패를 미지원 페이지와 구분해 안내한다", () => {
   assert.match(popupJs, /copy\("unableToProcess"\)/);
+});
+
+test("확장 연결 상태는 Discord가 아니라 앱과 번역 모델만 기준으로 표시한다", () => {
+  assert.match(popupJs, /response\?\.appConnected/);
+  assert.match(popupJs, /response\.modelReady/);
+  assert.doesNotMatch(popupJs, /response\.(?:discordConnected|cdpConnected)/);
+  assert.match(browserBridgeRs, /"appConnected": true/);
+  assert.match(browserBridgeRs, /"modelReady": model_ready/);
+  assert.match(browserBridgeRs, /"discordConnected": status\.cdp_connected/);
 });
 
 test("F4는 지원 페이지에서 번역과 원문을 직접 전환한다", () => {

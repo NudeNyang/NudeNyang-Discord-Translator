@@ -157,6 +157,7 @@ pub struct RustEngine {
 enum Control {
     ApplyConfig(Box<AppConfig>),
     SetEnabled(bool),
+    PrepareBrowserSession,
     CancelModelPreparation,
     ReplaceCdp(CdpClient, mpsc::Sender<Result<(), String>>),
     PauseForVerification(String, mpsc::Sender<Result<(), String>>),
@@ -521,6 +522,14 @@ impl RustEngine {
         self.controls
             .send(Control::SetEnabled(enabled))
             .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
+    }
+
+    pub fn prepare_browser_session(&self) -> Result<(), String> {
+        self.controls
+            .send(Control::PrepareBrowserSession)
+            .map_err(|_| {
+                "Rust 번역 엔진이 종료되어 웹 번역 모델을 준비하지 못했습니다.".to_string()
+            })
     }
 
     pub fn cancel_model_preparation(&self) -> Result<(), String> {
@@ -933,6 +942,37 @@ fn run_controller(
                                 let _ = worker_tx.send(WorkerCommand::Warm);
                             }
                         }
+                    }
+                }
+                Control::PrepareBrowserSession => {
+                    if !config.web_translation_enabled {
+                        continue;
+                    }
+                    browser_active_until = Some(Instant::now() + Duration::from_secs(5 * 60));
+                    let (display_ready, needs_preparation) = status
+                        .lock()
+                        .map(|runtime| {
+                            (
+                                runtime.active_translator == config.translator,
+                                display_preparation_is_required(&runtime, &config),
+                            )
+                        })
+                        .unwrap_or((false, false));
+                    if needs_preparation {
+                        request_translator_preparation(
+                            &config,
+                            TranslatorPreparationPlan {
+                                display: true,
+                                outgoing: false,
+                            },
+                            &preparation_tx,
+                            &progress_result_tx,
+                            &status,
+                            &mut preparation_generation,
+                            &mut preparation_cancellation,
+                        );
+                    } else if display_ready {
+                        let _ = worker_tx.send(WorkerCommand::Warm);
                     }
                 }
                 Control::CancelModelPreparation => {
@@ -3610,6 +3650,32 @@ mod tests {
             .items
             .iter()
             .all(|item| !item.text.contains("NTSPLIT")));
+    }
+
+    #[test]
+    fn browser_session_prepares_the_display_translator_without_discord() {
+        let engine = RustEngine::start(AppConfig {
+            enabled: false,
+            dictionary_enabled: false,
+            outgoing_translation_enabled: false,
+            web_translation_enabled: true,
+            translator: "mock".to_string(),
+            target_language: "ko".to_string(),
+            keep_local_model_warm: false,
+            ..Default::default()
+        });
+
+        engine.prepare_browser_session().unwrap();
+        wait_for_translator(&engine, "mock");
+        let status = engine.status().unwrap();
+        let response = engine
+            .translate_browser(browser_request(vec![("item-1", "paragraph-1", "Hello")]))
+            .unwrap();
+        engine.stop();
+
+        assert!(!status.cdp_connected);
+        assert_eq!(response.items.len(), 1);
+        assert!(response.items[0].text.starts_with("[ko] "));
     }
 
     impl Translator for DictionaryTestTranslator {

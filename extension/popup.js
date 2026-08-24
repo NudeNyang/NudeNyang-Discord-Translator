@@ -197,10 +197,12 @@ function renderPageStatus(status) {
 
 function renderConnection(response) {
   connection.className = "connection";
-  if (response?.type === "status") {
+  const appConnected = response?.appConnected ?? response?.type === "status";
+  if (response?.type === "status" && appConnected) {
     appStatus = response;
-    connection.classList.add(response.ready ? "ready" : "waiting");
-    connectionText.textContent = response.ready ? copy("connected") : copy("preparing");
+    const modelReady = response.modelReady ?? response.ready;
+    connection.classList.add(modelReady ? "ready" : "waiting");
+    connectionText.textContent = modelReady ? copy("connected") : copy("preparing");
     detail.textContent = `${response.translator} · ${response.targetLanguage.toUpperCase()} · ${copy("translation")}`;
   } else {
     connection.classList.add("error");

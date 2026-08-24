@@ -277,17 +277,28 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
     match request.get("type").and_then(Value::as_str) {
         Some("hello" | "status") => {
             let config = app.state::<ConfigStore>().get();
-            let status = app.state::<RustEngine>().status();
+            let engine = app.state::<RustEngine>();
+            if config
+                .as_ref()
+                .is_ok_and(|config| config.web_translation_enabled)
+            {
+                let _ = engine.prepare_browser_session();
+            }
+            let status = engine.status();
             match (config, status) {
                 (Ok(config), Ok(status)) => {
                     let (ui_language, resolved_ui_language) =
                         interface_language_value(&config.ui_language);
+                    let model_ready = status.active_translator == config.translator;
                     json!({
                         "type": "status",
                         "requestId": request_id,
                         "protocolVersion": PROTOCOL_VERSION,
                         "appVersion": env!("CARGO_PKG_VERSION"),
-                        "ready": status.active_translator == config.translator,
+                        "ready": model_ready,
+                        "appConnected": true,
+                        "modelReady": model_ready,
+                        "discordConnected": status.cdp_connected,
                         "uiLanguage": ui_language,
                         "resolvedUiLanguage": resolved_ui_language,
                         "targetLanguage": config.target_language,
