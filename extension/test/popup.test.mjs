@@ -73,6 +73,16 @@ test("팝업은 현재 페이지 언어, 사이트 정책, 사용량과 본체 �
   assert.match(popupJs, /sentChars/);
 });
 
+test("팝업 언어 선택은 메인 앱과 같은 검색형 메뉴와 제품 스크롤바를 사용한다", () => {
+  assert.doesNotMatch(popupHtml, /<select[^>]+id="target-language"/);
+  assert.match(popupHtml, /id="target-language-search"/);
+  assert.match(popupHtml, /id="target-language-options"[^>]+role="listbox"/);
+  assert.match(popupJs, /normalizeLanguageSearch/);
+  assert.match(popupCss, /\.language-picker\.open \.language-trigger/);
+  assert.match(popupCss, /\.language-options::-webkit-scrollbar-thumb/);
+  assert.match(popupCss, /scrollbar-color:\s*transparent transparent/);
+});
+
 test("팝업은 메인 앱의 파란색 다크 테마 토큰을 사용한다", () => {
   assert.match(popupCss, /--bg:\s*#08141d/);
   assert.match(popupCss, /--surface:\s*#0f202c/);

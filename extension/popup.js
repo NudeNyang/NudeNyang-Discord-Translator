@@ -7,6 +7,12 @@ const detail = document.querySelector("#detail");
 const commandShortcut = document.querySelector("#command-shortcut");
 const restore = document.querySelector("#restore");
 const targetLanguage = document.querySelector("#target-language");
+const targetLanguageTrigger = document.querySelector("#target-language-trigger");
+const targetLanguageLabel = document.querySelector("#target-language-label");
+const targetLanguageMenu = document.querySelector("#target-language-menu");
+const targetLanguageSearch = document.querySelector("#target-language-search");
+const targetLanguageOptions = document.querySelector("#target-language-options");
+const targetLanguageEmpty = document.querySelector("#target-language-empty");
 const alwaysTranslateSite = document.querySelector("#always-translate-site");
 const usage = document.querySelector("#usage");
 const openSettings = document.querySelector("#open-settings");
@@ -20,6 +26,63 @@ const LANGUAGE_OPTIONS = [
   ["bn", "বাংলা"], ["ur", "اردو"], ["ta", "தமிழ்"], ["fa", "فارسی"], ["he", "עברית"], ["cs", "Čeština"],
 ];
 let appStatus = null;
+let targetLanguageValue = "";
+
+function normalizeLanguageSearch(value) {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
+}
+
+function targetLanguageEntries() {
+  return [["", "앱 설정 따르기"], ...LANGUAGE_OPTIONS];
+}
+
+function setTargetLanguageValue(value) {
+  targetLanguageValue = LANGUAGE_OPTIONS.some(([code]) => code === value) ? value : "";
+  targetLanguageLabel.textContent = targetLanguageEntries().find(([code]) => code === targetLanguageValue)?.[1]
+    ?? "앱 설정 따르기";
+  for (const option of targetLanguageOptions.querySelectorAll(".language-option")) {
+    option.setAttribute("aria-selected", String(option.dataset.value === targetLanguageValue));
+  }
+}
+
+function renderTargetLanguageOptions(query = "") {
+  const needle = normalizeLanguageSearch(query);
+  targetLanguageOptions.replaceChildren();
+  let visible = 0;
+  for (const [value, label] of targetLanguageEntries()) {
+    if (needle && !normalizeLanguageSearch(`${label} ${value}`).includes(needle)) continue;
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "language-option";
+    option.dataset.value = value;
+    option.dataset.rtl = String(["ar", "ur", "fa", "he"].includes(value));
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(value === targetLanguageValue));
+    option.textContent = label;
+    targetLanguageOptions.append(option);
+    visible += 1;
+  }
+  targetLanguageEmpty.hidden = visible > 0;
+}
+
+function closeTargetLanguageMenu() {
+  targetLanguage.classList.remove("open");
+  targetLanguageTrigger.setAttribute("aria-expanded", "false");
+  targetLanguageMenu.hidden = true;
+}
+
+function openTargetLanguageMenu() {
+  if (targetLanguageTrigger.disabled) return;
+  targetLanguage.classList.add("open");
+  targetLanguageTrigger.setAttribute("aria-expanded", "true");
+  targetLanguageMenu.hidden = false;
+  targetLanguageSearch.value = "";
+  renderTargetLanguageOptions();
+  requestAnimationFrame(() => targetLanguageSearch.focus());
+}
 
 function queryTabs(query) {
   return new Promise((resolve) => api.tabs.query(query, resolve));
@@ -92,12 +155,13 @@ function renderPageStatus(status) {
   usage.textContent = `이 페이지 요청 ${status?.requestCount ?? 0}회 · 전송 ${(status?.sentChars ?? 0).toLocaleString()}자`;
   if (status?.usageLimit) usage.textContent += ` / 한도 ${Number(status.usageLimit).toLocaleString()}자`;
   usage.classList.toggle("warning", Boolean(status?.usageLimited));
-  targetLanguage.value = status?.targetLanguage && status.targetLanguage !== "display"
+  setTargetLanguageValue(status?.targetLanguage && status.targetLanguage !== "display"
     ? status.targetLanguage
-    : "";
+    : "");
   alwaysTranslateSite.checked = status?.sitePolicy === "always";
   alwaysTranslateSite.disabled = !status?.supported;
-  targetLanguage.disabled = !status?.supported;
+  targetLanguageTrigger.disabled = !status?.supported;
+  if (targetLanguageTrigger.disabled) closeTargetLanguageMenu();
 }
 
 function renderConnection(response) {
@@ -115,12 +179,7 @@ function renderConnection(response) {
 }
 
 async function initialize() {
-  for (const [value, label] of LANGUAGE_OPTIONS) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    targetLanguage.append(option);
-  }
+  renderTargetLanguageOptions();
   const commandsPromise = extensionCommands();
   const tab = await activeTab();
   let status = tab?.id ? await pageStatus(tab.id) : null;
@@ -152,16 +211,41 @@ async function initialize() {
       }
     }
   });
-  targetLanguage.addEventListener("change", async () => {
+  targetLanguageTrigger.addEventListener("click", () => {
+    if (targetLanguage.classList.contains("open")) closeTargetLanguageMenu();
+    else openTargetLanguageMenu();
+  });
+  targetLanguageSearch.addEventListener("input", () => renderTargetLanguageOptions(targetLanguageSearch.value));
+  targetLanguageSearch.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeTargetLanguageMenu();
+      targetLanguageTrigger.focus();
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      targetLanguageOptions.querySelector(".language-option")?.focus();
+    }
+  });
+  targetLanguageOptions.addEventListener("click", async (event) => {
+    const option = event.target.closest(".language-option");
+    if (!option || !tab?.id) return;
+    const previous = targetLanguageValue;
+    setTargetLanguageValue(option.dataset.value);
+    closeTargetLanguageMenu();
     if (!tab?.id) return;
     const updated = await tabMessage(tab.id, {
       type: "nudenyang-set-target-language",
-      targetLanguage: targetLanguage.value,
+      targetLanguage: targetLanguageValue,
     });
     if (updated) {
       status = updated;
       renderPageStatus(status);
+    } else {
+      setTargetLanguageValue(previous);
+      site.textContent = "이 페이지와 연결할 수 없습니다. 페이지를 새로고침해 주십시오.";
     }
+  });
+  document.addEventListener("click", (event) => {
+    if (!targetLanguage.contains(event.target)) closeTargetLanguageMenu();
   });
   alwaysTranslateSite.addEventListener("change", async () => {
     if (!tab?.id || !tab.url || !appStatus?.webSettings) return;

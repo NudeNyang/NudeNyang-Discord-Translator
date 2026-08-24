@@ -108,7 +108,7 @@ const OPTIONS = {
     [90, "90일 보관"],
     [180, "180일 보관"],
   ],
-  web_target_language: [["display", "표시 번역 언어 따르기"], ...LANGUAGE_OPTIONS],
+  web_target_language: [["display", "언어 감지"], ...LANGUAGE_OPTIONS],
   web_processing_mode: [
     ["balanced", "자동 (권장)"],
     ["responsive", "반응 우선"],

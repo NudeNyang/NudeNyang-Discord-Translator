@@ -25,12 +25,21 @@
       </div>
       <p id="detail" class="detail"></p>
       <div class="quick-controls">
-        <label class="quick-select-row" for="target-language">
+        <div class="quick-select-row">
           <span>현재 페이지 언어</span>
-          <select id="target-language">
-            <option value="">앱 설정 따르기</option>
-          </select>
-        </label>
+          <div id="target-language" class="language-picker">
+            <button id="target-language-trigger" class="language-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="target-language-label">앱 설정 따르기</span>
+            </button>
+            <div id="target-language-menu" class="language-menu" hidden>
+              <div class="language-search-shell">
+                <input id="target-language-search" class="language-search" type="search" placeholder="언어 검색" aria-label="언어 검색" autocomplete="off">
+              </div>
+              <div id="target-language-options" class="language-options" role="listbox" aria-label="현재 페이지 언어"></div>
+              <p id="target-language-empty" class="language-empty" hidden>일치하는 언어가 없습니다.</p>
+            </div>
+          </div>
+        </div>
         <label class="quick-switch-row">
           <span>이 사이트 항상 번역</span>
           <span class="switch compact-switch">

@@ -181,7 +181,7 @@ export const COPY = Object.freeze({
   "사이트별 동작": ["Site behavior", "サイト別の動作", "网站行为"],
   "확장 프로그램에서 등록한 사이트의 자동 시작 여부를 관리합니다.": ["Manage whether sites registered by the extension start translation automatically.", "拡張機能で登録したサイトの翻訳を自動で開始するか管理します。", "管理扩展程序中已登记网站是否自动开始翻译。"],
   "등록된 사이트 설정이 없습니다.": ["No site settings have been registered.", "登録されたサイト設定はありません。", "尚未登记网站设置。"],
-  "표시 번역 언어 따르기": ["Follow display translation language", "表示翻訳の言語に従う", "跟随显示翻译语言"],
+  "언어 감지": ["Detect language", "言語を検出", "检测语言"],
   "반응 우선": ["Prioritize responsiveness", "応答性を優先", "响应优先"],
   "사용량 절약": ["Reduce usage", "使用量を節約", "节省用量"],
   "항상 번역": ["Always translate", "常に翻訳", "始终翻译"],

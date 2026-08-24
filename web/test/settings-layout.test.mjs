@@ -186,6 +186,7 @@ test("web translation panel owns browser batching, usage protection, and site po
   assert.match(markup, /id="web-site-policies"/);
   assert.match(script, /browser_clients_status/);
   assert.match(script, /web_site_policies/);
+  assert.match(script, /web_target_language: \[\["display", "언어 감지"\]/);
 });
 
 test("received message nickname translation defaults on and saves immediately", () => {
