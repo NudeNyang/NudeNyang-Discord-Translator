@@ -156,6 +156,28 @@
     return Boolean(storedEnabled && adapter && !adapter.manualOnly);
   }
 
+  function pageTranslationEnabled({
+    adapter,
+    storedEnabled,
+    tabEnabled,
+    webEnabled,
+    sitePolicy,
+  }) {
+    if (!adapter || !webEnabled || sitePolicy === "never") {
+      return false;
+    }
+    if (typeof tabEnabled === "boolean") {
+      return tabEnabled;
+    }
+    if (sitePolicy === "manual") {
+      return false;
+    }
+    if (sitePolicy === "always") {
+      return true;
+    }
+    return initialTranslationEnabled(storedEnabled, adapter);
+  }
+
   function runtimeMessageFailure(requestId, error) {
     const detail = error?.message ?? String(error ?? "unknown");
     const invalidated = /extension context invalidated/i.test(detail);
@@ -178,6 +200,7 @@
     initialTranslationEnabled,
     isQuickToggleShortcut,
     isUrlLikeLinkText,
+    pageTranslationEnabled,
     registerTranslationBlock,
     runtimeMessageFailure,
     scanRootForAddedNode,

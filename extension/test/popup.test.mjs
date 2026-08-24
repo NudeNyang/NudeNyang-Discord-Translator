@@ -56,13 +56,34 @@ test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호
   assert.match(backgroundJs, /toggle-page-translation/);
   assert.match(backgroundJs, /nudenyang-toggle-enabled/);
   assert.match(contentJs, /nudenyang-toggle-enabled/);
+  assert.match(backgroundJs, /FALLBACK_COMMAND_SHORTCUT\s*=\s*"Ctrl\+Shift\+L"/);
+  assert.match(backgroundJs, /commands\.update/);
 });
 
 test("팝업은 빠른 단축키와 실제 등록된 보조 단축키를 안내한다", () => {
   assert.match(popupHtml, /<kbd class="primary-key">F4<\/kbd>/);
   assert.match(popupHtml, /id="command-shortcut"/);
   assert.match(popupJs, /commands\.getAll/);
+  assert.match(popupJs, /FALLBACK_COMMAND_SHORTCUT/);
   assert.match(popupCss, /\.shortcut-row/);
+});
+
+test("페이지 번역 상태는 현재 탭에 저장되어 다음 페이지에서도 유지된다", () => {
+  assert.match(backgroundJs, /nudenyang-tab-enabled-get/);
+  assert.match(backgroundJs, /nudenyang-tab-enabled-set/);
+  assert.match(backgroundJs, /tabs\.onRemoved/);
+  assert.match(contentJs, /nudenyang-tab-enabled-get/);
+  assert.match(contentJs, /nudenyang-tab-enabled-set/);
+});
+
+test("사이트 자동 번역은 범위와 동작을 분명하게 안내한다", () => {
+  assert.match(popupHtml, /data-i18n="autoTranslateThisSite"/);
+  assert.match(popupHtml, /data-i18n="autoTranslateThisSiteDescription"/);
+});
+
+test("상단 번역 토글은 웹 번역 제목 줄에 맞춰 아래로 정렬한다", () => {
+  assert.match(popupCss, /\.heading\s*\{[^}]*align-items:\s*flex-end/s);
+  assert.match(popupCss, /\.heading\s*>\s*\.switch\s*\{[^}]*margin-bottom:/s);
 });
 
 test("범용 사이트의 수동 시작 안내를 공식체로 표시한다", () => {

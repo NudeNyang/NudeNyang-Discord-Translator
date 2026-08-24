@@ -1,9 +1,11 @@
-if (!globalThis.NudeNyangNativeClient && typeof importScripts === "function") {
-  importScripts("native-client.js");
+if (typeof importScripts === "function") {
+  if (!globalThis.NudeNyangNativeClient) importScripts("native-client.js");
+  if (!globalThis.NudeNyangTabTranslationState) importScripts("tab-state.js");
 }
 
 const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
 const HOST_NAME = "com.nudenyang.translator";
+const FALLBACK_COMMAND_SHORTCUT = "Ctrl+Shift+L";
 const CLIENT = Object.freeze({
   browser: navigator.userAgent.includes("Firefox")
     ? "firefox"
@@ -13,18 +15,48 @@ const CLIENT = Object.freeze({
   extensionVersion: api.runtime.getManifest().version,
 });
 const nativeClient = globalThis.NudeNyangNativeClient.createNativeClient(api, HOST_NAME, CLIENT);
+const tabTranslationState = globalThis.NudeNyangTabTranslationState.createTabTranslationState(api);
 
 function nativeRequest(request) {
   return nativeClient.request(request);
 }
 
-api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== "nudenyang-native-request") {
-    return false;
+api.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "nudenyang-native-request") {
+    nativeRequest(message.request).then(sendResponse);
+    return true;
   }
-  nativeRequest(message.request).then(sendResponse);
-  return true;
+  if (message?.type === "nudenyang-tab-enabled-get") {
+    tabTranslationState.get(sender.tab?.id).then((enabled) => sendResponse({ enabled }));
+    return true;
+  }
+  if (message?.type === "nudenyang-tab-enabled-set") {
+    tabTranslationState.set(sender.tab?.id, message.enabled).then((enabled) => sendResponse({ enabled }));
+    return true;
+  }
+  return false;
 });
+
+api.tabs.onRemoved?.addListener((tabId) => {
+  void tabTranslationState.clear(tabId);
+});
+
+function ensureFallbackCommandShortcut() {
+  if (!api.commands?.getAll || !api.commands?.update) return;
+  api.commands.getAll((commands) => {
+    void api.runtime.lastError;
+    const toggleCommand = commands?.find((command) => command.name === "toggle-page-translation");
+    if (toggleCommand?.shortcut) return;
+    api.commands.update({
+      name: "toggle-page-translation",
+      shortcut: FALLBACK_COMMAND_SHORTCUT,
+    }, () => {
+      void api.runtime.lastError;
+    });
+  });
+}
+
+api.runtime.onInstalled?.addListener(ensureFallbackCommandShortcut);
 
 function sendPageToggle(tabId) {
   if (typeof tabId !== "number") {

@@ -1,6 +1,7 @@
 const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
 const { isQuickToggleShortcut } = globalThis.NudeNyangContentHelpers;
 const popupLocales = globalThis.NudeNyangPopupLocales;
+const FALLBACK_COMMAND_SHORTCUT = "Ctrl+Shift+L";
 const enabled = document.querySelector("#enabled");
 const site = document.querySelector("#site");
 const connection = document.querySelector("#connection");
@@ -149,9 +150,10 @@ function extensionCommands() {
 }
 
 function renderCommandShortcut(commands) {
-  const shortcut = commands.find((command) => command.name === "toggle-page-translation")?.shortcut ?? "";
-  commandShortcut.textContent = shortcut ? shortcut.replaceAll("+", " + ") : "-";
-  commandShortcut.classList.toggle("unassigned", !shortcut);
+  const assignedShortcut = commands.find((command) => command.name === "toggle-page-translation")?.shortcut ?? "";
+  const shortcut = assignedShortcut || FALLBACK_COMMAND_SHORTCUT;
+  commandShortcut.textContent = shortcut.replaceAll("+", " + ");
+  commandShortcut.classList.toggle("unassigned", !assignedShortcut);
 }
 
 function wait(milliseconds) {
@@ -321,6 +323,9 @@ async function initialize() {
     });
     if (updated) {
       status = updated;
+      if (alwaysTranslateSite.checked && !status.enabled) {
+        status = await tabMessage(tab.id, { type: "nudenyang-set-enabled", enabled: true }) ?? status;
+      }
       renderPageStatus(status);
     }
   });

@@ -185,6 +185,8 @@ export const COPY = Object.freeze({
   "반응 우선": ["Prioritize responsiveness", "応答性を優先", "响应优先"],
   "사용량 절약": ["Reduce usage", "使用量を節約", "节省用量"],
   "항상 번역": ["Always translate", "常に翻訳", "始终翻译"],
+  "이 사이트 자동 번역": ["Automatically translate this site", "このサイトを自動翻訳", "自动翻译此网站"],
+  "이 사이트의 페이지를 열 때마다 자동으로 번역합니다.": ["Automatically translate pages whenever you open this site.", "このサイトのページを開くたびに自動翻訳します。", "每次打开此网站的页面时自动翻译。"],
   "직접 시작": ["Start manually", "手動で開始", "手动开始"],
   "10,000자": ["10,000 characters", "10,000文字", "10,000 个字符"],
   "25,000자 (권장)": ["25,000 characters (recommended)", "25,000文字（推奨）", "25,000 个字符（推荐）"],

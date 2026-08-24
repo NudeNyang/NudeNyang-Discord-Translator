@@ -58,9 +58,13 @@ main {
 
 .heading {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
+}
+
+.heading > .switch {
+  margin-bottom: 3px;
 }
 
 .eyebrow {
@@ -143,6 +147,26 @@ h1 {
 
 .quick-select-row + .quick-switch-row {
   border-top: 1px solid var(--border);
+}
+
+.quick-switch-row {
+  padding: 8px 0;
+}
+
+.quick-switch-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.quick-switch-copy > span {
+  font-weight: 600;
+}
+
+.quick-switch-copy small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .language-picker {

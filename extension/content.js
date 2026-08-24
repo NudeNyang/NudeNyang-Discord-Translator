@@ -5,9 +5,9 @@
     createScanBatch,
     groupTranslationApplications,
     isElementNearViewport,
-    initialTranslationEnabled,
     isQuickToggleShortcut,
     isUrlLikeLinkText,
+    pageTranslationEnabled,
     registerTranslationBlock,
     runtimeMessageFailure,
     scanRootForAddedNode,
@@ -30,6 +30,8 @@
   let observedBlocks = new WeakSet();
   const queue = [];
   let enabled = false;
+  let storedEnabled = true;
+  let tabEnabled = null;
   let translating = false;
   let sequence = 0;
   let pageEpoch = 0;
@@ -57,6 +59,40 @@
 
   function storageGet(defaults) {
     return new Promise((resolve) => api.storage.local.get(defaults, resolve));
+  }
+
+  function extensionRequest(message) {
+    return new Promise((resolve) => {
+      try {
+        api.runtime.sendMessage(message, (response) => {
+          try {
+            if (api.runtime.lastError) {
+              resolve(null);
+              return;
+            }
+          } catch {
+            resolve(null);
+            return;
+          }
+          resolve(response ?? null);
+        });
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  async function loadTabEnabled() {
+    const response = await extensionRequest({ type: "nudenyang-tab-enabled-get" });
+    return typeof response?.enabled === "boolean" ? response.enabled : null;
+  }
+
+  async function saveTabEnabled(value) {
+    const response = await extensionRequest({
+      type: "nudenyang-tab-enabled-set",
+      enabled: Boolean(value),
+    });
+    return typeof response?.enabled === "boolean" ? response.enabled : Boolean(value);
   }
 
   function nativeRequest(request) {
@@ -120,12 +156,14 @@
     refreshSchedulingProfile();
   }
 
-  function initialEnabled(storedEnabled) {
-    if (!adapter || !webSettings.enabled || sitePolicy === "never" || sitePolicy === "manual") {
-      return false;
-    }
-    if (sitePolicy === "always") return true;
-    return initialTranslationEnabled(storedEnabled, adapter);
+  function initialEnabled() {
+    return pageTranslationEnabled({
+      adapter,
+      storedEnabled,
+      tabEnabled,
+      webEnabled: webSettings.enabled,
+      sitePolicy,
+    });
   }
 
   function resetPageUsage() {
@@ -481,13 +519,7 @@
     const nextAdapter = adapters.adapterForLocation(location);
     adapter = nextAdapter;
     sitePolicy = webSettings.sitePolicies[currentHostname()] ?? "default";
-    if (sitePolicy === "never" || sitePolicy === "manual" || !webSettings.enabled) {
-      enabled = false;
-    } else if (sitePolicy === "always") {
-      enabled = true;
-    } else if (adapter?.manualOnly) {
-      enabled = false;
-    }
+    enabled = initialEnabled();
     lastError = "";
     scheduleScan(document);
   }
@@ -500,7 +532,12 @@
       lastError = "Windows 앱에서 웹 번역 사용이 꺼져 있습니다.";
       return status();
     }
-    enabled = Boolean(value);
+    if (value && sitePolicy === "never") {
+      lastError = "이 사이트는 번역하지 않도록 설정되어 있습니다.";
+      return status();
+    }
+    tabEnabled = await saveTabEnabled(value);
+    enabled = tabEnabled;
     usageLimited = false;
     lastError = "";
     if (enabled) {
@@ -584,11 +621,10 @@
       intersectionObserver?.disconnect();
       observedBlocks = new WeakSet();
       configureIntersectionObserver();
-      if (!webSettings.enabled || sitePolicy === "never" || sitePolicy === "manual") {
-        enabled = false;
+      enabled = initialEnabled();
+      if (!enabled) {
         restoreOriginals();
-      } else if (sitePolicy === "always") {
-        enabled = true;
+      } else {
         scan(document);
       }
       sendResponse(status());
@@ -600,10 +636,15 @@
   window.addEventListener("keydown", handleQuickToggle, true);
 
   async function start() {
-    const stored = await storageGet({ enabled: true });
-    const appStatus = await nativeRequest({ type: "status", requestId: `content-${Date.now()}` });
+    const [stored, appStatus, restoredTabEnabled] = await Promise.all([
+      storageGet({ enabled: true }),
+      nativeRequest({ type: "status", requestId: `content-${Date.now()}` }),
+      loadTabEnabled(),
+    ]);
+    storedEnabled = stored.enabled !== false;
+    tabEnabled = restoredTabEnabled;
     applyAppStatus(appStatus);
-    enabled = initialEnabled(stored.enabled);
+    enabled = initialEnabled();
     configureIntersectionObserver();
     observer = new MutationObserver((mutations) => {
       handleNavigation();

@@ -9,6 +9,7 @@ const {
   initialTranslationEnabled,
   isQuickToggleShortcut,
   isUrlLikeLinkText,
+  pageTranslationEnabled,
   registerTranslationBlock,
   runtimeMessageFailure,
   scanRootForAddedNode,
@@ -22,6 +23,37 @@ test("범용 사이트는 저장된 전역 설정과 무관하게 사용자가 �
   assert.equal(initialTranslationEnabled(true, { id: "github" }), true);
   assert.equal(initialTranslationEnabled(false, { id: "github" }), false);
   assert.equal(initialTranslationEnabled(true, null), false);
+});
+
+test("탭에서 선택한 번역 상태는 페이지와 사이트가 바뀌어도 우선 유지한다", () => {
+  assert.equal(pageTranslationEnabled({
+    adapter: { id: "web", manualOnly: true },
+    storedEnabled: true,
+    tabEnabled: true,
+    webEnabled: true,
+    sitePolicy: "default",
+  }), true);
+  assert.equal(pageTranslationEnabled({
+    adapter: { id: "github" },
+    storedEnabled: true,
+    tabEnabled: false,
+    webEnabled: true,
+    sitePolicy: "always",
+  }), false);
+  assert.equal(pageTranslationEnabled({
+    adapter: { id: "web", manualOnly: true },
+    storedEnabled: true,
+    tabEnabled: null,
+    webEnabled: true,
+    sitePolicy: "always",
+  }), true);
+  assert.equal(pageTranslationEnabled({
+    adapter: null,
+    storedEnabled: true,
+    tabEnabled: true,
+    webEnabled: true,
+    sitePolicy: "default",
+  }), false);
 });
 
 test("보조키 없는 F4만 빠른 번역 전환으로 판정한다", () => {
