@@ -46,11 +46,41 @@ if ($Manifest.browser_specific_settings.gecko.id -ne 'web-translator@nudenyang.g
 $ResolvedOutput = [System.IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $ResolvedOutput -Force | Out-Null
 $BaseName = "NudeNyang-Web-Translator-Firefox-$($Manifest.version)"
-$TemporaryZip = Join-Path $ResolvedOutput "$BaseName.zip"
 $PackagePath = Join-Path $ResolvedOutput "$BaseName.xpi"
-Remove-Item -LiteralPath $TemporaryZip, $PackagePath -Force -ErrorAction SilentlyContinue
-Compress-Archive -Path (Join-Path $ResolvedStaging '*') -DestinationPath $TemporaryZip -CompressionLevel Optimal
-Move-Item -LiteralPath $TemporaryZip -Destination $PackagePath -Force
+Remove-Item -LiteralPath $PackagePath -Force -ErrorAction SilentlyContinue
+
+# AMO requires forward slashes in every XPI entry name, including nested icons
+# and locale files. Write the archive directly instead of using Windows paths.
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$ArchiveStream = [System.IO.File]::Open($PackagePath, [System.IO.FileMode]::CreateNew)
+try {
+    $Archive = [System.IO.Compression.ZipArchive]::new(
+        $ArchiveStream,
+        [System.IO.Compression.ZipArchiveMode]::Create,
+        $false
+    )
+    try {
+        Get-ChildItem -LiteralPath $ResolvedStaging -Recurse -File |
+            Sort-Object FullName |
+            ForEach-Object {
+                $RelativePath = $_.FullName.Substring($ResolvedStaging.Length).TrimStart([char[]]'\/')
+                $EntryName = $RelativePath.Replace('\', '/')
+                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                    $Archive,
+                    $_.FullName,
+                    $EntryName,
+                    [System.IO.Compression.CompressionLevel]::Optimal
+                ) | Out-Null
+            }
+    }
+    finally {
+        $Archive.Dispose()
+    }
+}
+finally {
+    $ArchiveStream.Dispose()
+}
 
 Write-Host "Firefox extension package: $PackagePath"
 Write-Output $PackagePath

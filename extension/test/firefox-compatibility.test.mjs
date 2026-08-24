@@ -46,6 +46,8 @@ test("Firefox 패키지는 전용 매니페스트와 라이선스를 XPI 루트�
   assert.match(packager, /NudeNyang-Web-Translator-Firefox-/);
   assert.match(packager, /popup-locales\.js/);
   assert.match(packager, /'_locales'/);
+  assert.doesNotMatch(packager, /Compress-Archive/);
+  assert.match(packager, /\.Replace\('\\', '\/'\)/);
 });
 
 test("AMO 비공개 서명 패키지는 생성 코드 원본과 검토자 안내를 함께 제공한다", () => {

@@ -68,6 +68,7 @@ Remove-Item -LiteralPath $SourceArchive, $ChecksumPath -Force -ErrorAction Silen
 
 # The built-in PowerShell archiver stores Windows separators in ZIP entry names.
 # AMO rejects those entries, so write portable ZIP entry names explicitly.
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $ArchiveStream = [System.IO.File]::Open($SourceArchive, [System.IO.FileMode]::CreateNew)
 try {
