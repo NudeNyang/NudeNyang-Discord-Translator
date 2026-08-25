@@ -66,6 +66,10 @@ impl Translator for ResilientTranslator {
                 .is_some_and(|translator| translator.sends_text_externally())
     }
 
+    fn isolate_incoming_failures(&self) -> bool {
+        self.primary.isolate_incoming_failures()
+    }
+
     fn translate(
         &mut self,
         text: &str,

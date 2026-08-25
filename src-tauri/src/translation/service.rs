@@ -1559,7 +1559,9 @@ mod tests {
     use crate::cache::TranslationCache;
     use crate::language::{detect_language, Language};
     use crate::translation::hymt::{detect_speech_style, HyMtModelSize, HyMtTranslator};
-    use crate::translation::{translation_needs_repair, MockTranslator, Translator};
+    use crate::translation::{
+        translation_needs_repair, MockTranslator, ResilientTranslator, Translator,
+    };
     use std::fs;
     use std::sync::{Arc, Mutex};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1620,6 +1622,10 @@ mod tests {
     struct JoinedLineContextTranslator;
 
     struct FlakyQualityTranslator {
+        calls: Arc<Mutex<usize>>,
+    }
+
+    struct AlwaysIncompleteIsolatedTranslator {
         calls: Arc<Mutex<usize>>,
     }
 
@@ -1699,6 +1705,30 @@ mod tests {
             target: Language,
         ) -> bool {
             !translation_needs_repair(source_text, translated_text, source, target)
+        }
+    }
+
+    impl Translator for AlwaysIncompleteIsolatedTranslator {
+        fn display_name(&self) -> &str {
+            "always-incomplete-isolated"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "always-incomplete-isolated:v1"
+        }
+
+        fn isolate_incoming_failures(&self) -> bool {
+            true
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            *self.calls.lock().unwrap() += 1;
+            Ok(text.to_string())
         }
     }
 
@@ -3188,6 +3218,31 @@ mod tests {
             ["초대받아 들어가도 바로 떨어져 버립니다 ( ノД`)".to_string()]
         );
         assert_eq!(*calls.lock().unwrap(), 2);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn resilient_local_model_bounds_incoming_quality_failures_and_keeps_the_original() {
+        let path = cache_path("resilient-incoming-quality-failure");
+        let calls = Arc::new(Mutex::new(0));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(
+                Box::new(AlwaysIncompleteIsolatedTranslator {
+                    calls: calls.clone(),
+                }),
+                None,
+            )),
+            cache,
+        );
+        let source = "インバイトで入っててもすぐ落下してしまいます".to_string();
+
+        let translated = service
+            .translate_many_for_incoming(std::slice::from_ref(&source), Language::Korean)
+            .unwrap();
+
+        assert_eq!(translated, [source]);
+        assert_eq!(*calls.lock().unwrap(), 4);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
