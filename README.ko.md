@@ -191,6 +191,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 | [PRIVACY.md](PRIVACY.md) | 로컬 데이터 처리와 선택형 외부 서비스 전송 범위 |
 | [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | 릴리스 출처, 서명 역할과 검증 정책 |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | 모델, 런타임, 의존성 고지 |
+| [docs/releases/0.7.0-beta.md](docs/releases/0.7.0-beta.md) | 확장 프로그램 심사용 웹 번역 연동 미리보기 |
 | [docs/releases/0.6.1-beta.md](docs/releases/0.6.1-beta.md) | 0.6.1 Beta의 새 기능과 수정 내역 |
 | [docs/releases/0.6.0-beta.md](docs/releases/0.6.0-beta.md) | 0.6.0 Beta의 새 기능과 수정 내역 |
 

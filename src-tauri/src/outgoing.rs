@@ -1447,6 +1447,7 @@ pub fn outgoing_ui_script(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn outgoing_ui_script_with_visibility(
     enabled: bool,
     display_enabled: bool,

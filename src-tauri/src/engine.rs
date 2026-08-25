@@ -2242,6 +2242,7 @@ fn record_outgoing_ui_change(changes: &mut OutgoingUiChanges, request: &Outgoing
     false
 }
 
+#[allow(clippy::too_many_arguments)]
 fn scan_outgoing(
     client: &mut CdpClient,
     pending: &mut HashSet<OutgoingPendingKey>,

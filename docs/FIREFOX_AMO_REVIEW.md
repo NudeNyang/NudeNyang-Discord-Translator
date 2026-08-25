@@ -5,7 +5,8 @@
 - Channel: self-distributed (`On your own` / unlisted)
 - Add-on ID: `web-translator@nudenyang.github.io`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
-- Companion application: NudeNyang Translator `0.6.2-beta` or later
+- Companion application: NudeNyang Translator `0.7.0-beta` or later
+- Reviewer download: <https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.0-beta>
 
 The add-on is not useful on its own. It sends translation requests to the separately installed
 NudeNyang Windows application through Firefox Native Messaging. If the companion application is
