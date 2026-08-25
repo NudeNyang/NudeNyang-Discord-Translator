@@ -74,6 +74,7 @@ test("AMO 공개 심사 패키지는 생성 코드 원본과 검토자 안내를
   assert.match(amoScript, /\$BaseName-source\.zip/);
   assert.match(amoScript, /Get-ChildItem.+extension/);
   assert.match(amoScript, /generate-extension-locales\.mjs/);
+  assert.match(amoScript, /package_personal_chromium_extension\.ps1/);
   assert.match(amoScript, /ui-locales\.mjs/);
   assert.match(amoScript, /FIREFOX_AMO_REVIEW\.md/);
   assert.match(amoScript, /PRIVACY\.md/);

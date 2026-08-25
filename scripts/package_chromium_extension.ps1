@@ -42,6 +42,11 @@ $DevelopmentManifest = Get-Content -Raw -LiteralPath (Join-Path $ExtensionDirect
 if (-not $DevelopmentManifest.key) {
     throw '개발용 Chromium 매니페스트에 확장 ID를 고정할 공개 키가 없습니다.'
 }
+$Identities = Get-Content -Raw -LiteralPath (Join-Path $ExtensionDirectory 'chromium-identities.json') |
+    ConvertFrom-Json
+if ($DevelopmentManifest.key -ne $Identities.store.publicKey) {
+    throw 'Chromium 원본 매니페스트의 공개 키가 스토어 ID 설정과 일치하지 않습니다.'
+}
 $DevelopmentManifest.PSObject.Properties.Remove('key')
 $StoreManifestPath = Join-Path $ResolvedStaging 'manifest.json'
 $StoreManifestJson = $DevelopmentManifest | ConvertTo-Json -Depth 100
