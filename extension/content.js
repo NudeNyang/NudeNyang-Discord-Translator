@@ -2,6 +2,8 @@
   const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
   const adapters = globalThis.NudeNyangSiteAdapters;
   const {
+    addTranslationItems,
+    closestTranslationBlock,
     createScanBatch,
     groupTranslationApplications,
     isElementNearViewport,
@@ -12,6 +14,7 @@
     registerTranslationBlock,
     runtimeMessageFailure,
     scanRootForAddedNode,
+    syncTrackedTranslationDisplay,
     takeTranslationBatch,
     translationBatchLimits,
     webSchedulingProfile,
@@ -44,6 +47,7 @@
   let rescanTimer;
   let navigationTimer;
   let flushTimer;
+  let flushDueAt = 0;
   let applyTimer;
   let applyingFrame;
   const pendingScanBatch = createScanBatch();
@@ -228,7 +232,10 @@
           return NodeFilter.FILTER_REJECT;
         }
         const state = nodeStates.get(node);
-        if (state?.pending || (state?.translated && text === state.translated)) {
+        if (
+          state?.pending
+          || (state?.translated != null && (text === state.original || text === state.translated))
+        ) {
           return NodeFilter.FILTER_REJECT;
         }
         return NodeFilter.FILTER_ACCEPT;
@@ -241,27 +248,34 @@
     return nodes;
   }
 
-  function enqueueBlock(block) {
+  function enqueueBlock(block, { priority = false } = {}) {
     if (!enabled || !adapter || usageLimited || !isElementNearViewport(block, innerHeight, scheduling.viewportMargin)) {
       return;
     }
     const id = blockId(block);
+    const items = [];
     for (const node of eligibleTextNodes(block)) {
       const original = node.nodeValue;
       const itemId = `${id}-${++sequence}`;
       nodeStates.set(node, { original, translated: null, pending: true, itemId, epoch: pageEpoch });
       trackedNodes.add(node);
-      queue.push({ id: itemId, blockId: id, text: original, node, block, epoch: pageEpoch });
+      items.push({ id: itemId, blockId: id, text: original, node, block, epoch: pageEpoch, priority });
     }
-    scheduleFlush();
+    addTranslationItems(queue, items, priority);
+    if (items.length > 0) scheduleFlush(priority ? 0 : scheduling.collectDelayMs);
   }
 
   function scheduleFlush(delay = scheduling.collectDelayMs) {
+    const normalizedDelay = Math.max(0, delay);
+    const dueAt = performance.now() + normalizedDelay;
+    if (flushTimer && flushDueAt <= dueAt) return;
     clearTimeout(flushTimer);
+    flushDueAt = dueAt;
     flushTimer = setTimeout(() => {
       flushTimer = undefined;
+      flushDueAt = 0;
       void flushQueue();
-    }, Math.max(0, delay));
+    }, normalizedDelay);
   }
 
   function scheduleApplications() {
@@ -297,7 +311,7 @@
         ) {
           state.pending = false;
           state.translated = translated;
-          writes.push({ node: item.node, translated });
+          if (enabled) writes.push({ node: item.node, translated });
         } else if (state?.itemId === item.id) {
           state.pending = false;
         }
@@ -429,27 +443,55 @@
       return;
     }
     if (queue.length > 0) {
-      scheduleFlush();
+      scheduleFlush(queue.some((item) => item.priority) ? 0 : scheduling.collectDelayMs);
     }
   }
 
-  function restoreOriginals() {
-    queue.length = 0;
+  function settlePendingApplications() {
+    for (const block of pendingApplications) {
+      for (const { item, translated } of block.applications) {
+        const state = nodeStates.get(item.node);
+        if (
+          translated != null
+          && state?.itemId === item.id
+          && state.epoch === pageEpoch
+          && item.node.isConnected
+          && item.node.nodeValue === state.original
+        ) {
+          state.pending = false;
+          state.translated = translated;
+        } else if (state?.itemId === item.id) {
+          state.pending = false;
+        }
+      }
+    }
     pendingApplications.length = 0;
+  }
+
+  function restoreOriginals({ discard = false } = {}) {
+    while (queue.length > 0) releasePending(queue.shift());
+    settlePendingApplications();
     clearTimeout(flushTimer);
     clearTimeout(applyTimer);
     if (applyingFrame) cancelAnimationFrame(applyingFrame);
     flushTimer = undefined;
+    flushDueAt = 0;
     applyTimer = undefined;
     applyingFrame = undefined;
-    for (const node of trackedNodes) {
-      const state = nodeStates.get(node);
-      if (state && node.isConnected && state.translated != null && node.nodeValue === state.translated) {
-        node.nodeValue = state.original;
-      }
-      nodeStates.delete(node);
+    const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, false);
+    if (discard) {
+      for (const node of trackedNodes) nodeStates.delete(node);
+      trackedNodes.clear();
     }
-    trackedNodes.clear();
+    return result;
+  }
+
+  function replayTranslations() {
+    const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, true);
+    if (result.changed > 0 || result.removed > 0) {
+      logDiagnostic("cached-translations-replayed", result);
+    }
+    return result;
   }
 
   function shutdownInvalidatedContext() {
@@ -467,14 +509,14 @@
     window.removeEventListener("keydown", handleQuickToggle, true);
     rescanTimer = undefined;
     navigationTimer = undefined;
-    restoreOriginals();
+    restoreOriginals({ discard: true });
   }
 
   function observeBlock(block) {
     registerTranslationBlock(block, observedBlocks, intersectionObserver);
   }
 
-  function scan(root = document) {
+  function scan(root = document, { enqueueVisible = false } = {}) {
     if (!enabled || !adapter || !root?.querySelectorAll) {
       return;
     }
@@ -482,9 +524,11 @@
     const containingBlock = root.nodeType === Node.ELEMENT_NODE ? root.closest(selector) : null;
     if (containingBlock) {
       observeBlock(containingBlock);
+      if (enqueueVisible) enqueueBlock(containingBlock);
     }
     if (root.nodeType === Node.ELEMENT_NODE && root.matches(selector)) {
       observeBlock(root);
+      if (enqueueVisible && root !== containingBlock) enqueueBlock(root);
     }
     const matchedBlocks = root.querySelectorAll(selector);
     if (root === document && matchedBlocks.length >= 200) {
@@ -492,6 +536,7 @@
     }
     for (const block of matchedBlocks) {
       observeBlock(block);
+      if (enqueueVisible) enqueueBlock(block);
     }
     pruneDisconnectedNodes();
   }
@@ -515,7 +560,7 @@
     }
     currentUrl = location.href;
     pageEpoch += 1;
-    restoreOriginals();
+    restoreOriginals({ discard: true });
     resetPageUsage();
     pageTargetLanguage = "";
     longDocument = false;
@@ -551,7 +596,8 @@
     usageLimited = false;
     lastError = "";
     if (enabled) {
-      scan(document);
+      replayTranslations();
+      scan(document, { enqueueVisible: true });
     } else {
       restoreOriginals();
     }
@@ -577,7 +623,10 @@
       supported: Boolean(adapter),
       site: adapter?.id ?? "",
       manualOnly: Boolean(adapter?.manualOnly),
-      translatedNodes: [...trackedNodes].filter((node) => nodeStates.get(node)?.translated != null).length,
+      translatedNodes: [...trackedNodes].filter((node) => {
+        const state = nodeStates.get(node);
+        return state?.translated != null && node.nodeValue === state.translated;
+      }).length,
       requestCount,
       sentChars,
       usageLimit: externalProvider ? webSettings.externalPageCharLimit : 0,
@@ -620,9 +669,9 @@
     if (message?.type === "nudenyang-set-target-language") {
       pageTargetLanguage = typeof message.targetLanguage === "string" ? message.targetLanguage : "";
       pageEpoch += 1;
-      restoreOriginals();
+      restoreOriginals({ discard: true });
       resetPageUsage();
-      if (enabled) scan(document);
+      if (enabled) scan(document, { enqueueVisible: true });
       sendResponse(status());
       return false;
     }
@@ -635,7 +684,8 @@
       if (!enabled) {
         restoreOriginals();
       } else {
-        scan(document);
+        replayTranslations();
+        scan(document, { enqueueVisible: true });
       }
       sendResponse(status());
       return false;
@@ -664,18 +714,24 @@
       const blockSelector = adapter?.blocks.join(",") ?? "body";
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
+          const changedBlock = closestTranslationBlock(mutation.target, blockSelector);
+          if (changedBlock) enqueueBlock(changedBlock, { priority: true });
           for (const node of mutation.addedNodes) {
             const scanRoot = scanRootForAddedNode(node, blockSelector);
             if (scanRoot) {
+              const addedBlock = closestTranslationBlock(scanRoot, blockSelector);
+              if (addedBlock && addedBlock !== changedBlock) {
+                enqueueBlock(addedBlock, { priority: true });
+              }
               scheduleScan(scanRoot);
             }
           }
         } else if (mutation.type === "characterData") {
           const state = nodeStates.get(mutation.target);
           if (!state || mutation.target.nodeValue !== state.translated) {
-            const block = mutation.target.parentElement?.closest(adapter?.blocks.join(",") ?? "body");
+            const block = closestTranslationBlock(mutation.target, blockSelector);
             if (block) {
-              scheduleScan(block);
+              enqueueBlock(block, { priority: true });
             }
           }
         }

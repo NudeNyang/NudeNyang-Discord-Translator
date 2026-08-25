@@ -3,6 +3,8 @@ import test from "node:test";
 import "../content-helpers.js";
 
 const {
+  addTranslationItems,
+  closestTranslationBlock,
   createScanBatch,
   groupTranslationApplications,
   isElementNearViewport,
@@ -14,10 +16,96 @@ const {
   registerTranslationBlock,
   runtimeMessageFailure,
   scanRootForAddedNode,
+  syncTrackedTranslationDisplay,
   takeTranslationBatch,
   translationBatchLimits,
   webSchedulingProfile,
 } = globalThis.NudeNyangContentHelpers;
+
+test("웹 번역 토글은 저장된 번역을 버리지 않고 원문과 즉시 교체한다", () => {
+  const translatedNode = { isConnected: true, nodeValue: "번역문" };
+  const pendingNode = { isConnected: true, nodeValue: "Pending source" };
+  const tracked = new Set([translatedNode, pendingNode]);
+  const states = new WeakMap([
+    [translatedNode, { original: "Original", translated: "번역문", pending: false }],
+    [pendingNode, { original: "Pending source", translated: null, pending: true }],
+  ]);
+
+  assert.deepEqual(syncTrackedTranslationDisplay(tracked, states, false), {
+    changed: 1,
+    retained: 2,
+    removed: 0,
+  });
+  assert.equal(translatedNode.nodeValue, "Original");
+  assert.equal(states.get(translatedNode)?.translated, "번역문");
+
+  assert.deepEqual(syncTrackedTranslationDisplay(tracked, states, true), {
+    changed: 1,
+    retained: 2,
+    removed: 0,
+  });
+  assert.equal(translatedNode.nodeValue, "번역문");
+  assert.equal(pendingNode.nodeValue, "Pending source");
+});
+
+test("웹 문단이 바뀌었으면 오래된 번역 기록을 즉시 재생하지 않는다", () => {
+  const changedNode = { isConnected: true, nodeValue: "New source text" };
+  const disconnectedNode = { isConnected: false, nodeValue: "번역문" };
+  const tracked = new Set([changedNode, disconnectedNode]);
+  const states = new WeakMap([
+    [changedNode, { original: "Old source text", translated: "오래된 번역", pending: false }],
+    [disconnectedNode, { original: "Original", translated: "번역문", pending: false }],
+  ]);
+
+  assert.deepEqual(syncTrackedTranslationDisplay(tracked, states, true), {
+    changed: 0,
+    retained: 0,
+    removed: 2,
+  });
+  assert.equal(changedNode.nodeValue, "New source text");
+  assert.equal(states.has(changedNode), false);
+  assert.equal(tracked.size, 0);
+});
+
+test("사용자가 펼친 동적 문단은 기존 웹 번역 대기열보다 먼저 처리한다", () => {
+  const queue = [{ id: "older-1" }, { id: "older-2" }];
+  const expanded = [{ id: "expanded-1" }, { id: "expanded-2" }];
+
+  addTranslationItems(queue, expanded, true);
+
+  assert.deepEqual(queue.map((item) => item.id), [
+    "expanded-1",
+    "expanded-2",
+    "older-1",
+    "older-2",
+  ]);
+});
+
+test("동적으로 교체된 X 게시물 텍스트는 이미 관찰 중인 게시물 블록을 다시 찾는다", () => {
+  const block = {
+    nodeType: 1,
+    matches(selector) {
+      return selector === "[data-testid='tweetText']";
+    },
+    closest() {
+      return null;
+    },
+  };
+  const nested = {
+    nodeType: 1,
+    matches() {
+      return false;
+    },
+    closest(selector) {
+      assert.equal(selector, "[data-testid='tweetText']");
+      return block;
+    },
+  };
+  const text = { nodeType: 3, parentElement: nested };
+
+  assert.equal(closestTranslationBlock(text, "[data-testid='tweetText']"), block);
+  assert.equal(closestTranslationBlock(nested, "[data-testid='tweetText']"), block);
+});
 
 test("사이트가 명시한 공개 안내 블록만 공통 내비게이션 제외를 우회한다", () => {
   const safeSelector = "nav.public-guide a[href^='https://example.com/']";

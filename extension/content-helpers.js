@@ -38,6 +38,17 @@
     return null;
   }
 
+  function closestTranslationBlock(node, blockSelector) {
+    const element = node?.nodeType === 3 ? node.parentElement : node?.nodeType === 1 ? node : null;
+    if (!element) return null;
+    try {
+      if (element.matches?.(blockSelector)) return element;
+      return element.closest?.(blockSelector) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   function isElementNearViewport(element, viewportHeight, margin = 500) {
     if (!element?.isConnected) return false;
     const rect = element.getBoundingClientRect?.();
@@ -50,6 +61,39 @@
     observedBlocks.add(block);
     observer.observe(block);
     return true;
+  }
+
+  function syncTrackedTranslationDisplay(trackedNodes, nodeStates, showTranslations) {
+    let changed = 0;
+    let retained = 0;
+    let removed = 0;
+    for (const node of trackedNodes) {
+      const state = nodeStates.get(node);
+      const current = node?.nodeValue;
+      const isKnownValue = state
+        && (current === state.original || (state.translated != null && current === state.translated));
+      if (!node?.isConnected || !isKnownValue) {
+        trackedNodes.delete(node);
+        nodeStates.delete(node);
+        removed += 1;
+        continue;
+      }
+      retained += 1;
+      const next = showTranslations && state.translated != null ? state.translated : state.original;
+      if (current !== next) {
+        node.nodeValue = next;
+        changed += 1;
+      }
+    }
+    return { changed, retained, removed };
+  }
+
+  function addTranslationItems(queue, items, priority = false) {
+    if (priority) {
+      queue.unshift(...items);
+    } else {
+      queue.push(...items);
+    }
   }
 
   function isUrlLikeLinkText(text, href = "") {
@@ -215,6 +259,8 @@
   }
 
   const api = Object.freeze({
+    addTranslationItems,
+    closestTranslationBlock,
     createScanBatch,
     groupTranslationApplications,
     isElementNearViewport,
@@ -226,6 +272,7 @@
     registerTranslationBlock,
     runtimeMessageFailure,
     scanRootForAddedNode,
+    syncTrackedTranslationDisplay,
     takeTranslationBatch,
     translationBatchLimits,
     webSchedulingProfile,
