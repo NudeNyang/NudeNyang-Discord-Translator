@@ -67,6 +67,7 @@ Chromium 확장은 스토어 제출본과 개인 테스트본의 ID를 분리한
 `release/browser-extension/NudeNyang-Web-Translator-Firefox-<version>.xpi`는 Mozilla 제출과 개발 검증을 위한 패키지다. 일반 Firefox 사용자가 영구 설치하는 XPI는 Mozilla 서명이 필요하다. 서명되지 않은 로컬 패키지는 `about:debugging`의 임시 부가 기능으로 검증하며, 공개 배포는 AMO 검토 또는 자체 배포용 서명 후 진행한다.
 
 `release/browser-extension/NudeNyang-Web-Translator-Chromium-<version>.zip`은 Chrome 웹 스토어와 Whale 스토어에 올리는 패키지다. 개발용 manifest의 `key`는 포함하지 않으며 스토어가 발급한 항목 ID를 확인한 뒤 Native Messaging 허용 목록을 동기화한다.
+스토어 설치 검사가 운영체제와 화면 배율에 관계없이 같은 아이콘 규격을 확인할 수 있도록 manifest의 각 아이콘 슬롯은 선언한 숫자와 실제 PNG 픽셀 크기를 일치시킨다.
 
 Windows 앱이 꺼져 있거나 호스트 등록이 없으면 확장 팝업에 연결 오류가 표시된다. 앱을 실행한 뒤 페이지를 새로 고치거나 확장 토글을 다시 켜면 된다. 모델을 처음 준비하는 동안에는 확장이 잠시 기다렸다가 재시도한다.
 

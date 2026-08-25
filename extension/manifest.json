@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "0.1.33",
+  "version": "0.1.34",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsQb6ooSh0XMll55fpPN2MShl7EqUWFUzCKz1n4SZJRaIcSUI8P0BUoZsTaNH+J/oXGPyp8p/30dZqCJONNUUKZIcJoQtIIY0lqN1zEhqZQlgdWWV3xHu8DUPXIyfi8EOQi4aMQcxM83JWS4f+KaG5tWxyE5CVl6Cn3qXDmv9XblSt1GkeEwe/7k1oBG9mt2AF87EmDoMEls6ejcUjqL4qreT+vXKk01wQldzADDUCs23RXSv+H9w5yj+15COrqqrAZBVqaiNMawadFqu+tf2W19RGu+YqmW7SpBcc/O4aMPC5p68DJTY45CxrmBKIWM/lZoLMHeVvE6hJJyAW0pBeQIDAQAB",
@@ -12,7 +12,7 @@
   "icons": {
     "16": "icons/paw-16.png",
     "32": "icons/paw-32.png",
-    "48": "icons/paw-256.png",
+    "48": "icons/paw-48.png",
     "60": "icons/paw-60.png",
     "72": "icons/paw-72.png",
     "96": "icons/paw-96.png",
