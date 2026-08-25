@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "0.1.35",
+  "version": "0.1.36",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "permissions": ["nativeMessaging", "storage", "activeTab"],
@@ -43,7 +43,7 @@
   "commands": {
     "toggle-page-translation": {
       "suggested_key": {
-        "windows": "Ctrl+Shift+L"
+        "default": "Ctrl+Shift+L"
       },
       "description": "__MSG_togglePageTranslation__"
     }

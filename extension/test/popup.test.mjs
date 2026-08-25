@@ -58,7 +58,7 @@ test("차단 페이지에서는 보조 단축키도 번역 설정을 바꾸지 �
 test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호출한다", () => {
   assert.deepEqual(manifest.commands, {
     "toggle-page-translation": {
-      suggested_key: { windows: "Ctrl+Shift+L" },
+      suggested_key: { default: "Ctrl+Shift+L" },
       description: "__MSG_togglePageTranslation__",
     },
   });
