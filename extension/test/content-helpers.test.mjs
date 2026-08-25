@@ -162,12 +162,12 @@ test("웹 처리 모드는 Discord와 무관한 유휴 배치 프로필로 변�
   assert.equal(webSchedulingProfile("invalid", true).collectDelayMs, 420);
 });
 
-test("긴 문서의 로컬 AI 요청만 짧은 추론 구간으로 나눈다", () => {
+test("긴 문서의 로컬 AI도 문단 묶음을 유지해 작은 추론이 연속되지 않게 한다", () => {
   const profile = webSchedulingProfile("balanced", false);
 
   assert.deepEqual(translationBatchLimits(profile, false, true), {
-    maxItems: 6,
-    maxChars: 4000,
+    maxItems: 24,
+    maxChars: 16000,
   });
   assert.deepEqual(translationBatchLimits(profile, false, false), {
     maxItems: 24,

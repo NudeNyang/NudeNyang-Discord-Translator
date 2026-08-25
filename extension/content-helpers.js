@@ -154,13 +154,13 @@
   }
 
   function translationBatchLimits(profile, externalProvider, longDocument) {
-    if (!longDocument || externalProvider) {
-      return { maxItems: profile.maxItems, maxChars: profile.maxChars };
-    }
-    return {
-      maxItems: Math.min(profile.maxItems, 6),
-      maxChars: Math.min(profile.maxChars, 4000),
-    };
+    // Long local-AI pages must keep the normal visible-paragraph batch size.
+    // Splitting them into six-item requests makes the model wake repeatedly and
+    // stretches GPU contention across the entire scroll instead of finishing a
+    // nearby group together. External-service limits are enforced separately.
+    void externalProvider;
+    void longDocument;
+    return { maxItems: profile.maxItems, maxChars: profile.maxChars };
   }
 
   function isQuickToggleShortcut(event) {

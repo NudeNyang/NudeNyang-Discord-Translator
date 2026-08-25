@@ -31,6 +31,7 @@ static ENGLISH_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
 const MAX_TRANSLATION_CHARS: usize = 700;
 const MAX_MESSAGE_CONTEXT_CHARS: usize = 320;
 const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
+const WEB_VISIBLE_BATCH_CONTEXT_KEY: &str = "web:visible-batch";
 const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
 const QUALITY_REJECTED_ERROR: &str = "번역 품질 검사 실패";
 const MAX_INCOMING_QUALITY_ATTEMPTS: usize = 2;
@@ -586,7 +587,7 @@ impl TranslationService {
         let mut pending_hints = Vec::new();
         let mut pending_keys = Vec::new();
 
-        for (index, ((text, block_key), source_hint)) in
+        for (index, ((text, _block_key), source_hint)) in
             texts.iter().zip(block_keys).zip(&source_hints).enumerate()
         {
             let detected = detect_explicit_language(text);
@@ -602,7 +603,11 @@ impl TranslationService {
             pending_indices.push(index);
             pending_texts.push(text.clone());
             pending_hints.push(*source_hint);
-            pending_keys.push(block_key.clone());
+            // A web request already contains only nearby blocks in DOM order. Give those
+            // blocks one short-lived context key so the local model can process several
+            // adjacent snippets per inference instead of waking once per paragraph/list row.
+            // The original block keys are still used above for source-language hints.
+            pending_keys.push(Some(WEB_VISIBLE_BATCH_CONTEXT_KEY.to_string()));
         }
 
         let translated = self.translate_contextual_pending(
@@ -3100,6 +3105,47 @@ mod tests {
         assert_eq!(service.incoming_context_scope, "/channels/guild/channel");
         assert_eq!(service.web_context_scope, "web:github.com/readme");
 
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn web_context_groups_adjacent_visible_blocks_into_fewer_provider_calls() {
+        let path = cache_path("web-adjacent-visible-block-context");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(RecordingIdentityTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = [
+            "GitHub provides distributed version control".to_string(),
+            "Repositories include source code and documentation".to_string(),
+            "Developers collaborate through issues and pull requests".to_string(),
+        ];
+        let block_keys = [
+            Some("web:wikipedia:paragraph-1".to_string()),
+            Some("web:wikipedia:paragraph-2".to_string()),
+            Some("web:wikipedia:list-item-1".to_string()),
+        ];
+
+        service
+            .translate_many_for_web_contextual_filtered(
+                &source,
+                &block_keys,
+                "universal:https://en.wikipedia.org/wiki/GitHub",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+
+        let recorded = inputs.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(
+            recorded[0].matches(MESSAGE_CONTEXT_SEPARATOR).count(),
+            source.len() - 1
+        );
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
