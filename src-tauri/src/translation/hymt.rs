@@ -1946,24 +1946,6 @@ fn is_moderation_rule_text(text: &str) -> bool {
             .any(|signal| text.contains(signal))
 }
 
-fn translation_prompt(text: &str, source: Language, target: Language, style: &str) -> String {
-    let separator_requirement = context_separator_requirement(text);
-    let moderation_requirement = moderation_policy_requirement(text, target);
-    format!(
-        "Translate the following {} text into {}.\n\
-         Translate every clause and preserve every piece of information without adding or omitting anything.\n\
-         Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts in the translation; never replace an animal, person, object, or place with a related but different one.\n\
-         Preserve the speaker's exact social register, warmth, directness, slang, contractions, fragments, and emotional intensity. Do not make casual language polite, formal, literary, or businesslike.\n\
-         Style requirement: {}\n\
-         Preserve paragraph boundaries, line breaks, emojis, and punctuation intent. {NO_UNWRITTEN_DECORATIONS}{separator_requirement}{moderation_requirement} If a source line has no sentence-final punctuation, do not add a period, full stop, question mark, or exclamation mark. Preserve ellipses and repeated punctuation.\n\
-         Only output the translated result without an explanation.\n\n{}",
-        source.english_name(),
-        target.english_name(),
-        style_requirement(target, style),
-        text
-    )
-}
-
 #[cfg(test)]
 fn translation_prompt_for_model(
     model_size: HyMtModelSize,
@@ -1983,14 +1965,13 @@ fn translation_prompt_for_profile(
     style: &str,
 ) -> String {
     match profile.prompt_strategy {
-        LocalPromptStrategy::Compact | LocalPromptStrategy::TranslateGemma => {
-            compact_translation_prompt(text, source, target, style)
+        LocalPromptStrategy::SharedChat | LocalPromptStrategy::OfficialTranslateGemma => {
+            shared_chat_translation_prompt(text, source, target, style)
         }
-        LocalPromptStrategy::Full => translation_prompt(text, source, target, style),
     }
 }
 
-fn compact_translation_prompt(
+fn shared_chat_translation_prompt(
     text: &str,
     source: Language,
     target: Language,
@@ -1998,14 +1979,14 @@ fn compact_translation_prompt(
 ) -> String {
     let separator_requirement = context_separator_requirement(text);
     let moderation_requirement = moderation_policy_requirement(text, target);
-    let style = compact_style_requirement(target, style);
+    let style = shared_chat_style_requirement(target, style);
     let style = if style.is_empty() {
         String::new()
     } else {
         format!(" {style}")
     };
     format!(
-        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names, and do not introduce a third language. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar; game and gameplay never mean food or eating. Preserve its tone, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS}{separator_requirement}{moderation_requirement}{} Output only the translation without explanation:\n\n{}",
+        "Translate the following {} segment into {}. Translate every source-language word; leave source script only for proper names, and do not introduce a third language. Preserve grammatical person exactly; never change a question addressed to the listener into a first-person-plural suggestion. Korean -(으)ㄹ래(요)? asks whether the listener wants to, not whether 'we' want to. Preserve the exact identity of every concrete noun; never replace an animal, person, object, or place with a related but different one. Distinct source nouns must remain distinct concepts. Interpret chat terms in context: in Malay or Indonesian online-game text, pelayan means an online server, not a waiter or bar; game and gameplay never mean food or eating. Preserve its tone, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS}{separator_requirement}{moderation_requirement}{} Output only the translation without explanation:\n\n{}",
         source.english_name(),
         target.english_name(),
         style,
@@ -2091,23 +2072,20 @@ pub fn rewrite_style_prompt(text: &str, target: Language, style: &str) -> String
 }
 
 fn rewrite_style_prompt_for_profile(
-    profile: LocalModelProfile,
+    _profile: LocalModelProfile,
     text: &str,
     target: Language,
     style: &str,
 ) -> String {
-    if profile.prompt_strategy == LocalPromptStrategy::Full {
-        return rewrite_style_prompt(text, target, style);
-    }
     format!(
         "Rewrite this {} text. {} Preserve its meaning, line breaks, emojis, and punctuation. {NO_UNWRITTEN_DECORATIONS} Output only the rewritten text:\n\n{}",
         target.english_name(),
-        compact_style_requirement(target, style),
+        shared_chat_style_requirement(target, style),
         text
     )
 }
 
-fn compact_style_requirement(target: Language, style: &str) -> &'static str {
+fn shared_chat_style_requirement(target: Language, style: &str) -> &'static str {
     match (style, target) {
         ("polite", Language::Korean) => "Use polite Korean honorific speech.",
         ("polite", Language::Japanese) => "Use polite Japanese です/ます forms.",
@@ -2592,20 +2570,17 @@ mod tests {
         assert_eq!(prompts.len(), 2);
         assert!(prompts
             .iter()
-            .all(|prompt| prompt.contains("text into Korean.")));
+            .all(|prompt| prompt.contains("segment into Korean.")));
         assert!(prompts
             .iter()
-            .all(|prompt| prompt.contains("preserve every piece of information")));
+            .all(|prompt| prompt.contains("Translate every source-language word")));
         assert!(prompts
             .iter()
-            .all(|prompt| prompt.contains("no sentence-final punctuation")));
-        assert!(prompts
-            .iter()
-            .all(|prompt| prompt.contains("exact social register")));
+            .all(|prompt| prompt.contains("Preserve its tone")));
     }
 
     #[test]
-    fn small_model_uses_a_compact_prompt_that_does_not_echo_detailed_instructions() {
+    fn shared_chat_prompt_stays_compact_enough_for_small_models() {
         let prompt = translation_prompt_for_model(
             HyMtModelSize::Small,
             "Rules still apply in the server and common filters.",
@@ -2618,6 +2593,27 @@ mod tests {
         assert!(!prompt.contains("Translate every clause"));
         assert!(!prompt.contains("exact social register"));
         assert!(!prompt.contains("sentence-final punctuation"));
+    }
+
+    #[test]
+    fn generic_hymt_models_share_the_same_translation_prompt_contract() {
+        let text = "インバイトで入っててもすぐ落下してしまいます( ノД`)";
+        let small = translation_prompt_for_model(
+            HyMtModelSize::Small,
+            text,
+            Language::Japanese,
+            Language::Korean,
+            "auto",
+        );
+        let large = translation_prompt_for_model(
+            HyMtModelSize::Large,
+            text,
+            Language::Japanese,
+            Language::Korean,
+            "auto",
+        );
+
+        assert_eq!(large, small);
     }
 
     #[test]
@@ -2719,7 +2715,7 @@ mod tests {
     }
 
     #[test]
-    fn large_model_keeps_the_detailed_translation_prompt() {
+    fn large_model_uses_the_shared_chat_translation_prompt() {
         let prompt = translation_prompt_for_model(
             HyMtModelSize::Large,
             "Rules still apply in the server and common filters.",
@@ -2727,8 +2723,9 @@ mod tests {
             Language::Korean,
             "neutral",
         );
-        assert!(prompt.contains("Translate every clause"));
-        assert!(prompt.contains("exact social register"));
+        assert!(prompt.contains("Output only the translation"));
+        assert!(!prompt.contains("Translate every clause"));
+        assert!(!prompt.contains("exact social register"));
     }
 
     #[test]
@@ -2742,6 +2739,7 @@ mod tests {
                 "casual",
             );
             assert!(prompt.contains("Preserve the exact identity of every concrete noun"));
+            assert!(prompt.contains("never replace an animal, person, object, or place"));
             assert!(prompt.contains("Distinct source nouns must remain distinct concepts"));
         }
     }
@@ -2930,8 +2928,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result, "日本語に訳して");
-        assert!(captured.contains("Japanese casual/plain form"));
-        assert!(captured.contains("Do not make casual language polite"));
+        assert!(captured.contains("natural Japanese casual plain form"));
+        assert!(captured.contains("never です/ます"));
     }
 
     #[test]
@@ -3053,7 +3051,7 @@ mod tests {
         let polite = HyMtTranslator::new(HyMtModelSize::Small, "auto", "polite").unwrap();
         let casual = HyMtTranslator::new(HyMtModelSize::Small, "auto", "casual").unwrap();
         assert_ne!(polite.cache_namespace(), casual.cache_namespace());
-        assert!(polite.cache_namespace().contains("meaning-preserving-v12"));
+        assert!(polite.cache_namespace().contains("shared-chat-v1"));
         assert!(
             rewrite_style_prompt("고마워요.", Language::Korean, "casual")
                 .contains("Korean casual banmal")
@@ -3484,6 +3482,7 @@ mod tests {
         assert!(translator.model_is_ready());
         translator.prepare().expect("start llama-server");
         for source in [
+            "インバイトで入っててもすぐ落下してしまいます( ノД`)",
             "残念ながら、庭がないんだ...",
             "もしなければ、通りに置いてください",
             "きっとそうな国だㅋㅋㅋ",
@@ -3548,7 +3547,7 @@ mod tests {
 
     #[test]
     #[ignore = "검증된 Hy-MT2 7B 모델과 llama-server가 필요합니다"]
-    fn live_large_model_preserves_the_reported_raccoon_dog_noun() {
+    fn live_large_model_satisfies_the_reported_chat_contract() {
         let mut translator = HyMtTranslator::new(HyMtModelSize::Large, "auto", "auto").unwrap();
         assert!(translator.model_is_ready());
         translator.prepare().expect("start Hy-MT2 7B server");
@@ -3556,6 +3555,15 @@ mod tests {
             .translate("너구리", Language::Korean, Language::Japanese)
             .expect("translate the reported Korean noun into Japanese");
         assert_eq!(translated, "タヌキ");
+
+        let source = "インバイトで入っててもすぐ落下してしまいます( ノД`)";
+        let translated = translator
+            .translate(source, Language::Japanese, Language::Korean)
+            .expect("translate the previously missed Japanese chat message");
+        assert!(
+            !translation_needs_repair(source, &translated, Language::Japanese, Language::Korean,),
+            "Hy-MT2 7B left the reported chat untranslated: {translated}"
+        );
         translator.close();
     }
 
@@ -3613,6 +3621,7 @@ mod tests {
             .prepare()
             .expect("start TranslateGemma 4B server");
         for source in [
+            "インバイトで入っててもすぐ落下してしまいます( ノД`)",
             "残念ながら、庭がないんだ...",
             "もしなければ、通りに置いてください",
             "刑務所でデコ（デコレーション）できる",
@@ -3635,5 +3644,59 @@ mod tests {
             );
         }
         translator.close();
+    }
+
+    #[test]
+    #[ignore = "all verified local models and llama-server are required"]
+    fn live_every_catalog_model_satisfies_the_shared_chat_translation_contract() {
+        let cases = [
+            (
+                "インバイトで入っててもすぐ落下してしまいます( ノД`)",
+                Language::Japanese,
+                Language::Korean,
+            ),
+            (
+                "방금 같은 방식으로 피해를 입고 있어요...",
+                Language::Korean,
+                Language::Japanese,
+            ),
+            (
+                "I think the server restarted before everyone could reconnect",
+                Language::English,
+                Language::Korean,
+            ),
+        ];
+
+        for model_size in HyMtModelSize::all() {
+            let mut translator = HyMtTranslator::new(model_size, "auto", "auto").unwrap();
+            assert!(
+                translator.model_is_ready(),
+                "{} is not installed and verified",
+                model_size.runtime_label()
+            );
+            translator
+                .prepare()
+                .unwrap_or_else(|error| panic!("start {}: {error}", model_size.runtime_label()));
+            for (source_text, source, target) in cases {
+                let translated = translator
+                    .translate(source_text, source, target)
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "{} failed {}->{}: {error}",
+                            model_size.runtime_label(),
+                            source.code(),
+                            target.code()
+                        )
+                    });
+                assert!(
+                    !translation_needs_repair(source_text, &translated, source, target),
+                    "{} rejected {}->{} result: {translated}",
+                    model_size.runtime_label(),
+                    source.code(),
+                    target.code()
+                );
+            }
+            translator.close();
+        }
     }
 }

@@ -32,6 +32,8 @@ const MAX_TRANSLATION_CHARS: usize = 700;
 const MAX_MESSAGE_CONTEXT_CHARS: usize = 320;
 const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
 const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
+const QUALITY_REJECTED_ERROR: &str = "번역 품질 검사 실패";
+const MAX_INCOMING_QUALITY_ATTEMPTS: usize = 2;
 
 pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
     let segments = DiscordFormatTemplate::parse(text).translatable_texts();
@@ -302,25 +304,45 @@ impl TranslationService {
     ) -> Vec<String> {
         let mut output = Vec::with_capacity(texts.len());
         for (text, hint) in texts.iter().zip(source_hints) {
-            match self.translate_many_with_source_hints(
-                std::slice::from_ref(text),
-                std::slice::from_ref(hint),
-                target,
-                allowed_sources,
-            ) {
-                Ok(mut translated) => output.push(translated.remove(0)),
-                Err(failure) => {
-                    crate::diagnostics::warn(
-                        "incoming-translation",
-                        &format!(
-                            "item kept as original; chars={}; hash={}; error={failure}",
-                            text.chars().count(),
-                            source_hash(text)
-                        ),
-                    );
-                    output.push(text.clone());
+            let mut result = None;
+            for attempt in 1..=MAX_INCOMING_QUALITY_ATTEMPTS {
+                match self.translate_many_with_source_hints(
+                    std::slice::from_ref(text),
+                    std::slice::from_ref(hint),
+                    target,
+                    allowed_sources,
+                ) {
+                    Ok(mut translated) => {
+                        result = Some(translated.remove(0));
+                        break;
+                    }
+                    Err(failure)
+                        if failure.starts_with(QUALITY_REJECTED_ERROR)
+                            && attempt < MAX_INCOMING_QUALITY_ATTEMPTS =>
+                    {
+                        crate::diagnostics::info(
+                            "incoming-translation-quality-retry",
+                            &format!(
+                                "attempt={attempt}; chars={}; hash={}",
+                                text.chars().count(),
+                                source_hash(text)
+                            ),
+                        );
+                    }
+                    Err(failure) => {
+                        crate::diagnostics::warn(
+                            "incoming-translation",
+                            &format!(
+                                "item kept as original; attempts={attempt}; chars={}; hash={}; error={failure}",
+                                text.chars().count(),
+                                source_hash(text)
+                            ),
+                        );
+                        break;
+                    }
                 }
             }
+            output.push(result.unwrap_or_else(|| text.clone()));
         }
         output
     }
@@ -1086,6 +1108,26 @@ impl TranslationService {
                 let restored =
                     apply_conservative_semantic_repairs(&restored, &text, source, target);
                 let restored = preserve_terminal_punctuation(&text, &restored);
+                if !text.contains(MESSAGE_CONTEXT_SEPARATOR.trim())
+                    && !self
+                        .translator
+                        .translation_is_acceptable(&text, &restored, source, target)
+                {
+                    crate::diagnostics::warn(
+                        "translation-quality",
+                        &format!(
+                            "final result rejected; translator={}; chars={}; hash={}; source={}; target={}",
+                            self.translator.display_name(),
+                            text.chars().count(),
+                            hash,
+                            source.code(),
+                            target.code(),
+                        ),
+                    );
+                    return Err(format!(
+                        "{QUALITY_REJECTED_ERROR}: 결과가 원문을 충분히 번역하지 못했습니다."
+                    ));
+                }
                 if self
                     .translator
                     .should_cache(&text, &restored, source, target)
@@ -1577,6 +1619,10 @@ mod tests {
 
     struct JoinedLineContextTranslator;
 
+    struct FlakyQualityTranslator {
+        calls: Arc<Mutex<usize>>,
+    }
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -1604,6 +1650,55 @@ mod tests {
             _target: Language,
         ) -> bool {
             source_text != translated_text
+        }
+    }
+
+    impl Translator for FlakyQualityTranslator {
+        fn display_name(&self) -> &str {
+            "flaky-quality"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "flaky-quality:v1"
+        }
+
+        fn isolate_incoming_failures(&self) -> bool {
+            true
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            let mut calls = self.calls.lock().unwrap();
+            *calls += 1;
+            if *calls == 1 {
+                Ok(text.to_string())
+            } else {
+                Ok("초대받아 들어가도 바로 떨어져 버립니다".to_string())
+            }
+        }
+
+        fn should_cache(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            self.translation_is_acceptable(source_text, translated_text, source, target)
+        }
+
+        fn translation_is_acceptable(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            !translation_needs_repair(source_text, translated_text, source, target)
         }
     }
 
@@ -3073,6 +3168,30 @@ mod tests {
     }
 
     #[test]
+    fn best_effort_retries_a_quality_rejected_result_before_showing_the_original() {
+        let path = cache_path("best-effort-quality-retry");
+        let calls = Arc::new(Mutex::new(0));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(FlakyQualityTranslator {
+                calls: calls.clone(),
+            }),
+            cache,
+        );
+        let source = "インバイトで入っててもすぐ落下してしまいます( ノД`)".to_string();
+
+        let translated =
+            service.translate_many_best_effort(std::slice::from_ref(&source), Language::Korean);
+
+        assert_eq!(
+            translated,
+            ["초대받아 들어가도 바로 떨어져 버립니다 ( ノД`)".to_string()]
+        );
+        assert_eq!(*calls.lock().unwrap(), 2);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn contaminated_cached_marker_fragments_are_sanitized() {
         let path = cache_path("marker-cache");
         let calls = Arc::new(Mutex::new(0));
@@ -3344,7 +3463,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "verified Hy-MT2 7B, TranslateGemma 4B, and llama-server are required"]
+    #[ignore = "all verified local models and llama-server are required"]
     fn multilingual_translation_benchmark_extended_local_models() {
         let fixture = include_str!("../../../tests/fixtures/multilingual-detection.tsv");
         let extended_codes = ["th", "fil", "bn", "ur", "ta", "fa", "he", "cs"];
@@ -3364,16 +3483,14 @@ mod tests {
         let korean = "안녕, 오늘 밤 서버에서 같이 게임할래?";
         let mut report = String::from(
             "# Extended-language local model benchmark\n\n\
-             Hy-MT2 7B and TranslateGemma 4B are checked on the eight first-wave extension languages.\n\n\
+             Every model in the local model catalog is checked on the eight first-wave extension languages.\n\n\
              | Model | Direction | Detected output | Gate | Translation |\n\
              |---|---|---|---|---|\n",
         );
         let mut failures = Vec::new();
 
-        for (model_size, model_key) in [
-            (HyMtModelSize::Large, "hymt-7b"),
-            (HyMtModelSize::TranslateGemma4B, "translategemma-4b"),
-        ] {
+        for model_size in HyMtModelSize::all() {
+            let model_key = model_size.config_id();
             let path = cache_path(&format!("extended-{model_key}"));
             let cache = TranslationCache::open(path.clone(), 64).unwrap();
             let translator = HyMtTranslator::new(model_size, "auto", "auto")

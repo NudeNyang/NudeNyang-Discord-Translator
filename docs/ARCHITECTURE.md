@@ -85,6 +85,8 @@ This is not an officially supported Discord extension interface. Discord updates
 
 Local Hy-MT2 and TranslateGemma requests are handled on the user's computer through a Rust-managed llama.cpp runtime. Optional external providers receive only the extracted text selected for translation.
 
+Local models are registered through one catalog. General instruction-following chat models inherit the shared chat translation contract, completion API defaults, cache-version policy, and common conformance corpus from the catalog instead of carrying a separately tuned prompt per model size. Models that require an official request template, such as TranslateGemma, keep only a thin model-specific adapter while using the same post-translation quality gate. Adding a future local model therefore starts from the shared contract and requires model-specific prompt work only when the model's official interface makes it necessary.
+
 NudeNyang does not send these items to external translation providers:
 
 - Discord image pixels;
@@ -94,7 +96,7 @@ NudeNyang does not send these items to external translation providers:
 
 DeepL credentials are stored in Windows Credential Manager. Subscription providers use their official local CLI authentication. Diagnostic logs redact home paths and secret values and do not include message bodies or local-model prompts.
 
-Translation results are cached in memory and SQLite. Cache namespaces include the engine, target language, prompt/register version, and relevant renderer version so incompatible results are not reused. Within one uncached batch, identical source text resolved to the same source language is translated once and fanned out to every matching result slot. This reduces cold-cache work without sharing results across incompatible target languages or engine namespaces.
+Translation results are cached in memory and SQLite. Cache namespaces include the engine, target language, prompt/register version, and relevant renderer version so incompatible results are not reused. Within one uncached batch, identical source text resolved to the same source language is translated once and fanned out to every matching result slot. This reduces cold-cache work without sharing results across incompatible target languages or engine namespaces. A final shared quality gate rejects an untranslated or incomplete result before it can be cached as a success. Incoming local translation retries that item once in isolation before preserving the original, and diagnostics record only its length and hash rather than the message body.
 
 ## Image translation
 
