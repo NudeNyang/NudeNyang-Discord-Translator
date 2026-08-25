@@ -2,7 +2,7 @@
 
 ## Distribution
 
-- Channel: self-distributed (`On your own` / unlisted)
+- Channel: public listing (`On this site` / listed)
 - Add-on ID: `web-translator@nudenyang.github.io`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
 - Companion application: NudeNyang Translator `0.7.0-beta` or later

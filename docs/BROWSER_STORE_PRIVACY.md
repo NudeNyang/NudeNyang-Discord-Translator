@@ -62,7 +62,7 @@ the data.
 
 - Required data types: `websiteContent`, `browsingActivity`.
 - Supported platform: Firefox desktop on Windows only.
-- Distribution channel for the current beta: self-distributed (`On your own`).
+- Distribution channel: public AMO listing (`On this site`).
 - Firefox for Android: not supported because the Windows Native Messaging companion is required.
 
 ## Naver Whale Store disclosure

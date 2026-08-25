@@ -11,6 +11,11 @@ const chromiumManifest = JSON.parse(fs.readFileSync(new URL("../manifest.json", 
 const firefoxManifest = JSON.parse(fs.readFileSync(new URL("../manifest.firefox.json", import.meta.url), "utf8"));
 const localeRoot = new URL("../_locales/", import.meta.url);
 
+test("Chromium과 Firefox 패키지는 같은 확장 릴리스 버전을 사용한다", () => {
+  assert.equal(chromiumManifest.version, "0.1.24");
+  assert.equal(firefoxManifest.version, chromiumManifest.version);
+});
+
 test("확장 팝업은 메인 앱과 같은 28개 인터페이스 언어를 제공한다", () => {
   assert.equal(locales.SUPPORTED.length, 28);
   const expectedKeys = Object.keys(locales.COPY.ko).sort();

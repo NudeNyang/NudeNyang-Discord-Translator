@@ -67,7 +67,7 @@ test("Firefox 패키지는 전용 매니페스트와 라이선스를 XPI 루트�
   assert.match(packager, /\.Replace\('\\', '\/'\)/);
 });
 
-test("AMO 비공개 서명 패키지는 생성 코드 원본과 검토자 안내를 함께 제공한다", () => {
+test("AMO 공개 심사 패키지는 생성 코드 원본과 검토자 안내를 함께 제공한다", () => {
   const amoScript = fs.readFileSync(new URL("../../scripts/package_firefox_amo.ps1", import.meta.url), "utf8");
   const reviewerNotes = fs.readFileSync(new URL("../../docs/FIREFOX_AMO_REVIEW.md", import.meta.url), "utf8");
 
@@ -79,7 +79,8 @@ test("AMO 비공개 서명 패키지는 생성 코드 원본과 검토자 안내
   assert.match(amoScript, /PRIVACY\.md/);
   assert.doesNotMatch(amoScript, /Compress-Archive/);
   assert.match(amoScript, /\.Replace\('\\', '\/'\)/);
-  assert.match(reviewerNotes, /self-distributed/i);
+  assert.match(reviewerNotes, /public listing/i);
+  assert.match(reviewerNotes, /On this site/i);
   assert.match(reviewerNotes, /web-translator@nudenyang\.github\.io/);
   assert.match(reviewerNotes, /nativeMessaging/);
   assert.match(reviewerNotes, /websiteContent/);
