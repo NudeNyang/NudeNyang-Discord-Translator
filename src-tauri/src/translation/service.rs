@@ -35,6 +35,12 @@ const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
 const QUALITY_REJECTED_ERROR: &str = "번역 품질 검사 실패";
 const MAX_INCOMING_QUALITY_ATTEMPTS: usize = 2;
 
+#[derive(Clone, Copy)]
+enum BestEffortChunkPolicy {
+    WholeText,
+    PreserveSuccessfulChunks,
+}
+
 pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
     let segments = DiscordFormatTemplate::parse(text).translatable_texts();
     let meaningful = segments
@@ -237,7 +243,14 @@ impl TranslationService {
 
         let hints = vec![Some(source); parts.len()];
         let keys = vec![Some("message:dictionary-context".to_string()); parts.len()];
-        let translated = self.translate_contextual_pending(&parts, &hints, &keys, target, None)?;
+        let translated = self.translate_contextual_pending(
+            &parts,
+            &hints,
+            &keys,
+            target,
+            None,
+            BestEffortChunkPolicy::WholeText,
+        )?;
         let translated_selection = translated
             .get(selection_part)
             .cloned()
@@ -347,6 +360,51 @@ impl TranslationService {
         output
     }
 
+    fn translate_many_best_effort_with_chunk_policy(
+        &mut self,
+        texts: &[String],
+        source_hints: &[Option<Language>],
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+        chunk_policy: BestEffortChunkPolicy,
+    ) -> Vec<String> {
+        if matches!(chunk_policy, BestEffortChunkPolicy::WholeText) {
+            return self.translate_many_best_effort_with_hints(
+                texts,
+                source_hints,
+                target,
+                allowed_sources,
+            );
+        }
+
+        texts
+            .iter()
+            .zip(source_hints)
+            .map(|(text, hint)| {
+                let chunks = split_for_translation(text, MAX_TRANSLATION_CHARS);
+                if chunks.len() == 1 {
+                    return self
+                        .translate_many_best_effort_with_hints(
+                            std::slice::from_ref(text),
+                            std::slice::from_ref(hint),
+                            target,
+                            allowed_sources,
+                        )
+                        .remove(0);
+                }
+
+                let chunk_hints = vec![*hint; chunks.len()];
+                self.translate_many_best_effort_with_hints(
+                    &chunks,
+                    &chunk_hints,
+                    target,
+                    allowed_sources,
+                )
+                .concat()
+            })
+            .collect()
+    }
+
     pub fn translate_many_for_incoming(
         &mut self,
         texts: &[String],
@@ -422,6 +480,7 @@ impl TranslationService {
             &pending_keys,
             target,
             allowed_sources,
+            BestEffortChunkPolicy::WholeText,
         )?;
         if translated.len() != pending_indices.len() {
             return Err("번역 엔진이 일부 텍스트의 결과를 반환하지 않았습니다.".to_string());
@@ -480,6 +539,7 @@ impl TranslationService {
             &pending_keys,
             target,
             allowed_sources,
+            BestEffortChunkPolicy::PreserveSuccessfulChunks,
         )?;
         if translated.len() != pending_indices.len() {
             return Err("번역 엔진이 일부 웹 텍스트의 결과를 반환하지 않았습니다.".to_string());
@@ -504,6 +564,7 @@ impl TranslationService {
         message_keys: &[Option<String>],
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
+        chunk_policy: BestEffortChunkPolicy,
     ) -> Result<Vec<String>, String> {
         if texts.len() != source_hints.len() || texts.len() != message_keys.len() {
             return Err("번역 문맥 정보의 개수가 원문 개수와 다릅니다.".to_string());
@@ -652,11 +713,12 @@ impl TranslationService {
             .collect::<Vec<_>>();
         let unit_hints = units.iter().map(|unit| unit.hint).collect::<Vec<_>>();
         let translated_units = if self.translator.isolate_incoming_failures() {
-            self.translate_many_best_effort_with_hints(
+            self.translate_many_best_effort_with_chunk_policy(
                 &unit_texts,
                 &unit_hints,
                 target,
                 allowed_sources,
+                chunk_policy,
             )
         } else {
             self.translate_many_with_source_hints(
@@ -686,6 +748,7 @@ impl TranslationService {
                     unit.hint,
                     target,
                     allowed_sources,
+                    chunk_policy,
                 )?;
                 for (index, line) in unit.members.into_iter().zip(lines) {
                     output[index] = Some(line);
@@ -719,6 +782,7 @@ impl TranslationService {
                     unit.hint,
                     target,
                     allowed_sources,
+                    chunk_policy,
                 )?;
                 for (index, line) in unit.members.into_iter().zip(reconciled) {
                     output[index] = Some(line);
@@ -749,11 +813,12 @@ impl TranslationService {
                 .map(|index| source_hints[*index])
                 .collect::<Vec<_>>();
             let fallback = if self.translator.isolate_incoming_failures() {
-                self.translate_many_best_effort_with_hints(
+                self.translate_many_best_effort_with_chunk_policy(
                     &fallback_texts,
                     &fallback_hints,
                     target,
                     allowed_sources,
+                    chunk_policy,
                 )
             } else {
                 self.translate_many_with_source_hints(
@@ -786,6 +851,7 @@ impl TranslationService {
         source_hint: Option<Language>,
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
+        chunk_policy: BestEffortChunkPolicy,
     ) -> Result<Vec<String>, String> {
         let Some(source) = source_hint.filter(|source| *source != Language::Unknown) else {
             return Ok(translated_parts);
@@ -823,11 +889,12 @@ impl TranslationService {
             .collect::<Vec<_>>();
         let retry_hints = vec![Some(source); retry_texts.len()];
         let retried = if self.translator.isolate_incoming_failures() {
-            self.translate_many_best_effort_with_hints(
+            self.translate_many_best_effort_with_chunk_policy(
                 &retry_texts,
                 &retry_hints,
                 target,
                 allowed_sources,
+                chunk_policy,
             )
         } else {
             self.translate_many_with_source_hints(
@@ -1629,6 +1696,8 @@ mod tests {
         calls: Arc<Mutex<usize>>,
     }
 
+    struct PartiallyFailingWebChunkTranslator;
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -1729,6 +1798,53 @@ mod tests {
         ) -> Result<String, String> {
             *self.calls.lock().unwrap() += 1;
             Ok(text.to_string())
+        }
+    }
+
+    impl Translator for PartiallyFailingWebChunkTranslator {
+        fn display_name(&self) -> &str {
+            "partially-failing-web-chunk"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "partially-failing-web-chunk:v1"
+        }
+
+        fn isolate_incoming_failures(&self) -> bool {
+            true
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            if text.contains("コンセプトアート") {
+                Ok(text.to_string())
+            } else {
+                Ok("코기의 사랑스러움을 담은 의상입니다.\n빵집 모티브입니다.\n\n".to_string())
+            }
+        }
+
+        fn should_cache(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            self.translation_is_acceptable(source_text, translated_text, source, target)
+        }
+
+        fn translation_is_acceptable(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            !translation_needs_repair(source_text, translated_text, source, target)
         }
     }
 
@@ -3243,6 +3359,67 @@ mod tests {
 
         assert_eq!(translated, [source]);
         assert_eq!(*calls.lock().unwrap(), 4);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn web_translation_preserves_successful_paragraph_chunks_when_one_chunk_fails_quality() {
+        let path = cache_path("web-partial-chunk-quality-failure");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service =
+            TranslationService::new(Box::new(PartiallyFailingWebChunkTranslator), cache);
+        let source = concat!(
+            "コーギーの愛らしさを詰め込んだ衣装です。\n",
+            "パン屋さんモチーフです。\n\n",
+            "コンセプトアート・デザイン：ぷも"
+        )
+        .to_string();
+
+        let translated = service
+            .translate_many_for_web_contextual_filtered(
+                std::slice::from_ref(&source),
+                &[None],
+                "https://booth.pm/ko/items/test",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            [concat!(
+                "코기의 사랑스러움을 담은 의상입니다.\n",
+                "빵집 모티브입니다.\n\n",
+                "コンセプトアート・デザイン：ぷも"
+            )
+            .to_string()]
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn incoming_translation_keeps_whole_text_when_one_paragraph_chunk_fails_quality() {
+        let path = cache_path("incoming-whole-text-quality-failure");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service =
+            TranslationService::new(Box::new(PartiallyFailingWebChunkTranslator), cache);
+        let source = concat!(
+            "コーギーの愛らしさを詰め込んだ衣装です。\n",
+            "パン屋さんモチーフです。\n\n",
+            "コンセプトアート・デザイン：ぷも"
+        )
+        .to_string();
+
+        let translated = service
+            .translate_many_for_incoming_contextual(
+                std::slice::from_ref(&source),
+                &[None],
+                "/channels/test/general",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(translated, [source]);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
