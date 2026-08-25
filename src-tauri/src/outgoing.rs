@@ -30,7 +30,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 45;
+  const CONTROLLER_VERSION = 46;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -46,7 +46,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'원문 전송', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
       pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.',
       reviewReadyLong:'번역문이 Discord 길이 제한을 초과했습니다. 내용을 줄이거나 직접 파일로 첨부하십시오.',
-      realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택', searchLanguages:'언어 검색', noMatchingLanguages:'검색 결과 없음'
+      realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택', translationOff:'번역 안 함', searchLanguages:'언어 검색', noMatchingLanguages:'검색 결과 없음'
     },
     en: {
       auto:'Auto detect', outgoingLanguage:'Send', selectLanguage:'Select outgoing language', originalOnce:'Send only this message without translation',
@@ -56,7 +56,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'Send original', translationFailed:'The message could not be translated. The original message has been preserved.',
       pending:'The previous message is still being processed. Try again shortly.', reviewReady:'Review or edit the translation, then press Enter to send.',
       reviewReadyLong:'The translation exceeds Discord’s length limit. Shorten it or attach it as a file yourself.',
-      realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language', searchLanguages:'Search languages', noMatchingLanguages:'No matching languages'
+      realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language', translationOff:'Do not translate', searchLanguages:'Search languages', noMatchingLanguages:'No matching languages'
     },
     ja: {
       auto:'自動検出', outgoingLanguage:'送信', selectLanguage:'送信言語を選択', originalOnce:'このメッセージのみ原文で送信',
@@ -66,7 +66,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'原文を送信', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
       pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', reviewReady:'翻訳文を確認・修正し、Enterで送信してください。',
       reviewReadyLong:'翻訳文がDiscordの文字数制限を超えています。短くするか、手動でファイルを添付してください。',
-      realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択', searchLanguages:'言語を検索', noMatchingLanguages:'一致する言語がありません'
+      realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択', translationOff:'翻訳しない', searchLanguages:'言語を検索', noMatchingLanguages:'一致する言語がありません'
     },
     zh: {
       auto:'自动检测', outgoingLanguage:'发送', selectLanguage:'选择发送语言', originalOnce:'仅本条消息发送原文',
@@ -76,7 +76,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       sendOriginal:'发送原文', translationFailed:'无法翻译消息。原文已保持不变。',
       pending:'上一条消息仍在处理中。请稍后重试。', reviewReady:'请检查或修改译文，然后按 Enter 发送。',
       reviewReadyLong:'译文超过 Discord 的长度限制。请缩短内容或自行附加文件。',
-      realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言', searchLanguages:'搜索语言', noMatchingLanguages:'没有匹配的语言'
+      realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言', translationOff:'不翻译', searchLanguages:'搜索语言', noMatchingLanguages:'没有匹配的语言'
     }
   }, __GENERATED_OUTGOING_COPIES__);
   const languageLabels = __LANGUAGE_LABELS__;
@@ -86,6 +86,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const compactLanguageLabels = __COMPACT_LANGUAGE_LABELS__;
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
   const formatCopy = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), copy(key));
+  const languageLabel = code => code === 'off' ? copy('translationOff') : languageLabels[code];
   function currentChannelKey() {
     return location.pathname.startsWith('/channels/') ? location.pathname : '';
   }
@@ -307,7 +308,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     empty.hidden = true;
     search.append(input);
     const buttons = choices.map(code => {
-      const button = makeButton(languageLabels[code], action, code);
+      const button = makeButton(languageLabel(code), action, code);
       button.setAttribute('aria-pressed', String(code === selectedValue));
       if (code === selectedValue) {
         const check = document.createElement('span');
@@ -323,12 +324,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     input.addEventListener('input', () => {
       const query = normalizeLanguageSearch(input.value);
       const exactCodes = new Set(query ? choices.filter(code =>
-        [code, languageSearchAliases[code] || ''].some(value => normalizeLanguageSearch(value) === query)
+        [code, languageLabel(code), languageSearchAliases[code] || ''].some(value => normalizeLanguageSearch(value) === query)
       ) : []);
       let visible = 0;
       buttons.forEach((button, index) => {
         const code = choices[index];
-        const searchable = normalizeLanguageSearch(`${languageLabels[code]} ${code} ${languageSearchAliases[code] || ''} ${languageEnglishNames[code] || ''}`);
+        const searchable = normalizeLanguageSearch(`${languageLabel(code)} ${code} ${languageSearchAliases[code] || ''} ${languageEnglishNames[code] || ''}`);
         button.hidden = Boolean(query) && (exactCodes.size ? !exactCodes.has(code) : !searchable.includes(query));
         if (!button.hidden) visible += 1;
       });
@@ -660,9 +661,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           return leftBounds.width * leftBounds.height - rightBounds.width * rightBounds.height;
         }).at(-1) || null;
         const anchor = composer || readonlyAnchor;
-        this.root.querySelector('.nt-outgoing-control').hidden = !this.enabled || !editor;
-        this.root.querySelector('.nt-display-control').hidden = !this.displayEnabled;
-        this.root.hidden = !this.displayEnabled && (!this.enabled || !editor);
+        this.root.querySelector('.nt-outgoing-control').hidden = !editor;
+        this.root.querySelector('.nt-display-control').hidden = false;
+        this.root.hidden = false;
         if (!anchor || this.root.hidden) {
           this.root.style.visibility = 'hidden';
           return;
@@ -682,11 +683,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!this.root) return;
         const key = currentChannelKey();
         const language = selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
-        this.root.querySelector('.nt-outgoing-trigger b').textContent = compactLanguageLabels[language] || compactLanguageLabels.auto;
-        this.root.querySelector('.nt-display-trigger b').textContent = compactLanguageLabels[this.displayLanguage] || compactLanguageLabels.ko;
-        this.root.querySelector('.nt-outgoing-control').hidden = !this.enabled;
-        this.root.querySelector('.nt-display-control').hidden = !this.displayEnabled;
-        this.root.hidden = !this.enabled && !this.displayEnabled;
+        this.root.querySelector('.nt-outgoing-trigger b').textContent = this.enabled ? (compactLanguageLabels[language] || compactLanguageLabels.auto) : 'OFF';
+        this.root.querySelector('.nt-display-trigger b').textContent = this.displayEnabled ? (compactLanguageLabels[this.displayLanguage] || compactLanguageLabels.ko) : 'OFF';
+        this.root.querySelector('.nt-outgoing-control').hidden = false;
+        this.root.querySelector('.nt-display-control').hidden = false;
+        this.root.hidden = false;
       },
       rememberLanguage(key, language) {
         if (!key) return;
@@ -698,6 +699,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           text:'',
           action:'remember-language',
           selected_language:language,
+          recent_messages:[],
+        });
+      },
+      setOutgoingEnabled(nextEnabled) {
+        this.enabled = nextEnabled;
+        this.draftChecks.clear();
+        this.queue.push({
+          id:`outgoing-enabled-${Date.now()}-${++this.sequence}`,
+          channel_key:currentChannelKey(),
+          text:'',
+          action:'outgoing-enabled',
+          selected_language:String(nextEnabled),
           recent_messages:[],
         });
       },
@@ -719,11 +732,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         menu.replaceChildren();
         menu.setAttribute('aria-label', heading);
         const selectedLanguage = selectedLanguageForChannel(currentChannelKey(), this.defaultLanguage, this.channelLanguages);
-        const selectedLabel = selectedLanguage === 'auto' ? copy('auto') : (languageLabels[selectedLanguage] || heading);
+        const selectedValue = this.enabled ? selectedLanguage : 'off';
+        const selectedLabel = selectedValue === 'auto' ? copy('auto') : (languageLabel(selectedValue) || heading);
         const title = makeMenuHeading(requestId ? heading : selectedLabel, copy('outgoingLanguage'), '↑');
         menu.append(title);
-        const choices = requestId ? languageCodes : ['auto', ...languageCodes];
-        const searchInput = appendLanguageChoices(menu, choices, 'language', selectedLanguage);
+        const choices = requestId ? languageCodes : ['off', 'auto', ...languageCodes];
+        const searchInput = appendLanguageChoices(menu, choices, 'language', requestId ? selectedLanguage : selectedValue);
         const divider = document.createElement('div');
         divider.className = 'nt-divider';
         menu.append(divider, makeButton(copy('originalOnce'), 'original-once'));
@@ -746,9 +760,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const menu = this.root.querySelector('.nt-display-menu');
         menu.replaceChildren();
         menu.setAttribute('aria-label', copy('selectDisplayLanguage'));
-        const title = makeMenuHeading(languageLabels[this.displayLanguage] || copy('selectDisplayLanguage'), copy('displayLanguage'), '↓');
+        const selectedValue = this.displayEnabled ? this.displayLanguage : 'off';
+        const title = makeMenuHeading(languageLabel(selectedValue) || copy('selectDisplayLanguage'), copy('displayLanguage'), '↓');
         menu.append(title);
-        const searchInput = appendLanguageChoices(menu, languageCodes, 'display-language', this.displayLanguage);
+        const searchInput = appendLanguageChoices(menu, ['off', ...languageCodes], 'display-language', selectedValue);
         menu.hidden = false;
         this.root.dataset.openMenu = 'display';
         menu.__ntScrollIndicator?.update();
@@ -767,13 +782,15 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       onDisplayMenu(event) {
         const button = event.target.closest('button[data-action="display-language"]');
         if (!button) return;
-        this.displayLanguage = button.dataset.value;
+        const selectedValue = button.dataset.value;
+        this.displayEnabled = selectedValue !== 'off';
+        if (this.displayEnabled) this.displayLanguage = selectedValue;
         this.queue.push({
           id:`display-language-${Date.now()}-${++this.sequence}`,
           channel_key:currentChannelKey(),
           text:'',
           action:'display-language',
-          selected_language:this.displayLanguage,
+          selected_language:selectedValue,
           recent_messages:[],
         });
         const menu = this.root.querySelector('.nt-display-menu');
@@ -788,8 +805,14 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!button) return;
         const key = currentChannelKey();
         if (button.dataset.action === 'language') {
-          this.rememberLanguage(key, button.dataset.value);
-          if (this.manualRequest) this.retry(this.manualRequest, button.dataset.value);
+          const selectedValue = button.dataset.value;
+          if (selectedValue === 'off') {
+            this.setOutgoingEnabled(false);
+          } else {
+            this.rememberLanguage(key, selectedValue);
+            this.setOutgoingEnabled(true);
+          }
+          if (this.manualRequest) this.retry(this.manualRequest, selectedValue);
           this.manualRequest = '';
           this.updateLabel();
         } else if (button.dataset.action === 'original-once') {
@@ -1089,13 +1112,19 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const optimisticLanguages = controller.queue
     .filter(item => item.action === 'remember-language' && item.channel_key)
     .map(item => [item.channel_key, item.selected_language]);
+  const optimisticOutgoingEnabled = controller.queue
+    .filter(item => item.action === 'outgoing-enabled')
+    .at(-1)?.selected_language;
+  const optimisticDisplayLanguage = controller.queue
+    .filter(item => item.action === 'display-language')
+    .at(-1)?.selected_language;
   controller.channelLanguages = {...rememberedChannelLanguages};
   for (const [channelKey, language] of optimisticLanguages) {
     controller.channelLanguages[channelKey] = language;
   }
-  controller.enabled = enabled;
-  controller.displayEnabled = displayEnabled;
-  controller.displayLanguage = displayLanguage;
+  controller.enabled = optimisticOutgoingEnabled === undefined ? enabled : optimisticOutgoingEnabled === 'true';
+  controller.displayEnabled = optimisticDisplayLanguage === undefined ? displayEnabled : optimisticDisplayLanguage !== 'off';
+  controller.displayLanguage = optimisticDisplayLanguage && optimisticDisplayLanguage !== 'off' ? optimisticDisplayLanguage : displayLanguage;
   controller.root = ensureRoot(controller);
   controller.prunePending();
   controller.reconcileSent();
@@ -1103,10 +1132,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   controller.updateLabel();
   controller.reposition();
   controller.queueDraftCheck();
-  return enabled || displayEnabled ? controller.queue.splice(0, 8).map(item => {
+  return controller.queue.splice(0, 8).map(item => {
     const {editor, ...plain} = item;
     return plain;
-  }) : [];
+  });
 })()
 "####;
 
@@ -1520,6 +1549,7 @@ pub fn outgoing_ui_script(
         ("realTimeOn", "번역 켜짐"),
         ("displayLanguage", "표시"),
         ("selectDisplayLanguage", "표시 언어 선택"),
+        ("translationOff", "사용 안 함"),
         ("searchLanguages", "언어 검색"),
         ("noMatchingLanguages", "검색 결과 없음"),
     ]);
@@ -1790,10 +1820,10 @@ mod tests {
     }
 
     #[test]
-    fn display_control_keeps_a_read_only_channel_position_anchor() {
+    fn language_controls_remain_available_when_translation_is_disabled() {
         let script = outgoing_ui_script(
             false,
-            true,
+            false,
             "ko",
             "auto",
             "ko",
@@ -1806,8 +1836,12 @@ mod tests {
         assert!(script.contains("const readonlyAnchor ="));
         assert!(script.contains("[class*=\"channelTextArea\"]"));
         assert!(script.contains("[class*=\"chatContent\"]"));
-        assert!(script
-            .contains("this.root.hidden = !this.displayEnabled && (!this.enabled || !editor)"));
+        assert!(script.contains("this.root.hidden = false"));
+        assert!(script.contains("['off', 'auto', ...languageCodes]"));
+        assert!(script.contains("['off', ...languageCodes]"));
+        assert!(script.contains("translationOff:'번역 안 함'"));
+        assert!(script.contains("action:'outgoing-enabled'"));
+        assert!(script.contains("return controller.queue.splice(0, 8)"));
     }
 
     #[test]

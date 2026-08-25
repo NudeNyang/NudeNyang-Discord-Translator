@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Map, Value};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
 
@@ -705,7 +705,6 @@ fn run_controller(
     let mut consecutive_connection_failures = 0_u8;
     let mut connection_issue_reported = false;
     let mut image_ui_needs_cleanup = true;
-    let mut outgoing_ui_needs_cleanup = true;
     let mut dictionary_ui_needs_cleanup = true;
     let mut app_handle: Option<AppHandle> = None;
     let mut verification_paused = config.discord_verification_mode;
@@ -846,7 +845,6 @@ fn run_controller(
                     if outgoing_changed {
                         outgoing_pending.clear();
                         generation += 1;
-                        outgoing_ui_needs_cleanup = true;
                         if config.outgoing_translation_enabled {
                             let needs_preparation = status.lock().is_ok_and(|runtime| {
                                 runtime.active_outgoing_translator != config.outgoing_translator
@@ -1037,7 +1035,6 @@ fn run_controller(
                         outgoing_pending.clear();
                         generation += 1;
                         image_ui_needs_cleanup = true;
-                        outgoing_ui_needs_cleanup = true;
                         dictionary_ui_needs_cleanup = true;
                         consecutive_connection_failures = 0;
                         connection_issue_reported = false;
@@ -1351,62 +1348,47 @@ fn run_controller(
                 &config.ui_language,
                 config.enabled,
             )?;
-            let requested_display_language =
-                if config.enabled || config.outgoing_translation_enabled {
-                    let requested = scan_outgoing(
-                        client.as_mut().expect("connected CDP client"),
-                        &mut outgoing_pending,
-                        generation,
-                        &outgoing_worker_tx,
-                        &config,
-                        outgoing_original_store.as_ref(),
-                        &mut outgoing_channel_languages,
-                    )?;
-                    outgoing_ui_needs_cleanup = true;
-                    requested
-                } else if outgoing_ui_needs_cleanup {
-                    client.as_mut().expect("connected CDP client").evaluate(
-                        &outgoing_ui_script(
-                            false,
-                            false,
-                            &config.target_language,
-                            &config.outgoing_target_language,
-                            &config.ui_language,
-                            &outgoing_channel_languages,
-                        ),
-                        false,
-                    )?;
-                    outgoing_ui_needs_cleanup = false;
-                    None
-                } else {
-                    None
-                };
-            if let Some(language) =
-                requested_display_language.filter(|language| language != &config.target_language)
+            let requested_changes = scan_outgoing(
+                client.as_mut().expect("connected CDP client"),
+                &mut outgoing_pending,
+                generation,
+                &outgoing_worker_tx,
+                &config,
+                outgoing_original_store.as_ref(),
+                &mut outgoing_channel_languages,
+            )?;
+            let mut patch = Map::new();
+            if let Some(language) = requested_changes
+                .display_language
+                .filter(|language| language != &config.target_language)
             {
+                patch.insert("target_language".to_string(), Value::String(language));
+            }
+            if let Some(enabled) = requested_changes
+                .display_enabled
+                .filter(|enabled| *enabled != config.enabled)
+            {
+                patch.insert("enabled".to_string(), Value::Bool(enabled));
+            }
+            if let Some(enabled) = requested_changes
+                .outgoing_enabled
+                .filter(|enabled| *enabled != config.outgoing_translation_enabled)
+            {
+                patch.insert(
+                    "outgoing_translation_enabled".to_string(),
+                    Value::Bool(enabled),
+                );
+            }
+            if !patch.is_empty() {
                 let updated = if let Some(app) = app_handle.as_ref() {
-                    let updated = app
-                        .state::<ConfigStore>()
-                        .update(json!({"target_language": language}))?;
+                    let updated = app.state::<ConfigStore>().update(Value::Object(patch))?;
                     let _ = app.emit("settings-changed", updated.clone());
                     updated
                 } else {
-                    config.patched(json!({"target_language": language}))?
+                    config.patched(Value::Object(patch))?
                 };
-                config = updated;
-                reset_translation_state(
-                    &mut client,
-                    &mut states,
-                    &mut pending,
-                    &mut image_pending,
-                    &mut outgoing_pending,
-                    &mut generation,
-                );
-                image_ui_needs_cleanup = client.is_none();
-                update_status(&status, |runtime| {
-                    runtime.target_language = config.target_language.clone();
-                    runtime.notice = "표시 언어를 변경했습니다.".to_string();
-                });
+                pending_control = Some(Control::ApplyConfig(Box::new(updated)));
+                return Ok(());
             }
             let target =
                 Language::try_from(config.target_language.as_str()).unwrap_or(Language::Korean);
@@ -1528,7 +1510,6 @@ fn run_controller(
                 update_status(&status, |runtime| runtime.cdp_connected = false);
             }
             image_ui_needs_cleanup = true;
-            outgoing_ui_needs_cleanup = true;
             dictionary_ui_needs_cleanup = true;
         }
 
@@ -1538,7 +1519,7 @@ fn run_controller(
             Duration::from_secs(1)
         };
         let remaining = interval.saturating_sub(started.elapsed());
-        if remaining > Duration::ZERO {
+        if pending_control.is_none() && remaining > Duration::ZERO {
             match controls.recv_timeout(remaining) {
                 Ok(control) => pending_control = Some(control),
                 Err(mpsc::RecvTimeoutError::Disconnected) => stopped = true,
@@ -2167,6 +2148,32 @@ fn ensure_outgoing_originals(
     Ok(())
 }
 
+#[derive(Debug, Default, Eq, PartialEq)]
+struct OutgoingUiChanges {
+    display_language: Option<String>,
+    display_enabled: Option<bool>,
+    outgoing_enabled: Option<bool>,
+}
+
+fn record_outgoing_ui_change(changes: &mut OutgoingUiChanges, request: &OutgoingRequest) -> bool {
+    if request.action == "display-language" {
+        if request.selected_language == "off" {
+            changes.display_enabled = Some(false);
+        } else if crate::language::is_supported_language_code(&request.selected_language) {
+            changes.display_language = Some(request.selected_language.clone());
+            changes.display_enabled = Some(true);
+        }
+        return true;
+    }
+    if request.action == "outgoing-enabled" {
+        if let Ok(enabled) = request.selected_language.parse::<bool>() {
+            changes.outgoing_enabled = Some(enabled);
+        }
+        return true;
+    }
+    false
+}
+
 fn scan_outgoing(
     client: &mut CdpClient,
     pending: &mut HashSet<OutgoingPendingKey>,
@@ -2175,7 +2182,7 @@ fn scan_outgoing(
     config: &AppConfig,
     original_store: Option<&TranslationCache>,
     channel_languages: &mut HashMap<String, String>,
-) -> Result<Option<String>, String> {
+) -> Result<OutgoingUiChanges, String> {
     let requests = parse_outgoing_requests(client.evaluate(
         &outgoing_ui_script(
             config.outgoing_translation_enabled,
@@ -2193,15 +2200,17 @@ fn scan_outgoing(
             let _ = store.put_outgoing_original(binding);
         }
     }
-    let mut requested_display_language = None;
+    let mut requested_changes = OutgoingUiChanges::default();
     for request in requests {
-        if request.action == "display-language" {
-            if crate::language::is_supported_language_code(&request.selected_language) {
-                requested_display_language = Some(request.selected_language);
-            }
+        if record_outgoing_ui_change(&mut requested_changes, &request) {
             continue;
         }
         if request.action == "remember-language" {
+            if request.selected_language != "auto"
+                && !crate::language::is_supported_language_code(&request.selected_language)
+            {
+                continue;
+            }
             if let Some(store) = original_store {
                 store.set_outgoing_channel_language(
                     &request.channel_key,
@@ -2209,6 +2218,7 @@ fn scan_outgoing(
                 )?;
             }
             channel_languages.insert(request.channel_key, request.selected_language);
+            requested_changes.outgoing_enabled = Some(true);
             continue;
         }
         if request.action == "classify" {
@@ -2254,7 +2264,7 @@ fn scan_outgoing(
         };
         enqueue_outgoing_translation(request, target, pending, generation, worker)?;
     }
-    Ok(requested_display_language)
+    Ok(requested_changes)
 }
 
 fn enqueue_outgoing_translation(
@@ -3555,14 +3565,14 @@ mod tests {
         display_batch_item_limit, display_preparation_is_required, display_translation_is_ready,
         display_view_scope, incoming_context_key, initial_model_preparation_progress,
         localize_dictionary_result, next_worker_command, plan_dom_updates, poll_interval,
-        preparation_plan_for_active_lanes, retain_enabled_dom_parts,
+        preparation_plan_for_active_lanes, record_outgoing_ui_change, retain_enabled_dom_parts,
         run_outgoing_translation_worker, stage_dictionary_lookup_result,
         translator_activation_notice, translator_label, translator_preparation_plan,
         validate_browser_translation_request, BrowserTranslationItem, BrowserTranslationRequest,
         DictionaryLocalizationBatch, DisplayViewObservation, DisplayViewState,
-        OutgoingTranslationBatch, OutgoingWorkerCommand, PartState, RuntimeStatus, RustEngine,
-        TranslationBatch, TranslatorPreparationPlan, WorkerCommand, WorkerResult,
-        CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
+        OutgoingTranslationBatch, OutgoingUiChanges, OutgoingWorkerCommand, PartState,
+        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
+        WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
     };
     use crate::cache::TranslationCache;
     use crate::cdp::{discord_target, CdpClient};
@@ -3573,6 +3583,7 @@ mod tests {
         INSTALL_TEXT_RESTORE_SCRIPT, RESTORE_TEXT_SCRIPT, SNAPSHOT_SCRIPT,
     };
     use crate::language::{detect_explicit_language, Language};
+    use crate::outgoing::OutgoingRequest;
     use crate::translation::{TranslationService, Translator};
     use std::collections::{HashMap, HashSet, VecDeque};
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -3581,6 +3592,46 @@ mod tests {
     use std::time::{Duration, Instant};
 
     struct DictionaryTestTranslator;
+
+    fn outgoing_ui_request(action: &str, selected_language: &str) -> OutgoingRequest {
+        OutgoingRequest {
+            id: format!("{action}-test"),
+            channel_key: "/channels/1/2".to_string(),
+            text: String::new(),
+            action: action.to_string(),
+            selected_language: selected_language.to_string(),
+            recent_messages: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn discord_language_menu_can_disable_and_reenable_each_translation_lane() {
+        let mut changes = OutgoingUiChanges::default();
+        assert!(record_outgoing_ui_change(
+            &mut changes,
+            &outgoing_ui_request("display-language", "off"),
+        ));
+        assert_eq!(changes.display_enabled, Some(false));
+
+        assert!(record_outgoing_ui_change(
+            &mut changes,
+            &outgoing_ui_request("display-language", "ja"),
+        ));
+        assert_eq!(changes.display_language.as_deref(), Some("ja"));
+        assert_eq!(changes.display_enabled, Some(true));
+
+        assert!(record_outgoing_ui_change(
+            &mut changes,
+            &outgoing_ui_request("outgoing-enabled", "false"),
+        ));
+        assert_eq!(changes.outgoing_enabled, Some(false));
+
+        assert!(record_outgoing_ui_change(
+            &mut changes,
+            &outgoing_ui_request("outgoing-enabled", "true"),
+        ));
+        assert_eq!(changes.outgoing_enabled, Some(true));
+    }
 
     fn browser_request(items: Vec<(&str, &str, &str)>) -> BrowserTranslationRequest {
         BrowserTranslationRequest {
