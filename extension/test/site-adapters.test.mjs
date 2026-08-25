@@ -121,6 +121,12 @@ test("BOOTH Tailwind order 레이아웃 클래스는 주문 영역으로 오인�
   assert.match(selector, /form\[action\*='order'\]/);
 });
 
+test("BOOTH 판매자 페이지의 span 기반 데스크톱 상품 설명을 번역한다", () => {
+  const booth = adapterForLocation(new URL("https://shop.booth.pm/items/123"));
+
+  assert.ok(booth.blocks.includes("[class~='description'] > span.autolink"));
+});
+
 test("manifest 공개 키가 Native Messaging 허용 ID를 안정적으로 만든다", () => {
   const manifest = JSON.parse(fs.readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
   const publicKey = Buffer.from(manifest.key, "base64");

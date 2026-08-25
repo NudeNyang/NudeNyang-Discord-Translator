@@ -77,6 +77,7 @@
       blocks: [
         "main p", "main li", "main h1", "main h2", "main h3",
         "[class*='description'] p", "[class*='description'] li",
+        "[class~='description'] > span.autolink",
         "[class*='notice'] p",
       ],
       excludes: [
