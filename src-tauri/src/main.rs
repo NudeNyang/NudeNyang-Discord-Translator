@@ -91,6 +91,14 @@ enum ShortcutAction {
     OutgoingTranslation,
 }
 
+fn shortcut_toggle_state(enabled: bool, control_visible: bool) -> (bool, bool) {
+    if enabled || control_visible {
+        (false, false)
+    } else {
+        (true, true)
+    }
+}
+
 fn shortcut_action_for(config: &ShortcutConfig, pressed: &str) -> Option<ShortcutAction> {
     [
         ShortcutAction::Translation,
@@ -153,13 +161,14 @@ fn set_translation_enabled_from_app(
 
 fn toggle_translation_from_app(app: &AppHandle) -> Result<Value, String> {
     let config = app.state::<ConfigStore>().get()?;
-    if !config.enabled && !config.discord_auto_restart_consent_granted {
+    let runtime = app.state::<RustEngine>().status()?;
+    let (enabled, _) = shortcut_toggle_state(config.enabled, runtime.display_control_visible);
+    if enabled && !config.discord_auto_restart_consent_granted {
         main_window_show(app.clone());
         app.emit("request-translation-toggle", ())
             .map_err(|error| format!("번역 시작 동의 화면을 열지 못했습니다: {error}"))?;
         return Ok(json!({"deferredForConsent": true}));
     }
-    let enabled = !config.enabled;
     diagnostics::info(
         "shortcut",
         &format!("native translation toggle requested; enabled={enabled}"),
@@ -171,19 +180,23 @@ fn toggle_outgoing_translation_from_shortcut(app: &AppHandle) -> Result<(), Stri
     let config = app.state::<ConfigStore>();
     let engine = app.state::<RustEngine>();
     let previous = config.get()?;
-    if !previous.outgoing_translation_enabled && !previous.discord_auto_restart_consent_granted {
+    let runtime = engine.status()?;
+    let (enabled, control_visible) = shortcut_toggle_state(
+        previous.outgoing_translation_enabled,
+        runtime.outgoing_control_visible,
+    );
+    if enabled && !previous.discord_auto_restart_consent_granted {
         main_window_show(app.clone());
         app.emit("request-outgoing-translation-toggle", ())
             .map_err(|error| format!("전송 메시지 통역 동의 화면을 열지 못했습니다: {error}"))?;
         return Ok(());
     }
-    let enabled = !previous.outgoing_translation_enabled;
     let updated = config.update(json!({"outgoing_translation_enabled": enabled}))?;
     if let Err(error) = engine.apply_config(updated.clone()) {
         let _ = config.replace(previous);
         return Err(error);
     }
-    if let Err(error) = engine.set_outgoing_control_visible(enabled) {
+    if let Err(error) = engine.set_outgoing_control_visible(control_visible) {
         let _ = config.replace(previous.clone());
         let _ = engine.apply_config(previous);
         return Err(error);
@@ -1938,9 +1951,16 @@ fn main() {
 mod tests {
     use super::{
         fallback_function_key, fallback_press_should_dispatch, shortcut_action_for,
-        shortcut_changed, shortcuts_are_unique, tray_menu_position, ProviderLoginState,
-        ShortcutAction, ShortcutConfig,
+        shortcut_changed, shortcut_toggle_state, shortcuts_are_unique, tray_menu_position,
+        ProviderLoginState, ShortcutAction, ShortcutConfig,
     };
+
+    #[test]
+    fn shortcut_hides_a_visible_off_control_before_reenabling_translation() {
+        assert_eq!(shortcut_toggle_state(false, true), (false, false));
+        assert_eq!(shortcut_toggle_state(false, false), (true, true));
+        assert_eq!(shortcut_toggle_state(true, true), (false, false));
+    }
 
     #[test]
     fn default_shortcuts_route_incoming_and_outgoing_toggles_separately() {

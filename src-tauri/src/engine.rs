@@ -68,6 +68,8 @@ type OutgoingPendingKey = (u64, String);
 pub struct RuntimeStatus {
     pub enabled: bool,
     pub controller_enabled: bool,
+    pub display_control_visible: bool,
+    pub outgoing_control_visible: bool,
     pub cdp_connected: bool,
     pub connection_issue: String,
     pub discord_process_id: Option<u32>,
@@ -125,6 +127,8 @@ impl RuntimeStatus {
             controller_enabled: config.enabled
                 || config.outgoing_translation_enabled
                 || config.dictionary_enabled,
+            display_control_visible: true,
+            outgoing_control_visible: true,
             cdp_connected: false,
             connection_issue: String::new(),
             discord_process_id: None,
@@ -523,6 +527,9 @@ impl RustEngine {
     pub fn set_enabled(&self, enabled: bool) -> Result<(), String> {
         if let Ok(mut status) = self.status.lock() {
             status.enabled = enabled;
+            if enabled {
+                status.display_control_visible = true;
+            }
         }
         self.controls
             .send(Control::SetEnabled {
@@ -535,6 +542,7 @@ impl RustEngine {
     pub fn set_enabled_from_shortcut(&self, enabled: bool) -> Result<(), String> {
         if let Ok(mut status) = self.status.lock() {
             status.enabled = enabled;
+            status.display_control_visible = enabled;
         }
         self.controls
             .send(Control::SetEnabled {
@@ -545,6 +553,9 @@ impl RustEngine {
     }
 
     pub fn set_outgoing_control_visible(&self, visible: bool) -> Result<(), String> {
+        if let Ok(mut status) = self.status.lock() {
+            status.outgoing_control_visible = visible;
+        }
         self.controls
             .send(Control::SetOutgoingControlVisible(visible))
             .map_err(|_| {
@@ -813,6 +824,8 @@ fn run_controller(
                         runtime.target_language = config.target_language.clone();
                         runtime.configured_translator = config.translator.clone();
                         runtime.configured_outgoing_translator = config.outgoing_translator.clone();
+                        runtime.display_control_visible = display_control_visible;
+                        runtime.outgoing_control_visible = outgoing_control_visible;
                     });
                     let preparation_plan =
                         preparation_plan_for_active_lanes(&config, requested_preparation);
@@ -941,6 +954,9 @@ fn run_controller(
                     } else if enabled {
                         display_control_visible = true;
                     }
+                    update_status(&status, |runtime| {
+                        runtime.display_control_visible = display_control_visible;
+                    });
                     if config.enabled != enabled {
                         config.enabled = enabled;
                         update_status(&status, |runtime| {
@@ -988,6 +1004,9 @@ fn run_controller(
                 }
                 Control::SetOutgoingControlVisible(visible) => {
                     outgoing_control_visible = visible;
+                    update_status(&status, |runtime| {
+                        runtime.outgoing_control_visible = visible;
+                    });
                 }
                 Control::PrepareBrowserSession => {
                     if !config.web_translation_enabled {
