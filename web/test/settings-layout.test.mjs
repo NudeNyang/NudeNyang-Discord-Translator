@@ -189,7 +189,7 @@ test("web translation panel owns browser batching, usage protection, and site po
   assert.match(markup, /id="web-browser-clients"/);
   assert.match(markup, /id="web-site-policies"/);
   assert.match(script, /browser_clients_status/);
-  assert.match(script, /browser_shortcut_settings_open/);
+  assert.doesNotMatch(script, /browser_shortcut_settings_open/);
   assert.match(script, /web_quick_toggle_shortcut/);
   assert.match(script, /web_site_policies/);
   assert.match(script, /web_target_language: \[\["display", "언어 감지"\]/);
@@ -393,11 +393,19 @@ test("convenience panel exposes the Discord target and global translation toggle
   assert.match(rustEngine, /Control::SetOutgoingControlVisible\(visible\)/);
 });
 
-test("웹 빠른 전환키는 편의 기능의 단축키 카드에서 관리한다", () => {
+test("웹 번역 전환키는 편의 기능의 단축키 카드에서 관리한다", () => {
   const conveniencePanel = markup.match(/data-settings-view="convenience"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(conveniencePanel, /class="settings-card shortcut-card"/);
+  assert.match(conveniencePanel, /<h3>웹 번역 전환키<\/h3>/);
   assert.match(conveniencePanel, /id="web-quick-toggle-shortcut"/);
   assert.match(conveniencePanel, /id="web-quick-toggle-shortcut-help"/);
+  assert.doesNotMatch(conveniencePanel, /Delete를 누르면 사용하지 않습니다/);
+});
+
+test("브라우저 연결 목록은 상태와 버전만 표시한다", () => {
+  assert.match(markup, /확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다\./);
+  assert.doesNotMatch(markup, /브라우저 단축키 변경/);
+  assert.doesNotMatch(script, /web-client-shortcut-button/);
 });
 
 test("convenience controls stay compact in wider settings windows", () => {

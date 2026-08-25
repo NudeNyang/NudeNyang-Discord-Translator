@@ -2833,18 +2833,6 @@ select:focus-visible,
   font-weight: 700;
 }
 
-.web-client-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.web-client-shortcut-button {
-  min-height: 34px;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
 .web-site-row > div {
   display: flex;
   align-items: center;

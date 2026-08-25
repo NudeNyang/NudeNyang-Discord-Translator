@@ -1475,21 +1475,7 @@ function renderBrowserClients() {
     setLocalizedText(status, "연결됨");
     status.className = "web-client-status";
     identity.append(name, version);
-    const actions = document.createElement("div");
-    const shortcutButton = document.createElement("button");
-    actions.className = "web-client-actions";
-    shortcutButton.type = "button";
-    shortcutButton.className = "button secondary web-client-shortcut-button";
-    setLocalizedText(shortcutButton, "브라우저 단축키 변경");
-    shortcutButton.addEventListener("click", async () => {
-      try {
-        await invoke("browser_shortcut_settings_open", { browser: client.browser });
-      } catch (error) {
-        await showError("브라우저 단축키 설정을 열지 못했습니다", String(error));
-      }
-    });
-    actions.append(status, shortcutButton);
-    row.append(identity, actions);
+    row.append(identity, status);
     elements.webBrowserClients.append(row);
   }
 }
@@ -3539,19 +3525,19 @@ function bindWebQuickToggleShortcutEditor() {
     element.value = shortcut;
     try {
       await applySettingsPatch({ web_quick_toggle_shortcut: shortcut });
-      setLocalizedText(help, shortcut ? `${shortcut}로 적용되었습니다.` : "빠른 전환키를 사용하지 않습니다.");
+      setLocalizedText(help, shortcut ? `${shortcut}로 적용되었습니다.` : "웹 번역 전환키를 사용하지 않습니다.");
     } catch (error) {
       element.value = previous;
-      await showError("빠른 전환키를 적용하지 못했습니다", String(error));
+      await showError("웹 번역 전환키를 적용하지 못했습니다", String(error));
     }
   });
   element.addEventListener("focus", () => {
     invoke("shortcut_capture_set_active", { active: true }).catch(() => {});
-    setLocalizedText(help, "새 단축키를 입력하십시오. Delete를 누르면 사용하지 않고 Esc를 누르면 취소됩니다.");
+    setLocalizedText(help, "새 단축키 조합을 입력하십시오. Esc를 누르면 취소됩니다.");
   });
   element.addEventListener("blur", () => {
     invoke("shortcut_capture_set_active", { active: false }).catch(() => {});
-    setLocalizedText(help, "입력란을 선택한 뒤 원하는 단축키를 누르십시오. Delete를 누르면 사용하지 않습니다.");
+    setLocalizedText(help, "입력란을 선택한 뒤 원하는 단축키를 누르십시오.");
   });
 }
 
