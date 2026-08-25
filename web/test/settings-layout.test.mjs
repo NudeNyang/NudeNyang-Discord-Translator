@@ -178,14 +178,14 @@ test("settings apply immediately and the primary footer action only confirms", (
 });
 
 test("web translation panel owns browser batching, usage protection, and site policies", () => {
+  const webPanel = markup.match(/data-settings-view="web"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(markup, /Chrome, Whale과 Firefox/);
   assert.match(script, /firefox:\s*"Mozilla Firefox"/);
   assert.match(markup, /id="web-translation-enabled"/);
   assert.match(markup, /data-field="web_target_language"/);
   assert.match(markup, /data-field="web_processing_mode"/);
   assert.match(markup, /data-field="web_external_page_char_limit"/);
-  assert.match(markup, /id="web-quick-toggle-shortcut"/);
-  assert.match(markup, /id="web-quick-toggle-shortcut-help"/);
+  assert.doesNotMatch(webPanel, /id="web-quick-toggle-shortcut"/);
   assert.match(markup, /id="web-browser-clients"/);
   assert.match(markup, /id="web-site-policies"/);
   assert.match(script, /browser_clients_status/);
@@ -391,6 +391,13 @@ test("convenience panel exposes the Discord target and global translation toggle
   );
   assert.match(rustMain, /engine\.set_enabled_from_shortcut\(enabled\)/);
   assert.match(rustEngine, /Control::SetOutgoingControlVisible\(visible\)/);
+});
+
+test("웹 빠른 전환키는 편의 기능의 단축키 카드에서 관리한다", () => {
+  const conveniencePanel = markup.match(/data-settings-view="convenience"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.match(conveniencePanel, /class="settings-card shortcut-card"/);
+  assert.match(conveniencePanel, /id="web-quick-toggle-shortcut"/);
+  assert.match(conveniencePanel, /id="web-quick-toggle-shortcut-help"/);
 });
 
 test("convenience controls stay compact in wider settings windows", () => {
