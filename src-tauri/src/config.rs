@@ -71,6 +71,7 @@ pub struct AppConfig {
     pub web_target_language: String,
     pub web_processing_mode: String,
     pub web_external_page_char_limit: u32,
+    pub web_quick_toggle_shortcut: String,
     pub web_site_policies: BTreeMap<String, String>,
     pub enabled: bool,
     pub outgoing_translation_enabled: bool,
@@ -116,6 +117,7 @@ impl Default for AppConfig {
             web_target_language: "display".to_string(),
             web_processing_mode: "balanced".to_string(),
             web_external_page_char_limit: 25_000,
+            web_quick_toggle_shortcut: "F4".to_string(),
             web_site_policies: BTreeMap::new(),
             enabled: true,
             outgoing_translation_enabled: false,
@@ -308,6 +310,16 @@ impl AppConfig {
                 Value::from(25_000),
             );
         }
+        if object
+            .get("web_quick_toggle_shortcut")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !valid_web_shortcut(value))
+        {
+            object.insert(
+                "web_quick_toggle_shortcut".to_string(),
+                Value::String("F4".to_string()),
+            );
+        }
         if let Some(policies) = object.get("web_site_policies") {
             let normalized = policies
                 .as_object()
@@ -453,6 +465,60 @@ fn valid_web_hostname(value: &str) -> bool {
                     .chars()
                     .all(|character| character.is_ascii_alphanumeric() || character == '-')
         })
+}
+
+fn valid_web_shortcut(value: &str) -> bool {
+    if value.is_empty() || matches_function_key(value) {
+        return true;
+    }
+    let mut parts = value.split('+').collect::<Vec<_>>();
+    let Some(key) = parts.pop() else {
+        return false;
+    };
+    if parts.is_empty() || parts.len() > 4 {
+        return false;
+    }
+    let modifier_order = ["Ctrl", "Alt", "Shift", "Super"];
+    let mut last = None;
+    for modifier in parts {
+        let Some(index) = modifier_order
+            .iter()
+            .position(|candidate| *candidate == modifier)
+        else {
+            return false;
+        };
+        if last.is_some_and(|previous| index <= previous) {
+            return false;
+        }
+        last = Some(index);
+    }
+    matches_function_key(key)
+        || (key.len() == 1
+            && key
+                .as_bytes()
+                .first()
+                .is_some_and(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit()))
+        || matches!(
+            key,
+            "Space"
+                | "Enter"
+                | "ArrowUp"
+                | "ArrowDown"
+                | "ArrowLeft"
+                | "ArrowRight"
+                | "Home"
+                | "End"
+                | "PageUp"
+                | "PageDown"
+                | "Insert"
+        )
+}
+
+fn matches_function_key(value: &str) -> bool {
+    value
+        .strip_prefix('F')
+        .and_then(|number| number.parse::<u8>().ok())
+        .is_some_and(|number| (1..=24).contains(&number))
 }
 
 pub struct ConfigStore {
@@ -639,6 +705,7 @@ mod tests {
         assert_eq!(restored.web_target_language, "display");
         assert_eq!(restored.web_processing_mode, "balanced");
         assert_eq!(restored.web_external_page_char_limit, 25_000);
+        assert_eq!(restored.web_quick_toggle_shortcut, "F4");
         assert!(restored.web_site_policies.is_empty());
         assert_eq!(restored.translation_history_retention_days, 30);
         assert!(restored.dictionary_enabled);
@@ -672,6 +739,7 @@ mod tests {
             "web_target_language": "ar",
             "web_processing_mode": "economy",
             "web_external_page_char_limit": 50_000,
+            "web_quick_toggle_shortcut": "Ctrl+Alt+K",
             "web_site_policies": {
                 "WWW.GitHub.com": "always",
                 "example.com": "manual",
@@ -685,6 +753,7 @@ mod tests {
         assert_eq!(config.web_target_language, "ar");
         assert_eq!(config.web_processing_mode, "economy");
         assert_eq!(config.web_external_page_char_limit, 50_000);
+        assert_eq!(config.web_quick_toggle_shortcut, "Ctrl+Alt+K");
         assert_eq!(
             config.web_site_policies.get("github.com"),
             Some(&"always".to_string())
@@ -704,12 +773,14 @@ mod tests {
             "web_target_language": "invalid",
             "web_processing_mode": "fastest",
             "web_external_page_char_limit": 123,
+            "web_quick_toggle_shortcut": "K",
             "web_site_policies": []
         }))
         .expect("invalid values should fall back");
         assert_eq!(invalid.web_target_language, "display");
         assert_eq!(invalid.web_processing_mode, "balanced");
         assert_eq!(invalid.web_external_page_char_limit, 25_000);
+        assert_eq!(invalid.web_quick_toggle_shortcut, "F4");
         assert!(invalid.web_site_policies.is_empty());
 
         let cleared = config

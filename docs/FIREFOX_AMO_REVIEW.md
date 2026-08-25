@@ -81,7 +81,7 @@ npx --yes web-ext lint --source-dir dist/firefox-extension --warnings-as-errors
 2. Register its Native Messaging host by running the installed executable once with
    `--register-browser-native-host`. The installer performs this automatically.
 3. Install the signed XPI and open an ordinary HTTP/HTTPS page.
-4. Press `F4` or use the popup switch to translate the current page.
+4. Press the quick toggle shortcut configured in the Windows app (`F4` by default), use the registered Firefox command (`Ctrl+Shift+L` by default), or use the popup switch to translate the current page.
 5. Use `Restore this page to the original` in the popup and verify that the original text returns.
 6. Stop the companion application and verify that the add-on reports the connection requirement
    without translating or transmitting page content.

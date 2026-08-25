@@ -157,9 +157,16 @@ test("탭에서 선택한 번역 상태는 페이지와 사이트가 바뀌어�
   }), false);
 });
 
-test("보조키 없는 F4만 빠른 번역 전환으로 판정한다", () => {
+test("설정한 빠른 번역 전환키만 판정한다", () => {
   assert.equal(isQuickToggleShortcut({ key: "F4" }), true);
   assert.equal(isQuickToggleShortcut({ key: "Unidentified", code: "F4" }), true);
+  assert.equal(isQuickToggleShortcut({ key: "F9" }, "F9"), true);
+  assert.equal(isQuickToggleShortcut({ key: "F4" }, "F9"), false);
+  assert.equal(
+    isQuickToggleShortcut({ key: "k", ctrlKey: true, altKey: true }, "Ctrl+Alt+K"),
+    true,
+  );
+  assert.equal(isQuickToggleShortcut({ key: "F4" }, ""), false);
   assert.equal(isQuickToggleShortcut({ key: "F4", ctrlKey: true }), false);
   assert.equal(isQuickToggleShortcut({ key: "F4", altKey: true }), false);
   assert.equal(isQuickToggleShortcut({ key: "F4", shiftKey: true }), false);

@@ -14,6 +14,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   web_target_language: "display",
   web_processing_mode: "balanced",
   web_external_page_char_limit: 25000,
+  web_quick_toggle_shortcut: "F4",
   web_site_policies: {},
   translator: "hymt_1_8b",
   outgoing_translator: "hymt_1_8b",
@@ -68,6 +69,24 @@ export function shortcutFromKeyboardEvent(event = {}) {
   return [...modifiers, key].join("+");
 }
 
+export function normalizeWebQuickToggleShortcut(value, fallback = "F4") {
+  const shortcut = String(value ?? fallback).trim();
+  if (shortcut === "") return "";
+  if (/^F(?:[1-9]|1\d|2[0-4])$/.test(shortcut)) return shortcut;
+  if (/^(?:(?:Ctrl|Alt|Shift|Super)\+)+(?:[A-Z0-9]|F(?:[1-9]|1\d|2[0-4])|Space|Enter|Arrow(?:Up|Down|Left|Right)|Home|End|Page(?:Up|Down)|Insert)$/.test(shortcut)) {
+    const parts = shortcut.split("+");
+    const key = parts.pop();
+    const modifiers = parts;
+    if (new Set(modifiers).size !== modifiers.length) return fallback;
+    const order = ["Ctrl", "Alt", "Shift", "Super"];
+    if (modifiers.some((modifier, index) => order.indexOf(modifier) <= order.indexOf(modifiers[index - 1] ?? ""))) {
+      return fallback;
+    }
+    return [...modifiers, key].join("+");
+  }
+  return fallback;
+}
+
 export function normalizeConfig(value = {}) {
   const targetLanguage = SUPPORTED_TARGET_LANGUAGES.includes(value.target_language)
     ? value.target_language
@@ -118,6 +137,9 @@ export function normalizeConfig(value = {}) {
   )
     ? Number(value.web_external_page_char_limit)
     : DEFAULT_CONFIG.web_external_page_char_limit;
+  const webQuickToggleShortcut = normalizeWebQuickToggleShortcut(
+    value.web_quick_toggle_shortcut,
+  );
   const webSitePolicies = Object.fromEntries(
     Object.entries(
       value.web_site_policies && !Array.isArray(value.web_site_policies)
@@ -146,6 +168,7 @@ export function normalizeConfig(value = {}) {
     web_target_language: webTargetLanguage,
     web_processing_mode: webProcessingMode,
     web_external_page_char_limit: webExternalPageCharLimit,
+    web_quick_toggle_shortcut: webQuickToggleShortcut,
     web_site_policies: webSitePolicies,
     hotkeys: {
       ...DEFAULT_CONFIG.hotkeys,

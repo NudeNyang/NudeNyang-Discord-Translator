@@ -190,6 +190,7 @@ const elements = {
   translateNicknames: document.querySelector("#translate-nicknames"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   webTranslationEnabled: document.querySelector("#web-translation-enabled"),
+  webQuickToggleShortcut: document.querySelector("#web-quick-toggle-shortcut"),
   webBrowserClients: document.querySelector("#web-browser-clients"),
   webSitePolicies: document.querySelector("#web-site-policies"),
   dictionaryEnabled: document.querySelector("#dictionary-enabled"),
@@ -1474,7 +1475,21 @@ function renderBrowserClients() {
     setLocalizedText(status, "연결됨");
     status.className = "web-client-status";
     identity.append(name, version);
-    row.append(identity, status);
+    const actions = document.createElement("div");
+    const shortcutButton = document.createElement("button");
+    actions.className = "web-client-actions";
+    shortcutButton.type = "button";
+    shortcutButton.className = "button secondary web-client-shortcut-button";
+    setLocalizedText(shortcutButton, "브라우저 단축키 변경");
+    shortcutButton.addEventListener("click", async () => {
+      try {
+        await invoke("browser_shortcut_settings_open", { browser: client.browser });
+      } catch (error) {
+        await showError("브라우저 단축키 설정을 열지 못했습니다", String(error));
+      }
+    });
+    actions.append(status, shortcutButton);
+    row.append(identity, actions);
     elements.webBrowserClients.append(row);
   }
 }
@@ -2696,6 +2711,7 @@ function renderConfig(config) {
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
+  elements.webQuickToggleShortcut.value = state.config.web_quick_toggle_shortcut;
   elements.translationShortcutHint.textContent = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcutHint.textContent = state.config.hotkeys.toggle_outgoing_translation;
   renderWebSitePolicies();
@@ -3499,6 +3515,47 @@ bindShortcutEditor(
   "outgoing-shortcut-help",
   "F8",
 );
+
+function bindWebQuickToggleShortcutEditor() {
+  const element = elements.webQuickToggleShortcut;
+  const help = document.querySelector("#web-quick-toggle-shortcut-help");
+  element.addEventListener("keydown", async event => {
+    if (event.key === "Tab") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      element.value = state.config.web_quick_toggle_shortcut;
+      element.blur();
+      return;
+    }
+    const shortcut = ["Backspace", "Delete"].includes(event.key)
+      ? ""
+      : shortcutFromKeyboardEvent(event);
+    if (!shortcut && !["Backspace", "Delete"].includes(event.key)) {
+      setLocalizedText(help, "F1~F24 또는 Ctrl·Alt·Shift와 일반 키를 함께 입력하십시오.");
+      return;
+    }
+    const previous = state.config.web_quick_toggle_shortcut;
+    element.value = shortcut;
+    try {
+      await applySettingsPatch({ web_quick_toggle_shortcut: shortcut });
+      setLocalizedText(help, shortcut ? `${shortcut}로 적용되었습니다.` : "빠른 전환키를 사용하지 않습니다.");
+    } catch (error) {
+      element.value = previous;
+      await showError("빠른 전환키를 적용하지 못했습니다", String(error));
+    }
+  });
+  element.addEventListener("focus", () => {
+    invoke("shortcut_capture_set_active", { active: true }).catch(() => {});
+    setLocalizedText(help, "새 단축키를 입력하십시오. Delete를 누르면 사용하지 않고 Esc를 누르면 취소됩니다.");
+  });
+  element.addEventListener("blur", () => {
+    invoke("shortcut_capture_set_active", { active: false }).catch(() => {});
+    setLocalizedText(help, "입력란을 선택한 뒤 원하는 단축키를 누르십시오. Delete를 누르면 사용하지 않습니다.");
+  });
+}
+
+bindWebQuickToggleShortcutEditor();
 
 for (const item of document.querySelectorAll("[data-settings-panel]")) {
   item.addEventListener("click", () => activateSettingsPanel(item.dataset.settingsPanel));

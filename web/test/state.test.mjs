@@ -8,6 +8,7 @@ import {
   modelPreparationBanner,
   nextIncomingSourceLanguageSelection,
   normalizeConfig,
+  normalizeWebQuickToggleShortcut,
   providerOperationAvailability,
   resolveEnabledState,
   restartCountdownMessage,
@@ -117,6 +118,14 @@ test("shortcut capture accepts function keys and modified key combinations", () 
   assert.equal(shortcutFromKeyboardEvent({ key: "t" }), "");
 });
 
+test("웹 빠른 전환키는 지원하는 조합만 보존하고 비워서 끌 수 있다", () => {
+  assert.equal(normalizeWebQuickToggleShortcut("F9"), "F9");
+  assert.equal(normalizeWebQuickToggleShortcut("Ctrl+Alt+K"), "Ctrl+Alt+K");
+  assert.equal(normalizeWebQuickToggleShortcut(""), "");
+  assert.equal(normalizeWebQuickToggleShortcut("K"), "F4");
+  assert.equal(normalizeWebQuickToggleShortcut("Ctrl++K"), "F4");
+});
+
 test("old settings receive safe Tauri defaults", () => {
   const config = normalizeConfig({ enabled: true });
 
@@ -152,12 +161,14 @@ test("web translation settings receive safe defaults and reject invalid policies
   assert.equal(defaults.web_target_language, "display");
   assert.equal(defaults.web_processing_mode, "balanced");
   assert.equal(defaults.web_external_page_char_limit, 25000);
+  assert.equal(defaults.web_quick_toggle_shortcut, "F4");
   assert.deepEqual(defaults.web_site_policies, {});
 
   const normalized = normalizeConfig({
     web_target_language: "ar",
     web_processing_mode: "economy",
     web_external_page_char_limit: 50000,
+    web_quick_toggle_shortcut: "Ctrl+Alt+K",
     web_site_policies: {
       "github.com": "always",
       "example.com": "manual",
@@ -169,6 +180,7 @@ test("web translation settings receive safe defaults and reject invalid policies
   assert.equal(normalized.web_target_language, "ar");
   assert.equal(normalized.web_processing_mode, "economy");
   assert.equal(normalized.web_external_page_char_limit, 50000);
+  assert.equal(normalized.web_quick_toggle_shortcut, "Ctrl+Alt+K");
   assert.deepEqual(normalized.web_site_policies, {
     "github.com": "always",
     "example.com": "manual",
@@ -179,11 +191,13 @@ test("web translation settings receive safe defaults and reject invalid policies
     web_target_language: "unknown",
     web_processing_mode: "fastest",
     web_external_page_char_limit: 123,
+    web_quick_toggle_shortcut: "K",
     web_site_policies: [],
   });
   assert.equal(invalid.web_target_language, "display");
   assert.equal(invalid.web_processing_mode, "balanced");
   assert.equal(invalid.web_external_page_char_limit, 25000);
+  assert.equal(invalid.web_quick_toggle_shortcut, "F4");
   assert.deepEqual(invalid.web_site_policies, {});
 });
 

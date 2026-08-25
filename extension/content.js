@@ -26,6 +26,7 @@
     targetLanguage: "display",
     processingMode: "balanced",
     externalPageCharLimit: 25000,
+    quickToggleShortcut: "F4",
     sitePolicies: {},
   });
   const APPLY_BLOCKS_PER_FRAME = 2;
@@ -143,6 +144,9 @@
       externalPageCharLimit: [0, 10000, 25000, 50000].includes(Number(source.externalPageCharLimit))
         ? Number(source.externalPageCharLimit)
         : 25000,
+      quickToggleShortcut: typeof source.quickToggleShortcut === "string"
+        ? source.quickToggleShortcut
+        : "F4",
       sitePolicies: policies,
     };
   }
@@ -155,6 +159,11 @@
     if (response?.type !== "status") return;
     externalProvider = EXTERNAL_TRANSLATORS.has(response.translator);
     applyWebSettings(response.webSettings);
+  }
+
+  async function refreshAppStatus() {
+    const response = await nativeRequest({ type: "status", requestId: `content-focus-${Date.now()}` });
+    applyAppStatus(response);
   }
 
   function applyWebSettings(value) {
@@ -507,6 +516,7 @@
     clearInterval(navigationTimer);
     document.removeEventListener("scroll", noteViewportActivity, true);
     window.removeEventListener("keydown", handleQuickToggle, true);
+    window.removeEventListener("focus", refreshAppStatus, true);
     rescanTimer = undefined;
     navigationTimer = undefined;
     restoreOriginals({ discard: true });
@@ -609,7 +619,7 @@
   }
 
   function handleQuickToggle(event) {
-    if (!adapter || !isQuickToggleShortcut(event)) {
+    if (!adapter || !isQuickToggleShortcut(event, webSettings.quickToggleShortcut)) {
       return;
     }
     event.preventDefault();
@@ -634,6 +644,7 @@
       targetLanguage: pageTargetLanguage || webSettings.targetLanguage,
       sitePolicy,
       processingMode: webSettings.processingMode,
+      quickToggleShortcut: webSettings.quickToggleShortcut,
       lastError,
     };
   }
@@ -694,6 +705,7 @@
   });
 
   window.addEventListener("keydown", handleQuickToggle, true);
+  window.addEventListener("focus", refreshAppStatus, true);
 
   async function start() {
     const [stored, appStatus, restoredTabEnabled] = await Promise.all([

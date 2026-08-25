@@ -4,6 +4,7 @@ use std::fs;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
 use std::path::PathBuf;
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, JoinHandle};
@@ -236,12 +237,105 @@ pub fn browser_clients_status() -> Vec<BrowserClientInfo> {
         .unwrap_or_default()
 }
 
+fn browser_shortcut_settings_url(browser: &str) -> Option<&'static str> {
+    match browser {
+        "chrome" => Some("chrome://extensions/shortcuts"),
+        "whale" => Some("whale://extensions/shortcuts"),
+        "firefox" => Some("about:addons"),
+        _ => None,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn browser_executable_path(browser: &str) -> Option<PathBuf> {
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
+    use winreg::RegKey;
+
+    let executable = match browser {
+        "chrome" => "chrome.exe",
+        "whale" => "whale.exe",
+        "firefox" => "firefox.exe",
+        _ => return None,
+    };
+    let app_path = format!(r"Software\Microsoft\Windows\CurrentVersion\App Paths\{executable}");
+    for hive in [HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE] {
+        if let Ok(key) = RegKey::predef(hive).open_subkey(&app_path) {
+            if let Ok(value) = key.get_value::<String, _>("") {
+                let path = PathBuf::from(value);
+                if path.is_file() {
+                    return Some(path);
+                }
+            }
+        }
+    }
+
+    let local_app_data = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
+    let program_files = std::env::var_os("ProgramFiles").map(PathBuf::from);
+    let program_files_x86 = std::env::var_os("ProgramFiles(x86)").map(PathBuf::from);
+    let candidates = match browser {
+        "chrome" => vec![
+            local_app_data
+                .as_ref()
+                .map(|root| root.join(r"Google\Chrome\Application\chrome.exe")),
+            program_files
+                .as_ref()
+                .map(|root| root.join(r"Google\Chrome\Application\chrome.exe")),
+            program_files_x86
+                .as_ref()
+                .map(|root| root.join(r"Google\Chrome\Application\chrome.exe")),
+        ],
+        "whale" => vec![
+            local_app_data
+                .as_ref()
+                .map(|root| root.join(r"Naver\Naver Whale\Application\whale.exe")),
+            program_files
+                .as_ref()
+                .map(|root| root.join(r"Naver\Naver Whale\Application\whale.exe")),
+            program_files_x86
+                .as_ref()
+                .map(|root| root.join(r"Naver\Naver Whale\Application\whale.exe")),
+        ],
+        "firefox" => vec![
+            program_files
+                .as_ref()
+                .map(|root| root.join(r"Mozilla Firefox\firefox.exe")),
+            program_files_x86
+                .as_ref()
+                .map(|root| root.join(r"Mozilla Firefox\firefox.exe")),
+        ],
+        _ => Vec::new(),
+    };
+    candidates.into_iter().flatten().find(|path| path.is_file())
+}
+
+#[tauri::command]
+pub fn browser_shortcut_settings_open(browser: String) -> Result<(), String> {
+    let url = browser_shortcut_settings_url(&browser)
+        .ok_or_else(|| "지원하지 않는 브라우저입니다.".to_string())?;
+    #[cfg(target_os = "windows")]
+    {
+        let executable = browser_executable_path(&browser)
+            .ok_or_else(|| "설치된 브라우저를 찾지 못했습니다.".to_string())?;
+        Command::new(executable)
+            .arg(url)
+            .spawn()
+            .map_err(|error| format!("브라우저 단축키 설정을 열지 못했습니다: {error}"))?;
+        return Ok(());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = url;
+        Err("이 운영체제에서는 브라우저 단축키 설정 열기를 지원하지 않습니다.".to_string())
+    }
+}
+
 fn web_settings_value(config: &crate::config::AppConfig) -> Value {
     json!({
         "enabled": config.web_translation_enabled,
         "targetLanguage": config.web_target_language,
         "processingMode": config.web_processing_mode,
         "externalPageCharLimit": config.web_external_page_char_limit,
+        "quickToggleShortcut": config.web_quick_toggle_shortcut,
         "sitePolicies": config.web_site_policies,
     })
 }
@@ -259,6 +353,7 @@ fn update_web_settings(app: &AppHandle, patch: Value) -> Result<Value, String> {
         "web_target_language",
         "web_processing_mode",
         "web_external_page_char_limit",
+        "web_quick_toggle_shortcut",
         "web_site_policies",
     ];
     let patch = patch
@@ -815,12 +910,29 @@ fn tokens_equal(left: &str, right: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        firefox_native_host_manifest_path, interface_language_value,
+        browser_shortcut_settings_url, firefox_native_host_manifest_path, interface_language_value,
         is_native_messaging_host_invocation, read_native_message, tokens_equal,
         write_native_message, ChromiumNativeHostManifest, FirefoxNativeHostManifest,
         CHROME_WEB_STORE_EXTENSION_ID, CHROMIUM_EXTENSION_IDS, FIREFOX_EXTENSION_ID,
         LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID, NATIVE_HOST_NAME,
     };
+
+    #[test]
+    fn supported_browsers_have_native_shortcut_settings_pages() {
+        assert_eq!(
+            browser_shortcut_settings_url("chrome"),
+            Some("chrome://extensions/shortcuts")
+        );
+        assert_eq!(
+            browser_shortcut_settings_url("whale"),
+            Some("whale://extensions/shortcuts")
+        );
+        assert_eq!(
+            browser_shortcut_settings_url("firefox"),
+            Some("about:addons")
+        );
+        assert_eq!(browser_shortcut_settings_url("edge"), None);
+    }
     use serde_json::json;
     use std::ffi::OsString;
     use std::io::Cursor;

@@ -184,9 +184,13 @@ test("web translation panel owns browser batching, usage protection, and site po
   assert.match(markup, /data-field="web_target_language"/);
   assert.match(markup, /data-field="web_processing_mode"/);
   assert.match(markup, /data-field="web_external_page_char_limit"/);
+  assert.match(markup, /id="web-quick-toggle-shortcut"/);
+  assert.match(markup, /id="web-quick-toggle-shortcut-help"/);
   assert.match(markup, /id="web-browser-clients"/);
   assert.match(markup, /id="web-site-policies"/);
   assert.match(script, /browser_clients_status/);
+  assert.match(script, /browser_shortcut_settings_open/);
+  assert.match(script, /web_quick_toggle_shortcut/);
   assert.match(script, /web_site_policies/);
   assert.match(script, /web_target_language: \[\["display", "언어 감지"\]/);
 });

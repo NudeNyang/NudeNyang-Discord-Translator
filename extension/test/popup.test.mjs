@@ -35,17 +35,17 @@ test("확장 연결 상태는 Discord가 아니라 앱과 번역 모델만 기�
   assert.match(browserBridgeRs, /"discordConnected": status\.cdp_connected/);
 });
 
-test("F4는 지원 페이지에서 번역과 원문을 직접 전환한다", () => {
+test("설정한 빠른 전환키는 지원 페이지에서 번역과 원문을 직접 전환한다", () => {
   assert.match(contentJs, /addEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
-  assert.match(contentJs, /isQuickToggleShortcut\(event\)/);
+  assert.match(contentJs, /isQuickToggleShortcut\(event,\s*webSettings\.quickToggleShortcut\)/);
   assert.match(contentJs, /event\.stopImmediatePropagation\(\)/);
   assert.match(contentJs, /setEnabled\(!enabled\)/);
   assert.match(contentJs, /removeEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
 });
 
-test("팝업에 포커스가 있어도 F4는 현재 페이지 번역을 전환한다", () => {
+test("팝업에 포커스가 있어도 설정한 빠른 전환키는 현재 페이지 번역을 전환한다", () => {
   assert.match(popupJs, /document\.addEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
-  assert.match(popupJs, /isQuickToggleShortcut\(event\)/);
+  assert.match(popupJs, /isQuickToggleShortcut\(event,\s*quickToggleShortcut\)/);
   assert.match(popupJs, /type:\s*"nudenyang-toggle-enabled"/);
   assert.match(popupJs, /event\.preventDefault\(\)/);
   assert.match(popupJs, /event\.stopImmediatePropagation\(\)/);
@@ -71,7 +71,8 @@ test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호
 });
 
 test("팝업은 빠른 단축키와 실제 등록된 보조 단축키를 안내한다", () => {
-  assert.match(popupHtml, /<kbd class="primary-key">F4<\/kbd>/);
+  assert.match(popupHtml, /<kbd class="primary-key" id="quick-toggle-shortcut">F4<\/kbd>/);
+  assert.match(popupJs, /nativeStatus\.webSettings\?\.quickToggleShortcut/);
   assert.match(popupHtml, /id="command-shortcut"/);
   assert.match(popupJs, /commands\.getAll/);
   assert.match(popupJs, /FALLBACK_COMMAND_SHORTCUT/);
@@ -108,7 +109,7 @@ test("상단 번역 토글은 웹 번역 제목 줄에 맞춰 아래로 정렬�
 
 test("범용 사이트의 수동 시작 안내를 공식체로 표시한다", () => {
   assert.match(popupJs, /copy\("manualStart"\)/);
-  assert.match(popupJs, /· F4/);
+  assert.match(popupJs, /· \$\{quickToggleShortcut\}/);
 });
 
 test("팝업은 현재 페이지 언어, 사이트 정책, 사용량과 본체 설정 이동을 제공한다", () => {

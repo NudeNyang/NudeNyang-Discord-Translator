@@ -8,6 +8,7 @@ const connection = document.querySelector("#connection");
 const connectionText = document.querySelector("#connection-text");
 const detail = document.querySelector("#detail");
 const commandShortcut = document.querySelector("#command-shortcut");
+const quickToggleShortcutElement = document.querySelector("#quick-toggle-shortcut");
 const restore = document.querySelector("#restore");
 const targetLanguage = document.querySelector("#target-language");
 const targetLanguageTrigger = document.querySelector("#target-language-trigger");
@@ -29,6 +30,7 @@ const LANGUAGE_OPTIONS = [
   ["bn", "বাংলা"], ["ur", "اردو"], ["ta", "தமிழ்"], ["fa", "فارسی"], ["he", "עברית"], ["cs", "Čeština"],
 ];
 let appStatus = null;
+let quickToggleShortcut = "F4";
 let targetLanguageValue = "";
 let uiLanguage = popupLocales.resolve(
   "auto",
@@ -176,7 +178,9 @@ function renderPageStatus(status) {
   if (!status) {
     site.textContent = copy("unableToProcess");
   } else if (status.supported && status.manualOnly && !status.enabled) {
-    site.textContent = `${copy("manualStart")} · F4`;
+    site.textContent = quickToggleShortcut
+      ? `${copy("manualStart")} · ${quickToggleShortcut}`
+      : copy("manualStart");
   } else if (status.supported) {
     site.textContent = `${status.site.toUpperCase()} · ${copy("translation")} ${formatNumber(status.translatedNodes)}`;
   } else {
@@ -221,13 +225,15 @@ async function initialize() {
   if (nativeStatus?.type === "status") {
     applyUiLanguage(nativeStatus.resolvedUiLanguage || nativeStatus.uiLanguage);
     renderTargetLanguageOptions();
+    quickToggleShortcut = nativeStatus.webSettings?.quickToggleShortcut ?? "F4";
+    quickToggleShortcutElement.textContent = quickToggleShortcut || "-";
   }
   renderPageStatus(status);
   renderConnection(nativeStatus);
   renderCommandShortcut(await commandsPromise);
 
   async function handleQuickToggle(event) {
-    if (!isQuickToggleShortcut(event)) return;
+    if (!isQuickToggleShortcut(event, quickToggleShortcut)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     if (!tab?.id) return;

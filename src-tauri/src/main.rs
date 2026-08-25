@@ -1880,6 +1880,7 @@ fn main() {
             shortcut_capture_set_active,
             settings_get,
             browser_bridge::browser_clients_status,
+            browser_bridge::browser_shortcut_settings_open,
             dictionary_status_get,
             dictionary_personal_list,
             dictionary_personal_query,

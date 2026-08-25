@@ -207,14 +207,29 @@
     return { maxItems: profile.maxItems, maxChars: profile.maxChars };
   }
 
-  function isQuickToggleShortcut(event) {
-    return (event?.key === "F4" || event?.code === "F4")
-      && !event.repeat
-      && !event.isComposing
-      && !event.ctrlKey
-      && !event.altKey
-      && !event.shiftKey
-      && !event.metaKey;
+  function browserShortcutFromEvent(event) {
+    let key = String(event?.key ?? "");
+    if (/^Key[A-Z]$/.test(String(event?.code ?? "")) && !/^[a-z]$/i.test(key)) {
+      key = String(event.code).slice(3);
+    } else if (/^F(?:[1-9]|1\d|2[0-4])$/.test(String(event?.code ?? "")) && !/^F\d+$/.test(key)) {
+      key = String(event.code);
+    }
+    if (/^[a-z0-9]$/i.test(key)) key = key.toUpperCase();
+    const aliases = { " ": "Space", Spacebar: "Space" };
+    key = aliases[key] ?? key;
+    const modifiers = [];
+    if (event?.ctrlKey) modifiers.push("Ctrl");
+    if (event?.altKey) modifiers.push("Alt");
+    if (event?.shiftKey) modifiers.push("Shift");
+    if (event?.metaKey) modifiers.push("Super");
+    return [...modifiers, key].filter(Boolean).join("+");
+  }
+
+  function isQuickToggleShortcut(event, configuredShortcut = "F4") {
+    return Boolean(configuredShortcut)
+      && !event?.repeat
+      && !event?.isComposing
+      && browserShortcutFromEvent(event) === configuredShortcut;
   }
 
   function initialTranslationEnabled(storedEnabled, adapter) {
