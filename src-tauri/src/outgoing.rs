@@ -13,6 +13,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
 (() => {
   const enabled = __ENABLED__;
   const displayEnabled = __DISPLAY_ENABLED__;
+  const outgoingControlVisible = __OUTGOING_CONTROL_VISIBLE__;
+  const displayControlVisible = __DISPLAY_CONTROL_VISIBLE__;
   const displayLanguage = __DISPLAY_LANGUAGE__;
   const defaultLanguage = __DEFAULT_LANGUAGE__;
   const requestedUiLanguage = __UI_LANGUAGE__;
@@ -30,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 46;
+  const CONTROLLER_VERSION = 47;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -540,6 +542,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       version: CONTROLLER_VERSION,
       uiLanguage,
       enabled: false,
+      outgoingControlVisible: true,
       queue: [],
       pending: new Map(),
       draftChecks: new Map(),
@@ -555,6 +558,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       root: null,
       defaultLanguage: 'auto',
       displayEnabled: false,
+      displayControlVisible: true,
       displayLanguage: 'ko',
       channelLanguages: {},
       pointerDownListener: null,
@@ -661,9 +665,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           return leftBounds.width * leftBounds.height - rightBounds.width * rightBounds.height;
         }).at(-1) || null;
         const anchor = composer || readonlyAnchor;
-        this.root.querySelector('.nt-outgoing-control').hidden = !editor;
-        this.root.querySelector('.nt-display-control').hidden = false;
-        this.root.hidden = false;
+        this.root.querySelector('.nt-outgoing-control').hidden = !this.outgoingControlVisible || !editor;
+        this.root.querySelector('.nt-display-control').hidden = !this.displayControlVisible;
+        this.root.hidden = !this.displayControlVisible && (!this.outgoingControlVisible || !editor);
         if (!anchor || this.root.hidden) {
           this.root.style.visibility = 'hidden';
           return;
@@ -685,9 +689,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const language = selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
         this.root.querySelector('.nt-outgoing-trigger b').textContent = this.enabled ? (compactLanguageLabels[language] || compactLanguageLabels.auto) : 'OFF';
         this.root.querySelector('.nt-display-trigger b').textContent = this.displayEnabled ? (compactLanguageLabels[this.displayLanguage] || compactLanguageLabels.ko) : 'OFF';
-        this.root.querySelector('.nt-outgoing-control').hidden = false;
-        this.root.querySelector('.nt-display-control').hidden = false;
-        this.root.hidden = false;
+        this.root.querySelector('.nt-outgoing-control').hidden = !this.outgoingControlVisible;
+        this.root.querySelector('.nt-display-control').hidden = !this.displayControlVisible;
+        this.root.hidden = !this.outgoingControlVisible && !this.displayControlVisible;
       },
       rememberLanguage(key, language) {
         if (!key) return;
@@ -1123,7 +1127,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     controller.channelLanguages[channelKey] = language;
   }
   controller.enabled = optimisticOutgoingEnabled === undefined ? enabled : optimisticOutgoingEnabled === 'true';
+  controller.outgoingControlVisible = outgoingControlVisible;
   controller.displayEnabled = optimisticDisplayLanguage === undefined ? displayEnabled : optimisticDisplayLanguage !== 'off';
+  controller.displayControlVisible = displayControlVisible;
   controller.displayLanguage = optimisticDisplayLanguage && optimisticDisplayLanguage !== 'off' ? optimisticDisplayLanguage : displayLanguage;
   controller.root = ensureRoot(controller);
   controller.prunePending();
@@ -1429,6 +1435,28 @@ pub fn outgoing_ui_script(
     ui_language: &str,
     channel_languages: &HashMap<String, String>,
 ) -> String {
+    outgoing_ui_script_with_visibility(
+        enabled,
+        display_enabled,
+        display_language,
+        default_language,
+        ui_language,
+        channel_languages,
+        true,
+        true,
+    )
+}
+
+pub fn outgoing_ui_script_with_visibility(
+    enabled: bool,
+    display_enabled: bool,
+    display_language: &str,
+    default_language: &str,
+    ui_language: &str,
+    channel_languages: &HashMap<String, String>,
+    outgoing_control_visible: bool,
+    display_control_visible: bool,
+) -> String {
     let display_language = if is_supported_language_code(display_language) {
         display_language
     } else {
@@ -1558,6 +1586,22 @@ pub fn outgoing_ui_script(
         .replace(
             "__DISPLAY_ENABLED__",
             if display_enabled { "true" } else { "false" },
+        )
+        .replace(
+            "__OUTGOING_CONTROL_VISIBLE__",
+            if outgoing_control_visible {
+                "true"
+            } else {
+                "false"
+            },
+        )
+        .replace(
+            "__DISPLAY_CONTROL_VISIBLE__",
+            if display_control_visible {
+                "true"
+            } else {
+                "false"
+            },
         )
         .replace(
             "__DISPLAY_LANGUAGE__",
@@ -1761,8 +1805,8 @@ mod tests {
     use super::{
         apply_outgoing_suggestion_script, finish_outgoing_review_script,
         outgoing_originals_ui_script, outgoing_ui_script as build_outgoing_ui_script,
-        parse_outgoing_bindings, parse_outgoing_requests, suggest_recent_language,
-        OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
+        outgoing_ui_script_with_visibility, parse_outgoing_bindings, parse_outgoing_requests,
+        suggest_recent_language, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
     };
     use crate::cache::OutgoingOriginalRecord;
     use crate::cdp::{discord_target, CdpClient};
@@ -1836,12 +1880,38 @@ mod tests {
         assert!(script.contains("const readonlyAnchor ="));
         assert!(script.contains("[class*=\"channelTextArea\"]"));
         assert!(script.contains("[class*=\"chatContent\"]"));
-        assert!(script.contains("this.root.hidden = false"));
+        assert!(script.contains("const outgoingControlVisible = true"));
+        assert!(script.contains("const displayControlVisible = true"));
+        assert!(script.contains(
+            "this.root.hidden = !this.outgoingControlVisible && !this.displayControlVisible"
+        ));
         assert!(script.contains("['off', 'auto', ...languageCodes]"));
         assert!(script.contains("['off', ...languageCodes]"));
         assert!(script.contains("translationOff:'번역 안 함'"));
         assert!(script.contains("action:'outgoing-enabled'"));
         assert!(script.contains("return controller.queue.splice(0, 8)"));
+    }
+
+    #[test]
+    fn shortcut_visibility_can_hide_translation_controls_without_selecting_off() {
+        let script = outgoing_ui_script_with_visibility(
+            false,
+            false,
+            "ko",
+            "auto",
+            "ko",
+            &HashMap::new(),
+            false,
+            false,
+        );
+
+        assert!(script.contains("const outgoingControlVisible = false"));
+        assert!(script.contains("const displayControlVisible = false"));
+        assert!(script.contains(
+            "this.root.hidden = !this.outgoingControlVisible && !this.displayControlVisible"
+        ));
+        assert!(!script.contains("__OUTGOING_CONTROL_VISIBLE__"));
+        assert!(!script.contains("__DISPLAY_CONTROL_VISIBLE__"));
     }
 
     #[test]

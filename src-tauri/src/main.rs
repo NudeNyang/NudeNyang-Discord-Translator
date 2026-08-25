@@ -128,21 +128,21 @@ impl ShortcutConfig {
     }
 }
 
-impl ShortcutAction {
-    fn event_name(self) -> &'static str {
-        match self {
-            Self::Translation => "request-translation-toggle",
-            Self::OutgoingTranslation => "request-outgoing-translation-toggle",
-        }
-    }
-}
-
-fn set_translation_enabled_from_app(app: &AppHandle, enabled: bool) -> Result<Value, String> {
+fn set_translation_enabled_from_app(
+    app: &AppHandle,
+    enabled: bool,
+    from_shortcut: bool,
+) -> Result<Value, String> {
     let config = app.state::<ConfigStore>();
     let engine = app.state::<RustEngine>();
     let previous_config = config.get()?;
     config.update(json!({"enabled": enabled}))?;
-    engine.set_enabled(enabled).inspect_err(|_| {
+    let apply_result = if from_shortcut {
+        engine.set_enabled_from_shortcut(enabled)
+    } else {
+        engine.set_enabled(enabled)
+    };
+    apply_result.inspect_err(|_| {
         let _ = config.replace(previous_config);
     })?;
     let status = serde_json::to_value(engine.status()?)
@@ -164,15 +164,38 @@ fn toggle_translation_from_app(app: &AppHandle) -> Result<Value, String> {
         "shortcut",
         &format!("native translation toggle requested; enabled={enabled}"),
     );
-    set_translation_enabled_from_app(app, enabled)
+    set_translation_enabled_from_app(app, enabled, true)
+}
+
+fn toggle_outgoing_translation_from_shortcut(app: &AppHandle) -> Result<(), String> {
+    let config = app.state::<ConfigStore>();
+    let engine = app.state::<RustEngine>();
+    let previous = config.get()?;
+    if !previous.outgoing_translation_enabled && !previous.discord_auto_restart_consent_granted {
+        main_window_show(app.clone());
+        app.emit("request-outgoing-translation-toggle", ())
+            .map_err(|error| format!("전송 메시지 통역 동의 화면을 열지 못했습니다: {error}"))?;
+        return Ok(());
+    }
+    let enabled = !previous.outgoing_translation_enabled;
+    let updated = config.update(json!({"outgoing_translation_enabled": enabled}))?;
+    if let Err(error) = engine.apply_config(updated.clone()) {
+        let _ = config.replace(previous);
+        return Err(error);
+    }
+    if let Err(error) = engine.set_outgoing_control_visible(enabled) {
+        let _ = config.replace(previous.clone());
+        let _ = engine.apply_config(previous);
+        return Err(error);
+    }
+    let _ = app.emit("settings-changed", updated);
+    Ok(())
 }
 
 fn dispatch_shortcut_action(app: &AppHandle, action: ShortcutAction) -> Result<(), String> {
     match action {
         ShortcutAction::Translation => toggle_translation_from_app(app).map(|_| ()),
-        ShortcutAction::OutgoingTranslation => app
-            .emit(action.event_name(), ())
-            .map_err(|error| format!("전송 메시지 통역 단축키를 처리하지 못했습니다: {error}")),
+        ShortcutAction::OutgoingTranslation => toggle_outgoing_translation_from_shortcut(app),
     }
 }
 
@@ -663,7 +686,7 @@ fn settings_reset(
 
 #[tauri::command]
 fn translation_set_enabled(app: AppHandle, enabled: bool) -> Result<Value, String> {
-    set_translation_enabled_from_app(&app, enabled)
+    set_translation_enabled_from_app(&app, enabled, false)
 }
 
 #[tauri::command]

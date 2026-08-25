@@ -381,6 +381,12 @@ test("convenience panel exposes the Discord target and global translation toggle
   assert.doesNotMatch(script, /send_outgoing_immediately/);
   assert.doesNotMatch(script, /review_outgoing_before_send/);
   assert.match(script, /request-outgoing-translation-toggle/);
+  assert.match(
+    rustMain,
+    /ShortcutAction::OutgoingTranslation => toggle_outgoing_translation_from_shortcut\(app\)/,
+  );
+  assert.match(rustMain, /engine\.set_enabled_from_shortcut\(enabled\)/);
+  assert.match(rustEngine, /Control::SetOutgoingControlVisible\(visible\)/);
 });
 
 test("convenience controls stay compact in wider settings windows", () => {

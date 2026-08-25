@@ -37,9 +37,10 @@ use crate::ocr::OcrQualityMode;
 use crate::outgoing::{
     apply_outgoing_classification_script, apply_outgoing_detected_script,
     apply_outgoing_error_script, apply_outgoing_review_script, apply_outgoing_suggestion_script,
-    finish_outgoing_review_script, outgoing_originals_ui_script, outgoing_ui_script,
-    parse_outgoing_bindings, parse_outgoing_requests, suggest_recent_language, OutgoingRequest,
-    OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
+    finish_outgoing_review_script, outgoing_originals_ui_script,
+    outgoing_ui_script_with_visibility, parse_outgoing_bindings, parse_outgoing_requests,
+    suggest_recent_language, OutgoingRequest, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
+    OUTGOING_ORIGINALS_UI_VERSION,
 };
 use crate::translation::{
     outgoing_can_passthrough, DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator,
@@ -156,7 +157,11 @@ pub struct RustEngine {
 #[allow(clippy::large_enum_variant)]
 enum Control {
     ApplyConfig(Box<AppConfig>),
-    SetEnabled(bool),
+    SetEnabled {
+        enabled: bool,
+        from_shortcut: bool,
+    },
+    SetOutgoingControlVisible(bool),
     PrepareBrowserSession,
     CancelModelPreparation,
     ReplaceCdp(CdpClient, mpsc::Sender<Result<(), String>>),
@@ -520,8 +525,31 @@ impl RustEngine {
             status.enabled = enabled;
         }
         self.controls
-            .send(Control::SetEnabled(enabled))
+            .send(Control::SetEnabled {
+                enabled,
+                from_shortcut: false,
+            })
             .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
+    }
+
+    pub fn set_enabled_from_shortcut(&self, enabled: bool) -> Result<(), String> {
+        if let Ok(mut status) = self.status.lock() {
+            status.enabled = enabled;
+        }
+        self.controls
+            .send(Control::SetEnabled {
+                enabled,
+                from_shortcut: true,
+            })
+            .map_err(|_| "Rust 번역 엔진이 종료되어 번역 상태를 바꾸지 못했습니다.".to_string())
+    }
+
+    pub fn set_outgoing_control_visible(&self, visible: bool) -> Result<(), String> {
+        self.controls
+            .send(Control::SetOutgoingControlVisible(visible))
+            .map_err(|_| {
+                "Rust 번역 엔진이 종료되어 통역 메뉴 표시를 바꾸지 못했습니다.".to_string()
+            })
     }
 
     pub fn prepare_browser_session(&self) -> Result<(), String> {
@@ -699,6 +727,8 @@ fn run_controller(
     let mut display_view = DisplayViewState::default();
     let mut image_pending: HashSet<ImagePendingKey> = HashSet::new();
     let mut outgoing_pending: HashSet<OutgoingPendingKey> = HashSet::new();
+    let mut display_control_visible = true;
+    let mut outgoing_control_visible = true;
     let mut generation = 0_u64;
     let mut preparation_generation = 0_u64;
     let mut preparation_cancellation: Option<ModelPreparationCancellation> = None;
@@ -766,6 +796,12 @@ fn run_controller(
                         image_ui_needs_cleanup = client.is_none();
                     }
                     config = updated;
+                    if enabled_changed && config.enabled {
+                        display_control_visible = true;
+                    }
+                    if outgoing_changed && config.outgoing_translation_enabled {
+                        outgoing_control_visible = true;
+                    }
                     if history_retention_changed {
                         last_history_cleanup_at = None;
                     }
@@ -896,7 +932,15 @@ fn run_controller(
                         }
                     }
                 }
-                Control::SetEnabled(enabled) => {
+                Control::SetEnabled {
+                    enabled,
+                    from_shortcut,
+                } => {
+                    if from_shortcut {
+                        display_control_visible = enabled;
+                    } else if enabled {
+                        display_control_visible = true;
+                    }
                     if config.enabled != enabled {
                         config.enabled = enabled;
                         update_status(&status, |runtime| {
@@ -941,6 +985,9 @@ fn run_controller(
                             }
                         }
                     }
+                }
+                Control::SetOutgoingControlVisible(visible) => {
+                    outgoing_control_visible = visible;
                 }
                 Control::PrepareBrowserSession => {
                     if !config.web_translation_enabled {
@@ -1356,6 +1403,8 @@ fn run_controller(
                 &config,
                 outgoing_original_store.as_ref(),
                 &mut outgoing_channel_languages,
+                outgoing_control_visible,
+                display_control_visible,
             )?;
             let mut patch = Map::new();
             if let Some(language) = requested_changes
@@ -2182,15 +2231,19 @@ fn scan_outgoing(
     config: &AppConfig,
     original_store: Option<&TranslationCache>,
     channel_languages: &mut HashMap<String, String>,
+    outgoing_control_visible: bool,
+    display_control_visible: bool,
 ) -> Result<OutgoingUiChanges, String> {
     let requests = parse_outgoing_requests(client.evaluate(
-        &outgoing_ui_script(
+        &outgoing_ui_script_with_visibility(
             config.outgoing_translation_enabled,
             config.enabled,
             &config.target_language,
             &config.outgoing_target_language,
             &config.ui_language,
             channel_languages,
+            outgoing_control_visible,
+            display_control_visible,
         ),
         false,
     )?)?;
