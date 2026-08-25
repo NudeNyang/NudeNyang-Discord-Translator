@@ -30,6 +30,9 @@ static ENGLISH_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 const MAX_TRANSLATION_CHARS: usize = 700;
 const MAX_MESSAGE_CONTEXT_CHARS: usize = 320;
+const MAX_WEB_CONTEXT_CHARS: usize = 220;
+const MAX_WEB_INFERENCE_CHARS: usize = 240;
+const WEB_INFERENCE_YIELD_MS: u64 = 48;
 const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
 const WEB_VISIBLE_BATCH_CONTEXT_KEY: &str = "web:visible-batch";
 const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
@@ -40,6 +43,11 @@ const MAX_INCOMING_QUALITY_ATTEMPTS: usize = 2;
 enum BestEffortChunkPolicy {
     WholeText,
     PreserveSuccessfulChunks,
+}
+
+fn yield_between_web_inferences() {
+    #[cfg(not(test))]
+    std::thread::sleep(std::time::Duration::from_millis(WEB_INFERENCE_YIELD_MS));
 }
 
 fn split_visual_lines_preserving_endings(text: &str) -> Vec<(String, String)> {
@@ -401,35 +409,53 @@ impl TranslationService {
             );
         }
 
-        texts
+        let sliced = texts
             .iter()
             .zip(source_hints)
-            .map(|(text, hint)| {
-                let chunks = split_for_translation(text, MAX_TRANSLATION_CHARS);
-                chunks
-                    .into_iter()
-                    .map(|chunk| {
-                        let (translated, succeeded) = self.translate_one_best_effort_with_hint(
-                            &chunk,
-                            *hint,
-                            target,
-                            allowed_sources,
-                        );
-                        if succeeded {
-                            return translated;
-                        }
+            .map(|(text, hint)| (split_for_translation(text, MAX_WEB_INFERENCE_CHARS), *hint))
+            .collect::<Vec<_>>();
+        let total_slices = sliced.iter().map(|(chunks, _)| chunks.len()).sum::<usize>();
+        if total_slices > 1 {
+            crate::diagnostics::info(
+                "web-translation-time-sliced",
+                &format!(
+                    "items={}; slices={total_slices}; max_slice_chars={MAX_WEB_INFERENCE_CHARS}; yield_ms={WEB_INFERENCE_YIELD_MS}",
+                    texts.len(),
+                ),
+            );
+        }
+        let mut completed_slices = 0_usize;
+        let mut outputs = Vec::with_capacity(sliced.len());
+        for (chunks, hint) in sliced {
+            let mut output = String::new();
+            for chunk in chunks {
+                if completed_slices > 0 {
+                    yield_between_web_inferences();
+                }
+                let (translated, succeeded) =
+                    self.translate_one_best_effort_with_hint(&chunk, hint, target, allowed_sources);
+                completed_slices += 1;
+                if succeeded {
+                    output.push_str(&translated);
+                    continue;
+                }
 
-                        self.retry_failed_web_chunk_by_visual_lines(
+                yield_between_web_inferences();
+                output.push_str(
+                    &self
+                        .retry_failed_web_chunk_by_visual_lines(
                             &chunk,
-                            *hint,
+                            hint,
                             target,
                             allowed_sources,
                         )
-                        .unwrap_or(translated)
-                    })
-                    .collect::<String>()
-            })
-            .collect()
+                        .unwrap_or(translated),
+                );
+            }
+            outputs.push(output);
+        }
+        debug_assert_eq!(completed_slices, total_slices);
+        outputs
     }
 
     fn retry_failed_web_chunk_by_visual_lines(
@@ -462,9 +488,13 @@ impl TranslationService {
         Some(
             lines
                 .into_iter()
-                .map(|(line, ending)| {
+                .enumerate()
+                .map(|(index, (line, ending))| {
                     if line.trim().is_empty() {
                         return format!("{line}{ending}");
+                    }
+                    if index > 0 {
+                        yield_between_web_inferences();
                     }
                     let (translated, _) = self.translate_one_best_effort_with_hint(
                         &line,
@@ -731,6 +761,14 @@ impl TranslationService {
             let mut chunk = Vec::new();
             let mut chars = 0_usize;
             let separator_chars = MESSAGE_CONTEXT_SEPARATOR.chars().count();
+            let context_char_limit = if matches!(
+                chunk_policy,
+                BestEffortChunkPolicy::PreserveSuccessfulChunks
+            ) {
+                MAX_WEB_CONTEXT_CHARS
+            } else {
+                MAX_MESSAGE_CONTEXT_CHARS
+            };
             let finish_chunk =
                 |chunk: &mut Vec<usize>,
                  group_at: &mut HashMap<usize, (Vec<usize>, Language)>,
@@ -746,7 +784,7 @@ impl TranslationService {
             for index in indices {
                 let separator = if chunk.is_empty() { 0 } else { separator_chars };
                 let next = texts[index].chars().count() + separator;
-                if !chunk.is_empty() && chars + next > MAX_MESSAGE_CONTEXT_CHARS {
+                if !chunk.is_empty() && chars + next > context_char_limit {
                     finish_chunk(&mut chunk, &mut group_at, &mut grouped_indices);
                     chars = 0;
                 }
@@ -1784,6 +1822,10 @@ mod tests {
 
     struct MultilineFailingWebChunkTranslator;
 
+    struct WebSliceRecordingTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -2005,6 +2047,50 @@ mod tests {
             target: Language,
         ) -> bool {
             !translation_needs_repair(source_text, translated_text, source, target)
+        }
+    }
+
+    impl Translator for WebSliceRecordingTranslator {
+        fn display_name(&self) -> &str {
+            "web-slice-recording"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "web-slice-recording:v1"
+        }
+
+        fn isolate_incoming_failures(&self) -> bool {
+            true
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            self.inputs.lock().unwrap().push(text.to_string());
+            Ok(format!("번역{}", text.chars().count()))
+        }
+
+        fn should_cache(
+            &self,
+            _source_text: &str,
+            _translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            false
+        }
+
+        fn translation_is_acceptable(
+            &self,
+            _source_text: &str,
+            _translated_text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> bool {
+            true
         }
     }
 
@@ -3146,6 +3232,65 @@ mod tests {
             recorded[0].matches(MESSAGE_CONTEXT_SEPARATOR).count(),
             source.len() - 1
         );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn long_web_paragraph_is_split_into_short_local_inference_slices() {
+        let path = cache_path("web-short-inference-slices");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(WebSliceRecordingTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = "GitHub hosts source code and helps developers collaborate. ".repeat(11);
+
+        let translated = service
+            .translate_many_for_web_contextual_filtered(
+                std::slice::from_ref(&source),
+                &[None],
+                "universal:https://en.wikipedia.org/wiki/GitHub",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+
+        let recorded = inputs.lock().unwrap();
+        assert_eq!(translated.len(), 1);
+        assert!(recorded.len() >= 3, "recorded={recorded:?}");
+        assert!(
+            recorded.iter().all(|text| text.chars().count() <= 240),
+            "recorded={recorded:?}"
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn discord_incoming_keeps_its_existing_whole_text_policy() {
+        let path = cache_path("discord-keeps-whole-text-policy");
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(
+            Box::new(WebSliceRecordingTranslator {
+                inputs: inputs.clone(),
+            }),
+            cache,
+        );
+        let source = "GitHub hosts source code and helps developers collaborate. ".repeat(11);
+
+        service
+            .translate_many_for_incoming_contextual(
+                std::slice::from_ref(&source),
+                &[None],
+                "/channels/test/general",
+                Language::Korean,
+            )
+            .unwrap();
+
+        assert_eq!(inputs.lock().unwrap().as_slice(), [source]);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
