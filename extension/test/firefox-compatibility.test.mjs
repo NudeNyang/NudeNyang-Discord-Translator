@@ -12,6 +12,11 @@ const packager = fs.readFileSync(
   new URL("../../scripts/package_firefox_extension.ps1", import.meta.url),
   "utf8",
 );
+const privacyPolicy = fs.readFileSync(new URL("../../PRIVACY.md", import.meta.url), "utf8");
+const storePrivacyNotes = fs.readFileSync(
+  new URL("../../docs/BROWSER_STORE_PRIVACY.md", import.meta.url),
+  "utf8",
+);
 
 test("Firefox Manifest V3는 고정 Add-on ID와 이벤트 백그라운드를 사용한다", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -28,9 +33,20 @@ test("Firefox 패키지는 Native Messaging과 웹 본문 처리 범위를 명�
   assert.deepEqual(manifest.host_permissions, ["http://*/*", "https://*/*"]);
   assert.deepEqual(
     manifest.browser_specific_settings.gecko.data_collection_permissions.required,
-    ["websiteContent"],
+    ["websiteContent", "browsingActivity"],
   );
   assert.deepEqual(manifest.content_scripts[0].matches, ["http://*/*", "https://*/*"]);
+});
+
+test("브라우저 심사 고지는 실제 탭 유지 동작과 주소 처리 범위를 설명한다", () => {
+  assert.match(privacyPolicy, /탭을 닫을 때까지/);
+  assert.match(privacyPolicy, /쿼리 문자열과 해시/);
+  assert.doesNotMatch(privacyPolicy, /새 페이지를 열거나 새로 고치면 다시 꺼진 상태로 시작합니다/);
+  assert.doesNotMatch(privacyPolicy, /it resets to off on each page load/i);
+  assert.match(storePrivacyNotes, /websiteContent/);
+  assert.match(storePrivacyNotes, /browsingActivity/);
+  assert.match(storePrivacyNotes, /Remote code:\s*No/i);
+  assert.match(storePrivacyNotes, /Web history/i);
 });
 
 test("공용 스크립트는 Firefox API와 Firefox 클라이언트 식별을 지원한다", () => {
@@ -60,10 +76,13 @@ test("AMO 비공개 서명 패키지는 생성 코드 원본과 검토자 안내
   assert.match(amoScript, /generate-extension-locales\.mjs/);
   assert.match(amoScript, /ui-locales\.mjs/);
   assert.match(amoScript, /FIREFOX_AMO_REVIEW\.md/);
+  assert.match(amoScript, /PRIVACY\.md/);
   assert.doesNotMatch(amoScript, /Compress-Archive/);
   assert.match(amoScript, /\.Replace\('\\', '\/'\)/);
   assert.match(reviewerNotes, /self-distributed/i);
   assert.match(reviewerNotes, /web-translator@nudenyang\.github\.io/);
   assert.match(reviewerNotes, /nativeMessaging/);
+  assert.match(reviewerNotes, /websiteContent/);
+  assert.match(reviewerNotes, /browsingActivity/);
   assert.match(reviewerNotes, /npm run extension:locales/);
 });

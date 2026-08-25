@@ -20,15 +20,20 @@ that the user activates. It excludes form controls, private-message routes, acco
 routes, code blocks, prices, URL-like link labels, and browser-internal pages.
 
 Eligible text is sent through Native Messaging to the companion application on the same computer.
+Each translation request also includes a page identifier made from the current protocol, hostname,
+and path so that requests and translation context remain separated by page. Query strings and URL
+fragments are not included. A saved site policy contains only the hostname and the behavior selected
+by the user.
 With a local model selected, the text remains on the device. If the user explicitly selects an
 external translation provider in the companion application, the text required for translation can
 be sent directly to that provider under the provider's terms. The project does not operate a relay
-or storage server and does not collect browsing history, webpage text, translation history,
-credentials, cookies, or analytics.
+or storage server. The developer does not receive or retain webpage text, current page addresses,
+browsing history, translation history, credentials, cookies, or analytics. The page identifier and
+site policies are processed locally only to provide the requested translation.
 
 The public privacy explanation is available at:
 
-`https://nudenyang.github.io/NudeNyang-Discord-Translator/#privacy`
+`https://github.com/NudeNyang/NudeNyang-Discord-Translator/blob/main/PRIVACY.md`
 
 ## Permission rationale
 
@@ -38,6 +43,8 @@ The public privacy explanation is available at:
 - `http://*/*` and `https://*/*`: allows the user to translate ordinary webpages. Sensitive routes
   and browser-internal pages are blocked in code.
 - `websiteContent`: declares the visible webpage text processed for Firefox users.
+- `browsingActivity`: declares the current page protocol, hostname, and path used locally to keep
+  translation requests and context separated by page. Query strings and URL fragments are excluded.
 
 ## Source and reproducible packaging
 

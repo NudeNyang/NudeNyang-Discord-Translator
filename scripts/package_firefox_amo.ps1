@@ -30,7 +30,7 @@ if (-not $ResolvedStaging.StartsWith($ProjectRoot, [System.StringComparison]::Or
 Remove-Item -LiteralPath $ResolvedStaging -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $ResolvedStaging -Force | Out-Null
 
-$RootFiles = @('LICENSE', 'README.md', 'package.json')
+$RootFiles = @('LICENSE', 'PRIVACY.md', 'README.md', 'package.json')
 foreach ($File in $RootFiles) {
     Copy-Item -LiteralPath (Join-Path $ProjectRoot $File) -Destination $ResolvedStaging -Force
 }
