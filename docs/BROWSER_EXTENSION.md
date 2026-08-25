@@ -58,7 +58,7 @@ F4 또는 상단 토글로 선택한 번역 상태는 현재 탭이 닫힐 때�
 
 개발 중 확장 관리 화면에서 확장을 다시 로드하면 이미 열려 있던 페이지의 이전 콘텐츠 스크립트는 무효화된다. 해당 페이지도 새로 고쳐야 새 버전이 적용된다. 이전 스크립트는 무효화를 감지하면 남은 번역 대기열과 DOM 관찰을 종료하고 적용된 텍스트를 원문으로 복원한다.
 
-개발용 Chromium 확장 ID는 manifest의 공개 키로 `bdkkgjjmocmdknffadjgbljmnhdcchjl`에 고정되어 있다. Chrome 웹 스토어는 최초 업로드 패키지의 `key` 필드를 허용하지 않으므로 `npm run extension:chromium`은 스토어 ZIP의 manifest에서 개발용 공개 키만 제거한다. 스토어가 항목 ID와 공개 키를 발급하면 그 공개 키를 개발용 manifest에 반영하고 Windows 앱의 Chromium `allowed_origins`도 발급된 ID로 갱신해야 한다. Firefox Add-on ID는 `web-translator@nudenyang.github.io`로 고정되어 있다. Windows 앱은 Chromium의 `allowed_origins`와 Firefox의 `allowed_extensions`를 별도 호스트 매니페스트로 등록하고 명시된 ID만 허용한다. Chrome과 Whale 스토어가 서로 다른 ID를 발급하면 두 ID를 모두 허용 목록에 추가한 뒤 설치본을 만들어야 한다.
+개발용 Chromium 확장 ID는 Chrome 웹 스토어가 발급한 공개 키로 `kpagdcdgomdlnnphakjakpodmgnhgaia`에 고정되어 있다. `npm run extension:chromium`은 스토어 ZIP의 manifest에서 공개 키를 제거하므로 업로드 패키지에는 `key` 필드가 들어가지 않지만, 저장소의 압축해제 개발 확장은 스토어 설치본과 같은 ID를 사용한다. Windows 앱의 Chromium `allowed_origins`에는 Chrome 웹 스토어 ID와 전환 전 개발 ID `bdkkgjjmocmdknffadjgbljmnhdcchjl`을 함께 등록해 기존 개발 설치를 바로 끊지 않는다. Firefox Add-on ID는 `web-translator@nudenyang.github.io`로 고정되어 있다. Windows 앱은 Chromium의 `allowed_origins`와 Firefox의 `allowed_extensions`를 별도 호스트 매니페스트로 등록하고 명시된 ID만 허용한다. Whale 스토어가 별도 ID를 발급하면 해당 ID도 허용 목록에 추가한 뒤 설치본을 만든다.
 
 `release/browser-extension/NudeNyang-Web-Translator-Firefox-<version>.xpi`는 Mozilla 제출과 개발 검증을 위한 패키지다. 일반 Firefox 사용자가 영구 설치하는 XPI는 Mozilla 서명이 필요하다. 서명되지 않은 로컬 패키지는 `about:debugging`의 임시 부가 기능으로 검증하며, 공개 배포는 AMO 검토 또는 자체 배포용 서명 후 진행한다.
 

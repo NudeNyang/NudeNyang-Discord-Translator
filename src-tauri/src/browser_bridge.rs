@@ -19,7 +19,12 @@ use crate::engine::{BrowserTranslationRequest, RustEngine};
 const PROTOCOL_VERSION: u8 = 1;
 const MAX_NATIVE_MESSAGE_BYTES: usize = 1024 * 1024;
 const BRIDGE_FILE_NAME: &str = "browser-bridge.json";
-pub const CHROMIUM_EXTENSION_ID: &str = "bdkkgjjmocmdknffadjgbljmnhdcchjl";
+pub const CHROME_WEB_STORE_EXTENSION_ID: &str = "kpagdcdgomdlnnphakjakpodmgnhgaia";
+pub const LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID: &str = "bdkkgjjmocmdknffadjgbljmnhdcchjl";
+pub const CHROMIUM_EXTENSION_IDS: &[&str] = &[
+    CHROME_WEB_STORE_EXTENSION_ID,
+    LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID,
+];
 pub const FIREFOX_EXTENSION_ID: &str = "web-translator@nudenyang.github.io";
 const NATIVE_HOST_NAME: &str = "com.nudenyang.translator";
 
@@ -65,6 +70,13 @@ struct FirefoxNativeHostManifest {
     path: String,
     r#type: &'static str,
     allowed_extensions: Vec<&'static str>,
+}
+
+fn chromium_allowed_origins() -> Vec<String> {
+    CHROMIUM_EXTENSION_IDS
+        .iter()
+        .map(|extension_id| format!("chrome-extension://{extension_id}/"))
+        .collect()
 }
 
 pub struct BrowserBridgeState {
@@ -537,7 +549,7 @@ pub fn register_native_messaging_host() -> Result<PathBuf, String> {
         description: "NudeNyang Web Translator native messaging host",
         path: executable_path.clone(),
         r#type: "stdio",
-        allowed_origins: vec![format!("chrome-extension://{CHROMIUM_EXTENSION_ID}/")],
+        allowed_origins: chromium_allowed_origins(),
     };
     let firefox_manifest = FirefoxNativeHostManifest {
         name: NATIVE_HOST_NAME,
@@ -806,7 +818,8 @@ mod tests {
         firefox_native_host_manifest_path, interface_language_value,
         is_native_messaging_host_invocation, read_native_message, tokens_equal,
         write_native_message, ChromiumNativeHostManifest, FirefoxNativeHostManifest,
-        CHROMIUM_EXTENSION_ID, FIREFOX_EXTENSION_ID, NATIVE_HOST_NAME,
+        CHROME_WEB_STORE_EXTENSION_ID, CHROMIUM_EXTENSION_IDS, FIREFOX_EXTENSION_ID,
+        LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID, NATIVE_HOST_NAME,
     };
     use serde_json::json;
     use std::ffi::OsString;
@@ -841,7 +854,7 @@ mod tests {
             description: "test",
             path: "C:\\NudeNyang.exe".to_string(),
             r#type: "stdio",
-            allowed_origins: vec![format!("chrome-extension://{CHROMIUM_EXTENSION_ID}/")],
+            allowed_origins: super::chromium_allowed_origins(),
         })
         .unwrap();
         let firefox = serde_json::to_value(FirefoxNativeHostManifest {
@@ -855,7 +868,17 @@ mod tests {
 
         assert_eq!(
             chromium["allowed_origins"],
-            json!([format!("chrome-extension://{CHROMIUM_EXTENSION_ID}/")])
+            json!([
+                format!("chrome-extension://{CHROME_WEB_STORE_EXTENSION_ID}/"),
+                format!("chrome-extension://{LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID}/")
+            ])
+        );
+        assert_eq!(
+            CHROMIUM_EXTENSION_IDS,
+            &[
+                CHROME_WEB_STORE_EXTENSION_ID,
+                LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID
+            ]
         );
         assert!(chromium.get("allowed_extensions").is_none());
         assert_eq!(firefox["allowed_extensions"], json!([FIREFOX_EXTENSION_ID]));

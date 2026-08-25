@@ -128,7 +128,7 @@ test("manifest 공개 키가 Native Messaging 허용 ID를 안정적으로 만�
   const extensionId = [...hash]
     .map((byte) => String.fromCharCode(97 + (byte >> 4), 97 + (byte & 15)))
     .join("");
-  assert.equal(extensionId, "bdkkgjjmocmdknffadjgbljmnhdcchjl");
+  assert.equal(extensionId, "kpagdcdgomdlnnphakjakpodmgnhgaia");
   assert.ok(manifest.permissions.includes("nativeMessaging"));
   assert.deepEqual(manifest.content_scripts[0].matches, ["http://*/*", "https://*/*"]);
 });

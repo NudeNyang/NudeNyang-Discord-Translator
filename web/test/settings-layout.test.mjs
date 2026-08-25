@@ -80,10 +80,10 @@ test("language compact codes are not rendered as select group headings", () => {
 });
 
 test("the application version is consistent across the application manifests", () => {
-  assert.equal(packageManifest.version, "0.7.0-beta");
-  assert.match(tauriConfig, /"version": "0\.7\.0-beta"/);
-  assert.match(cargoManifest, /^version = "0\.7\.0-beta"$/m);
-  assert.match(markup, /<span id="app-version">0\.7\.0 Beta<\/span>/);
+  assert.equal(packageManifest.version, "0.7.1-beta");
+  assert.match(tauriConfig, /"version": "0\.7\.1-beta"/);
+  assert.match(cargoManifest, /^version = "0\.7\.1-beta"$/m);
+  assert.match(markup, /<span id="app-version">0\.7\.1 Beta<\/span>/);
   assert.match(script, /replace\(\/-beta\$\/i, " Beta"\)/);
 });
 
