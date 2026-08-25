@@ -46,6 +46,7 @@ Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'extension') | ForEach-Object
 
 $ScriptFiles = @(
     'generate-extension-locales.mjs',
+    'package_chromium_extension.ps1',
     'package_firefox_amo.ps1',
     'package_firefox_extension.ps1'
 )

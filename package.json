@@ -10,6 +10,7 @@
     "test:landing": "node --test landing/test/*.test.mjs",
     "test:extension": "node scripts/generate-extension-locales.mjs --check && node --test extension/test/*.test.mjs",
     "extension:locales": "node scripts/generate-extension-locales.mjs",
+    "extension:chromium": "npm run extension:locales && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_chromium_extension.ps1",
     "extension:firefox": "npm run extension:locales && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_firefox_extension.ps1",
     "landing:locales": "node scripts/generate-landing-locales.mjs",
     "landing:serve": "node scripts/serve-landing.mjs",
