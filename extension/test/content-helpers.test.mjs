@@ -7,6 +7,7 @@ const {
   groupTranslationApplications,
   isElementNearViewport,
   initialTranslationEnabled,
+  isExplicitExclusionBypassBlock,
   isQuickToggleShortcut,
   isUrlLikeLinkText,
   pageTranslationEnabled,
@@ -14,8 +15,20 @@ const {
   runtimeMessageFailure,
   scanRootForAddedNode,
   takeTranslationBatch,
+  translationBatchLimits,
   webSchedulingProfile,
 } = globalThis.NudeNyangContentHelpers;
+
+test("사이트가 명시한 공개 안내 블록만 공통 내비게이션 제외를 우회한다", () => {
+  const safeSelector = "nav.public-guide a[href^='https://example.com/']";
+  const safeBlock = { matches: (selector) => selector === safeSelector };
+  const otherBlock = { matches: () => false };
+  const adapter = { exclusionBypassBlocks: [safeSelector] };
+
+  assert.equal(isExplicitExclusionBypassBlock(safeBlock, adapter), true);
+  assert.equal(isExplicitExclusionBypassBlock(otherBlock, adapter), false);
+  assert.equal(isExplicitExclusionBypassBlock(safeBlock, null), false);
+});
 
 test("범용 사이트는 저장된 전역 설정과 무관하게 사용자가 켜기 전까지 대기한다", () => {
   assert.equal(initialTranslationEnabled(true, { id: "web", manualOnly: true }), false);
@@ -147,6 +160,28 @@ test("웹 처리 모드는 Discord와 무관한 유휴 배치 프로필로 변�
   assert.equal(webSchedulingProfile("responsive", false).collectDelayMs, 140);
   assert.equal(webSchedulingProfile("economy", true).collectDelayMs, 700);
   assert.equal(webSchedulingProfile("invalid", true).collectDelayMs, 420);
+});
+
+test("긴 문서의 로컬 AI 요청만 짧은 추론 구간으로 나눈다", () => {
+  const profile = webSchedulingProfile("balanced", false);
+
+  assert.deepEqual(translationBatchLimits(profile, false, true), {
+    maxItems: 6,
+    maxChars: 4000,
+  });
+  assert.deepEqual(translationBatchLimits(profile, false, false), {
+    maxItems: 24,
+    maxChars: 16000,
+  });
+});
+
+test("긴 문서에서도 외부 번역 서비스의 묶음 전송 한도는 유지한다", () => {
+  const profile = webSchedulingProfile("balanced", true);
+
+  assert.deepEqual(translationBatchLimits(profile, true, true), {
+    maxItems: 32,
+    maxChars: 32000,
+  });
 });
 
 test("중첩된 DOM 변경은 가장 바깥쪽 루트만 다시 스캔한다", () => {

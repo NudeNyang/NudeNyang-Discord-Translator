@@ -69,6 +69,17 @@
     }
   }
 
+  function isExplicitExclusionBypassBlock(block, adapter) {
+    for (const selector of adapter?.exclusionBypassBlocks ?? []) {
+      try {
+        if (block?.matches?.(selector)) return true;
+      } catch {
+        // 잘못된 사이트별 선택자 하나가 전체 페이지 번역을 중단하지 않도록 무시한다.
+      }
+    }
+    return false;
+  }
+
   function takeTranslationBatch(queue, options) {
     const batch = [];
     let chars = 0;
@@ -142,6 +153,16 @@
     return { ...(profiles[mode] ?? profiles.balanced) };
   }
 
+  function translationBatchLimits(profile, externalProvider, longDocument) {
+    if (!longDocument || externalProvider) {
+      return { maxItems: profile.maxItems, maxChars: profile.maxChars };
+    }
+    return {
+      maxItems: Math.min(profile.maxItems, 6),
+      maxChars: Math.min(profile.maxChars, 4000),
+    };
+  }
+
   function isQuickToggleShortcut(event) {
     return (event?.key === "F4" || event?.code === "F4")
       && !event.repeat
@@ -198,6 +219,7 @@
     groupTranslationApplications,
     isElementNearViewport,
     initialTranslationEnabled,
+    isExplicitExclusionBypassBlock,
     isQuickToggleShortcut,
     isUrlLikeLinkText,
     pageTranslationEnabled,
@@ -205,6 +227,7 @@
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,
+    translationBatchLimits,
     webSchedulingProfile,
   });
   root.NudeNyangContentHelpers = api;

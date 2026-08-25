@@ -41,6 +41,20 @@ enum BestEffortChunkPolicy {
     PreserveSuccessfulChunks,
 }
 
+fn split_visual_lines_preserving_endings(text: &str) -> Vec<(String, String)> {
+    text.split_inclusive('\n')
+        .map(|line| {
+            if let Some(content) = line.strip_suffix("\r\n") {
+                (content.to_string(), "\r\n".to_string())
+            } else if let Some(content) = line.strip_suffix('\n') {
+                (content.to_string(), "\n".to_string())
+            } else {
+                (line.to_string(), String::new())
+            }
+        })
+        .collect()
+}
+
 pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
     let segments = DiscordFormatTemplate::parse(text).translatable_texts();
     let meaningful = segments
@@ -315,49 +329,58 @@ impl TranslationService {
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
     ) -> Vec<String> {
-        let mut output = Vec::with_capacity(texts.len());
-        for (text, hint) in texts.iter().zip(source_hints) {
-            let mut result = None;
-            for attempt in 1..=MAX_INCOMING_QUALITY_ATTEMPTS {
-                match self.translate_many_with_source_hints(
-                    std::slice::from_ref(text),
-                    std::slice::from_ref(hint),
-                    target,
-                    allowed_sources,
-                ) {
-                    Ok(mut translated) => {
-                        result = Some(translated.remove(0));
-                        break;
-                    }
-                    Err(failure)
-                        if failure.starts_with(QUALITY_REJECTED_ERROR)
-                            && attempt < MAX_INCOMING_QUALITY_ATTEMPTS =>
-                    {
-                        crate::diagnostics::info(
-                            "incoming-translation-quality-retry",
-                            &format!(
-                                "attempt={attempt}; chars={}; hash={}",
-                                text.chars().count(),
-                                source_hash(text)
-                            ),
-                        );
-                    }
-                    Err(failure) => {
-                        crate::diagnostics::warn(
-                            "incoming-translation",
-                            &format!(
-                                "item kept as original; attempts={attempt}; chars={}; hash={}; error={failure}",
-                                text.chars().count(),
-                                source_hash(text)
-                            ),
-                        );
-                        break;
-                    }
+        texts
+            .iter()
+            .zip(source_hints)
+            .map(|(text, hint)| {
+                self.translate_one_best_effort_with_hint(text, *hint, target, allowed_sources)
+                    .0
+            })
+            .collect()
+    }
+
+    fn translate_one_best_effort_with_hint(
+        &mut self,
+        text: &String,
+        source_hint: Option<Language>,
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+    ) -> (String, bool) {
+        for attempt in 1..=MAX_INCOMING_QUALITY_ATTEMPTS {
+            match self.translate_many_with_source_hints(
+                std::slice::from_ref(text),
+                std::slice::from_ref(&source_hint),
+                target,
+                allowed_sources,
+            ) {
+                Ok(mut translated) => return (translated.remove(0), true),
+                Err(failure)
+                    if failure.starts_with(QUALITY_REJECTED_ERROR)
+                        && attempt < MAX_INCOMING_QUALITY_ATTEMPTS =>
+                {
+                    crate::diagnostics::info(
+                        "incoming-translation-quality-retry",
+                        &format!(
+                            "attempt={attempt}; chars={}; hash={}",
+                            text.chars().count(),
+                            source_hash(text)
+                        ),
+                    );
+                }
+                Err(failure) => {
+                    crate::diagnostics::warn(
+                        "incoming-translation",
+                        &format!(
+                            "item kept as original; attempts={attempt}; chars={}; hash={}; error={failure}",
+                            text.chars().count(),
+                            source_hash(text)
+                        ),
+                    );
+                    break;
                 }
             }
-            output.push(result.unwrap_or_else(|| text.clone()));
         }
-        output
+        (text.clone(), false)
     }
 
     fn translate_many_best_effort_with_chunk_policy(
@@ -382,27 +405,76 @@ impl TranslationService {
             .zip(source_hints)
             .map(|(text, hint)| {
                 let chunks = split_for_translation(text, MAX_TRANSLATION_CHARS);
-                if chunks.len() == 1 {
-                    return self
-                        .translate_many_best_effort_with_hints(
-                            std::slice::from_ref(text),
-                            std::slice::from_ref(hint),
+                chunks
+                    .into_iter()
+                    .map(|chunk| {
+                        let (translated, succeeded) = self.translate_one_best_effort_with_hint(
+                            &chunk,
+                            *hint,
+                            target,
+                            allowed_sources,
+                        );
+                        if succeeded {
+                            return translated;
+                        }
+
+                        self.retry_failed_web_chunk_by_visual_lines(
+                            &chunk,
+                            *hint,
                             target,
                             allowed_sources,
                         )
-                        .remove(0);
-                }
-
-                let chunk_hints = vec![*hint; chunks.len()];
-                self.translate_many_best_effort_with_hints(
-                    &chunks,
-                    &chunk_hints,
-                    target,
-                    allowed_sources,
-                )
-                .concat()
+                        .unwrap_or(translated)
+                    })
+                    .collect::<String>()
             })
             .collect()
+    }
+
+    fn retry_failed_web_chunk_by_visual_lines(
+        &mut self,
+        text: &str,
+        source_hint: Option<Language>,
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+    ) -> Option<String> {
+        let lines = split_visual_lines_preserving_endings(text);
+        if lines
+            .iter()
+            .filter(|(line, _)| !line.trim().is_empty())
+            .count()
+            < 2
+        {
+            return None;
+        }
+
+        crate::diagnostics::info(
+            "web-translation-line-fallback",
+            &format!(
+                "lines={}; chars={}; hash={}",
+                lines.len(),
+                text.chars().count(),
+                source_hash(text)
+            ),
+        );
+
+        Some(
+            lines
+                .into_iter()
+                .map(|(line, ending)| {
+                    if line.trim().is_empty() {
+                        return format!("{line}{ending}");
+                    }
+                    let (translated, _) = self.translate_one_best_effort_with_hint(
+                        &line,
+                        source_hint,
+                        target,
+                        allowed_sources,
+                    );
+                    format!("{translated}{ending}")
+                })
+                .collect(),
+        )
     }
 
     pub fn translate_many_for_incoming(
@@ -1134,7 +1206,11 @@ impl TranslationService {
                 let cached = sanitize_unexpected_marker_artifacts(text, &cached);
                 let cached = apply_conservative_semantic_repairs(&cached, text, source, target);
                 let cached = preserve_terminal_punctuation(text, &cached);
-                if self.translator.should_cache(text, &cached, source, target) {
+                let masked_cached = protected.mask_preserved_tokens_in(&cached);
+                if self
+                    .translator
+                    .should_cache(&protected.masked, &masked_cached, source, target)
+                {
                     results[index] = Some(cached);
                     cache_hits += 1;
                     continue;
@@ -1176,9 +1252,12 @@ impl TranslationService {
                     apply_conservative_semantic_repairs(&restored, &text, source, target);
                 let restored = preserve_terminal_punctuation(&text, &restored);
                 if !text.contains(MESSAGE_CONTEXT_SEPARATOR.trim())
-                    && !self
-                        .translator
-                        .translation_is_acceptable(&text, &restored, source, target)
+                    && !self.translator.translation_is_acceptable(
+                        &protected.masked,
+                        &translated,
+                        source,
+                        target,
+                    )
                 {
                     crate::diagnostics::warn(
                         "translation-quality",
@@ -1197,7 +1276,7 @@ impl TranslationService {
                 }
                 if self
                     .translator
-                    .should_cache(&text, &restored, source, target)
+                    .should_cache(&protected.masked, &translated, source, target)
                 {
                     self.cache.put(
                         &hash,
@@ -1698,6 +1777,8 @@ mod tests {
 
     struct PartiallyFailingWebChunkTranslator;
 
+    struct MultilineFailingWebChunkTranslator;
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -1825,6 +1906,80 @@ mod tests {
             } else {
                 Ok("코기의 사랑스러움을 담은 의상입니다.\n빵집 모티브입니다.\n\n".to_string())
             }
+        }
+
+        fn should_cache(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            self.translation_is_acceptable(source_text, translated_text, source, target)
+        }
+
+        fn translation_is_acceptable(
+            &self,
+            source_text: &str,
+            translated_text: &str,
+            source: Language,
+            target: Language,
+        ) -> bool {
+            !translation_needs_repair(source_text, translated_text, source, target)
+        }
+    }
+
+    impl Translator for MultilineFailingWebChunkTranslator {
+        fn display_name(&self) -> &str {
+            "multiline-failing-web-chunk"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "multiline-failing-web-chunk:v1"
+        }
+
+        fn isolate_incoming_failures(&self) -> bool {
+            true
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            if text.contains('\n') {
+                return Ok(text.to_string());
+            }
+            Ok(
+                if text.starts_with("大人気な輝夜ちゃんの特別セットをご用意しました")
+                {
+                    text.replacen(
+                        "大人気な輝夜ちゃんの特別セットをご用意しました",
+                        "인기 많은 카구야의 특별 세트를 준비했습니다",
+                        1,
+                    )
+                } else {
+                    match text {
+                        "なんと11種類セットでとってもお得になってます！" => {
+                            "무려 11종 세트로 매우 알찬 구성입니다!"
+                        }
+                        "使いやすいお洋服からかぷちやの定番まで！" => {
+                            "활용하기 좋은 의상부터 카푸치야의 대표 상품까지!"
+                        }
+                        _ if text.starts_with("ぜひ") && text.ends_with("でポストしてね！") =>
+                        {
+                            return Ok(text.replacen("ぜひ", "꼭 ", 1).replacen(
+                                "でポストしてね！",
+                                "에 게시해 주세요!",
+                                1,
+                            ));
+                        }
+                        _ => text,
+                    }
+                    .to_string()
+                },
+            )
         }
 
         fn should_cache(
@@ -3391,6 +3546,43 @@ mod tests {
                 "코기의 사랑스러움을 담은 의상입니다.\n",
                 "빵집 모티브입니다.\n\n",
                 "コンセプトアート・デザイン：ぷも"
+            )
+            .to_string()]
+        );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn web_translation_retries_a_failed_single_paragraph_by_visual_lines() {
+        let path = cache_path("web-single-paragraph-line-fallback");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service =
+            TranslationService::new(Box::new(MultilineFailingWebChunkTranslator), cache);
+        let source = concat!(
+            "大人気な輝夜ちゃんの特別セットをご用意しました✨\n",
+            "なんと11種類セットでとってもお得になってます！\n",
+            "使いやすいお洋服からかぷちやの定番まで！\n",
+            "ぜひ『#かぷちやこーで』でポストしてね！"
+        )
+        .to_string();
+
+        let translated = service
+            .translate_many_for_web_contextual_filtered(
+                std::slice::from_ref(&source),
+                &[None],
+                "https://booth.pm/ko/items/test",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            [concat!(
+                "인기 많은 카구야의 특별 세트를 준비했습니다✨\n",
+                "무려 11종 세트로 매우 알찬 구성입니다!\n",
+                "활용하기 좋은 의상부터 카푸치야의 대표 상품까지!\n",
+                "꼭 『#かぷちやこーで』에 게시해 주세요!"
             )
             .to_string()]
         );

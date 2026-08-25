@@ -5,6 +5,7 @@
     createScanBatch,
     groupTranslationApplications,
     isElementNearViewport,
+    isExplicitExclusionBypassBlock,
     isQuickToggleShortcut,
     isUrlLikeLinkText,
     pageTranslationEnabled,
@@ -12,6 +13,7 @@
     runtimeMessageFailure,
     scanRootForAddedNode,
     takeTranslationBatch,
+    translationBatchLimits,
     webSchedulingProfile,
   } = globalThis.NudeNyangContentHelpers;
   const MAX_ITEM_CHARS = 4000;
@@ -53,6 +55,7 @@
   let externalProvider = false;
   let scheduling = webSchedulingProfile("balanced", false);
   let viewportActiveUntil = 0;
+  let longDocument = false;
   let requestCount = 0;
   let sentChars = 0;
   let usageLimited = false;
@@ -206,7 +209,8 @@
 
   function eligibleTextNodes(block) {
     const excluded = adapters.exclusionSelector(adapter);
-    if (block.matches(excluded) || block.closest(excluded)) {
+    const bypassExclusion = isExplicitExclusionBypassBlock(block, adapter);
+    if (!bypassExclusion && (block.matches(excluded) || block.closest(excluded))) {
       return [];
     }
     const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
@@ -216,7 +220,7 @@
           return NodeFilter.FILTER_REJECT;
         }
         const parent = node.parentElement;
-        if (!parent || parent.closest(excluded)) {
+        if (!parent || (!bypassExclusion && parent.closest(excluded))) {
           return NodeFilter.FILTER_REJECT;
         }
         const anchor = parent.closest("a[href]");
@@ -329,17 +333,18 @@
       return;
     }
     translating = true;
+    const batchLimits = translationBatchLimits(scheduling, externalProvider, longDocument);
     const remainingBudget = externalProvider && webSettings.externalPageCharLimit > 0
       ? Math.max(0, webSettings.externalPageCharLimit - sentChars)
-      : scheduling.maxChars;
+      : batchLimits.maxChars;
     if (remainingBudget === 0) {
       translating = false;
       stopForUsageLimit();
       return;
     }
     const batch = takeTranslationBatch(queue, {
-      maxItems: scheduling.maxItems,
-      maxChars: Math.min(scheduling.maxChars, remainingBudget),
+      maxItems: batchLimits.maxItems,
+      maxChars: Math.min(batchLimits.maxChars, remainingBudget),
       discardOversize: externalProvider && webSettings.externalPageCharLimit > 0,
       isCurrent(item) {
         const state = nodeStates.get(item.node);
@@ -481,7 +486,11 @@
     if (root.nodeType === Node.ELEMENT_NODE && root.matches(selector)) {
       observeBlock(root);
     }
-    for (const block of root.querySelectorAll(selector)) {
+    const matchedBlocks = root.querySelectorAll(selector);
+    if (root === document && matchedBlocks.length >= 200) {
+      longDocument = true;
+    }
+    for (const block of matchedBlocks) {
       observeBlock(block);
     }
     pruneDisconnectedNodes();
@@ -509,6 +518,7 @@
     restoreOriginals();
     resetPageUsage();
     pageTargetLanguage = "";
+    longDocument = false;
     blockIds = new WeakMap();
     observedBlocks = new WeakSet();
     intersectionObserver.disconnect();

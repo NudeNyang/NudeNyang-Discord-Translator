@@ -10,7 +10,7 @@ const KAOMOJI_HINTS: &str = "^;:°ωツづノಠಥ益Д▽∀・´｀≧≤＞�
 static MENTION_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)@(?:[A-Za-z0-9_.-]+|全員|各位|여러분)").unwrap());
 static CHANNEL_TAG_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"#[A-Za-z0-9_.-]{2,}").unwrap());
+    LazyLock::new(|| Regex::new(r"[『「]?#[\p{L}\p{M}\p{N}_.-]{2,}[』」]?").unwrap());
 static URL_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?i)\bhttps?://[^\s<>"']+"#).unwrap());
 static CUSTOM_EMOJI_RE: LazyLock<Regex> =
@@ -91,6 +91,15 @@ impl ProtectedText {
             restored.push_str(&missing.join(" "));
         }
         sanitize_unexpected_marker_artifacts(&self.original, &restored)
+    }
+
+    pub fn mask_preserved_tokens_in(&self, text: &str) -> String {
+        self.tokens
+            .iter()
+            .enumerate()
+            .fold(text.to_string(), |masked, (index, token)| {
+                masked.replacen(token, &marker(index), 1)
+            })
     }
 }
 
@@ -331,6 +340,20 @@ mod tests {
     fn missing_markers_are_readded_without_losing_tags() {
         let protected = protect_text("Hello @here");
         assert_eq!(protected.restore("안녕하세요"), "안녕하세요 @here");
+    }
+
+    #[test]
+    fn non_latin_hashtags_are_preserved_without_hiding_the_surrounding_sentence() {
+        let source = "ぜひ『#かぷちやこーで』でポストしてね！";
+        let protected = protect_text(source);
+
+        assert_eq!(protected.tokens, ["『#かぷちやこーで』"]);
+        assert!(!protected.masked.contains("#かぷちやこーで"));
+        assert!(protected.has_translatable_text());
+        assert_eq!(
+            protected.mask_preserved_tokens_in("꼭 『#かぷちやこーで』로 게시해 주세요!"),
+            "꼭 ZXQKEEP000QXZ로 게시해 주세요!"
+        );
     }
 
     #[test]

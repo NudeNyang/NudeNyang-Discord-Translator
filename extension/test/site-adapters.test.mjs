@@ -106,6 +106,30 @@ test("GitHub Markdown 표의 셀도 번역 블록에 포함한다", () => {
   assert.ok(github.blocks.includes(".markdown-body table td"));
 });
 
+test("GitHub Markdown의 하위 제목과 접이식 요약도 번역한다", () => {
+  const github = adapterForLocation(new URL("https://github.com/NudeNyang/project"));
+
+  assert.ok(github.blocks.includes(".markdown-body h4"));
+  assert.ok(github.blocks.includes(".markdown-body h6"));
+  assert.ok(github.blocks.includes(".markdown-body details > summary"));
+});
+
+test("Google의 최신 카드형 검색 결과 제목도 번역한다", () => {
+  const google = adapterForLocation(new URL("https://www.google.com/search?q=translator"));
+
+  assert.ok(google.blocks.includes("#search h1"));
+  assert.ok(google.blocks.includes("#search h2"));
+  assert.ok(google.blocks.includes("#search [role='heading']"));
+});
+
+test("YouTube의 새 설명과 추천 영상 ViewModel도 번역한다", () => {
+  const youtube = adapterForLocation(new URL("https://www.youtube.com/watch?v=abc"));
+
+  assert.ok(youtube.blocks.includes("ytd-text-inline-expander #attributed-snippet-text"));
+  assert.ok(youtube.blocks.includes(".ytLockupMetadataViewModelTitle"));
+  assert.ok(youtube.blocks.includes("ytd-media-lockup-renderer #title"));
+});
+
 test("X 프로필은 소개만 번역하고 표시 이름과 핸들은 제외한다", () => {
   const x = adapterForLocation(new URL("https://x.com/nudenyang"));
   const selector = exclusionSelector(x);
@@ -125,6 +149,70 @@ test("BOOTH 판매자 페이지의 span 기반 데스크톱 상품 설명을 번
   const booth = adapterForLocation(new URL("https://shop.booth.pm/items/123"));
 
   assert.ok(booth.blocks.includes("[class~='description'] > span.autolink"));
+});
+
+test("BOOTH 판매자 소개의 긴 단일 텍스트를 번역한다", () => {
+  const booth = adapterForLocation(new URL("https://shop.booth.pm/"));
+
+  assert.ok(booth.blocks.includes(".booth-description > .autolink > div"));
+});
+
+test("BOOTH 공개 안내 페이지의 비시맨틱 텍스트 블록을 범용으로 번역한다", () => {
+  const lineBreakTextSelector =
+    "main :is(div,section,span,a,b,strong,small,th,td):not(:has(*:not(br)))";
+
+  for (const url of [
+    "https://booth.pm/about",
+    "https://booth.pm/customer_guide",
+    "https://booth.pm/guide",
+  ]) {
+    const booth = adapterForLocation(new URL(url));
+    assert.equal(booth.id, "booth");
+    assert.ok(booth.blocks.includes(lineBreakTextSelector));
+  }
+});
+
+test("BOOTH 공개 안내의 br 줄바꿈 문단을 하나의 번역 블록으로 포함한다", () => {
+  const booth = adapterForLocation(new URL("https://booth.pm/about"));
+  const selector = booth.blocks.find((value) => value.includes(":not(:has(*:not(br)))"));
+
+  assert.ok(selector);
+  assert.doesNotMatch(selector, /:not\(:has\(\*\)\)/);
+});
+
+test("BOOTH 공개 안내 내비게이션만 공통 nav 제외를 안전하게 우회한다", () => {
+  const booth = adapterForLocation(new URL("https://booth.pm/guide"));
+  const publicGuideSelector =
+    "nav.js-accordion-content a.no-underline[href^='https://booth.pm/']";
+
+  assert.ok(booth.blocks.includes(publicGuideSelector));
+  assert.ok(booth.exclusionBypassBlocks.includes(publicGuideSelector));
+});
+
+test("BOOTH 상단 약관 안내와 공개 공지 링크를 번역한다", () => {
+  const booth = adapterForLocation(new URL("https://booth.pm/ko"));
+  const bannerText = ".js-agreement-banner .text-white.text-14.font-bold";
+  const bannerLink = ".js-agreement-banner a[href^='https://booth.pm/']";
+  const announcementLink = ".booth-message > a[href^='https://booth.pm/announcements/']";
+  const moreAnnouncements = "details.booth-messages > summary";
+
+  assert.ok(booth.blocks.includes(bannerText));
+  assert.ok(booth.blocks.includes(bannerLink));
+  assert.ok(booth.blocks.includes(announcementLink));
+  assert.ok(booth.blocks.includes(moreAnnouncements));
+  assert.ok(booth.exclusionBypassBlocks.includes(bannerText));
+  assert.ok(booth.exclusionBypassBlocks.includes(bannerLink));
+  assert.ok(!booth.blocks.includes(".js-agreement-banner button"));
+});
+
+test("BOOTH 다운로드 파일명은 버전과 확장자를 유지하며 번역 대상으로 포함한다", () => {
+  const booth = adapterForLocation(new URL("https://booth.pm/ko/items/123"));
+  const selector = exclusionSelector(booth);
+
+  assert.ok(booth.blocks.includes("a[href*='/downloadables/'] [class~='text-ellipsis']"));
+  assert.ok(booth.blocks.includes(".cart-button-wrap [class~='text-left'][class~='mb-8']"));
+  assert.doesNotMatch(selector, /\[class\*='cart'\]/);
+  assert.match(selector, /form\[action\*='cart'\]/);
 });
 
 test("manifest 공개 키가 Native Messaging 허용 ID를 안정적으로 만든다", () => {

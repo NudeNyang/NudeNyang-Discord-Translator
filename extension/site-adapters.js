@@ -62,6 +62,9 @@
       blocks: [
         ".markdown-body p", ".markdown-body li", ".markdown-body blockquote",
         ".markdown-body h1", ".markdown-body h2", ".markdown-body h3",
+        ".markdown-body h4", ".markdown-body h5", ".markdown-body h6",
+        ".markdown-body details > summary", ".markdown-body dt", ".markdown-body dd",
+        ".markdown-body figcaption",
         ".markdown-body table th", ".markdown-body table td",
         ".comment-body p", ".comment-body li", "[data-testid='issue-body'] p",
         "[data-testid='issue-body'] li", ".Box-body .markdown-title",
@@ -76,15 +79,33 @@
       hosts: ["booth.pm"],
       blocks: [
         "main p", "main li", "main h1", "main h2", "main h3",
+        "main h4", "main h5", "main h6", "main blockquote", "main figcaption",
+        "main dt", "main dd",
+        "main :is(div,section,span,a,b,strong,small,th,td):not(:has(*:not(br)))",
         "[class*='description'] p", "[class*='description'] li",
         "[class~='description'] > span.autolink",
+        ".booth-description > .autolink > div",
+        "nav.js-accordion-content a.no-underline[href^='https://booth.pm/']",
+        ".js-agreement-banner .text-white.text-14.font-bold",
+        ".js-agreement-banner a[href^='https://booth.pm/']",
+        ".booth-message > a[href^='https://booth.pm/announcements/']",
+        "details.booth-messages > summary",
+        "details.booth-messages .booth-message > a[href^='https://booth.pm/announcements/']",
+        "a[href*='/downloadables/'] [class~='text-ellipsis']",
+        ".cart-button-wrap [class~='text-left'][class~='mb-8']",
         "[class*='notice'] p",
       ],
       excludes: [
-        "[class*='price']", "[class*='cart']", "[class*='checkout']",
+        "[class*='price']", "[class*='checkout']",
+        "[data-testid*='cart']", "form[action*='cart']", "a[href*='/cart']",
         "[class~='order']", "[class^='order-']", "[class*=' order-']",
         "[class*='item-order']", "[data-testid*='order']", "form[action*='order']",
         "[class*='account']", "[class*='payment']",
+      ],
+      exclusionBypassBlocks: [
+        "nav.js-accordion-content a.no-underline[href^='https://booth.pm/']",
+        ".js-agreement-banner .text-white.text-14.font-bold",
+        ".js-agreement-banner a[href^='https://booth.pm/']",
       ],
     },
     {
@@ -104,7 +125,8 @@
       id: "google",
       hosts: ["www.google.com", "www.google.co.kr", "www.google.co.jp"],
       blocks: [
-        "#search h3", "#search [data-sncf]", "#search [data-content-feature]",
+        "#search h1", "#search h2", "#search h3", "#search h4",
+        "#search [role='heading']", "#search [data-sncf]", "#search [data-content-feature]",
         "#search .VwiC3b", "#search .IsZvec", "#search .kno-rdesc span",
         "#search [data-attrid='wa:/description']", "#search [data-md] span",
       ],
@@ -118,9 +140,11 @@
       hosts: ["www.youtube.com"],
       blocks: [
         "ytd-watch-metadata h1", "ytd-text-inline-expander #plain-snippet-text",
-        "ytd-text-inline-expander #expanded", "ytd-comment-thread-renderer #content-text",
+        "ytd-text-inline-expander #expanded", "ytd-text-inline-expander #attributed-snippet-text",
+        "ytd-comment-thread-renderer #content-text",
         "ytd-transcript-segment-renderer .segment-text", "ytd-video-renderer #video-title",
         "ytd-rich-grid-media #video-title", "ytd-compact-video-renderer #video-title",
+        ".ytLockupMetadataViewModelTitle", "ytd-media-lockup-renderer #title",
       ],
       excludes: [
         "#search-form", "ytd-comment-simplebox-renderer", "#channel-name",
@@ -136,6 +160,7 @@
     blocks: [
       "body h1", "body h2", "body h3", "body h4", "body h5", "body h6",
       "body p", "body li", "body blockquote", "body figcaption", "body dt", "body dd",
+      "body details > summary", "body table th", "body table td",
     ],
     excludes: [],
   });
