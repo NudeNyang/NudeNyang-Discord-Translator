@@ -46,8 +46,13 @@
     "[data-testid='twitterArticleReadView'] section[data-block='true']",
   ];
 
-  const DLSITE_PUBLIC_HEADER_LINK = [
-    "#header a[href]",
+  const DOCUMENT_BLOCKS = [
+    "body h1", "body h2", "body h3", "body h4", "body h5", "body h6",
+    "body p", "body li", "body blockquote", "body figcaption", "body dt", "body dd",
+    "body details > summary", "body table th", "body table td",
+  ];
+
+  const DLSITE_PRIVATE_LINK_FILTERS = [
     ":not([href*='/mypage'])",
     ":not([href*='/cart'])",
     ":not([href*='/checkout'])",
@@ -60,6 +65,12 @@
     ":not([href*='/coupon'])",
     ":not([href*='/history'])",
   ].join("");
+
+  const DLSITE_PUBLIC_NAVIGATION_LINKS = [
+    "#header a[href]",
+    "header a[href]",
+    "nav a[href]",
+  ].map((selector) => `${selector}${DLSITE_PRIVATE_LINK_FILTERS}`);
 
   const ADAPTERS = [
     {
@@ -94,16 +105,11 @@
       hosts: ["www.dlsite.com"],
       blockUniversalSensitivePaths: true,
       blocks: [
-        "main h1", "main h2", "main h3", "main h4", "main h5", "main h6",
-        "main p", "main li", "main blockquote", "main figcaption", "main dt", "main dd",
-        "main details > summary", "main table th", "main table td",
-        "#main h1", "#main h2", "#main h3", "#main h4", "#main h5", "#main h6",
-        "#main p", "#main li", "#main blockquote", "#main figcaption", "#main dt", "#main dd",
-        "#main details > summary", "#main table th", "#main table td",
-        DLSITE_PUBLIC_HEADER_LINK,
+        ...DOCUMENT_BLOCKS,
+        ...DLSITE_PUBLIC_NAVIGATION_LINKS,
       ],
       excludes: [],
-      exclusionBypassBlocks: [DLSITE_PUBLIC_HEADER_LINK],
+      exclusionBypassBlocks: DLSITE_PUBLIC_NAVIGATION_LINKS,
     },
     {
       id: "github",
@@ -208,11 +214,7 @@
   const UNIVERSAL_ADAPTER = Object.freeze({
     id: "web",
     manualOnly: true,
-    blocks: [
-      "body h1", "body h2", "body h3", "body h4", "body h5", "body h6",
-      "body p", "body li", "body blockquote", "body figcaption", "body dt", "body dd",
-      "body details > summary", "body table th", "body table td",
-    ],
+    blocks: DOCUMENT_BLOCKS,
     excludes: [],
   });
 

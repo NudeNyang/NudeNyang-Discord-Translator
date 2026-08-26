@@ -35,15 +35,18 @@ test("DLsite 서클 리포트의 div 기반 작품 소개와 구매 버튼 문�
 
 test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역한다", () => {
   const dlsite = adapterForLocation(new URL("https://www.dlsite.com/maniax/"));
-  const publicHeaderLink = dlsite.blocks.find((selector) => (
-    selector.startsWith("#header a[href]")
+  const publicNavigationLinks = dlsite.blocks.filter((selector) => (
+    selector.includes("a[href]") && selector.includes("/mypage")
   ));
 
   assert.equal(dlsite.id, "dlsite");
-  assert.ok(publicHeaderLink);
-  assert.match(publicHeaderLink, /mypage/);
-  assert.match(publicHeaderLink, /cart/);
-  assert.ok(dlsite.exclusionBypassBlocks.includes(publicHeaderLink));
+  assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("#header a[href]")));
+  assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("header a[href]")));
+  assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("nav a[href]")));
+  for (const publicNavigationLink of publicNavigationLinks) {
+    assert.match(publicNavigationLink, /cart/);
+    assert.ok(dlsite.exclusionBypassBlocks.includes(publicNavigationLink));
+  }
   assert.equal(
     adapterForLocation(new URL("https://www.dlsite.com/maniax/mypage")),
     null,
@@ -52,6 +55,17 @@ test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역�
     adapterForLocation(new URL("https://www.dlsite.com/maniax/cart")),
     null,
   );
+});
+
+test("DLsite 공개 페이지는 범용 문서와 왼쪽 카테고리 목록을 계속 번역한다", () => {
+  const dlsite = adapterForLocation(new URL(
+    "https://www.dlsite.com/maniax/circle/profile/=/maker_id/RG12345.html",
+  ));
+
+  assert.equal(dlsite.id, "dlsite");
+  assert.ok(dlsite.blocks.includes("body p"));
+  assert.ok(dlsite.blocks.includes("body li"));
+  assert.ok(dlsite.blocks.includes("body table td"));
 });
 
 test("특집형 상품 페이지의 카테고리와 정적 하단 안내를 번역한다", () => {
