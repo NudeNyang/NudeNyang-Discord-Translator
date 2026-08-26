@@ -41,6 +41,9 @@ The public privacy explanation is available at:
 - `nativeMessaging`: communicates with the installed Windows translation engine.
 - `storage`: retains non-sensitive extension preferences.
 - `activeTab`: reads and controls the current page from the popup and keyboard command.
+- `scripting`: reinjects only the add-on's bundled content scripts when an already-open HTTP/HTTPS
+  tab has lost its receiver after the add-on was installed, updated, or reloaded. It does not fetch
+  or execute remote code.
 - `http://*/*` and `https://*/*`: allows the user to translate ordinary webpages. Sensitive routes
   and browser-internal pages are blocked in code.
 - `websiteContent`: declares the visible webpage text processed for Firefox users.

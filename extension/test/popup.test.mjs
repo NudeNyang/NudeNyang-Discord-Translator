@@ -26,6 +26,16 @@ test("탭 응답 실패를 미지원 페이지와 구분해 안내한다", () =>
   assert.match(popupJs, /copy\("unableToProcess"\)/);
 });
 
+test("팝업과 보조 단축키는 끊어진 현재 탭 연결을 백그라운드에서 자동 복구한다", () => {
+  assert.ok(manifest.permissions.includes("scripting"));
+  assert.match(popupJs, /type:\s*"nudenyang-page-request"/);
+  assert.match(backgroundJs, /NudeNyangPageConnection\.createPageConnection/);
+  assert.match(backgroundJs, /tabs\.onActivated/);
+  assert.match(backgroundJs, /windows\?\.onFocusChanged/);
+  assert.match(backgroundJs, /pageConnection\.request\(tabId,\s*\{\s*type:\s*"nudenyang-toggle-enabled"/);
+  assert.match(contentJs, /message\?\.type === "nudenyang-ready"/);
+});
+
 test("확장 연결 상태는 Discord가 아니라 앱과 번역 모델만 기준으로 표시한다", () => {
   assert.match(popupJs, /response\?\.appConnected/);
   assert.match(popupJs, /response\.modelReady/);

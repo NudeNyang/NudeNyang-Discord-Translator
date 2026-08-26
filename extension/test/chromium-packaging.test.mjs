@@ -19,6 +19,7 @@ test("Chrome 웹 스토어 패키지는 개발용 공개 키를 매니페스트�
   assert.match(packager, /PSObject\.Properties\.Remove\(['"]key['"]\)/);
   assert.match(packager, /manifest\.json/);
   assert.match(packager, /NudeNyang-Web-Translator-Chromium-/);
+  assert.match(packager, /page-connection\.js/);
   assert.doesNotMatch(packager, /Compress-Archive/);
   assert.match(packager, /\.Replace\('\\', '\/'\)/);
 });

@@ -60,7 +60,9 @@ X의 `더보기`처럼 이미 보이는 문단의 내용을 동적으로 펼치�
 6. Firefox에서 `about:debugging#/runtime/this-firefox`를 열고 `임시 부가 기능 로드`에서 `dist/firefox-extension/manifest.json`을 선택한다.
 7. Chrome과 Whale은 브라우저를 완전히 종료했다가 다시 시작한다. Firefox 임시 설치는 종료 시 제거되므로 개발 검증 중에는 Firefox를 재시작하지 않는다.
 
-개발 중 확장 관리 화면에서 확장을 다시 로드하면 이미 열려 있던 페이지의 이전 콘텐츠 스크립트는 무효화된다. 해당 페이지도 새로 고쳐야 새 버전이 적용된다. 이전 스크립트는 무효화를 감지하면 남은 번역 대기열과 DOM 관찰을 종료하고 적용된 텍스트를 원문으로 복원한다.
+개발 중 확장 관리 화면에서 확장을 다시 로드하면 이미 열려 있던 페이지의 이전 콘텐츠 스크립트는 무효화된다. 이전 스크립트는 무효화를 감지하면 남은 번역 대기열과 DOM 관찰을 종료하고 적용된 텍스트를 원문으로 복원한다.
+
+확장 업데이트·재로드 뒤 이미 열려 있던 일반 HTTP/HTTPS 탭에 새 콘텐츠 스크립트 수신자가 없으면, 백그라운드가 사용자가 다시 활성화한 탭의 연결을 조용히 확인한다. 연결이 없을 때만 최신 콘텐츠 스크립트를 다시 삽입하고 탭에 저장된 번역 상태를 복원한다. 팝업 조작과 보조 단축키도 같은 복구 경로에서 원래 요청을 한 번 자동 재시도하므로 보통 페이지 새로고침이 필요하지 않다. 브라우저 내부 페이지처럼 스크립트 삽입이 금지된 화면에서는 복구를 시도하지 않는다.
 
 Chromium 확장은 스토어 제출본과 개인 테스트본의 ID를 분리한다. `npm run extension:chromium`은 Chrome 웹 스토어 ID `kpagdcdgomdlnnphakjakpodmgnhgaia`용 ZIP을 만들고 manifest의 `key`를 제거한다. `npm run extension:personal`은 `dist/chromium-personal-extension`에 기존 개인용 ID `bdkkgjjmocmdknffadjgbljmnhdcchjl`을 유지하는 압축해제 확장을 만든다. 두 공개 키와 ID는 `extension/chromium-identities.json`에서 함께 검증하며, Windows 앱의 Chromium `allowed_origins`도 두 ID를 모두 허용한다. Firefox Add-on ID는 `web-translator@nudenyang.github.io`로 고정되어 있다. Windows 앱은 Chromium의 `allowed_origins`와 Firefox의 `allowed_extensions`를 별도 호스트 매니페스트로 등록하고 명시된 ID만 허용한다. Whale 스토어가 별도 ID를 발급하면 해당 ID도 허용 목록에 추가한 뒤 설치본을 만든다.
 

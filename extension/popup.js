@@ -128,9 +128,13 @@ async function activeTab() {
 }
 
 function tabMessage(tabId, message) {
-  return new Promise((resolve) => api.tabs.sendMessage(tabId, message, (response) => {
+  return new Promise((resolve) => api.runtime.sendMessage({
+    type: "nudenyang-page-request",
+    tabId,
+    message,
+  }, (response) => {
     if (api.runtime.lastError) resolve(null);
-    else resolve(response);
+    else resolve(response ?? null);
   }));
 }
 

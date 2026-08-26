@@ -54,6 +54,9 @@ the data.
 - `storage`: Stores non-sensitive extension preferences and the explicit translation state for the
   current browser tab. The tab state is removed when the tab closes.
 - `activeTab`: Lets the popup and keyboard command control translation in the active tab.
+- `scripting`: Reconnects the extension's bundled content scripts to an already-open HTTP/HTTPS
+  tab after an extension install, update, or reload invalidates the old script. Injection occurs only
+  when the bundled receiver is missing; no remote code is executed.
 - `http://*/*` and `https://*/*`: Allows eligible visible text to be translated on ordinary
   webpages after the user activates translation or saves an automatic site policy. Browser-internal
   pages and sensitive routes are blocked.

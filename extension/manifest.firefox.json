@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
-  "permissions": ["nativeMessaging", "storage", "activeTab"],
+  "permissions": ["nativeMessaging", "storage", "activeTab", "scripting"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "browser_specific_settings": {
     "gecko": {
@@ -16,7 +16,7 @@
     }
   },
   "background": {
-    "scripts": ["native-client.js", "tab-state.js", "background.js"]
+    "scripts": ["native-client.js", "tab-state.js", "page-connection.js", "background.js"]
   },
   "icons": {
     "16": "icons/paw-16.png",

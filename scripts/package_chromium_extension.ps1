@@ -24,6 +24,7 @@ $SharedFiles = @(
     'content-helpers.js',
     'content.js',
     'native-client.js',
+    'page-connection.js',
     'popup.css',
     'popup.html',
     'popup-locales.js',

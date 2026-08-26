@@ -64,6 +64,7 @@
   let requestCount = 0;
   let sentChars = 0;
   let usageLimited = false;
+  let startupPromise;
 
   function storageGet(defaults) {
     return new Promise((resolve) => api.storage.local.get(defaults, resolve));
@@ -661,6 +662,10 @@
   }
 
   api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "nudenyang-ready") {
+      Promise.resolve(startupPromise).then(() => sendResponse({ ready: true }));
+      return true;
+    }
     if (message?.type === "nudenyang-status") {
       sendResponse(status());
       return false;
@@ -755,5 +760,8 @@
     scan(document);
   }
 
-  void start();
+  startupPromise = start().catch((error) => {
+    lastError = error?.message ?? String(error ?? "확장 프로그램을 시작하지 못했습니다.");
+    console.warn("[NudeNyang Web Translator] startup-failed", { detail: lastError });
+  });
 })();

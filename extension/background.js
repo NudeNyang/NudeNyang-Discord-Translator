@@ -1,6 +1,7 @@
 if (typeof importScripts === "function") {
   if (!globalThis.NudeNyangNativeClient) importScripts("native-client.js");
   if (!globalThis.NudeNyangTabTranslationState) importScripts("tab-state.js");
+  if (!globalThis.NudeNyangPageConnection) importScripts("page-connection.js");
 }
 
 const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
@@ -16,6 +17,7 @@ const CLIENT = Object.freeze({
 });
 const nativeClient = globalThis.NudeNyangNativeClient.createNativeClient(api, HOST_NAME, CLIENT);
 const tabTranslationState = globalThis.NudeNyangTabTranslationState.createTabTranslationState(api);
+const pageConnection = globalThis.NudeNyangPageConnection.createPageConnection(api);
 
 function nativeRequest(request) {
   return nativeClient.request(request);
@@ -32,6 +34,10 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message?.type === "nudenyang-tab-enabled-set") {
     tabTranslationState.set(sender.tab?.id, message.enabled).then((enabled) => sendResponse({ enabled }));
+    return true;
+  }
+  if (message?.type === "nudenyang-page-request") {
+    pageConnection.request(message.tabId, message.message).then(sendResponse);
     return true;
   }
   return false;
@@ -56,19 +62,37 @@ function ensureFallbackCommandShortcut() {
   });
 }
 
-api.runtime.onInstalled?.addListener(ensureFallbackCommandShortcut);
+function recoverPageConnection(tabId) {
+  if (typeof tabId === "number") void pageConnection.ensure(tabId);
+}
+
+function recoverActiveTabs() {
+  api.tabs.query({ active: true }, (tabs) => {
+    void api.runtime.lastError;
+    for (const tab of tabs ?? []) recoverPageConnection(tab.id);
+  });
+}
+
+api.runtime.onInstalled?.addListener(() => {
+  ensureFallbackCommandShortcut();
+  recoverActiveTabs();
+});
+
+api.tabs.onActivated?.addListener(({ tabId }) => recoverPageConnection(tabId));
+
+api.windows?.onFocusChanged?.addListener((windowId) => {
+  if (windowId === api.windows.WINDOW_ID_NONE) return;
+  api.tabs.query({ active: true, windowId }, ([tab]) => {
+    void api.runtime.lastError;
+    recoverPageConnection(tab?.id);
+  });
+});
 
 function sendPageToggle(tabId) {
   if (typeof tabId !== "number") {
     return;
   }
-  try {
-    api.tabs.sendMessage(tabId, { type: "nudenyang-toggle-enabled" }, () => {
-      void api.runtime.lastError;
-    });
-  } catch {
-    // 브라우저 내부 페이지처럼 콘텐츠 스크립트가 없는 탭에서는 조용히 무시한다.
-  }
+  void pageConnection.request(tabId, { type: "nudenyang-toggle-enabled" });
 }
 
 api.commands.onCommand.addListener((command, tab) => {
