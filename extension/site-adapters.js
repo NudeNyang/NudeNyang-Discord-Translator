@@ -73,8 +73,17 @@
     "#left a[href]",
   ].map((selector) => `${selector}${DLSITE_PRIVATE_LINK_FILTERS}`);
 
-  const DLSITE_PUBLIC_HEADER_TEXTS = [
+  const DLSITE_STATIC_HEADER_LABELS = [
     "#header .header_description",
+    "#header .login_information_item.type_point > .coupon_text",
+    "#header .login_information_item.type_coupon > .coupon_text",
+    "#header .header_dropdown_nav.type_language .header_dropdown_nav_Link",
+    "#header .header_dropdown_nav.type_service .header_dropdown_nav_Link",
+    "#header .globalNav > .globalNav-item.type-favorite > a > i",
+    "#header .globalNav > .globalNav-item.type-cart > a > i",
+    "#header .globalNav > .globalNav-item.type-play > a > i",
+    "#header .globalNav > .globalNav-item.type-circle > a > i",
+    "#header .globalNav > .globalNav-item.type-guide > a > i",
   ];
 
   const ADAPTERS = [
@@ -112,12 +121,14 @@
       blocks: [
         ...DOCUMENT_BLOCKS,
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
-        ...DLSITE_PUBLIC_HEADER_TEXTS,
+        ...DLSITE_STATIC_HEADER_LABELS,
       ],
-      excludes: [],
+      excludes: [
+        "#header .login_information .number",
+      ],
       exclusionBypassBlocks: [
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
-        ...DLSITE_PUBLIC_HEADER_TEXTS,
+        ...DLSITE_STATIC_HEADER_LABELS,
       ],
     },
     {

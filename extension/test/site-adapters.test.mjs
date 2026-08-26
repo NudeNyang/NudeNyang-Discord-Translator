@@ -38,6 +38,17 @@ test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역�
   const publicNavigationLinks = dlsite.blocks.filter((selector) => (
     selector.includes("a[href]") && selector.includes("/mypage")
   ));
+  const staticHeaderLabels = [
+    "#header .login_information_item.type_point > .coupon_text",
+    "#header .login_information_item.type_coupon > .coupon_text",
+    "#header .header_dropdown_nav.type_language .header_dropdown_nav_Link",
+    "#header .header_dropdown_nav.type_service .header_dropdown_nav_Link",
+    "#header .globalNav > .globalNav-item.type-favorite > a > i",
+    "#header .globalNav > .globalNav-item.type-cart > a > i",
+    "#header .globalNav > .globalNav-item.type-play > a > i",
+    "#header .globalNav > .globalNav-item.type-circle > a > i",
+    "#header .globalNav > .globalNav-item.type-guide > a > i",
+  ];
 
   assert.equal(dlsite.id, "dlsite");
   assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("#header a[href]")));
@@ -46,6 +57,11 @@ test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역�
   assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("#left a[href]")));
   assert.ok(dlsite.blocks.includes("#header .header_description"));
   assert.ok(dlsite.exclusionBypassBlocks.includes("#header .header_description"));
+  for (const staticHeaderLabel of staticHeaderLabels) {
+    assert.ok(dlsite.blocks.includes(staticHeaderLabel));
+    assert.ok(dlsite.exclusionBypassBlocks.includes(staticHeaderLabel));
+  }
+  assert.ok(dlsite.excludes.includes("#header .login_information .number"));
   for (const publicNavigationLink of publicNavigationLinks) {
     assert.match(publicNavigationLink, /cart/);
     assert.ok(dlsite.exclusionBypassBlocks.includes(publicNavigationLink));
