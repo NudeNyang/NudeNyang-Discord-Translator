@@ -52,6 +52,8 @@ X의 `더보기`처럼 이미 보이는 문단의 내용을 동적으로 펼치�
 
 ## 개발 설치
 
+본체와 확장은 같은 제품 호환 세대를 알아보기 쉽도록 Major·Minor 버전을 맞춘다. Patch 버전은 각 배포물의 실제 변경에 따라 독립적으로 올릴 수 있다. 예를 들어 본체 `0.7.1-beta`와 확장 `0.7.0`은 같은 `0.7` 호환 세대다. Chrome·Whale·Firefox 확장은 같은 확장 릴리스 버전을 사용한다.
+
 1. 최신 NudeNyang Windows 앱을 한 번 실행한다.
 2. 실행 파일에 `--register-browser-native-host`를 붙여 한 번 실행한다. 정식 설치본은 설치 과정에서 이 등록을 자동으로 수행한다.
 3. Chrome은 `chrome://extensions`, Whale은 `whale://extensions`를 연다.

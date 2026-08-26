@@ -12,7 +12,7 @@ const firefoxManifest = JSON.parse(fs.readFileSync(new URL("../manifest.firefox.
 const localeRoot = new URL("../_locales/", import.meta.url);
 
 test("Chromium과 Firefox 패키지는 같은 확장 릴리스 버전을 사용한다", () => {
-  assert.equal(chromiumManifest.version, "0.1.37");
+  assert.equal(chromiumManifest.version, "0.7.0");
   assert.equal(firefoxManifest.version, chromiumManifest.version);
 });
 
