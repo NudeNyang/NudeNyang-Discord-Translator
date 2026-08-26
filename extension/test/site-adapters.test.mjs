@@ -43,6 +43,9 @@ test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역�
   assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("#header a[href]")));
   assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("header a[href]")));
   assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("nav a[href]")));
+  assert.ok(publicNavigationLinks.some((selector) => selector.startsWith("#left a[href]")));
+  assert.ok(dlsite.blocks.includes("#header .header_description"));
+  assert.ok(dlsite.exclusionBypassBlocks.includes("#header .header_description"));
   for (const publicNavigationLink of publicNavigationLinks) {
     assert.match(publicNavigationLink, /cart/);
     assert.ok(dlsite.exclusionBypassBlocks.includes(publicNavigationLink));

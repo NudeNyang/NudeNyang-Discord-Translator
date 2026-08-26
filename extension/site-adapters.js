@@ -70,7 +70,12 @@
     "#header a[href]",
     "header a[href]",
     "nav a[href]",
+    "#left a[href]",
   ].map((selector) => `${selector}${DLSITE_PRIVATE_LINK_FILTERS}`);
+
+  const DLSITE_PUBLIC_HEADER_TEXTS = [
+    "#header .header_description",
+  ];
 
   const ADAPTERS = [
     {
@@ -107,9 +112,13 @@
       blocks: [
         ...DOCUMENT_BLOCKS,
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
+        ...DLSITE_PUBLIC_HEADER_TEXTS,
       ],
       excludes: [],
-      exclusionBypassBlocks: DLSITE_PUBLIC_NAVIGATION_LINKS,
+      exclusionBypassBlocks: [
+        ...DLSITE_PUBLIC_NAVIGATION_LINKS,
+        ...DLSITE_PUBLIC_HEADER_TEXTS,
+      ],
     },
     {
       id: "github",
