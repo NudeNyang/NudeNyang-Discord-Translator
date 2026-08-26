@@ -87,6 +87,21 @@ test("DLsite 공개 페이지는 범용 문서와 왼쪽 카테고리 목록을 
   assert.ok(dlsite.blocks.includes("body table td"));
 });
 
+test("공개 본문 루트의 비시맨틱 읽기 블록과 CTA를 범용으로 번역한다", () => {
+  const welcome = adapterForLocation(new URL("https://www.dlsite.com/home/welcome"));
+  const generic = adapterForLocation(new URL("https://example.com/landing"));
+
+  assert.equal(welcome.id, "dlsite");
+  for (const adapter of [welcome, generic]) {
+    assert.ok(adapter.blocks.some((selector) => selector.startsWith("#main ")));
+    assert.ok(adapter.blocks.some((selector) => selector.startsWith("main ")));
+    assert.ok(adapter.blocks.some((selector) => selector.includes("[role='main'] ")));
+    assert.ok(adapter.blocks.some((selector) => selector.includes(":is(div,section,span,a,")));
+    assert.ok(adapter.blocks.some((selector) => selector.includes(":not(:has(*:not(br)))")));
+    assert.ok(adapter.blocks.some((selector) => selector.includes("p *")));
+  }
+});
+
 test("EISYS 공개 기업 페이지의 상단 메뉴와 하단 안내를 번역한다", () => {
   const eisys = adapterForLocation(new URL("https://www.eisys.co.jp/company/information"));
   const publicNavigationBlocks = [
@@ -157,8 +172,11 @@ test("범용 어댑터는 문단 구조를 허용하고 입력·탐색·민감 U
   assert.ok(web.blocks.includes("body p"));
   assert.ok(web.blocks.includes("body blockquote"));
   assert.ok(web.blocks.includes("body figcaption"));
+  assert.ok(web.blocks.some((value) => value.startsWith("main ")));
   assert.match(selector, /form/);
   assert.match(selector, /nav/);
+  assert.match(selector, /button/);
+  assert.match(selector, /\[role='button'\]/);
   assert.match(selector, /\[role='dialog'\]/);
   assert.match(selector, /\[aria-live\]/);
   assert.match(selector, /\[contenteditable\]/);
@@ -247,9 +265,6 @@ test("BOOTH 판매자 소개의 긴 단일 텍스트를 번역한다", () => {
 });
 
 test("BOOTH 공개 안내 페이지의 비시맨틱 텍스트 블록을 범용으로 번역한다", () => {
-  const lineBreakTextSelector =
-    "main :is(div,section,span,a,b,strong,small,th,td):not(:has(*:not(br)))";
-
   for (const url of [
     "https://booth.pm/about",
     "https://booth.pm/customer_guide",
@@ -257,7 +272,10 @@ test("BOOTH 공개 안내 페이지의 비시맨틱 텍스트 블록을 범용�
   ]) {
     const booth = adapterForLocation(new URL(url));
     assert.equal(booth.id, "booth");
-    assert.ok(booth.blocks.includes(lineBreakTextSelector));
+    assert.ok(booth.blocks.some((selector) => (
+      selector.startsWith("main :is(div,section,span,a,b,")
+      && selector.includes(":not(:has(*:not(br)))")
+    )));
   }
 });
 

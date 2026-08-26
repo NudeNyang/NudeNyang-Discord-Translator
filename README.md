@@ -207,6 +207,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 | [PRIVACY.md](PRIVACY.md) | Local data handling and optional external-provider transfers |
 | [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | Release provenance, signing roles, and verification policy |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Model, runtime, and dependency notices |
+| [docs/releases/0.7.2-beta.md](docs/releases/0.7.2-beta.md) | 범용 공개 웹 콘텐츠 수집과 비시맨틱 안내·CTA 번역 개선 |
 | [docs/releases/0.7.1-beta.md](docs/releases/0.7.1-beta.md) | Chrome Web Store native-host identity synchronization for review |
 | [docs/releases/0.7.0-beta.md](docs/releases/0.7.0-beta.md) | Web translation companion preview for extension review |
 | [docs/releases/0.6.1-beta.md](docs/releases/0.6.1-beta.md) | New features and fixes in 0.6.1 Beta |

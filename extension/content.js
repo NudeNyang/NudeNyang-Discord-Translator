@@ -43,6 +43,8 @@
   let pageEpoch = 0;
   let currentUrl = location.href;
   let adapter = adapters.adapterForLocation(location);
+  let blockSelector = adapter?.blocks.join(",") ?? "";
+  let excludedSelector = adapter ? adapters.exclusionSelector(adapter) : "";
   let observer;
   let intersectionObserver;
   let rescanTimer;
@@ -65,6 +67,12 @@
   let sentChars = 0;
   let usageLimited = false;
   let startupPromise;
+
+  function assignAdapter(nextAdapter) {
+    adapter = nextAdapter;
+    blockSelector = adapter?.blocks.join(",") ?? "";
+    excludedSelector = adapter ? adapters.exclusionSelector(adapter) : "";
+  }
 
   function storageGet(defaults) {
     return new Promise((resolve) => api.storage.local.get(defaults, resolve));
@@ -222,9 +230,8 @@
   }
 
   function eligibleTextNodes(block) {
-    const excluded = adapters.exclusionSelector(adapter);
     const bypassExclusion = isExplicitExclusionBypassBlock(block, adapter);
-    if (!bypassExclusion && (block.matches(excluded) || block.closest(excluded))) {
+    if (!bypassExclusion && (block.matches(excludedSelector) || block.closest(excludedSelector))) {
       return [];
     }
     const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
@@ -234,7 +241,7 @@
           return NodeFilter.FILTER_REJECT;
         }
         const parent = node.parentElement;
-        const nearestExcluded = parent?.closest(excluded);
+        const nearestExcluded = parent?.closest(excludedSelector);
         const excludedInsideBypass = bypassExclusion
           && nearestExcluded !== block
           && block.contains(nearestExcluded);
@@ -445,7 +452,7 @@
         setTimeout(() => {
           for (const item of batch) {
             if (item.epoch === pageEpoch && item.node.isConnected) {
-              enqueueBlock(item.node.parentElement?.closest(adapter.blocks.join(",")) ?? item.node.parentElement);
+              enqueueBlock(item.node.parentElement?.closest(blockSelector) ?? item.node.parentElement);
             }
           }
         }, response.code === "model_preparing" ? 2500 : 5000);
@@ -535,17 +542,16 @@
     if (!enabled || !adapter || !root?.querySelectorAll) {
       return;
     }
-    const selector = adapter.blocks.join(",");
-    const containingBlock = root.nodeType === Node.ELEMENT_NODE ? root.closest(selector) : null;
+    const containingBlock = root.nodeType === Node.ELEMENT_NODE ? root.closest(blockSelector) : null;
     if (containingBlock) {
       observeBlock(containingBlock);
       if (enqueueVisible) enqueueBlock(containingBlock);
     }
-    if (root.nodeType === Node.ELEMENT_NODE && root.matches(selector)) {
+    if (root.nodeType === Node.ELEMENT_NODE && root.matches(blockSelector)) {
       observeBlock(root);
       if (enqueueVisible && root !== containingBlock) enqueueBlock(root);
     }
-    const matchedBlocks = root.querySelectorAll(selector);
+    const matchedBlocks = root.querySelectorAll(blockSelector);
     if (root === document && matchedBlocks.length >= 200) {
       longDocument = true;
     }
@@ -587,7 +593,7 @@
     clearTimeout(rescanTimer);
     rescanTimer = undefined;
     const nextAdapter = adapters.adapterForLocation(location);
-    adapter = nextAdapter;
+    assignAdapter(nextAdapter);
     sitePolicy = webSettings.sitePolicies[currentHostname()] ?? "default";
     enabled = initialEnabled();
     lastError = "";

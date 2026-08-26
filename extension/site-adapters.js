@@ -52,6 +52,29 @@
     "body details > summary", "body table th", "body table td",
   ];
 
+  const PUBLIC_CONTENT_ROOTS = [
+    "main", "article", "[role='main']", "#main", "#content", "#contents", "#primary",
+    ".main-content", ".page-content", ".article-content",
+  ];
+
+  // Many public pages render readable copy and CTA labels with layout elements instead of
+  // semantic paragraphs. Only collect terminal text blocks inside recognized content roots;
+  // semantic descendants remain grouped by DOCUMENT_BLOCKS to preserve sentence context.
+  const SEMANTIC_DOCUMENT_DESCENDANTS = [
+    "h1 *", "h2 *", "h3 *", "h4 *", "h5 *", "h6 *", "p *", "li *",
+    "blockquote *", "figcaption *", "dt *", "dd *", "summary *", "th *", "td *",
+  ].join(",");
+
+  const PUBLIC_CONTENT_LEAF_BLOCKS = PUBLIC_CONTENT_ROOTS.map((rootSelector) => (
+    `${rootSelector} :is(div,section,span,a,b,strong,small,em)`
+      + `:not(:has(*:not(br))):not(:is(${SEMANTIC_DOCUMENT_DESCENDANTS}))`
+  ));
+
+  const PUBLIC_DOCUMENT_BLOCKS = [
+    ...DOCUMENT_BLOCKS,
+    ...PUBLIC_CONTENT_LEAF_BLOCKS,
+  ];
+
   const EISYS_PUBLIC_NAVIGATION_BLOCKS = [
     "nav.header_navi a[href^='https://www.eisys.co.jp/']",
     "footer.l-footer .footer_sitemap a[href]",
@@ -127,7 +150,7 @@
       hosts: ["www.dlsite.com"],
       blockUniversalSensitivePaths: true,
       blocks: [
-        ...DOCUMENT_BLOCKS,
+        ...PUBLIC_DOCUMENT_BLOCKS,
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
         ...DLSITE_STATIC_HEADER_LABELS,
       ],
@@ -143,7 +166,7 @@
       id: "eisys",
       hosts: ["www.eisys.co.jp", "eisys.co.jp"],
       blocks: [
-        ...DOCUMENT_BLOCKS,
+        ...PUBLIC_DOCUMENT_BLOCKS,
         ...EISYS_PUBLIC_NAVIGATION_BLOCKS,
       ],
       excludes: [],
@@ -171,10 +194,7 @@
       id: "booth",
       hosts: ["booth.pm"],
       blocks: [
-        "main p", "main li", "main h1", "main h2", "main h3",
-        "main h4", "main h5", "main h6", "main blockquote", "main figcaption",
-        "main dt", "main dd",
-        "main :is(div,section,span,a,b,strong,small,th,td):not(:has(*:not(br)))",
+        ...PUBLIC_DOCUMENT_BLOCKS,
         "[class*='description'] p", "[class*='description'] li",
         "[class~='description'] > span.autolink",
         ".booth-description > .autolink > div",
@@ -252,7 +272,7 @@
   const UNIVERSAL_ADAPTER = Object.freeze({
     id: "web",
     manualOnly: true,
-    blocks: DOCUMENT_BLOCKS,
+    blocks: PUBLIC_DOCUMENT_BLOCKS,
     excludes: [],
   });
 
