@@ -41,7 +41,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v7-resolution-aware';
+  const version = 'rust-image-ui-v8-viewer-transition';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -120,7 +120,12 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     if (/\/(?:avatars|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source)) return false;
     return !String(img.className).match(/avatar|emoji|sticker|icon|placeholder/i);
   };
-  const activeViewerImage = () => [...document.querySelectorAll('[role="dialog"] img')]
+  const activeDialog = () => [...document.querySelectorAll('[role="dialog"]')].find(dialog => {
+    const rect = dialog.getBoundingClientRect();
+    return rect.width >= 160 && rect.height >= 90 && rect.right > 0 && rect.bottom > 0 &&
+      rect.left < innerWidth && rect.top < innerHeight;
+  }) || null;
+  const activeViewerImage = () => [...(activeDialog()?.querySelectorAll('img') || [])]
     .filter(img => inViewer(img) && eligible(img))
     .sort((left, right) => {
       const leftRect = left.getBoundingClientRect();
@@ -171,7 +176,12 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   };
   window.__ntUpdateImageButton = update;
   const show = img => {
-    const target = activeViewerImage() || img;
+    const viewer = activeViewerImage();
+    if (!viewer && activeDialog()) {
+      button.style.display = 'none';
+      return;
+    }
+    const target = viewer || img;
     if (!window.__ntImageEnabled || !eligible(target)) {
       button.style.display = 'none';
       return;
@@ -242,6 +252,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
         .some(node => node instanceof Element &&
           (node.matches('[role="dialog"]') || node.closest('[role="dialog"]') || node.querySelector('[role="dialog"]'))));
       if (!viewerChanged) return;
+      button.style.display = 'none';
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const viewer = activeViewerImage();
         if (viewer) show(viewer);
@@ -1275,10 +1286,28 @@ mod tests {
     #[test]
     fn expanded_image_view_retargets_and_repositions_the_translation_button() {
         assert!(IMAGE_UI_SCRIPT.contains("const activeViewerImage = () =>"));
-        assert!(IMAGE_UI_SCRIPT.contains("const target = activeViewerImage() || img"));
+        assert!(IMAGE_UI_SCRIPT.contains("const activeDialog = () =>"));
+        assert!(IMAGE_UI_SCRIPT.contains("const viewer = activeViewerImage()"));
+        assert!(IMAGE_UI_SCRIPT.contains("if (!viewer && activeDialog())"));
         assert!(IMAGE_UI_SCRIPT.contains("new MutationObserver"));
         assert!(IMAGE_UI_SCRIPT.contains("if (viewer) show(viewer)"));
         assert!(IMAGE_UI_SCRIPT.contains("window.addEventListener('resize'"));
+    }
+
+    #[test]
+    fn expanded_image_view_hides_the_stale_thumbnail_button_before_layout_settles() {
+        assert!(IMAGE_UI_SCRIPT.contains("const version = 'rust-image-ui-v8-viewer-transition'"));
+        let observer = IMAGE_UI_SCRIPT
+            .find("const viewerObserver = new MutationObserver")
+            .expect("viewer observer must exist");
+        let observer_script = &IMAGE_UI_SCRIPT[observer..];
+        let immediate_hide = observer_script
+            .find("button.style.display = 'none';")
+            .expect("the stale button must be hidden");
+        let deferred_layout = observer_script
+            .find("requestAnimationFrame")
+            .expect("viewer layout must be checked on the next frame");
+        assert!(immediate_hide < deferred_layout);
     }
 
     #[test]
