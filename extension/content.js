@@ -234,7 +234,11 @@
           return NodeFilter.FILTER_REJECT;
         }
         const parent = node.parentElement;
-        if (!parent || (!bypassExclusion && parent.closest(excluded))) {
+        const nearestExcluded = parent?.closest(excluded);
+        const excludedInsideBypass = bypassExclusion
+          && nearestExcluded !== block
+          && block.contains(nearestExcluded);
+        if (!parent || (!bypassExclusion && nearestExcluded) || excludedInsideBypass) {
           return NodeFilter.FILTER_REJECT;
         }
         const anchor = parent.closest("a[href]");

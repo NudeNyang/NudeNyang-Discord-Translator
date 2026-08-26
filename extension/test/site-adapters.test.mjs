@@ -138,6 +138,23 @@ test("X 프로필은 소개만 번역하고 표시 이름과 핸들은 제외한
   assert.match(selector, /\[data-testid='UserName'\]/);
 });
 
+test("X 기사 카드와 긴 형식 기사 본문을 번역 대상으로 포함한다", () => {
+  const x = adapterForLocation(new URL("https://x.com/nudenyang/article/123"));
+  const articleCard = "article [data-testid='card.wrapper'] [dir='auto']";
+  const articleTitle =
+    "[data-testid='twitterArticleReadView'] [data-testid='twitter-article-title']";
+  const articleParagraph =
+    "[data-testid='twitterArticleReadView'] section[data-block='true']";
+
+  assert.ok(x.blocks.includes(articleCard));
+  assert.ok(x.blocks.includes(articleTitle));
+  assert.ok(x.blocks.includes(articleParagraph));
+  assert.ok(x.exclusionBypassBlocks.includes(articleCard));
+  assert.ok(x.exclusionBypassBlocks.includes(articleTitle));
+  assert.ok(x.exclusionBypassBlocks.includes(articleParagraph));
+  assert.ok(!x.blocks.some((selector) => selector.includes("markdown-code-block")));
+});
+
 test("BOOTH Tailwind order 레이아웃 클래스는 주문 영역으로 오인하지 않는다", () => {
   const booth = adapterForLocation(new URL("https://booth.pm/ko/items/123"));
   const selector = exclusionSelector(booth);

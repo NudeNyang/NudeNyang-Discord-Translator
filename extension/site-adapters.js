@@ -28,6 +28,24 @@
     "messenger.com", "www.messenger.com", "outlook.live.com", "outlook.office.com",
   ]);
 
+  const X_ARTICLE_BLOCKS = [
+    "article [data-testid='card.wrapper'] [dir='auto']",
+    "[data-testid='twitterArticleReadView'] [data-testid='twitter-article-title']",
+    "[data-testid='twitterArticleReadView'] .longform-header-one",
+    "[data-testid='twitterArticleReadView'] .longform-header-one-narrow",
+    "[data-testid='twitterArticleReadView'] .longform-header-two",
+    "[data-testid='twitterArticleReadView'] .longform-header-two-narrow",
+    "[data-testid='twitterArticleReadView'] .longform-unstyled",
+    "[data-testid='twitterArticleReadView'] .longform-unstyled-narrow",
+    "[data-testid='twitterArticleReadView'] .longform-blockquote",
+    "[data-testid='twitterArticleReadView'] .longform-blockquote-narrow",
+    "[data-testid='twitterArticleReadView'] .longform-unordered-list-item",
+    "[data-testid='twitterArticleReadView'] .longform-unordered-list-item-narrow",
+    "[data-testid='twitterArticleReadView'] .longform-ordered-list-item",
+    "[data-testid='twitterArticleReadView'] .longform-ordered-list-item-narrow",
+    "[data-testid='twitterArticleReadView'] section[data-block='true']",
+  ];
+
   const ADAPTERS = [
     {
       id: "dlsite-report",
@@ -114,11 +132,13 @@
       blocks: [
         "article [data-testid='tweetText']", "article [data-testid='card.layoutLarge.detail']",
         "article [data-testid='card.layoutSmall.detail']", "[data-testid='UserDescription']",
+        ...X_ARTICLE_BLOCKS,
       ],
       excludes: [
         "[data-testid='tweetTextarea_0']", "[data-testid='DMDrawer']",
         "[data-testid='UserName']", "a[href^='/hashtag/']",
       ],
+      exclusionBypassBlocks: X_ARTICLE_BLOCKS,
       blockedPaths: ["/messages", "/compose"],
     },
     {
