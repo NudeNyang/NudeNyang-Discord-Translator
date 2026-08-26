@@ -52,6 +52,14 @@
     "body details > summary", "body table th", "body table td",
   ];
 
+  const EISYS_PUBLIC_NAVIGATION_BLOCKS = [
+    "nav.header_navi a[href^='https://www.eisys.co.jp/']",
+    "footer.l-footer .footer_sitemap a[href]",
+    "footer.l-footer .corp_navi a[href]",
+    "footer.l-footer .footer_parent_text",
+    "footer.l-footer .corp_support",
+  ];
+
   const DLSITE_PRIVATE_LINK_FILTERS = [
     ":not([href*='/mypage'])",
     ":not([href*='/cart'])",
@@ -130,6 +138,16 @@
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
         ...DLSITE_STATIC_HEADER_LABELS,
       ],
+    },
+    {
+      id: "eisys",
+      hosts: ["www.eisys.co.jp", "eisys.co.jp"],
+      blocks: [
+        ...DOCUMENT_BLOCKS,
+        ...EISYS_PUBLIC_NAVIGATION_BLOCKS,
+      ],
+      excludes: [],
+      exclusionBypassBlocks: EISYS_PUBLIC_NAVIGATION_BLOCKS,
     },
     {
       id: "github",

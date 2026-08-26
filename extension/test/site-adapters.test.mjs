@@ -87,6 +87,24 @@ test("DLsite 공개 페이지는 범용 문서와 왼쪽 카테고리 목록을 
   assert.ok(dlsite.blocks.includes("body table td"));
 });
 
+test("EISYS 공개 기업 페이지의 상단 메뉴와 하단 안내를 번역한다", () => {
+  const eisys = adapterForLocation(new URL("https://www.eisys.co.jp/company/information"));
+  const publicNavigationBlocks = [
+    "nav.header_navi a[href^='https://www.eisys.co.jp/']",
+    "footer.l-footer .footer_sitemap a[href]",
+    "footer.l-footer .corp_navi a[href]",
+    "footer.l-footer .footer_parent_text",
+    "footer.l-footer .corp_support",
+  ];
+
+  assert.equal(eisys.id, "eisys");
+  assert.ok(eisys.blocks.includes("body table td"));
+  for (const selector of publicNavigationBlocks) {
+    assert.ok(eisys.blocks.includes(selector));
+    assert.ok(eisys.exclusionBypassBlocks.includes(selector));
+  }
+});
+
 test("특집형 상품 페이지의 카테고리와 정적 하단 안내를 번역한다", () => {
   const report = adapterForLocation(new URL(
     "https://www.dlsite.com/maniax/circle/report/=/report/202607202",
