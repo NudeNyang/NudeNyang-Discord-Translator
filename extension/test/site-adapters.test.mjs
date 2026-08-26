@@ -228,6 +228,21 @@ test("X 프로필은 소개만 번역하고 표시 이름과 핸들은 제외한
   assert.match(selector, /\[data-testid='UserName'\]/);
 });
 
+test("X 사진 뷰어 대화상자에서도 게시물과 기사 카드 본문을 번역한다", () => {
+  const x = adapterForLocation(new URL("https://x.com/nudenyang/status/123/photo/1"));
+  const tweetText = "article [data-testid='tweetText']";
+  const largeCard = "article [data-testid='card.layoutLarge.detail']";
+  const smallCard = "article [data-testid='card.layoutSmall.detail']";
+
+  assert.match(exclusionSelector(x), /\[role='dialog'\]/);
+  assert.ok(x.blocks.includes(tweetText));
+  assert.ok(x.blocks.includes(largeCard));
+  assert.ok(x.blocks.includes(smallCard));
+  assert.ok(x.exclusionBypassBlocks.includes(tweetText));
+  assert.ok(x.exclusionBypassBlocks.includes(largeCard));
+  assert.ok(x.exclusionBypassBlocks.includes(smallCard));
+});
+
 test("X 기사 카드와 긴 형식 기사 본문을 번역 대상으로 포함한다", () => {
   const x = adapterForLocation(new URL("https://x.com/nudenyang/article/123"));
   const articleCard = "article [data-testid='card.wrapper'] [dir='auto']";

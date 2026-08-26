@@ -28,6 +28,12 @@
     "messenger.com", "www.messenger.com", "outlook.live.com", "outlook.office.com",
   ]);
 
+  const X_TWEET_BLOCKS = [
+    "article [data-testid='tweetText']",
+    "article [data-testid='card.layoutLarge.detail']",
+    "article [data-testid='card.layoutSmall.detail']",
+  ];
+
   const X_ARTICLE_BLOCKS = [
     "article [data-testid='card.wrapper'] [dir='auto']",
     "[data-testid='twitterArticleReadView'] [data-testid='twitter-article-title']",
@@ -225,15 +231,18 @@
       id: "x",
       hosts: ["x.com", "twitter.com"],
       blocks: [
-        "article [data-testid='tweetText']", "article [data-testid='card.layoutLarge.detail']",
-        "article [data-testid='card.layoutSmall.detail']", "[data-testid='UserDescription']",
+        ...X_TWEET_BLOCKS,
+        "[data-testid='UserDescription']",
         ...X_ARTICLE_BLOCKS,
       ],
       excludes: [
         "[data-testid='tweetTextarea_0']", "[data-testid='DMDrawer']",
         "[data-testid='UserName']", "a[href^='/hashtag/']",
       ],
-      exclusionBypassBlocks: X_ARTICLE_BLOCKS,
+      exclusionBypassBlocks: [
+        ...X_TWEET_BLOCKS,
+        ...X_ARTICLE_BLOCKS,
+      ],
       blockedPaths: ["/messages", "/compose"],
     },
     {
