@@ -41,7 +41,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v8-viewer-transition';
+  const version = 'rust-image-ui-v9-largest-viewer-image';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -125,7 +125,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     return rect.width >= 160 && rect.height >= 90 && rect.right > 0 && rect.bottom > 0 &&
       rect.left < innerWidth && rect.top < innerHeight;
   }) || null;
-  const activeViewerImage = () => [...(activeDialog()?.querySelectorAll('img') || [])]
+  const activeViewerImage = () => [...document.querySelectorAll('[role="dialog"] img')]
     .filter(img => inViewer(img) && eligible(img))
     .sort((left, right) => {
       const leftRect = left.getBoundingClientRect();
@@ -1287,6 +1287,8 @@ mod tests {
     fn expanded_image_view_retargets_and_repositions_the_translation_button() {
         assert!(IMAGE_UI_SCRIPT.contains("const activeViewerImage = () =>"));
         assert!(IMAGE_UI_SCRIPT.contains("const activeDialog = () =>"));
+        assert!(IMAGE_UI_SCRIPT.contains("document.querySelectorAll('[role=\"dialog\"] img')"));
+        assert!(!IMAGE_UI_SCRIPT.contains("activeDialog()?.querySelectorAll('img')"));
         assert!(IMAGE_UI_SCRIPT.contains("const viewer = activeViewerImage()"));
         assert!(IMAGE_UI_SCRIPT.contains("if (!viewer && activeDialog())"));
         assert!(IMAGE_UI_SCRIPT.contains("new MutationObserver"));
@@ -1296,7 +1298,7 @@ mod tests {
 
     #[test]
     fn expanded_image_view_hides_the_stale_thumbnail_button_before_layout_settles() {
-        assert!(IMAGE_UI_SCRIPT.contains("const version = 'rust-image-ui-v8-viewer-transition'"));
+        assert!(IMAGE_UI_SCRIPT.contains("const version = 'rust-image-ui-v9-largest-viewer-image'"));
         let observer = IMAGE_UI_SCRIPT
             .find("const viewerObserver = new MutationObserver")
             .expect("viewer observer must exist");
