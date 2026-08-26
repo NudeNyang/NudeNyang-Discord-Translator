@@ -1,11 +1,11 @@
 {
-  "version": "0.6.1-beta",
-  "notes": "# NudeNyang Discord Translator 0.6.1 Beta\n\n0.6.1 Beta는 Discord 배포판 선택과 닉네임 번역 제어를 개선하고, 번역할 필요가 없는 전송 메시지는 원문 그대로 보낼 수 있도록 다듬은 릴리스입니다.\n\n## 주요 변경 사항\n\n### Discord 연결 대상 선택\n\n- 설정의 **Discord 선택**에서 자동(권장), Discord, Discord PTB, Discord Canary 중 연결할 배포판을 선택할 수 있습니다.\n- 선택한 배포판을 전환해도 함께 실행 중인 다른 Discord 배포판은 종료하지 않습니다.\n- 자동 모드에서는 지원되는 Discord 배포판을 찾아 연결합니다.\n\n### 전송 메시지 원문 통과\n\n- 작성한 메시지가 선택한 전송 언어와 같은 언어이면 불필요한 번역 안내 없이 원문 그대로 전송합니다.\n- 문장에 다른 언어가 섞여 있으면 기존과 같이 전송 언어로 번역합니다.\n- 문자가 없는 기호, 이모티콘, 이모지와 문자 이모지는 번역하지 않고 그대로 전송합니다.\n\n### 닉네임 번역\n\n- 받는 메시지 설정에 **닉네임 번역하기** 옵션을 추가했으며 기본값은 켜짐입니다.\n- 옵션을 끄면 메시지 작성자, 다이렉트 메시지 목록, 서버 멤버 목록과 좌측 하단 계정 패널의 닉네임을 원문으로 복원합니다.\n- 옵션을 켰을 때도 표시 위치에 따라 일부 닉네임이 누락되거나 중복 번역되던 문제를 수정했습니다.\n\n## 수정 사항\n\n- 개인 사전 항목 삭제 확인 버튼의 색상을 동작 의미에 맞게 수정했습니다.\n- Discord 배포판을 바꿀 때 다른 Discord 프로세스까지 종료되던 문제를 수정했습니다.\n- 계정 패널의 닉네임이 번역 옵션을 끈 뒤에도 번역된 상태로 남는 문제를 수정했습니다.\n- 다이렉트 메시지와 서버 멤버 목록에서 닉네임 번역 옵션이 일관되게 적용되지 않던 문제를 수정했습니다.\n\n## 설치 파일\n\n- Windows x64: **NudeNyang-Translator-0.6.1-beta-x64-Setup.exe**\n- Windows ARM64: **NudeNyang-Translator-0.6.1-beta-ARM64-Setup.exe**\n\n설치 전에 Discord를 실행해 두면 첫 연결을 더 쉽게 확인할 수 있습니다. Windows가 게시자를 확인할 수 없다는 경고를 표시할 수 있으므로, 이 저장소의 GitHub Releases에서 받은 설치 파일인지 확인한 뒤 실행하십시오.\n\n---\n\n## English summary\n\nVersion 0.6.1 Beta adds explicit Discord Stable, PTB, and Canary selection; preserves unrelated Discord installations when switching targets; passes through messages that do not need translation; and makes nickname translation consistent across message authors, direct messages, member lists, and the account panel.",
-  "pub_date": "2026-08-23T03:33:21.8234752Z",
-  "platforms": {
-    "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSUmN0SWVVTGZyUStraWJ6QW1kVDIvb3hGU2E1eFRvK3JuNjd4TVpmVUphNHY1U1ZuSXBVOFBJTGJSN1pEc1JlRSt2YUFGckd3RmxhVEwyb3dyZDg2TDdwOE1wR25EcXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3NDU2MDAwCWZpbGU6TnVkZU55YW5nIERpc2NvcmQgVHJhbnNsYXRvcl8wLjYuMS1iZXRhX3g2NC1zZXR1cC5leGUKVG1YYmZGVmo0di94K0FxNDVJL1FxOVdPenJKbUxmTVNPZHJlNEJWZjFiVXZmNVp0aFMrWDRXWUNpYWlFYkVtWkQ2NEluUFJRdFF0dzZXNkRPOXd1RHc9PQo=",
-      "url": "https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/download/v0.6.1-beta/NudeNyang-Translator-0.6.1-beta-x64-Setup.exe"
-    }
-  }
+    "version":  "0.7.2-beta",
+    "notes":  "# NudeNyang Discord Translator 0.7.2 Beta\n\n0.7.2 Beta는 브라우저별 임시 선택자를 계속 추가하지 않고, 공개 웹페이지의 공통 문서 구조를 기준으로 텍스트 수집 범위를 확장한 시험 버전입니다.\n\n- X의 사진·영상 뷰어에서 게시물 본문과 추천 게시물 본문도 번역합니다.\n\n## 웹 번역\n\n- 제목·문단·목록·인용문·표 셀처럼 의미가 명확한 HTML 요소는 기존 문맥 단위를 유지합니다.\n- `main`, `article`, `role=main`, `#main`, `#content` 등 대표적인 공개 본문 루트 안에서 `div`·`span`·링크로만 작성된 독립형 안내와 링크형 CTA를 추가로 번역합니다.\n- 이미 문단 안에 포함된 강조·링크 요소는 별도 번역 블록으로 다시 수집하지 않아 문장이 잘게 나뉘는 것을 방지합니다.\n- 입력 폼, 탐색·대화상자, 코드, 가격, 쿠키 동의 UI와 계정·결제·메시지 경로는 계속 제외합니다.\n- DLsite, BOOTH, EISYS 공개 페이지와 일반 HTTP/HTTPS 페이지가 같은 공개 본문 수집 규칙을 공유합니다.\n\n## 버전\n\n- Windows 앱: `0.7.2-beta`\n- Chrome·Whale·Firefox 확장: `0.7.2`\n- 앞으로 Windows 앱과 확장은 Major·Minor만 호환 세대로 맞추고, Patch는 각 배포 채널의 수정·심사 주기에 따라 독립적으로 올립니다.\n\n이 버전은 GitHub 프리 릴리스로 배포합니다.",
+    "pub_date":  "2026-08-26T18:20:15.2813556Z",
+    "platforms":  {
+                      "windows-x86_64":  {
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSUmN0SWVVTGZyUTBsYnZwR1pUMUs5Sng5V3hCeFhEdHRMbno1NmdqektQSk1yN2R2cmZvdVlaTDN3cmZGcXFHZUdLMDFqMUFZZVMrckROUWlubms3Y0FKMjM0aVI1Ync4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3NzY4Mzk3CWZpbGU6TnVkZU55YW5nIERpc2NvcmQgVHJhbnNsYXRvcl8wLjcuMi1iZXRhX3g2NC1zZXR1cC5leGUKTmQ3ZnlMTmc4L0lLbDB5YU1zZUphaGFmSmxCV0tzRW1JSTk0WjdRVFRxMWVnVHpkTklpNHdLOXNya0lDL1Y0U2lsVlBGa2lxTXRYNWo5S3crSGNxQVE9PQo=",
+                                             "url":  "https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/download/v0.7.2-beta/NudeNyang-Translator-0.7.2-beta-x64-Setup.exe"
+                                         }
+                  }
 }
