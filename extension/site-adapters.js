@@ -17,7 +17,7 @@
   const UNIVERSAL_BLOCKED_PATH_SEGMENTS = new Set([
     "account", "accounts", "admin", "billing", "cart", "checkout", "compose",
     "dashboard", "dm", "dms", "inbox", "login", "log-in", "logout", "log-out",
-    "mail", "message", "messages", "order", "orders", "payment", "payments",
+    "mail", "message", "messages", "mypage", "order", "orders", "payment", "payments",
     "register", "settings", "signin", "sign-in", "signup", "sign-up", "wallet",
   ]);
 
@@ -46,6 +46,21 @@
     "[data-testid='twitterArticleReadView'] section[data-block='true']",
   ];
 
+  const DLSITE_PUBLIC_HEADER_LINK = [
+    "#header a[href]",
+    ":not([href*='/mypage'])",
+    ":not([href*='/cart'])",
+    ":not([href*='/checkout'])",
+    ":not([href*='/order'])",
+    ":not([href*='/payment'])",
+    ":not([href*='/login'])",
+    ":not([href*='/account'])",
+    ":not([href*='/favorite'])",
+    ":not([href*='/wishlist'])",
+    ":not([href*='/coupon'])",
+    ":not([href*='/history'])",
+  ].join("");
+
   const ADAPTERS = [
     {
       id: "dlsite-report",
@@ -73,6 +88,22 @@
         "#footer #system",
       ],
       excludes: [],
+    },
+    {
+      id: "dlsite",
+      hosts: ["www.dlsite.com"],
+      blockUniversalSensitivePaths: true,
+      blocks: [
+        "main h1", "main h2", "main h3", "main h4", "main h5", "main h6",
+        "main p", "main li", "main blockquote", "main figcaption", "main dt", "main dd",
+        "main details > summary", "main table th", "main table td",
+        "#main h1", "#main h2", "#main h3", "#main h4", "#main h5", "#main h6",
+        "#main p", "#main li", "#main blockquote", "#main figcaption", "#main dt", "#main dd",
+        "#main details > summary", "#main table th", "#main table td",
+        DLSITE_PUBLIC_HEADER_LINK,
+      ],
+      excludes: [],
+      exclusionBypassBlocks: [DLSITE_PUBLIC_HEADER_LINK],
     },
     {
       id: "github",
@@ -215,7 +246,10 @@
       && (!adapter.pathPattern || adapter.pathPattern.test(path))
     ));
     if (specific) {
-      return (specific.blockedPaths ?? []).some((prefix) => path.startsWith(prefix)) ? null : specific;
+      const blockedByPrefix = (specific.blockedPaths ?? []).some((prefix) => path.startsWith(prefix));
+      const blockedBySensitiveSegment = specific.blockUniversalSensitivePaths
+        && pathSegments(locationLike).some((segment) => UNIVERSAL_BLOCKED_PATH_SEGMENTS.has(segment));
+      return blockedByPrefix || blockedBySensitiveSegment ? null : specific;
     }
     return isUniversalLocationAllowed(locationLike, host) ? UNIVERSAL_ADAPTER : null;
   }

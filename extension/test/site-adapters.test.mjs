@@ -29,7 +29,28 @@ test("DLsite 서클 리포트의 div 기반 작품 소개와 구매 버튼 문�
   assert.ok(report.blocks.includes("article.circle_report .btn_report.type_cart"));
   assert.equal(
     adapterForLocation(new URL("https://www.dlsite.com/maniax/work/=/product_id/RJ01669233.html")).id,
-    "web",
+    "dlsite",
+  );
+});
+
+test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역한다", () => {
+  const dlsite = adapterForLocation(new URL("https://www.dlsite.com/maniax/"));
+  const publicHeaderLink = dlsite.blocks.find((selector) => (
+    selector.startsWith("#header a[href]")
+  ));
+
+  assert.equal(dlsite.id, "dlsite");
+  assert.ok(publicHeaderLink);
+  assert.match(publicHeaderLink, /mypage/);
+  assert.match(publicHeaderLink, /cart/);
+  assert.ok(dlsite.exclusionBypassBlocks.includes(publicHeaderLink));
+  assert.equal(
+    adapterForLocation(new URL("https://www.dlsite.com/maniax/mypage")),
+    null,
+  );
+  assert.equal(
+    adapterForLocation(new URL("https://www.dlsite.com/maniax/cart")),
+    null,
   );
 });
 
