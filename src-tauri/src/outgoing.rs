@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 47;
+  const CONTROLLER_VERSION = 48;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -166,6 +166,28 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         && bounds.top > window.innerHeight * 0.4
         && bounds.bottom <= window.innerHeight + 1;
     }).sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top).at(-1) || null;
+  }
+  function hasActiveMediaViewer() {
+    return [...document.querySelectorAll('[role="dialog"] img')].some(img => {
+      const dialog = img.closest('[role="dialog"]');
+      if (!dialog) return false;
+      const label = dialog.getAttribute('aria-label') || '';
+      const looksLikeMediaViewer = /media|미디어|メディア|媒体/i.test(label)
+        || Boolean(dialog.querySelector('[class*="carousel"], [class*="modal"]'));
+      if (!looksLikeMediaViewer) return false;
+      const bounds = img.getBoundingClientRect();
+      const source = img.currentSrc || img.src || '';
+      const classes = `${img.className || ''} ${img.parentElement?.className || ''}`;
+      return Boolean(source)
+        && bounds.width >= 160
+        && bounds.height >= 90
+        && bounds.right > 0
+        && bounds.left < window.innerWidth
+        && bounds.bottom > 0
+        && bounds.top < window.innerHeight
+        && !/(avatar|emoji|sticker|icon|placeholder)/i.test(classes)
+        && !/\/(?:avatars|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source);
+    });
   }
   function selectionCoversComposer(editor) {
     const selection = getSelection();
@@ -643,6 +665,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       reposition() {
         if (!this.root) return;
+        if (hasActiveMediaViewer()) {
+          this.closeMenus();
+          this.root.hidden = true;
+          this.root.style.visibility = 'hidden';
+          return;
+        }
         const editor = activeComposer();
         const composer = editor?.closest('form') || editor?.closest('[class*="channelTextArea"]') || editor?.parentElement || null;
         const visibleAnchors = selector => [...document.querySelectorAll(selector)].filter(anchor => {
@@ -1913,6 +1941,27 @@ mod tests {
         ));
         assert!(!script.contains("__OUTGOING_CONTROL_VISIBLE__"));
         assert!(!script.contains("__DISPLAY_CONTROL_VISIBLE__"));
+    }
+
+    #[test]
+    fn expanded_media_viewer_temporarily_hides_chat_translation_controls() {
+        let script = outgoing_ui_script(
+            true,
+            true,
+            "ko",
+            "auto",
+            "ko",
+            &HashMap::new(),
+            true,
+            "Ctrl+Enter",
+            "Alt+Enter",
+        );
+
+        assert!(script.contains("function hasActiveMediaViewer()"));
+        assert!(script.contains("if (hasActiveMediaViewer()) {"));
+        assert!(script.contains("this.root.hidden = true;"));
+        assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
+        assert!(script.contains("const CONTROLLER_VERSION = 48"));
     }
 
     #[test]
