@@ -28,17 +28,26 @@
       id: "x", label: "X",
       hosts: ["x.com", "www.x.com", "twitter.com", "www.twitter.com"],
       route: (path) => /^\/(?:messages|i\/chat)(?:\/[^/]+)?\/?$/.test(path),
-      roots: ['[data-testid="DmActivityViewport"]', '[data-testid="dm-conversation-messages"]'],
+      roots: [
+        '[data-testid="DmActivityViewport"]', '[data-testid="dm-conversation-messages"]',
+        // Current X Chat: the inbox is a sibling of the conversation panel.
+        // Do not use dm-container, the whole panel, or an arbitrary role=log.
+        '[data-testid="dm-conversation-panel"] [data-testid="dm-conversation-content"] [data-testid="dm-message-scroller"][role="log"]',
+      ],
       blocks: [
         '[data-testid="messageEntry"] [data-testid="tweetText"]',
         '[data-testid="messageEntry"] [data-testid="message-text"]',
         '[data-testid="messageEntry"] [dir="auto"]',
         '[data-testid="dm-message-text"]',
+        // The bubble also contains timestamp/layout nodes. Only its directional
+        // body span is text; the dynamic test ID is not a conversation identity.
+        '[data-testid="dm-message-scroller"][role="log"] [role="article"] [data-testid^="message-text-"] span[dir="auto"]',
       ],
       excludes: [
         '[data-testid="UserName"]', '[data-testid="User-Name"]', '[data-testid="UserAvatar-Container"]',
         '[data-testid="messageHeader"]', '[data-testid="messageSender"]', '[data-testid="DMComposer"]',
         '[data-testid="DMConversationList"]', '[data-testid="reply"]', '[data-testid="dm-reaction"]',
+        '[data-testid="dm-inbox-panel"]', '[role="status"]',
         'a[href^="/i/user/"]', 'a[href^="/hashtag/"]',
       ],
     },
@@ -289,11 +298,13 @@
       service = x;
     }
     const visibilityCache = new WeakMap();
+    let xContext = null;
     for (const selector of service.roots) {
       const contexts = [];
       for (const scope of scopes) {
         for (const root of scope.querySelectorAll(selector)) {
           if (!isVisibleElement(root, visibilityCache)) continue;
+          if (service.id === "x" && root.closest('[data-testid="dm-inbox-panel"]')) continue;
           const context = {
             id: service.id,
             label: service.label,
@@ -315,9 +326,17 @@
       // Ambiguous visible transcripts (e.g. during a view transition) are left
       // untouched until a single active conversation can be identified.
       if (contexts.length > 1) return null;
-      if (contexts.length === 1) return contexts[0];
+      if (contexts.length === 1) {
+        if (service.id !== "x") return contexts[0];
+        // Check all X layouts before choosing: a legacy and a current panel
+        // can coexist during navigation. Nested roots are the same transcript;
+        // retain the existing selector priority only in that case.
+        const next = contexts[0];
+        if (xContext && !xContext.root.contains(next.root) && !next.root.contains(xContext.root)) return null;
+        xContext ??= next;
+      }
     }
-    return null;
+    return xContext;
   }
 
   globalThis.NudeNyangMessengerAdapters = Object.freeze({

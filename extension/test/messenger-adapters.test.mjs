@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import "../messenger-adapters.js";
+import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
 
 const {
   siteForLocation,
@@ -13,6 +14,7 @@ const {
 } = globalThis.NudeNyangMessengerAdapters;
 
 const cases = [
+  { id: "x", url: X_CHAT_URL, html: X_CHAT },
   {
     id: "x", url: "https://x.com/messages/101-202",
     html: `<div data-testid="DmActivityViewport"><div data-testid="messageEntry"><span data-testid="messageSender">Example Sender</span><span dir="auto" id="body-one">A neutral first message.</span><time>12:01</time></div><button data-testid="messageEntry"><span dir="auto" id="body-two">A neutral reply.</span></button></div>`,
@@ -52,6 +54,52 @@ const cases = [
     html: `<mws-conversation-container><header>Example Sender</header><mws-messages-list><mws-message-wrapper><mws-text-message-part id="body-one">A neutral first message.</mws-text-message-part></mws-message-wrapper><mws-message-wrapper><mws-text-message-part id="body-two">A neutral reply.</mws-text-message-part></mws-message-wrapper></mws-messages-list><textarea>A private unsent draft.</textarea></mws-conversation-container>`,
   },
 ];
+
+test("새 X 채팅은 대화 패널의 메시지 스크롤러만 루트로 사용한다", () => {
+  const dom = new JSDOM(X_CHAT, { url: X_CHAT_URL, pretendToBeVisual: true });
+  try {
+    const { document, location } = dom.window;
+    const context = contextForDocument(location, document);
+    assert.equal(context?.root, document.querySelector('[data-testid="dm-message-scroller"]'));
+    assert.deepEqual(selectMessageBlocks(context).map((el) => el.id), ["body-one", "body-two"]);
+    // Similar bodies in the inbox, header, controls or drafts are not messages.
+    document.querySelector('[data-testid="dm-inbox-panel"]').innerHTML = xChatMessage("preview", "Synthetic preview");
+    document.querySelector('[role="status"]').innerHTML = xChatMessage("status", "Loading placeholder");
+    for (const wrapper of ['<div hidden>', '<div contenteditable="true">', '<button>', '<div role="search">']) {
+      const holder = document.createElement("div");
+      holder.innerHTML = `${wrapper}${xChatMessage("excluded", "Synthetic excluded body")}</${wrapper.startsWith("<button") ? "button" : "div"}>`;
+      context.root.append(holder);
+    }
+    assert.deepEqual(selectMessageBlocks(context).map((el) => el.id), ["body-one", "body-two"]);
+  } finally { dom.window.close(); }
+});
+
+test("새 X 채팅의 대화 경계·읽기 역할이 없으면 범용 로그나 본문으로 우회하지 않는다", () => {
+  for (const attribute of ["dm-conversation-panel", "dm-conversation-content", "dm-message-scroller"]) {
+    const dom = new JSDOM(X_CHAT.replace(`data-testid="${attribute}"`, ""), { url: X_CHAT_URL });
+    try { assert.equal(contextForDocument(dom.window.location, dom.window.document), null, attribute); }
+    finally { dom.window.close(); }
+  }
+  for (const html of [X_CHAT.replace('role="log"', 'role="textbox"'),
+    `<div data-testid="dm-inbox-panel">${X_CHAT_PANEL}</div>`,
+    X_CHAT.replace('data-testid="dm-conversation-panel"', 'data-testid="dm-conversation-panel" hidden')]) {
+    const dom = new JSDOM(html, { url: X_CHAT_URL });
+    try { assert.equal(contextForDocument(dom.window.location, dom.window.document), null); }
+    finally { dom.window.close(); }
+  }
+});
+
+test("새 X 채팅과 다른 대화가 동시에 보이면 형식에 관계없이 차단한다", () => {
+  for (const other of [X_CHAT_PANEL, `<div data-testid="DmActivityViewport"><div data-testid="messageEntry"><span dir="auto">Synthetic legacy message</span></div></div>`]) {
+    const dom = new JSDOM(`${X_CHAT}<aside id="other">${other}</aside>`, { url: X_CHAT_URL });
+    try {
+      const { document, location } = dom.window;
+      assert.equal(contextForDocument(location, document), null);
+      document.getElementById("other").hidden = true;
+      assert.equal(contextForDocument(location, document)?.root.dataset.testid, "dm-message-scroller");
+    } finally { dom.window.close(); }
+  }
+});
 
 function fixture(entry, before = "", after = "") {
   return new JSDOM(`<aside><p id="contact">Contact and conversation preview.</p></aside>${before}${entry.html}${after}<input value="private search query"><textarea>A private unsent draft.</textarea>`, { url: entry.url, pretendToBeVisual: true });

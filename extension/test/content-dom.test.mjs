@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
+import { X_CHAT, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
 
 const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"].map((file) => (
   fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
@@ -143,6 +144,78 @@ const PRIVATE_CHAT = `<nav><span>Private contact list</span></nav>
     </div></li></ol><div role="textbox" contenteditable="true">Unsent private draft</div>`;
 const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", consent: true,
   settings: { messengerEnabled: true } };
+
+test("새 X 채팅은 기존 동의와 자동 번역 설정으로 본문만 추출한다", async (t) => {
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL,
+    settings: { messengerEnabled: true, sitePolicies: { "x.com": "always" } } });
+  await p.message({ type: "nudenyang-ready" });
+  const state = await p.message({ type: "nudenyang-status" });
+  assert.equal(state.messengerGate, "");
+  assert.equal(state.enabled, true);
+  await waitFor(() => ["body-one", "body-two"].every((id) => p.w.document.getElementById(id).textContent.startsWith("번역(")), "modern X bodies should translate");
+  assert.deepEqual(p.sent().sort(), ["A neutral incoming message.", "A neutral outgoing message."].sort());
+  assert.ok(p.requests.every((r) => r.privateContext.service === "x" && r.pageId.startsWith("messenger:x:")));
+  assert.ok(!JSON.stringify(p.requests).includes("synthetic-conversation"));
+  for (const selector of ['[data-testid="dm-inbox-panel"]', '[role="textbox"]', '#send', '[role="status"]']) {
+    assert.ok(!p.w.document.querySelector(selector).textContent.includes("번역("), selector);
+  }
+  assert.ok((await p.message({ type: "nudenyang-status" })).sentChars > 0);
+});
+
+test("새 X 채팅도 동의 전에는 본문을 읽지 않고 동의 후 같은 대화만 재개한다", async (t) => {
+  const options = { ...PRIVATE_OPTIONS, url: X_CHAT_URL, consent: false, tabEnabled: false };
+  const p = page(t, X_CHAT, options);
+  const reads = watchNodeValueReads(p.w, p.w.document.querySelector("#body-one span").firstChild);
+  await p.message({ type: "nudenyang-ready" });
+  const state = await p.message({ type: "nudenyang-status" });
+  assert.equal(state.messengerGate, "messenger_consent_required");
+  assert.equal(reads(), 0);
+  assert.equal(p.requests.length, 0);
+  options.consent = true;
+  assert.equal((await p.message({ type: "nudenyang-messenger-start", contextId: state.messengerContextId })).enabled, true);
+  await waitFor(() => p.sent().length === 2, "consented X conversation resumes");
+  assert.deepEqual(p.savedStates, []);
+});
+
+test("새 X 채팅의 스크롤러 밖으로 잘린 본문은 수집하지 않는다", async (t) => {
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false });
+  await p.message({ type: "nudenyang-ready" });
+  const clipped = p.w.document.querySelector("#body-two");
+  // Model the site's overflow-y-auto utility without loading remote CSS.
+  p.w.document.querySelector('[data-testid="dm-message-scroller"]').style.overflowY = "auto";
+  clipped.getBoundingClientRect = () => ({ top: 100, bottom: 130, left: 10, right: 210, width: 200, height: 30 });
+  const reads = watchNodeValueReads(p.w, clipped.firstChild.firstChild);
+  await p.message({ type: "nudenyang-set-enabled", enabled: true });
+  await waitFor(() => p.w.document.querySelector("#body-one").textContent.startsWith("번역("), "visible body translates");
+  assert.deepEqual(p.sent(), ["A neutral incoming message."]);
+  assert.equal(reads(), 0);
+});
+
+test("새 X 채팅의 대화 이동·동의 철회는 진행 중 결과와 사본을 폐기한다", async (t) => {
+  for (const action of ["navigate", "revoke"]) {
+    const options = { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false, deferTranslation: true };
+    const p = page(t, X_CHAT, options);
+    await p.message({ type: "nudenyang-ready" });
+    const before = await p.message({ type: "nudenyang-status" });
+    await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+    await waitFor(() => p.requests.length > 0, "X translation is in flight");
+    const count = p.requests.length;
+    if (action === "navigate") {
+      p.w.history.pushState({}, "", "/i/chat/another-synthetic-conversation");
+      p.w.document.querySelector('[data-testid="dm-message-scroller"]').innerHTML = xChatMessage("new-body", "Another neutral conversation.");
+    } else {
+      options.consent = false;
+      await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
+    }
+    const after = await p.message({ type: "nudenyang-status" });
+    assert.equal(after.enabled, false, action);
+    assert.equal(after.translatedNodes, 0, action);
+    p.releaseTranslation();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(p.requests.length, count, action);
+    assert.ok(!p.w.document.querySelector('[data-testid="dm-message-scroller"]').textContent.includes("번역("), action);
+  }
+});
 
 test("동의 후 시작은 새 동의 상태를 확인하여 새로고침 없이 기존 대화를 번역한다", async (t) => {
   const options = { ...PRIVATE_OPTIONS, consent: false, tabEnabled: false };

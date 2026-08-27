@@ -4,7 +4,7 @@
 
 - Channel: public listing (`On this site` / listed)
 - Add-on ID: `web-translator@nudenyang.github.io`
-- Add-on version: `0.7.5`
+- Add-on version: `0.7.6`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
 - Companion application: a compatible NudeNyang Windows application with the web-messenger
   opt-in setting and private, local-only translation path described below
@@ -25,6 +25,17 @@ Major and minor versions identify the product generation; patch versions are ind
 matching generation alone does not establish support for the new privacy contract. The extension
 must receive `webSettings.messengerEnabled: true` from the compatible companion and otherwise
 keeps web-messenger reading disabled.
+
+## Changes in 0.7.6
+
+- Recognize the current X conversation-panel/message-scroller structure and its dynamic
+  `message-text-*` body spans, based on user-provided Whale Elements screenshots. Retain the
+  legacy X DM selectors without broadening collection to the inbox or arbitrary log elements.
+- Exclude timestamps, status controls, drafts and clipped messages. Reject distinct visible
+  transcripts even when they use different X layouts. Consent, local-only processing and
+  private-data retention rules are unchanged; no new permissions are introduced.
+- Add synthetic structure and content-runtime regressions. No real DM text or identifiers are
+  included in fixtures, and these tests do not claim live translation success in Whale or Firefox.
 
 ## Changes in 0.7.5
 
