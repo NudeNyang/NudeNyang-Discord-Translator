@@ -61,8 +61,13 @@ Before attaching, the app checks:
 - the normalized Discord executable path;
 - the original process and any same-install PID handoff;
 - the local guardian process and its startup arguments;
-- that the selected renderer belongs to `https://discord.com`, `https://ptb.discord.com`, or
-  `https://canary.discord.com`.
+- that the selected renderer uses HTTPS on the default port (443) and exactly one of
+  `discord.com`, `ptb.discord.com`, `canary.discord.com`, `discordapp.com`,
+  `ptb.discordapp.com`, or `canary.discordapp.com`.
+
+The legacy origins remain supported because Discord desktop clients can use them before
+domain migration completes. NudeNyang does not change Discord settings or migration state
+files. Arbitrary subdomains and CDN hosts are not accepted as chat renderers.
 
 The saved connection target can be automatic, Discord, Discord PTB, or Discord Canary. When
 multiple release variants are running, NudeNyang connects to and restarts only the explicitly

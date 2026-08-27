@@ -80,9 +80,17 @@ fn discord_page_url(value: &str) -> Option<Url> {
     let url = Url::parse(value).ok()?;
     (url.scheme() == "https"
         && url.host_str().is_some_and(|host| {
-            ["discord.com", "ptb.discord.com", "canary.discord.com"]
-                .iter()
-                .any(|allowed| host.eq_ignore_ascii_case(allowed))
+            // Desktop clients can retain the old origin until domain migration finishes.
+            [
+                "discord.com",
+                "ptb.discord.com",
+                "canary.discord.com",
+                "discordapp.com",
+                "ptb.discordapp.com",
+                "canary.discordapp.com",
+            ]
+            .iter()
+            .any(|allowed| host.eq_ignore_ascii_case(allowed))
         })
         && url.port_or_known_default() == Some(443))
     .then_some(url)
@@ -436,22 +444,25 @@ mod tests {
 
     #[test]
     fn discord_channel_page_is_preferred() {
-        let selected = select_discord_target(vec![
-            target(
-                "settings",
-                "page",
-                "Settings",
-                "https://discord.com/settings",
-            ),
-            target(
-                "channel",
-                "page",
-                "Discord",
-                "https://discord.com/channels/1/2",
-            ),
-        ])
-        .unwrap();
-        assert_eq!(selected.target_id, "channel");
+        for host in ["discord.com", "discordapp.com"] {
+            let selected = select_discord_target(vec![
+                target("empty", "page", "", ""),
+                target(
+                    "settings",
+                    "page",
+                    "Settings",
+                    "https://discord.com/settings",
+                ),
+                target(
+                    "channel",
+                    "page",
+                    "好友",
+                    &format!("https://{host}/channels/@me"),
+                ),
+            ])
+            .unwrap();
+            assert_eq!(selected.target_id, "channel", "{host}");
+        }
     }
 
     #[test]
@@ -460,42 +471,49 @@ mod tests {
             ("stable", "discord.com"),
             ("ptb", "ptb.discord.com"),
             ("canary", "canary.discord.com"),
+            ("legacy-stable", "discordapp.com"),
+            ("legacy-ptb", "ptb.discordapp.com"),
+            ("legacy-canary", "canary.discordapp.com"),
         ] {
-            let selected = select_discord_target(vec![target(
-                id,
-                "page",
-                "Discord",
-                &format!("https://{host}/channels/1/2"),
-            )])
-            .expect("official Discord release host");
-            assert_eq!(selected.target_id, id);
+            for path in ["/channels/@me", "/channels/1/2", "/login"] {
+                let url = format!("https://{host}{path}");
+                let selected = select_discord_target(vec![target(id, "page", "Discord", &url)])
+                    .unwrap_or_else(|error| panic!("{url}: {error}"));
+                assert_eq!(selected.target_id, id);
+            }
         }
     }
 
     #[test]
     fn non_page_and_lookalike_origins_are_rejected() {
-        let error = select_discord_target(vec![
-            target(
-                "worker",
-                "service_worker",
-                "Discord",
-                "https://discord.com/channels/1/2",
-            ),
-            target(
-                "evil",
+        for (kind, url) in [
+            ("service_worker", "https://discord.com/channels/1/2"),
+            ("service_worker", "https://discordapp.com/channels/1/2"),
+            ("page", "https://discord.com.evil.example/channels/1/2"),
+            (
                 "page",
-                "Discord",
-                "https://discord.com.evil.example/channels/1/2",
-            ),
-            target(
-                "canary-evil",
-                "page",
-                "Discord",
                 "https://canary.discord.com.evil.example/channels/1/2",
             ),
-        ])
-        .unwrap_err();
-        assert!(error.contains("찾지 못했습니다"));
+            ("page", "https://discordapp.com.evil.example/channels/1/2"),
+            (
+                "page",
+                "https://ptb.discordapp.com.evil.example/channels/1/2",
+            ),
+            (
+                "page",
+                "https://canary.discordapp.com.evil.example/channels/1/2",
+            ),
+            ("page", "https://evil-discordapp.com/channels/1/2"),
+            ("page", "https://discordapp.com@evil.example/channels/1/2"),
+            ("page", "https://cdn.discordapp.com/channels/1/2"),
+            ("page", "https://custom.discordapp.com/channels/1/2"),
+            ("page", "http://discordapp.com/channels/1/2"),
+            ("page", "https://discordapp.com:444/channels/1/2"),
+        ] {
+            let error = select_discord_target(vec![target("untrusted", kind, "Discord", url)])
+                .expect_err(url);
+            assert!(error.contains("찾지 못했습니다"), "{kind}: {url}");
+        }
     }
 
     #[test]
