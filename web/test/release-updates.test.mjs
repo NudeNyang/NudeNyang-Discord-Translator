@@ -79,7 +79,7 @@ test('서명 파일 안의 신뢰 주석도 변조하면 검증에 실패한다'
   assert.throws(() => f.helper.verifyUpdaterSignature(readFileSync(join(f.directory, name)), changed, f.options.pubkey));
 });
 
-for (const scenario of ['success', 'missing-arm', 'upload-digest-mismatch', 'publish-failed']) {
+for (const scenario of ['success', 'missing-arm', 'upload-digest-mismatch', 'publish-failed', 'draft-source-mismatch', 'draft-already-public', 'draft-missing']) {
   test(`실제 PowerShell 배포 흐름: ${scenario}`, { skip: process.platform !== 'win32' }, async (t) => {
     const f = await fixture(t);
     const root = join(f.directory, 'project');
@@ -103,7 +103,9 @@ for (const scenario of ['success', 'missing-arm', 'upload-digest-mismatch', 'pub
     const directory = join(root, 'release', f.options.version);
     for (const name of Object.values(f.names).flatMap(name => [name, `${name}.sig`])) copyFileSync(join(f.directory, name), join(directory, name));
     const result = f.helper.generateRelease({ ...f.options, directory, commit, notes: '한글 릴리스 안내' });
-    const remote = { draft: true, prerelease: true, assets: result.artifacts.map(a => ({ ...a, state: 'uploaded', digest: `sha256:${a.sha256}` })) };
+    const remote = { id: 12345, tag_name: `v${f.options.version}`, target_commitish: commit, draft: true, prerelease: true, assets: result.artifacts.map(a => ({ ...a, state: 'uploaded', digest: `sha256:${a.sha256}` })) };
+    if (scenario === 'draft-source-mismatch') remote.target_commitish = 'b'.repeat(40);
+    if (scenario === 'draft-already-public') remote.draft = false;
     if (scenario === 'missing-arm') unlinkSync(join(directory, f.names['windows-aarch64']));
     if (scenario === 'upload-digest-mismatch') remote.assets[0].digest = `sha256:${'0'.repeat(64)}`;
     const remotePath = join(f.directory, 'remote.json');
@@ -123,7 +125,14 @@ function gh {
     ${scenario === 'publish-failed' ? '$global:LASTEXITCODE = 1' : '$script:published = $true'}
     return
   }
-  if ($args[0] -eq 'api') {
+  if ($args[0] -eq 'api' -and $args[1] -like '*/releases?per_page=100') {
+    ${scenario === 'draft-missing' ? "return '[]'" : `return '[' + [IO.File]::ReadAllText(${quote(remotePath)}) + ']'`}
+  }
+  if ($args[0] -eq 'api' -and $args[1] -like '*/releases/tags/*' -and -not $script:published) {
+    $global:LASTEXITCODE = 1
+    return 'Not Found: draft tag does not exist yet'
+  }
+  if ($args[0] -eq 'api' -and ($args[1] -like '*/releases/12345' -or ($args[1] -like '*/releases/tags/*' -and $script:published))) {
     $remote = [IO.File]::ReadAllText(${quote(remotePath)}) | ConvertFrom-Json
     $remote.draft = -not $script:published
     return ($remote | ConvertTo-Json -Depth 8)
@@ -150,6 +159,7 @@ function gh {
         assert.match(run.stderr, /Release validation failed/);
       }
       if (scenario === 'upload-digest-mismatch') { assert.ok(create); assert.equal(publish, undefined); }
+      if (scenario.startsWith('draft-')) { assert.ok(create); assert.equal(publish, undefined); }
       if (scenario === 'publish-failed') assert.ok(publish);
     }
   });

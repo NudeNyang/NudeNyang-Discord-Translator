@@ -39,9 +39,21 @@ try {
     gh release create "v$Version" @Artifacts --repo $Repository --title ($Version -replace '-beta$', ' Beta') --notes-file $ReleaseNotesPath --target $SourceCommit @ReleaseFlags
     if ($LASTEXITCODE -ne 0) { throw '릴리스 초안 업로드에 실패했습니다. 생성된 초안은 확인 전 공개하지 마십시오.' }
 
-    $RemoteJson = gh api "repos/$Repository/releases/tags/v$Version"
+    # An unpublished draft may not have a Git tag yet, so /releases/tags can
+    # return 404 even to its author. Find this new draft in the authenticated
+    # release list and verify it by numeric release ID instead.
+    $DraftListJson = gh api "repos/$Repository/releases?per_page=100"
+    if ($LASTEXITCODE -ne 0) { throw '업로드된 초안 목록을 확인하지 못했습니다.' }
+    $Drafts = @($DraftListJson | ConvertFrom-Json | Where-Object { $_.tag_name -eq "v$Version" })
+    if ($Drafts.Count -ne 1 -or -not $Drafts[0].draft -or $Drafts[0].target_commitish -ne $SourceCommit -or ($Version.Contains('-') -and -not $Drafts[0].prerelease)) {
+        throw '생성된 초안의 버전·소스 커밋·공개 상태가 예상과 다릅니다.'
+    }
+    $ReleaseId = [long]$Drafts[0].id
+    if ($ReleaseId -le 0) { throw '릴리스 초안 ID가 올바르지 않습니다.' }
+    $RemoteJson = gh api "repos/$Repository/releases/$ReleaseId"
     if ($LASTEXITCODE -ne 0) { throw '업로드된 릴리스를 확인하지 못했습니다. 초안을 유지합니다.' }
     $Remote = $RemoteJson | ConvertFrom-Json
+    if (-not $Remote.draft -or $Remote.tag_name -ne "v$Version" -or $Remote.target_commitish -ne $SourceCommit) { throw '검증 중 릴리스 초안이 변경되었습니다.' }
     foreach ($artifact in $Validation.artifacts) {
         $UploadedAssets = @($Remote.assets | Where-Object { $_.name -eq $artifact.name })
         if ($UploadedAssets.Count -ne 1 -or $UploadedAssets[0].state -ne 'uploaded' -or $UploadedAssets[0].size -ne $artifact.size -or $UploadedAssets[0].digest -ne "sha256:$($artifact.sha256)") {
@@ -52,10 +64,10 @@ try {
     if ($Version.Contains('-')) { $PublishFlags += '--prerelease' }
     gh release edit "v$Version" --repo $Repository @PublishFlags
     if ($LASTEXITCODE -ne 0) { throw '검증된 릴리스 공개에 실패했습니다.' }
-    $PublishedJson = gh api "repos/$Repository/releases/tags/v$Version"
+    $PublishedJson = gh api "repos/$Repository/releases/$ReleaseId"
     if ($LASTEXITCODE -ne 0) { throw '공개 여부를 확인하지 못해 업데이트 목록을 변경하지 않습니다.' }
     $Published = $PublishedJson | ConvertFrom-Json
-    if ($Published.draft -or ($Version.Contains('-') -and -not $Published.prerelease)) { throw '프리릴리스 공개 상태가 예상과 다릅니다.' }
+    if ($Published.draft -or $Published.tag_name -ne "v$Version" -or $Published.target_commitish -ne $SourceCommit -or ($Version.Contains('-') -and -not $Published.prerelease)) { throw '프리릴리스 공개 상태가 예상과 다릅니다.' }
 
     # Only advertise downloads after both verified installers are public.
     Copy-Item -LiteralPath $ManifestPath -Destination (Join-Path $ProjectRoot 'updates\beta\latest.json') -Force
