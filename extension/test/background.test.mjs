@@ -13,6 +13,8 @@ function createBackground(tabState, {
   loadBridgeThroughImportScripts = false,
   realBridge = false,
   sendTabMessage,
+  queryTabs = (_query, callback) => callback([]),
+  privacy = { forward: (request, _sender, forward) => forward(request), getConsent: async () => ({ granted: false }), invalidate: () => {} },
 } = {}) {
   const listeners = {};
   const imports = [];
@@ -27,9 +29,11 @@ function createBackground(tabState, {
     tabs: {
       onRemoved: event("removed"),
       onActivated: event("activated"),
-      query: (_query, callback) => callback([]),
+      query: queryTabs,
       sendMessage: sendTabMessage,
     },
+    storage: { onChanged: event("storageChanged") },
+    permissions: { onRemoved: event("permissionsRemoved") },
     commands: { onCommand: event("command") },
   };
   const bridgeModule = {
@@ -46,6 +50,8 @@ function createBackground(tabState, {
     NudeNyangTabTranslationState: { createTabTranslationState: () => tabState },
     NudeNyangPageConnection: { createPageConnection: () => pageConnection },
     NudeNyangEmbeddedBridge: loadBridgeThroughImportScripts || realBridge ? undefined : bridgeModule,
+    NudeNyangMessengerAdapters: {},
+    NudeNyangMessengerPrivacy: { createMessengerPrivacy: () => privacy },
   };
   if (loadBridgeThroughImportScripts || realBridge) {
     context.importScripts = (path) => {
@@ -232,4 +238,49 @@ test("bridge가 거절한 일반 Native·페이지 요청은 기존 경로를 �
   assert.deepEqual(nativeRequests, [nativeRequest]);
   assert.deepEqual(pageRequests, [{ tabId: 23, message: pageMessage }]);
   assert.equal(background.listeners.message({ type: "unrelated-message" }, {}, () => assert.fail("unexpected response")), false);
+});
+
+test("동의 조회가 늦게 끝난 이전 허용 알림은 최신 철회 알림 뒤에 방송되지 않는다", async () => {
+  const consentReads = [];
+  const delivered = [];
+  let invalidations = 0;
+  const background = createBackground({}, {
+    privacy: {
+      getConsent: () => new Promise((resolve) => consentReads.push(resolve)),
+      invalidate: () => { invalidations += 1; },
+    },
+    queryTabs: (_query, callback) => callback([{ id: 7 }]),
+    sendTabMessage: (_tabId, message, _options, callback) => { delivered.push(message.consent.granted); callback(); },
+  });
+  background.listeners.storageChanged({ messengerConsentVersion: { oldValue: 0, newValue: 1 } }, "local");
+  background.listeners.storageChanged({ messengerConsentVersion: { oldValue: 1, newValue: 0 } }, "local");
+  consentReads[1]({ granted: false, consentVersion: 0 });
+  await Promise.resolve();
+  consentReads[0]({ granted: true, consentVersion: 1 });
+  await Promise.resolve();
+  assert.equal(invalidations, 2);
+  assert.deepEqual(delivered, [false]);
+});
+
+test("탭 조회가 지연된 허용 알림은 Firefox 권한 철회 뒤에 도착해도 방송되지 않는다", async () => {
+  const queries = [];
+  const delivered = [];
+  let granted = true;
+  const background = createBackground({}, {
+    privacy: {
+      getConsent: async () => ({ granted, consentVersion: granted ? 1 : 0 }),
+      invalidate: () => {},
+    },
+    queryTabs: (_query, callback) => queries.push(callback),
+    sendTabMessage: (_tabId, message, _options, callback) => { delivered.push(message.consent.granted); callback(); },
+  });
+  background.listeners.storageChanged({ messengerConsentVersion: { oldValue: 0, newValue: 1 } }, "local");
+  await Promise.resolve();
+  granted = false;
+  background.listeners.permissionsRemoved({ data_collection: ["personalCommunications"] });
+  await Promise.resolve();
+  assert.equal(queries.length, 2);
+  queries[1]([{ id: 7 }]);
+  queries[0]([{ id: 7 }]);
+  assert.deepEqual(delivered, [false]);
 });

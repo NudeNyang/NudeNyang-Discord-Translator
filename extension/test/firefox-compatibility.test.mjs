@@ -23,7 +23,7 @@ test("Firefox Manifest V3는 고정 Add-on ID와 이벤트 백그라운드를 �
   assert.equal(manifest.browser_specific_settings.gecko.id, "web-translator@nudenyang.github.io");
   assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, "142.0");
   assert.deepEqual(manifest.background, {
-    scripts: ["native-client.js", "tab-state.js", "page-connection.js", "embedded-bridge.js", "background.js"],
+    scripts: ["native-client.js", "tab-state.js", "page-connection.js", "embedded-bridge.js", "messenger-adapters.js", "messenger-privacy.js", "background.js"],
   });
   assert.equal(manifest.key, undefined);
 });
@@ -37,6 +37,14 @@ test("Firefox 패키지는 Native Messaging과 웹 본문 처리 범위를 명�
     ["websiteContent", "browsingActivity"],
   );
   assert.deepEqual(manifest.content_scripts[0].matches, ["http://*/*", "https://*/*"]);
+});
+
+test("Firefox의 개인 대화 데이터 권한은 필수가 아닌 별도 동의 항목이다", () => {
+  const permissions = manifest.browser_specific_settings.gecko.data_collection_permissions;
+  assert.deepEqual(permissions.optional, ["personalCommunications"]);
+  assert.equal(permissions.required.includes("personalCommunications"), false);
+  assert.ok(manifest.background.scripts.indexOf("messenger-adapters.js") < manifest.background.scripts.indexOf("messenger-privacy.js"));
+  assert.ok(manifest.background.scripts.indexOf("messenger-privacy.js") < manifest.background.scripts.indexOf("background.js"));
 });
 
 test("브라우저 심사 고지는 실제 탭 유지 동작과 주소 처리 범위를 설명한다", () => {

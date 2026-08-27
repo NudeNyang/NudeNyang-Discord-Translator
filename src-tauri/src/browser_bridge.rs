@@ -174,8 +174,7 @@ fn handle_bridge_connection(
         .set_write_timeout(Some(Duration::from_secs(10)))
         .map_err(|error| format!("브리지 쓰기 제한 시간을 설정하지 못했습니다: {error}"))?;
     let request_bytes = read_line_limited(&mut stream)?;
-    let envelope: BridgeEnvelope = serde_json::from_slice(&request_bytes)
-        .map_err(|error| format!("브라우저 번역 요청 형식이 올바르지 않습니다: {error}"))?;
+    let envelope = parse_bridge_envelope(&request_bytes)?;
     if !tokens_equal(&envelope.token, expected_token) {
         return Err("브라우저 번역 브리지 인증에 실패했습니다.".to_string());
     }
@@ -186,6 +185,13 @@ fn handle_bridge_connection(
     stream
         .write_all(&encoded)
         .map_err(|error| format!("브라우저 번역 응답을 전송하지 못했습니다: {error}"))
+}
+
+fn parse_bridge_envelope(bytes: &[u8]) -> Result<BridgeEnvelope, String> {
+    // Serde type errors can quote the supplied string. This error reaches the
+    // bridge thread's diagnostic log before a private request scope exists.
+    serde_json::from_slice(bytes)
+        .map_err(|_| "브라우저 번역 요청 형식이 올바르지 않습니다.".to_string())
 }
 
 fn record_browser_client(request: &Value) {
@@ -239,6 +245,7 @@ pub fn browser_clients_status() -> Vec<BrowserClientInfo> {
 fn web_settings_value(config: &crate::config::AppConfig) -> Value {
     json!({
         "enabled": config.web_translation_enabled,
+        "messengerEnabled": config.web_messenger_enabled,
         "targetLanguage": config.web_target_language,
         "processingMode": config.web_processing_mode,
         "externalPageCharLimit": config.web_external_page_char_limit,
@@ -257,6 +264,7 @@ fn interface_language_value(configured: &str) -> (&str, &'static str) {
 fn update_web_settings(app: &AppHandle, patch: Value) -> Result<Value, String> {
     let allowed = [
         "web_translation_enabled",
+        "web_messenger_enabled",
         "web_target_language",
         "web_processing_mode",
         "web_external_page_char_limit",
@@ -343,24 +351,12 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
                         "translator": config.as_ref().map(|config| config.translator.as_str()),
                     })
                 }
-                Err(error) => {
-                    let preparing = error.contains("준비하고 있습니다");
-                    error_response(
-                        &request_id,
-                        if preparing {
-                            "model_preparing"
-                        } else {
-                            "translation_failed"
-                        },
-                        &error,
-                        preparing,
-                    )
-                }
+                Err(error) => translation_error_response(&request_id, &error),
             },
-            Err(error) => error_response(
+            Err(_) => error_response(
                 &request_id,
                 "invalid_request",
-                &format!("웹페이지 번역 요청 형식이 올바르지 않습니다: {error}"),
+                "웹페이지 번역 요청 형식이 올바르지 않습니다.",
                 false,
             ),
         },
@@ -415,6 +411,32 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
             false,
         ),
     }
+}
+
+fn translation_error_response(request_id: &str, error: &str) -> Value {
+    for code in [
+        "web_translation_disabled",
+        "messenger_disabled",
+        "messenger_local_only",
+        "messenger_consent_required",
+        "messenger_invalid_context",
+        "messenger_request_cancelled",
+    ] {
+        if let Some(message) = error.strip_prefix(&format!("[{code}] ")) {
+            return error_response(request_id, code, message, false);
+        }
+    }
+    let preparing = error.contains("준비하고 있습니다");
+    error_response(
+        request_id,
+        if preparing {
+            "model_preparing"
+        } else {
+            "translation_failed"
+        },
+        error,
+        preparing,
+    )
 }
 
 fn error_response(request_id: &str, code: &str, message: &str, retryable: bool) -> Value {
@@ -827,6 +849,67 @@ mod tests {
     use serde_json::json;
     use std::ffi::OsString;
     use std::io::Cursor;
+
+    #[test]
+    fn private_malformed_bridge_requests_never_echo_supplied_values() {
+        let private_text = "private-message-must-never-appear-in-a-diagnostic";
+        let malformed = serde_json::to_vec(&json!(private_text)).unwrap();
+        let error = super::parse_bridge_envelope(&malformed).unwrap_err();
+        assert_eq!(error, "브라우저 번역 요청 형식이 올바르지 않습니다.");
+        assert!(!error.contains(private_text));
+
+        let valid = serde_json::to_vec(&json!({
+            "token": "test-token",
+            "request": {"type": "translate", "items": [{"text": private_text}]}
+        }))
+        .unwrap();
+        let envelope = super::parse_bridge_envelope(&valid).unwrap();
+        assert_eq!(envelope.token, "test-token");
+        assert_eq!(envelope.request["items"][0]["text"], private_text);
+    }
+
+    #[test]
+    fn web_settings_expose_messenger_consent_as_default_off() {
+        let mut config = crate::config::AppConfig::default();
+        let settings = super::web_settings_value(&config);
+        assert_eq!(settings["messengerEnabled"], false);
+        assert_eq!(settings["enabled"], true);
+        config.web_messenger_enabled = true;
+        assert_eq!(super::web_settings_value(&config)["messengerEnabled"], true);
+    }
+
+    #[test]
+    fn private_translation_errors_preserve_stable_non_retryable_codes() {
+        for code in [
+            "web_translation_disabled",
+            "messenger_disabled",
+            "messenger_local_only",
+            "messenger_consent_required",
+            "messenger_invalid_context",
+            "messenger_request_cancelled",
+        ] {
+            let response = super::translation_error_response(
+                "opaque-request",
+                &format!("[{code}] 요청이 허용되지 않습니다."),
+            );
+            assert_eq!(response["code"], code);
+            assert_eq!(response["retryable"], false);
+            assert_eq!(response["message"], "요청이 허용되지 않습니다.");
+        }
+        assert_eq!(
+            super::translation_error_response("request", "번역 모델을 준비하고 있습니다.")["code"],
+            "model_preparing"
+        );
+        assert_eq!(
+            super::translation_error_response("request", "번역 모델을 준비하고 있습니다.")
+                ["retryable"],
+            true
+        );
+        assert_eq!(
+            super::translation_error_response("request", "일반 오류")["code"],
+            "translation_failed"
+        );
+    }
 
     #[test]
     fn native_message_round_trip_uses_little_endian_length_prefix() {

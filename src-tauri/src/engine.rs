@@ -98,12 +98,106 @@ pub struct BrowserTranslationItem {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct BrowserPrivateContext {
+    #[serde(default)]
+    pub service: String,
+    #[serde(default)]
+    pub consent_version: u32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BrowserTranslationRequest {
     pub request_id: String,
     pub page_id: String,
     #[serde(default)]
     pub target_language: Option<String>,
+    #[serde(default)]
+    pub private_context: Option<BrowserPrivateContext>,
     pub items: Vec<BrowserTranslationItem>,
+}
+
+// Updated synchronously when settings are saved, independently from controller
+// and model queues. Turning a permission OFF and ON must not revive old work.
+struct BrowserTranslationPolicy {
+    revision: u64,
+    web_enabled: bool,
+    messenger_enabled: bool,
+    translator: String,
+}
+
+impl BrowserTranslationPolicy {
+    fn new(config: &AppConfig) -> Self {
+        Self {
+            revision: 0,
+            web_enabled: config.web_translation_enabled,
+            messenger_enabled: config.web_messenger_enabled,
+            translator: config.translator.clone(),
+        }
+    }
+
+    fn update(&mut self, config: &AppConfig) {
+        if self.web_enabled != config.web_translation_enabled
+            || self.messenger_enabled != config.web_messenger_enabled
+            || self.translator != config.translator
+        {
+            self.revision = self.revision.wrapping_add(1);
+            self.web_enabled = config.web_translation_enabled;
+            self.messenger_enabled = config.web_messenger_enabled;
+            self.translator = config.translator.clone();
+        }
+    }
+
+    fn check(&self, private: bool) -> Result<(), String> {
+        if !self.web_enabled {
+            return Err(
+                "[web_translation_disabled] 웹페이지 번역이 비활성화되어 있습니다.".to_string(),
+            );
+        }
+        if private && !self.messenger_enabled {
+            return Err("[messenger_disabled] 웹 메신저 번역이 비활성화되어 있습니다. 메인 앱의 웹 번역 설정에서 사용 여부를 선택해 주십시오.".to_string());
+        }
+        if private && !is_local_model_name(&self.translator) && self.translator != "mock" {
+            return Err("[messenger_local_only] 웹 메신저 번역에는 로컬 번역 모델만 사용할 수 있습니다. 메인 앱에서 로컬 모델을 선택해 주십시오.".to_string());
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone)]
+struct BrowserTranslationPermit {
+    policy: Arc<Mutex<BrowserTranslationPolicy>>,
+    revision: u64,
+    private: bool,
+}
+
+impl BrowserTranslationPermit {
+    fn issue(policy: &Arc<Mutex<BrowserTranslationPolicy>>, private: bool) -> Result<Self, String> {
+        let current = policy.lock().map_err(|_| browser_permission_cancelled())?;
+        current.check(private)?;
+        Ok(Self {
+            policy: policy.clone(),
+            revision: current.revision,
+            private,
+        })
+    }
+
+    fn check(&self) -> Result<(), String> {
+        let current = self
+            .policy
+            .lock()
+            .map_err(|_| browser_permission_cancelled())?;
+        current.check(self.private)?;
+        if self.private && current.revision != self.revision {
+            return Err(browser_permission_cancelled());
+        }
+        Ok(())
+    }
+}
+
+fn browser_permission_cancelled() -> String {
+    "[messenger_request_cancelled] 웹 메신저 번역 설정이 변경되어 이전 요청을 취소했습니다."
+        .to_string()
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -153,6 +247,7 @@ impl RuntimeStatus {
 pub struct RustEngine {
     controls: mpsc::Sender<Control>,
     status: Arc<Mutex<RuntimeStatus>>,
+    browser_policy: Arc<Mutex<BrowserTranslationPolicy>>,
     thread: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
@@ -173,6 +268,7 @@ enum Control {
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     TranslateBrowser(
         BrowserTranslationRequest,
+        BrowserTranslationPermit,
         mpsc::Sender<Result<BrowserTranslationResponse, String>>,
     ),
     AttachApp(AppHandle),
@@ -262,6 +358,7 @@ struct DictionaryLocalizationBatch {
 
 struct BrowserTranslationBatch {
     request: BrowserTranslationRequest,
+    permit: BrowserTranslationPermit,
     target: Language,
     allowed_sources: Option<HashSet<Language>>,
     queued_at: Instant,
@@ -506,6 +603,7 @@ impl RustEngine {
     pub fn start(config: AppConfig) -> Self {
         let (control_tx, control_rx) = mpsc::channel();
         let status = Arc::new(Mutex::new(RuntimeStatus::new(&config)));
+        let browser_policy = Arc::new(Mutex::new(BrowserTranslationPolicy::new(&config)));
         let thread_status = status.clone();
         let handle = thread::Builder::new()
             .name("rust-dom-controller".to_string())
@@ -514,11 +612,17 @@ impl RustEngine {
         Self {
             controls: control_tx,
             status,
+            browser_policy,
             thread: Arc::new(Mutex::new(Some(handle))),
         }
     }
 
     pub fn apply_config(&self, config: AppConfig) -> Result<(), String> {
+        let mut policy = self
+            .browser_policy
+            .lock()
+            .map_err(|_| browser_permission_cancelled())?;
+        policy.update(&config);
         self.controls
             .send(Control::ApplyConfig(Box::new(config)))
             .map_err(|_| "Rust 번역 엔진이 종료되어 설정을 적용하지 못했습니다.".to_string())
@@ -636,9 +740,13 @@ impl RustEngine {
         request: BrowserTranslationRequest,
     ) -> Result<BrowserTranslationResponse, String> {
         validate_browser_translation_request(&request)?;
+        let permit = BrowserTranslationPermit::issue(
+            &self.browser_policy,
+            request.private_context.is_some(),
+        )?;
         let (result_tx, result_rx) = mpsc::channel();
         self.controls
-            .send(Control::TranslateBrowser(request, result_tx))
+            .send(Control::TranslateBrowser(request, permit, result_tx))
             .map_err(|_| {
                 "Rust 번역 엔진이 종료되어 웹페이지 번역을 시작하지 못했습니다.".to_string()
             })?;
@@ -672,6 +780,7 @@ fn validate_browser_translation_request(request: &BrowserTranslationRequest) -> 
     const MAX_BROWSER_ITEM_CHARS: usize = 4_000;
     const MAX_BROWSER_TOTAL_CHARS: usize = 32_000;
 
+    validate_browser_private_context(request)?;
     if request.request_id.is_empty() || request.request_id.len() > 160 {
         return Err("웹페이지 번역 요청 식별자가 올바르지 않습니다.".to_string());
     }
@@ -703,6 +812,46 @@ fn validate_browser_translation_request(request: &BrowserTranslationRequest) -> 
     }
     if total_chars > MAX_BROWSER_TOTAL_CHARS {
         return Err("웹페이지 번역 요청의 전체 텍스트가 허용 길이를 초과했습니다.".to_string());
+    }
+    Ok(())
+}
+
+fn validate_browser_private_context(request: &BrowserTranslationRequest) -> Result<(), String> {
+    let Some(context) = request.private_context.as_ref() else {
+        if request.page_id.starts_with("messenger:") {
+            return Err(
+                "[messenger_consent_required] 웹 메신저 번역에 필요한 동의 정보가 없습니다."
+                    .to_string(),
+            );
+        }
+        return Ok(());
+    };
+    if context.consent_version != 1 {
+        return Err("[messenger_consent_required] 웹 메신저 번역 동의를 확인하지 못했습니다. 메인 앱에서 설정을 다시 확인해 주십시오.".to_string());
+    }
+    if !matches!(
+        context.service.as_str(),
+        "x" | "discord"
+            | "whatsapp"
+            | "telegram"
+            | "messenger"
+            | "slack"
+            | "teams"
+            | "google-messages"
+    ) {
+        return Err("[messenger_invalid_context] 지원하지 않는 웹 메신저 요청입니다.".to_string());
+    }
+    let prefix = format!("messenger:{}:", context.service);
+    let opaque_id = request.page_id.strip_prefix(&prefix).unwrap_or_default();
+    if !(16..=128).contains(&opaque_id.len())
+        || !opaque_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
+    {
+        return Err(
+            "[messenger_invalid_context] 웹 메신저 번역에 필요한 임시 식별자가 올바르지 않습니다."
+                .to_string(),
+        );
     }
     Ok(())
 }
@@ -1162,7 +1311,14 @@ fn run_controller(
                     }
                     let _ = result_tx.send(result);
                 }
-                Control::TranslateBrowser(request, result_tx) => {
+                Control::TranslateBrowser(request, permit, result_tx) => {
+                    if let Err(error) = permit
+                        .check()
+                        .and_then(|_| BrowserTranslationPolicy::new(&config).check(permit.private))
+                    {
+                        let _ = result_tx.send(Err(error));
+                        continue;
+                    }
                     browser_active_until = Some(Instant::now() + Duration::from_secs(5 * 60));
                     let target_code = request
                         .target_language
@@ -1183,6 +1339,7 @@ fn run_controller(
                     if display_ready {
                         let command = WorkerCommand::TranslateBrowser(BrowserTranslationBatch {
                             request,
+                            permit,
                             target,
                             allowed_sources: incoming_allowed_sources(&config),
                             queued_at: Instant::now(),
@@ -2804,6 +2961,7 @@ fn run_translation_worker(
             WorkerCommand::TranslateBrowser(batch) => {
                 let BrowserTranslationBatch {
                     request,
+                    permit,
                     target,
                     allowed_sources,
                     queued_at,
@@ -2813,14 +2971,17 @@ fn run_translation_worker(
                     request_id,
                     page_id,
                     target_language: _,
+                    private_context,
                     items,
                 } = request;
-                log_worker_queue(
-                    "browser",
-                    queued_at,
-                    items.len(),
-                    items.iter().map(|item| item.text.chars().count()).sum(),
-                );
+                if private_context.is_none() {
+                    log_worker_queue(
+                        "browser",
+                        queued_at,
+                        items.len(),
+                        items.iter().map(|item| item.text.chars().count()).sum(),
+                    );
+                }
                 let texts = items
                     .iter()
                     .map(|item| item.text.clone())
@@ -2829,15 +2990,30 @@ fn run_translation_worker(
                     .iter()
                     .map(|item| Some(format!("web:{page_id}:{}", item.block_id)))
                     .collect::<Vec<_>>();
-                let translated = service
-                    .translate_many_for_web_contextual_filtered(
-                        &texts,
-                        &message_keys,
-                        &page_id,
-                        target,
-                        allowed_sources.as_ref(),
-                    )
+                let translated = permit
+                    .check()
+                    .and_then(|_| {
+                        if private_context.is_some() {
+                            let private_permit = permit.clone();
+                            service.translate_many_for_private_web(
+                                &texts,
+                                &message_keys,
+                                &page_id,
+                                target,
+                                Box::new(move || private_permit.check()),
+                            )
+                        } else {
+                            service.translate_many_for_web_contextual_filtered(
+                                &texts,
+                                &message_keys,
+                                &page_id,
+                                target,
+                                allowed_sources.as_ref(),
+                            )
+                        }
+                    })
                     .and_then(|values| {
+                        permit.check()?;
                         if values.len() != items.len() {
                             return Err("번역 서비스가 요청한 문장 수와 다른 결과를 반환했습니다."
                                 .to_string());
@@ -3641,7 +3817,8 @@ mod tests {
         preparation_plan_for_active_lanes, record_outgoing_ui_change, retain_enabled_dom_parts,
         run_outgoing_translation_worker, stage_dictionary_lookup_result,
         translator_activation_notice, translator_label, translator_preparation_plan,
-        validate_browser_translation_request, BrowserTranslationItem, BrowserTranslationRequest,
+        validate_browser_translation_request, BrowserPrivateContext, BrowserTranslationItem,
+        BrowserTranslationPermit, BrowserTranslationPolicy, BrowserTranslationRequest,
         DictionaryLocalizationBatch, DisplayViewObservation, DisplayViewState,
         OutgoingTranslationBatch, OutgoingUiChanges, OutgoingWorkerCommand, PartState,
         RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
@@ -3660,7 +3837,7 @@ mod tests {
     use crate::translation::{TranslationService, Translator};
     use std::collections::{HashMap, HashSet, VecDeque};
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{mpsc, Arc};
+    use std::sync::{mpsc, Arc, Mutex};
     use std::thread;
     use std::time::{Duration, Instant};
 
@@ -3711,6 +3888,7 @@ mod tests {
             request_id: "browser-test-request".to_string(),
             page_id: "github:https://github.com/example/project".to_string(),
             target_language: Some("ko".to_string()),
+            private_context: None,
             items: items
                 .into_iter()
                 .map(|(id, block_id, text)| BrowserTranslationItem {
@@ -3720,6 +3898,185 @@ mod tests {
                 })
                 .collect(),
         }
+    }
+
+    fn private_browser_request() -> BrowserTranslationRequest {
+        let mut request = browser_request(vec![("item-1", "block-1", "Hello there")]);
+        request.page_id = "messenger:discord:01234567-89ab-cdef-0123-456789abcdef".to_string();
+        request.private_context = Some(BrowserPrivateContext {
+            service: "discord".to_string(),
+            consent_version: 1,
+        });
+        request
+    }
+
+    #[test]
+    fn private_browser_request_requires_supported_service_current_consent_and_opaque_scope() {
+        let mut request = private_browser_request();
+        assert!(validate_browser_translation_request(&request).is_ok());
+        for service in [
+            "x",
+            "discord",
+            "whatsapp",
+            "telegram",
+            "messenger",
+            "slack",
+            "teams",
+            "google-messages",
+        ] {
+            request.private_context.as_mut().unwrap().service = service.to_string();
+            request.page_id = format!("messenger:{service}:01234567-89ab-cdef-0123-456789abcdef");
+            assert!(
+                validate_browser_translation_request(&request).is_ok(),
+                "{service}"
+            );
+        }
+        request = private_browser_request();
+        request.private_context.as_mut().unwrap().consent_version = 0;
+        assert!(validate_browser_translation_request(&request)
+            .unwrap_err()
+            .starts_with("[messenger_consent_required]"));
+        request.private_context.as_mut().unwrap().consent_version = 2;
+        assert!(validate_browser_translation_request(&request)
+            .unwrap_err()
+            .starts_with("[messenger_consent_required]"));
+        request.private_context.as_mut().unwrap().consent_version = 1;
+        request.private_context.as_mut().unwrap().service = "email".to_string();
+        assert!(validate_browser_translation_request(&request)
+            .unwrap_err()
+            .starts_with("[messenger_invalid_context]"));
+
+        request = private_browser_request();
+        for invalid in [
+            "messenger:x:0123456789abcdef",
+            "messenger:discord:short",
+            "messenger:discord:https://discord.com/channels/123/456",
+            "messenger:discord:somebody@example.com",
+            "discord:https://discord.com/channels/@me/123",
+        ] {
+            request.page_id = invalid.to_string();
+            assert!(
+                validate_browser_translation_request(&request)
+                    .unwrap_err()
+                    .starts_with("[messenger_invalid_context]"),
+                "{invalid}"
+            );
+        }
+        request = private_browser_request();
+        request.private_context = None;
+        assert!(validate_browser_translation_request(&request)
+            .unwrap_err()
+            .starts_with("[messenger_consent_required]"));
+    }
+
+    #[test]
+    fn private_browser_policy_denies_by_default_and_disallows_every_external_provider() {
+        let mut config = AppConfig::default();
+        assert!(BrowserTranslationPolicy::new(&config).check(false).is_ok());
+        assert!(BrowserTranslationPolicy::new(&config)
+            .check(true)
+            .unwrap_err()
+            .starts_with("[messenger_disabled]"));
+        config.web_messenger_enabled = true;
+        for translator in [
+            "deepl", "chatgpt", "claude", "gemini", "original", "unknown",
+        ] {
+            config.translator = translator.to_string();
+            assert!(
+                BrowserTranslationPolicy::new(&config)
+                    .check(true)
+                    .unwrap_err()
+                    .starts_with("[messenger_local_only]"),
+                "{translator}"
+            );
+            assert!(BrowserTranslationPolicy::new(&config).check(false).is_ok());
+        }
+        for translator in ["hymt_1_8b", "hymt_7b", "translategemma_4b", "mock"] {
+            config.translator = translator.to_string();
+            assert!(
+                BrowserTranslationPolicy::new(&config).check(true).is_ok(),
+                "{translator}"
+            );
+        }
+        config.web_translation_enabled = false;
+        for private in [false, true] {
+            assert!(BrowserTranslationPolicy::new(&config)
+                .check(private)
+                .unwrap_err()
+                .starts_with("[web_translation_disabled]"));
+        }
+    }
+
+    #[test]
+    fn private_browser_permits_reject_queued_work_after_disable_even_if_reenabled() {
+        let mut config = AppConfig {
+            web_messenger_enabled: true,
+            translator: "mock".to_string(),
+            ..Default::default()
+        };
+        let policy = Arc::new(Mutex::new(BrowserTranslationPolicy::new(&config)));
+        let permit = BrowserTranslationPermit::issue(&policy, true).unwrap();
+        assert!(permit.check().is_ok());
+        config.web_messenger_enabled = false;
+        policy.lock().unwrap().update(&config);
+        assert!(permit
+            .check()
+            .unwrap_err()
+            .starts_with("[messenger_disabled]"));
+        config.web_messenger_enabled = true;
+        policy.lock().unwrap().update(&config);
+        assert!(permit
+            .check()
+            .unwrap_err()
+            .starts_with("[messenger_request_cancelled]"));
+        assert!(BrowserTranslationPermit::issue(&policy, true)
+            .unwrap()
+            .check()
+            .is_ok());
+        let permit = BrowserTranslationPermit::issue(&policy, true).unwrap();
+        config.translator = "deepl".to_string();
+        policy.lock().unwrap().update(&config);
+        assert!(permit
+            .check()
+            .unwrap_err()
+            .starts_with("[messenger_local_only]"));
+    }
+
+    #[test]
+    fn private_browser_api_rejects_requests_before_model_preparation_without_opt_in() {
+        let engine = RustEngine::start(AppConfig {
+            enabled: false,
+            dictionary_enabled: false,
+            keep_local_model_warm: false,
+            translator: "mock".to_string(),
+            ..Default::default()
+        });
+        let result = engine.translate_browser(private_browser_request());
+        engine.stop();
+        assert!(result.unwrap_err().starts_with("[messenger_disabled]"));
+    }
+
+    #[test]
+    fn private_browser_worker_translates_locally_only_while_permission_is_enabled() {
+        let mut config = AppConfig {
+            enabled: false,
+            dictionary_enabled: false,
+            keep_local_model_warm: false,
+            translator: "mock".to_string(),
+            web_messenger_enabled: true,
+            ..Default::default()
+        };
+        let engine = RustEngine::start(config.clone());
+        engine.prepare_browser_session().unwrap();
+        wait_for_translator(&engine, "mock");
+        let response = engine.translate_browser(private_browser_request()).unwrap();
+        assert_eq!(response.items.len(), 1);
+        assert!(response.items[0].text.starts_with("[ko] "));
+        config.web_messenger_enabled = false;
+        engine.apply_config(config).unwrap();
+        let result = engine.translate_browser(private_browser_request());
+        engine.stop();
+        assert!(result.unwrap_err().starts_with("[messenger_disabled]"));
     }
 
     #[test]

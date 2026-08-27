@@ -124,6 +124,23 @@ pub struct TranslationCache {
 }
 
 impl TranslationCache {
+    /// Request-scoped storage for private conversations. No database, journal or
+    /// temporary sorting data is written to disk, even if the LRU fills up.
+    pub fn in_memory(memory_capacity: usize) -> Result<Self, String> {
+        let mut connection = Connection::open_in_memory()
+            .map_err(|_| "개인 대화용 임시 번역 캐시를 만들지 못했습니다.".to_string())?;
+        connection
+            .execute_batch("PRAGMA temp_store=MEMORY;")
+            .map_err(|_| "개인 대화용 임시 번역 캐시를 설정하지 못했습니다.".to_string())?;
+        initialize_schema(&mut connection)?;
+        Ok(Self {
+            path: PathBuf::new(),
+            connection: Mutex::new(connection),
+            memory: Mutex::new(MemoryCache::default()),
+            memory_capacity,
+        })
+    }
+
     pub fn open_default() -> Result<Self, String> {
         Self::open(default_cache_path(), 4096)
     }
@@ -799,6 +816,49 @@ mod tests {
         std::env::temp_dir()
             .join(format!("nude-translator-cache-{name}-{nonce}"))
             .join("cache.db")
+    }
+
+    #[test]
+    fn private_cache_uses_only_memory_and_does_not_survive_a_new_request() {
+        let cache = TranslationCache::in_memory(1).unwrap();
+        assert!(cache.path.as_os_str().is_empty());
+        {
+            let connection = cache.connection.lock().unwrap();
+            let database_file: String = connection
+                .query_row("PRAGMA database_list", [], |row| row.get(2))
+                .unwrap();
+            let temp_store: i32 = connection
+                .query_row("PRAGMA temp_store", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(database_file, "");
+            assert_eq!(temp_store, 2);
+        }
+        cache
+            .put("private-1", "hello", "en", "ko", "안녕하세요", "local:test")
+            .unwrap();
+        cache
+            .put(
+                "private-2",
+                "goodbye",
+                "en",
+                "ko",
+                "안녕히 가십시오",
+                "local:test",
+            )
+            .unwrap();
+        cache.clear_memory().unwrap();
+        assert_eq!(
+            cache
+                .get("private-1", "ko", "local:test")
+                .unwrap()
+                .as_deref(),
+            Some("안녕하세요")
+        );
+        let other_request = TranslationCache::in_memory(1).unwrap();
+        assert_eq!(
+            other_request.get("private-1", "ko", "local:test").unwrap(),
+            None
+        );
     }
 
     #[test]

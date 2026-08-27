@@ -1,6 +1,7 @@
 (() => {
   const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
   const adapters = globalThis.NudeNyangSiteAdapters;
+  const messengerAdapters = globalThis.NudeNyangMessengerAdapters;
   const INSTANCE_KEY = "__nudeNyangContentRuntime";
   const version = api.runtime.getManifest().version;
   const previous = globalThis[INSTANCE_KEY];
@@ -26,8 +27,10 @@
   } = globalThis.NudeNyangContentHelpers;
   const MAX_ITEM_CHARS = 4000;
   const EXTERNAL_TRANSLATORS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
+  const LOCAL_TRANSLATORS = new Set(["hymt_1_8b", "hymt_7b", "translategemma_4b"]);
   const DEFAULT_WEB_SETTINGS = Object.freeze({
     enabled: true,
+    messengerEnabled: false,
     targetLanguage: "display",
     processingMode: "balanced",
     externalPageCharLimit: 25000,
@@ -37,6 +40,7 @@
   const APPLY_BLOCKS_PER_FRAME = 2;
   const LAYOUT_OWNER = "p,h1,h2,h3,h4,h5,h6,li,blockquote,figcaption,dt,dd,summary,th,td,div,section,article,main,body";
   const EMBED_HOSTS = new Set(["www.youtube.com", "www.youtube-nocookie.com"]);
+  const RESTORABLE_HIDDEN_SELECTORS = new Set(["[hidden]", "[inert]", '[aria-hidden="true"]']);
   const trackedNodes = new Set();
   const nodeStates = new WeakMap();
   const embeddedRequests = new Map();
@@ -53,10 +57,19 @@
   let sequence = 0;
   let pageEpoch = 0;
   let currentUrl = location.href;
+  let messengerSite = null;
+  let messengerContext = null;
+  let messengerConsent = false;
+  let messengerPageId = "";
+  let messengerFailure = "";
+  let lastMessengerStatusAt = 0;
+  let refreshingStatus = false;
+  let appStatusEpoch = 0;
   let adapter = adapters.adapterForLocation(location);
   let blockSelector = adapter?.blocks.join(",") ?? "";
   let excludedSelector = adapter ? adapters.exclusionSelector(adapter) : "";
   let protectedSelector = adapter ? adapters.protectedExclusionSelector(adapter) : "";
+  let messengerRestoreSelector = "";
   let observer;
   let visibilityObserver;
   let intersectionObserver;
@@ -93,8 +106,81 @@
   function assignAdapter(nextAdapter) {
     adapter = nextAdapter;
     blockSelector = adapter?.blocks.join(",") ?? "";
-    excludedSelector = adapter ? adapters.exclusionSelector(adapter) : "";
-    protectedSelector = adapter ? adapters.protectedExclusionSelector(adapter) : "";
+    excludedSelector = messengerSite ? (messengerContext?.excludes.join(",") ?? "")
+      : adapter ? adapters.exclusionSelector(adapter) : "";
+    protectedSelector = messengerSite ? excludedSelector
+      : adapter ? adapters.protectedExclusionSelector(adapter) : "";
+    messengerRestoreSelector = messengerSite
+      ? (messengerContext?.excludes ?? []).filter((selector) => !RESTORABLE_HIDDEN_SELECTORS.has(selector)).join(",")
+      : "";
+  }
+
+  function pageContext() {
+    const context = messengerAdapters?.contextForDocument(location, document) ?? null;
+    const site = context ? { id: context.id, label: context.label }
+      : messengerAdapters?.privateSiteForLocation(location)
+        ?? messengerAdapters?.siteForLocation(location) ?? null;
+    return { context, site };
+  }
+
+  function sameConversation(next) {
+    return next.site?.id === messengerSite?.id
+      && next.context?.root === messengerContext?.root
+      && next.context?.routeKey === messengerContext?.routeKey
+      && (next.context?.identityNodes ?? []).every((node, index) => node === messengerContext?.identityNodes[index]);
+  }
+
+  function assignPageContext(next) {
+    messengerSite = next.site;
+    messengerContext = next.context;
+    messengerFailure = "";
+    // An opaque, per-conversation nonce must never contain a URL, peer ID or name.
+    messengerPageId = messengerSite ? `messenger:${messengerSite.id}:${crypto.randomUUID()}` : "";
+    assignAdapter(messengerSite
+      ? messengerContext ?? { id: messengerSite.id, blocks: [] }
+      : adapters.adapterForLocation(location));
+  }
+
+  function messengerGate() {
+    if (!messengerSite) return "";
+    if (!webSettings.enabled) return "web_translation_disabled";
+    if (!webSettings.messengerEnabled) return "messenger_disabled";
+    if (!messengerConsent) return "messenger_consent_required";
+    if (!LOCAL_TRANSLATORS.has(translator)) return "messenger_local_only";
+    if (!messengerContext?.root.isConnected) return "messenger_no_conversation";
+    return messengerFailure;
+  }
+
+  function canReadConversation() {
+    return !messengerSite || (!messengerGate() && !document.hidden);
+  }
+
+  function nearViewport(block) {
+    if (!messengerSite) return isElementNearViewport(block, innerHeight, scheduling.viewportMargin);
+    if (!canReadConversation() || !messengerContext.root.contains(block)
+      || !messengerAdapters.isVisibleElement(block)) return false;
+    const rect = block.getBoundingClientRect();
+    let top = Math.max(0, rect.top);
+    let bottom = Math.min(innerHeight, rect.bottom);
+    let left = Math.max(0, rect.left);
+    let right = Math.min(innerWidth, rect.right);
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    // Message lists scroll inside panels; window coordinates alone can expose
+    // historical messages clipped outside the currently visible conversation.
+    for (let parent = block.parentElement; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      if (/(auto|scroll|hidden|clip)/u.test(`${style.overflow} ${style.overflowY}`)) {
+        const bounds = parent.getBoundingClientRect();
+        top = Math.max(top, bounds.top);
+        bottom = Math.min(bottom, bounds.bottom);
+      }
+      if (/(auto|scroll|hidden|clip)/u.test(`${style.overflow} ${style.overflowX}`)) {
+        const bounds = parent.getBoundingClientRect();
+        left = Math.max(left, bounds.left);
+        right = Math.min(right, bounds.right);
+      }
+    }
+    return bottom > top && right > left;
   }
 
   function changeState(operation) {
@@ -163,6 +249,7 @@
   }
 
   function logDiagnostic(event, detail = {}) {
+    if (messengerSite) return;
     console.info("[NudeNyang Web Translator]", event, detail);
   }
 
@@ -177,6 +264,7 @@
       : {};
     return {
       enabled: source.enabled !== false,
+      messengerEnabled: source.messengerEnabled === true,
       targetLanguage: typeof source.targetLanguage === "string" ? source.targetLanguage : "display",
       processingMode: ["responsive", "balanced", "economy"].includes(source.processingMode)
         ? source.processingMode
@@ -204,13 +292,38 @@
   }
 
   async function refreshAppStatus() {
-    const response = await nativeRequest({ type: "status", requestId: `content-focus-${Date.now()}` });
-    if (response?.type !== "status" || disposed) return;
-    await changeState(() => {
-      const oldKey = translationKey();
-      applyAppStatus(response);
-      refreshPageSettings(oldKey);
-    });
+    if (refreshingStatus || disposed) return;
+    refreshingStatus = true;
+    const refreshEpoch = ++appStatusEpoch;
+    try {
+      const [response, consent] = await Promise.all([
+        nativeRequest({ type: "status", requestId: `content-focus-${Date.now()}` }),
+        extensionRequest({ type: "nudenyang-messenger-consent-get" }),
+      ]);
+      if (disposed || refreshEpoch !== appStatusEpoch) return;
+      await changeState(() => {
+        // A queued refresh must not undo a newer permission/settings notification.
+        if (refreshEpoch !== appStatusEpoch) return status();
+        const oldKey = translationKey();
+        const oldSettings = JSON.stringify(webSettings);
+        const oldFailure = messengerFailure;
+        messengerConsent = consent?.granted === true && consent.consentVersion === 1;
+        if (response?.type === "status") {
+          applyAppStatus(response);
+          messengerFailure = "";
+        } else if (messengerSite) messengerFailure = "messenger_request_cancelled";
+        handleNavigation();
+        if (oldKey !== translationKey() || oldSettings !== JSON.stringify(webSettings)
+          || oldFailure !== messengerFailure) refreshPageSettings(oldKey);
+        else if (messengerSite && enabled && canReadConversation()) {
+          replayTranslations();
+          scan(document, { enqueueVisible: true });
+        }
+      });
+    } finally {
+      lastMessengerStatusAt = refreshEpoch === appStatusEpoch ? Date.now() : 0;
+      refreshingStatus = false;
+    }
   }
 
   function applyWebSettings(value) {
@@ -220,7 +333,7 @@
   }
 
   function initialEnabled() {
-    return pageTranslationEnabled({
+    return !messengerGate() && pageTranslationEnabled({
       adapter,
       storedEnabled,
       tabEnabled,
@@ -241,11 +354,12 @@
   }
 
   function translationKey() {
-    return JSON.stringify([translator, effectiveTargetLanguage() ?? appTargetLanguage]);
+    return JSON.stringify([translator, effectiveTargetLanguage() ?? appTargetLanguage,
+      messengerSite ? [messengerSite.id, webSettings.messengerEnabled, messengerConsent] : null]);
   }
 
   function visibleEmbed(frameUrl) {
-    if (!adapter || document.hidden) return null;
+    if (!adapter || messengerSite || document.hidden) return null;
     let url;
     try { url = new URL(frameUrl); } catch { return null; }
     if (url.protocol !== "https:" || !EMBED_HOSTS.has(url.hostname) || url.port
@@ -270,7 +384,7 @@
 
   function embeddedContext() {
     return {
-      ok: true, enabled: enabled && Boolean(adapter) && !disposed,
+      ok: true, enabled: enabled && Boolean(adapter) && !messengerSite && !disposed,
       epoch: pageEpoch, translationKey: translationKey(),
       targetLanguage: effectiveTargetLanguage() ?? appTargetLanguage,
     };
@@ -335,7 +449,30 @@
 
   function handleVisibilityChange() {
     if (document.hidden) cancelEmbeddedRequests("stale");
+    if (messengerSite) {
+      if (document.hidden) restoreOriginals();
+      else {
+        handleNavigation();
+        void refreshAppStatus();
+      }
+    }
     notifyEmbeddedFrames();
+  }
+
+  function handlePageHide() {
+    if (!messengerSite || disposed) return;
+    pageEpoch += 1;
+    enabled = false;
+    restoreOriginals({ discard: true });
+    pendingScanBatch.clear();
+    messengerContext = null;
+    messengerPageId = "";
+  }
+
+  function handlePageShow() {
+    if (disposed) return;
+    handleNavigation();
+    if (messengerSite) void refreshAppStatus();
   }
 
   function completeEmbedded(item, response) {
@@ -354,7 +491,10 @@
       return;
     }
     const state = nodeStates.get(item.node);
-    if (state?.itemId === item.id) state.pending = false;
+    if (state?.itemId === item.id) {
+      if (messengerSite && !isCurrentMessengerText(item.node)) forgetMessengerText(item.node);
+      else state.pending = false;
+    }
   }
 
   function pruneDisconnectedNodes() {
@@ -389,6 +529,8 @@
   }
 
   function excludedBlock(block) {
+    if (messengerSite) return !canReadConversation()
+      || !messengerAdapters.isEligibleMessageBlock(block, messengerContext);
     if (!block || !excludedSelector || block.closest(protectedSelector)) return true;
     if (isPublicUiBlock(block)) return !allowedPublicForm(block);
     return !isExplicitExclusionBypassBlock(block, adapter) && Boolean(block.closest(excludedSelector));
@@ -408,8 +550,10 @@
   function translationBlockFor(node) {
     if (!adapter) return null;
     const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    if (messengerSite && (!messengerContext || !element || !messengerContext.root.contains(element))) return null;
     const semantic = closestTranslationBlock(node, blockSelector);
     if (semantic) return semantic;
+    if (messengerSite) return null;
     if (!adapter.collectLayoutText || !element || element.closest(excludedSelector)) return null;
     const block = element.closest(LAYOUT_OWNER);
     if (block) layoutBlocks.add(block);
@@ -418,6 +562,26 @@
 
   function textEligibility(block, visibility = new WeakMap()) {
     if (excludedBlock(block)) return () => false;
+    if (messengerSite) return (node) => {
+      const parent = node.parentElement;
+      if (!canReadConversation() || !parent || !block.contains(node)
+        || !messengerContext.root.contains(node) || !textIsVisible(parent, visibility)) return false;
+      // Protect author names, mentions, timestamps, editors and attachments even
+      // when a service places them inside its message-body element.
+      for (let current = parent; current; current = current.parentElement) {
+        if (current.matches(excludedSelector)) return false;
+        if (current === messengerContext.root) break;
+      }
+      const anchor = parent.closest("a[href]");
+      if (!anchor) return true;
+      // textContent also reads hidden/editor/author descendants. A mixed or
+      // enclosing link is not a safe message label, even if this node is safe.
+      if (!block.contains(anchor)) return false;
+      for (const child of anchor.querySelectorAll("*")) {
+        if (child.matches(excludedSelector) || !textIsVisible(child, visibility)) return false;
+      }
+      return !isUrlLikeLinkText(anchor.textContent, anchor.href);
+    };
     const publicUi = isPublicUiBlock(block);
     const bypassExclusion = publicUi || isExplicitExclusionBypassBlock(block, adapter);
     return (node) => {
@@ -435,15 +599,55 @@
     };
   }
 
+  function isCurrentMessengerText(node) {
+    // A retained node can be repurposed without changing the conversation root
+    // or first message. Recheck its current role and visibility before reading
+    // its value, retaining a result, or replaying a cached translation.
+    const block = translationBlockFor(node);
+    return Boolean(block && canReadConversation() && nearViewport(block) && textEligibility(block)(node));
+  }
+
+  function isRestorableMessengerText(node) {
+    const block = translationBlockFor(node);
+    if (!node?.isConnected || !block || block === messengerContext?.root
+      || !messengerContext?.root.contains(block) || !block.matches(blockSelector)) return false;
+    // Cleanup may restore an already translated, now-hidden message. It must
+    // never overwrite an editor, sender name, contact, or other repurposed UI,
+    // even if the retained text still equals our earlier translated value.
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      if (messengerRestoreSelector && parent.matches(messengerRestoreSelector)) return false;
+    }
+    return true;
+  }
+
+  function forgetMessengerText(node, { restore = false } = {}) {
+    const state = nodeStates.get(node);
+    if (restore && isRestorableMessengerText(node)
+      && state?.translated != null && node.nodeValue === state.translated) node.nodeValue = state.original;
+    nodeStates.delete(node);
+    trackedNodes.delete(node);
+  }
+
+  function pruneMessengerTranslations({ restoring = false } = {}) {
+    if (!messengerSite) return 0;
+    let removed = 0;
+    for (const node of trackedNodes) {
+      if (restoring ? isRestorableMessengerText(node) : isCurrentMessengerText(node)) continue;
+      forgetMessengerText(node, { restore: !restoring });
+      removed += 1;
+    }
+    return removed;
+  }
+
   function eligibleTextNodes(block) {
     const isEligible = textEligibility(block);
     const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
+        if (!isEligible(node)) return NodeFilter.FILTER_REJECT;
         const text = node.nodeValue ?? "";
         if (text.trim().length < 2 || text.length > MAX_ITEM_CHARS) {
           return NodeFilter.FILTER_REJECT;
         }
-        if (!isEligible(node)) return NodeFilter.FILTER_REJECT;
         const state = nodeStates.get(node);
         if (
           state?.pending
@@ -463,7 +667,7 @@
 
   function enqueueBlock(block, { priority = false } = {}) {
     if (disposed || !enabled || !adapter || usageLimited || !block
-      || !isElementNearViewport(block, innerHeight, scheduling.viewportMargin)) {
+      || !canReadConversation() || !nearViewport(block)) {
       return;
     }
     const id = blockId(block);
@@ -505,6 +709,8 @@
 
   function applyApplicationChunk() {
     applyingFrame = undefined;
+    if (!disposed && messengerSite) handleNavigation();
+    if (disposed) return;
     if (performance.now() < viewportActiveUntil) {
       scheduleApplications();
       return;
@@ -522,6 +728,10 @@
           continue;
         }
         const state = nodeStates.get(item.node);
+        if (messengerSite && state?.itemId === item.id && !isCurrentMessengerText(item.node)) {
+          forgetMessengerText(item.node);
+          continue;
+        }
         if (
           translated != null
           && state?.itemId === item.id
@@ -531,7 +741,7 @@
         ) {
           state.pending = false;
           state.translated = translated;
-          if (enabled) writes.push({ node: item.node, translated });
+          if (enabled && canReadConversation()) writes.push({ node: item.node, translated });
         } else if (state?.itemId === item.id) {
           state.pending = false;
         }
@@ -564,7 +774,7 @@
 
   async function flushQueue() {
     if (!disposed) handleNavigation();
-    if (disposed || translating || !enabled || usageLimited || queue.length === 0) {
+    if (disposed || translating || !enabled || !canReadConversation() || usageLimited || queue.length === 0) {
       return;
     }
     translating = true;
@@ -593,11 +803,14 @@
           && state?.itemId === item.id
           && state.epoch === pageEpoch
           && item.node.isConnected
+          // A queued private message can become an editor, author label or
+          // hidden node before dispatch. Do not read its newly protected value.
+          && (!messengerSite || (nearViewport(item.block) && eligibilityByBlock.get(item.block)(item.node)))
           && item.node.nodeValue === state.original
-          && eligibilityByBlock.get(item.block)(item.node);
+          && (messengerSite || eligibilityByBlock.get(item.block)(item.node));
       },
       isNearViewport(item) {
-        return isElementNearViewport(item.block, innerHeight, scheduling.viewportMargin);
+        return nearViewport(item.block);
       },
       onDiscard: releasePending,
     });
@@ -617,12 +830,14 @@
     const response = await nativeRequest({
       type: "translate",
       requestId,
-      pageId: `${adapter.id}:${location.origin}${location.pathname}`.slice(0, 240),
+      pageId: messengerSite ? messengerPageId
+        : `${adapter.id}:${location.origin}${location.pathname}`.slice(0, 240),
+      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 1 } } : {}),
       targetLanguage: effectiveTargetLanguage(),
       items: batch.map(({ id, blockId: itemBlockId, text }) => ({ id, blockId: itemBlockId, text })),
     });
     if (!disposed) handleNavigation();
-    if (disposed || requestEpoch !== pageEpoch || requestKey !== translationKey()) {
+    if (disposed || requestEpoch !== pageEpoch || requestKey !== translationKey() || messengerGate()) {
       for (const item of batch) releasePending(item);
       translating = false;
       if (!disposed && enabled && queue.length > 0) scheduleFlush(0);
@@ -677,6 +892,15 @@
         shutdownInvalidatedContext();
         return;
       }
+      if (messengerSite) {
+        // Do not expose native/provider errors that could contain private text.
+        messengerFailure = ["messenger_disabled", "messenger_local_only", "messenger_consent_required",
+          "web_translation_disabled"].includes(response?.code) ? response.code : "messenger_request_cancelled";
+        lastError = "";
+        translating = false;
+        refreshPageSettings(translationKey());
+        return;
+      }
       console.warn("[NudeNyang Web Translator] batch-failed", {
         code: response?.code ?? "unknown",
         retryable: Boolean(response?.retryable),
@@ -707,6 +931,10 @@
       for (const { item, translated } of block.applications) {
         if (item.embedded) { releasePending(item); continue; }
         const state = nodeStates.get(item.node);
+        if (messengerSite && state?.itemId === item.id && !isCurrentMessengerText(item.node)) {
+          forgetMessengerText(item.node);
+          continue;
+        }
         if (
           translated != null
           && state?.itemId === item.id
@@ -735,7 +963,9 @@
     flushDueAt = 0;
     applyTimer = undefined;
     applyingFrame = undefined;
+    const removed = pruneMessengerTranslations({ restoring: true });
     const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, false);
+    result.removed += removed;
     if (discard) {
       for (const node of trackedNodes) nodeStates.delete(node);
       trackedNodes.clear();
@@ -744,7 +974,10 @@
   }
 
   function replayTranslations() {
+    if (!canReadConversation()) return { changed: 0, removed: 0 };
+    const removed = pruneMessengerTranslations();
     const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, true);
+    result.removed += removed;
     if (result.changed > 0 || result.removed > 0) {
       logDiagnostic("cached-translations-replayed", result);
     }
@@ -772,6 +1005,8 @@
     document.removeEventListener("focusin", handleMenuInteraction, true);
     document.removeEventListener("toggle", handleMenuInteraction, true);
     document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("pagehide", handlePageHide);
+    window.removeEventListener("pageshow", handlePageShow);
     try { api.runtime.onMessage.removeListener(handleMessage); } catch { /* Reloaded extension. */ }
     rescanTimer = undefined;
     navigationTimer = undefined;
@@ -780,6 +1015,7 @@
   }
 
   function observeBlock(block) {
+    if (messengerSite && excludedBlock(block)) return;
     if (intersectionObserver) registerTranslationBlock(block, observedBlocks, intersectionObserver);
   }
 
@@ -831,8 +1067,12 @@
   }
 
   function scan(root = document, { enqueueVisible = false } = {}) {
-    if (disposed || !enabled || !adapter || !root?.querySelectorAll) {
+    if (disposed || !enabled || !adapter || !blockSelector || !canReadConversation() || !root?.querySelectorAll) {
       return;
+    }
+    if (messengerSite) {
+      if (root === document || root.contains(messengerContext.root)) root = messengerContext.root;
+      else if (!messengerContext.root.contains(root)) return;
     }
     observeVisibilityRoots(root);
     const containingBlock = root.nodeType === Node.ELEMENT_NODE ? translationBlockFor(root) : null;
@@ -874,9 +1114,9 @@
   }
 
   function handleNavigation() {
-    if (disposed || location.href === currentUrl) {
-      return;
-    }
+    if (disposed) return;
+    const next = pageContext();
+    if (location.href === currentUrl && sameConversation(next)) return;
     currentUrl = location.href;
     pageEpoch += 1;
     restoreOriginals({ discard: true });
@@ -888,13 +1128,12 @@
     layoutBlocks = new WeakSet();
     visibilityRoots = new WeakSet();
     visibilityObserver?.disconnect();
-    intersectionObserver.disconnect();
+    intersectionObserver?.disconnect();
+    assignPageContext(next);
     configureIntersectionObserver();
     pendingScanBatch.clear();
     clearTimeout(rescanTimer);
     rescanTimer = undefined;
-    const nextAdapter = adapters.adapterForLocation(location);
-    assignAdapter(nextAdapter);
     sitePolicy = webSettings.sitePolicies[currentHostname()] ?? "default";
     enabled = initialEnabled();
     lastError = "";
@@ -903,6 +1142,7 @@
   }
 
   async function setEnabled(value) {
+    handleNavigation();
     if (!adapter) {
       return status();
     }
@@ -914,9 +1154,11 @@
       lastError = "이 사이트는 번역하지 않도록 설정되어 있습니다.";
       return status();
     }
+    if (value && messengerGate()) return status();
     tabEnabled = await saveTabEnabled(value);
     if (disposed) return status();
-    enabled = tabEnabled;
+    handleNavigation();
+    enabled = tabEnabled && !messengerGate();
     usageLimited = false;
     lastError = "";
     if (enabled) {
@@ -949,9 +1191,12 @@
       supported: Boolean(adapter),
       site: adapter?.id ?? "",
       manualOnly: Boolean(adapter?.manualOnly),
+      messengerService: messengerSite?.id ?? "",
+      messengerGate: messengerGate(),
       translatedNodes: [...trackedNodes].filter((node) => {
         const state = nodeStates.get(node);
-        return state?.translated != null && node.nodeValue === state.translated;
+        return state?.translated != null && (!messengerSite || isCurrentMessengerText(node))
+          && node.nodeValue === state.translated;
       }).length,
       requestCount,
       sentChars,
@@ -973,11 +1218,11 @@
           enqueueBlock(entry.target);
         }
       }
-    }, { rootMargin: `${scheduling.viewportMargin}px 0px` });
+    }, { rootMargin: `${messengerSite ? 0 : scheduling.viewportMargin}px 0px` });
   }
 
   function refreshPageSettings(oldKey) {
-    if (oldKey !== translationKey()) {
+    if (oldKey !== translationKey() || (messengerSite && messengerGate())) {
       pageEpoch += 1;
       restoreOriginals({ discard: true });
       resetPageUsage();
@@ -1007,8 +1252,20 @@
       return true;
     }
     if (message?.type === "nudenyang-status") {
+      handleNavigation();
       sendResponse(status());
       return false;
+    }
+    if (message?.type === "nudenyang-messenger-refresh" && sender?.id === api.runtime.id) {
+      appStatusEpoch += 1;
+      changeState(() => {
+        const oldKey = translationKey();
+        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 1;
+        messengerFailure = "";
+        handleNavigation();
+        return refreshPageSettings(oldKey);
+      }).then(sendResponse);
+      return true;
     }
     if (message?.type === "nudenyang-set-enabled") {
       changeState(() => setEnabled(message.enabled)).then(sendResponse);
@@ -1031,9 +1288,11 @@
       return true;
     }
     if (message?.type === "nudenyang-apply-web-settings") {
+      appStatusEpoch += 1;
       changeState(() => {
         const oldKey = translationKey();
         applyWebSettings(message.webSettings);
+        messengerFailure = "";
         return refreshPageSettings(oldKey);
       }).then(sendResponse);
       return true;
@@ -1047,15 +1306,25 @@
   window.addEventListener("focus", refreshAppStatus, true);
 
   async function start() {
-    const [stored, appStatus, restoredTabEnabled] = await Promise.all([
+    const startupEpoch = appStatusEpoch;
+    const [stored, appStatus, restoredTabEnabled, consent] = await Promise.all([
       storageGet({ enabled: true }),
       nativeRequest({ type: "status", requestId: `content-${Date.now()}` }),
       loadTabEnabled(),
+      extensionRequest({ type: "nudenyang-messenger-consent-get" }),
     ]);
     if (disposed) return;
     storedEnabled = stored.enabled !== false;
     tabEnabled = restoredTabEnabled;
-    applyAppStatus(appStatus);
+    // Notifications received during startup are queued behind this promise.
+    // Keep the private gate closed until they apply instead of scanning with
+    // a now-obsolete consent snapshot even for a single microtask.
+    if (startupEpoch === appStatusEpoch) {
+      messengerConsent = consent?.granted === true && consent.consentVersion === 1;
+      applyAppStatus(appStatus);
+    }
+    assignPageContext(pageContext());
+    lastMessengerStatusAt = startupEpoch === appStatusEpoch ? Date.now() : 0;
     enabled = initialEnabled();
     configureIntersectionObserver();
     visibilityObserver = new MutationObserver((mutations) => {
@@ -1064,7 +1333,7 @@
     });
     observer = new MutationObserver((mutations) => {
       handleNavigation();
-      if (!enabled || disposed) {
+      if (!enabled || disposed || !canReadConversation()) {
         return;
       }
       for (const mutation of mutations) {
@@ -1082,6 +1351,10 @@
             }
           }
         } else if (mutation.type === "characterData") {
+          if (messengerSite && !isCurrentMessengerText(mutation.target)) {
+            forgetMessengerText(mutation.target);
+            continue;
+          }
           const state = nodeStates.get(mutation.target);
           if (!state || mutation.target.nodeValue !== state.translated) {
             const block = translationBlockFor(mutation.target);
@@ -1103,7 +1376,14 @@
     document.addEventListener("focusin", handleMenuInteraction, true);
     document.addEventListener("toggle", handleMenuInteraction, true);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    navigationTimer = setInterval(handleNavigation, 500);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("pageshow", handlePageShow);
+    navigationTimer = setInterval(() => {
+      handleNavigation();
+      // The desktop app may change while the browser stays focused. Only active
+      // messenger tabs poll permission/model state; public pages do not poll.
+      if (messengerSite && !document.hidden && Date.now() - lastMessengerStatusAt >= 5000) void refreshAppStatus();
+    }, 500);
     scan(document);
     notifyEmbeddedFrames();
   }

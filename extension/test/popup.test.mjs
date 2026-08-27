@@ -62,7 +62,7 @@ test("팝업에 포커스가 있어도 설정한 빠른 전환키는 현재 페�
 });
 
 test("차단 페이지에서는 보조 단축키도 번역 설정을 바꾸지 않는다", () => {
-  assert.match(contentJs, /async function setEnabled\(value\) \{\s*if \(!adapter\) \{\s*return status\(\);/);
+  assert.match(contentJs, /async function setEnabled\(value\) \{\s*handleNavigation\(\);\s*if \(!adapter\) \{\s*return status\(\);/);
 });
 
 test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호출한다", () => {

@@ -11,12 +11,13 @@
       "id": "web-translator@nudenyang.github.io",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
-        "required": ["websiteContent", "browsingActivity"]
+        "required": ["websiteContent", "browsingActivity"],
+        "optional": ["personalCommunications"]
       }
     }
   },
   "background": {
-    "scripts": ["native-client.js", "tab-state.js", "page-connection.js", "embedded-bridge.js", "background.js"]
+    "scripts": ["native-client.js", "tab-state.js", "page-connection.js", "embedded-bridge.js", "messenger-adapters.js", "messenger-privacy.js", "background.js"]
   },
   "icons": {
     "16": "icons/paw-16.png",
@@ -51,7 +52,7 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["site-adapters.js", "content-helpers.js", "content.js"],
+      "js": ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"],
       "run_at": "document_idle"
     },
     {

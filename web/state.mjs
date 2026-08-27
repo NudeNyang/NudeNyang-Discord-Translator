@@ -11,6 +11,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   incoming_source_languages: [],
   translate_nicknames: true,
   web_translation_enabled: true,
+  web_messenger_enabled: false,
   web_target_language: "display",
   web_processing_mode: "balanced",
   web_external_page_char_limit: 25000,
@@ -166,6 +167,7 @@ export function normalizeConfig(value = {}) {
     dictionary_external_provider: dictionaryExternalProvider,
     discord_variant: discordVariant,
     web_target_language: webTargetLanguage,
+    web_messenger_enabled: value.web_messenger_enabled === true,
     web_processing_mode: webProcessingMode,
     web_external_page_char_limit: webExternalPageCharLimit,
     web_quick_toggle_shortcut: webQuickToggleShortcut,
@@ -289,6 +291,11 @@ const LOCAL_MODEL_RESOURCE_PROFILES = Object.freeze({
     estimatedRamBytes: Math.round(3.2 * 1024 ** 3),
   }),
 });
+
+export function webMessengerNeedsLocalModel(config = {}) {
+  return config.web_messenger_enabled === true
+    && !Object.hasOwn(LOCAL_MODEL_RESOURCE_PROFILES, config.translator);
+}
 
 export function localModelResourceGuidance(config = {}, memory = {}) {
   const modelId = LOCAL_MODEL_RESOURCE_PROFILES[config.translator]

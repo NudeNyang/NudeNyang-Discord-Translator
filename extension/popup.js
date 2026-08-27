@@ -7,6 +7,8 @@ const site = document.querySelector("#site");
 const connection = document.querySelector("#connection");
 const connectionText = document.querySelector("#connection-text");
 const detail = document.querySelector("#detail");
+const messengerNotice = document.querySelector("#messenger-notice");
+const messengerPrivacy = document.querySelector("#messenger-privacy");
 const commandShortcut = document.querySelector("#command-shortcut");
 const quickToggleShortcutElement = document.querySelector("#quick-toggle-shortcut");
 const restore = document.querySelector("#restore");
@@ -176,9 +178,24 @@ async function pageStatus(tabId) {
 }
 
 function renderPageStatus(status) {
+  const messengerGate = status?.messengerService ? status.messengerGate : "";
   enabled.checked = status?.enabled ?? false;
-  enabled.disabled = !status?.supported;
+  enabled.disabled = !status?.supported || Boolean(messengerGate);
   restore.disabled = !status?.supported;
+  messengerNotice.hidden = !status?.messengerService;
+  const messengerCopy = {
+    messenger_consent_required: "messengerConsentRequired",
+    messenger_disabled: "messengerDisabled",
+    messenger_local_only: "messengerLocalOnly",
+    messenger_no_conversation: "messengerNoConversation",
+    messenger_request_cancelled: "messengerWaiting",
+    messenger_invalid_context: "unableToProcess",
+  };
+  messengerNotice.textContent = messengerGate === "web_translation_disabled"
+    ? `${copy("enableWebTranslation")} · ${copy("settings")}`
+    : copy(messengerCopy[messengerGate] ?? (messengerGate ? "unableToProcess" : "messengerReadTranslation"));
+  messengerPrivacy.textContent = copy(messengerGate === "messenger_consent_required"
+    ? "reviewMessengerPrivacy" : "messengerPrivacyConsent");
   if (!status) {
     site.textContent = copy("unableToProcess");
   } else if (status.supported && status.manualOnly && !status.enabled) {
@@ -198,7 +215,7 @@ function renderPageStatus(status) {
     ? status.targetLanguage
     : "");
   alwaysTranslateSite.checked = status?.sitePolicy === "always";
-  alwaysTranslateSite.disabled = !status?.supported;
+  alwaysTranslateSite.disabled = !status?.supported || Boolean(messengerGate);
   targetLanguageTrigger.disabled = !status?.supported;
   if (targetLanguageTrigger.disabled) closeTargetLanguageMenu();
 }
@@ -240,7 +257,7 @@ async function initialize() {
     if (!isQuickToggleShortcut(event, quickToggleShortcut)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (!tab?.id) return;
+    if (!tab?.id || enabled.disabled) return;
     const updated = await tabMessage(tab.id, { type: "nudenyang-toggle-enabled" });
     if (updated) {
       status = updated;
@@ -253,7 +270,7 @@ async function initialize() {
   document.addEventListener("keydown", handleQuickToggle, true);
 
   enabled.addEventListener("change", async () => {
-    if (!tab?.id) return;
+    if (!tab?.id || enabled.disabled) return;
     const previous = status?.enabled ?? false;
     const updated = await tabMessage(tab.id, { type: "nudenyang-set-enabled", enabled: enabled.checked });
     if (updated) {
@@ -347,6 +364,19 @@ async function initialize() {
       window.close();
     } else {
       detail.textContent = copy("error");
+    }
+  });
+  messengerPrivacy.addEventListener("click", () => {
+    try {
+      api.tabs.create({ url: api.runtime.getURL("messenger-privacy.html") }, () => {
+        if (api.runtime.lastError) {
+          messengerNotice.hidden = false;
+          messengerNotice.textContent = copy("unableToProcess");
+        }
+      });
+    } catch {
+      messengerNotice.hidden = false;
+      messengerNotice.textContent = copy("unableToProcess");
     }
   });
 }

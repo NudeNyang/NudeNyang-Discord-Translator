@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Web messenger privacy consent</title>
+    <link rel="icon" type="image/png" href="icons/paw-32.png">
+    <link rel="stylesheet" href="messenger-privacy.css">
+    <script src="popup-locales.js" defer></script>
+    <script src="messenger-privacy-page.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header class="page-heading">
+        <img class="brand-icon" src="icons/paw-128.png" width="48" height="48" alt="">
+        <div>
+          <p class="eyebrow">NUDENYANG</p>
+          <h1 id="privacy-title" data-i18n="messengerPrivacyTitle">Privacy notice for web messenger reading translation</h1>
+        </div>
+      </header>
+
+      <p class="intro" data-i18n="messengerPrivacyIntro">Web messenger reading translation is off by default. It is available only in browsers where you have given consent.</p>
+      <p class="services">X · Discord · WhatsApp · Telegram · Messenger · Slack · Microsoft Teams · Google Messages</p>
+
+      <section class="notice" aria-labelledby="privacy-title">
+        <ul class="privacy-details">
+          <li data-i18n="messengerPrivacyData">Only message bodies from the currently open conversation are sent to the separately installed NudeNyang Windows app for translation with local AI.</li>
+          <li data-i18n="messengerPrivacyExternal">Conversation content is not sent to external translation services.</li>
+          <li data-i18n="messengerPrivacyRetention">Conversation content and translations held by the extension are processed only in memory and deleted when you switch or close the conversation. They are not saved to disk caches, translation history, or message-body logs.</li>
+          <li data-i18n="messengerPrivacyNoSending">No message composition or sending features are used, and names and contacts are not translated automatically.</li>
+        </ul>
+      </section>
+
+      <section class="consent" aria-labelledby="consent-title" id="privacy-controls" aria-busy="false">
+        <h2 id="consent-title" data-i18n="messengerPrivacyConsent">Web messenger privacy consent</h2>
+        <label class="confirmation" id="privacy-confirmation" for="privacy-confirm">
+          <input type="checkbox" id="privacy-confirm" autocomplete="off" disabled>
+          <span data-i18n="messengerPrivacyConfirm">Only consent records and settings are saved in this browser. I have read the information above and consent to web messenger reading translation.</span>
+        </label>
+        <p id="privacy-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+        <p id="privacy-settings-hint" class="settings-hint" data-i18n="messengerDisabled" hidden>Enable web messenger reading translation in the main app.</p>
+        <div class="actions">
+          <button type="button" id="privacy-cancel" class="secondary" data-i18n="messengerPrivacyCancel">Cancel</button>
+          <button type="button" id="privacy-revoke" class="revoke" data-i18n="messengerPrivacyRevoke" hidden disabled>Withdraw consent</button>
+          <button type="button" id="privacy-accept" class="primary" data-i18n="messengerPrivacyAccept" disabled>Agree and enable</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

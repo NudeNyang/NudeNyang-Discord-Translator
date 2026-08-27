@@ -211,6 +211,7 @@ struct SharedModelRuntime {
     monitor_running: bool,
     pending_vram_action: Option<VramProtectionAction>,
     vram_protection: VramProtectionState,
+    raw_output_allowed: Arc<AtomicBool>,
 }
 
 static SHARED_MODEL_RUNTIMES: LazyLock<Mutex<HashMap<String, Weak<Mutex<SharedModelRuntime>>>>> =
@@ -720,11 +721,22 @@ impl HyMtTranslator {
                     &format!("server process job unavailable: {error}"),
                 ),
             }
+            // Never re-open an old pipe gate: buffered private output must
+            // remain suppressed even while a replacement server starts.
+            runtime.raw_output_allowed = Arc::new(AtomicBool::new(true));
             if let Some(stdout) = child.stdout.take() {
-                crate::diagnostics::pipe_external_output(stdout, diagnostics_scope);
+                crate::diagnostics::pipe_external_output(
+                    stdout,
+                    diagnostics_scope,
+                    Arc::clone(&runtime.raw_output_allowed),
+                );
             }
             if let Some(stderr) = child.stderr.take() {
-                crate::diagnostics::pipe_external_output(stderr, diagnostics_scope);
+                crate::diagnostics::pipe_external_output(
+                    stderr,
+                    diagnostics_scope,
+                    Arc::clone(&runtime.raw_output_allowed),
+                );
             }
             runtime.process = Some(child);
             let deadline = Instant::now() + self.startup_timeout;
@@ -820,6 +832,9 @@ impl HyMtTranslator {
             if runtime.generation == self.runtime_generation
                 && runtime_process_is_running(&mut runtime)
             {
+                if crate::diagnostics::sensitive_request_active() {
+                    runtime.raw_output_allowed.store(false, Ordering::Release);
+                }
                 runtime.active_requests += 1;
                 return Ok(RuntimeRequestGuard {
                     runtime: Arc::clone(&self.runtime),
@@ -1034,14 +1049,18 @@ impl HyMtTranslator {
 }
 
 fn completion_payload(prompt: &str, output_limit: usize) -> Value {
-    json!({
+    let mut payload = json!({
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": output_limit,
         "temperature": INFERENCE_TEMPERATURE,
         "top_p": 0.6,
         "top_k": 20,
         "repeat_penalty": 1.05,
-    })
+    });
+    if crate::diagnostics::sensitive_request_active() {
+        payload["cache_prompt"] = json!(false);
+    }
+    payload
 }
 
 fn translate_gemma_completion_payload(
@@ -1056,7 +1075,7 @@ fn translate_gemma_completion_payload(
         "n_predict": output_limit,
         "temperature": INFERENCE_TEMPERATURE,
         "stop": ["<end_of_turn>"],
-        "cache_prompt": true,
+        "cache_prompt": !crate::diagnostics::sensitive_request_active(),
     })
 }
 
@@ -2815,6 +2834,48 @@ mod tests {
     fn local_translation_sampling_is_deterministic() {
         let payload = completion_payload("translate", 96);
         assert_eq!(payload["temperature"].as_f64(), Some(0.0));
+    }
+
+    #[test]
+    fn private_model_payloads_disable_prompt_cache_without_changing_public_defaults() {
+        let public_hymt = completion_payload("translate", 96);
+        let public_gemma = translate_gemma_completion_payload(
+            "Test message",
+            Language::English,
+            Language::Korean,
+            "auto",
+            96,
+        );
+        assert!(public_hymt.get("cache_prompt").is_none());
+        assert_eq!(public_gemma["cache_prompt"], true);
+        {
+            let _scope = crate::diagnostics::sensitive_request_scope();
+            let mut private_hymt = completion_payload("translate", 96);
+            let mut private_gemma = translate_gemma_completion_payload(
+                "Test message",
+                Language::English,
+                Language::Korean,
+                "auto",
+                96,
+            );
+            assert_eq!(private_hymt["cache_prompt"], false);
+            assert_eq!(private_gemma["cache_prompt"], false);
+            private_hymt.as_object_mut().unwrap().remove("cache_prompt");
+            private_gemma["cache_prompt"] = serde_json::json!(true);
+            assert_eq!(private_hymt, public_hymt);
+            assert_eq!(private_gemma, public_gemma);
+        }
+        assert_eq!(completion_payload("translate", 96), public_hymt);
+        assert_eq!(
+            translate_gemma_completion_payload(
+                "Test message",
+                Language::English,
+                Language::Korean,
+                "auto",
+                96
+            ),
+            public_gemma
+        );
     }
 
     #[test]

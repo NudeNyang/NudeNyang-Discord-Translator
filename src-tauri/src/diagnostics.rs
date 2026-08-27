@@ -1,8 +1,12 @@
+use std::cell::Cell;
 use std::env;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
-use std::sync::{LazyLock, Mutex};
+use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use regex::Regex;
 use time::OffsetDateTime;
@@ -12,6 +16,36 @@ pub const MAX_LOG_BYTES: u64 = 5 * 1024 * 1024;
 const RETAIN_LOG_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_MESSAGE_CHARS: usize = 8_000;
 static LOG_WRITE_LOCK: Mutex<()> = Mutex::new(());
+thread_local! {
+    static SENSITIVE_SCOPE_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Private inference is synchronous on the translation worker. This guard is
+/// deliberately !Send/!Sync so it cannot silently move to a different thread.
+pub struct SensitiveRequestScope {
+    _same_thread: PhantomData<Rc<()>>,
+}
+
+pub fn sensitive_request_scope() -> SensitiveRequestScope {
+    SENSITIVE_SCOPE_DEPTH.with(|depth| depth.set(depth.get() + 1));
+    SensitiveRequestScope {
+        _same_thread: PhantomData,
+    }
+}
+
+impl Drop for SensitiveRequestScope {
+    fn drop(&mut self) {
+        SENSITIVE_SCOPE_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+fn diagnostics_suppressed() -> bool {
+    SENSITIVE_SCOPE_DEPTH.with(|depth| depth.get() > 0)
+}
+
+pub(crate) fn sensitive_request_active() -> bool {
+    diagnostics_suppressed()
+}
 static BEARER_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)bearer\s+[A-Za-z0-9._~+/=-]+").expect("valid bearer regex"));
 static SECRET_ASSIGNMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -108,6 +142,11 @@ pub fn error(component: &str, message: &str) {
 }
 
 pub fn record(level: &str, component: &str, message: &str) {
+    // Drop the entire entry, including source hashes and per-conversation
+    // metadata, before looking up or opening a persistent log file.
+    if diagnostics_suppressed() {
+        return;
+    }
     let path = default_log_path();
     let Ok(_guard) = LOG_WRITE_LOCK.lock() else {
         return;
@@ -133,17 +172,27 @@ pub fn record(level: &str, component: &str, message: &str) {
     );
 }
 
-pub fn pipe_external_output<R>(reader: R, component: &'static str)
-where
+pub fn pipe_external_output<R>(
+    reader: R,
+    component: &'static str,
+    allow_raw_output: Arc<AtomicBool>,
+) where
     R: Read + Send + 'static,
 {
     std::thread::spawn(move || {
         for line in BufReader::new(reader).lines().map_while(Result::ok) {
-            if external_line_is_diagnostic(&line) {
+            // The pipe reader outlives individual inference calls. Its gate
+            // stays closed for the rest of a process's lifetime after private
+            // input, including any delayed/buffered stdout or stderr.
+            if external_output_allowed(&allow_raw_output, &line) {
                 info(component, &line);
             }
         }
     });
+}
+
+fn external_output_allowed(allow_raw_output: &AtomicBool, line: &str) -> bool {
+    allow_raw_output.load(Ordering::Acquire) && external_line_is_diagnostic(line)
 }
 
 fn prepare_log_file(path: &Path) -> Result<(), String> {
@@ -301,6 +350,34 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
+    fn private_diagnostic_scopes_nest_and_restore_without_affecting_other_threads() {
+        assert!(!super::diagnostics_suppressed());
+        let outer = super::sensitive_request_scope();
+        assert!(super::diagnostics_suppressed());
+        {
+            let _inner = super::sensitive_request_scope();
+            assert!(super::diagnostics_suppressed());
+            assert!(!std::thread::spawn(super::diagnostics_suppressed)
+                .join()
+                .unwrap());
+        }
+        assert!(super::diagnostics_suppressed());
+        drop(outer);
+        assert!(!super::diagnostics_suppressed());
+    }
+
+    #[test]
+    fn private_diagnostic_scope_is_released_during_unwinding() {
+        let result = std::panic::catch_unwind(|| {
+            let _scope = super::sensitive_request_scope();
+            assert!(super::diagnostics_suppressed());
+            panic!("synthetic private request failure");
+        });
+        assert!(result.is_err());
+        assert!(!super::diagnostics_suppressed());
+    }
+
+    #[test]
     fn secrets_and_user_profile_are_redacted() {
         let home = std::env::var("USERPROFILE")
             .or_else(|_| std::env::var("HOME"))
@@ -381,6 +458,34 @@ mod tests {
         ));
         assert!(!external_line_is_diagnostic(
             "request prompt: a private Discord message"
+        ));
+    }
+
+    #[test]
+    fn private_external_output_gate_blocks_delayed_lines_on_the_reader_thread() {
+        let gate = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        assert!(super::external_output_allowed(
+            &gate,
+            "CUDA backend failed to allocate memory"
+        ));
+        gate.store(false, std::sync::atomic::Ordering::Release);
+        let reader_gate = std::sync::Arc::clone(&gate);
+        std::thread::spawn(move || {
+            // A message containing words like 'warning' or 'error' would pass
+            // the normal model diagnostic filter. Private gates still deny it.
+            assert!(!super::sensitive_request_active());
+            assert!(!super::external_output_allowed(
+                &reader_gate,
+                "warning: delayed private input"
+            ));
+        })
+        .join()
+        .unwrap();
+        assert!(!super::external_output_allowed(&gate, "model load failed"));
+        let new_process_gate = std::sync::atomic::AtomicBool::new(true);
+        assert!(super::external_output_allowed(
+            &new_process_gate,
+            "model load failed"
         ));
     }
 }

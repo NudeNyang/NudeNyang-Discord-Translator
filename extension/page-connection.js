@@ -1,6 +1,7 @@
 (function exposePageConnection(root) {
   const DEFAULT_CONTENT_SCRIPTS = Object.freeze([
     "site-adapters.js",
+    "messenger-adapters.js",
     "content-helpers.js",
     "content.js",
   ]);

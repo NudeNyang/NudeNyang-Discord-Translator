@@ -3,7 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 
-const sources = ["site-adapters.js", "content-helpers.js", "content.js"].map((file) => (
+const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"].map((file) => (
   fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
 ));
 const FRAME_URL = "https://www.youtube-nocookie.com/embed/video123?rel=0";
@@ -41,6 +41,8 @@ function page(t, html, options = {}) {
   const requests = [];
   const runtimeMessages = [];
   const savedStates = [];
+  const applicationFrames = new Map();
+  let nextApplicationFrame = 0;
   let releaseStatus;
   let releaseTranslation;
   const appStatus = {
@@ -48,6 +50,14 @@ function page(t, html, options = {}) {
     webSettings: { enabled: true, processingMode: "responsive", ...options.settings },
   };
   w.console.info = () => {};
+  if (options.deferApplications) {
+    w.requestAnimationFrame = (callback) => {
+      const id = ++nextApplicationFrame;
+      applicationFrames.set(id, callback);
+      return id;
+    };
+    w.cancelAnimationFrame = (id) => applicationFrames.delete(id);
+  }
   w.HTMLElement.prototype.getBoundingClientRect = function rect() {
     const hidden = this.closest("[hidden],[aria-hidden='true']")
       || w.getComputedStyle(this).display === "none";
@@ -83,6 +93,8 @@ function page(t, html, options = {}) {
         } else if (message.type === "nudenyang-tab-enabled-set") {
           savedStates.push(message.enabled);
           callback({ enabled: message.enabled });
+        } else if (message.type === "nudenyang-messenger-consent-get") {
+          callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? 1 : 0 });
         } else if (message.type === "nudenyang-native-request") {
           if (message.request.type === "status") {
             if (options.deferStatus) releaseStatus = () => callback(appStatus);
@@ -108,13 +120,358 @@ function page(t, html, options = {}) {
   }
   for (const source of sources) w.eval(source);
   return {
-    w, requests, savedStates, message, listeners, runtimeMessages,
+    w, requests, savedStates, message, listeners, runtimeMessages, appStatus,
     releaseStatus: () => releaseStatus?.(),
     releaseTranslation: () => releaseTranslation?.(),
+    pendingApplicationFrames: () => applicationFrames.size,
+    releaseApplications() {
+      const pending = [...applicationFrames.values()];
+      applicationFrames.clear();
+      for (const callback of pending) callback(w.performance.now());
+    },
     reinject: () => sources.forEach((source) => w.eval(source)),
     sent: () => requests.flatMap((request) => request.items.map((item) => item.text)),
   };
 }
+
+const PRIVATE_CHAT = `<nav><span>Private contact list</span></nav>
+  <ol data-list-id="chat-messages"><li>
+    <span id="message-username-1">Private sender</span>
+    <div id="message-content-1">Hello from a private conversation
+      <span class="mention_abcd">@Private person</span><code>secret_code()</code>
+      <time>Private timestamp</time><a href="https://example.com/">https://example.com/</a>
+    </div></li></ol><div role="textbox" contenteditable="true">Unsent private draft</div>`;
+const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", consent: true,
+  settings: { messengerEnabled: true } };
+
+test("웹 메신저는 본체 허용·브라우저 동의·로컬 AI가 모두 있어야 본문을 읽는다", async (t) => {
+  for (const extra of [{ settings: {} }, { consent: false }, { translator: "deepl" }, { translator: "unknown" }]) {
+    const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, ...extra });
+    await p.message({ type: "nudenyang-ready" });
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(p.requests.length, 0);
+    const state = await p.message({ type: "nudenyang-status" });
+    assert.equal(state.messengerService, "discord");
+    assert.ok(state.messengerGate);
+    assert.ok(p.w.document.querySelector("#message-content-1").textContent.includes("Hello"));
+  }
+});
+
+test("동의한 웹 Discord는 본문만 사적 컨텍스트로 보내고 원문 비교에 재요청하지 않는다", async (t) => {
+  const p = page(t, PRIVATE_CHAT, PRIVATE_OPTIONS);
+  await p.message({ type: "nudenyang-ready" });
+  const body = p.w.document.querySelector("#message-content-1");
+  const original = body.innerHTML;
+  await waitFor(() => body.textContent.includes("번역(Hello"), "opted-in message should translate");
+  assert.equal(p.sent().length, 1);
+  assert.ok(!p.sent().some((text) => /sender|draft|timestamp|person|secret_code|https:/.test(text)));
+  for (const request of p.requests) {
+    assert.deepEqual(JSON.parse(JSON.stringify(request.privateContext)), { service: "discord", consentVersion: 1 });
+    assert.match(request.pageId, /^messenger:discord:[a-zA-Z0-9_-]{16,128}$/);
+    assert.ok(!JSON.stringify(request).includes("123456789"));
+  }
+  const count = p.requests.length;
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  assert.equal(body.innerHTML, original);
+  await p.message({ type: "nudenyang-set-enabled", enabled: true });
+  assert.ok(body.textContent.includes("번역(Hello"));
+  assert.equal(p.requests.length, count);
+  assert.equal(p.w.document.querySelector("[contenteditable]").textContent, "Unsent private draft");
+});
+
+test("메신저 동의 철회와 외부 모델 전환은 원문을 복원하고 사적 캐시를 폐기한다", async (t) => {
+  const p = page(t, PRIVATE_CHAT, PRIVATE_OPTIONS);
+  await p.message({ type: "nudenyang-ready" });
+  const body = p.w.document.querySelector("#message-content-1");
+  await waitFor(() => body.textContent.includes("번역(Hello"), "initial translation");
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
+  assert.ok(!body.textContent.includes("번역("));
+  assert.equal((await p.message({ type: "nudenyang-status" })).translatedNodes, 0);
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 1 } });
+  await waitFor(() => p.requests.length >= 2 && body.textContent.includes("번역("), "re-consent starts fresh");
+  p.appStatus.translator = "chatgpt";
+  p.w.dispatchEvent(new p.w.FocusEvent("focus"));
+  await waitFor(() => !body.textContent.includes("번역("), "external provider must discard private display");
+  const state = await p.message({ type: "nudenyang-status" });
+  assert.equal(state.messengerGate, "messenger_local_only");
+});
+
+for (const { label, update, gate } of [
+  { label: "동의 철회", update: { type: "nudenyang-messenger-refresh",
+    consent: { granted: false, consentVersion: 0 } }, gate: "messenger_consent_required" },
+  { label: "본체 설정 끄기", update: { type: "nudenyang-apply-web-settings",
+    webSettings: { enabled: true, messengerEnabled: false } }, gate: "messenger_disabled" },
+]) {
+  test(`늦게 도착한 상태 조회는 최신 ${label}를 덮어쓰지 않는다`, async (t) => {
+    const options = { ...PRIVATE_OPTIONS };
+    const p = page(t, PRIVATE_CHAT, options);
+    await p.message({ type: "nudenyang-ready" });
+    const body = p.w.document.querySelector("#message-content-1");
+    await waitFor(() => body.textContent.includes("번역("), "initial private translation");
+    options.deferStatus = true;
+    p.w.dispatchEvent(new p.w.FocusEvent("focus"));
+    await p.message(update);
+    const requestCount = p.requests.length;
+    p.releaseStatus();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const state = await p.message({ type: "nudenyang-status" });
+    assert.equal(state.enabled, false);
+    assert.equal(state.messengerGate, gate);
+    assert.equal(p.requests.length, requestCount, "stale permission must not enqueue private text again");
+    assert.ok(!body.textContent.includes("번역("));
+  });
+}
+
+test("시작 상태 조회 중 철회한 메신저 동의는 본문을 읽기 전에 적용한다", async (t) => {
+  const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, deferStatus: true });
+  const body = p.w.document.querySelector("#message-content-1");
+  const reads = watchNodeValueReads(p.w, body.firstChild);
+  const revoked = p.message({ type: "nudenyang-messenger-refresh",
+    consent: { granted: false, consentVersion: 0 } });
+  p.releaseStatus();
+  await revoked;
+  assert.equal(reads(), 0, "startup must not briefly read text with a revoked consent snapshot");
+  assert.equal(p.requests.length, 0);
+  assert.equal((await p.message({ type: "nudenyang-status" })).enabled, false);
+});
+
+test("대화 전환 중 늦은 번역은 다른 대화에 적용하지 않고 대화 ID를 전송하지 않는다", async (t) => {
+  const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, deferTranslation: true });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.requests.length === 1, "first conversation in flight");
+  const firstPageId = p.requests[0].pageId;
+  const root = p.w.document.querySelector("[data-list-id]");
+  p.w.history.pushState(null, "", "/channels/@me/987654321");
+  root.innerHTML = '<li><div id="message-content-2">A different private conversation</div></li>';
+  p.releaseTranslation();
+  await waitFor(() => p.requests.length === 2, "second conversation starts");
+  assert.notEqual(p.requests[1].pageId, firstPageId);
+  assert.ok(!root.textContent.includes("번역("));
+  p.releaseTranslation();
+  await waitFor(() => root.textContent.includes("번역(A different"), "second conversation translated");
+  assert.ok(!JSON.stringify(p.requests).includes("987654321"));
+});
+
+// Keep the first message stable so these changes exercise per-node privacy,
+// rather than passing because the conversation-identity guard discarded it all.
+const RECLASSIFIED_CHAT = `<ol data-list-id="chat-messages">
+  <li><div id="message-content-anchor">Stable neutral anchor</div></li>
+  <li><div id="message-content-changing">Secondary synthetic message</div></li>
+</ol>`;
+const PRIVATE_NODE_CHANGES = [
+  { label: "숨김", attribute: "hidden", value: "" },
+  { label: "작성창", attribute: "contenteditable", value: "true" },
+  { label: "작성자 영역", attribute: "class", value: "message-author" },
+];
+
+function watchNodeValueReads(w, node) {
+  const descriptor = Object.getOwnPropertyDescriptor(w.Node.prototype, "nodeValue");
+  let reads = 0;
+  Object.defineProperty(node, "nodeValue", {
+    configurable: true,
+    get() { reads += 1; return descriptor.get.call(this); },
+    set(value) { descriptor.set.call(this, value); },
+  });
+  return () => reads;
+}
+
+for (const { label, attributes } of [
+  { label: "작성창", attributes: 'contenteditable="true"' },
+  { label: "작성자", attributes: 'class="message-author"' },
+  { label: "숨김 속성", attributes: "hidden" },
+  { label: "CSS 숨김", attributes: 'style="display:none"' },
+  { label: "투명 요소", attributes: 'style="opacity:0"' },
+]) {
+  test(`메신저 링크 안의 ${label} 텍스트는 링크 판별을 위해서도 읽지 않는다`, async (t) => {
+    const html = RECLASSIFIED_CHAT.replace("Secondary synthetic message", `Visible surrounding message
+      <a id="mixed-private-link" href="https://example.com/article">Visible link label
+        <span ${attributes}>Protected synthetic text</span>
+      </a>`);
+    const p = page(t, html, PRIVATE_OPTIONS);
+    const anchor = p.w.document.querySelector("#mixed-private-link");
+    const descriptor = Object.getOwnPropertyDescriptor(p.w.Node.prototype, "textContent");
+    let aggregateReads = 0;
+    Object.defineProperty(anchor, "textContent", {
+      configurable: true,
+      get() { aggregateReads += 1; return descriptor.get.call(this); },
+      set(value) { descriptor.set.call(this, value); },
+    });
+    const protectedReads = watchNodeValueReads(p.w, anchor.querySelector("span").firstChild);
+    await p.message({ type: "nudenyang-ready" });
+    await waitFor(() => p.w.document.querySelector("#message-content-anchor").textContent.includes("번역("),
+      "the same conversation should still translate its ordinary message");
+    assert.ok(p.sent().some((text) => text.includes("Visible surrounding message")));
+    assert.ok(!p.sent().some((text) => text.includes("Protected synthetic text")));
+    assert.equal(aggregateReads, 0, "link classification must not read a protected descendant through textContent");
+    assert.equal(protectedReads(), 0, "protected descendant nodeValue must remain unread");
+  });
+}
+
+test("메신저의 일반 설명 링크는 번역하고 URL 형태의 링크는 보존한다", async (t) => {
+  const html = RECLASSIFIED_CHAT.replace("Secondary synthetic message", `
+    <a id="ordinary-private-link" href="https://example.com/article">Read the <strong>article</strong></a>
+    <a id="url-private-link" href="https://example.com/article"><span>https://example.com/article</span></a>`);
+  const p = page(t, html, PRIVATE_OPTIONS);
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.w.document.querySelector("#ordinary-private-link").textContent.includes("번역("),
+    "ordinary link labels inside a message should remain translatable");
+  assert.ok(p.sent().some((text) => text.includes("Read the")));
+  assert.ok(!p.sent().some((text) => text.includes("https://example.com/article")));
+  assert.equal(p.w.document.querySelector("#url-private-link").textContent, "https://example.com/article");
+});
+
+for (const { label, attribute, value } of PRIVATE_NODE_CHANGES) {
+  test(`전송 직전에 ${label}으로 바뀐 메신저 노드는 현재 텍스트 자체도 읽지 않는다`, async (t) => {
+    const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+    await p.message({ type: "nudenyang-ready" });
+    assert.equal(p.requests.length, 0, "messages should still be queued");
+    const node = p.w.document.querySelector("#message-content-changing");
+    node.setAttribute(attribute, value);
+    const reads = watchNodeValueReads(p.w, node.firstChild);
+    await waitFor(() => p.w.document.querySelector("#message-content-anchor").textContent.includes("번역("),
+      "the unchanged message should pass through the same queue");
+    assert.ok(!p.sent().includes("Secondary synthetic message"));
+    assert.equal(reads(), 0, "private eligibility must be checked before accessing nodeValue");
+  });
+
+  test(`대기 중 ${label}으로 바뀌어 제외된 메신저 노드는 원문 추적도 폐기한다`, async (t) => {
+    const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+    await p.message({ type: "nudenyang-ready" });
+    const node = p.w.document.querySelector("#message-content-changing");
+    node.setAttribute(attribute, value);
+    await waitFor(() => p.w.document.querySelector("#message-content-anchor").textContent.includes("번역("),
+      "the queue should discard the ineligible message");
+    const reads = watchNodeValueReads(p.w, node.firstChild);
+    node.removeAttribute(attribute);
+    await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    assert.equal(reads(), 0, "a discarded node must no longer participate in original/cache restoration");
+  });
+
+  test(`메신저 상태 조회는 ${label}으로 바뀐 노드의 값이나 번역 개수를 읽지 않는다`, async (t) => {
+    const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+    await p.message({ type: "nudenyang-ready" });
+    const node = p.w.document.querySelector("#message-content-changing");
+    await waitFor(() => node.textContent.includes("번역("), "initial translation");
+    node.setAttribute(attribute, value);
+    const reads = watchNodeValueReads(p.w, node.firstChild);
+    const state = await p.message({ type: "nudenyang-status" });
+    assert.equal(reads(), 0, "status must not inspect a private editor, author, or hidden message");
+    assert.equal(state.translatedNodes, 1, "only the still-visible read-only message should be counted");
+  });
+
+  test(`메신저 변경 감시는 ${label}으로 바뀐 노드에 입력된 값을 읽지 않는다`, async (t) => {
+    const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+    await p.message({ type: "nudenyang-ready" });
+    const node = p.w.document.querySelector("#message-content-changing");
+    await waitFor(() => node.textContent.includes("번역("), "initial translation");
+    node.setAttribute(attribute, value);
+    const reads = watchNodeValueReads(p.w, node.firstChild);
+    const count = p.requests.length;
+    node.firstChild.nodeValue = "New protected synthetic text";
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(reads(), 0, "a characterData event must not read newly protected text");
+    assert.equal(p.requests.length, count);
+  });
+
+  test(`메신저 응답 대기 중 ${label}으로 바뀐 본문에는 늦은 결과를 쓰거나 보관하지 않는다`, async (t) => {
+    const p = page(t, RECLASSIFIED_CHAT, { ...PRIVATE_OPTIONS, deferTranslation: true });
+    await p.message({ type: "nudenyang-ready" });
+    await waitFor(() => p.sent().includes("Secondary synthetic message"), "both messages in flight");
+    const node = p.w.document.querySelector("#message-content-changing");
+    node.setAttribute(attribute, value);
+    p.releaseTranslation();
+    await waitFor(() => p.w.document.querySelector("#message-content-anchor").textContent.includes("번역("),
+      "the unchanged message should still translate");
+    assert.equal(node.textContent, "Secondary synthetic message", "excluded node must remain untouched");
+    const count = p.requests.length;
+    node.removeAttribute(attribute);
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    await waitFor(() => p.requests.length > count, "discarded private result must be requested again");
+    assert.equal(node.textContent, "Secondary synthetic message", "discarded result must not replay");
+    p.releaseTranslation();
+    await waitFor(() => node.textContent.includes("번역("), "newly eligible message should translate again");
+  });
+
+  test(`메신저 원문 비교 중 ${label}으로 바뀐 본문은 번역 캐시를 재적용하지 않는다`, async (t) => {
+    const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+    await p.message({ type: "nudenyang-ready" });
+    const node = p.w.document.querySelector("#message-content-changing");
+    await waitFor(() => node.textContent.includes("번역("), "initial translation");
+    await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    assert.equal(node.textContent, "Secondary synthetic message");
+    node.setAttribute(attribute, value);
+    const count = p.requests.length;
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    assert.equal(node.textContent, "Secondary synthetic message", "excluded node must not receive a cached translation");
+    assert.equal(p.requests.length, count, "excluded node must not be re-requested either");
+    node.removeAttribute(attribute);
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    await waitFor(() => p.requests.length > count, "excluded node's cached text must be discarded");
+    await waitFor(() => node.textContent.includes("번역("), "eligible message should translate after a fresh request");
+  });
+
+  test(`메신저 표시 대기 중 ${label}으로 바뀐 결과는 끄는 순간에도 캐시로 보관하지 않는다`, async (t) => {
+    const p = page(t, RECLASSIFIED_CHAT, { ...PRIVATE_OPTIONS, deferApplications: true });
+    await p.message({ type: "nudenyang-ready" });
+    await waitFor(() => p.pendingApplicationFrames() > 0, "translation is waiting for a display frame");
+    const node = p.w.document.querySelector("#message-content-changing");
+    node.setAttribute(attribute, value);
+    await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    assert.equal(node.textContent, "Secondary synthetic message");
+    const count = p.requests.length;
+    node.removeAttribute(attribute);
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    assert.equal(node.textContent, "Secondary synthetic message", "settled private result must not survive exclusion");
+    await waitFor(() => p.requests.length > count, "excluded pending result must start a fresh request");
+    await waitFor(() => p.pendingApplicationFrames() > 0, "fresh result should be pending");
+    p.releaseApplications();
+    await waitFor(() => node.textContent.includes("번역("), "fresh result should be eligible to display");
+  });
+}
+
+test("메신저 원문 복원은 숨긴 본문만 정리하고 작성창·작성자로 재사용된 노드는 쓰지 않는다", async (t) => {
+  for (const { attribute, value } of PRIVATE_NODE_CHANGES) {
+    const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+    await p.message({ type: "nudenyang-ready" });
+    const node = p.w.document.querySelector("#message-content-changing");
+    await waitFor(() => node.textContent.includes("번역("), "initial translation");
+    node.setAttribute(attribute, value);
+    await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    assert.equal(node.textContent, attribute === "hidden"
+      ? "Secondary synthetic message" : "번역(Secondary synthetic message)",
+    "only an unchanged read-only message may be restored; editor/author text is no longer ours to write");
+    if (attribute !== "hidden") {
+      await p.message({ type: "nudenyang-set-enabled", enabled: true });
+      const state = await p.message({ type: "nudenyang-status" });
+      assert.equal(state.translatedNodes, 1, "repurposed node must no longer be tracked as translated");
+    }
+  }
+});
+
+test("X 공개 타임라인의 DM 서랍도 별도 동의가 없으면 절대 번역하지 않는다", async (t) => {
+  const p = page(t, `<main><article><div data-testid="tweetText">Public timeline message</div></article></main>
+    <div data-testid="DMDrawer"><div data-testid="DmActivityViewport">
+      <div data-testid="messageEntry"><span dir="auto">Private drawer conversation</span></div>
+    </div></div>`, { url: "https://x.com/home", settings: { messengerEnabled: true }, consent: false });
+  await p.message({ type: "nudenyang-ready" });
+  await p.message({ type: "nudenyang-set-enabled", enabled: true });
+  assert.equal(p.requests.length, 0);
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 1 } });
+  await waitFor(() => p.sent().includes("Private drawer conversation"), "consented drawer translates");
+  assert.ok(!p.sent().includes("Public timeline message"));
+  assert.equal(p.requests[0].privateContext.service, "x");
+});
+
+test("메신저 미지원 화면·메일·비공개 경로는 일반 본문 수집으로 우회하지 않는다", async (t) => {
+  for (const url of ["https://x.com/i/chat/compose", "https://discord.com/channels/@me",
+    "https://mail.google.com/mail/u/0/", "https://app.slack.com/client/TABC/search"]) {
+    const p = page(t, '<main><p>Private fallback must not translate</p></main>', { ...PRIVATE_OPTIONS, url });
+    await p.message({ type: "nudenyang-ready" });
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    assert.equal(p.requests.length, 0);
+  }
+});
 
 test("상품 설명은 임의의 본문 ID와 혼합 인라인 구조에서도 빠짐없이 한 번 수집한다", async (t) => {
   const p = page(t, `<section id="mainContent">

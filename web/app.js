@@ -13,6 +13,7 @@ import {
   shortcutFromKeyboardEvent,
   shouldPromptRestart,
   translatorRuntimeLabel,
+  webMessengerNeedsLocalModel,
 } from "./state.mjs";
 import { DICTIONARY_NOTICES_TEXT, LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
 import { LANGUAGE_OPTIONS } from "./languages.mjs";
@@ -190,6 +191,8 @@ const elements = {
   translateNicknames: document.querySelector("#translate-nicknames"),
   outgoingTranslation: document.querySelector("#outgoing-translation"),
   webTranslationEnabled: document.querySelector("#web-translation-enabled"),
+  webMessengerEnabled: document.querySelector("#web-messenger-enabled"),
+  webMessengerModelNote: document.querySelector("#web-messenger-model-note"),
   webQuickToggleShortcut: document.querySelector("#web-quick-toggle-shortcut"),
   webBrowserClients: document.querySelector("#web-browser-clients"),
   webSitePolicies: document.querySelector("#web-site-policies"),
@@ -2271,6 +2274,11 @@ function setSwitch(button, checked, onLabel, offLabel) {
   button.querySelector("b").textContent = translateCopy(language, checked ? onLabel : offLabel);
 }
 
+function renderWebMessengerSettings() {
+  setSwitch(elements.webMessengerEnabled, state.config.web_messenger_enabled, "켜짐", "꺼짐");
+  elements.webMessengerModelNote.hidden = !webMessengerNeedsLocalModel(state.config);
+}
+
 function currentUiLanguage() {
   return state.selectValues.ui_language || state.config.ui_language;
 }
@@ -2354,6 +2362,7 @@ function applyUiLanguage(language) {
   renderSourceLanguagePicker();
   renderBrowserClients();
   renderWebSitePolicies();
+  renderWebMessengerSettings();
   refreshDictionaryCustomSelects({ rebuild: true });
   window.requestAnimationFrame(updateScrollIndicator);
 }
@@ -2682,6 +2691,7 @@ function renderConfig(config) {
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
   setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   setSwitch(elements.webTranslationEnabled, state.config.web_translation_enabled, "켜짐", "꺼짐");
+  renderWebMessengerSettings();
   setSwitch(elements.translateNicknames, state.config.translate_nicknames, "켜짐", "꺼짐");
   setSwitch(
     elements.outgoingTranslation,
@@ -3247,6 +3257,22 @@ elements.webTranslationEnabled.addEventListener("click", async () => {
   } catch (error) {
     setSwitch(elements.webTranslationEnabled, state.config.web_translation_enabled, "켜짐", "꺼짐");
     await showError("설정을 적용하지 못했습니다", String(error));
+  }
+});
+
+elements.webMessengerEnabled.addEventListener("click", async () => {
+  if (elements.webMessengerEnabled.disabled) return;
+  const enabled = elements.webMessengerEnabled.getAttribute("aria-checked") !== "true";
+  elements.webMessengerEnabled.disabled = true;
+  setSwitch(elements.webMessengerEnabled, enabled, "켜짐", "꺼짐");
+  try {
+    await applySettingsPatch({ web_messenger_enabled: enabled });
+  } catch (error) {
+    renderWebMessengerSettings();
+    await showError("설정을 적용하지 못했습니다", String(error));
+  } finally {
+    elements.webMessengerEnabled.disabled = false;
+    renderWebMessengerSettings();
   }
 });
 elements.translateNicknames.addEventListener("click", async () => {

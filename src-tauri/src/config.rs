@@ -68,6 +68,7 @@ pub struct AppConfig {
     pub incoming_source_languages: Vec<String>,
     pub translate_nicknames: bool,
     pub web_translation_enabled: bool,
+    pub web_messenger_enabled: bool,
     pub web_target_language: String,
     pub web_processing_mode: String,
     pub web_external_page_char_limit: u32,
@@ -114,6 +115,7 @@ impl Default for AppConfig {
             incoming_source_languages: Vec::new(),
             translate_nicknames: true,
             web_translation_enabled: true,
+            web_messenger_enabled: false,
             web_target_language: "display".to_string(),
             web_processing_mode: "balanced".to_string(),
             web_external_page_char_limit: 25_000,
@@ -702,6 +704,7 @@ mod tests {
         assert_eq!(restored.hotkeys.toggle_outgoing_translation, "F8");
         assert!(restored.disabled_providers.is_empty());
         assert!(restored.web_translation_enabled);
+        assert!(!restored.web_messenger_enabled);
         assert_eq!(restored.web_target_language, "display");
         assert_eq!(restored.web_processing_mode, "balanced");
         assert_eq!(restored.web_external_page_char_limit, 25_000);
@@ -736,6 +739,7 @@ mod tests {
     #[test]
     fn web_translation_settings_normalize_language_mode_limit_and_site_rules() {
         let config = AppConfig::from_value(json!({
+            "web_messenger_enabled": true,
             "web_target_language": "ar",
             "web_processing_mode": "economy",
             "web_external_page_char_limit": 50_000,
@@ -750,6 +754,7 @@ mod tests {
         }))
         .expect("web settings should normalize");
 
+        assert!(config.web_messenger_enabled);
         assert_eq!(config.web_target_language, "ar");
         assert_eq!(config.web_processing_mode, "economy");
         assert_eq!(config.web_external_page_char_limit, 50_000);
@@ -777,6 +782,7 @@ mod tests {
             "web_site_policies": []
         }))
         .expect("invalid values should fall back");
+        assert!(!invalid.web_messenger_enabled);
         assert_eq!(invalid.web_target_language, "display");
         assert_eq!(invalid.web_processing_mode, "balanced");
         assert_eq!(invalid.web_external_page_char_limit, 25_000);
@@ -787,6 +793,11 @@ mod tests {
             .patched(json!({ "web_site_policies": {} }))
             .expect("site policy map should be replaceable");
         assert!(cleared.web_site_policies.is_empty());
+        assert!(cleared.web_messenger_enabled);
+        let disabled = cleared
+            .patched(json!({ "web_messenger_enabled": false }))
+            .unwrap();
+        assert!(!disabled.web_messenger_enabled);
     }
 
     #[test]

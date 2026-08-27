@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 import "../page-connection.js";
 
@@ -79,10 +80,21 @@ test("수신자가 사라진 일반 웹 탭은 콘텐츠 스크립트를 다시 
   assert.equal(response?.supported, true);
   assert.equal(fake.injectionCount(), 2);
   assert.deepEqual(fake.injections, [
-    { target: { tabId: 17, frameIds: [0] }, files: ["site-adapters.js", "content-helpers.js", "content.js"] },
+    { target: { tabId: 17, frameIds: [0] }, files: ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"] },
     { target: { tabId: 17, allFrames: true }, files: ["embedded-title.js"] },
   ]);
   assert.deepEqual(fake.sent, ["nudenyang-status", "nudenyang-ready", "nudenyang-status"]);
+});
+
+test("자동 복구는 두 브라우저의 최초 주입과 같은 순서로 메신저 어댑터까지 로드한다", async () => {
+  const fake = fakeApi();
+  await createPageConnection(fake.api).ensure(17);
+
+  for (const manifestName of ["manifest.json", "manifest.firefox.json"]) {
+    const manifest = JSON.parse(fs.readFileSync(new URL(`../${manifestName}`, import.meta.url), "utf8"));
+    assert.deepEqual(fake.injections[0].files, manifest.content_scripts[0].js, manifestName);
+    assert.deepEqual(fake.injections[0].target, { tabId: 17, frameIds: [0] });
+  }
 });
 
 test("이미 연결된 탭은 스크립트를 중복 삽입하지 않는다", async () => {

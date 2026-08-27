@@ -115,6 +115,7 @@ pub struct TranslationService {
     web_context_scope: String,
     navigation_context_scope: String,
     navigation_languages: HashMap<ScriptFamily, Language>,
+    private_request_guard: Option<Box<dyn Fn() -> Result<(), String> + Send>>,
 }
 
 impl TranslationService {
@@ -129,6 +130,7 @@ impl TranslationService {
             web_context_scope: String::new(),
             navigation_context_scope: String::new(),
             navigation_languages: HashMap::new(),
+            private_request_guard: None,
         }
     }
 
@@ -151,6 +153,66 @@ impl TranslationService {
 
     pub fn clear_cache_memory(&self) -> Result<(), String> {
         self.cache.clear_memory()
+    }
+
+    fn check_private_request(&self) -> Result<(), String> {
+        if let Some(guard) = &self.private_request_guard {
+            guard()?;
+            // ResilientTranslator includes every fallback in this answer. A local
+            // primary with a cloud fallback must never receive private text.
+            if self.translator.sends_text_externally() {
+                return Err("[messenger_local_only] 웹 메신저 번역에는 로컬 번역 모델만 사용할 수 있습니다. 메인 앱에서 로컬 모델을 선택해 주십시오.".to_string());
+            }
+        }
+        Ok(())
+    }
+
+    /// Uses only request-lifetime memory and fresh language-detection context.
+    /// The normal webpage/Discord cache and all conversation hints are restored
+    /// before returning, including on errors and consent revocation.
+    pub fn translate_many_for_private_web(
+        &mut self,
+        texts: &[String],
+        block_keys: &[Option<String>],
+        page_scope: &str,
+        target: Language,
+        guard: Box<dyn Fn() -> Result<(), String> + Send>,
+    ) -> Result<Vec<String>, String> {
+        guard()?;
+        if self.translator.sends_text_externally() {
+            return Err("[messenger_local_only] 웹 메신저 번역에는 로컬 번역 모델만 사용할 수 있습니다. 메인 앱에서 로컬 모델을 선택해 주십시오.".to_string());
+        }
+        // Translator::translate/translate_many and their model retry diagnostics
+        // run synchronously on this same worker; no request/body/hash is logged.
+        let _private_diagnostics = crate::diagnostics::sensitive_request_scope();
+        let private_cache = TranslationCache::in_memory(256)?;
+        let public_cache = std::mem::replace(&mut self.cache, private_cache);
+        let detector = std::mem::take(&mut self.detector);
+        let incoming_detector = std::mem::take(&mut self.incoming_detector);
+        let incoming_context_scope = std::mem::take(&mut self.incoming_context_scope);
+        let web_detector = std::mem::take(&mut self.web_detector);
+        let web_context_scope = std::mem::take(&mut self.web_context_scope);
+        let navigation_context_scope = std::mem::take(&mut self.navigation_context_scope);
+        let navigation_languages = std::mem::take(&mut self.navigation_languages);
+        self.private_request_guard = Some(guard);
+
+        let result = self.translate_many_for_web_contextual_filtered(
+            texts, block_keys, page_scope, target, None,
+        );
+        // Best-effort paragraph retries can preserve a failed paragraph as its
+        // original. A revoked permission must instead discard the entire reply.
+        let result = self.check_private_request().and(result);
+
+        self.cache = public_cache;
+        self.detector = detector;
+        self.incoming_detector = incoming_detector;
+        self.incoming_context_scope = incoming_context_scope;
+        self.web_detector = web_detector;
+        self.web_context_scope = web_context_scope;
+        self.navigation_context_scope = navigation_context_scope;
+        self.navigation_languages = navigation_languages;
+        self.private_request_guard = None;
+        result
     }
 
     pub fn translate(&mut self, text: &str, target: Language) -> Result<String, String> {
@@ -1197,6 +1259,7 @@ impl TranslationService {
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
     ) -> Result<Vec<String>, String> {
+        self.check_private_request()?;
         if texts.is_empty() {
             return Ok(Vec::new());
         }
@@ -1283,7 +1346,9 @@ impl TranslationService {
                 .iter()
                 .map(|(_, _, protected, source, _)| (protected.masked.clone(), *source))
                 .collect();
+            self.check_private_request()?;
             let translated = self.translator.translate_many(&items, target)?;
+            self.check_private_request()?;
             if translated.len() != pending.len() {
                 return Err("번역 엔진이 요청한 메시지 수와 다른 결과를 반환했습니다.".to_string());
             }
@@ -1462,6 +1527,7 @@ impl TranslationService {
         source: Language,
         target: Language,
     ) -> Result<String, String> {
+        self.check_private_request()?;
         let hash = source_hash(text);
         if let Some(cached) = self.cache.get_message(
             &hash,
@@ -1485,9 +1551,11 @@ impl TranslationService {
                 ),
             );
         }
+        self.check_private_request()?;
         let translated = self
             .translator
             .translate(&protected.masked, source, target)?;
+        self.check_private_request()?;
         let restored = protected.restore(&translated);
         let restored = apply_conservative_semantic_repairs(&restored, text, source, target);
         let restored = preserve_terminal_punctuation(text, &restored);
@@ -1746,17 +1814,55 @@ mod tests {
         preserve_terminal_punctuation, source_hash, TranslationService, MESSAGE_CONTEXT_SEPARATOR,
     };
     use crate::cache::TranslationCache;
-    use crate::language::{detect_language, Language};
+    use crate::language::{detect_language, Language, ScriptFamily};
     use crate::translation::hymt::{detect_speech_style, HyMtModelSize, HyMtTranslator};
     use crate::translation::{
         translation_needs_repair, MockTranslator, ResilientTranslator, Translator,
     };
     use std::fs;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Arc, Mutex};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct CountingTranslator {
         calls: Arc<Mutex<usize>>,
+    }
+
+    struct PrivateProbeTranslator {
+        calls: Arc<Mutex<usize>>,
+        external: bool,
+        revoke_after_call: Option<Arc<AtomicBool>>,
+    }
+
+    impl Translator for PrivateProbeTranslator {
+        fn display_name(&self) -> &str {
+            "private-probe"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "private-probe:v1"
+        }
+
+        fn sends_text_externally(&self) -> bool {
+            self.external
+        }
+
+        fn isolate_incoming_failures(&self) -> bool {
+            true
+        }
+
+        fn translate(
+            &mut self,
+            _text: &str,
+            _source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            *self.calls.lock().unwrap() += 1;
+            if let Some(allowed) = &self.revoke_after_call {
+                allowed.store(false, Ordering::SeqCst);
+            }
+            Ok("개인 대화의 번역 결과입니다.".to_string())
+        }
     }
 
     #[test]
@@ -2354,6 +2460,206 @@ mod tests {
         std::env::temp_dir()
             .join(format!("nude-translator-service-{name}-{nonce}"))
             .join("cache.db")
+    }
+
+    #[test]
+    fn private_web_cache_is_request_only_and_never_reads_or_writes_public_cache() {
+        let path = cache_path("private-isolation");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let calls = Arc::new(Mutex::new(0));
+        let mut service = TranslationService::new(
+            Box::new(CountingTranslator {
+                calls: calls.clone(),
+            }),
+            cache,
+        );
+        let shared_text = "This sentence was also visible on a public webpage.".to_string();
+        let private_text =
+            "This second sentence appears only in a private conversation.".to_string();
+        let public_result = service.translate(&shared_text, Language::Korean).unwrap();
+        assert_eq!(*calls.lock().unwrap(), 1);
+        let public_status = service.cache.storage_status().unwrap();
+        let public_database = fs::read(&path).unwrap();
+
+        for (index, text) in [&shared_text, &private_text, &private_text]
+            .into_iter()
+            .enumerate()
+        {
+            let result = service
+                .translate_many_for_private_web(
+                    std::slice::from_ref(text),
+                    &[Some("opaque-message".to_string())],
+                    "messenger:discord:7a13470c-870a-44dc-8a8a-840833de8ca1",
+                    Language::Korean,
+                    Box::new(|| Ok(())),
+                )
+                .unwrap();
+            assert_eq!(result, [format!("[ko] {text}")]);
+            // Not even a public cache hit, or the preceding private request, can
+            // replace inference in this separate request-lifetime cache.
+            assert_eq!(*calls.lock().unwrap(), index + 2);
+            assert_eq!(service.cache.storage_status().unwrap(), public_status);
+            assert_eq!(fs::read(&path).unwrap(), public_database);
+            assert!(service
+                .cache
+                .get(&source_hash(&private_text), "ko", "counting:v1")
+                .unwrap()
+                .is_none());
+            assert!(service.private_request_guard.is_none());
+        }
+
+        assert_eq!(
+            service.translate(&shared_text, Language::Korean).unwrap(),
+            public_result
+        );
+        assert_eq!(*calls.lock().unwrap(), 4);
+        drop(service);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn private_web_rejects_actual_external_provider_and_hidden_fallback_before_inference() {
+        for hidden_fallback in [false, true] {
+            let calls = Arc::new(Mutex::new(0));
+            let external = Box::new(PrivateProbeTranslator {
+                calls: calls.clone(),
+                external: true,
+                revoke_after_call: None,
+            });
+            let translator: Box<dyn Translator> = if hidden_fallback {
+                Box::new(ResilientTranslator::new(
+                    Box::new(CountingTranslator {
+                        calls: calls.clone(),
+                    }),
+                    Some(external),
+                ))
+            } else {
+                external
+            };
+            let mut service =
+                TranslationService::new(translator, TranslationCache::in_memory(32).unwrap());
+            let error = service
+                .translate_many_for_private_web(
+                    &["Please keep this conversation private.".to_string()],
+                    &[None],
+                    "messenger:x:dc456b5d-edcc-476e-9bc2-17f39c6f1f8d",
+                    Language::Korean,
+                    Box::new(|| Ok(())),
+                )
+                .unwrap_err();
+            assert!(error.starts_with("[messenger_local_only]"));
+            assert_eq!(*calls.lock().unwrap(), 0);
+            assert_eq!(
+                service.cache.storage_status().unwrap().translation_records,
+                0
+            );
+            assert!(service.private_request_guard.is_none());
+        }
+    }
+
+    #[test]
+    fn private_web_revocation_stops_remaining_inferences_and_restores_all_public_context() {
+        let allowed = Arc::new(AtomicBool::new(true));
+        let calls = Arc::new(Mutex::new(0));
+        let mut service = TranslationService::new(
+            Box::new(PrivateProbeTranslator {
+                calls: calls.clone(),
+                external: false,
+                revoke_after_call: Some(allowed.clone()),
+            }),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        service.incoming_context_scope = "public-discord-context".to_string();
+        service.web_context_scope = "public-web-context".to_string();
+        service.navigation_context_scope = "public-navigation-context".to_string();
+        service
+            .navigation_languages
+            .insert(ScriptFamily::EastAsian, Language::Japanese);
+        for _ in 0..2 {
+            service.detector.remember(Language::Japanese);
+            service.incoming_detector.remember(Language::Japanese);
+            service.web_detector.remember(Language::ChineseSimplified);
+        }
+        let error = service
+            .translate_many_for_private_web(
+                &[
+                    "Please translate this first private message.".to_string(),
+                    "This next private message must not reach the model after revocation."
+                        .to_string(),
+                ],
+                &[Some("first".to_string()), Some("second".to_string())],
+                "messenger:slack:a58ab7d7-a831-432b-b8e2-c8dba4b10b4a",
+                Language::Korean,
+                Box::new(move || {
+                    if allowed.load(Ordering::SeqCst) {
+                        Ok(())
+                    } else {
+                        Err(
+                            "[messenger_disabled] 웹 메신저 번역이 비활성화되어 있습니다."
+                                .to_string(),
+                        )
+                    }
+                }),
+            )
+            .unwrap_err();
+        assert!(error.starts_with("[messenger_disabled]"));
+        assert_eq!(*calls.lock().unwrap(), 1);
+        assert_eq!(
+            service.cache.storage_status().unwrap().translation_records,
+            0
+        );
+        assert_eq!(service.incoming_context_scope, "public-discord-context");
+        assert_eq!(service.web_context_scope, "public-web-context");
+        assert_eq!(
+            service.navigation_context_scope,
+            "public-navigation-context"
+        );
+        assert_eq!(
+            service.navigation_languages.get(&ScriptFamily::EastAsian),
+            Some(&Language::Japanese)
+        );
+        assert_eq!(
+            service.detector.recent_language_for("漢字"),
+            Some(Language::Japanese)
+        );
+        assert_eq!(
+            service.incoming_detector.recent_language_for("漢字"),
+            Some(Language::Japanese)
+        );
+        assert_eq!(
+            service.web_detector.recent_language_for("漢字"),
+            Some(Language::ChineseSimplified)
+        );
+        assert!(service.private_request_guard.is_none());
+    }
+
+    #[test]
+    fn private_web_denies_revoked_permission_before_touching_the_model() {
+        let calls = Arc::new(Mutex::new(0));
+        let mut service = TranslationService::new(
+            Box::new(CountingTranslator {
+                calls: calls.clone(),
+            }),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        let error = service
+            .translate_many_for_private_web(
+                &["No consent has been granted.".to_string()],
+                &[None],
+                "messenger:telegram:6049c614-a66c-4ab0-a5d6-53a8d7d53aeb",
+                Language::Korean,
+                Box::new(|| {
+                    Err("[messenger_disabled] 웹 메신저 번역이 비활성화되어 있습니다.".to_string())
+                }),
+            )
+            .unwrap_err();
+        assert!(error.starts_with("[messenger_disabled]"));
+        assert_eq!(*calls.lock().unwrap(), 0);
+        assert_eq!(
+            service.cache.storage_status().unwrap().translation_records,
+            0
+        );
+        assert!(service.private_request_guard.is_none());
     }
 
     #[test]
