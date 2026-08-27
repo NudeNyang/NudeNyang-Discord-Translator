@@ -36,6 +36,24 @@ DeepL은 모델이나 SDK를 번들하지 않고 사용자가 제공한 API 키�
 TranslateGemma is provided under and subject to the Gemma Terms of Use found at
 <https://ai.google.dev/gemma/terms>.
 
+## 브라우저 식별 아이콘
+
+설정의 브라우저 연결 목록에는 각 공식 사이트에서 제공하는 원본 PNG를 변경 없이 사용한다.
+아이콘은 연결할 브라우저를 식별하기 위한 것이며 NudeNyang 또는 확장 프로그램의 로고가 아니다.
+Google Chrome은 Google LLC, Naver Whale은 NAVER, Firefox는 Mozilla Foundation의 상표이다.
+각 아이콘의 권리는 해당 권리자에게 있으며 앱의 GPL 라이선스로 재허가하지 않는다.
+이 표시는 해당 회사의 제휴·후원·보증을 의미하지 않는다.
+
+| 로컬 파일 | 공식 원본 출처 (2026-08-28 확인) |
+|---|---|
+| `web/assets/browser-chrome.png` | <https://www.google.com/chrome/static/images/favicons/android-icon-192x192.png> |
+| `web/assets/browser-whale.png` | <https://shared-whale.pstatic.net/favicon/icon256.png> |
+| `web/assets/browser-firefox.png` | <https://www.firefox.com/media/img/favicons/firefox/browser/favicon-196x196.59e3822720be.png> |
+
+브랜드 정책: <https://about.google/brand-resource-center/products-and-services/>,
+<https://www.mozilla.org/en-US/foundation/trademarks/policy/>.
+Whale 원본은 <https://whale.naver.com/>의 아이콘 링크에서 확인했다.
+
 ## 개발 및 검증 도구
 
 | 구성요소 | 용도 | 라이선스 및 출처 |

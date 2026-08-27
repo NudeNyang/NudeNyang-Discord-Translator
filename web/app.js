@@ -3231,13 +3231,27 @@ document.addEventListener("click", event => {
 document.addEventListener("mousedown", handleDictionaryMouseBack, true);
 elements.enabled.addEventListener("click", toggleTranslation);
 elements.webTranslationEnabled.addEventListener("click", async () => {
+  if (elements.webTranslationEnabled.disabled) return;
   const enabled = elements.webTranslationEnabled.getAttribute("aria-checked") !== "true";
+  elements.webTranslationEnabled.disabled = true;
   setSwitch(elements.webTranslationEnabled, enabled, "켜짐", "꺼짐");
   try {
     await applySettingsPatch({ web_translation_enabled: enabled });
+    if (enabled) {
+      await showModal({
+        title: "확장 프로그램 설치가 필요합니다",
+        message: "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.",
+        acceptText: "확인",
+        cancelVisible: false,
+      });
+      elements.webBrowserClients.scrollIntoView({ block: "center", behavior: "auto" });
+      await loadBrowserClients();
+    }
   } catch (error) {
     setSwitch(elements.webTranslationEnabled, state.config.web_translation_enabled, "켜짐", "꺼짐");
     await showError("설정을 적용하지 못했습니다", String(error));
+  } finally {
+    elements.webTranslationEnabled.disabled = false;
   }
 });
 

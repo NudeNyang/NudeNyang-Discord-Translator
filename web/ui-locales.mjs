@@ -648,7 +648,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "請在瀏覽器中開啟擴充功能以檢查連線。",
     "브라우저 설치를 찾지 못했습니다.": "找不到已安裝的瀏覽器。",
     "스토어 심사 중": "商店審查中",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "無法檢查瀏覽器連線，請重試。"
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "無法檢查瀏覽器連線，請重試。",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "使用本機 AI 翻譯已同意使用的網頁聊天對話。",
+    "확장 프로그램 설치가 필요합니다": "需要安裝擴充功能",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "請在下方連接您使用的瀏覽器。如果已安裝擴充功能，請檢查連線狀態。"
   },
   "pt-BR": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
@@ -1298,7 +1301,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Abra a extensão no navegador para verificar a conexão.",
     "브라우저 설치를 찾지 못했습니다.": "Instalação do navegador não encontrada.",
     "스토어 심사 중": "Em análise na loja",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Não foi possível verificar a conexão do navegador. Tente novamente."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Não foi possível verificar a conexão do navegador. Tente novamente.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Traduz conversas de mensageiros web autorizados com IA local.",
+    "확장 프로그램 설치가 필요합니다": "É necessário instalar a extensão",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Conecte seu navegador abaixo. Se a extensão já estiver instalada, verifique a conexão."
   },
   "hi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
@@ -1948,7 +1954,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "कनेक्शन जाँचने के लिए ब्राउज़र में एक्सटेंशन खोलें।",
     "브라우저 설치를 찾지 못했습니다.": "ब्राउज़र इंस्टॉलेशन नहीं मिला।",
     "스토어 심사 중": "स्टोर की समीक्षा जारी है",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ब्राउज़र कनेक्शन की जाँच नहीं हो सकी। फिर से प्रयास करें।"
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ब्राउज़र कनेक्शन की जाँच नहीं हो सकी। फिर से प्रयास करें।",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "सहमति प्राप्त वेब मैसेंजर की बातचीत का स्थानीय AI से अनुवाद करें।",
+    "확장 프로그램 설치가 필요합니다": "एक्सटेंशन इंस्टॉल करना आवश्यक है",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "नीचे अपना ब्राउज़र कनेक्ट करें। यदि एक्सटेंशन पहले से इंस्टॉल है, तो कनेक्शन जाँचें।"
   },
   "es-419": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
@@ -2598,7 +2607,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Abre la extensión en tu navegador para verificar la conexión.",
     "브라우저 설치를 찾지 못했습니다.": "No se encontró la instalación del navegador.",
     "스토어 심사 중": "En revisión en la tienda",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "No se pudo verificar la conexión del navegador. Inténtalo de nuevo."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "No se pudo verificar la conexión del navegador. Inténtalo de nuevo.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Traduce conversaciones de mensajeros web autorizados con IA local.",
+    "확장 프로그램 설치가 필요합니다": "Es necesario instalar la extensión",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Conecte su navegador a continuación. Si la extensión ya está instalada, compruebe la conexión."
   },
   "de": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
@@ -3248,7 +3260,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Öffnen Sie die Erweiterung im Browser, um die Verbindung zu prüfen.",
     "브라우저 설치를 찾지 못했습니다.": "Browserinstallation nicht gefunden.",
     "스토어 심사 중": "Store-Prüfung läuft",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Die Browserverbindung konnte nicht geprüft werden. Versuchen Sie es erneut."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Die Browserverbindung konnte nicht geprüft werden. Versuchen Sie es erneut.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Übersetzt Chats in freigegebenen Web-Messengern mit lokaler KI.",
+    "확장 프로그램 설치가 필요합니다": "Installation der Erweiterung erforderlich",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Verbinden Sie unten Ihren Browser. Ist die Erweiterung bereits installiert, prüfen Sie die Verbindung."
   },
   "ru": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
@@ -3898,7 +3913,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Откройте расширение в браузере для проверки подключения.",
     "브라우저 설치를 찾지 못했습니다.": "Установленный браузер не найден.",
     "스토어 심사 중": "Проверка в магазине",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Не удалось проверить подключение браузера. Повторите попытку."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Не удалось проверить подключение браузера. Повторите попытку.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Переводит чаты в разрешённых веб-мессенджерах с помощью локального ИИ.",
+    "확장 프로그램 설치가 필요합니다": "Требуется установка расширения",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Подключите браузер ниже. Если расширение уже установлено, проверьте подключение."
   },
   "id": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
@@ -4548,7 +4566,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Buka ekstensi di browser untuk memeriksa koneksi.",
     "브라우저 설치를 찾지 못했습니다.": "Instalasi browser tidak ditemukan.",
     "스토어 심사 중": "Sedang ditinjau oleh toko",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Koneksi browser tidak dapat diperiksa. Silakan coba lagi."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Koneksi browser tidak dapat diperiksa. Silakan coba lagi.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Terjemahkan percakapan di pesan web yang disetujui dengan AI lokal.",
+    "확장 프로그램 설치가 필요합니다": "Ekstensi perlu dipasang",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Hubungkan peramban Anda di bawah. Jika ekstensi sudah terpasang, periksa koneksi."
   },
   "fr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
@@ -5198,7 +5219,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Ouvrez l’extension dans votre navigateur pour vérifier la connexion.",
     "브라우저 설치를 찾지 못했습니다.": "Installation du navigateur introuvable.",
     "스토어 심사 중": "Examen par la boutique en cours",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Impossible de vérifier la connexion du navigateur. Veuillez réessayer."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Impossible de vérifier la connexion du navigateur. Veuillez réessayer.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Traduit les conversations des messageries web autorisées avec une IA locale.",
+    "확장 프로그램 설치가 필요합니다": "Installation de l’extension requise",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Connectez votre navigateur ci-dessous. Si l’extension est déjà installée, vérifiez la connexion."
   },
   "tr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
@@ -5848,7 +5872,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Bağlantıyı kontrol etmek için tarayıcınızda uzantıyı açın.",
     "브라우저 설치를 찾지 못했습니다.": "Tarayıcı kurulumu bulunamadı.",
     "스토어 심사 중": "Mağaza incelemesi sürüyor",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Tarayıcı bağlantısı kontrol edilemedi. Lütfen tekrar deneyin."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Tarayıcı bağlantısı kontrol edilemedi. Lütfen tekrar deneyin.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "İzin verilen web mesajlaşma sohbetlerini yerel yapay zekâyla çevirir.",
+    "확장 프로그램 설치가 필요합니다": "Uzantının yüklenmesi gerekiyor",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Aşağıdan tarayıcınızı bağlayın. Uzantı zaten yüklüyse bağlantıyı kontrol edin."
   },
   "ar": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
@@ -6498,7 +6525,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "افتح الإضافة في المتصفح للتحقق من الاتصال.",
     "브라우저 설치를 찾지 못했습니다.": "لم يُعثر على المتصفح المثبّت.",
     "스토어 심사 중": "قيد مراجعة المتجر",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "تعذر التحقق من اتصال المتصفح. يرجى المحاولة مرة أخرى."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "تعذر التحقق من اتصال المتصفح. يرجى المحاولة مرة أخرى.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "ترجمة محادثات تطبيقات المراسلة على الويب المصرّح بها باستخدام الذكاء الاصطناعي المحلي.",
+    "확장 프로그램 설치가 필요합니다": "يلزم تثبيت الإضافة",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "اربط متصفحك أدناه. إذا كانت الإضافة مثبتة بالفعل، فتحقق من الاتصال."
   },
   "vi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
@@ -7148,7 +7178,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Mở tiện ích trong trình duyệt để kiểm tra kết nối.",
     "브라우저 설치를 찾지 못했습니다.": "Không tìm thấy trình duyệt đã cài đặt.",
     "스토어 심사 중": "Đang được cửa hàng xét duyệt",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Không thể kiểm tra kết nối trình duyệt. Vui lòng thử lại."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Không thể kiểm tra kết nối trình duyệt. Vui lòng thử lại.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Dịch hội thoại trên trình nhắn tin web đã được đồng ý bằng AI cục bộ.",
+    "확장 프로그램 설치가 필요합니다": "Cần cài đặt tiện ích mở rộng",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Kết nối trình duyệt bên dưới. Nếu đã cài tiện ích, hãy kiểm tra kết nối."
   },
   "it": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
@@ -7798,7 +7831,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Apri l’estensione nel browser per verificare la connessione.",
     "브라우저 설치를 찾지 못했습니다.": "Installazione del browser non trovata.",
     "스토어 심사 중": "In revisione nello store",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Impossibile verificare la connessione del browser. Riprova."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Impossibile verificare la connessione del browser. Riprova.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Traduce le conversazioni delle chat web autorizzate con IA locale.",
+    "확장 프로그램 설치가 필요합니다": "È necessario installare l’estensione",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Colleghi il browser qui sotto. Se l’estensione è già installata, verifichi la connessione."
   },
   "pl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
@@ -8448,7 +8484,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Otwórz rozszerzenie w przeglądarce, aby sprawdzić połączenie.",
     "브라우저 설치를 찾지 못했습니다.": "Nie znaleziono zainstalowanej przeglądarki.",
     "스토어 심사 중": "Trwa weryfikacja w sklepie",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Nie udało się sprawdzić połączenia przeglądarki. Spróbuj ponownie."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Nie udało się sprawdzić połączenia przeglądarki. Spróbuj ponownie.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Tłumaczy rozmowy w zatwierdzonych komunikatorach internetowych lokalną AI.",
+    "확장 프로그램 설치가 필요합니다": "Wymagana instalacja rozszerzenia",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Proszę połączyć przeglądarkę poniżej. Jeśli rozszerzenie jest już zainstalowane, proszę sprawdzić połączenie."
   },
   "uk": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
@@ -9098,7 +9137,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Відкрийте розширення в браузері для перевірки підключення.",
     "브라우저 설치를 찾지 못했습니다.": "Встановлений браузер не знайдено.",
     "스토어 심사 중": "Триває перевірка в магазині",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Не вдалося перевірити підключення браузера. Спробуйте ще раз."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Не вдалося перевірити підключення браузера. Спробуйте ще раз.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Перекладає розмови в дозволених вебмесенджерах за допомогою локального ШІ.",
+    "확장 프로그램 설치가 필요합니다": "Потрібно встановити розширення",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Підключіть браузер нижче. Якщо розширення вже встановлено, перевірте з’єднання."
   },
   "ms": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
@@ -9748,7 +9790,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Buka sambungan dalam pelayar untuk menyemak sambungan.",
     "브라우저 설치를 찾지 못했습니다.": "Pemasangan pelayar tidak ditemukan.",
     "스토어 심사 중": "Sedang disemak oleh kedai",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Sambungan pelayar tidak dapat disemak. Sila cuba lagi."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Sambungan pelayar tidak dapat disemak. Sila cuba lagi.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Terjemahkan perbualan pemesejan web yang dipersetujui dengan AI setempat.",
+    "확장 프로그램 설치가 필요합니다": "Pemasangan sambungan diperlukan",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Sambungkan pelayar anda di bawah. Jika sambungan telah dipasang, semak sambungan."
   },
   "nl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
@@ -10398,7 +10443,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Open de extensie in uw browser om de verbinding te controleren.",
     "브라우저 설치를 찾지 못했습니다.": "Browserinstallatie niet gevonden.",
     "스토어 심사 중": "Wordt beoordeeld door de store",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "De browserverbinding kon niet worden gecontroleerd. Probeer het opnieuw."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "De browserverbinding kon niet worden gecontroleerd. Probeer het opnieuw.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Vertaalt gesprekken in goedgekeurde webmessengers met lokale AI.",
+    "확장 프로그램 설치가 필요합니다": "Installatie van de extensie vereist",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Verbind hieronder uw browser. Controleer de verbinding als de extensie al is geïnstalleerd."
   },
   "th": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
@@ -11048,7 +11096,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "เปิดส่วนขยายในเบราว์เซอร์เพื่อตรวจสอบการเชื่อมต่อ",
     "브라우저 설치를 찾지 못했습니다.": "ไม่พบการติดตั้งเบราว์เซอร์",
     "스토어 심사 중": "อยู่ระหว่างการตรวจสอบของร้านค้า",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ไม่สามารถตรวจสอบการเชื่อมต่อเบราว์เซอร์ได้ โปรดลองอีกครั้ง"
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ไม่สามารถตรวจสอบการเชื่อมต่อเบราว์เซอร์ได้ โปรดลองอีกครั้ง",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "แปลบทสนทนาในเว็บแชทที่ให้ความยินยอมด้วย AI ในเครื่อง",
+    "확장 프로그램 설치가 필요합니다": "จำเป็นต้องติดตั้งส่วนขยาย",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "เชื่อมต่อเบราว์เซอร์ด้านล่าง หากติดตั้งส่วนขยายแล้ว โปรดตรวจสอบการเชื่อมต่อ"
   },
   "fil": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
@@ -11698,7 +11749,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Buksan ang extension sa browser para suriin ang koneksyon.",
     "브라우저 설치를 찾지 못했습니다.": "Hindi nahanap ang naka-install na browser.",
     "스토어 심사 중": "Sinusuri pa ng tindahan",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Hindi masuri ang koneksyon ng browser. Pakisubukang muli."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Hindi masuri ang koneksyon ng browser. Pakisubukang muli.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Isinasalin gamit ang lokal na AI ang mga chat sa web na pinahintulutan.",
+    "확장 프로그램 설치가 필요합니다": "Kailangang i-install ang extension",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Ikonekta ang browser sa ibaba. Kung naka-install na ang extension, suriin ang koneksyon."
   },
   "bn": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
@@ -12348,7 +12402,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "সংযোগ পরীক্ষা করতে ব্রাউজারে এক্সটেনশনটি খুলুন।",
     "브라우저 설치를 찾지 못했습니다.": "ইনস্টল করা ব্রাউজার পাওয়া যায়নি।",
     "스토어 심사 중": "স্টোরে পর্যালোচনা চলছে",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ব্রাউজারের সংযোগ পরীক্ষা করা যায়নি। আবার চেষ্টা করুন।"
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ব্রাউজারের সংযোগ পরীক্ষা করা যায়নি। আবার চেষ্টা করুন।",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "অনুমোদিত ওয়েব মেসেঞ্জারের কথোপকথন স্থানীয় AI দিয়ে অনুবাদ করুন।",
+    "확장 프로그램 설치가 필요합니다": "এক্সটেনশন ইনস্টল করা প্রয়োজন",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "নিচে আপনার ব্রাউজার সংযুক্ত করুন। এক্সটেনশন ইনস্টল করা থাকলে সংযোগ পরীক্ষা করুন।"
   },
   "ur": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
@@ -12998,7 +13055,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "کنکشن چیک کرنے کے لیے براؤزر میں ایکسٹینشن کھولیں۔",
     "브라우저 설치를 찾지 못했습니다.": "براؤزر کی انسٹالیشن نہیں ملی۔",
     "스토어 심사 중": "اسٹور میں جائزہ جاری ہے",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "براؤزر کا کنکشن چیک نہیں ہو سکا۔ دوبارہ کوشش کریں۔"
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "براؤزر کا کنکشن چیک نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "منظور شدہ ویب میسنجر کی گفتگو کا مقامی AI سے ترجمہ کریں۔",
+    "확장 프로그램 설치가 필요합니다": "ایکسٹینشن انسٹال کرنا ضروری ہے",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "نیچے اپنا براؤزر منسلک کریں۔ اگر ایکسٹینشن پہلے سے انسٹال ہے تو کنکشن چیک کریں۔"
   },
   "ta": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
@@ -13648,7 +13708,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "இணைப்பைச் சரிபார்க்க உலாவியில் நீட்டிப்பைத் திறக்கவும்.",
     "브라우저 설치를 찾지 못했습니다.": "நிறுவப்பட்ட உலாவி காணப்படவில்லை.",
     "스토어 심사 중": "அங்காடி மதிப்பாய்வு நடைபெறுகிறது",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "உலாவி இணைப்பைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "உலாவி இணைப்பைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "ஒப்புதல் அளிக்கப்பட்ட இணைய அரட்டைகளை உள்ளூர் AI மூலம் மொழிபெயர்க்கிறது.",
+    "확장 프로그램 설치가 필요합니다": "நீட்டிப்பை நிறுவ வேண்டும்",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "கீழே உங்கள் உலாவியை இணைக்கவும். நீட்டிப்பு ஏற்கனவே நிறுவப்பட்டிருந்தால், இணைப்பைச் சரிபார்க்கவும்."
   },
   "fa": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
@@ -14298,7 +14361,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "برای بررسی اتصال، افزونه را در مرورگر باز کنید.",
     "브라우저 설치를 찾지 못했습니다.": "مرورگر نصب‌شده یافت نشد.",
     "스토어 심사 중": "در حال بررسی در فروشگاه",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "بررسی اتصال مرورگر ممکن نشد. دوباره تلاش کنید."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "بررسی اتصال مرورگر ممکن نشد. دوباره تلاش کنید.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "گفتگوهای پیام‌رسان‌های وب تأییدشده را با هوش مصنوعی محلی ترجمه می‌کند.",
+    "확장 프로그램 설치가 필요합니다": "نصب افزونه لازم است",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "مرورگر خود را در زیر متصل کنید. اگر افزونه قبلاً نصب شده است، اتصال را بررسی کنید."
   },
   "he": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
@@ -14948,7 +15014,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "פתחו את התוסף בדפדפן כדי לבדוק את החיבור.",
     "브라우저 설치를 찾지 못했습니다.": "לא נמצא דפדפן מותקן.",
     "스토어 심사 중": "בבדיקת החנות",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "לא ניתן לבדוק את חיבור הדפדפן. נסו שוב."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "לא ניתן לבדוק את חיבור הדפדפן. נסו שוב.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "תרגום שיחות מאושרות במסרים בדפדפן באמצעות בינה מלאכותית מקומית.",
+    "확장 프로그램 설치가 필요합니다": "נדרשת התקנת התוסף",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "יש לחבר את הדפדפן למטה. אם התוסף כבר מותקן, יש לבדוק את החיבור."
   },
   "cs": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
@@ -15598,6 +15667,9 @@ export const UI_LOCALE_COPY = Object.freeze({
     "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Otevřete rozšíření v prohlížeči a zkontrolujte připojení.",
     "브라우저 설치를 찾지 못했습니다.": "Instalace prohlížeče nebyla nalezena.",
     "스토어 심사 중": "Probíhá kontrola v obchodě",
-    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Připojení prohlížeče se nepodařilo zkontrolovat. Zkuste to znovu."
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Připojení prohlížeče se nepodařilo zkontrolovat. Zkuste to znovu.",
+    "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": "Překládá konverzace ve schválených webových messengerech pomocí místní AI.",
+    "확장 프로그램 설치가 필요합니다": "Je nutné nainstalovat rozšíření",
+    "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": "Připojte svůj prohlížeč níže. Pokud je rozšíření již nainstalované, zkontrolujte připojení."
   }
 });

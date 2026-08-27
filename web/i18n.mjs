@@ -1,6 +1,9 @@
 import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 
 export const COPY = Object.freeze({
+  "동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.": ["Translate conversations in approved web messengers with local AI.","同意済みのウェブメッセンジャーの会話をローカルAIで翻訳します。","使用本地 AI 翻译已同意使用的网页聊天对话。"],
+  "확장 프로그램 설치가 필요합니다": ["Extension installation required","拡張機能のインストールが必要です","需要安装扩展程序"],
+  "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.": ["Connect your browser below. If the extension is already installed, check the connection.","以下から使用するブラウザーを接続してください。インストール済みの場合は接続を確認してください。","请在下方连接您使用的浏览器。如果已安装扩展，请检查连接状态。"],
   "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": ["Connect the browsers you use. You can use several browsers together.","使用するブラウザーを接続してください。複数のブラウザーを併用できます。","连接您使用的浏览器。可以同时使用多个浏览器。"],
   "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": ["The extension works only in the browser profile where it is installed.","拡張機能はインストールしたブラウザープロファイルでのみ使用できます。","扩展仅可在安装它的浏览器个人资料中使用。"],
   "연결 확인": ["Check connection","接続を確認","检查连接"],

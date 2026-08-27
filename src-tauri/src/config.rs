@@ -11,6 +11,7 @@ use crate::language::is_supported_language_code;
 use crate::translation::HyMtModelSize;
 
 const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Discord-Translator";
+const WEB_EXTENSION_SETUP_VERSION: u32 = 1;
 const LEGACY_UPDATE_REPOSITORIES: &[&str] = &[
     "NudeNyang/NudeNyang-Translator",
     "NudeNyang/DiscordTranslateOverlay",
@@ -68,6 +69,7 @@ pub struct AppConfig {
     pub incoming_source_languages: Vec<String>,
     pub translate_nicknames: bool,
     pub web_translation_enabled: bool,
+    pub web_extension_setup_version: u32,
     pub web_messenger_enabled: bool,
     pub web_target_language: String,
     pub web_processing_mode: String,
@@ -114,7 +116,8 @@ impl Default for AppConfig {
             incoming_language_mode: "all".to_string(),
             incoming_source_languages: Vec::new(),
             translate_nicknames: true,
-            web_translation_enabled: true,
+            web_translation_enabled: false,
+            web_extension_setup_version: WEB_EXTENSION_SETUP_VERSION,
             web_messenger_enabled: false,
             web_target_language: "display".to_string(),
             web_processing_mode: "balanced".to_string(),
@@ -610,13 +613,25 @@ fn load_config(path: &Path) -> Result<AppConfig, String> {
     }
     let bytes = fs::read(path)
         .map_err(|error| format!("설정 파일을 읽지 못했습니다 ({}): {error}", path.display()))?;
-    let value = serde_json::from_slice(&bytes).map_err(|error| {
+    let value: Value = serde_json::from_slice(&bytes).map_err(|error| {
         format!(
             "설정 JSON 형식이 올바르지 않습니다 ({}): {error}",
             path.display()
         )
     })?;
-    AppConfig::from_value(value)
+    let setup_version = value
+        .get("web_extension_setup_version")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let mut config = AppConfig::from_value(value)?;
+    if setup_version < u64::from(WEB_EXTENSION_SETUP_VERSION) {
+        // Persist before the engine starts. Later explicit opt-ins survive
+        // restarts, even if the user changes no other settings this session.
+        config.web_translation_enabled = false;
+        config.web_extension_setup_version = WEB_EXTENSION_SETUP_VERSION;
+        save_config(path, &config)?;
+    }
+    Ok(config)
 }
 
 fn save_config(path: &Path, config: &AppConfig) -> Result<(), String> {
@@ -671,6 +686,65 @@ mod tests {
     }
 
     #[test]
+    fn web_extension_setup_resets_existing_toggle_once_and_preserves_other_settings() {
+        for previous in [true, false] {
+            let path = temporary_settings_path("web-extension-setup");
+            fs::write(
+                &path,
+                serde_json::to_vec(&json!({
+                    "web_translation_enabled": previous,
+                    "web_messenger_enabled": true,
+                    "web_target_language": "ja",
+                    "web_site_policies": { "example.com": "always" }
+                }))
+                .unwrap(),
+            )
+            .unwrap();
+            let store = ConfigStore::load(path.clone()).unwrap();
+            let migrated = store.get().unwrap();
+            assert!(!migrated.web_translation_enabled);
+            assert!(migrated.web_messenger_enabled);
+            assert_eq!(migrated.web_target_language, "ja");
+            assert_eq!(migrated.web_site_policies["example.com"], "always");
+            let persisted: serde_json::Value =
+                serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            assert_eq!(persisted["web_extension_setup_version"], 1);
+            store
+                .update(json!({ "web_translation_enabled": true }))
+                .unwrap();
+            assert!(
+                ConfigStore::load(path.clone())
+                    .unwrap()
+                    .get()
+                    .unwrap()
+                    .web_translation_enabled
+            );
+            fs::remove_file(path).unwrap();
+        }
+    }
+
+    #[test]
+    fn new_users_start_web_translation_disabled_and_reloading_never_reenables_it() {
+        let path = temporary_settings_path("new-web-extension-setup");
+        let store = ConfigStore::load(path.clone()).unwrap();
+        assert!(!store.get().unwrap().web_translation_enabled);
+        store
+            .update(json!({ "web_translation_enabled": true }))
+            .unwrap();
+        store
+            .update(json!({ "web_translation_enabled": false }))
+            .unwrap();
+        assert!(
+            !ConfigStore::load(path.clone())
+                .unwrap()
+                .get()
+                .unwrap()
+                .web_translation_enabled
+        );
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn old_settings_receive_new_defaults_and_migrations() {
         let restored = AppConfig::from_value(json!({
             "enabled": false,
@@ -703,7 +777,7 @@ mod tests {
         assert_eq!(restored.hotkeys.toggle_translation, "F12");
         assert_eq!(restored.hotkeys.toggle_outgoing_translation, "F8");
         assert!(restored.disabled_providers.is_empty());
-        assert!(restored.web_translation_enabled);
+        assert!(!restored.web_translation_enabled);
         assert!(!restored.web_messenger_enabled);
         assert_eq!(restored.web_target_language, "display");
         assert_eq!(restored.web_processing_mode, "balanced");

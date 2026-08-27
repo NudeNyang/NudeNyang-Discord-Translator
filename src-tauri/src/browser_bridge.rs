@@ -888,7 +888,7 @@ mod tests {
         let mut config = crate::config::AppConfig::default();
         let settings = super::web_settings_value(&config);
         assert_eq!(settings["messengerEnabled"], false);
-        assert_eq!(settings["enabled"], true);
+        assert_eq!(settings["enabled"], false);
         config.web_messenger_enabled = true;
         assert_eq!(super::web_settings_value(&config)["messengerEnabled"], true);
     }

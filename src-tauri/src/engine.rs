@@ -3977,7 +3977,10 @@ mod tests {
 
     #[test]
     fn private_browser_policy_denies_by_default_and_disallows_every_external_provider() {
-        let mut config = AppConfig::default();
+        let mut config = AppConfig {
+            web_translation_enabled: true,
+            ..Default::default()
+        };
         assert!(BrowserTranslationPolicy::new(&config).check(false).is_ok());
         assert!(BrowserTranslationPolicy::new(&config)
             .check(true)
@@ -4016,6 +4019,7 @@ mod tests {
     #[test]
     fn private_browser_permits_reject_queued_work_after_disable_even_if_reenabled() {
         let mut config = AppConfig {
+            web_translation_enabled: true,
             web_messenger_enabled: true,
             translator: "mock".to_string(),
             ..Default::default()
@@ -4051,6 +4055,7 @@ mod tests {
     #[test]
     fn private_browser_api_rejects_requests_before_model_preparation_without_opt_in() {
         let engine = RustEngine::start(AppConfig {
+            web_translation_enabled: true,
             enabled: false,
             dictionary_enabled: false,
             keep_local_model_warm: false,
@@ -4065,6 +4070,7 @@ mod tests {
     #[test]
     fn private_browser_worker_translates_locally_only_while_permission_is_enabled() {
         let mut config = AppConfig {
+            web_translation_enabled: true,
             enabled: false,
             dictionary_enabled: false,
             keep_local_model_warm: false,
@@ -4111,6 +4117,7 @@ mod tests {
     #[test]
     fn browser_translation_uses_the_existing_display_worker() {
         let engine = RustEngine::start(AppConfig {
+            web_translation_enabled: true,
             enabled: false,
             translator: "mock".to_string(),
             target_language: "ko".to_string(),

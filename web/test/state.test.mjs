@@ -157,7 +157,7 @@ test("Discord variant selection accepts stable, PTB, and Canary", () => {
 
 test("web translation settings receive safe defaults and reject invalid policies", () => {
   const defaults = normalizeConfig({});
-  assert.equal(defaults.web_translation_enabled, true);
+  assert.equal(defaults.web_translation_enabled, false);
   assert.equal(defaults.web_target_language, "display");
   assert.equal(defaults.web_processing_mode, "balanced");
   assert.equal(defaults.web_external_page_char_limit, 25000);

@@ -79,9 +79,8 @@ test("web settings explain read-only local processing and separate browser conse
   assert.equal(label.textContent, "웹 메신저 읽기 번역");
   const description = dom.window.document.getElementById(button.getAttribute("aria-describedby"));
   assert.match(description.textContent, /로컬 AI/);
-  assert.match(description.textContent, /현재 열린 대화/);
-  assert.match(description.textContent, /입력 및 전송 기능을 사용하지 않으며/);
-  assert.match(description.textContent, /개인정보 동의가 필요/);
+  assert.match(description.textContent, /동의한 웹 메신저의 대화/);
+  assert.ok(description.textContent.length < 40, "the settings summary stays one short line; detailed consent remains in the extension");
   assert.equal(note.hidden, true);
   await harness.click();
   assert.deepEqual(harness.patches, [{ web_messenger_enabled: true }]);

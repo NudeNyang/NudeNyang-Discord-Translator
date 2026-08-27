@@ -149,20 +149,15 @@
 
               <section class="settings-view" data-settings-view="web" aria-labelledby="web-heading" hidden>
                 <div class="panel-heading"><h2 id="web-heading">웹 번역</h2><p>Chrome, Whale과 Firefox의 웹페이지 번역 방식과 외부 서비스 사용량을 관리합니다.</p></div>
-                <section class="web-browser-setup" aria-labelledby="web-browser-heading">
-                  <div class="panel-subheading"><h3 id="web-browser-heading">브라우저 연결</h3><p>사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.</p></div>
-                  <div class="settings-card web-browser-clients" id="web-browser-clients"></div>
-                  <p class="web-profile-note">확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.</p>
-                </section>
                 <article class="settings-card web-settings-card">
                   <div class="setting-row compact-row first-row">
                     <div class="setting-copy"><h3>웹페이지 번역 사용</h3><p>확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다.</p></div>
-                    <button class="switch" id="web-translation-enabled" type="button" role="switch" aria-checked="true"><span></span><b>켜짐</b></button>
+                    <button class="switch" id="web-translation-enabled" type="button" role="switch" aria-checked="false"><span></span><b>꺼짐</b></button>
                   </div>
                   <div class="setting-row compact-row">
                     <div class="setting-copy">
                       <h3 id="web-messenger-heading">웹 메신저 읽기 번역</h3>
-                      <p id="web-messenger-description">현재 열린 대화의 메시지 본문·링크 미리보기 텍스트와 현재 Discord 서버의 보이는 채널 이름만 별도로 설치한 NudeNyang Windows 앱에서 로컬 AI로 번역합니다. 입력 및 전송 기능을 사용하지 않으며, 사용자 이름과 연락처를 번역하지 않습니다. 웹 메신저 읽기 번역에 대한 개인정보 동의가 필요합니다.</p>
+                      <p id="web-messenger-description">동의한 웹 메신저의 대화를 로컬 AI로 번역합니다.</p>
                       <p id="web-messenger-model-note" role="status" hidden>웹 메신저 읽기 번역은 로컬 AI에서만 사용할 수 있습니다.</p>
                     </div>
                     <button class="switch" id="web-messenger-enabled" type="button" role="switch" aria-checked="false" aria-labelledby="web-messenger-heading" aria-describedby="web-messenger-description"><span></span><b>꺼짐</b></button>
@@ -180,6 +175,12 @@
                     <div class="custom-select" data-field="web_external_page_char_limit"></div>
                   </div>
                 </article>
+
+                <section class="web-browser-setup" aria-labelledby="web-browser-heading">
+                  <div class="panel-subheading"><h3 id="web-browser-heading">브라우저 연결</h3><p>사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.</p></div>
+                  <div class="settings-card web-browser-clients provider-connections" id="web-browser-clients"></div>
+                  <p class="web-profile-note">확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.</p>
+                </section>
 
                 <section aria-labelledby="web-sites-heading">
                   <div class="panel-subheading"><h3 id="web-sites-heading">사이트별 동작</h3><p>확장 프로그램에서 등록한 사이트의 자동 시작 여부를 관리합니다.</p></div>
