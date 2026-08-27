@@ -194,6 +194,18 @@ powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
+Commit source/version/release notes before packaging, and push that source commit before deployment.
+The public packaging script builds **both x64 and ARM64**, signs both installers with the existing
+Tauri updater key, and verifies signatures, SHA-256 checksums, URLs and both update platform entries.
+Missing or mismatched artifacts stop deployment. `-beta` versions remain GitHub prereleases with
+`--latest=false`; prerelease status does not disable app updates.
+
+Packaging writes only `release/<version>/latest.json`. Deployment uploads a draft, checks every
+asset's server-side SHA-256 and size, publishes it, then copies the validated manifest to
+`updates/beta/latest.json`. Review, commit and push that generated file **after publication** to
+activate both architectures at the existing update URL. Do not rotate the signing key or change
+the update endpoint to add ARM64 support. See [Windows release procedure](docs/WINDOWS_RELEASE.md).
+
 </details>
 
 ## Documentation

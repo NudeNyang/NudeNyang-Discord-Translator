@@ -18,6 +18,8 @@ const githubDeployment = readFileSync(
   new URL("../../scripts/deploy_github_release.ps1", import.meta.url),
   "utf8",
 );
+const windowsPackaging = readFileSync(new URL("../../scripts/package_windows_variants.ps1", import.meta.url), "utf8");
+const releaseUpdates = readFileSync(new URL("../../scripts/release-updates.mjs", import.meta.url), "utf8");
 
 test("beta packaging updates the renamed developer executable", () => {
   assert.match(betaPackaging, /Sync-DeveloperBuild/);
@@ -50,24 +52,23 @@ test("default beta release notes survive Windows PowerShell source decoding", ()
 test("R2 bridge builds a public updater without embedding the private beta token", () => {
   assert.match(betaPackaging, /\[switch\]\$PublicUpdater/);
   assert.match(betaPackaging, /if \(\$PublicUpdater\)[\s\S]*Remove-Item Env:NUDE_TRANSLATOR_BETA_TOKEN/);
-  assert.match(githubPackaging, /raw\.githubusercontent\.com\/\$Repository\/main\/updates\/beta\/latest\.json/);
-  assert.match(githubPackaging, /'-PublicUpdater'/);
+  assert.match(githubPackaging, /package_windows_variants\.ps1/);
+  assert.match(windowsPackaging, /raw\.githubusercontent\.com\/NudeNyang\/NudeNyang-Discord-Translator\/main\/updates\/beta\/latest\.json/);
+  assert.match(windowsPackaging, /Remove-Item Env:NUDE_TRANSLATOR_BETA_TOKEN/);
 });
 
-test("GitHub Open Beta artifacts include a signed manifest and become the latest release", () => {
-  assert.match(githubPackaging, /SHA256SUMS\.txt/);
+test("GitHub beta artifacts include both signed installers without becoming the stable latest release", () => {
+  assert.match(releaseUpdates, /SHA256SUMS\.txt/);
   assert.match(githubPackaging, /Get-FileHash[^\r\n]+SHA256/);
-  assert.match(githubPackaging, /NudeNyang-Translator-\$Version-x64-Setup\.exe/);
-  assert.match(githubPackaging, /NudeNyang-Translator-\$Version-ARM64-Setup\.exe/);
+  assert.match(githubPackaging, /@\('x64', 'ARM64'\)/);
+  assert.match(githubPackaging, /NudeNyang-Translator-\$Version-\$_-Setup\.exe/);
   assert.doesNotMatch(githubPackaging, /Portable\.zip/);
-  assert.match(githubDeployment, /\$WindowsPackagePaths/);
+  assert.match(githubDeployment, /\$Validation\.artifacts/);
   assert.doesNotMatch(githubDeployment, /Portable\.zip/);
   assert.match(githubDeployment, /gh release create/);
-  assert.match(githubDeployment, /--title "\$DisplayVersion"/);
-  assert.match(githubDeployment, /--latest/);
-  assert.doesNotMatch(githubDeployment, /--prerelease/);
-  assert.match(githubDeployment, /SHA256SUMS\.txt/);
-  assert.doesNotMatch(githubDeployment, /--verify-tag/);
+  assert.match(githubDeployment, /--latest=false/);
+  assert.match(githubDeployment, /--prerelease/);
+  assert.match(githubDeployment, /--target \$SourceCommit/);
 });
 
 test("GitHub release packaging reads Korean metadata explicitly as UTF-8", () => {
