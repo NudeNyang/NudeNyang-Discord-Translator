@@ -4,7 +4,7 @@
 
 - Channel: public listing (`On this site` / listed)
 - Add-on ID: `web-translator@nudenyang.github.io`
-- Add-on version: `0.7.8`
+- Add-on version: `0.7.9`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
 - Companion application: NudeNyang Windows 0.7.3-beta with the web-messenger opt-in setting
   and private, local-only translation path described below
@@ -26,6 +26,28 @@ must receive `webSettings.messengerEnabled: true` from the compatible companion 
 keeps web-messenger reading disabled.
 
 ## Changes in 0.7.8
+
+The following section records the previous release. Version 0.7.9 keeps those translation and
+consent behaviors and adds the installation/recovery guide described below.
+
+### Additional changes in 0.7.9
+
+- Repeated native-connection failures expose a dismissible installation/recovery card. A saved
+  success flag prioritizes recovery; `browser_connection_disabled` never becomes an install prompt.
+- A user click opens bundled `download.html`, which retrieves the existing public GitHub update
+  feed without cookies, referrers, page text, page addresses, or messages. It displays the latest
+  published build including prereleases and both Windows architectures. The user must separately
+  click an installer to download it. Network failure leaves retry and GitHub Releases links.
+- Only release data is fetched. There is no remote executable code, analytics, new permission,
+  automatic download, or change to messenger consent. Connection-success and help-dismissal flags
+  are local preferences. The public privacy policy must include this addition before submission.
+- The generator additionally imports `scripts/extension-setup-copy.mjs` (28 interface languages);
+  this input is included in the source archive. Reproduction commands below are unchanged.
+- Test first-use failure, transient failure, previous connection, dismissal, reconnect, and
+  explicit browser disable. Check that the download guide uses the published feed rather than a
+  hardcoded companion version and does not open without a user click.
+
+### Previous 0.7.8 changes
 
 - Check fresh companion settings and browser consent before a manual translation start, including
   F4. OFF cancels a pending ON without waiting for the native lookup; stale replies after navigation

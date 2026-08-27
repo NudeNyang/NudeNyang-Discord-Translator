@@ -15,6 +15,9 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 
 ## 브라우저 확장
 
+- 확장 0.7.9의 설치·연결 도움말은 연결 성공 이력과 안내를 접었는지만 브라우저 로컬 저장소에 추가로 저장합니다. 웹페이지 본문·주소·대화 내용은 포함하지 않습니다. 본체 연결 해제나 메신저 동의를 자동으로 변경하지 않습니다.
+- 사용자가 다운로드 안내를 열면 기존 GitHub 공개 업데이트 목록에서 최신 본체 버전과 x64·ARM64 설치형 링크를 확인합니다. 조회에는 쿠키·리퍼러·페이지 주소·본문·대화를 보내지 않으며 원격 코드를 실행하지 않습니다. GitHub는 일반 HTTPS 요청에 필요한 IP 주소 등 네트워크 정보를 처리할 수 있습니다. 파일은 사용자가 설치형 링크를 선택할 때만 다운로드됩니다. 설치나 브라우저 시작 시 다운로드 탭을 자동으로 열지 않습니다.
+
 - Chrome, Naver Whale과 Firefox 확장은 일반 HTTP/HTTPS 웹사이트에서 동작할 수 있으므로 브라우저가 모든 웹사이트의 데이터를 읽고 변경할 수 있다는 권한 경고를 표시할 수 있습니다. Firefox는 일반 웹 번역에서 Windows 앱으로 전달되는 허용 영역 텍스트를 `websiteContent`, 번역 중인 현재 페이지의 주소 범주를 `browsingActivity`로 명시합니다. 메신저 기능에는 별도 선택 항목인 `personalCommunications`를 사용합니다.
 - 확장 백그라운드 시작·설치·브라우저 시작·창 포커스 변경과 주기적인 알람에서 같은 PC의 본체 연결을 확인하며, 일시 실패는 제한된 횟수로 재시도합니다. 연결 확인에는 브라우저 종류와 확장 버전이 포함되며, 페이지 본문이나 주소는 포함되지 않습니다. 연결 확인만으로 모델을 준비하거나 번역·개인정보 동의를 활성화하지 않습니다.
 - 본체의 브라우저별 `연결 해제`는 해당 종류의 모든 프로필에서 본체 사용을 중지하는 로컬 설정입니다. 새 번역·설정 요청을 차단하고 대기 결과를 무효화하지만 확장 삭제, 브라우저 권한 또는 메신저 동의 철회를 대신하지 않으며 이미 표시한 번역문을 강제로 복원하지 않습니다. 다른 브라우저와 Discord의 설정은 유지됩니다. 연결 확인의 브라우저 종류·버전 기록은 갱신될 수 있지만 저장한 해제 상태를 자동으로 취소하지 않습니다.
@@ -77,6 +80,10 @@ The web-messenger reading feature below describes Windows companion `0.7.3-beta`
 Local models process translation on the user's PC. Image pixels remain local for OCR and compositing. For ordinary webpage and Discord translation, if the user explicitly selects ChatGPT, Claude, Gemini, or DeepL, only the text required for translation is sent to that provider under its own terms and privacy policy. Ordinary settings, caches, and history remain in the Windows user data directory. The web-messenger feature does not use those content-storage paths or external translation providers. DeepL credentials are stored in Windows Credential Manager, and subscription providers use their official local CLI authentication. Diagnostic logs do not record message bodies, local-model prompts, or authentication secrets.
 
 The Chrome, Naver Whale, and Firefox extensions can run on ordinary HTTP/HTTPS websites, which may produce a browser warning that they can read and change data on all websites. Firefox declares eligible ordinary page text passed to the Windows app as `websiteContent` and the address category of the page being translated as `browsingActivity`. Web-messenger reading uses the separate optional category `personalCommunications`.
+
+Extension 0.7.9 additionally stores two local preferences: whether the companion has connected successfully and whether the connection-help card was dismissed. These contain no page addresses, text, or conversations and never change messenger consent or a disabled browser connection.
+
+Only when the user opens the bundled download guide does it fetch the existing public GitHub update list for the latest published companion, including prereleases and both Windows installer architectures. The request omits cookies and referrers; no page addresses, text, or conversations are sent. GitHub may process network information such as the IP address needed for a normal HTTPS request. No remote code runs. Installer downloads require a further user click; installation and browser startup never open download tabs automatically.
 
 At background startup, installation, browser startup, window-focus changes, and periodic alarms, the extension checks its connection to the same-computer companion, with bounded retries for temporary failures. These checks include browser type and extension version, not webpage text or addresses. A connection check alone does not initialize a translation model, enable translation, or grant messenger consent.
 

@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { COPY, DYNAMIC_TEMPLATE_COPY } from "../web/i18n.mjs";
 import { UI_LOCALE_COPY } from "../web/ui-locales.mjs";
+import { EXTENSION_SETUP_COPY } from "./extension-setup-copy.mjs";
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const EXTENSION_ROOT = join(PROJECT_ROOT, "extension");
@@ -32,6 +33,7 @@ const BROWSER_LOCALE = Object.freeze({
 });
 
 const POPUP_SOURCE = Object.freeze({
+  checkConnection: "연결 확인",
   messengerPrivacyPermissionDenied: "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.",
   messengerPrivacyRevoked: "동의를 철회했습니다.",
   messengerPrivacySaveFailed: "동의를 저장하지 못했습니다. 다시 시도해 주십시오.",
@@ -97,7 +99,8 @@ function translated(locale, korean) {
 
 const popupCopy = Object.fromEntries(LOCALES.map(locale => [
   locale,
-  Object.fromEntries(Object.entries(POPUP_SOURCE).map(([id, korean]) => [id, translated(locale, korean)])),
+  { ...Object.fromEntries(Object.entries(POPUP_SOURCE).map(([id, korean]) => [id, translated(locale, korean)])),
+    ...EXTENSION_SETUP_COPY[locale] },
 ]));
 
 const runtime = `(function exposePopupLocales(root) {\n` +

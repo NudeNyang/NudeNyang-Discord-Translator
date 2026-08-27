@@ -4,7 +4,7 @@ import test from "node:test";
 import { JSDOM } from "jsdom";
 
 const html = fs.readFileSync(new URL("../popup.html", import.meta.url), "utf8");
-const scripts = ["content-helpers.js", "popup-locales.js", "popup.js"]
+const scripts = ["content-helpers.js", "popup-locales.js", "connection-guidance.js", "popup.js"]
   .map((name) => fs.readFileSync(new URL(`../${name}`, import.meta.url), "utf8"));
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -14,6 +14,13 @@ async function popup(options = {}) {
   });
   const messages = [];
   const tabs = [];
+  const timers = new Map();
+  let timerId = 0;
+  if (options.fakeTime) {
+    dom.window.setTimeout = (fn, ms) => { timers.set(++timerId, { fn, ms }); return timerId; };
+    dom.window.clearTimeout = id => timers.delete(id);
+  }
+  const preferences = { ...options.preferences };
   let state = {
     supported: true, enabled: false, site: "discord", translatedNodes: 0,
     messengerService: "discord", messengerGate: "messenger_consent_required",
@@ -35,15 +42,21 @@ async function popup(options = {}) {
       },
     },
     commands: { getAll(callback) { callback([]); } },
+    storage: { local: {
+      get(_keys, callback) { callback(preferences); },
+      set(patch, callback) { Object.assign(preferences, patch); callback?.(); },
+    } },
     runtime: {
       getURL(path) { return `chrome-extension://test/${path}`; },
       sendMessage(message, callback) {
         messages.push(JSON.parse(JSON.stringify(message)));
         if (message.type === "nudenyang-page-request") {
+          if (options.pageUnresponsive) return;
           if (message.message.type === "nudenyang-toggle-enabled") state = { ...state, enabled: !state.enabled };
           if (message.message.type === "nudenyang-set-enabled") state = { ...state, enabled: message.message.enabled };
           callback({ ...state });
-        } else if (message.type === "nudenyang-native-request") {
+        } else if (message.type === "nudenyang-native-request" || message.type === "nudenyang-setup-status") {
+          if (message.type === "nudenyang-setup-status") message = { ...message, request: { type: "status" } };
           if (message.request.type === "openWebSettings") { callback({ type: "opened" }); return; }
           if (message.request.type === "webSettingsUpdate" && options.webSettingsResponse) { callback(options.webSettingsResponse); return; }
           callback({
@@ -60,7 +73,11 @@ async function popup(options = {}) {
   await settle();
   await settle();
   return {
-    dom, messages, tabs,
+    dom, messages, tabs, preferences,
+    async tick() {
+      const [key, timer] = [...timers].sort((a, b) => a[1].ms - b[1].ms)[0];
+      timers.delete(key); timer.fn(); await settle(); await settle();
+    },
     get(id) { return dom.window.document.getElementById(id); },
     toggleCalls() { return messages.filter((message) => message.message?.type === "nudenyang-toggle-enabled"); },
     pressF4() { dom.window.document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "F4", code: "F4", bubbles: true, cancelable: true })); },
@@ -77,6 +94,81 @@ test("개인정보 페이지의 팝업은 오류 대신 안내 페이지임을 �
     assert.equal(p.get("messenger-panel").hidden, true);
     assert.equal(p.get("open-settings").disabled, false);
     assert.ok(!p.messages.some((m) => m.type === "nudenyang-page-request"));
+  } finally { p.dispose(); }
+});
+
+test("미연결 팝업은 재확인 뒤에만 안내하며 다운로드는 클릭할 때만 열고 개인정보를 URL에 넣지 않는다", async () => {
+  const options = { fakeTime: true, language: "ko", nativeStatus: { type: "error", code: "native_host_unavailable", appConnected: false } };
+  const p = await popup(options);
+  try {
+    assert.equal(p.get("companion-panel").hidden, true);
+    assert.deepEqual(p.tabs, []);
+    await p.tick();
+    assert.equal(p.get("companion-panel").hidden, true);
+    await p.tick();
+    assert.equal(p.get("companion-panel").hidden, false);
+    assert.equal(p.get("enabled").disabled, true);
+    assert.equal(p.get("messenger-panel").hidden, true);
+    assert.equal(p.get("companion-download").classList.contains("messenger-consent-action"), true);
+    p.get("companion-download").click();
+    assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/download.html?lang=en" }]);
+    p.get("companion-dismiss").click();
+    assert.equal(p.get("companion-panel").hidden, true);
+    assert.equal(p.get("companion-help").hidden, false);
+    assert.equal(p.preferences.companionHelpDismissed, true);
+    await p.tick();
+    assert.equal(p.get("companion-panel").hidden, true);
+    p.get("companion-help").click();
+    assert.equal(p.get("companion-panel").hidden, false);
+    options.nativeStatus = {};
+    p.get("companion-retry").click(); await settle(); await settle();
+    assert.equal(p.get("companion-panel").hidden, true);
+    assert.equal(p.get("companion-help").hidden, true);
+    assert.equal(p.get("messenger-panel").hidden, false, "본체 연결 후에도 기존 메신저 동의를 요구한다");
+    assert.equal(p.preferences.companionConnected, true);
+    assert.ok(p.messages.every(m => !m.type.includes("consent-set") && !m.message?.type.includes("set-enabled")));
+  } finally { p.dispose(); }
+});
+
+test("오래 열린 탭이 응답하지 않아도 본체 설치·연결 안내는 독립적으로 동작한다", async () => {
+  const p = await popup({ fakeTime: true, pageUnresponsive: true, nativeStatus: { type: "error", code: "native_host_unavailable", appConnected: false } });
+  try {
+    assert.ok(p.messages.some(m => m.type === "nudenyang-setup-status"));
+    await p.tick(); await p.tick();
+    assert.equal(p.get("companion-panel").hidden, false);
+    p.get("companion-download").click();
+    assert.equal(p.tabs.length, 1);
+  } finally { p.dispose(); }
+});
+
+test("본체 연결이 끊겨도 이미 번역 중인 페이지는 팝업에서 원문으로 끌 수 있다", async () => {
+  const p = await popup({ fakeTime: true, status: { messengerService: "", messengerGate: "", enabled: true },
+    nativeStatus: { type: "error", code: "app_unavailable", appConnected: false } });
+  try {
+    assert.equal(p.get("enabled").checked, true);
+    assert.equal(p.get("enabled").disabled, false);
+    p.get("enabled").click(); await settle();
+    assert.equal(p.get("enabled").checked, false);
+    assert.equal(p.get("enabled").disabled, true, "연결이 없을 때 새 번역을 켜지는 않는다");
+  } finally { p.dispose(); }
+});
+
+test("연결 이력·등록된 본체 오류는 재설치보다 복구를 우선하고 명시적 해제는 다운로드를 숨긴다", async () => {
+  for (const variant of [{ preferences: { companionConnected: true }, code: "native_host_unavailable" }, { code: "app_unavailable" }]) {
+    const p = await popup({ fakeTime: true, preferences: variant.preferences, nativeStatus: { type: "error", code: variant.code, appConnected: false } });
+    try {
+      await p.tick(); await p.tick();
+      assert.equal(p.get("companion-download").classList.contains("messenger-consent-action"), false);
+      assert.equal(p.get("companion-retry").classList.contains("messenger-consent-action"), true);
+    } finally { p.dispose(); }
+  }
+  const p = await popup({ fakeTime: true, nativeStatus: { type: "error", code: "browser_connection_disabled", appConnected: false } });
+  try {
+    await p.tick();
+    assert.equal(p.get("companion-panel").hidden, true);
+    assert.equal(p.get("companion-help").hidden, true);
+    assert.equal(p.get("open-settings").disabled, false);
+    assert.deepEqual(p.tabs, []);
   } finally { p.dispose(); }
 });
 

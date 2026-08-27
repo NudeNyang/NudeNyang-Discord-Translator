@@ -20,6 +20,11 @@ Remove-Item -LiteralPath $ResolvedStaging -Recurse -Force -ErrorAction SilentlyC
 New-Item -ItemType Directory -Path $ResolvedStaging -Force | Out-Null
 
 $SharedFiles = @(
+    'connection-guidance.js',
+    'download.html',
+    'download.css',
+    'download.js',
+    'download-feed.js',
     'background.js',
     'content-helpers.js',
     'content.js',

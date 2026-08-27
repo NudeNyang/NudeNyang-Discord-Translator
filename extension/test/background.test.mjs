@@ -25,6 +25,7 @@ function createBackground(tabState, {
   const api = {
     runtime: {
       getManifest: () => ({ version: "0.7.4" }),
+      getURL: path => `chrome-extension://test/${path}`,
       onMessage: event("message"),
       onInstalled: event("installed"),
       onStartup: event("startup"),
@@ -80,6 +81,18 @@ function createBackground(tabState, {
 }
 
 const flushConnection = () => new Promise(resolve => setImmediate(resolve));
+
+test("짧은 팝업 연결 확인은 확장 팝업만 요청할 수 있고 페이지 데이터 없이 처리한다", async () => {
+  const requests = [];
+  const b = createBackground({}, { nativeClient: { request: async request => { requests.push(request); return { type: "connection", appConnected: true }; } } });
+  await flushConnection(); requests.length = 0;
+  for (const sender of [{ url: "https://example.com", tab: { id: 1 } }, { url: "chrome-extension://test/download.html" }, { url: "chrome-extension://test/popup.html", tab: { id: 2 } }]) {
+    assert.equal((await b.message({ type: "nudenyang-setup-status" }, sender)).code, "invalid_setup_sender");
+  }
+  assert.equal(requests.length, 0);
+  await b.message({ type: "nudenyang-setup-status", checkOnly: true, pageText: "must not forward" }, { url: "chrome-extension://test/popup.html" });
+  assert.deepEqual(JSON.parse(JSON.stringify(requests)), [{ type: "connectionPing", requestId: "popup-connection" }]);
+});
 
 test("페이지 동의 안내 열기는 발신자 검증과 최신 대화 상태 확인을 개인정보 모듈에 위임한다", async () => {
   const sender = { tab: { id: 23 }, frameId: 0 };

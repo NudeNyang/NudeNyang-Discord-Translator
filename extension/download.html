@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>NudeNyang · Windows</title>
+    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="download.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="icons/paw-96.png" width="56" height="56" alt="">
+        <div><p class="eyebrow">NUDENYANG</p><h1 data-i18n="windowsDownload">Download Windows app</h1></div>
+      </header>
+      <p class="intro" data-i18n="companionIntro"></p>
+      <section class="download-card" aria-labelledby="latest-label">
+        <h2 id="latest-label" data-i18n="latestBuild">Latest published build</h2>
+        <p id="download-status" role="status" aria-live="polite" data-i18n="checking">Checking</p>
+        <div id="download-options" hidden>
+          <p id="release-version" dir="ltr"></p>
+          <div class="installers">
+            <a id="download-x64" class="installer" rel="noreferrer noopener">Windows x64</a>
+            <a id="download-arm64" class="installer" rel="noreferrer noopener">Windows ARM64</a>
+          </div>
+          <p data-i18n="architectureHelp"></p>
+        </div>
+        <button id="download-retry" type="button" data-i18n="checkConnection" hidden>Check connection</button>
+        <a id="release-page" href="https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases" target="_blank" rel="noreferrer noopener">GitHub Releases ↗</a>
+      </section>
+      <p class="privacy" data-i18n="downloadPrivacy"></p>
+      <details>
+        <summary data-i18n="connectionHelp">Connection help</summary>
+        <p data-i18n="companionRecovery"></p>
+      </details>
+    </main>
+    <script src="popup-locales.js"></script>
+    <script src="download-feed.js"></script>
+    <script src="download.js"></script>
+  </body>
+</html>

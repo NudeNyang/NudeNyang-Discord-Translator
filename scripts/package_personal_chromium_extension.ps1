@@ -18,6 +18,11 @@ Remove-Item -LiteralPath $ResolvedOutput -Recurse -Force -ErrorAction SilentlyCo
 New-Item -ItemType Directory -Path $ResolvedOutput -Force | Out-Null
 
 $SharedFiles = @(
+    'connection-guidance.js',
+    'download.html',
+    'download.css',
+    'download.js',
+    'download-feed.js',
     'background.js',
     'content-helpers.js',
     'content.js',

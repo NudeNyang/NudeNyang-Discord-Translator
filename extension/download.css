@@ -1,0 +1,17 @@
+body { min-width: 0; }
+main { max-width: 720px; margin: 48px auto; padding: 24px; }
+header { display: flex; align-items: center; gap: 16px; }
+h1 { font-size: 26px; }
+h2 { font-size: 15px; margin: 0; }
+.intro { margin: 28px 0; line-height: 1.7; }
+.download-card { padding: 24px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
+#release-version { font-size: 30px; font-weight: 650; margin: 14px 0 20px; }
+.installers { display: flex; gap: 12px; flex-wrap: wrap; }
+.installer { flex: 1; min-width: 180px; padding: 16px; text-align: center; border: 1px solid var(--accent); border-radius: var(--radius-control); text-decoration: none; color: var(--text); background: var(--accent-soft); font-weight: 600; }
+.installer:hover { border-color: var(--text); background: var(--surface-hover); }
+.download-card p, .privacy, details p { line-height: 1.7; overflow-wrap: anywhere; }
+.privacy { font-size: 12px; color: var(--muted); margin: 24px 0; }
+#release-page { display: inline-block; margin-top: 12px; color: var(--accent-strong); }
+summary { cursor: pointer; color: var(--accent-strong); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 480px) { main { margin: 16px auto; padding: 18px; } .download-card { padding: 18px; } h1 { font-size: 22px; } }

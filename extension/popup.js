@@ -35,6 +35,7 @@ const LANGUAGE_OPTIONS = [
 ];
 let appStatus = null;
 let browserConnectionDisabled = false;
+let connectionAvailable = false;
 let quickToggleShortcut = "F4";
 let targetLanguageValue = "";
 let uiLanguage = popupLocales.resolve(
@@ -184,10 +185,11 @@ async function pageStatus(tabId) {
 
 function renderPageStatus(status) {
   const messengerGate = status?.messengerService ? status.messengerGate : "";
-  const needsConsent = !browserConnectionDisabled && messengerGate === "messenger_consent_required";
+  const needsConsent = connectionAvailable && !browserConnectionDisabled && messengerGate === "messenger_consent_required";
   enabled.checked = !browserConnectionDisabled && (status?.enabled ?? false);
-  enabled.disabled = browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
-  messengerPanel.hidden = browserConnectionDisabled || !status?.messengerService;
+  // Losing the engine must not prevent an already translated page going OFF.
+  enabled.disabled = (!connectionAvailable && !status?.enabled) || browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
+  messengerPanel.hidden = !connectionAvailable || browserConnectionDisabled || !status?.messengerService;
   messengerPanel.classList.toggle("consent-required", needsConsent);
   messengerTitle.hidden = !needsConsent;
   messengerNotice.hidden = messengerPanel.hidden;
@@ -228,8 +230,8 @@ function renderPageStatus(status) {
     ? status.targetLanguage
     : "");
   alwaysTranslateSite.checked = status?.sitePolicy === "always";
-  alwaysTranslateSite.disabled = browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
-  targetLanguageTrigger.disabled = browserConnectionDisabled || !status?.supported;
+  alwaysTranslateSite.disabled = !connectionAvailable || browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
+  targetLanguageTrigger.disabled = !connectionAvailable || browserConnectionDisabled || !status?.supported;
   if (targetLanguageTrigger.disabled) closeTargetLanguageMenu();
 }
 
@@ -260,27 +262,94 @@ async function initialize() {
   const commandsPromise = extensionCommands();
   const tab = await activeTab();
   const privacyPage = tab?.url?.split(/[?#]/u)[0] === api.runtime.getURL("messenger-privacy.html");
-  let status = privacyPage ? { privacyPage: true, supported: false }
-    : tab?.id ? await pageStatus(tab.id) : null;
-  const nativeStatus = await nativeRequest({ type: "status", requestId: `popup-${Date.now()}` });
-  browserConnectionDisabled = nativeStatus?.code === "browser_connection_disabled";
-  if (nativeStatus?.type === "status" || browserConnectionDisabled) {
-    applyUiLanguage(nativeStatus.resolvedUiLanguage || nativeStatus.uiLanguage);
-    renderTargetLanguageOptions();
+  let status = privacyPage ? { privacyPage: true, supported: false } : null;
+  let pageRevision = 0;
+  function refreshPageStatus() {
+    if (!tab?.id || privacyPage) return;
+    const revision = ++pageRevision;
+    void pageStatus(tab.id).then(updated => {
+      if (revision === pageRevision && updated) { status = updated; renderPageStatus(status); }
+    });
   }
-  if (nativeStatus?.type === "status") {
-    quickToggleShortcut = nativeStatus.webSettings?.quickToggleShortcut ?? "F4";
-    quickToggleShortcutElement.textContent = quickToggleShortcut || "-";
-  }
+  // A discarded or stalled page must never hold the installation guide hostage.
+  refreshPageStatus();
   renderPageStatus(status);
-  renderConnection(nativeStatus);
-  renderCommandShortcut(await commandsPromise);
+  const get = id => document.getElementById(id);
+  const guidance = globalThis.NudeNyangConnectionGuidance.createGuidance({
+    read: () => new Promise(resolve => {
+      if (!api.storage?.local) return resolve({});
+      api.storage.local.get(["companionConnected", "companionHelpDismissed"], result => {
+        void api.runtime.lastError; resolve(result ?? {});
+      });
+    }),
+    save: patch => new Promise(resolve => {
+      if (!api.storage?.local) return resolve();
+      api.storage.local.set(patch, () => { void api.runtime.lastError; resolve(); });
+    }),
+    request: type => new Promise(resolve => {
+      // Also bound a missing extension worker; never wait indefinitely for UI.
+      const timer = setTimeout(() => resolve(null), 7000);
+      try {
+        api.runtime.sendMessage({ type: "nudenyang-setup-status", checkOnly: type === "connectionPing" }, response => {
+          clearTimeout(timer); void api.runtime.lastError; resolve(response ?? null);
+        });
+      } catch { clearTimeout(timer); resolve(null); }
+    }),
+    render(state) {
+      const nativeStatus = state.response;
+      const wasConnected = connectionAvailable;
+      connectionAvailable = state.phase === "connected";
+      browserConnectionDisabled = state.phase === "disabled";
+      if (nativeStatus?.type === "status" || browserConnectionDisabled) {
+        applyUiLanguage(nativeStatus.resolvedUiLanguage || nativeStatus.uiLanguage);
+        renderTargetLanguageOptions();
+      }
+      if (nativeStatus?.type === "status") {
+        quickToggleShortcut = nativeStatus.webSettings?.quickToggleShortcut ?? "F4";
+        quickToggleShortcutElement.textContent = quickToggleShortcut || "-";
+      }
+      renderPageStatus(status);
+      renderConnection(nativeStatus?.type === "connection" && connectionAvailable ? appStatus : nativeStatus);
+      if (state.phase === "checking") {
+        connection.className = "connection waiting";
+        connectionText.textContent = copy("checking");
+        detail.textContent = "";
+      } else if (state.phase === "unavailable") {
+        appStatus = null;
+        detail.textContent = copy("connectionHelp");
+      }
+      const unavailable = state.phase === "unavailable";
+      const recovery = state.everConnected || ["app_unavailable", "app_state_unavailable", "native_host_timeout"].includes(nativeStatus?.code);
+      get("companion-panel").hidden = !unavailable || state.dismissed;
+      get("companion-help").hidden = !unavailable || !state.dismissed;
+      get("companion-description").textContent = copy(recovery ? "companionRecovery" : "companionIntro");
+      get("companion-download").classList.toggle("messenger-consent-action", !recovery);
+      get("companion-retry").classList.toggle("messenger-consent-action", recovery);
+      get("companion-troubleshooting").hidden = recovery;
+      // Consent and translation remain untouched. Only refresh visible status.
+      if (connectionAvailable && !wasConnected && tab?.id && !privacyPage) {
+        refreshPageStatus();
+      }
+    },
+  });
+  get("companion-dismiss").addEventListener("click", () => guidance.dismiss());
+  get("companion-help").addEventListener("click", () => guidance.expand());
+  get("companion-retry").addEventListener("click", () => { void guidance.retry(); });
+  get("companion-download").addEventListener("click", () => {
+    api.tabs.create({ url: `${api.runtime.getURL("download.html")}?lang=${encodeURIComponent(uiLanguage)}` }, () => {
+      if (api.runtime.lastError) detail.textContent = copy("unableToProcess");
+    });
+  });
+  window.addEventListener("pagehide", () => guidance.stop(), { once: true });
+  void guidance.start();
+  void commandsPromise.then(renderCommandShortcut);
 
   async function handleQuickToggle(event) {
     if (!isQuickToggleShortcut(event, quickToggleShortcut)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     if (!tab?.id || enabled.disabled) return;
+    pageRevision++;
     const updated = await tabMessage(tab.id, { type: "nudenyang-toggle-enabled" });
     if (updated) {
       status = updated;
@@ -294,6 +363,7 @@ async function initialize() {
 
   enabled.addEventListener("change", async () => {
     if (!tab?.id || enabled.disabled) return;
+    pageRevision++;
     const previous = status?.enabled ?? false;
     const updated = await tabMessage(tab.id, { type: "nudenyang-set-enabled", enabled: enabled.checked });
     if (updated) {
@@ -321,6 +391,7 @@ async function initialize() {
   targetLanguageOptions.addEventListener("click", async (event) => {
     const option = event.target.closest(".language-option");
     if (!option || !tab?.id || targetLanguageTrigger.disabled) return;
+    pageRevision++;
     const previous = targetLanguageValue;
     setTargetLanguageValue(option.dataset.value);
     closeTargetLanguageMenu();
@@ -342,6 +413,7 @@ async function initialize() {
   });
   alwaysTranslateSite.addEventListener("change", async () => {
     if (!tab?.id || !tab.url || !appStatus?.webSettings || alwaysTranslateSite.disabled) return;
+    pageRevision++;
     const hostname = new URL(tab.url).hostname.toLowerCase().replace(/^www\./, "");
     const sitePolicies = { ...(appStatus.webSettings.sitePolicies ?? {}) };
     if (alwaysTranslateSite.checked) sitePolicies[hostname] = "always";

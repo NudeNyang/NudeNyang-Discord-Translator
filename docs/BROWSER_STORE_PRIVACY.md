@@ -1,6 +1,6 @@
 # Browser store privacy declarations
 
-This document contains privacy answers for NudeNyang Web Translator 0.7.8 with Windows companion
+This document contains privacy answers for NudeNyang Web Translator 0.7.9 with Windows companion
 0.7.3-beta, including optional web-messenger reading. The public policy source is `PRIVACY.md`.
 
 ## Submission readiness
@@ -14,6 +14,27 @@ not been completed; fixture tests are not a substitute for that validation. See
 `BROWSER_STORE_SUBMISSION_0.7.8.md` for the submission checklist and listing copy.
 
 ## Single purpose
+
+### Installation and connection guidance added in 0.7.9
+
+After repeated connection failures, the popup offers installation or recovery help without
+claiming that the app is uninstalled. Explicit browser disconnection remains a separate state.
+Two local preferences remember a successful connection and dismissal of the help card. They
+contain no website or conversation information. Existing `storage` permission covers them.
+
+The bundled download guide opens only on a user click. That page alone fetches
+`https://raw.githubusercontent.com/NudeNyang/NudeNyang-Discord-Translator/main/updates/beta/latest.json`
+without cookies, referrers, webpage addresses, text, or messages. GitHub may receive normal HTTPS
+network metadata, such as the source IP. The response is data only, never executable code. The
+guide displays the latest published build from that feed, including prereleases, with separate
+x64 and ARM64 installer links. A further click starts the download. No new permission, analytics,
+background remote polling, automatic download, or automatic installation is added. Existing
+HTTP/HTTPS host access covers the feed; denied access yields a manual GitHub Releases fallback.
+
+Connection checks use a separate short-timeout native port so long translations are not cancelled.
+Popup status queries retain the existing model-preparation behavior; periodic checks use
+`connectionPing` and cannot activate translation, consent, or a disabled browser connection.
+See `BROWSER_STORE_SUBMISSION_0.7.9.md` for the new submission notes.
 
 NudeNyang Web Translator uses the translation engine in the separately installed NudeNyang Windows
 application to translate eligible visible text on webpages activated by the user while preserving

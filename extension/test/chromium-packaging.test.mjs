@@ -3,6 +3,14 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import test from "node:test";
 
+test("개인용·스토어·Firefox 패키지에 설치 안내 의존 파일을 포함한다", () => {
+  for (const name of ["chromium", "personal_chromium", "firefox"]) {
+    const script = fs.readFileSync(new URL(`../../scripts/package_${name}_extension.ps1`, import.meta.url), "utf8");
+    const shared = script.match(/\$SharedFiles\s*=\s*@\(([\s\S]*?)\)/)?.[1] ?? "";
+    for (const file of ["connection-guidance.js", "download-feed.js", "download.html", "download.css", "download.js"]) assert.ok(shared.includes(`'${file}'`), `${name}: ${file}`);
+  }
+});
+
 const packager = fs.readFileSync(
   new URL("../../scripts/package_chromium_extension.ps1", import.meta.url),
   "utf8",

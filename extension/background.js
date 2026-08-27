@@ -19,6 +19,18 @@ const CLIENT = Object.freeze({
   extensionVersion: api.runtime.getManifest().version,
 });
 const nativeClient = globalThis.NudeNyangNativeClient.createNativeClient(api, HOST_NAME, CLIENT);
+// Keep short liveness deadlines separate from long, in-flight translations.
+const connectionClient = globalThis.NudeNyangNativeClient.createNativeClient(api, HOST_NAME, CLIENT, 5000);
+let rememberedConnection = false;
+function rememberConnection(response) {
+  if (!rememberedConnection && response?.appConnected === true && response.type !== "error") {
+    rememberedConnection = true;
+    try {
+      api.storage.local?.set({ companionConnected: true }, () => { void api.runtime.lastError; });
+    } catch { /* Connection remains usable when storage is unavailable. */ }
+  }
+  return response;
+}
 const tabTranslationState = globalThis.NudeNyangTabTranslationState.createTabTranslationState(api);
 const pageConnection = globalThis.NudeNyangPageConnection.createPageConnection(api);
 const embeddedBridge = globalThis.NudeNyangEmbeddedBridge.createEmbeddedBridge(api);
@@ -34,7 +46,8 @@ function checkAppConnection(attempt = 0) {
   if (connectionCheck) return connectionCheck;
   if (connectionRetry !== null) clearTimeout(connectionRetry);
   connectionRetry = null;
-  connectionCheck = nativeClient.request({ type: "connectionPing", requestId: "connection" })
+  connectionCheck = connectionClient.request({ type: "connectionPing", requestId: "connection" })
+    .then(rememberConnection)
     .catch(() => null)
     .then(response => {
       // The desktop app may still be starting when the browser loses focus.
@@ -64,11 +77,21 @@ api.alarms?.onAlarm.addListener((alarm) => {
 });
 
 function nativeRequest(request) {
-  return nativeClient.request(request);
+  return nativeClient.request(request).then(rememberConnection);
 }
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (embeddedBridge.handle(message, sender, sendResponse)) return true;
+  if (message?.type === "nudenyang-setup-status") {
+    if (sender?.url !== api.runtime.getURL("popup.html") || sender?.tab) {
+      sendResponse({ type: "error", code: "invalid_setup_sender" });
+      return true;
+    }
+    const type = message.checkOnly === true ? "connectionPing" : "status";
+    connectionClient.request({ type, requestId: "popup-connection" })
+      .then(rememberConnection).then(sendResponse, () => sendResponse(null));
+    return true;
+  }
   if (message?.type === "nudenyang-native-request") {
     messengerPrivacy.forward(message.request, sender, nativeRequest).then(sendResponse).catch(() => sendResponse({
       type: "error", code: "messenger_request_cancelled", retryable: false,

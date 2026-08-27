@@ -24,6 +24,22 @@
         <span id="connection-text" data-i18n="connecting">엔진 연결 중</span>
       </div>
       <p id="detail" class="detail"></p>
+      <section id="companion-panel" class="companion-panel" aria-labelledby="companion-title" hidden>
+        <div class="companion-heading">
+          <h2 id="companion-title" data-i18n="connectionRequired">연결 필요</h2>
+          <button id="companion-dismiss" class="text-action" type="button" data-i18n="close">닫기</button>
+        </div>
+        <p id="companion-description"></p>
+        <div class="companion-actions">
+          <button id="companion-download" class="messenger-consent-action" type="button" data-i18n="windowsDownload">Windows 앱 다운로드</button>
+          <button id="companion-retry" type="button" data-i18n="checkConnection">연결 확인</button>
+        </div>
+        <details id="companion-troubleshooting">
+          <summary data-i18n="connectionHelp">연결 도움말</summary>
+          <p data-i18n="companionRecovery"></p>
+        </details>
+      </section>
+      <button id="companion-help" class="text-action" type="button" data-i18n="connectionHelp" hidden>연결 도움말</button>
       <div id="messenger-panel" class="messenger-panel" hidden>
         <h2 id="messenger-title" data-i18n="messengerPrivacyConsent" hidden>웹 메신저 개인정보 동의</h2>
         <p id="messenger-notice" class="messenger-notice" role="status" aria-live="polite" hidden></p>
@@ -72,6 +88,7 @@
     </main>
     <script src="content-helpers.js"></script>
     <script src="popup-locales.js"></script>
+    <script src="connection-guidance.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

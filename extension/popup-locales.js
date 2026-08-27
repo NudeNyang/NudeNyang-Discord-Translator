@@ -1,6 +1,7 @@
 (function exposePopupLocales(root) {
   const COPY = Object.freeze({
   "ko": {
+    "checkConnection": "연결 확인",
     "messengerPrivacyPermissionDenied": "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.",
     "messengerPrivacyRevoked": "동의를 철회했습니다.",
     "messengerPrivacySaveFailed": "동의를 저장하지 못했습니다. 다시 시도해 주십시오.",
@@ -47,9 +48,18 @@
     "connectionRequired": "연결 필요",
     "unableToProcess": "요청을 처리할 수 없음",
     "manualStart": "직접 시작",
-    "error": "오류"
+    "error": "오류",
+    "companionIntro": "이 확장 프로그램은 NudeNyang Windows 앱과 함께 작동합니다. 이미 설치하셨다면 앱을 실행한 뒤 연결을 다시 확인하십시오.",
+    "companionRecovery": "NudeNyang 앱을 실행하고 웹 번역 설정에서 이 브라우저의 연결을 허용하십시오. 계속 연결되지 않으면 앱과 확장을 다시 시작하거나 최신 설치형으로 연결 구성요소를 복구하십시오.",
+    "connectionHelp": "연결 도움말",
+    "windowsDownload": "Windows 앱 다운로드",
+    "latestBuild": "최신 공개 버전 · 프리릴리스 포함",
+    "downloadPrivacy": "이 화면에서 GitHub의 공개 다운로드 목록을 조회합니다. 페이지 주소·본문·대화 내용은 보내지 않습니다. 파일은 설치 버튼을 눌러야 다운로드됩니다.",
+    "downloadUnavailable": "최신 다운로드 정보를 확인하지 못했습니다. 다시 확인하거나 GitHub 릴리스에서 설치 파일을 선택하십시오.",
+    "architectureHelp": "Windows 설정 → 시스템 → 정보의 시스템 종류를 확인한 뒤 x64 또는 ARM64를 선택하십시오."
   },
   "en": {
+    "checkConnection": "Check connection",
     "messengerPrivacyPermissionDenied": "Consent was not saved because the optional permission was not granted.",
     "messengerPrivacyRevoked": "Consent has been withdrawn.",
     "messengerPrivacySaveFailed": "Could not save your consent. Please try again.",
@@ -96,9 +106,18 @@
     "connectionRequired": "Connection required",
     "unableToProcess": "Could not process the request",
     "manualStart": "Start manually",
-    "error": "Error"
+    "error": "Error",
+    "companionIntro": "This extension works with the NudeNyang Windows app. If already installed, start the app and check the connection again.",
+    "companionRecovery": "Start NudeNyang and allow this browser in Web Translation settings. If it still cannot connect, restart the app and extension, or repair the connection components with the latest installer.",
+    "connectionHelp": "Connection help",
+    "windowsDownload": "Download Windows app",
+    "latestBuild": "Latest published build · Includes prereleases",
+    "downloadPrivacy": "This screen checks GitHub's public download list. No page addresses, page text, or conversations are sent. Files download only when you select an installer.",
+    "downloadUnavailable": "Could not check the latest downloads. Try again or choose an installer on GitHub Releases.",
+    "architectureHelp": "Check System type in Windows Settings → System → About, then choose x64 or ARM64."
   },
   "ja": {
+    "checkConnection": "接続を確認",
     "messengerPrivacyPermissionDenied": "追加権限が許可されなかったため、同意を保存しませんでした。",
     "messengerPrivacyRevoked": "同意を撤回しました。",
     "messengerPrivacySaveFailed": "同意を保存できませんでした。もう一度お試しください。",
@@ -145,9 +164,18 @@
     "connectionRequired": "接続が必要",
     "unableToProcess": "リクエストを処理できません",
     "manualStart": "手動で開始",
-    "error": "エラー"
+    "error": "エラー",
+    "companionIntro": "この拡張機能はNudeNyang Windowsアプリと連携します。インストール済みの場合は、アプリを起動して接続を再確認してください。",
+    "companionRecovery": "NudeNyangを起動し、ウェブ翻訳設定でこのブラウザーの接続を許可してください。接続できない場合は、アプリと拡張機能を再起動するか、最新のインストーラーで接続コンポーネントを修復してください。",
+    "connectionHelp": "接続ヘルプ",
+    "windowsDownload": "Windowsアプリをダウンロード",
+    "latestBuild": "最新の公開ビルド · プレリリースを含む",
+    "downloadPrivacy": "この画面ではGitHubの公開ダウンロード一覧を確認します。ページのアドレス・本文・会話は送信しません。インストーラーを選択した場合のみダウンロードします。",
+    "downloadUnavailable": "最新のダウンロード情報を確認できませんでした。再試行するか、GitHub Releasesでインストーラーを選択してください。",
+    "architectureHelp": "Windowsの設定 → システム → バージョン情報でシステムの種類を確認し、x64またはARM64を選択してください。"
   },
   "zh": {
+    "checkConnection": "检查连接",
     "messengerPrivacyPermissionDenied": "由于未授予可选权限，未保存同意。",
     "messengerPrivacyRevoked": "已撤回同意。",
     "messengerPrivacySaveFailed": "无法保存您的同意，请重试。",
@@ -194,9 +222,18 @@
     "connectionRequired": "需要连接",
     "unableToProcess": "无法处理请求",
     "manualStart": "手动开始",
-    "error": "错误"
+    "error": "错误",
+    "companionIntro": "此扩展需要配合 NudeNyang Windows 应用使用。如果已安装，请启动应用并重新检查连接。",
+    "companionRecovery": "请启动 NudeNyang，并在网页翻译设置中允许此浏览器连接。如果仍无法连接，请重启应用和扩展，或使用最新安装程序修复连接组件。",
+    "connectionHelp": "连接帮助",
+    "windowsDownload": "下载 Windows 应用",
+    "latestBuild": "最新公开版本 · 包含预发布版",
+    "downloadPrivacy": "此页面会查询 GitHub 的公开下载列表，不会发送网页地址、正文或聊天内容。仅在选择安装程序后下载文件。",
+    "downloadUnavailable": "无法获取最新下载信息。请重试，或在 GitHub Releases 中选择安装程序。",
+    "architectureHelp": "请在 Windows 设置 → 系统 → 系统信息中查看系统类型，然后选择 x64 或 ARM64。"
   },
   "zh-Hant": {
+    "checkConnection": "檢查連線",
     "messengerPrivacyPermissionDenied": "由於未授予選用權限，未儲存同意。",
     "messengerPrivacyRevoked": "已撤回同意。",
     "messengerPrivacySaveFailed": "無法儲存您的同意，請再試一次。",
@@ -243,9 +280,18 @@
     "connectionRequired": "需要連線",
     "unableToProcess": "無法處理要求",
     "manualStart": "手動開始",
-    "error": "錯誤"
+    "error": "錯誤",
+    "companionIntro": "此擴充功能需搭配 NudeNyang Windows 應用程式使用。若已安裝，請啟動應用程式並重新檢查連線。",
+    "companionRecovery": "請啟動 NudeNyang，並在網頁翻譯設定中允許此瀏覽器連線。若仍無法連線，請重新啟動應用程式和擴充功能，或使用最新安裝程式修復連線元件。",
+    "connectionHelp": "連線說明",
+    "windowsDownload": "下載 Windows 應用程式",
+    "latestBuild": "最新公開版本 · 包含預先發行版",
+    "downloadPrivacy": "此畫面會查詢 GitHub 的公開下載清單，不會傳送網頁位址、本文或對話內容。僅在選擇安裝程式後下載檔案。",
+    "downloadUnavailable": "無法取得最新下載資訊。請重試，或在 GitHub Releases 中選擇安裝程式。",
+    "architectureHelp": "請在 Windows 設定 → 系統 → 關於中查看系統類型，再選擇 x64 或 ARM64。"
   },
   "pt-BR": {
+    "checkConnection": "Verificar conexão",
     "messengerPrivacyPermissionDenied": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
     "messengerPrivacyRevoked": "O consentimento foi retirado.",
     "messengerPrivacySaveFailed": "Não foi possível salvar seu consentimento. Tente novamente.",
@@ -292,9 +338,18 @@
     "connectionRequired": "Conexão necessária",
     "unableToProcess": "Não foi possível processar a solicitação",
     "manualStart": "Iniciar manualmente",
-    "error": "Erro"
+    "error": "Erro",
+    "companionIntro": "Esta extensão funciona com o aplicativo NudeNyang para Windows. Se já estiver instalado, inicie-o e verifique a conexão novamente.",
+    "companionRecovery": "Inicie o NudeNyang e permita este navegador nas configurações de tradução da web. Se a conexão falhar, reinicie o aplicativo e a extensão ou repare os componentes com o instalador mais recente.",
+    "connectionHelp": "Ajuda de conexão",
+    "windowsDownload": "Baixar aplicativo Windows",
+    "latestBuild": "Versão publicada mais recente · Inclui pré-lançamentos",
+    "downloadPrivacy": "Esta tela consulta a lista pública de downloads do GitHub. Nenhum endereço, texto de página ou conversa é enviado. O download só começa ao selecionar um instalador.",
+    "downloadUnavailable": "Não foi possível consultar os downloads mais recentes. Tente novamente ou escolha um instalador no GitHub Releases.",
+    "architectureHelp": "Confira o tipo de sistema em Configurações do Windows → Sistema → Sobre e escolha x64 ou ARM64."
   },
   "hi": {
+    "checkConnection": "कनेक्शन जाँचें",
     "messengerPrivacyPermissionDenied": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
     "messengerPrivacyRevoked": "सहमति वापस ले ली गई है।",
     "messengerPrivacySaveFailed": "आपकी सहमति सहेजी नहीं जा सकी। कृपया फिर प्रयास करें।",
@@ -341,9 +396,18 @@
     "connectionRequired": "कनेक्शन आवश्यक है",
     "unableToProcess": "अनुरोध प्रोसेस नहीं किया जा सका",
     "manualStart": "मैन्युअल रूप से शुरू करें",
-    "error": "त्रुटि"
+    "error": "त्रुटि",
+    "companionIntro": "यह एक्सटेंशन NudeNyang Windows ऐप के साथ काम करता है। यदि ऐप पहले से इंस्टॉल है, तो उसे शुरू करके कनेक्शन फिर जाँचें।",
+    "companionRecovery": "NudeNyang शुरू करें और वेब अनुवाद सेटिंग में इस ब्राउज़र को अनुमति दें। कनेक्शन न बने तो ऐप और एक्सटेंशन फिर शुरू करें या नवीनतम इंस्टॉलर से कनेक्शन घटकों की मरम्मत करें।",
+    "connectionHelp": "कनेक्शन सहायता",
+    "windowsDownload": "Windows ऐप डाउनलोड करें",
+    "latestBuild": "नवीनतम प्रकाशित बिल्ड · प्रीरिलीज़ सहित",
+    "downloadPrivacy": "यह स्क्रीन GitHub की सार्वजनिक डाउनलोड सूची जाँचती है। पेज के पते, टेक्स्ट या बातचीत नहीं भेजी जाती। इंस्टॉलर चुनने पर ही डाउनलोड होता है।",
+    "downloadUnavailable": "नवीनतम डाउनलोड की जानकारी नहीं मिली। फिर कोशिश करें या GitHub Releases पर इंस्टॉलर चुनें।",
+    "architectureHelp": "Windows सेटिंग → सिस्टम → परिचय में सिस्टम का प्रकार देखें, फिर x64 या ARM64 चुनें।"
   },
   "es-419": {
+    "checkConnection": "Verificar conexión",
     "messengerPrivacyPermissionDenied": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
     "messengerPrivacyRevoked": "Se retiró el consentimiento.",
     "messengerPrivacySaveFailed": "No se pudo guardar su consentimiento. Vuelva a intentarlo.",
@@ -390,9 +454,18 @@
     "connectionRequired": "Se requiere conexión",
     "unableToProcess": "No se pudo procesar la solicitud",
     "manualStart": "Iniciar manualmente",
-    "error": "Error"
+    "error": "Error",
+    "companionIntro": "Esta extensión funciona con la aplicación NudeNyang para Windows. Si ya está instalada, ábrala y vuelva a comprobar la conexión.",
+    "companionRecovery": "Abra NudeNyang y permita este navegador en los ajustes de traducción web. Si no se conecta, reinicie la aplicación y la extensión o repare los componentes con el instalador más reciente.",
+    "connectionHelp": "Ayuda de conexión",
+    "windowsDownload": "Descargar aplicación Windows",
+    "latestBuild": "Última versión publicada · Incluye versiones preliminares",
+    "downloadPrivacy": "Esta pantalla consulta la lista pública de descargas de GitHub. No envía direcciones, texto de páginas ni conversaciones. La descarga comienza solo al seleccionar un instalador.",
+    "downloadUnavailable": "No se pudieron consultar las últimas descargas. Inténtelo de nuevo o elija un instalador en GitHub Releases.",
+    "architectureHelp": "Revise el tipo de sistema en Configuración de Windows → Sistema → Acerca de y elija x64 o ARM64."
   },
   "de": {
+    "checkConnection": "Verbindung prüfen",
     "messengerPrivacyPermissionDenied": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
     "messengerPrivacyRevoked": "Die Einwilligung wurde widerrufen.",
     "messengerPrivacySaveFailed": "Ihre Einwilligung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
@@ -439,9 +512,18 @@
     "connectionRequired": "Verbindung erforderlich",
     "unableToProcess": "Die Anfrage konnte nicht verarbeitet werden",
     "manualStart": "Manuell starten",
-    "error": "Fehler"
+    "error": "Fehler",
+    "companionIntro": "Diese Erweiterung benötigt die NudeNyang-Windows-App. Falls sie bereits installiert ist, starten Sie die App und prüfen Sie die Verbindung erneut.",
+    "companionRecovery": "Starten Sie NudeNyang und erlauben Sie diesen Browser in den Webübersetzungseinstellungen. Starten Sie bei weiteren Problemen App und Erweiterung neu oder reparieren Sie die Verbindungskomponenten mit dem neuesten Installationsprogramm.",
+    "connectionHelp": "Verbindungshilfe",
+    "windowsDownload": "Windows-App herunterladen",
+    "latestBuild": "Neuester veröffentlichter Build · Einschließlich Vorabversionen",
+    "downloadPrivacy": "Diese Seite prüft die öffentliche Downloadliste von GitHub. Seitenadressen, Seitentext und Gespräche werden nicht gesendet. Der Download beginnt erst nach Auswahl eines Installationsprogramms.",
+    "downloadUnavailable": "Die neuesten Downloads konnten nicht geprüft werden. Versuchen Sie es erneut oder wählen Sie ein Installationsprogramm auf GitHub Releases.",
+    "architectureHelp": "Prüfen Sie den Systemtyp unter Windows-Einstellungen → System → Info und wählen Sie x64 oder ARM64."
   },
   "ru": {
+    "checkConnection": "Проверить подключение",
     "messengerPrivacyPermissionDenied": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
     "messengerPrivacyRevoked": "Согласие отозвано.",
     "messengerPrivacySaveFailed": "Не удалось сохранить согласие. Повторите попытку.",
@@ -488,9 +570,18 @@
     "connectionRequired": "Требуется подключение",
     "unableToProcess": "Не удалось обработать запрос",
     "manualStart": "Запускать вручную",
-    "error": "Ошибка"
+    "error": "Ошибка",
+    "companionIntro": "Это расширение работает с приложением NudeNyang для Windows. Если оно уже установлено, запустите его и проверьте подключение снова.",
+    "companionRecovery": "Запустите NudeNyang и разрешите этот браузер в настройках веб-перевода. Если подключение не появилось, перезапустите приложение и расширение или восстановите компоненты подключения последним установщиком.",
+    "connectionHelp": "Помощь с подключением",
+    "windowsDownload": "Скачать приложение Windows",
+    "latestBuild": "Последняя опубликованная сборка · Включая предварительные версии",
+    "downloadPrivacy": "Этот экран запрашивает открытый список загрузок GitHub. Адреса страниц, их текст и переписка не отправляются. Загрузка начинается только после выбора установщика.",
+    "downloadUnavailable": "Не удалось проверить последние загрузки. Повторите попытку или выберите установщик на GitHub Releases.",
+    "architectureHelp": "Проверьте тип системы в Параметры Windows → Система → О системе и выберите x64 или ARM64."
   },
   "id": {
+    "checkConnection": "Periksa koneksi",
     "messengerPrivacyPermissionDenied": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
     "messengerPrivacyRevoked": "Persetujuan telah dicabut.",
     "messengerPrivacySaveFailed": "Persetujuan Anda tidak dapat disimpan. Silakan coba lagi.",
@@ -537,9 +628,18 @@
     "connectionRequired": "Perlu koneksi",
     "unableToProcess": "Tidak dapat memproses permintaan",
     "manualStart": "Mulai secara manual",
-    "error": "Kesalahan"
+    "error": "Kesalahan",
+    "companionIntro": "Ekstensi ini bekerja dengan aplikasi NudeNyang Windows. Jika sudah terpasang, jalankan aplikasi dan periksa koneksi lagi.",
+    "companionRecovery": "Jalankan NudeNyang dan izinkan browser ini di pengaturan terjemahan web. Jika belum terhubung, mulai ulang aplikasi dan ekstensi atau perbaiki komponen koneksi dengan penginstal terbaru.",
+    "connectionHelp": "Bantuan koneksi",
+    "windowsDownload": "Unduh aplikasi Windows",
+    "latestBuild": "Build publik terbaru · Termasuk prarilis",
+    "downloadPrivacy": "Layar ini memeriksa daftar unduhan publik GitHub. Alamat halaman, teks halaman, dan percakapan tidak dikirim. Unduhan hanya dimulai setelah memilih penginstal.",
+    "downloadUnavailable": "Tidak dapat memeriksa unduhan terbaru. Coba lagi atau pilih penginstal di GitHub Releases.",
+    "architectureHelp": "Periksa jenis sistem di Pengaturan Windows → Sistem → Tentang, lalu pilih x64 atau ARM64."
   },
   "fr": {
+    "checkConnection": "Vérifier la connexion",
     "messengerPrivacyPermissionDenied": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
     "messengerPrivacyRevoked": "Le consentement a été retiré.",
     "messengerPrivacySaveFailed": "Impossible d’enregistrer votre consentement. Veuillez réessayer.",
@@ -586,9 +686,18 @@
     "connectionRequired": "Connexion requise",
     "unableToProcess": "Impossible de traiter la demande",
     "manualStart": "Démarrer manuellement",
-    "error": "Erreur"
+    "error": "Erreur",
+    "companionIntro": "Cette extension fonctionne avec l’application NudeNyang pour Windows. Si elle est déjà installée, lancez-la et vérifiez à nouveau la connexion.",
+    "companionRecovery": "Lancez NudeNyang et autorisez ce navigateur dans les paramètres de traduction web. Si la connexion échoue, redémarrez l’application et l’extension ou réparez les composants avec le dernier programme d’installation.",
+    "connectionHelp": "Aide à la connexion",
+    "windowsDownload": "Télécharger l’application Windows",
+    "latestBuild": "Dernière version publiée · Préversions incluses",
+    "downloadPrivacy": "Cet écran consulte la liste publique des téléchargements GitHub. Aucune adresse de page, aucun texte ni aucune conversation n’est envoyé. Le téléchargement ne commence qu’après sélection d’un programme d’installation.",
+    "downloadUnavailable": "Impossible de vérifier les derniers téléchargements. Réessayez ou choisissez un programme d’installation sur GitHub Releases.",
+    "architectureHelp": "Vérifiez le type du système dans Paramètres Windows → Système → Informations système, puis choisissez x64 ou ARM64."
   },
   "tr": {
+    "checkConnection": "Bağlantıyı kontrol et",
     "messengerPrivacyPermissionDenied": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
     "messengerPrivacyRevoked": "Onay geri çekildi.",
     "messengerPrivacySaveFailed": "Onayınız kaydedilemedi. Lütfen tekrar deneyin.",
@@ -635,9 +744,18 @@
     "connectionRequired": "Bağlantı gerekli",
     "unableToProcess": "İstek işlenemedi",
     "manualStart": "Manuel başlat",
-    "error": "Hata"
+    "error": "Hata",
+    "companionIntro": "Bu uzantı NudeNyang Windows uygulamasıyla çalışır. Zaten yüklüyse uygulamayı başlatıp bağlantıyı tekrar kontrol edin.",
+    "companionRecovery": "NudeNyang’ı başlatın ve web çevirisi ayarlarında bu tarayıcıya izin verin. Bağlantı kurulmazsa uygulama ve uzantıyı yeniden başlatın veya en yeni yükleyiciyle bağlantı bileşenlerini onarın.",
+    "connectionHelp": "Bağlantı yardımı",
+    "windowsDownload": "Windows uygulamasını indir",
+    "latestBuild": "En yeni yayımlanan sürüm · Ön sürümler dahil",
+    "downloadPrivacy": "Bu ekran GitHub’ın herkese açık indirme listesini kontrol eder. Sayfa adresleri, metinler veya konuşmalar gönderilmez. İndirme yalnızca yükleyici seçildiğinde başlar.",
+    "downloadUnavailable": "En yeni indirmeler kontrol edilemedi. Tekrar deneyin veya GitHub Releases üzerinden bir yükleyici seçin.",
+    "architectureHelp": "Windows Ayarları → Sistem → Hakkında bölümünde sistem türünü kontrol edip x64 veya ARM64 seçin."
   },
   "ar": {
+    "checkConnection": "التحقق من الاتصال",
     "messengerPrivacyPermissionDenied": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
     "messengerPrivacyRevoked": "تم سحب الموافقة.",
     "messengerPrivacySaveFailed": "تعذر حفظ موافقتك. يرجى المحاولة مرة أخرى.",
@@ -684,9 +802,18 @@
     "connectionRequired": "الاتصال مطلوب",
     "unableToProcess": "تعذّرت معالجة الطلب",
     "manualStart": "البدء يدويًا",
-    "error": "خطأ"
+    "error": "خطأ",
+    "companionIntro": "يعمل هذا الامتداد مع تطبيق NudeNyang لنظام Windows. إذا كان مثبتًا، فشغّل التطبيق وتحقق من الاتصال مجددًا.",
+    "companionRecovery": "شغّل NudeNyang واسمح لهذا المتصفح بالاتصال من إعدادات ترجمة الويب. إذا استمرت المشكلة، فأعد تشغيل التطبيق والامتداد أو أصلح مكونات الاتصال بأحدث برنامج تثبيت.",
+    "connectionHelp": "مساعدة الاتصال",
+    "windowsDownload": "تنزيل تطبيق Windows",
+    "latestBuild": "أحدث إصدار منشور · يشمل الإصدارات التجريبية",
+    "downloadPrivacy": "تتحقق هذه الشاشة من قائمة التنزيلات العامة في GitHub. لا تُرسل عناوين الصفحات أو نصوصها أو المحادثات. يبدأ التنزيل فقط عند اختيار برنامج تثبيت.",
+    "downloadUnavailable": "تعذر التحقق من أحدث التنزيلات. أعد المحاولة أو اختر برنامج تثبيت من GitHub Releases.",
+    "architectureHelp": "تحقق من نوع النظام في إعدادات Windows ← النظام ← حول، ثم اختر x64 أو ARM64."
   },
   "vi": {
+    "checkConnection": "Kiểm tra kết nối",
     "messengerPrivacyPermissionDenied": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
     "messengerPrivacyRevoked": "Đã rút lại sự đồng ý.",
     "messengerPrivacySaveFailed": "Không thể lưu sự đồng ý của bạn. Vui lòng thử lại.",
@@ -733,9 +860,18 @@
     "connectionRequired": "Cần kết nối",
     "unableToProcess": "Không thể xử lý yêu cầu",
     "manualStart": "Bắt đầu thủ công",
-    "error": "Lỗi"
+    "error": "Lỗi",
+    "companionIntro": "Tiện ích này hoạt động cùng ứng dụng NudeNyang Windows. Nếu đã cài đặt, hãy mở ứng dụng và kiểm tra lại kết nối.",
+    "companionRecovery": "Mở NudeNyang và cho phép trình duyệt này trong cài đặt dịch web. Nếu vẫn không kết nối, hãy khởi động lại ứng dụng và tiện ích hoặc sửa các thành phần kết nối bằng trình cài đặt mới nhất.",
+    "connectionHelp": "Trợ giúp kết nối",
+    "windowsDownload": "Tải ứng dụng Windows",
+    "latestBuild": "Bản dựng công khai mới nhất · Gồm bản phát hành trước",
+    "downloadPrivacy": "Màn hình này kiểm tra danh sách tải xuống công khai của GitHub. Không gửi địa chỉ trang, văn bản hay hội thoại. Chỉ tải tệp khi bạn chọn trình cài đặt.",
+    "downloadUnavailable": "Không thể kiểm tra bản tải xuống mới nhất. Hãy thử lại hoặc chọn trình cài đặt trên GitHub Releases.",
+    "architectureHelp": "Kiểm tra loại hệ thống trong Cài đặt Windows → Hệ thống → Giới thiệu, rồi chọn x64 hoặc ARM64."
   },
   "it": {
+    "checkConnection": "Verifica connessione",
     "messengerPrivacyPermissionDenied": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
     "messengerPrivacyRevoked": "Il consenso è stato revocato.",
     "messengerPrivacySaveFailed": "Impossibile salvare il consenso. Riprovare.",
@@ -782,9 +918,18 @@
     "connectionRequired": "Connessione richiesta",
     "unableToProcess": "Impossibile elaborare la richiesta",
     "manualStart": "Avvia manualmente",
-    "error": "Errore"
+    "error": "Errore",
+    "companionIntro": "Questa estensione funziona con l’app NudeNyang per Windows. Se è già installata, avviala e verifica di nuovo la connessione.",
+    "companionRecovery": "Avvia NudeNyang e autorizza questo browser nelle impostazioni di traduzione web. Se non si connette, riavvia l’app e l’estensione o ripara i componenti con il programma di installazione più recente.",
+    "connectionHelp": "Guida alla connessione",
+    "windowsDownload": "Scarica l’app Windows",
+    "latestBuild": "Ultima build pubblicata · Include versioni preliminari",
+    "downloadPrivacy": "Questa schermata consulta l’elenco pubblico dei download di GitHub. Non invia indirizzi, testo delle pagine o conversazioni. Il download inizia solo dopo aver scelto un programma di installazione.",
+    "downloadUnavailable": "Impossibile verificare gli ultimi download. Riprova o scegli un programma di installazione su GitHub Releases.",
+    "architectureHelp": "Controlla il tipo di sistema in Impostazioni Windows → Sistema → Informazioni e scegli x64 o ARM64."
   },
   "pl": {
+    "checkConnection": "Sprawdź połączenie",
     "messengerPrivacyPermissionDenied": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
     "messengerPrivacyRevoked": "Zgoda została wycofana.",
     "messengerPrivacySaveFailed": "Nie udało się zapisać zgody. Proszę spróbować ponownie.",
@@ -831,9 +976,18 @@
     "connectionRequired": "Wymagane połączenie",
     "unableToProcess": "Nie udało się przetworzyć żądania",
     "manualStart": "Uruchamiaj ręcznie",
-    "error": "Błąd"
+    "error": "Błąd",
+    "companionIntro": "To rozszerzenie działa z aplikacją NudeNyang dla Windows. Jeśli jest już zainstalowana, uruchom ją i ponownie sprawdź połączenie.",
+    "companionRecovery": "Uruchom NudeNyang i zezwól na tę przeglądarkę w ustawieniach tłumaczenia stron. Jeśli nadal brak połączenia, uruchom ponownie aplikację i rozszerzenie lub napraw składniki najnowszym instalatorem.",
+    "connectionHelp": "Pomoc z połączeniem",
+    "windowsDownload": "Pobierz aplikację Windows",
+    "latestBuild": "Najnowsza opublikowana kompilacja · Z wersjami wstępnymi",
+    "downloadPrivacy": "Ten ekran sprawdza publiczną listę plików GitHub. Adresy i tekst stron ani rozmowy nie są wysyłane. Pobieranie zaczyna się dopiero po wybraniu instalatora.",
+    "downloadUnavailable": "Nie udało się sprawdzić najnowszych plików. Spróbuj ponownie lub wybierz instalator w GitHub Releases.",
+    "architectureHelp": "Sprawdź typ systemu w Ustawienia Windows → System → Informacje, a następnie wybierz x64 lub ARM64."
   },
   "uk": {
+    "checkConnection": "Перевірити підключення",
     "messengerPrivacyPermissionDenied": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
     "messengerPrivacyRevoked": "Згоду відкликано.",
     "messengerPrivacySaveFailed": "Не вдалося зберегти згоду. Спробуйте ще раз.",
@@ -880,9 +1034,18 @@
     "connectionRequired": "Потрібне підключення",
     "unableToProcess": "Не вдалося обробити запит",
     "manualStart": "Запускати вручну",
-    "error": "Помилка"
+    "error": "Помилка",
+    "companionIntro": "Це розширення працює з програмою NudeNyang для Windows. Якщо її вже встановлено, запустіть її та перевірте з’єднання ще раз.",
+    "companionRecovery": "Запустіть NudeNyang і дозвольте цей браузер у налаштуваннях вебперекладу. Якщо з’єднання немає, перезапустіть програму й розширення або відновіть компоненти найновішим інсталятором.",
+    "connectionHelp": "Допомога зі з’єднанням",
+    "windowsDownload": "Завантажити програму Windows",
+    "latestBuild": "Найновіша опублікована збірка · З попередніми версіями",
+    "downloadPrivacy": "Цей екран перевіряє відкритий список завантажень GitHub. Адреси сторінок, їхній текст і розмови не надсилаються. Завантаження починається лише після вибору інсталятора.",
+    "downloadUnavailable": "Не вдалося перевірити останні завантаження. Спробуйте ще раз або виберіть інсталятор на GitHub Releases.",
+    "architectureHelp": "Перевірте тип системи в Настройки Windows → Система → Про систему й виберіть x64 або ARM64."
   },
   "ms": {
+    "checkConnection": "Semak sambungan",
     "messengerPrivacyPermissionDenied": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
     "messengerPrivacyRevoked": "Persetujuan telah ditarik balik.",
     "messengerPrivacySaveFailed": "Persetujuan anda tidak dapat disimpan. Sila cuba lagi.",
@@ -929,9 +1092,18 @@
     "connectionRequired": "Sambungan diperlukan",
     "unableToProcess": "Tidak dapat memproses permintaan",
     "manualStart": "Mulakan secara manual",
-    "error": "Ralat"
+    "error": "Ralat",
+    "companionIntro": "Sambungan ini berfungsi dengan aplikasi NudeNyang Windows. Jika sudah dipasang, mulakan aplikasi dan semak sambungan semula.",
+    "companionRecovery": "Mulakan NudeNyang dan benarkan pelayar ini dalam tetapan terjemahan web. Jika masih gagal, mulakan semula aplikasi dan sambungan atau baiki komponen dengan pemasang terkini.",
+    "connectionHelp": "Bantuan sambungan",
+    "windowsDownload": "Muat turun aplikasi Windows",
+    "latestBuild": "Binaan terbitan terkini · Termasuk prapelancaran",
+    "downloadPrivacy": "Skrin ini menyemak senarai muat turun awam GitHub. Alamat halaman, teks dan perbualan tidak dihantar. Muat turun hanya bermula apabila pemasang dipilih.",
+    "downloadUnavailable": "Tidak dapat menyemak muat turun terkini. Cuba lagi atau pilih pemasang di GitHub Releases.",
+    "architectureHelp": "Semak jenis sistem di Tetapan Windows → Sistem → Perihal, kemudian pilih x64 atau ARM64."
   },
   "nl": {
+    "checkConnection": "Verbinding controleren",
     "messengerPrivacyPermissionDenied": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
     "messengerPrivacyRevoked": "De toestemming is ingetrokken.",
     "messengerPrivacySaveFailed": "Uw toestemming kon niet worden opgeslagen. Probeer het opnieuw.",
@@ -978,9 +1150,18 @@
     "connectionRequired": "Verbinding vereist",
     "unableToProcess": "Kan het verzoek niet verwerken",
     "manualStart": "Handmatig starten",
-    "error": "Fout"
+    "error": "Fout",
+    "companionIntro": "Deze extensie werkt met de NudeNyang-app voor Windows. Als die al is geïnstalleerd, start de app en controleer de verbinding opnieuw.",
+    "companionRecovery": "Start NudeNyang en sta deze browser toe in de instellingen voor webvertaling. Lukt verbinden niet, herstart dan de app en extensie of herstel de onderdelen met het nieuwste installatieprogramma.",
+    "connectionHelp": "Verbindingshulp",
+    "windowsDownload": "Windows-app downloaden",
+    "latestBuild": "Nieuwste gepubliceerde build · Inclusief voorlopige versies",
+    "downloadPrivacy": "Dit scherm controleert de openbare downloadlijst van GitHub. Pagina-adressen, paginatekst en gesprekken worden niet verzonden. Downloaden begint pas nadat u een installatieprogramma kiest.",
+    "downloadUnavailable": "De nieuwste downloads konden niet worden gecontroleerd. Probeer opnieuw of kies een installatieprogramma op GitHub Releases.",
+    "architectureHelp": "Controleer het systeemtype in Windows-instellingen → Systeem → Info en kies x64 of ARM64."
   },
   "th": {
+    "checkConnection": "ตรวจสอบการเชื่อมต่อ",
     "messengerPrivacyPermissionDenied": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
     "messengerPrivacyRevoked": "ถอนความยินยอมแล้ว",
     "messengerPrivacySaveFailed": "ไม่สามารถบันทึกความยินยอมของคุณได้ โปรดลองอีกครั้ง",
@@ -1027,9 +1208,18 @@
     "connectionRequired": "ต้องเชื่อมต่อ",
     "unableToProcess": "ไม่สามารถประมวลผลคำขอได้",
     "manualStart": "เริ่มด้วยตนเอง",
-    "error": "ข้อผิดพลาด"
+    "error": "ข้อผิดพลาด",
+    "companionIntro": "ส่วนขยายนี้ทำงานร่วมกับแอป NudeNyang สำหรับ Windows หากติดตั้งแล้ว ให้เปิดแอปและตรวจสอบการเชื่อมต่ออีกครั้ง",
+    "companionRecovery": "เปิด NudeNyang และอนุญาตเบราว์เซอร์นี้ในการตั้งค่าการแปลเว็บ หากยังเชื่อมต่อไม่ได้ ให้เริ่มแอปและส่วนขยายใหม่ หรือซ่อมแซมส่วนประกอบด้วยตัวติดตั้งล่าสุด",
+    "connectionHelp": "ความช่วยเหลือการเชื่อมต่อ",
+    "windowsDownload": "ดาวน์โหลดแอป Windows",
+    "latestBuild": "บิลด์ที่เผยแพร่ล่าสุด · รวมรุ่นก่อนเผยแพร่จริง",
+    "downloadPrivacy": "หน้าจอนี้ตรวจสอบรายการดาวน์โหลดสาธารณะของ GitHub โดยไม่ส่งที่อยู่หน้าเว็บ ข้อความ หรือบทสนทนา จะดาวน์โหลดไฟล์เมื่อเลือกตัวติดตั้งเท่านั้น",
+    "downloadUnavailable": "ตรวจสอบดาวน์โหลดล่าสุดไม่ได้ โปรดลองอีกครั้งหรือเลือกตัวติดตั้งใน GitHub Releases",
+    "architectureHelp": "ตรวจสอบชนิดระบบใน การตั้งค่า Windows → ระบบ → เกี่ยวกับ แล้วเลือก x64 หรือ ARM64"
   },
   "fil": {
+    "checkConnection": "Suriin ang koneksyon",
     "messengerPrivacyPermissionDenied": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
     "messengerPrivacyRevoked": "Nabawi na ang pahintulot.",
     "messengerPrivacySaveFailed": "Hindi ma-save ang inyong pahintulot. Pakisubukang muli.",
@@ -1076,9 +1266,18 @@
     "connectionRequired": "Kailangan ng koneksyon",
     "unableToProcess": "Hindi maproseso ang kahilingan",
     "manualStart": "Manu-manong simulan",
-    "error": "Error"
+    "error": "Error",
+    "companionIntro": "Gumagana ang extension na ito kasama ng NudeNyang Windows app. Kung naka-install na ito, buksan ang app at suriin muli ang koneksyon.",
+    "companionRecovery": "Buksan ang NudeNyang at payagan ang browser na ito sa mga setting ng pagsasalin sa web. Kung hindi pa rin makakonekta, i-restart ang app at extension o ayusin ang mga bahagi gamit ang pinakabagong installer.",
+    "connectionHelp": "Tulong sa koneksyon",
+    "windowsDownload": "I-download ang Windows app",
+    "latestBuild": "Pinakabagong inilabas na build · Kasama ang mga prerelease",
+    "downloadPrivacy": "Sinusuri ng screen na ito ang pampublikong listahan ng download sa GitHub. Hindi ipinapadala ang mga address, teksto ng pahina, o usapan. Magsisimula lang ang download kapag pumili ng installer.",
+    "downloadUnavailable": "Hindi masuri ang pinakabagong download. Subukan muli o pumili ng installer sa GitHub Releases.",
+    "architectureHelp": "Tingnan ang System type sa Windows Settings → System → About, at piliin ang x64 o ARM64."
   },
   "bn": {
+    "checkConnection": "সংযোগ পরীক্ষা করুন",
     "messengerPrivacyPermissionDenied": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
     "messengerPrivacyRevoked": "সম্মতি প্রত্যাহার করা হয়েছে।",
     "messengerPrivacySaveFailed": "আপনার সম্মতি সংরক্ষণ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
@@ -1125,9 +1324,18 @@
     "connectionRequired": "সংযোগ প্রয়োজন",
     "unableToProcess": "অনুরোধটি প্রক্রিয়া করা যায়নি",
     "manualStart": "ম্যানুয়ালি শুরু করুন",
-    "error": "ত্রুটি"
+    "error": "ত্রুটি",
+    "companionIntro": "এই এক্সটেনশনটি NudeNyang Windows অ্যাপের সঙ্গে কাজ করে। আগে থেকেই ইনস্টল থাকলে অ্যাপ চালু করে আবার সংযোগ পরীক্ষা করুন।",
+    "companionRecovery": "NudeNyang চালু করুন এবং ওয়েব অনুবাদ সেটিংসে এই ব্রাউজারকে অনুমতি দিন। সংযোগ না হলে অ্যাপ ও এক্সটেনশন পুনরায় চালু করুন বা সর্বশেষ ইনস্টলার দিয়ে সংযোগের উপাদান মেরামত করুন।",
+    "connectionHelp": "সংযোগ সহায়তা",
+    "windowsDownload": "Windows অ্যাপ ডাউনলোড",
+    "latestBuild": "সর্বশেষ প্রকাশিত বিল্ড · প্রিরিলিজসহ",
+    "downloadPrivacy": "এই পর্দা GitHub-এর উন্মুক্ত ডাউনলোড তালিকা পরীক্ষা করে। পৃষ্ঠার ঠিকানা, লেখা বা কথোপকথন পাঠানো হয় না। ইনস্টলার বেছে নিলেই ডাউনলোড শুরু হয়।",
+    "downloadUnavailable": "সর্বশেষ ডাউনলোড যাচাই করা যায়নি। আবার চেষ্টা করুন অথবা GitHub Releases থেকে ইনস্টলার বেছে নিন।",
+    "architectureHelp": "Windows সেটিংস → সিস্টেম → সম্পর্কে থেকে সিস্টেমের ধরন দেখে x64 বা ARM64 বেছে নিন।"
   },
   "ur": {
+    "checkConnection": "کنکشن چیک کریں",
     "messengerPrivacyPermissionDenied": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
     "messengerPrivacyRevoked": "رضامندی واپس لے لی گئی ہے۔",
     "messengerPrivacySaveFailed": "آپ کی رضامندی محفوظ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
@@ -1174,9 +1382,18 @@
     "connectionRequired": "کنکشن درکار ہے",
     "unableToProcess": "درخواست پر کارروائی نہیں ہو سکی",
     "manualStart": "دستی طور پر شروع کریں",
-    "error": "خرابی"
+    "error": "خرابی",
+    "companionIntro": "یہ ایکسٹینشن NudeNyang Windows ایپ کے ساتھ کام کرتی ہے۔ اگر ایپ پہلے سے انسٹال ہے تو اسے شروع کریں اور کنکشن دوبارہ چیک کریں۔",
+    "companionRecovery": "NudeNyang شروع کریں اور ویب ترجمے کی ترتیبات میں اس براؤزر کو اجازت دیں۔ کنکشن نہ بنے تو ایپ اور ایکسٹینشن دوبارہ شروع کریں یا تازہ ترین انسٹالر سے کنکشن کے اجزا کی مرمت کریں۔",
+    "connectionHelp": "کنکشن میں مدد",
+    "windowsDownload": "Windows ایپ ڈاؤن لوڈ کریں",
+    "latestBuild": "تازہ ترین شائع شدہ بلڈ · پری ریلیز سمیت",
+    "downloadPrivacy": "یہ اسکرین GitHub کی عوامی ڈاؤن لوڈ فہرست چیک کرتی ہے۔ صفحات کے پتے، متن یا گفتگو نہیں بھیجی جاتی۔ انسٹالر منتخب کرنے پر ہی ڈاؤن لوڈ شروع ہوتا ہے۔",
+    "downloadUnavailable": "تازہ ترین ڈاؤن لوڈ کی معلومات نہیں مل سکیں۔ دوبارہ کوشش کریں یا GitHub Releases پر انسٹالر منتخب کریں۔",
+    "architectureHelp": "Windows ترتیبات ← سسٹم ← تعارف میں سسٹم کی قسم دیکھیں، پھر x64 یا ARM64 منتخب کریں۔"
   },
   "ta": {
+    "checkConnection": "இணைப்பைச் சரிபார்க்கவும்",
     "messengerPrivacyPermissionDenied": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
     "messengerPrivacyRevoked": "ஒப்புதல் திரும்பப் பெறப்பட்டது.",
     "messengerPrivacySaveFailed": "உங்கள் ஒப்புதலைச் சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
@@ -1223,9 +1440,18 @@
     "connectionRequired": "இணைப்பு தேவை",
     "unableToProcess": "கோரிக்கையைச் செயலாக்க முடியவில்லை",
     "manualStart": "கைமுறையாகத் தொடங்கு",
-    "error": "பிழை"
+    "error": "பிழை",
+    "companionIntro": "இந்த நீட்டிப்பு NudeNyang Windows செயலியுடன் இயங்கும். ஏற்கனவே நிறுவியிருந்தால், செயலியைத் தொடங்கி இணைப்பை மீண்டும் சரிபார்க்கவும்.",
+    "companionRecovery": "NudeNyang-ஐத் தொடங்கி இணைய மொழிபெயர்ப்பு அமைப்புகளில் இந்த உலாவியை அனுமதிக்கவும். இணைக்க முடியாவிட்டால் செயலியையும் நீட்டிப்பையும் மறுதொடக்கம் செய்யவும் அல்லது சமீபத்திய நிறுவி மூலம் இணைப்புக் கூறுகளைச் சரிசெய்யவும்.",
+    "connectionHelp": "இணைப்பு உதவி",
+    "windowsDownload": "Windows செயலியைப் பதிவிறக்கவும்",
+    "latestBuild": "சமீபத்திய வெளியிடப்பட்ட பதிப்பு · முன்வெளியீடுகள் உட்பட",
+    "downloadPrivacy": "இந்தத் திரை GitHub-இன் பொதுப் பதிவிறக்கப் பட்டியலைச் சரிபார்க்கிறது. பக்க முகவரிகள், உரை அல்லது உரையாடல்கள் அனுப்பப்படாது. நிறுவியைத் தேர்ந்தெடுத்தால் மட்டுமே பதிவிறக்கம் தொடங்கும்.",
+    "downloadUnavailable": "சமீபத்திய பதிவிறக்கங்களைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயலவும் அல்லது GitHub Releases-இல் நிறுவியைத் தேர்ந்தெடுக்கவும்.",
+    "architectureHelp": "Windows அமைப்புகள் → கணினி → பற்றி என்பதில் கணினி வகையைச் சரிபார்த்து x64 அல்லது ARM64-ஐத் தேர்ந்தெடுக்கவும்."
   },
   "fa": {
+    "checkConnection": "بررسی اتصال",
     "messengerPrivacyPermissionDenied": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
     "messengerPrivacyRevoked": "رضایت پس گرفته شد.",
     "messengerPrivacySaveFailed": "رضایت شما ذخیره نشد. لطفاً دوباره تلاش کنید.",
@@ -1272,9 +1498,18 @@
     "connectionRequired": "اتصال لازم است",
     "unableToProcess": "درخواست پردازش نشد",
     "manualStart": "شروع دستی",
-    "error": "خطا"
+    "error": "خطا",
+    "companionIntro": "این افزونه همراه برنامه NudeNyang ویندوز کار می‌کند. اگر نصب شده است، برنامه را اجرا کرده و اتصال را دوباره بررسی کنید.",
+    "companionRecovery": "NudeNyang را اجرا کنید و در تنظیمات ترجمه وب به این مرورگر اجازه اتصال بدهید. اگر مشکل ادامه داشت، برنامه و افزونه را دوباره راه‌اندازی کنید یا اجزای اتصال را با جدیدترین نصب‌کننده ترمیم کنید.",
+    "connectionHelp": "راهنمای اتصال",
+    "windowsDownload": "دریافت برنامه Windows",
+    "latestBuild": "جدیدترین نسخه منتشرشده · شامل پیش‌انتشارها",
+    "downloadPrivacy": "این صفحه فهرست عمومی دانلودهای GitHub را بررسی می‌کند. نشانی صفحات، متن یا گفتگوها ارسال نمی‌شوند. دانلود فقط پس از انتخاب نصب‌کننده آغاز می‌شود.",
+    "downloadUnavailable": "بررسی جدیدترین دانلودها ممکن نشد. دوباره تلاش کنید یا نصب‌کننده‌ای در GitHub Releases انتخاب کنید.",
+    "architectureHelp": "نوع سیستم را در تنظیمات Windows ← سیستم ← درباره بررسی کرده و x64 یا ARM64 را انتخاب کنید."
   },
   "he": {
+    "checkConnection": "בדיקת חיבור",
     "messengerPrivacyPermissionDenied": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
     "messengerPrivacyRevoked": "ההסכמה בוטלה.",
     "messengerPrivacySaveFailed": "לא ניתן לשמור את ההסכמה. נא לנסות שוב.",
@@ -1321,9 +1556,18 @@
     "connectionRequired": "נדרש חיבור",
     "unableToProcess": "לא ניתן לעבד את הבקשה",
     "manualStart": "הפעלה ידנית",
-    "error": "שגיאה"
+    "error": "שגיאה",
+    "companionIntro": "תוסף זה פועל עם יישום NudeNyang ל-Windows. אם הוא כבר מותקן, הפעילו את היישום ובדקו שוב את החיבור.",
+    "companionRecovery": "הפעילו את NudeNyang ואפשרו דפדפן זה בהגדרות תרגום האינטרנט. אם החיבור עדיין נכשל, הפעילו מחדש את היישום והתוסף או תקנו את רכיבי החיבור בעזרת תוכנית ההתקנה העדכנית.",
+    "connectionHelp": "עזרה בחיבור",
+    "windowsDownload": "הורדת יישום Windows",
+    "latestBuild": "הגרסה האחרונה שפורסמה · כולל גרסאות מקדימות",
+    "downloadPrivacy": "מסך זה בודק את רשימת ההורדות הציבורית של GitHub. כתובות דפים, טקסט ושיחות אינם נשלחים. ההורדה מתחילה רק לאחר בחירת תוכנית התקנה.",
+    "downloadUnavailable": "לא ניתן לבדוק את ההורדות העדכניות. נסו שוב או בחרו תוכנית התקנה ב-GitHub Releases.",
+    "architectureHelp": "בדקו את סוג המערכת בהגדרות Windows ← מערכת ← אודות, ובחרו x64 או ARM64."
   },
   "cs": {
+    "checkConnection": "Zkontrolovat připojení",
     "messengerPrivacyPermissionDenied": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
     "messengerPrivacyRevoked": "Souhlas byl odvolán.",
     "messengerPrivacySaveFailed": "Souhlas se nepodařilo uložit. Zkuste to prosím znovu.",
@@ -1370,7 +1614,15 @@
     "connectionRequired": "Je vyžadováno připojení",
     "unableToProcess": "Požadavek se nepodařilo zpracovat",
     "manualStart": "Spustit ručně",
-    "error": "Chyba"
+    "error": "Chyba",
+    "companionIntro": "Toto rozšíření funguje s aplikací NudeNyang pro Windows. Pokud je již nainstalovaná, spusťte ji a znovu ověřte připojení.",
+    "companionRecovery": "Spusťte NudeNyang a povolte tento prohlížeč v nastavení webového překladu. Pokud se nepřipojí, restartujte aplikaci a rozšíření nebo opravte součásti nejnovějším instalátorem.",
+    "connectionHelp": "Pomoc s připojením",
+    "windowsDownload": "Stáhnout aplikaci Windows",
+    "latestBuild": "Nejnovější zveřejněné sestavení · Včetně předběžných verzí",
+    "downloadPrivacy": "Tato obrazovka kontroluje veřejný seznam stažení na GitHubu. Adresy stránek, jejich text ani konverzace se neodesílají. Stahování začne až po výběru instalátoru.",
+    "downloadUnavailable": "Nejnovější stažení nelze ověřit. Zkuste to znovu nebo vyberte instalátor na GitHub Releases.",
+    "architectureHelp": "Ověřte typ systému v Nastavení Windows → Systém → O systému a zvolte x64 nebo ARM64."
   }
 });
   const SUPPORTED = Object.freeze(["ko","en","ja","zh","zh-Hant","pt-BR","hi","es-419","de","ru","id","fr","tr","ar","vi","it","pl","uk","ms","nl","th","fil","bn","ur","ta","fa","he","cs"]);
