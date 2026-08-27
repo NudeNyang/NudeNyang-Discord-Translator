@@ -3,6 +3,7 @@ import test from "node:test";
 import { JSDOM } from "jsdom";
 import "../messenger-adapters.js";
 import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
+import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
 
 const {
   siteForLocation,
@@ -11,7 +12,51 @@ const {
   isEligibleMessageBlock,
   selectMessageBlocks,
   isVisibleElement,
+  selectChannelNameBlocks,
 } = globalThis.NudeNyangMessengerAdapters;
+
+test("Discord 채널명 탐색은 텍스트를 읽지 않고 정확한 채널 링크와 현재 제목만 선택한다", () => {
+  const dom = new JSDOM(DISCORD_WEB, { url: DISCORD_WEB_URL, pretendToBeVisual: true });
+  try {
+    const { document, location } = dom.window;
+    const fail = () => { throw Error("Unexpected content read"); };
+    Object.defineProperty(dom.window.Node.prototype, "textContent", { get: fail, configurable: true });
+    Object.defineProperty(dom.window.HTMLElement.prototype, "innerText", { get: fail, configurable: true });
+    const context = contextForDocument(location, document);
+    assert.deepEqual(selectChannelNameBlocks(context).map((el) => el.id), ["channel-current", "channel-other", "channel-title"]);
+    assert.equal(selectMessageBlocks(context).length, 5);
+    document.querySelector("nav").setAttribute("aria-hidden", "true");
+    assert.deepEqual(selectChannelNameBlocks(context).map((el) => el.id), ["channel-title"]);
+    document.querySelector("nav").removeAttribute("aria-hidden");
+    document.getElementById("channel-current").hidden = true;
+    document.getElementById("channel-other").setAttribute("contenteditable", "true");
+    assert.deepEqual(selectChannelNameBlocks(context).map((el) => el.id), ["channel-title"]);
+    context.root.hidden = true;
+    assert.deepEqual(selectChannelNameBlocks(context), []);
+    context.root.hidden = false;
+    document.querySelector("header").setAttribute("role", "dialog");
+    assert.deepEqual(selectChannelNameBlocks(context), []);
+  } finally { dom.window.close(); }
+});
+
+test("Discord 미리보기 텍스트만 있어도 열린 대화로 인식하고 첨부·검색·입력 속 복제는 제외한다", () => {
+  const dom = new JSDOM(DISCORD_WEB, { url: DISCORD_WEB_URL });
+  try {
+    const { document, location } = dom.window;
+    document.getElementById("message-content-500").remove();
+    const context = contextForDocument(location, document);
+    assert.equal(context?.id, "discord");
+    assert.deepEqual(selectMessageBlocks(context).map((el) => el.id), ["embed-title", "embed-description", "embed-field-name", "embed-field-value"]);
+    document.querySelector("article").classList.add("attachment_test");
+    assert.deepEqual(selectMessageBlocks(context), []);
+    document.querySelector("article").classList.remove("attachment_test");
+    for (const [attribute, value] of [["role", "search"], ["contenteditable", "true"]]) {
+      document.querySelector("article").setAttribute(attribute, value);
+      assert.deepEqual(selectMessageBlocks(context), []);
+      document.querySelector("article").removeAttribute(attribute);
+    }
+  } finally { dom.window.close(); }
+});
 
 const cases = [
   { id: "x", url: X_CHAT_URL, html: X_CHAT },

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import { X_CHAT, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
+import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
 
 const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"].map((file) => (
   fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
@@ -30,6 +31,7 @@ function page(t, html, options = {}) {
   });
   const w = dom.window;
   const observers = new Set();
+  const intersections = new Set();
   const MutationObserver = w.MutationObserver;
   w.MutationObserver = class extends MutationObserver {
     constructor(callback) { super(callback); observers.add(this); }
@@ -60,15 +62,19 @@ function page(t, html, options = {}) {
     w.cancelAnimationFrame = (id) => applicationFrames.delete(id);
   }
   w.HTMLElement.prototype.getBoundingClientRect = function rect() {
-    const hidden = this.closest("[hidden],[aria-hidden='true']")
+    const hidden = this.closest(options.renderAriaHidden ? "[hidden]" : "[hidden],[aria-hidden='true']")
       || w.getComputedStyle(this).display === "none";
     const top = this.closest("[data-offscreen]") ? 5000 : 10;
     return { top, bottom: top + (hidden ? 0 : 30), left: 10, right: 210,
       width: hidden ? 0 : 200, height: hidden ? 0 : 30 };
   };
   w.IntersectionObserver = class {
-    constructor(callback) { this.callback = callback; this.active = true; }
+    constructor(callback) {
+      this.callback = callback; this.active = true; this.targets = new Set();
+      intersections.add(this);
+    }
     observe(target) {
+      this.targets.add(target);
       w.queueMicrotask(() => {
         if (this.active) this.callback([{
           target, isIntersecting: target.getBoundingClientRect().height > 0
@@ -95,7 +101,7 @@ function page(t, html, options = {}) {
           savedStates.push(message.enabled);
           callback({ enabled: message.enabled });
         } else if (message.type === "nudenyang-messenger-consent-get") {
-          callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? 1 : 0 });
+          callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? (options.consentVersion ?? 2) : 0 });
         } else if (message.type === "nudenyang-native-request") {
           if (message.request.type === "status") {
             if (options.deferStatus) releaseStatus = () => callback(appStatus);
@@ -132,6 +138,11 @@ function page(t, html, options = {}) {
     },
     reinject: () => sources.forEach((source) => w.eval(source)),
     sent: () => requests.flatMap((request) => request.items.map((item) => item.text)),
+    intersect(target) {
+      const active = [...intersections].filter((observer) => observer.active && observer.targets.has(target));
+      assert.ok(active.length > 0, "revealed element must already be observed");
+      for (const observer of active) observer.callback([{ target, isIntersecting: true }]);
+    },
   };
 }
 
@@ -144,6 +155,100 @@ const PRIVATE_CHAT = `<nav><span>Private contact list</span></nav>
     </div></li></ol><div role="textbox" contenteditable="true">Unsent private draft</div>`;
 const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", consent: true,
   settings: { messengerEnabled: true } };
+
+const DISCORD_WEB_OPTIONS = { ...PRIVATE_OPTIONS, url: DISCORD_WEB_URL, renderAriaHidden: true };
+const DISCORD_WEB_TEXT = ["General room", "Help desk", "General room", "A neutral message.",
+  "A neutral preview title", "A neutral preview description.", "A field label", "A field value"];
+
+test("웹 Discord 채널명과 링크 미리보기는 현재 서버의 허용된 텍스트만 번역한다", async (t) => {
+  const p = page(t, DISCORD_WEB, DISCORD_WEB_OPTIONS);
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.sent().length === DISCORD_WEB_TEXT.length, "Discord channel names and previews are extracted");
+  assert.deepEqual(p.sent().sort(), [...DISCORD_WEB_TEXT].sort());
+  await waitFor(() => p.w.document.getElementById("channel-current").textContent.startsWith("번역("), "channel name is applied");
+  assert.ok(p.requests.every((r) => r.privateContext.service === "discord"));
+  assert.ok(!JSON.stringify(p.requests).includes("/channels/100/200"));
+  assert.equal(p.w.document.getElementById("embed-title").getAttribute("href"), "https://example.invalid/page");
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  assert.equal(p.w.document.getElementById("channel-current").textContent, "General room");
+  assert.equal(p.w.document.getElementById("embed-title").textContent, "A neutral preview title");
+});
+
+test("웹 Discord 채널명·미리보기도 동의·로컬 모델·본체 허용 없이 읽지 않는다", async (t) => {
+  for (const extra of [{ consent: false }, { consentVersion: 1 }, { translator: "deepl" }, { settings: { messengerEnabled: false } }]) {
+    const p = page(t, DISCORD_WEB, { ...DISCORD_WEB_OPTIONS, ...extra });
+    const reads = ["channel-current", "channel-title", "embed-title"].map((id) => watchNodeValueReads(p.w, p.w.document.getElementById(id).firstChild));
+    await p.message({ type: "nudenyang-ready" });
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    assert.equal(p.requests.length, 0);
+    assert.ok(reads.every((read) => read() === 0));
+  }
+});
+
+test("웹 Discord DM에서는 서버 채널명·상대 이름을 수집하지 않는다", async (t) => {
+  const p = page(t, DISCORD_WEB, { ...DISCORD_WEB_OPTIONS, url: "https://discord.com/channels/@me/300" });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.sent().length >= 5, "DM message and preview bodies translate");
+  assert.deepEqual(p.sent().sort(), DISCORD_WEB_TEXT.slice(3).sort());
+  assert.equal(p.w.document.getElementById("channel-title").textContent, "General room");
+});
+
+test("메시지가 없는 열린 Discord 서버 채널도 보이는 채널명은 번역한다", async (t) => {
+  const p = page(t, DISCORD_WEB.replace(/<ol[\s\S]*?<\/ol>/, '<ol data-list-id="chat-messages"></ol>'), DISCORD_WEB_OPTIONS);
+  await p.message({ type: "nudenyang-ready" });
+  assert.equal((await p.message({ type: "nudenyang-status" })).messengerGate, "");
+  await waitFor(() => p.sent().length === 3, "empty server channel labels translate");
+  assert.deepEqual(p.sent().sort(), DISCORD_WEB_TEXT.slice(0, 3).sort());
+});
+
+test("하이픈 채널명도 번역하고 화면 밖 이름은 스크롤로 표시된 뒤 처리한다", async (t) => {
+  const p = page(t, DISCORD_WEB.replaceAll("General room", "general-room").replace("Help desk", "help-desk"), DISCORD_WEB_OPTIONS);
+  const label = p.w.document.getElementById("channel-other");
+  label.setAttribute("data-offscreen", "");
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.sent().includes("general-room"), "hyphenated channel name translates");
+  assert.equal(p.sent().includes("help-desk"), false);
+  label.removeAttribute("data-offscreen");
+  p.w.document.dispatchEvent(new p.w.Event("scroll"));
+  // JSDOM has no layout engine: deliver the observer notification a real
+  // browser emits when this already-observed label enters the viewport.
+  p.intersect(label);
+  await waitFor(() => p.sent().includes("help-desk"), "visible channel name translates after scroll");
+  assert.equal(label.closest("a").getAttribute("href"), "/channels/100/201");
+});
+
+test("나중에 표시된 Discord 링크 미리보기도 현재 대화에서만 한 번 번역한다", async (t) => {
+  const p = page(t, DISCORD_WEB, DISCORD_WEB_OPTIONS);
+  const preview = p.w.document.querySelector("article");
+  preview.hidden = true;
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.sent().length === 4, "initial message and labels translate");
+  preview.hidden = false;
+  await waitFor(() => p.sent().length === DISCORD_WEB_TEXT.length, "revealed preview translates");
+  assert.deepEqual(p.sent().sort(), [...DISCORD_WEB_TEXT].sort());
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  assert.equal(p.w.document.getElementById("embed-description").textContent, "A neutral preview description.");
+});
+
+test("웹 Discord 채널명이 숨김·입력·다른 서버 링크로 바뀌면 늦은 번역을 적용하지 않는다", async (t) => {
+  for (const action of ["hidden", "editor", "other-server", "revoke", "navigate"]) {
+    const p = page(t, DISCORD_WEB, { ...DISCORD_WEB_OPTIONS, deferTranslation: true });
+    await p.message({ type: "nudenyang-ready" });
+    await waitFor(() => p.sent().includes("General room"), "channel translation in flight");
+    const label = p.w.document.getElementById("channel-current");
+    if (action === "hidden") label.hidden = true;
+    if (action === "editor") label.setAttribute("contenteditable", "true");
+    if (action === "other-server") label.closest("a").setAttribute("href", "/channels/900/200");
+    if (action === "revoke") await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
+    if (action === "navigate") p.w.history.pushState({}, "", "/channels/@me/300");
+    await p.message({ type: "nudenyang-status" });
+    const reads = watchNodeValueReads(p.w, label.firstChild);
+    p.releaseTranslation();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(label.textContent, "General room", action);
+    assert.equal(reads(), 0, action);
+  }
+});
 
 test("새 X 채팅은 기존 동의와 자동 번역 설정으로 본문만 추출한다", async (t) => {
   const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL,
@@ -339,7 +444,7 @@ test("동의한 웹 Discord는 본문만 사적 컨텍스트로 보내고 원문
   assert.equal(p.sent().length, 1);
   assert.ok(!p.sent().some((text) => /sender|draft|timestamp|person|secret_code|https:/.test(text)));
   for (const request of p.requests) {
-    assert.deepEqual(JSON.parse(JSON.stringify(request.privateContext)), { service: "discord", consentVersion: 1 });
+    assert.deepEqual(JSON.parse(JSON.stringify(request.privateContext)), { service: "discord", consentVersion: 2 });
     assert.match(request.pageId, /^messenger:discord:[a-zA-Z0-9_-]{16,128}$/);
     assert.ok(!JSON.stringify(request).includes("123456789"));
   }
@@ -360,7 +465,7 @@ test("메신저 동의 철회와 외부 모델 전환은 원문을 복원하고 
   await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
   assert.ok(!body.textContent.includes("번역("));
   assert.equal((await p.message({ type: "nudenyang-status" })).translatedNodes, 0);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 1 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 2 } });
   await waitFor(() => p.requests.length >= 2 && body.textContent.includes("번역("), "re-consent starts fresh");
   p.appStatus.translator = "chatgpt";
   p.w.dispatchEvent(new p.w.FocusEvent("focus"));
@@ -629,7 +734,7 @@ test("X 공개 타임라인의 DM 서랍도 별도 동의가 없으면 절대 �
   await p.message({ type: "nudenyang-ready" });
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   assert.equal(p.requests.length, 0);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 1 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 2 } });
   await waitFor(() => p.sent().includes("Private drawer conversation"), "consented drawer translates");
   assert.ok(!p.sent().includes("Public timeline message"));
   assert.equal(p.requests[0].privateContext.service, "x");

@@ -56,11 +56,17 @@
       hosts: ["discord.com", "ptb.discord.com", "canary.discord.com"],
       route: (path) => /^\/channels\/(?:@me|\d+)\/\d+(?:\/\d+)?\/?$/.test(path),
       roots: ['[data-list-id="chat-messages"]'],
-      blocks: ['[id^="message-content-"]'],
+      blocks: [
+        '[id^="message-content-"]',
+        // Use the same textual preview parts as the desktop adapter, inside
+        // the current transcript only. Never follow links or read image pixels.
+        ':is(article[class*="embed_"], [class*="embedFull_"]) :is([class*="embedTitle_"], [class*="embedDescription_"], [class*="embedFieldName_"], [class*="embedFieldValue_"])',
+      ],
       excludes: [
         '[id^="message-username-"]', '[id^="message-reply-context-"]', '[class*="repliedMessage_"]',
         '[class*="username_"]', '[class*="timestamp_"]', '[class*="reactions_"]',
         '[class*="embedAuthor_"]', '[class*="attachment_"]', '[class*="mention_"]',
+        '[class*="embedAuthorName_"]', '[class*="embedProvider_"]', '[class*="embedFooter_"]',
         '[data-list-id="private-channels"]',
       ],
     },
@@ -196,8 +202,12 @@
       && !privateSiteForLocation(url);
   }
 
-  function isVisibleElement(element, cache) {
+  function isVisibleElement(element, cache, ariaHiddenException = null) {
     if (!element || element.nodeType !== 1 || !element.isConnected) return false;
+    // Discord's visual channel label duplicates its accessible link name.
+    // Ignore aria-hidden only on that exact, structurally verified wrapper;
+    // never reuse its visibility result for ordinary message collection.
+    if (ariaHiddenException) cache = undefined;
     if (cache?.has(element)) return cache.get(element);
     const view = element.ownerDocument?.defaultView;
     const walked = [];
@@ -209,7 +219,7 @@
       }
       walked.push(current);
       if (current.hasAttribute("hidden") || current.hasAttribute("inert")
-        || current.getAttribute("aria-hidden") === "true"
+        || (current.getAttribute("aria-hidden") === "true" && current !== ariaHiddenException)
         || (current.localName === "dialog" && !current.hasAttribute("open"))) {
         visible = false;
         break;
@@ -235,6 +245,73 @@
     return visible;
   }
 
+  const DISCORD_CHANNEL_VISUAL = 'div[aria-hidden="true"] > span, [class*="name__"][aria-hidden="true"] > div';
+  const DISCORD_CHANNEL_TITLE = 'h1[class*="title__"], h2[class*="title__"]';
+  const CHANNEL_CONTAINER_EXCLUDES = new Set(["nav", "header", '[role="navigation"]', '[role="heading"]', '[aria-hidden="true"]']);
+
+  function channelNameInfo(element, context) {
+    if (context?.id !== "discord" || !context.guildId || !context.root?.isConnected || !element?.closest) return null;
+    if (context.root.contains(element)) return null;
+    const row = element.closest('[data-list-item-id^="channels___"]');
+    if (row) {
+      if (!row.closest('nav, [role="navigation"], [data-list-id="channels"]')) return null;
+      const link = row.matches("a[href]") ? row : row.querySelector("a[href]");
+      if (!link) return null;
+      let url;
+      try { url = new URL(link.getAttribute("href"), element.ownerDocument.location.href); }
+      catch { return null; }
+      const route = /^\/channels\/(\d+)\/(\d+)\/?$/.exec(url.pathname);
+      if (url.origin !== element.ownerDocument.location.origin || url.username || url.password
+        || url.search || url.hash || !route || route[1] !== context.guildId
+        || row.getAttribute("data-list-item-id") !== `channels___${route[2]}`) return null;
+      const block = link.querySelector(DISCORD_CHANNEL_VISUAL);
+      if (!block || !(element === row || element.contains(block) || block.contains(element))) return null;
+      return { block, ariaHiddenException: block.parentElement };
+    }
+    const chat = context.root.closest('[class*="chat_"]');
+    if (!chat || !chat.contains(element)) return null;
+    const titles = [...chat.querySelectorAll(DISCORD_CHANNEL_TITLE)].filter((title) => (
+      !context.root.contains(title) && title.closest('[class*="chat_"]') === chat
+    ));
+    if (titles.length !== 1) return null;
+    const block = titles[0];
+    if (element !== block && !element.contains(block) && !block.contains(element)) return null;
+    return { block, ariaHiddenException: block.getAttribute("aria-hidden") === "true" ? block : null };
+  }
+
+  function channelNameBlockFor(element, context) {
+    return channelNameInfo(element, context)?.block ?? null;
+  }
+
+  function channelNameTextAllowed(node, block, context, { restoring = false } = {}) {
+    const info = channelNameInfo(block, context);
+    if (!info || info.block !== block || !block.contains(node) || !node.isConnected) return false;
+    if (!restoring && !isVisibleElement(context.root)) return false;
+    for (let current = node.nodeType === 1 ? node : node.parentElement; current; current = current.parentElement) {
+      if (context.channelNameExcludes.some((selector) => (
+        !(restoring && ["[hidden]", "[inert]"].includes(selector)) && current.matches(selector)
+      ))) return false;
+      if (!restoring && current.getAttribute("aria-hidden") === "true" && current !== info.ariaHiddenException) return false;
+      // Navigation/heading containers are allowed only around the verified
+      // label, not as arbitrary descendants inside its text.
+      if (current !== block && block.contains(current)
+        && current.matches('nav, header, [role="navigation"], [role="heading"]')) return false;
+    }
+    return restoring || isVisibleElement(node.nodeType === 1 ? node : node.parentElement, undefined, info.ariaHiddenException);
+  }
+
+  function selectChannelNameBlocks(context, scope = context?.root?.ownerDocument) {
+    if (!context?.guildId || !scope?.querySelectorAll) return [];
+    const candidates = [...scope.querySelectorAll(`[data-list-item-id^="channels___"], ${DISCORD_CHANNEL_TITLE}`)];
+    if (scope.nodeType === 1) candidates.unshift(scope);
+    const blocks = new Set();
+    for (const candidate of candidates) {
+      const block = channelNameBlockFor(candidate, context);
+      if (block && channelNameTextAllowed(block, block, context)) blocks.add(block);
+    }
+    return [...blocks];
+  }
+
   function excludedInsideRoot(element, context) {
     const selectors = context.excludes.join(",");
     for (let current = element; current; current = current.parentElement) {
@@ -246,6 +323,9 @@
   }
 
   function isEligibleMessageBlock(element, context, visibilityCache) {
+    if (context?.guildId && channelNameBlockFor(element, context) === element) {
+      return channelNameTextAllowed(element, element, context);
+    }
     return Boolean(context?.root && element?.nodeType === 1 && element !== context.root
       && context.root.isConnected && context.root.contains(element)
       && element.matches(context.blocks.join(","))
@@ -317,9 +397,18 @@
             routeKey: `${service.id}:${url.pathname}${url.hash}`,
             identityNodes: [],
           };
+          if (service.id === "discord") {
+            // Server identity is local-only, like routeKey. DM recipients and
+            // other servers' channel lists are never eligible channel names.
+            context.guildId = /^\/channels\/(\d+)\/\d+(?:\/\d+)?\/?$/.exec(url.pathname)?.[1] ?? "";
+            context.channelNameExcludes = [
+              ...service.excludes.filter((item) => !CHANNEL_CONTAINER_EXCLUDES.has(item)),
+              "dialog", '[role="dialog"]',
+            ];
+          }
           const first = firstMessageBlock(context, visibilityCache);
-          if (!first) continue;
-          context.identityNodes = [root, first];
+          if (!first && !selectChannelNameBlocks(context).length) continue;
+          context.identityNodes = first ? [root, first] : [root];
           contexts.push(context);
         }
       }
@@ -347,5 +436,8 @@
     isVisibleElement,
     isEligibleMessageBlock,
     selectMessageBlocks,
+    channelNameBlockFor,
+    channelNameTextAllowed,
+    selectChannelNameBlocks,
   });
 })();

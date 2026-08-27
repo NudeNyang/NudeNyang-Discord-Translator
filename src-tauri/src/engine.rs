@@ -826,8 +826,10 @@ fn validate_browser_private_context(request: &BrowserTranslationRequest) -> Resu
         }
         return Ok(());
     };
-    if context.consent_version != 1 {
-        return Err("[messenger_consent_required] 웹 메신저 번역 동의를 확인하지 못했습니다. 메인 앱에서 설정을 다시 확인해 주십시오.".to_string());
+    // Version 2 also covers visible Discord server channel labels and textual
+    // link previews. A version-1 message-only grant must not be upgraded here.
+    if context.consent_version != 2 {
+        return Err("[messenger_consent_required] 웹 메신저 번역 동의를 확인하지 못했습니다. 브라우저 확장에서 개인정보 안내를 확인해 주십시오.".to_string());
     }
     if !matches!(
         context.service.as_str(),
@@ -3905,7 +3907,7 @@ mod tests {
         request.page_id = "messenger:discord:01234567-89ab-cdef-0123-456789abcdef".to_string();
         request.private_context = Some(BrowserPrivateContext {
             service: "discord".to_string(),
-            consent_version: 1,
+            consent_version: 2,
         });
         request
     }
@@ -3936,11 +3938,15 @@ mod tests {
         assert!(validate_browser_translation_request(&request)
             .unwrap_err()
             .starts_with("[messenger_consent_required]"));
-        request.private_context.as_mut().unwrap().consent_version = 2;
+        request.private_context.as_mut().unwrap().consent_version = 1;
         assert!(validate_browser_translation_request(&request)
             .unwrap_err()
             .starts_with("[messenger_consent_required]"));
-        request.private_context.as_mut().unwrap().consent_version = 1;
+        request.private_context.as_mut().unwrap().consent_version = 3;
+        assert!(validate_browser_translation_request(&request)
+            .unwrap_err()
+            .starts_with("[messenger_consent_required]"));
+        request.private_context.as_mut().unwrap().consent_version = 2;
         request.private_context.as_mut().unwrap().service = "email".to_string();
         assert!(validate_browser_translation_request(&request)
             .unwrap_err()

@@ -1,6 +1,6 @@
 # 개인정보 처리방침 / Privacy Policy
 
-최종 수정일: 2026-08-27
+최종 수정일: 2026-08-28
 
 NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개발자가 Discord 메시지, 웹페이지 텍스트, 이미지, 번역 기록, 방문한 페이지 주소 또는 인증 정보를 수집하거나 보관하지 않습니다.
 
@@ -29,15 +29,16 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 
 - 기본값은 꺼짐입니다. Windows 앱의 `웹 메신저 읽기 번역` 설정을 켜고, 사용할 브라우저 프로필의 개인정보 안내에서 명시적으로 동의해야 합니다. 본체 설정을 켜거나 일반 웹 번역을 시작하는 것만으로 동의가 이루어지지 않으며, 다른 브라우저나 프로필의 동의도 대신하지 않습니다.
 - Firefox에서는 동의 동작 중 선택 데이터 권한 `personalCommunications`도 요청합니다. 거부하거나 취소하면 동의를 저장하지 않으며, 브라우저에서 이 권한을 철회하면 기존 동의로 번역을 계속할 수 없습니다.
-- 대상은 X DM, 웹 Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams, Google Messages의 식별 가능한 현재 열린 대화입니다. 활성 화면에서 보이는 메시지 본문만 읽습니다. 대화 목록이나 다른 대화를 열어 수집하지 않으며, 숨겨진 메시지나 첨부 파일을 가져오지 않습니다. 사이트 구조가 달라 대화를 안전하게 식별할 수 없으면 번역하지 않습니다.
+- 대상은 X DM, 웹 Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams, Google Messages의 식별 가능한 현재 열린 대화입니다. 활성 화면에서 보이는 메시지 본문을 읽습니다. 웹 Discord에서는 현재 대화에 표시된 링크 미리보기의 제목·설명·항목 텍스트와 현재 서버의 보이는 채널 이름도 포함합니다. DM 상대 목록이나 다른 서버의 채널 목록은 제외하며, 다른 대화를 열거나 숨겨진 메시지·첨부 파일·링크 대상 페이지를 가져오지 않습니다. 사이트 구조가 달라 대화를 안전하게 식별할 수 없으면 번역하지 않습니다.
+- 채널 이름과 링크 미리보기를 포함하는 범위에는 동의 버전 2가 필요합니다. 이전의 메시지 본문 전용 동의는 자동으로 확대하지 않으며, 갱신된 안내에 사용자가 직접 동의하기 전에는 웹 메신저 번역을 시작하지 않습니다.
 - 작성자 이름·연락처 목록·프로필, 작성창·입력값·미전송 초안, 전송 조작, 첨부 파일·이미지·음성·영상은 대상이 아닙니다. 이미 대화에 표시된 메시지의 읽기 번역만 수행하며 메시지를 작성하거나 전송하지 않습니다. 다만 메시지 본문 자체에 이름, 연락처 또는 민감한 정보가 적혀 있으면 해당 내용도 로컬 번역에 포함될 수 있습니다. 본문 속 개인정보를 자동으로 모두 찾아 지우는 기능은 아닙니다.
 - Hy-MT2 또는 TranslateGemma 로컬 모델에서만 동작합니다. 외부 번역 서비스가 선택되어 있거나 로컬 처리 조건을 확인할 수 없으면 요청을 차단하며, 대화 내용을 외부 서비스로 자동 전환하여 처리하지 않습니다.
 - 요청에는 허용된 본문과 목표 언어 등 번역에 필요한 정보, 서비스 구분, 동의 버전, 임의로 생성한 임시 대화 식별자가 포함되어 같은 PC의 Windows 본체로 전달됩니다. 실제 대화 URL·대화 ID·참여자 목록을 대화 식별자로 보내지 않습니다. 페이지 경로 등은 확장 안에서 대화 전환을 감지하는 데만 사용합니다.
-- 이메일, 지원하지 않는 메신저, 로그인·계정·결제·주문·관리 화면의 기본 차단은 유지됩니다. 위 조건을 모두 만족하는 지원 대화의 본문만 제한된 예외로 처리합니다.
+- 이메일, 지원하지 않는 메신저, 로그인·계정·결제·주문·관리 화면의 기본 차단은 유지됩니다. 위 조건을 모두 만족하는 지원 대화의 본문 및 명시된 Discord 텍스트만 제한된 예외로 처리합니다.
 
 ### 보관·철회와 메모리 처리의 한계
 
-확장 프로그램이 보관하는 대화 내용과 번역문은 메모리에서만 처리하며, 대화 전환 또는 종료 시 삭제합니다. 디스크 캐시, 번역 기록 또는 본문 로그에 저장하지 않습니다. Windows 본체도 일반 번역 캐시·문맥과 분리된 요청 단위 임시 메모리 캐시를 사용합니다. 브라우저에 지속적으로 저장하는 것은 동의 버전과 번역 설정이며 대화 본문이나 번역문이 아닙니다.
+확장 프로그램이 보관하는 대화 내용과 번역문은 메모리에서만 처리하며, 대화 전환 또는 종료 시 삭제합니다. 채널 이름과 링크 미리보기 텍스트에도 같은 규칙을 적용합니다. 디스크 캐시, 번역 기록 또는 본문 로그에 저장하지 않습니다. Windows 본체도 일반 번역 캐시·문맥과 분리된 요청 단위 임시 메모리 캐시를 사용합니다. 브라우저에 지속적으로 저장하는 것은 동의 버전과 번역 설정이며 대화 본문이나 번역문이 아닙니다.
 
 동의를 철회하거나 본체의 기능 허용을 끄면 새 수집과 요청을 중단하고 확장이 보관한 사본과 대기 작업을 폐기합니다. 대화 전환·종료 뒤 늦게 도착하는 결과도 적용하지 않습니다. 여기서 삭제는 확장과 본체가 관리하는 사본의 보관을 끝낸다는 뜻이며, 메신저 사이트의 원문이나 서버 기록을 삭제하는 것은 아닙니다. 이미 진행 중인 모델 처리는 정리되기까지 시간이 걸릴 수 있습니다.
 
@@ -85,13 +86,15 @@ Input values, editable content, code, prices, account, login, payment, order, ad
 
 The feature is off by default. It requires both the Windows app's web-messenger setting and explicit consent in the current browser profile. Enabling ordinary translation or the app setting alone does not grant consent; consent in another browser or profile does not apply. Firefox also requests optional `personalCommunications` permission from the consent action. Refusal or cancellation does not save consent, and removing that permission prevents a previously saved consent from authorizing translation.
 
-The supported surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams, and Google Messages. Only visible message bodies in an identifiable currently open conversation are eligible. The extension does not open other conversations, collect the conversation list, or retrieve hidden messages or attachments. If it cannot safely identify a supported conversation, it does not translate it.
+The supported surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams, and Google Messages. Visible message bodies in an identifiable currently open conversation are eligible. Web Discord also includes the titles, descriptions, and textual fields of link previews displayed in that conversation, plus visible channel names in the current server. DM contact lists and other servers' channel lists are excluded. The extension does not open other conversations or retrieve hidden messages, attachments, or linked pages. If it cannot safely identify a supported conversation, it does not translate it.
+
+Consent version 2 covers the added Discord channel names and link-preview text. Previous message-body-only consent is not automatically expanded. Web-messenger translation remains blocked until the user explicitly accepts the updated notice.
 
 Author names, contact lists, profiles, composers, input values, unsent drafts, send actions, attachments, images, audio, and video are excluded. This feature only translates messages already displayed in the conversation; it does not compose or send messages. Message bodies can themselves contain names, contact details, or other sensitive information, which may be included in local translation. This is not an automatic personal-data redaction feature.
 
 Only local Hy-MT2 or TranslateGemma models are permitted. An external provider selection or an unverified local-processing condition blocks the request, rather than falling back to an external service. Eligible text is passed to the Windows companion on the same computer with translation settings, a service identifier, consent version, and a randomly generated temporary conversation identifier. The identifier is not the real conversation URL, conversation ID, or participant list. Routing information used to detect conversation changes stays within the extension. Email, unsupported messengers, and account, login, payment, order, and administration pages remain blocked.
 
-Conversation content and translations retained by the extension are processed in memory only and discarded when the conversation changes or ends. They are not stored in disk caches, translation history, or body logs. The Windows companion uses a separate request-scoped in-memory cache and context, not the ordinary translation cache. Only consent version and translation preferences persist in browser storage, not conversation text or translations.
+Conversation content and translations retained by the extension are processed in memory only and discarded when the conversation changes or ends. The same rules apply to channel names and link-preview text. They are not stored in disk caches, translation history, or body logs. The Windows companion uses a separate request-scoped in-memory cache and context, not the ordinary translation cache. Only consent version and translation preferences persist in browser storage, not conversation text or translations.
 
 Revoking consent or disabling the feature in the companion stops new collection and requests and discards extension-owned copies and pending work. Results arriving after a conversation change or closure are not applied. Discarding these copies does not delete the original messages or the messenger service's records. An inference already running may take time to finish and release its request data.
 

@@ -18,7 +18,8 @@ fixture tests are not a substitute for that validation.
 NudeNyang Web Translator uses the translation engine in the separately installed NudeNyang Windows
 application to translate eligible visible text on webpages activated by the user while preserving
 the existing page layout. An optional, separately consented feature translates only visible
-message bodies in the currently open supported web-messenger conversation using local AI.
+message bodies in the currently open supported web-messenger conversation using local AI, plus
+Discord link-preview text in that conversation and visible channel names in the current server.
 
 ## Data handled
 
@@ -28,7 +29,9 @@ message bodies in the currently open supported web-messenger conversation using 
   ordinary webpage translation requests and context by page and to apply a user-selected hostname
   policy. Query strings and URL fragments are excluded from these requests.
 - Personal communications / `personalCommunications`: visible message bodies in the currently
-  open supported conversation, only after the app setting and browser-profile consent permit it.
+  open supported conversation, including Discord preview titles, descriptions, and textual fields,
+  plus visible channel names in the current Discord server, only after the app setting and
+  browser-profile consent permit it. DM contact lists and other servers' channels are excluded.
 
 The extension does not read authentication tokens, cookies, input values, unsent drafts, contact
 lists, or attachment contents. It does not monitor browsing history as a list or log user typing.
@@ -53,7 +56,7 @@ browser profiles. The feature covers X DM, web Discord, WhatsApp Web, Telegram W
 Slack, Microsoft Teams, and Google Messages only where the current visible conversation is safely
 identified. No background opening of other conversations is performed.
 
-Message bodies go only to the same-computer companion. Their request includes translation
+All eligible messenger text, including Discord channel names and link previews, goes only to the same-computer companion. Their request includes translation
 settings, service identifier, consent version, and a random temporary conversation identifier;
 it does not use the real conversation URL, conversation ID, or participants as that identifier.
 Route information used for conversation-change detection stays within the extension. Author
@@ -72,9 +75,15 @@ tab handle and random conversation nonce, not a real conversation URL or message
 conversation, revoked consent, or explicit OFF action cancels the pending start. Hidden tabs do
 not collect message bodies. The standalone consent-management link has no automatic-start action.
 
+Consent version 2 discloses the added Discord channel names and link-preview text. A previous
+version-1 message-only grant does not authorize this scope; it is not automatically upgraded.
+The user must explicitly accept the updated notice. No linked pages are fetched and no image
+text is read. No additional browser permission category is introduced.
+
 ## Messenger retention and withdrawal
 
-The extension holds message bodies and translations only in memory for the current conversation.
+The extension holds eligible messenger text and translations only in memory for the current
+conversation, including the added Discord channel names and link-preview text.
 It discards its copies when the conversation changes or ends, or consent is revoked. The companion
 uses a request-scoped in-memory translation cache and context separated from ordinary caches.
 Private bodies and translations are not written to disk caches, translation history, or body logs.

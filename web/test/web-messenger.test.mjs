@@ -80,8 +80,8 @@ test("web settings explain read-only local processing and separate browser conse
   const description = dom.window.document.getElementById(button.getAttribute("aria-describedby"));
   assert.match(description.textContent, /로컬 AI/);
   assert.match(description.textContent, /현재 열린 대화/);
-  assert.match(description.textContent, /입력 및 전송 기능은 사용하지 않습니다/);
-  assert.match(description.textContent, /브라우저별 개인정보 안내에 동의/);
+  assert.match(description.textContent, /입력 및 전송 기능을 사용하지 않으며/);
+  assert.match(description.textContent, /개인정보 동의가 필요/);
   assert.equal(note.hidden, true);
   await harness.click();
   assert.deepEqual(harness.patches, [{ web_messenger_enabled: true }]);
@@ -138,10 +138,10 @@ test("messenger consent and status copy follow the main app language in all twen
     reviewMessengerPrivacy: "개인정보 안내 확인",
     messengerPrivacyTitle: "웹 메신저 읽기 번역 개인정보 안내",
     messengerPrivacyIntro: "웹 메신저 읽기 번역은 기본적으로 꺼져 있습니다. 동의한 브라우저에서만 사용할 수 있습니다.",
-    messengerPrivacyData: "현재 열린 대화의 메시지 본문만 별도로 설치한 NudeNyang Windows 앱에 전달하여 로컬 AI로 번역합니다.",
+    messengerPrivacyData: "현재 열린 대화의 메시지 본문·링크 미리보기 텍스트와 현재 Discord 서버의 보이는 채널 이름만 별도로 설치한 NudeNyang Windows 앱에서 로컬 AI로 번역합니다.",
     messengerPrivacyRetention: "확장 프로그램이 보관하는 대화 내용과 번역문은 메모리에서만 처리하며, 대화 전환 또는 종료 시 삭제합니다. 디스크 캐시, 번역 기록 또는 본문 로그에 저장하지 않습니다.",
     messengerPrivacyExternal: "외부 번역 서비스로 대화 내용을 전송하지 않습니다.",
-    messengerPrivacyNoSending: "입력 및 전송 기능을 사용하지 않으며, 이름과 연락처를 자동으로 번역하지 않습니다.",
+    messengerPrivacyNoSending: "입력 및 전송 기능을 사용하지 않으며, 사용자 이름과 연락처를 번역하지 않습니다.",
     messengerPrivacyConfirm: "이 브라우저에는 동의 기록과 설정만 저장됩니다. 위 내용을 확인하고 웹 메신저 읽기 번역에 동의합니다.",
     messengerPrivacyAccept: "동의하고 사용",
     messengerPrivacyRevoke: "동의 철회",

@@ -160,8 +160,7 @@
 
   function nearViewport(block) {
     if (!messengerSite) return isElementNearViewport(block, innerHeight, scheduling.viewportMargin);
-    if (!canReadConversation() || !messengerContext.root.contains(block)
-      || !messengerAdapters.isVisibleElement(block)) return false;
+    if (!canReadConversation() || !messengerAdapters.isEligibleMessageBlock(block, messengerContext)) return false;
     const rect = block.getBoundingClientRect();
     let top = Math.max(0, rect.top);
     let bottom = Math.min(innerHeight, rect.bottom);
@@ -310,7 +309,7 @@
         const oldKey = translationKey();
         const oldSettings = JSON.stringify(webSettings);
         const oldFailure = messengerFailure;
-        messengerConsent = consent?.granted === true && consent.consentVersion === 1;
+        messengerConsent = consent?.granted === true && consent.consentVersion === 2;
         if (response?.type === "status") {
           applyAppStatus(response);
           messengerFailure = "";
@@ -556,7 +555,10 @@
   function translationBlockFor(node) {
     if (!adapter) return null;
     const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
-    if (messengerSite && (!messengerContext || !element || !messengerContext.root.contains(element))) return null;
+    if (messengerSite && (!messengerContext || !element)) return null;
+    if (messengerSite && !messengerContext.root.contains(element)) {
+      return messengerAdapters.channelNameBlockFor(element, messengerContext);
+    }
     const semantic = closestTranslationBlock(node, blockSelector);
     if (semantic) return semantic;
     if (messengerSite) return null;
@@ -568,6 +570,9 @@
 
   function textEligibility(block, visibility = new WeakMap()) {
     if (excludedBlock(block)) return () => false;
+    if (messengerSite && messengerAdapters.channelNameBlockFor(block, messengerContext) === block) {
+      return (node) => canReadConversation() && messengerAdapters.channelNameTextAllowed(node, block, messengerContext);
+    }
     if (messengerSite) return (node) => {
       const parent = node.parentElement;
       if (!canReadConversation() || !parent || !block.contains(node)
@@ -615,6 +620,9 @@
 
   function isRestorableMessengerText(node) {
     const block = translationBlockFor(node);
+    if (block && messengerAdapters.channelNameBlockFor(block, messengerContext) === block) {
+      return messengerAdapters.channelNameTextAllowed(node, block, messengerContext, { restoring: true });
+    }
     if (!node?.isConnected || !block || block === messengerContext?.root
       || !messengerContext?.root.contains(block) || !block.matches(blockSelector)) return false;
     // Cleanup may restore an already translated, now-hidden message. It must
@@ -838,7 +846,7 @@
       requestId,
       pageId: messengerSite ? messengerPageId
         : `${adapter.id}:${location.origin}${location.pathname}`.slice(0, 240),
-      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 1 } } : {}),
+      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 2 } } : {}),
       targetLanguage: effectiveTargetLanguage(),
       items: batch.map(({ id, blockId: itemBlockId, text }) => ({ id, blockId: itemBlockId, text })),
     });
@@ -1077,6 +1085,12 @@
       return;
     }
     if (messengerSite) {
+      // Channel labels are individual allowlisted blocks outside the transcript,
+      // never permission to walk all text in the sidebar or document.
+      for (const block of messengerAdapters.selectChannelNameBlocks(messengerContext, root)) {
+        observeBlock(block);
+        if (enqueueVisible) enqueueBlock(block);
+      }
       if (root === document || root.contains(messengerContext.root)) root = messengerContext.root;
       else if (!messengerContext.root.contains(root)) return;
     }
@@ -1203,7 +1217,7 @@
         // A consent-saved broadcast may race this lookup; read a fresh snapshot.
         if (epoch !== appStatusEpoch) return null;
         const oldKey = translationKey();
-        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 1;
+        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 2;
         if (app?.type === "status") {
           applyAppStatus(app);
           messengerFailure = "";
@@ -1305,7 +1319,7 @@
       if (message.consent?.granted !== true) messengerStartRevision += 1;
       changeState(() => {
         const oldKey = translationKey();
-        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 1;
+        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 2;
         messengerFailure = "";
         handleNavigation();
         return refreshPageSettings(oldKey);
@@ -1371,7 +1385,7 @@
     // Keep the private gate closed until they apply instead of scanning with
     // a now-obsolete consent snapshot even for a single microtask.
     if (startupEpoch === appStatusEpoch) {
-      messengerConsent = consent?.granted === true && consent.consentVersion === 1;
+      messengerConsent = consent?.granted === true && consent.consentVersion === 2;
       applyAppStatus(appStatus);
     }
     assignPageContext(pageContext());

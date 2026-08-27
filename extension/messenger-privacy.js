@@ -1,5 +1,5 @@
 (function exposeMessengerPrivacy(root) {
-  const CONSENT_VERSION = 1;
+  const CONSENT_VERSION = 2;
   const CONSENT_KEY = "messengerConsentVersion";
   const LOCAL_TRANSLATORS = new Set(["hymt_1_8b", "hymt_7b", "translategemma_4b"]);
   const SERVICES = new Set(["x", "discord", "whatsapp", "telegram", "messenger", "slack", "teams", "google-messages"]);

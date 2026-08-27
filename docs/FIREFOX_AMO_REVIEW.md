@@ -4,7 +4,7 @@
 
 - Channel: public listing (`On this site` / listed)
 - Add-on ID: `web-translator@nudenyang.github.io`
-- Add-on version: `0.7.6`
+- Add-on version: `0.7.7`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
 - Companion application: a compatible NudeNyang Windows application with the web-messenger
   opt-in setting and private, local-only translation path described below
@@ -25,6 +25,19 @@ Major and minor versions identify the product generation; patch versions are ind
 matching generation alone does not establish support for the new privacy contract. The extension
 must receive `webSettings.messengerEnabled: true` from the compatible companion and otherwise
 keeps web-messenger reading disabled.
+
+## Changes in 0.7.7
+
+- Translate visible channel names in the current Discord server and the current channel title;
+  exclude DM contact names, categories, other servers, editors and hidden content.
+- Translate textual Discord link-preview titles, descriptions and fields within the current
+  transcript. Do not follow links, fetch attachments, translate provider/author metadata or OCR
+  images. These texts use the same local-only, temporary-memory private path as messages.
+- Require consent version 2 in the extension and compatible companion, with updated notices in
+  all 28 interface languages. Existing version-1 consent is not automatically expanded. The user
+  must review and explicitly accept the new scope; Firefox's optional grant remains required.
+- Add synthetic extraction, consent and lifecycle regressions. This is not a claim of completed
+  signed-in testing in web Discord. No additional browser permission category is introduced.
 
 ## Changes in 0.7.6
 
@@ -139,8 +152,11 @@ extension checks both its consent version and the currently granted Firefox perm
 private translation; removing either stops the feature. Consent is not shared through the main
 application with other browsers or profiles.
 
-After these gates pass, only message-body text currently visible in the open conversation is
-eligible. The extension does not open other conversations, collect hidden history, translate
+After these gates pass, message-body text currently visible in the open conversation is eligible.
+For Discord, this also includes link-preview titles, descriptions and textual fields in the same
+transcript, and visible channel names in the current server (not DM contact lists or other servers).
+Consent version 2 is mandatory; the user must accept the updated notice to replace a version-1
+grant. Existing consent is not automatically upgraded. The extension does not open other conversations, collect hidden history, translate
 author names or contact lists, read drafts or composer values, download attachments, perform OCR,
 or invoke sending controls. Message bodies can themselves contain names or other sensitive
 personal information; they are not guaranteed to be anonymized or automatically redacted.
@@ -153,7 +169,8 @@ require a supported local AI engine. Selecting an external provider, including a
 fallback, blocks this private path instead of sending the message body to that provider. Embedded
 video-title translation is not enabled within this private path.
 
-Conversation text and translations retained by the extension are kept in memory only. Changing or
+Eligible messenger text and translations, including Discord channel names and link-preview text,
+are kept in memory only. Changing or
 closing the conversation discards those retained copies; revoking consent or disabling the feature
 also clears pending private work and retained results. Late results from a previous conversation
 or consent state are ignored. This does not delete messages from the website itself. An already
@@ -181,7 +198,8 @@ model KV-cache contents, and these notes do not make that guarantee.
 - Required `websiteContent`: declares the visible webpage text processed for Firefox users.
 - Required `browsingActivity`: declares the current page protocol, hostname, and path used locally to keep
   translation requests and context separated by page. Query strings and URL fragments are excluded.
-- Optional `personalCommunications`: declares the message-body text sent outside the add-on to the
+- Optional `personalCommunications`: declares eligible messenger text, including the disclosed
+  Discord channel names and link-preview text, sent outside the add-on to the
   local Windows companion for the explicitly enabled web-messenger feature. Local processing does
   not remove the need for this Firefox declaration. It is requested with
   `permissions.request({ data_collection: ["personalCommunications"] })` from the consent action,

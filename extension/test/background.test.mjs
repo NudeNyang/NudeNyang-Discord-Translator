@@ -256,7 +256,7 @@ test("동의 조회가 늦게 끝난 이전 허용 알림은 최신 철회 알�
   background.listeners.storageChanged({ messengerConsentVersion: { oldValue: 1, newValue: 0 } }, "local");
   consentReads[1]({ granted: false, consentVersion: 0 });
   await Promise.resolve();
-  consentReads[0]({ granted: true, consentVersion: 1 });
+  consentReads[0]({ granted: true, consentVersion: 2 });
   await Promise.resolve();
   assert.equal(invalidations, 2);
   assert.deepEqual(delivered, [false]);
@@ -268,7 +268,7 @@ test("탭 조회가 지연된 허용 알림은 Firefox 권한 철회 뒤에 도�
   let granted = true;
   const background = createBackground({}, {
     privacy: {
-      getConsent: async () => ({ granted, consentVersion: granted ? 1 : 0 }),
+      getConsent: async () => ({ granted, consentVersion: granted ? 2 : 0 }),
       invalidate: () => {},
     },
     queryTabs: (_query, callback) => queries.push(callback),
