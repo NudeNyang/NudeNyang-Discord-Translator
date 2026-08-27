@@ -4,7 +4,7 @@
 
 - Channel: public listing (`On this site` / listed)
 - Add-on ID: `web-translator@nudenyang.github.io`
-- Add-on version: `0.7.7`
+- Add-on version: `0.7.8`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
 - Companion application: a compatible NudeNyang Windows application with the web-messenger
   opt-in setting and private, local-only translation path described below
@@ -25,6 +25,18 @@ Major and minor versions identify the product generation; patch versions are ind
 matching generation alone does not establish support for the new privacy contract. The extension
 must receive `webSettings.messengerEnabled: true` from the compatible companion and otherwise
 keeps web-messenger reading disabled.
+
+## Changes in 0.7.8
+
+- Keep X Chat conversation identity stable when virtual scrolling replaces the first message
+  or temporarily empties the list. Only the modern panel/scroller on an explicit conversation
+  route uses this identity; route/panel changes and unsupported public drawers remain guarded.
+- Keep already translated, connected X messages in the current conversation's memory when
+  scrolling clips them from view. Permission refresh does not restore these nodes to the original
+  text, reread them, or submit new offscreen content. Detached, hidden or repurposed nodes do not
+  receive this retention exception. Navigation, revocation and explicit OFF still clear state.
+- Add synthetic scroll/lifecycle regressions. Live Whale scroll behavior still requires user
+  confirmation after reload. Consent remains version 2; no new scope or permission is introduced.
 
 ## Changes in 0.7.7
 

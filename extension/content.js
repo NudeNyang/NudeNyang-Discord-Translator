@@ -642,10 +642,24 @@
     trackedNodes.delete(node);
   }
 
-  function pruneMessengerTranslations({ restoring = false } = {}) {
+  function retainClippedXTranslation(node) {
+    // Retain only an already acquired translation in this conversation. This
+    // structural check must not read offscreen node values or authorize a new
+    // extraction/application. Hidden, detached or repurposed UI still expires.
+    if (messengerSite?.id !== "x" || !canReadConversation()
+      || nodeStates.get(node)?.translated == null || !isRestorableMessengerText(node)
+      || !messengerAdapters.isVisibleElement(node.parentElement)) return false;
+    return !nearViewport(translationBlockFor(node));
+  }
+
+  function pruneMessengerTranslations({ restoring = false, clipped = null } = {}) {
     if (!messengerSite) return 0;
     let removed = 0;
     for (const node of trackedNodes) {
+      if (!restoring && clipped && retainClippedXTranslation(node)) {
+        clipped.add(node);
+        continue;
+      }
       if (restoring ? isRestorableMessengerText(node) : isCurrentMessengerText(node)) continue;
       forgetMessengerText(node, { restore: !restoring });
       removed += 1;
@@ -989,8 +1003,16 @@
 
   function replayTranslations() {
     if (!canReadConversation()) return { changed: 0, removed: 0 };
-    const removed = pruneMessengerTranslations();
-    const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, true);
+    const clipped = new Set();
+    const removed = pruneMessengerTranslations({ clipped });
+    // A retained, clipped X node is left untouched, not read/replayed offscreen.
+    const displayNodes = clipped.size ? new Set([...trackedNodes].filter((node) => !clipped.has(node))) : trackedNodes;
+    const result = syncTrackedTranslationDisplay(displayNodes, nodeStates, true);
+    if (clipped.size) {
+      for (const node of trackedNodes) {
+        if (!clipped.has(node) && !displayNodes.has(node)) trackedNodes.delete(node);
+      }
+    }
     result.removed += removed;
     if (result.changed > 0 || result.removed > 0) {
       logDiagnostic("cached-translations-replayed", result);

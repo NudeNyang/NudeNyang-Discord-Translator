@@ -166,7 +166,8 @@ for (const entry of cases) {
       assert.ok(Array.isArray(context.blocks));
       assert.ok(Array.isArray(context.excludes));
       assert.equal(context.identityNodes[0], context.root);
-      assert.equal(context.identityNodes[1], selectMessageBlocks(context)[0]);
+      assert.equal(context.identityNodes[1], entry.url === X_CHAT_URL
+        ? document.querySelector('[data-testid="dm-conversation-panel"]') : selectMessageBlocks(context)[0]);
     } finally { dom.window.close(); }
   });
 }
@@ -199,6 +200,30 @@ test("정확한 HTTPS 서비스와 읽기 경로만 식별한다", () => {
     "not a url", "about:blank",
   ];
   for (const url of rejected) assert.equal(siteForLocation(url), null, url);
+});
+
+test("빈 X 가상 목록의 안정 식별은 명시적 대화 경로와 읽기 패널에만 허용한다", () => {
+  const dom = new JSDOM(X_CHAT, { url: X_CHAT_URL, pretendToBeVisual: true });
+  try {
+    const { document, location } = dom.window;
+    const first = contextForDocument(location, document);
+    first.root.replaceChildren();
+    const empty = contextForDocument(location, document);
+    assert.deepEqual(empty.identityNodes, first.identityNodes);
+    assert.deepEqual(selectMessageBlocks(empty), []);
+    for (const path of ["/i/chat", "/messages", "/i/chat/compose", "/settings", "/home"]) {
+      assert.equal(contextForDocument(new URL(path, location.href), document), null, path);
+    }
+    first.root.setAttribute("contenteditable", "true");
+    assert.equal(contextForDocument(location, document), null);
+    first.root.removeAttribute("contenteditable");
+    const panel = document.querySelector('[data-testid="dm-conversation-panel"]');
+    const replacement = panel.cloneNode(true);
+    panel.replaceWith(replacement);
+    const next = contextForDocument(location, document);
+    assert.notEqual(next.identityNodes[0], first.identityNodes[0]);
+    assert.notEqual(next.identityNodes[1], first.identityNodes[1]);
+  } finally { dom.window.close(); }
 });
 
 test("서비스 경로여도 실제 대화가 없으면 일반 본문을 메신저로 취급하지 않는다", () => {

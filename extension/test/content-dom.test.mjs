@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
-import { X_CHAT, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
+import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
 import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
 
 const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"].map((file) => (
@@ -296,6 +296,69 @@ test("새 X 채팅의 스크롤러 밖으로 잘린 본문은 수집하지 않�
   assert.equal(reads(), 0);
 });
 
+test("X 가상 스크롤의 첫 메시지 추가·제거는 같은 대화의 번역을 초기화하지 않는다", async (t) => {
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false });
+  await p.message({ type: "nudenyang-ready" });
+  const before = await p.message({ type: "nudenyang-status" });
+  await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+  const body = p.w.document.querySelector("#body-two");
+  await waitFor(() => body.textContent.startsWith("번역("), "X message initially translated");
+  const translated = body.textContent;
+  const firstRow = p.w.document.querySelector("#body-one").closest("[data-index]");
+  firstRow.insertAdjacentHTML("beforebegin", xChatMessage("older-body", "An older synthetic message."));
+  const older = p.w.document.querySelector("#older-body").closest("[data-index]");
+  older.setAttribute("data-offscreen", "");
+  let after = await p.message({ type: "nudenyang-status" });
+  assert.equal(after.messengerContextId, before.messengerContextId, "prepending history must not change the conversation nonce");
+  assert.equal(after.enabled, true, "conversation-only consent start survives scroll");
+  assert.equal(body.textContent, translated);
+  older.remove();
+  firstRow.remove();
+  after = await p.message({ type: "nudenyang-status" });
+  assert.equal(after.messengerContextId, before.messengerContextId, "unmounting the first row must not reset the conversation");
+  assert.equal(body.textContent, translated);
+  assert.equal(p.requests.length, 1, "unchanged messages are not retransmitted");
+});
+
+test("X 스크롤 중 잠시 비는 메시지 목록은 대화 전환으로 처리하지 않는다", async (t) => {
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false, deferTranslation: true });
+  await p.message({ type: "nudenyang-ready" });
+  const before = await p.message({ type: "nudenyang-status" });
+  await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+  await waitFor(() => p.requests.length === 1, "X translation started");
+  const root = p.w.document.querySelector('[data-testid="dm-message-scroller"]');
+  const rows = [...root.querySelectorAll("[data-index]")];
+  const parent = rows[0].parentElement;
+  rows.forEach((row) => row.remove());
+  const empty = await p.message({ type: "nudenyang-status" });
+  assert.equal(empty.messengerContextId, before.messengerContextId);
+  assert.equal(empty.enabled, true);
+  parent.append(...rows);
+  p.releaseTranslation();
+  await waitFor(() => p.w.document.querySelector("#body-two").textContent.startsWith("번역("), "pending translation survives transient empty list");
+  assert.equal(p.requests.length, 1);
+});
+
+test("X 스크롤로 가려진 번역은 상태 갱신에도 보존하고 새 본문은 읽지 않는다", async (t) => {
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL });
+  await p.message({ type: "nudenyang-ready" });
+  const body = p.w.document.querySelector("#body-two");
+  await waitFor(() => body.textContent.startsWith("번역("), "initial X translation applied");
+  const translated = body.textContent;
+  body.setAttribute("data-offscreen", "");
+  const reads = watchNodeValueReads(p.w, body.firstChild.firstChild);
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 2 } });
+  assert.equal(body.textContent, translated, "permission refresh must not restore clipped translations");
+  assert.equal(reads(), 0, "retaining an existing result must not reread offscreen text");
+  body.removeAttribute("data-offscreen");
+  p.intersect(body);
+  await p.message({ type: "nudenyang-status" });
+  assert.equal(body.textContent, translated);
+  assert.equal(p.requests.length, 1);
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
+  assert.equal(body.textContent, "A neutral outgoing message.");
+});
+
 test("새 X 채팅의 대화 이동·동의 철회는 진행 중 결과와 사본을 폐기한다", async (t) => {
   for (const action of ["navigate", "revoke"]) {
     const options = { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false, deferTranslation: true };
@@ -319,6 +382,51 @@ test("새 X 채팅의 대화 이동·동의 철회는 진행 중 결과와 사�
     await new Promise((resolve) => setTimeout(resolve, 150));
     assert.equal(p.requests.length, count, action);
     assert.ok(!p.w.document.querySelector('[data-testid="dm-message-scroller"]').textContent.includes("번역("), action);
+  }
+});
+
+test("X 스크롤 보존 중에도 패널 교체·대화 이동·철회·OFF는 사본을 정리한다", async (t) => {
+  for (const action of ["panel", "navigate", "revoke", "off"]) {
+    const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false });
+    await p.message({ type: "nudenyang-ready" });
+    const before = await p.message({ type: "nudenyang-status" });
+    await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+    const body = p.w.document.querySelector("#body-two");
+    await waitFor(() => body.textContent.startsWith("번역("), "X translation applied");
+    body.setAttribute("data-offscreen", "");
+    if (action === "panel") {
+      p.w.document.querySelector('[data-testid="dm-conversation-panel"]').outerHTML = X_CHAT_PANEL;
+    } else if (action === "navigate") {
+      p.w.history.pushState({}, "", "/i/chat/next-synthetic-conversation");
+    } else if (action === "revoke") {
+      await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
+    } else {
+      await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    }
+    const after = await p.message({ type: "nudenyang-status" });
+    assert.equal(after.enabled, false, action);
+    assert.equal(after.translatedNodes, 0, action);
+    assert.equal(p.w.document.querySelector("#body-two").textContent, "A neutral outgoing message.", action);
+    assert.equal(p.requests.length, 1, action);
+  }
+});
+
+test("X 화면 밖 노드가 입력·작성자·숨김 영역으로 바뀌면 스크롤 보존 예외를 적용하지 않는다", async (t) => {
+  for (const action of ["editor", "author", "hidden"]) {
+    const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL });
+    await p.message({ type: "nudenyang-ready" });
+    const body = p.w.document.querySelector("#body-two");
+    await waitFor(() => body.textContent.startsWith("번역("), "initial result applied");
+    body.setAttribute("data-offscreen", "");
+    if (action === "editor") body.setAttribute("contenteditable", "true");
+    if (action === "author") body.setAttribute("data-testid", "messageSender");
+    if (action === "hidden") body.hidden = true;
+    body.firstChild.firstChild.nodeValue = "A repurposed synthetic value.";
+    const reads = watchNodeValueReads(p.w, body.firstChild.firstChild);
+    await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 2 } });
+    assert.equal(reads(), 0, action);
+    assert.equal(body.textContent, "A repurposed synthetic value.", action);
+    assert.equal(p.requests.length, 1, action);
   }
 });
 

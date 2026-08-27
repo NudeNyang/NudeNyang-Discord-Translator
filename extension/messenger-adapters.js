@@ -23,6 +23,8 @@
     'a[href^="mailto:"]', 'a[href^="tel:"]',
   ]);
 
+  const X_CHAT_ROOT = '[data-testid="dm-conversation-panel"] [data-testid="dm-conversation-content"] [data-testid="dm-message-scroller"][role="log"]';
+
   const SERVICES = Object.freeze([
     {
       id: "x", label: "X",
@@ -32,7 +34,7 @@
         '[data-testid="DmActivityViewport"]', '[data-testid="dm-conversation-messages"]',
         // Current X Chat: the inbox is a sibling of the conversation panel.
         // Do not use dm-container, the whole panel, or an arbitrary role=log.
-        '[data-testid="dm-conversation-panel"] [data-testid="dm-conversation-content"] [data-testid="dm-message-scroller"][role="log"]',
+        X_CHAT_ROOT,
       ],
       blocks: [
         '[data-testid="messageEntry"] [data-testid="tweetText"]',
@@ -407,8 +409,16 @@
             ];
           }
           const first = firstMessageBlock(context, visibilityCache);
-          if (!first && !selectChannelNameBlocks(context).length) continue;
-          context.identityNodes = first ? [root, first] : [root];
+          // X Chat virtualizes rows: scrolling prepends/removes the first body
+          // and can briefly empty the list. Only on an explicit conversation
+          // route is the panel + scroller a stable identity without a message.
+          // Public drawers / inbox routes keep the conservative body identity.
+          const stableXPanel = service.id === "x"
+            && /^\/(?:messages|i\/chat)\/[^/]+\/?$/.test(url.pathname)
+            && root.matches(X_CHAT_ROOT) && !excludedInsideRoot(root, context)
+            ? root.closest('[data-testid="dm-conversation-panel"]') : null;
+          if (!first && !stableXPanel && !selectChannelNameBlocks(context).length) continue;
+          context.identityNodes = stableXPanel ? [root, stableXPanel] : first ? [root, first] : [root];
           contexts.push(context);
         }
       }

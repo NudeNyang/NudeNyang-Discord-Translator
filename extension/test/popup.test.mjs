@@ -99,7 +99,10 @@ test("페이지 번역 상태는 현재 탭에 저장되어 다음 페이지에�
 
 test("웹 번역을 다시 켜면 저장된 번역을 즉시 재생하고 미완료 문단만 다시 수집한다", () => {
   assert.match(contentJs, /replayTranslations\(\);\s*scan\(document,\s*\{\s*enqueueVisible:\s*true\s*\}\)/);
-  assert.match(contentJs, /syncTrackedTranslationDisplay\(trackedNodes,\s*nodeStates,\s*true\)/);
+  // X may retain clipped translations without reading/replaying those nodes.
+  // The full tracked set is still used when there are no clipped exceptions.
+  assert.match(contentJs, /const displayNodes = clipped\.size \? [^\n]+ : trackedNodes;/);
+  assert.match(contentJs, /syncTrackedTranslationDisplay\(displayNodes,\s*nodeStates,\s*true\)/);
 });
 
 test("동적으로 펼친 게시물은 일반 웹 대기열보다 먼저 번역한다", () => {
