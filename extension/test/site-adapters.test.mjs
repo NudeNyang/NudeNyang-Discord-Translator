@@ -246,15 +246,18 @@ test("X 사진 뷰어 대화상자에서도 게시물과 기사 카드 본문을
 test("X 기사 카드와 긴 형식 기사 본문을 번역 대상으로 포함한다", () => {
   const x = adapterForLocation(new URL("https://x.com/nudenyang/article/123"));
   const articleCard = "article [data-testid='card.wrapper'] [dir='auto']";
+  const semanticArticleCard = "article [role='link'] [dir='auto']";
   const articleTitle =
     "[data-testid='twitterArticleReadView'] [data-testid='twitter-article-title']";
   const articleParagraph =
     "[data-testid='twitterArticleReadView'] section[data-block='true']";
 
   assert.ok(x.blocks.includes(articleCard));
+  assert.ok(x.blocks.includes(semanticArticleCard));
   assert.ok(x.blocks.includes(articleTitle));
   assert.ok(x.blocks.includes(articleParagraph));
   assert.ok(x.exclusionBypassBlocks.includes(articleCard));
+  assert.ok(x.exclusionBypassBlocks.includes(semanticArticleCard));
   assert.ok(x.exclusionBypassBlocks.includes(articleTitle));
   assert.ok(x.exclusionBypassBlocks.includes(articleParagraph));
   assert.ok(!x.blocks.some((selector) => selector.includes("markdown-code-block")));

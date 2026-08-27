@@ -36,6 +36,8 @@
 
   const X_ARTICLE_BLOCKS = [
     "article [data-testid='card.wrapper'] [dir='auto']",
+    // Newer X article previews use a semantic link container without card.wrapper.
+    "article [role='link'] [dir='auto']",
     "[data-testid='twitterArticleReadView'] [data-testid='twitter-article-title']",
     "[data-testid='twitterArticleReadView'] .longform-header-one",
     "[data-testid='twitterArticleReadView'] .longform-header-one-narrow",
