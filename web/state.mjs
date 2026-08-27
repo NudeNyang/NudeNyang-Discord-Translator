@@ -12,6 +12,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   translate_nicknames: true,
   web_translation_enabled: false,
   web_extension_setup_version: 1,
+  disabled_browser_connections: [],
   web_messenger_enabled: false,
   web_target_language: "display",
   web_processing_mode: "balanced",

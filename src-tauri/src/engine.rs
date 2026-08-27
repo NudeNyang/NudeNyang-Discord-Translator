@@ -13,7 +13,7 @@ use tauri_plugin_opener::OpenerExt;
 
 use crate::cache::{CacheCleanupResult, TranslationCache};
 use crate::cdp::CdpClient;
-use crate::config::{default_config_path, AppConfig, ConfigStore};
+use crate::config::{browser_connection_enabled, default_config_path, AppConfig, ConfigStore};
 use crate::dictionary::{DictionaryLookupResult, DictionaryStore, PersonalDictionaryEntry};
 use crate::dictionary_ui::{
     apply_dictionary_error_script, apply_dictionary_result_script, apply_dictionary_saved_script,
@@ -114,13 +114,23 @@ pub struct BrowserTranslationRequest {
     pub target_language: Option<String>,
     #[serde(default)]
     pub private_context: Option<BrowserPrivateContext>,
+    #[serde(default)]
+    pub client: BrowserTranslationClient,
     pub items: Vec<BrowserTranslationItem>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct BrowserTranslationClient {
+    #[serde(default)]
+    pub browser: String,
 }
 
 // Updated synchronously when settings are saved, independently from controller
 // and model queues. Turning a permission OFF and ON must not revive old work.
 struct BrowserTranslationPolicy {
     revision: u64,
+    browser_revisions: HashMap<String, u64>,
+    disabled_browsers: Vec<String>,
     web_enabled: bool,
     messenger_enabled: bool,
     translator: String,
@@ -130,6 +140,8 @@ impl BrowserTranslationPolicy {
     fn new(config: &AppConfig) -> Self {
         Self {
             revision: 0,
+            browser_revisions: HashMap::new(),
+            disabled_browsers: config.disabled_browser_connections.clone(),
             web_enabled: config.web_translation_enabled,
             messenger_enabled: config.web_messenger_enabled,
             translator: config.translator.clone(),
@@ -137,6 +149,18 @@ impl BrowserTranslationPolicy {
     }
 
     fn update(&mut self, config: &AppConfig) {
+        for browser in ["chrome", "whale", "firefox", ""] {
+            if browser_connection_enabled(&self.disabled_browsers, browser)
+                != browser_connection_enabled(&config.disabled_browser_connections, browser)
+            {
+                let revision = self
+                    .browser_revisions
+                    .entry(browser.to_string())
+                    .or_default();
+                *revision = revision.wrapping_add(1);
+            }
+        }
+        self.disabled_browsers = config.disabled_browser_connections.clone();
         if self.web_enabled != config.web_translation_enabled
             || self.messenger_enabled != config.web_messenger_enabled
             || self.translator != config.translator
@@ -169,16 +193,36 @@ struct BrowserTranslationPermit {
     policy: Arc<Mutex<BrowserTranslationPolicy>>,
     revision: u64,
     private: bool,
+    browser: String,
+    browser_revision: u64,
 }
 
 impl BrowserTranslationPermit {
-    fn issue(policy: &Arc<Mutex<BrowserTranslationPolicy>>, private: bool) -> Result<Self, String> {
+    fn issue(
+        policy: &Arc<Mutex<BrowserTranslationPolicy>>,
+        private: bool,
+        browser: &str,
+    ) -> Result<Self, String> {
+        let browser = if matches!(browser, "chrome" | "whale" | "firefox") {
+            browser
+        } else {
+            ""
+        };
         let current = policy.lock().map_err(|_| browser_permission_cancelled())?;
+        if !browser_connection_enabled(&current.disabled_browsers, browser) {
+            return Err(browser_connection_cancelled());
+        }
         current.check(private)?;
         Ok(Self {
             policy: policy.clone(),
             revision: current.revision,
             private,
+            browser: browser.to_string(),
+            browser_revision: current
+                .browser_revisions
+                .get(browser)
+                .copied()
+                .unwrap_or_default(),
         })
     }
 
@@ -187,6 +231,16 @@ impl BrowserTranslationPermit {
             .policy
             .lock()
             .map_err(|_| browser_permission_cancelled())?;
+        if !browser_connection_enabled(&current.disabled_browsers, &self.browser)
+            || current
+                .browser_revisions
+                .get(&self.browser)
+                .copied()
+                .unwrap_or_default()
+                != self.browser_revision
+        {
+            return Err(browser_connection_cancelled());
+        }
         current.check(self.private)?;
         if self.private && current.revision != self.revision {
             return Err(browser_permission_cancelled());
@@ -197,6 +251,11 @@ impl BrowserTranslationPermit {
 
 fn browser_permission_cancelled() -> String {
     "[messenger_request_cancelled] 웹 메신저 번역 설정이 변경되어 이전 요청을 취소했습니다."
+        .to_string()
+}
+
+fn browser_connection_cancelled() -> String {
+    "[browser_connection_disabled] 브라우저 연결이 해제되어 이전 번역 요청을 취소했습니다."
         .to_string()
 }
 
@@ -743,6 +802,7 @@ impl RustEngine {
         let permit = BrowserTranslationPermit::issue(
             &self.browser_policy,
             request.private_context.is_some(),
+            &request.client.browser,
         )?;
         let (result_tx, result_rx) = mpsc::channel();
         self.controls
@@ -2974,6 +3034,7 @@ fn run_translation_worker(
                     page_id,
                     target_language: _,
                     private_context,
+                    client: _,
                     items,
                 } = request;
                 if private_context.is_none() {
@@ -3891,6 +3952,7 @@ mod tests {
             page_id: "github:https://github.com/example/project".to_string(),
             target_language: Some("ko".to_string()),
             private_context: None,
+            client: Default::default(),
             items: items
                 .into_iter()
                 .map(|(id, block_id, text)| BrowserTranslationItem {
@@ -3976,6 +4038,50 @@ mod tests {
     }
 
     #[test]
+    fn browser_disconnect_invalidates_only_that_browsers_pending_work_even_after_reconnect() {
+        for private in [false, true] {
+            let mut config = AppConfig {
+                web_translation_enabled: true,
+                web_messenger_enabled: true,
+                translator: "mock".to_string(),
+                ..Default::default()
+            };
+            let policy = Arc::new(Mutex::new(BrowserTranslationPolicy::new(&config)));
+            let chrome = BrowserTranslationPermit::issue(&policy, private, "chrome").unwrap();
+            let whale = BrowserTranslationPermit::issue(&policy, private, "whale").unwrap();
+            let unknown = BrowserTranslationPermit::issue(&policy, private, "unknown").unwrap();
+            config
+                .disabled_browser_connections
+                .push("chrome".to_string());
+            policy.lock().unwrap().update(&config);
+            assert!(chrome
+                .check()
+                .unwrap_err()
+                .starts_with("[browser_connection_disabled]"));
+            assert!(whale.check().is_ok());
+            assert!(BrowserTranslationPermit::issue(&policy, private, "chrome").is_err());
+            config.disabled_browser_connections.clear();
+            policy.lock().unwrap().update(&config);
+            assert!(
+                chrome.check().is_err(),
+                "reconnecting must not revive old work"
+            );
+            assert!(
+                unknown.check().is_err(),
+                "unknown identity shares a revocable legacy permit"
+            );
+            assert!(
+                whale.check().is_ok(),
+                "another browser must not be cancelled"
+            );
+            assert!(BrowserTranslationPermit::issue(&policy, private, "chrome")
+                .unwrap()
+                .check()
+                .is_ok());
+        }
+    }
+
+    #[test]
     fn private_browser_policy_denies_by_default_and_disallows_every_external_provider() {
         let mut config = AppConfig {
             web_translation_enabled: true,
@@ -4025,7 +4131,7 @@ mod tests {
             ..Default::default()
         };
         let policy = Arc::new(Mutex::new(BrowserTranslationPolicy::new(&config)));
-        let permit = BrowserTranslationPermit::issue(&policy, true).unwrap();
+        let permit = BrowserTranslationPermit::issue(&policy, true, "").unwrap();
         assert!(permit.check().is_ok());
         config.web_messenger_enabled = false;
         policy.lock().unwrap().update(&config);
@@ -4039,11 +4145,11 @@ mod tests {
             .check()
             .unwrap_err()
             .starts_with("[messenger_request_cancelled]"));
-        assert!(BrowserTranslationPermit::issue(&policy, true)
+        assert!(BrowserTranslationPermit::issue(&policy, true, "")
             .unwrap()
             .check()
             .is_ok());
-        let permit = BrowserTranslationPermit::issue(&policy, true).unwrap();
+        let permit = BrowserTranslationPermit::issue(&policy, true, "").unwrap();
         config.translator = "deepl".to_string();
         policy.lock().unwrap().update(&config);
         assert!(permit

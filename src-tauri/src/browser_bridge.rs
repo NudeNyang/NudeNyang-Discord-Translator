@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::config::{default_config_path, ConfigStore};
+use crate::config::{browser_connection_enabled, default_config_path, ConfigStore};
 use crate::engine::{BrowserTranslationRequest, RustEngine};
 
 const PROTOCOL_VERSION: u8 = 1;
@@ -298,6 +298,16 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string();
+    // Read the saved choice for every request, including an already-open native
+    // port. Heartbeats may report presence but must never enable a connection.
+    match app.state::<ConfigStore>().get() {
+        Ok(config) => {
+            if let Some(response) = disconnected_response(&config, &request) {
+                return response;
+            }
+        }
+        Err(error) => return error_response(&request_id, "app_state_unavailable", &error, true),
+    }
     match request.get("type").and_then(Value::as_str) {
         // Onboarding/liveness must work without starting inference, changing
         // permissions, or depending on a Discord session.
@@ -428,8 +438,40 @@ fn connection_response(request_id: &str) -> Value {
     })
 }
 
+fn disconnected_response(config: &crate::config::AppConfig, request: &Value) -> Option<Value> {
+    if matches!(
+        request.get("type").and_then(Value::as_str),
+        Some("openWebSettings" | "cancel")
+    ) {
+        return None;
+    }
+    let browser = request
+        .pointer("/client/browser")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if browser_connection_enabled(&config.disabled_browser_connections, browser) {
+        return None;
+    }
+    let request_id = request
+        .get("requestId")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let mut response = error_response(
+        request_id,
+        "browser_connection_disabled",
+        "메인 앱의 웹 번역 설정에서 이 브라우저를 다시 연결하십시오.",
+        false,
+    );
+    let (language, resolved) = interface_language_value(&config.ui_language);
+    response["appConnected"] = json!(false);
+    response["uiLanguage"] = json!(language);
+    response["resolvedUiLanguage"] = json!(resolved);
+    Some(response)
+}
+
 fn translation_error_response(request_id: &str, error: &str) -> Value {
     for code in [
+        "browser_connection_disabled",
         "web_translation_disabled",
         "messenger_disabled",
         "messenger_local_only",
@@ -881,6 +923,41 @@ mod tests {
         let envelope = super::parse_bridge_envelope(&valid).unwrap();
         assert_eq!(envelope.token, "test-token");
         assert_eq!(envelope.request["items"][0]["text"], private_text);
+    }
+
+    #[test]
+    fn disconnected_browser_cannot_ping_translate_or_change_settings_but_can_open_recovery() {
+        let config = crate::config::AppConfig {
+            disabled_browser_connections: vec!["chrome".to_string()],
+            ui_language: "ja".to_string(),
+            ..Default::default()
+        };
+        for kind in [
+            "connectionPing",
+            "hello",
+            "status",
+            "translate",
+            "webSettingsUpdate",
+        ] {
+            let mut request = serde_json::json!({"type": kind, "requestId": "blocked", "client": {"browser": "chrome"}});
+            let response = super::disconnected_response(&config, &request).unwrap();
+            assert_eq!(response["code"], "browser_connection_disabled");
+            assert_eq!(response["requestId"], "blocked");
+            assert_eq!(response["appConnected"], false);
+            assert_eq!(response["retryable"], false);
+            assert_eq!(response["resolvedUiLanguage"], "ja");
+            for browser in ["whale", "firefox"] {
+                request["client"]["browser"] = serde_json::json!(browser);
+                assert!(super::disconnected_response(&config, &request).is_none());
+            }
+            request.as_object_mut().unwrap().remove("client");
+            assert!(super::disconnected_response(&config, &request).is_some());
+        }
+        for kind in ["openWebSettings", "cancel"] {
+            let request = serde_json::json!({"type":kind,"client":{"browser":"chrome"}});
+            assert!(super::disconnected_response(&config, &request).is_none());
+        }
+        assert_eq!(config.disabled_browser_connections, ["chrome"]);
     }
 
     #[test]

@@ -70,6 +70,7 @@ pub struct AppConfig {
     pub translate_nicknames: bool,
     pub web_translation_enabled: bool,
     pub web_extension_setup_version: u32,
+    pub disabled_browser_connections: Vec<String>,
     pub web_messenger_enabled: bool,
     pub web_target_language: String,
     pub web_processing_mode: String,
@@ -118,6 +119,7 @@ impl Default for AppConfig {
             translate_nicknames: true,
             web_translation_enabled: false,
             web_extension_setup_version: WEB_EXTENSION_SETUP_VERSION,
+            disabled_browser_connections: Vec::new(),
             web_messenger_enabled: false,
             web_target_language: "display".to_string(),
             web_processing_mode: "balanced".to_string(),
@@ -212,6 +214,22 @@ impl AppConfig {
         }
         object.remove("kanana_device");
         object.remove("kanana_precision");
+
+        let mut disabled_browsers = object
+            .get("disabled_browser_connections")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .filter(|browser| matches!(*browser, "chrome" | "whale" | "firefox"))
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        disabled_browsers.sort();
+        disabled_browsers.dedup();
+        object.insert(
+            "disabled_browser_connections".to_string(),
+            Value::Array(disabled_browsers.into_iter().map(Value::String).collect()),
+        );
 
         let mut disabled_providers = object
             .get("disabled_providers")
@@ -526,12 +544,51 @@ fn matches_function_key(value: &str) -> bool {
         .is_some_and(|number| (1..=24).contains(&number))
 }
 
+pub fn browser_connection_enabled(disabled: &[String], browser: &str) -> bool {
+    if matches!(browser, "chrome" | "whale" | "firefox") {
+        !disabled.iter().any(|name| name == browser)
+    } else {
+        // Legacy requests without identity are compatible only while no browser
+        // is blocked. Omitting metadata must not bypass a disconnect.
+        disabled.is_empty()
+    }
+}
+
 pub struct ConfigStore {
     path: PathBuf,
     value: RwLock<AppConfig>,
 }
 
 impl ConfigStore {
+    pub fn set_browser_connection(
+        &self,
+        browser: &str,
+        enabled: bool,
+    ) -> Result<AppConfig, String> {
+        if !matches!(browser, "chrome" | "whale" | "firefox") {
+            return Err("unsupported_browser".to_string());
+        }
+        // Change only this browser under the same lock as the save, so another
+        // browser connecting concurrently cannot overwrite the user's choice.
+        let mut value = self
+            .value
+            .write()
+            .map_err(|_| "설정 쓰기 잠금을 열지 못했습니다.".to_string())?;
+        let mut updated = value.clone();
+        updated
+            .disabled_browser_connections
+            .retain(|name| name != browser);
+        if !enabled {
+            updated
+                .disabled_browser_connections
+                .push(browser.to_string());
+            updated.disabled_browser_connections.sort();
+        }
+        save_config(&self.path, &updated)?;
+        *value = updated.clone();
+        Ok(updated)
+    }
+
     pub fn load_default() -> Result<Self, String> {
         Self::load(default_config_path())
     }
@@ -686,38 +743,113 @@ mod tests {
     }
 
     #[test]
+    fn browser_disconnects_persist_independently_and_do_not_change_translation_or_consent() {
+        let path = temporary_settings_path("browser-disconnect");
+        let store = std::sync::Arc::new(ConfigStore::load(path.clone()).unwrap());
+        store
+            .update(json!({"web_translation_enabled": true, "web_messenger_enabled": true}))
+            .unwrap();
+        let workers = ["chrome", "whale"].map(|browser| {
+            let store = store.clone();
+            std::thread::spawn(move || store.set_browser_connection(browser, false).unwrap())
+        });
+        for worker in workers {
+            worker.join().unwrap();
+        }
+        let reloaded = ConfigStore::load(path.clone()).unwrap();
+        assert_eq!(
+            reloaded.get().unwrap().disabled_browser_connections,
+            ["chrome", "whale"]
+        );
+        let updated = reloaded.set_browser_connection("chrome", true).unwrap();
+        assert_eq!(updated.disabled_browser_connections, ["whale"]);
+        assert!(updated.web_translation_enabled);
+        assert!(updated.web_messenger_enabled);
+        assert!(reloaded.set_browser_connection("edge", false).is_err());
+        assert_eq!(
+            ConfigStore::load(path.clone()).unwrap().get().unwrap(),
+            updated
+        );
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn browser_disconnect_list_accepts_only_supported_browser_names() {
+        let config = AppConfig::from_value(json!({
+            "disabled_browser_connections": ["whale", "invalid", "chrome", "whale", 42]
+        }))
+        .unwrap();
+        assert_eq!(config.disabled_browser_connections, ["chrome", "whale"]);
+        assert!(super::browser_connection_enabled(
+            &config.disabled_browser_connections,
+            "firefox"
+        ));
+        assert!(!super::browser_connection_enabled(
+            &config.disabled_browser_connections,
+            ""
+        ));
+        assert!(!super::browser_connection_enabled(
+            &config.disabled_browser_connections,
+            "unknown"
+        ));
+        assert!(super::browser_connection_enabled(&[], ""));
+    }
+
+    #[test]
+    fn failed_browser_disconnect_save_does_not_change_the_active_choice() {
+        let path = temporary_settings_path("browser-disconnect-failed-save");
+        let store = ConfigStore::load(path.clone()).unwrap();
+        fs::create_dir(&path).unwrap();
+        assert!(store.set_browser_connection("chrome", false).is_err());
+        assert!(store.get().unwrap().disabled_browser_connections.is_empty());
+        fs::remove_dir(path).unwrap();
+    }
+
+    #[test]
     fn web_extension_setup_resets_existing_toggle_once_and_preserves_other_settings() {
         for previous in [true, false] {
             let path = temporary_settings_path("web-extension-setup");
-            fs::write(
-                &path,
-                serde_json::to_vec(&json!({
-                    "web_translation_enabled": previous,
-                    "web_messenger_enabled": true,
-                    "web_target_language": "ja",
-                    "web_site_policies": { "example.com": "always" }
-                }))
-                .unwrap(),
-            )
+            let mut expected = AppConfig::from_value(json!({
+                "web_translation_enabled": previous,
+                "web_messenger_enabled": true,
+                "web_target_language": "ja",
+                "web_site_policies": { "example.com": "always" },
+                "target_language": "en",
+                "outgoing_target_language": "zh-CN",
+                "outgoing_translation_enabled": true,
+                "translator": "deepl",
+                "outgoing_translator": "hymt_7b",
+                "ui_language": "ja",
+                "ui_theme": "dark",
+                "dictionary_enabled": false,
+                "auto_update": false,
+                "image_ocr_quality": "quality",
+                "hotkeys": { "toggle_translation": "F10" }
+            }))
             .unwrap();
+            let mut legacy = serde_json::to_value(&expected).unwrap();
+            legacy
+                .as_object_mut()
+                .unwrap()
+                .remove("web_extension_setup_version");
+            fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+            expected.web_translation_enabled = false;
             let store = ConfigStore::load(path.clone()).unwrap();
             let migrated = store.get().unwrap();
-            assert!(!migrated.web_translation_enabled);
-            assert!(migrated.web_messenger_enabled);
-            assert_eq!(migrated.web_target_language, "ja");
-            assert_eq!(migrated.web_site_policies["example.com"], "always");
+            assert_eq!(
+                migrated, expected,
+                "only the web toggle and migration marker change"
+            );
             let persisted: serde_json::Value =
                 serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-            assert_eq!(persisted["web_extension_setup_version"], 1);
+            assert_eq!(persisted, serde_json::to_value(&expected).unwrap());
             store
                 .update(json!({ "web_translation_enabled": true }))
                 .unwrap();
-            assert!(
-                ConfigStore::load(path.clone())
-                    .unwrap()
-                    .get()
-                    .unwrap()
-                    .web_translation_enabled
+            expected.web_translation_enabled = true;
+            assert_eq!(
+                ConfigStore::load(path.clone()).unwrap().get().unwrap(),
+                expected
             );
             fs::remove_file(path).unwrap();
         }

@@ -10,6 +10,25 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const appScript = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
+test("브라우저마다 연결 또는 해제 버튼 하나만 표시한다", async () => {
+  const h = harness();
+  await h.view.refresh();
+  for (const browser of ["chrome", "whale", "firefox"]) {
+    assert.equal(h.row(browser).querySelectorAll("button").length, 1);
+  }
+  const action = h.row("chrome").querySelector("button");
+  assert.equal(action.dataset.action, "connect");
+  assert.ok(action.classList.contains("provider-action"));
+  h.setClients([{ browser: "chrome", extensionVersion: "0.7.8", lastSeenAt: 999_999 }]);
+  await h.view.refresh();
+  assert.equal(h.row("chrome").querySelector("button"), action);
+  assert.equal(action.dataset.action, "disconnect");
+  assert.ok(action.classList.contains("provider-disconnect"));
+  action.click();
+  await flush();
+  assert.ok(h.calls.some(call => call.command === "browser_disconnect" && call.payload.browser === "chrome"));
+});
+
 test("웹 설정, 브라우저 연결, 사이트별 동작 순서이며 메신저 설명은 짧게 유지한다", () => {
   const document = new JSDOM(markup).window.document;
   const panel = document.querySelector('[data-settings-view="web"]');
@@ -47,6 +66,7 @@ test("웹 번역을 켜면 설치 안내를 표시하고 중복 클릭·끄기·
     showModal(options) { dialogs.push(options); return new Promise(resolve => { resolveDialog = resolve; }); },
     async showError(...args) { errors.push(args); },
     async loadBrowserClients() {},
+    browserConnections: { needsSetup: () => true },
   });
   button.addEventListener = (_type, callback) => { listener = callback; };
   vm.runInContext(appScript.match(/elements\.webTranslationEnabled\.addEventListener\("click", async \(\) => \{[\s\S]*?\n\}\);/)[0], context);
@@ -72,6 +92,61 @@ test("웹 번역을 켜면 설치 안내를 표시하고 중복 클릭·끄기·
   assert.equal(button.disabled, false);
 });
 
+test("이미 연결된 브라우저가 있으면 웹 번역을 다시 켜도 설치 안내나 화면 이동을 하지 않는다", async () => {
+  const document = new JSDOM(markup).window.document;
+  const button = document.querySelector("#web-translation-enabled");
+  const state = { config: { web_translation_enabled: false } };
+  let listener;
+  let refreshed = false;
+  let dialogs = 0;
+  let scrolled = 0;
+  const context = vm.createContext({
+    elements: {
+      webTranslationEnabled: button,
+      webBrowserClients: { scrollIntoView() { scrolled++; } },
+    },
+    state,
+    setSwitch(element, value) { element.setAttribute("aria-checked", String(value)); },
+    async applySettingsPatch(patch) { Object.assign(state.config, patch); },
+    async loadBrowserClients() { refreshed = true; },
+    browserConnections: { needsSetup() { assert.ok(refreshed); return false; } },
+    async showModal() { dialogs++; },
+    async showError(...args) { assert.fail(String(args)); },
+  });
+  button.addEventListener = (_type, callback) => { listener = callback; };
+  vm.runInContext(appScript.match(/elements\.webTranslationEnabled\.addEventListener\("click", async \(\) => \{[\s\S]*?\n\}\);/)[0], context);
+  await listener();
+  assert.equal(state.config.web_translation_enabled, true);
+  assert.equal(refreshed, true);
+  assert.equal(dialogs, 0);
+  assert.equal(scrolled, 0);
+  assert.equal(button.disabled, false);
+});
+
+test("설치 안내는 허용된 브라우저의 연결을 확인한 뒤에만 판단한다", async () => {
+  const h = harness();
+  assert.equal(h.view.needsSetup(), false, "loading is not evidence of a missing extension");
+  await h.view.refresh();
+  assert.equal(h.view.needsSetup(), true);
+  for (const browser of ["chrome", "whale", "firefox"]) {
+    h.setClients([{ browser, lastSeenAt: 999_999 }]);
+    await h.view.refresh();
+    assert.equal(h.view.needsSetup(), false, `${browser} alone is enough`);
+  }
+  h.setInstallations([
+    { browser: "firefox", installed: true, storeAvailable: false, connectionEnabled: false },
+    { browser: "whale", installed: true, storeAvailable: true, connectionEnabled: true },
+  ]);
+  await h.view.refresh();
+  assert.equal(h.view.needsSetup(), true, "a disabled browser's ping is not a connection");
+  h.setClients([{ browser: "firefox", lastSeenAt: 999_999 }, { browser: "whale", lastSeenAt: 999_999 }]);
+  await h.view.refresh();
+  assert.equal(h.view.needsSetup(), false, "another enabled browser remains usable");
+  h.setFailure(true);
+  await h.view.refresh();
+  assert.equal(h.view.needsSetup(), false, "failed status reads must not claim installation is required");
+});
+
 function harness() {
   const dom = new JSDOM('<div id="connections"></div>');
   const root = dom.window.document.querySelector("#connections");
@@ -81,6 +156,7 @@ function harness() {
   const calls = [];
   let action = async () => {};
   let failure = false;
+  let installationRead = null;
   let prefix = "";
   const view = createBrowserConnections({
     root, now: () => time, translate: text => prefix + text,
@@ -90,8 +166,13 @@ function harness() {
         if (failure) throw new Error("offline");
         return clients;
       }
-      if (command === "browser_installations") return installations;
-      return action(command, payload);
+      if (command === "browser_installations") return installationRead ? installationRead(installations) : installations;
+      const result = await action(command, payload);
+      if (["browser_connect", "browser_disconnect"].includes(command)) {
+        installations = installations.map(item => item.browser === payload.browser
+          ? { ...item, connectionEnabled: command === "browser_connect" } : item);
+      }
+      return result;
     },
   });
   return {
@@ -103,6 +184,7 @@ function harness() {
     setTime: value => { time = value; },
     setAction: value => { action = value; },
     setFailure: value => { failure = value; },
+    setInstallationRead: value => { installationRead = value; },
     setPrefix: value => { prefix = value; },
   };
 }
@@ -117,7 +199,7 @@ test("세 브라우저는 연결 전후 모두 유지되고 화면 갱신으로 
   h.setClients([{ browser: "chrome", extensionVersion: "0.7.8", lastSeenAt: 999_999 }]);
   await h.view.refresh();
   assert.equal(h.row("chrome").dataset.state, "connected");
-  assert.equal(h.button("chrome", "connect").dataset.tooltip, "스토어 열기");
+  assert.equal(h.button("chrome", "disconnect").dataset.tooltip, "연결 해제");
   assert.equal(h.button("whale", "connect"), whale);
   assert.equal(h.dom.window.document.activeElement, whale);
   assert.equal(h.root.children.length, 3);
@@ -135,7 +217,7 @@ test("한 브라우저의 설치 작업은 다른 브라우저 연결을 막지 
   assert.equal(h.button("whale", "connect").disabled, false);
   h.button("whale", "connect").click();
   await flush();
-  const opened = h.calls.filter(call => call.command === "browser_open_extension_store");
+  const opened = h.calls.filter(call => call.command === "browser_connect");
   assert.deepEqual(opened.map(call => call.payload), [{ browser: "chrome" }, { browser: "whale" }]);
   resolveChrome();
   await flush();
@@ -147,15 +229,16 @@ test("한 브라우저의 설치 작업은 다른 브라우저 연결을 막지 
   assert.equal(h.row("firefox").dataset.state, "unconfirmed");
 });
 
-test("연결 확인은 오래된 기록을 성공으로 쓰지 않고 새 응답이나 제한 시간을 기다린다", async () => {
+test("재연결은 오래된 기록을 성공으로 쓰지 않고 새 자동 응답이나 제한 시간을 기다린다", async () => {
   const h = harness();
+  h.setInstallations([{ browser: "chrome", installed: true, storeAvailable: true, connectionEnabled: false }]);
   h.setClients([{ browser: "chrome", lastSeenAt: 999_900 }]);
   await h.view.refresh();
-  h.button("chrome", "check").click();
+  h.button("chrome", "connect").click();
   await flush();
   assert.equal(h.row("chrome").dataset.state, "checking");
-  assert.ok(h.calls.some(call => call.command === "browser_repair_connection"));
-  assert.ok(!h.calls.some(call => call.command === "browser_open_extension_store"));
+  assert.ok(h.calls.some(call => call.command === "browser_connect"));
+  assert.equal(h.row("chrome").querySelectorAll("button").length, 1);
   h.setTime(1_100_000);
   h.view.render();
   assert.equal(h.row("chrome").dataset.state, "unconfirmed");
@@ -172,7 +255,7 @@ test("오래된 연결 기록이나 미래 시간은 현재 연결로 표시하�
   }
 });
 
-test("없는 브라우저와 미공개 스토어는 구분하고 기존 연결 확인은 계속 허용한다", async () => {
+test("없는 브라우저와 미공개 스토어는 구분하고 Firefox 기존 확장의 해제·재연결은 허용한다", async () => {
   const h = harness();
   h.setInstallations([
     { browser: "chrome", installed: true, storeAvailable: true },
@@ -183,9 +266,15 @@ test("없는 브라우저와 미공개 스토어는 구분하고 기존 연결 �
   assert.equal(h.button("chrome", "connect").disabled, false);
   assert.equal(h.button("whale", "connect").disabled, true);
   assert.equal(h.button("firefox", "connect").disabled, true);
-  assert.equal(h.button("firefox", "check").disabled, false);
   assert.match(h.row("whale").textContent, /브라우저 설치를 찾지/);
   assert.match(h.row("firefox").textContent, /스토어 심사 중/);
+  h.setClients([{ browser: "firefox", lastSeenAt: 999_999 }]);
+  await h.view.refresh();
+  assert.equal(h.button("firefox", "disconnect").disabled, false);
+  h.button("firefox", "disconnect").click();
+  await flush();
+  assert.equal(h.button("firefox", "connect").disabled, false);
+  assert.match(h.row("firefox").textContent, /사용 중지됨/);
 });
 
 test("실패한 작업은 다른 브라우저에 번지지 않고 다시 시도할 수 있다", async () => {
@@ -199,7 +288,7 @@ test("실패한 작업은 다른 브라우저에 번지지 않고 다시 시도�
   assert.equal(h.button("chrome", "connect").disabled, false);
   h.setPrefix("translated:");
   h.view.render();
-  assert.match(h.button("chrome", "check").dataset.tooltip, /^translated:/);
+  assert.match(h.button("chrome", "connect").dataset.tooltip, /^translated:/);
   h.setFailure(true);
   await h.view.refresh();
   assert.match(h.row("whale").textContent, /다시 시도하십시오/);
@@ -213,7 +302,7 @@ test("공식 브라우저 아이콘과 접근 가능한 아이콘 버튼으로 �
     assert.ok(row.classList.contains("provider-row"));
     assert.equal(row.querySelector("img").getAttribute("src"), `./assets/browser-${browser}.png`);
     assert.equal(row.querySelector("img").alt, "");
-    for (const action of ["connect", "check"]) {
+    for (const action of ["connect"]) {
       const button = h.button(browser, action);
       assert.ok(button.querySelector("svg[aria-hidden='true']"));
       assert.ok(button.getAttribute("aria-label"));
@@ -221,4 +310,41 @@ test("공식 브라우저 아이콘과 접근 가능한 아이콘 버튼으로 �
     }
     assert.doesNotMatch(row.textContent, /설치를 승인한 뒤|번역할 사이트에서/);
   }
+});
+
+test("해제한 브라우저는 새 자동 응답에도 켜지지 않고 다른 브라우저는 유지한다", async () => {
+  const h = harness();
+  h.setClients(["chrome", "whale"].map(browser => ({browser, lastSeenAt: 999_999})));
+  await h.view.refresh();
+  h.button("chrome", "disconnect").click();
+  await flush();
+  h.setTime(1_001_000);
+  h.setClients(["chrome", "whale"].map(browser => ({browser, lastSeenAt: 1_001_000})));
+  await h.view.refresh();
+  assert.equal(h.row("chrome").dataset.state, "disabled");
+  assert.equal(h.row("whale").dataset.state, "connected");
+  assert.ok(h.button("chrome", "connect").classList.contains("provider-action"));
+  assert.ok(h.button("whale", "disconnect").classList.contains("provider-disconnect"));
+  h.setAction(async () => { throw new Error("save failed"); });
+  h.button("whale", "disconnect").click();
+  await flush();
+  assert.equal(h.row("whale").dataset.state, "connected");
+  assert.equal(h.button("whale", "disconnect").disabled, false);
+});
+
+test("해제 직전 시작한 자동 조회가 늦게 끝나도 저장된 해제 상태를 다시 확인한다", async () => {
+  const h = harness();
+  h.setClients([{ browser: "chrome", lastSeenAt: 999_999 }]);
+  await h.view.refresh();
+  let finishOldRead;
+  h.setInstallationRead(snapshot => new Promise(resolve => { finishOldRead = () => resolve(snapshot); }));
+  const oldPoll = h.view.refresh();
+  h.setInstallationRead(null);
+  h.button("chrome", "disconnect").click();
+  await flush();
+  finishOldRead();
+  await oldPoll;
+  await flush();
+  assert.equal(h.row("chrome").dataset.state, "disabled");
+  assert.equal(h.button("chrome", "connect").disabled, false);
 });

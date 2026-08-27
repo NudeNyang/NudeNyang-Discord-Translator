@@ -76,50 +76,50 @@ export function createBrowserConnections({ root, invoke, translate = value => va
     statusBox.className = "provider-status";
     const actions = document.createElement("div");
     actions.className = "web-client-actions";
-    const connect = document.createElement("button");
-    connect.type = "button";
-    connect.className = "button secondary provider-icon-button";
-    connect.dataset.action = "connect";
-    connect.append(icon(["M9 15l6 -6", "M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464", "M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"]));
-    const check = document.createElement("button");
-    check.type = "button";
-    check.className = "button secondary provider-icon-button";
-    check.dataset.action = "check";
-    check.append(icon(["M20 7v5h-5", "M4 17v-5h5", "M6.1 7a7 7 0 0 1 11.55-1.65L20 8", "M4 16l2.35 2.65A7 7 0 0 0 17.9 17"]));
-    actions.append(connect, check);
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "button secondary provider-icon-button";
+    actions.append(action);
     const detail = document.createElement("span");
     detail.className = "web-client-detail";
     detail.id = `web-client-detail-${browser}`;
     detail.setAttribute("role", "status");
-    connect.setAttribute("aria-describedby", detail.id);
-    check.setAttribute("aria-describedby", detail.id);
+    action.setAttribute("aria-describedby", detail.id);
     statusBox.append(status, detail);
     connection.append(statusBox, actions);
     row.append(identity, connection);
     root.append(row);
-    const entry = { row, statusBox, status, connect, check, detail, name, busy: false, checkingSince: null, error: null };
+    const entry = { row, statusBox, status, action, detail, name, busy: false, checkingSince: null, error: null };
     rows.set(browser, entry);
-    connect.addEventListener("click", () => { void act(browser, "connect"); });
-    check.addEventListener("click", () => { void act(browser, "check"); });
+    action.addEventListener("click", () => { void act(browser, action.dataset.action); });
   }
 
   function render() {
     for (const [browser, entry] of rows) {
       const installation = installations.find(value => value.browser === browser);
       const client = clients.find(value => value.browser === browser);
-      const state = browserConnectionState(client, now(), entry.checkingSince);
+      const disabled = installation?.connectionEnabled === false;
+      const state = disabled ? "disabled" : browserConnectionState(client, now(), entry.checkingSince);
       if (state === "connected") entry.checkingSince = null;
       entry.row.dataset.state = state;
       entry.statusBox.dataset.state = entry.error || loadFailed ? "error" : state;
-      text(entry.status, loading ? "확인 중" : state === "connected" ? "연결됨"
-        : state === "checking" ? "확인 중" : installation && !installation.storeAvailable ? "스토어 심사 중" : "연결 확인 대기");
-      label(entry.connect, entry.name, state === "connected" ? "스토어 열기" : "연결");
-      label(entry.check, entry.name, "연결 확인");
-      entry.connect.disabled = loading || entry.busy || !installation?.installed || !installation?.storeAvailable;
-      entry.check.disabled = loading || entry.busy;
+      text(entry.status, loading ? "확인 중" : disabled ? "사용 중지됨" : state === "connected" ? "연결됨"
+        : state === "checking" ? "확인 중" : installation && !installation.storeAvailable ? "스토어 심사 중" : "연결 필요");
+      const disconnect = state === "connected";
+      const action = disconnect ? "disconnect" : "connect";
+      if (entry.action.dataset.action !== action) {
+        entry.action.dataset.action = action;
+        const paths = ["M9 15l6 -6", "M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464", "M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"];
+        if (disconnect) paths.push("M17 22v-2", "M20 17h2", "M2 7h2", "M7 2v2");
+        entry.action.replaceChildren(icon(paths));
+      }
+      entry.action.classList.toggle("provider-action", !disconnect);
+      entry.action.classList.toggle("provider-disconnect", disconnect);
+      label(entry.action, entry.name, disconnect ? "연결 해제" : "연결");
+      entry.action.disabled = loading || entry.busy || (!disconnect && !disabled && (!installation?.installed || !installation?.storeAvailable));
       entry.row.setAttribute("aria-busy", String(entry.busy));
       const detail = entry.error || (loadFailed ? "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오."
-        : state === "checking" ? "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오."
+        : disabled || state === "checking" ? ""
           : state === "connected" ? (client?.extensionVersion ? `v${client.extensionVersion}` : "")
             : entry.checkingSince !== null ? "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오."
               : loading ? ""
@@ -143,16 +143,28 @@ export function createBrowserConnections({ root, invoke, translate = value => va
     return refreshing;
   }
 
+  function needsSetup() {
+    // Do not claim that installation is required while status is unknown.
+    return !loading && !loadFailed && !BROWSERS.some(([browser]) => {
+      const installation = installations.find(value => value.browser === browser);
+      const client = clients.find(value => value.browser === browser);
+      return installation?.connectionEnabled !== false
+        && browserConnectionState(client, now()) === "connected";
+    });
+  }
+
   async function act(browser, action) {
     const entry = rows.get(browser);
-    if (!entry || entry.busy || (action === "connect" ? entry.connect.disabled : entry.check.disabled)) return;
+    if (!entry || entry.busy || entry.action.disabled) return;
     entry.busy = true;
     entry.error = null;
-    entry.checkingSince = now();
+    entry.checkingSince = action === "connect" ? now() : null;
     render();
     try {
-      if (action === "connect") await invoke("browser_open_extension_store", { browser });
-      else await invoke("browser_repair_connection");
+      await invoke(action === "connect" ? "browser_connect" : "browser_disconnect", { browser });
+      // A poll started before this save may contain the previous enabled flag.
+      // Drain it, then fetch the confirmed choice before making the button usable.
+      if (refreshing) await refreshing;
       await refresh();
     } catch (error) {
       entry.checkingSince = null;
@@ -166,5 +178,5 @@ export function createBrowserConnections({ root, invoke, translate = value => va
   }
 
   render();
-  return { render, refresh };
+  return { render, refresh, needsSetup };
 }

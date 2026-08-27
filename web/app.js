@@ -3238,14 +3238,16 @@ elements.webTranslationEnabled.addEventListener("click", async () => {
   try {
     await applySettingsPatch({ web_translation_enabled: enabled });
     if (enabled) {
+      await loadBrowserClients();
+    }
+    if (enabled && browserConnections.needsSetup()) {
       await showModal({
         title: "확장 프로그램 설치가 필요합니다",
-        message: "아래에서 사용할 브라우저를 연결하십시오. 이미 설치했다면 연결 상태를 확인하십시오.",
+        message: "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.",
         acceptText: "확인",
         cancelVisible: false,
       });
       elements.webBrowserClients.scrollIntoView({ block: "center", behavior: "auto" });
-      await loadBrowserClients();
     }
   } catch (error) {
     setSwitch(elements.webTranslationEnabled, state.config.web_translation_enabled, "켜짐", "꺼짐");

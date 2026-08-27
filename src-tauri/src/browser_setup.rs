@@ -2,7 +2,9 @@
 //! Never read browser profiles or install extensions through policy/registry keys.
 use std::path::PathBuf;
 
+use crate::config::{browser_connection_enabled, ConfigStore};
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -13,6 +15,14 @@ pub enum Browser {
 }
 
 impl Browser {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Chrome => "chrome",
+            Self::Whale => "whale",
+            Self::Firefox => "firefox",
+        }
+    }
+
     fn executable(self) -> &'static str {
         match self {
             Self::Chrome => "chrome.exe",
@@ -46,22 +56,71 @@ pub struct BrowserInstallation {
     browser: Browser,
     installed: bool,
     store_available: bool,
+    connection_enabled: bool,
 }
 
 #[tauri::command]
-pub fn browser_installations() -> Vec<BrowserInstallation> {
-    [Browser::Chrome, Browser::Whale, Browser::Firefox]
+pub fn browser_installations(
+    config: State<'_, ConfigStore>,
+) -> Result<Vec<BrowserInstallation>, String> {
+    let config = config.get()?;
+    Ok([Browser::Chrome, Browser::Whale, Browser::Firefox]
         .into_iter()
         .map(|browser| BrowserInstallation {
             browser,
             installed: find_browser(browser).is_some(),
             store_available: browser.store_url().is_some(),
+            connection_enabled: browser_connection_enabled(
+                &config.disabled_browser_connections,
+                browser.as_str(),
+            ),
         })
-        .collect()
+        .collect())
 }
 
 #[tauri::command]
-pub fn browser_open_extension_store(browser: Browser) -> Result<(), String> {
+pub fn browser_connect(app: AppHandle, browser: Browser) -> Result<(), String> {
+    let config = app.state::<ConfigStore>().get()?;
+    let reconnecting =
+        !browser_connection_enabled(&config.disabled_browser_connections, browser.as_str());
+    if reconnecting {
+        // An intentionally disconnected extension needs no reinstall. This also
+        // permits reconnecting an existing Firefox extension while AMO is pending.
+        browser_repair_connection()?;
+        set_connection_enabled(&app, browser, true)?;
+    } else {
+        browser_open_extension_store(browser)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn browser_disconnect(app: AppHandle, browser: Browser) -> Result<(), String> {
+    set_connection_enabled(&app, browser, false)
+}
+
+fn set_connection_enabled(app: &AppHandle, browser: Browser, enabled: bool) -> Result<(), String> {
+    let store = app.state::<ConfigStore>();
+    let previous = store.get()?;
+    let was_enabled =
+        browser_connection_enabled(&previous.disabled_browser_connections, browser.as_str());
+    let updated = store.set_browser_connection(browser.as_str(), enabled)?;
+    if let Err(error) = app
+        .state::<crate::engine::RustEngine>()
+        .apply_config(updated.clone())
+    {
+        if let Ok(restored) = store.set_browser_connection(browser.as_str(), was_enabled) {
+            let _ = app
+                .state::<crate::engine::RustEngine>()
+                .apply_config(restored);
+        }
+        return Err(error);
+    }
+    let _ = app.emit("settings-changed", updated);
+    Ok(())
+}
+
+fn browser_open_extension_store(browser: Browser) -> Result<(), String> {
     let url = browser.store_url().ok_or("store_unavailable")?;
     let executable = find_browser(browser).ok_or("browser_not_found")?;
     browser_repair_connection()?;
@@ -80,8 +139,7 @@ pub fn browser_open_extension_store(browser: Browser) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-pub fn browser_repair_connection() -> Result<(), String> {
+fn browser_repair_connection() -> Result<(), String> {
     crate::browser_bridge::register_native_messaging_host()
         .map(|_| ())
         .map_err(|error| {
