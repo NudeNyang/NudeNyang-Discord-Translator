@@ -636,7 +636,18 @@
     "웹 번역 전환키": "網頁翻譯切換快捷鍵",
     "웹 번역 전환키를 사용하지 않습니다.": "網頁翻譯切換快捷鍵已停用。",
     "웹 번역 전환키를 적용하지 못했습니다": "無法套用網頁翻譯切換快捷鍵",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "已連線的瀏覽器和擴充功能版本會顯示在這裡。"
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "已連線的瀏覽器和擴充功能版本會顯示在這裡。",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "連線您使用的瀏覽器。可以同時使用多個瀏覽器。",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "擴充功能僅可在安裝它的瀏覽器設定檔中使用。",
+    "연결 확인": "檢查連線",
+    "연결 확인 대기": "等待檢查連線",
+    "스토어 열기": "開啟商店",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "核准安裝後請稍候，或在瀏覽器中開啟擴充功能以檢查連線。",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "在想要翻譯的網站上，點選 NudeNyang 擴充功能開始翻譯。",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "請在瀏覽器中開啟擴充功能以檢查連線。",
+    "브라우저 설치를 찾지 못했습니다.": "找不到已安裝的瀏覽器。",
+    "스토어 심사 중": "商店審查中",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "無法檢查瀏覽器連線，請重試。"
   },
   "pt-BR": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
@@ -1275,7 +1286,18 @@
     "웹 번역 전환키": "Atalho para ativar/desativar a tradução web",
     "웹 번역 전환키를 사용하지 않습니다.": "O atalho para ativar/desativar a tradução web está desabilitado.",
     "웹 번역 전환키를 적용하지 못했습니다": "Não foi possível aplicar o atalho para ativar/desativar a tradução web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Os navegadores conectados e as versões das extensões aparecem aqui."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Os navegadores conectados e as versões das extensões aparecem aqui.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Conecte os navegadores que você usa. Você pode usar vários ao mesmo tempo.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "A extensão funciona apenas no perfil do navegador em que foi instalada.",
+    "연결 확인": "Verificar conexão",
+    "연결 확인 대기": "Aguardando verificação",
+    "스토어 열기": "Abrir loja",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Aprove a instalação e aguarde, ou abra a extensão no navegador para verificar a conexão.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "No site que deseja traduzir, clique na extensão NudeNyang para iniciar a tradução.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Abra a extensão no navegador para verificar a conexão.",
+    "브라우저 설치를 찾지 못했습니다.": "Instalação do navegador não encontrada.",
+    "스토어 심사 중": "Em análise na loja",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Não foi possível verificar a conexão do navegador. Tente novamente."
   },
   "hi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
@@ -1914,7 +1936,18 @@
     "웹 번역 전환키": "वेब अनुवाद टॉगल शॉर्टकट",
     "웹 번역 전환키를 사용하지 않습니다.": "वेब अनुवाद टॉगल शॉर्टकट अक्षम है।",
     "웹 번역 전환키를 적용하지 못했습니다": "वेब अनुवाद टॉगल शॉर्टकट लागू नहीं किया जा सका",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "कनेक्ट किए गए ब्राउज़र और एक्सटेंशन के वर्शन यहाँ दिखाई देंगे।"
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "कनेक्ट किए गए ब्राउज़र और एक्सटेंशन के वर्शन यहाँ दिखाई देंगे।",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "अपने उपयोग वाले ब्राउज़र कनेक्ट करें। आप कई ब्राउज़र एक साथ उपयोग कर सकते हैं।",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "एक्सटेंशन केवल उसी ब्राउज़र प्रोफ़ाइल में काम करता है जिसमें यह इंस्टॉल है।",
+    "연결 확인": "कनेक्शन जाँचें",
+    "연결 확인 대기": "कनेक्शन जाँच की प्रतीक्षा",
+    "스토어 열기": "स्टोर खोलें",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "इंस्टॉलेशन की अनुमति देकर प्रतीक्षा करें, या कनेक्शन जाँचने के लिए ब्राउज़र में एक्सटेंशन खोलें।",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "जिस साइट का अनुवाद करना है, वहाँ NudeNyang एक्सटेंशन पर क्लिक करके अनुवाद शुरू करें।",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "कनेक्शन जाँचने के लिए ब्राउज़र में एक्सटेंशन खोलें।",
+    "브라우저 설치를 찾지 못했습니다.": "ब्राउज़र इंस्टॉलेशन नहीं मिला।",
+    "스토어 심사 중": "स्टोर की समीक्षा जारी है",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ब्राउज़र कनेक्शन की जाँच नहीं हो सकी। फिर से प्रयास करें।"
   },
   "es-419": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
@@ -2553,7 +2586,18 @@
     "웹 번역 전환키": "Atajo para alternar la traducción web",
     "웹 번역 전환키를 사용하지 않습니다.": "El atajo para alternar la traducción web está desactivado.",
     "웹 번역 전환키를 적용하지 못했습니다": "No se pudo aplicar el atajo para alternar la traducción web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Los navegadores conectados y las versiones de las extensiones aparecen aquí."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Los navegadores conectados y las versiones de las extensiones aparecen aquí.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Conecta los navegadores que usas. Puedes usar varios al mismo tiempo.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "La extensión solo funciona en el perfil del navegador donde está instalada.",
+    "연결 확인": "Verificar conexión",
+    "연결 확인 대기": "Esperando verificación",
+    "스토어 열기": "Abrir tienda",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Aprueba la instalación y espera, o abre la extensión en tu navegador para verificar la conexión.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "En el sitio que quieras traducir, haz clic en la extensión NudeNyang para iniciar la traducción.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Abre la extensión en tu navegador para verificar la conexión.",
+    "브라우저 설치를 찾지 못했습니다.": "No se encontró la instalación del navegador.",
+    "스토어 심사 중": "En revisión en la tienda",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "No se pudo verificar la conexión del navegador. Inténtalo de nuevo."
   },
   "de": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
@@ -3192,7 +3236,18 @@
     "웹 번역 전환키": "Tastenkürzel zum Umschalten der Webübersetzung",
     "웹 번역 전환키를 사용하지 않습니다.": "Das Tastenkürzel zum Umschalten der Webübersetzung ist deaktiviert.",
     "웹 번역 전환키를 적용하지 못했습니다": "Das Tastenkürzel zum Umschalten der Webübersetzung konnte nicht angewendet werden",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Verbundene Browser und Erweiterungsversionen werden hier angezeigt."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Verbundene Browser und Erweiterungsversionen werden hier angezeigt.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Verbinden Sie Ihre Browser. Sie können mehrere Browser gleichzeitig verwenden.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Die Erweiterung funktioniert nur im Browserprofil, in dem sie installiert ist.",
+    "연결 확인": "Verbindung prüfen",
+    "연결 확인 대기": "Verbindungsprüfung ausstehend",
+    "스토어 열기": "Store öffnen",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Bestätigen Sie die Installation und warten Sie, oder öffnen Sie die Erweiterung im Browser, um die Verbindung zu prüfen.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Klicken Sie auf der gewünschten Website auf die NudeNyang-Erweiterung, um die Übersetzung zu starten.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Öffnen Sie die Erweiterung im Browser, um die Verbindung zu prüfen.",
+    "브라우저 설치를 찾지 못했습니다.": "Browserinstallation nicht gefunden.",
+    "스토어 심사 중": "Store-Prüfung läuft",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Die Browserverbindung konnte nicht geprüft werden. Versuchen Sie es erneut."
   },
   "ru": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
@@ -3831,7 +3886,18 @@
     "웹 번역 전환키": "Сочетание клавиш для включения веб-перевода",
     "웹 번역 전환키를 사용하지 않습니다.": "Сочетание клавиш для включения веб-перевода отключено.",
     "웹 번역 전환키를 적용하지 못했습니다": "Не удалось применить сочетание клавиш для включения веб-перевода",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Здесь отображаются подключённые браузеры и версии расширений."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Здесь отображаются подключённые браузеры и версии расширений.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Подключите используемые браузеры. Можно использовать несколько браузеров одновременно.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Расширение работает только в том профиле браузера, в котором оно установлено.",
+    "연결 확인": "Проверить подключение",
+    "연결 확인 대기": "Ожидание проверки",
+    "스토어 열기": "Открыть магазин",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Подтвердите установку и подождите или откройте расширение в браузере для проверки подключения.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "На нужном сайте нажмите на расширение NudeNyang, чтобы начать перевод.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Откройте расширение в браузере для проверки подключения.",
+    "브라우저 설치를 찾지 못했습니다.": "Установленный браузер не найден.",
+    "스토어 심사 중": "Проверка в магазине",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Не удалось проверить подключение браузера. Повторите попытку."
   },
   "id": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
@@ -4470,7 +4536,18 @@
     "웹 번역 전환키": "Pintasan untuk mengaktifkan/menonaktifkan terjemahan web",
     "웹 번역 전환키를 사용하지 않습니다.": "Pintasan untuk mengaktifkan/menonaktifkan terjemahan web dinonaktifkan.",
     "웹 번역 전환키를 적용하지 못했습니다": "Tidak dapat menerapkan pintasan untuk mengaktifkan/menonaktifkan terjemahan web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Browser yang terhubung dan versi ekstensi akan muncul di sini."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Browser yang terhubung dan versi ekstensi akan muncul di sini.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Hubungkan browser yang Anda gunakan. Anda dapat menggunakan beberapa browser sekaligus.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Ekstensi hanya berfungsi di profil browser tempat ekstensi dipasang.",
+    "연결 확인": "Periksa koneksi",
+    "연결 확인 대기": "Menunggu pemeriksaan koneksi",
+    "스토어 열기": "Buka toko",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Setujui pemasangan dan tunggu, atau buka ekstensi di browser untuk memeriksa koneksi.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Di situs yang ingin diterjemahkan, klik ekstensi NudeNyang untuk mulai menerjemahkan.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Buka ekstensi di browser untuk memeriksa koneksi.",
+    "브라우저 설치를 찾지 못했습니다.": "Instalasi browser tidak ditemukan.",
+    "스토어 심사 중": "Sedang ditinjau oleh toko",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Koneksi browser tidak dapat diperiksa. Silakan coba lagi."
   },
   "fr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
@@ -5109,7 +5186,18 @@
     "웹 번역 전환키": "Raccourci d’activation/désactivation de la traduction web",
     "웹 번역 전환키를 사용하지 않습니다.": "Le raccourci d’activation/désactivation de la traduction web est désactivé.",
     "웹 번역 전환키를 적용하지 못했습니다": "Impossible d’appliquer le raccourci d’activation/désactivation de la traduction web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Les navigateurs connectés et les versions des extensions apparaissent ici."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Les navigateurs connectés et les versions des extensions apparaissent ici.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Connectez les navigateurs que vous utilisez. Vous pouvez en utiliser plusieurs à la fois.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "L’extension fonctionne uniquement dans le profil du navigateur où elle est installée.",
+    "연결 확인": "Vérifier la connexion",
+    "연결 확인 대기": "Vérification en attente",
+    "스토어 열기": "Ouvrir la boutique",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Approuvez l’installation et patientez, ou ouvrez l’extension dans votre navigateur pour vérifier la connexion.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Sur le site à traduire, cliquez sur l’extension NudeNyang pour lancer la traduction.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Ouvrez l’extension dans votre navigateur pour vérifier la connexion.",
+    "브라우저 설치를 찾지 못했습니다.": "Installation du navigateur introuvable.",
+    "스토어 심사 중": "Examen par la boutique en cours",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Impossible de vérifier la connexion du navigateur. Veuillez réessayer."
   },
   "tr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
@@ -5748,7 +5836,18 @@
     "웹 번역 전환키": "Web çevirisini açma/kapatma kısayolu",
     "웹 번역 전환키를 사용하지 않습니다.": "Web çevirisini açma/kapatma kısayolu devre dışı.",
     "웹 번역 전환키를 적용하지 못했습니다": "Web çevirisini açma/kapatma kısayolu uygulanamadı",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Bağlı tarayıcılar ve uzantı sürümleri burada görünür."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Bağlı tarayıcılar ve uzantı sürümleri burada görünür.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Kullandığınız tarayıcıları bağlayın. Birden fazla tarayıcıyı birlikte kullanabilirsiniz.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Uzantı yalnızca yüklendiği tarayıcı profilinde çalışır.",
+    "연결 확인": "Bağlantıyı kontrol et",
+    "연결 확인 대기": "Bağlantı kontrolü bekleniyor",
+    "스토어 열기": "Mağazayı aç",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Yüklemeyi onaylayıp bekleyin veya bağlantıyı kontrol etmek için tarayıcınızda uzantıyı açın.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Çevirmek istediğiniz sitede çeviriyi başlatmak için NudeNyang uzantısına tıklayın.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Bağlantıyı kontrol etmek için tarayıcınızda uzantıyı açın.",
+    "브라우저 설치를 찾지 못했습니다.": "Tarayıcı kurulumu bulunamadı.",
+    "스토어 심사 중": "Mağaza incelemesi sürüyor",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Tarayıcı bağlantısı kontrol edilemedi. Lütfen tekrar deneyin."
   },
   "ar": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
@@ -6387,7 +6486,18 @@
     "웹 번역 전환키": "اختصار تبديل ترجمة الويب",
     "웹 번역 전환키를 사용하지 않습니다.": "اختصار تبديل ترجمة الويب معطّل.",
     "웹 번역 전환키를 적용하지 못했습니다": "تعذّر تطبيق اختصار تبديل ترجمة الويب",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "تظهر هنا المتصفحات المتصلة وإصدارات الإضافات."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "تظهر هنا المتصفحات المتصلة وإصدارات الإضافات.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "اربط المتصفحات التي تستخدمها. يمكنك استخدام عدة متصفحات معًا.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "تعمل الإضافة فقط في ملف تعريف المتصفح الذي ثُبّتت فيه.",
+    "연결 확인": "التحقق من الاتصال",
+    "연결 확인 대기": "بانتظار التحقق من الاتصال",
+    "스토어 열기": "فتح المتجر",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "وافق على التثبيت وانتظر، أو افتح الإضافة في المتصفح للتحقق من الاتصال.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "في الموقع الذي تريد ترجمته، انقر على إضافة NudeNyang لبدء الترجمة.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "افتح الإضافة في المتصفح للتحقق من الاتصال.",
+    "브라우저 설치를 찾지 못했습니다.": "لم يُعثر على المتصفح المثبّت.",
+    "스토어 심사 중": "قيد مراجعة المتجر",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "تعذر التحقق من اتصال المتصفح. يرجى المحاولة مرة أخرى."
   },
   "vi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
@@ -7026,7 +7136,18 @@
     "웹 번역 전환키": "Phím tắt bật/tắt dịch web",
     "웹 번역 전환키를 사용하지 않습니다.": "Phím tắt bật/tắt dịch web đã bị vô hiệu hóa.",
     "웹 번역 전환키를 적용하지 못했습니다": "Không thể áp dụng phím tắt bật/tắt dịch web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Các trình duyệt đã kết nối và phiên bản tiện ích mở rộng sẽ xuất hiện tại đây."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Các trình duyệt đã kết nối và phiên bản tiện ích mở rộng sẽ xuất hiện tại đây.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Kết nối các trình duyệt bạn sử dụng. Bạn có thể dùng nhiều trình duyệt cùng lúc.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Tiện ích chỉ hoạt động trong hồ sơ trình duyệt đã cài đặt tiện ích.",
+    "연결 확인": "Kiểm tra kết nối",
+    "연결 확인 대기": "Chờ kiểm tra kết nối",
+    "스토어 열기": "Mở cửa hàng",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Chấp thuận cài đặt và chờ, hoặc mở tiện ích trong trình duyệt để kiểm tra kết nối.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Trên trang web muốn dịch, nhấp vào tiện ích NudeNyang để bắt đầu dịch.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Mở tiện ích trong trình duyệt để kiểm tra kết nối.",
+    "브라우저 설치를 찾지 못했습니다.": "Không tìm thấy trình duyệt đã cài đặt.",
+    "스토어 심사 중": "Đang được cửa hàng xét duyệt",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Không thể kiểm tra kết nối trình duyệt. Vui lòng thử lại."
   },
   "it": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
@@ -7665,7 +7786,18 @@
     "웹 번역 전환키": "Scorciatoia per attivare/disattivare la traduzione web",
     "웹 번역 전환키를 사용하지 않습니다.": "La scorciatoia per attivare/disattivare la traduzione web è disabilitata.",
     "웹 번역 전환키를 적용하지 못했습니다": "Impossibile applicare la scorciatoia per attivare/disattivare la traduzione web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Qui vengono visualizzati i browser connessi e le versioni delle estensioni."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Qui vengono visualizzati i browser connessi e le versioni delle estensioni.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Collega i browser che utilizzi. Puoi usarne diversi contemporaneamente.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "L’estensione funziona solo nel profilo del browser in cui è installata.",
+    "연결 확인": "Verifica connessione",
+    "연결 확인 대기": "In attesa di verifica",
+    "스토어 열기": "Apri lo store",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Approva l’installazione e attendi, oppure apri l’estensione nel browser per verificare la connessione.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Sul sito da tradurre, fai clic sull’estensione NudeNyang per avviare la traduzione.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Apri l’estensione nel browser per verificare la connessione.",
+    "브라우저 설치를 찾지 못했습니다.": "Installazione del browser non trovata.",
+    "스토어 심사 중": "In revisione nello store",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Impossibile verificare la connessione del browser. Riprova."
   },
   "pl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
@@ -8304,7 +8436,18 @@
     "웹 번역 전환키": "Skrót do przełączania tłumaczenia stron internetowych",
     "웹 번역 전환키를 사용하지 않습니다.": "Skrót do przełączania tłumaczenia stron internetowych jest wyłączony.",
     "웹 번역 전환키를 적용하지 못했습니다": "Nie udało się zastosować skrótu do przełączania tłumaczenia stron internetowych",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Tutaj pojawią się połączone przeglądarki i wersje rozszerzeń."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Tutaj pojawią się połączone przeglądarki i wersje rozszerzeń.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Połącz używane przeglądarki. Możesz korzystać z kilku jednocześnie.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Rozszerzenie działa tylko w profilu przeglądarki, w którym je zainstalowano.",
+    "연결 확인": "Sprawdź połączenie",
+    "연결 확인 대기": "Oczekiwanie na sprawdzenie",
+    "스토어 열기": "Otwórz sklep",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Zatwierdź instalację i poczekaj lub otwórz rozszerzenie w przeglądarce, aby sprawdzić połączenie.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Na stronie do przetłumaczenia kliknij rozszerzenie NudeNyang, aby rozpocząć tłumaczenie.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Otwórz rozszerzenie w przeglądarce, aby sprawdzić połączenie.",
+    "브라우저 설치를 찾지 못했습니다.": "Nie znaleziono zainstalowanej przeglądarki.",
+    "스토어 심사 중": "Trwa weryfikacja w sklepie",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Nie udało się sprawdzić połączenia przeglądarki. Spróbuj ponownie."
   },
   "uk": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
@@ -8943,7 +9086,18 @@
     "웹 번역 전환키": "Гаряча клавіша перемикання вебперекладу",
     "웹 번역 전환키를 사용하지 않습니다.": "Гарячу клавішу перемикання вебперекладу вимкнено.",
     "웹 번역 전환키를 적용하지 못했습니다": "Не вдалося застосувати гарячу клавішу перемикання вебперекладу",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Тут відображаються підключені браузери та версії розширень."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Тут відображаються підключені браузери та версії розширень.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Підключіть браузери, якими користуєтеся. Можна використовувати кілька браузерів одночасно.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Розширення працює лише в тому профілі браузера, де його встановлено.",
+    "연결 확인": "Перевірити підключення",
+    "연결 확인 대기": "Очікування перевірки",
+    "스토어 열기": "Відкрити магазин",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Підтвердьте встановлення й зачекайте або відкрийте розширення в браузері для перевірки підключення.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "На потрібному сайті натисніть розширення NudeNyang, щоб почати переклад.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Відкрийте розширення в браузері для перевірки підключення.",
+    "브라우저 설치를 찾지 못했습니다.": "Встановлений браузер не знайдено.",
+    "스토어 심사 중": "Триває перевірка в магазині",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Не вдалося перевірити підключення браузера. Спробуйте ще раз."
   },
   "ms": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
@@ -9582,7 +9736,18 @@
     "웹 번역 전환키": "Pintasan togol terjemahan web",
     "웹 번역 전환키를 사용하지 않습니다.": "Pintasan togol terjemahan web dinyahdayakan.",
     "웹 번역 전환키를 적용하지 못했습니다": "Tidak dapat menggunakan pintasan togol terjemahan web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Pelayar yang disambungkan dan versi sambungan akan dipaparkan di sini."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Pelayar yang disambungkan dan versi sambungan akan dipaparkan di sini.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Sambungkan pelayar yang anda gunakan. Anda boleh menggunakan beberapa pelayar serentak.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Sambungan hanya berfungsi dalam profil pelayar tempat ia dipasang.",
+    "연결 확인": "Semak sambungan",
+    "연결 확인 대기": "Menunggu semakan sambungan",
+    "스토어 열기": "Buka kedai",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Luluskan pemasangan dan tunggu, atau buka sambungan dalam pelayar untuk menyemak sambungan.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Pada laman yang ingin diterjemahkan, klik sambungan NudeNyang untuk memulakan terjemahan.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Buka sambungan dalam pelayar untuk menyemak sambungan.",
+    "브라우저 설치를 찾지 못했습니다.": "Pemasangan pelayar tidak ditemukan.",
+    "스토어 심사 중": "Sedang disemak oleh kedai",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Sambungan pelayar tidak dapat disemak. Sila cuba lagi."
   },
   "nl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
@@ -10221,7 +10386,18 @@
     "웹 번역 전환키": "Sneltoets voor webvertaling in-/uitschakelen",
     "웹 번역 전환키를 사용하지 않습니다.": "De sneltoets voor webvertaling in-/uitschakelen is uitgeschakeld.",
     "웹 번역 전환키를 적용하지 못했습니다": "Kan de sneltoets voor webvertaling in-/uitschakelen niet toepassen",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Verbonden browsers en extensieversies worden hier weergegeven."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Verbonden browsers en extensieversies worden hier weergegeven.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Verbind de browsers die u gebruikt. U kunt meerdere browsers tegelijk gebruiken.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "De extensie werkt alleen in het browserprofiel waarin deze is geïnstalleerd.",
+    "연결 확인": "Verbinding controleren",
+    "연결 확인 대기": "Wacht op verbindingscontrole",
+    "스토어 열기": "Store openen",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Keur de installatie goed en wacht, of open de extensie in uw browser om de verbinding te controleren.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Klik op de gewenste website op de NudeNyang-extensie om te beginnen met vertalen.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Open de extensie in uw browser om de verbinding te controleren.",
+    "브라우저 설치를 찾지 못했습니다.": "Browserinstallatie niet gevonden.",
+    "스토어 심사 중": "Wordt beoordeeld door de store",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "De browserverbinding kon niet worden gecontroleerd. Probeer het opnieuw."
   },
   "th": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
@@ -10860,7 +11036,18 @@
     "웹 번역 전환키": "ปุ่มลัดเปิด/ปิดการแปลเว็บ",
     "웹 번역 전환키를 사용하지 않습니다.": "ปุ่มลัดเปิด/ปิดการแปลเว็บถูกปิดใช้งาน",
     "웹 번역 전환키를 적용하지 못했습니다": "ไม่สามารถใช้ปุ่มลัดเปิด/ปิดการแปลเว็บได้",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "เบราว์เซอร์ที่เชื่อมต่อและเวอร์ชันส่วนขยายจะแสดงที่นี่"
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "เบราว์เซอร์ที่เชื่อมต่อและเวอร์ชันส่วนขยายจะแสดงที่นี่",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "เชื่อมต่อเบราว์เซอร์ที่คุณใช้ คุณสามารถใช้หลายเบราว์เซอร์พร้อมกันได้",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "ส่วนขยายทำงานได้เฉพาะในโปรไฟล์เบราว์เซอร์ที่ติดตั้งไว้เท่านั้น",
+    "연결 확인": "ตรวจสอบการเชื่อมต่อ",
+    "연결 확인 대기": "รอตรวจสอบการเชื่อมต่อ",
+    "스토어 열기": "เปิดร้านค้า",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "อนุมัติการติดตั้งแล้วรอ หรือเปิดส่วนขยายในเบราว์เซอร์เพื่อตรวจสอบการเชื่อมต่อ",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "บนเว็บไซต์ที่ต้องการแปล ให้คลิกส่วนขยาย NudeNyang เพื่อเริ่มแปล",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "เปิดส่วนขยายในเบราว์เซอร์เพื่อตรวจสอบการเชื่อมต่อ",
+    "브라우저 설치를 찾지 못했습니다.": "ไม่พบการติดตั้งเบราว์เซอร์",
+    "스토어 심사 중": "อยู่ระหว่างการตรวจสอบของร้านค้า",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ไม่สามารถตรวจสอบการเชื่อมต่อเบราว์เซอร์ได้ โปรดลองอีกครั้ง"
   },
   "fil": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
@@ -11499,7 +11686,18 @@
     "웹 번역 전환키": "Shortcut para i-toggle ang pagsasalin sa web",
     "웹 번역 전환키를 사용하지 않습니다.": "Naka-disable ang shortcut para i-toggle ang pagsasalin sa web.",
     "웹 번역 전환키를 적용하지 못했습니다": "Hindi mailapat ang shortcut para i-toggle ang pagsasalin sa web",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Lalabas dito ang mga nakakonektang browser at bersyon ng extension."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Lalabas dito ang mga nakakonektang browser at bersyon ng extension.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Ikonekta ang mga browser na ginagamit mo. Maaari kang gumamit ng ilan nang sabay-sabay.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Gumagana lang ang extension sa browser profile kung saan ito naka-install.",
+    "연결 확인": "Suriin ang koneksyon",
+    "연결 확인 대기": "Naghihintay ng pagsusuri",
+    "스토어 열기": "Buksan ang tindahan",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Aprubahan ang pag-install at maghintay, o buksan ang extension sa browser para suriin ang koneksyon.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Sa site na nais mong isalin, i-click ang NudeNyang extension upang simulan ang pagsasalin.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Buksan ang extension sa browser para suriin ang koneksyon.",
+    "브라우저 설치를 찾지 못했습니다.": "Hindi nahanap ang naka-install na browser.",
+    "스토어 심사 중": "Sinusuri pa ng tindahan",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Hindi masuri ang koneksyon ng browser. Pakisubukang muli."
   },
   "bn": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
@@ -12138,7 +12336,18 @@
     "웹 번역 전환키": "ওয়েব অনুবাদ টগল শর্টকাট",
     "웹 번역 전환키를 사용하지 않습니다.": "ওয়েব অনুবাদ টগল শর্টকাটটি নিষ্ক্রিয় আছে।",
     "웹 번역 전환키를 적용하지 못했습니다": "ওয়েব অনুবাদ টগল শর্টকাটটি প্রয়োগ করা যায়নি",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "সংযুক্ত ব্রাউজার ও এক্সটেনশনের সংস্করণ এখানে দেখা যাবে।"
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "সংযুক্ত ব্রাউজার ও এক্সটেনশনের সংস্করণ এখানে দেখা যাবে।",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "আপনার ব্যবহৃত ব্রাউজারগুলো সংযুক্ত করুন। একসঙ্গে একাধিক ব্রাউজার ব্যবহার করতে পারবেন।",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "এক্সটেনশনটি শুধু যে ব্রাউজার প্রোফাইলে ইনস্টল করা হয়েছে সেখানেই কাজ করে।",
+    "연결 확인": "সংযোগ পরীক্ষা করুন",
+    "연결 확인 대기": "সংযোগ পরীক্ষার অপেক্ষায়",
+    "스토어 열기": "স্টোর খুলুন",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "ইনস্টলেশনের অনুমতি দিয়ে অপেক্ষা করুন, অথবা সংযোগ পরীক্ষা করতে ব্রাউজারে এক্সটেনশনটি খুলুন।",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "যে সাইট অনুবাদ করতে চান, সেখানে NudeNyang এক্সটেনশনে ক্লিক করে অনুবাদ শুরু করুন।",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "সংযোগ পরীক্ষা করতে ব্রাউজারে এক্সটেনশনটি খুলুন।",
+    "브라우저 설치를 찾지 못했습니다.": "ইনস্টল করা ব্রাউজার পাওয়া যায়নি।",
+    "스토어 심사 중": "স্টোরে পর্যালোচনা চলছে",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "ব্রাউজারের সংযোগ পরীক্ষা করা যায়নি। আবার চেষ্টা করুন।"
   },
   "ur": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
@@ -12777,7 +12986,18 @@
     "웹 번역 전환키": "ویب ترجمہ آن/آف کرنے کا شارٹ کٹ",
     "웹 번역 전환키를 사용하지 않습니다.": "ویب ترجمہ آن/آف کرنے کا شارٹ کٹ غیر فعال ہے۔",
     "웹 번역 전환키를 적용하지 못했습니다": "ویب ترجمہ آن/آف کرنے کا شارٹ کٹ لاگو نہیں کیا جا سکا",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "منسلک براؤزرز اور ایکسٹینشن کے ورژنز یہاں ظاہر ہوتے ہیں۔"
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "منسلک براؤزرز اور ایکسٹینشن کے ورژنز یہاں ظاہر ہوتے ہیں۔",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "اپنے استعمال کے براؤزرز منسلک کریں۔ آپ کئی براؤزرز ایک ساتھ استعمال کر سکتے ہیں۔",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "ایکسٹینشن صرف اسی براؤزر پروفائل میں کام کرتی ہے جہاں اسے انسٹال کیا گیا ہو۔",
+    "연결 확인": "کنکشن چیک کریں",
+    "연결 확인 대기": "کنکشن کی جانچ کا انتظار",
+    "스토어 열기": "اسٹور کھولیں",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "انسٹالیشن کی منظوری دے کر انتظار کریں، یا کنکشن چیک کرنے کے لیے براؤزر میں ایکسٹینشن کھولیں۔",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "جس سائٹ کا ترجمہ کرنا ہے، وہاں NudeNyang ایکسٹینشن پر کلک کر کے ترجمہ شروع کریں۔",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "کنکشن چیک کرنے کے لیے براؤزر میں ایکسٹینشن کھولیں۔",
+    "브라우저 설치를 찾지 못했습니다.": "براؤزر کی انسٹالیشن نہیں ملی۔",
+    "스토어 심사 중": "اسٹور میں جائزہ جاری ہے",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "براؤزر کا کنکشن چیک نہیں ہو سکا۔ دوبارہ کوشش کریں۔"
   },
   "ta": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
@@ -13416,7 +13636,18 @@
     "웹 번역 전환키": "இணைய மொழிபெயர்ப்பை நிலைமாற்றும் குறுக்குவழி",
     "웹 번역 전환키를 사용하지 않습니다.": "இணைய மொழிபெயர்ப்பை நிலைமாற்றும் குறுக்குவழி முடக்கப்பட்டுள்ளது.",
     "웹 번역 전환키를 적용하지 못했습니다": "இணைய மொழிபெயர்ப்பை நிலைமாற்றும் குறுக்குவழியைப் பயன்படுத்த முடியவில்லை",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "இணைக்கப்பட்ட உலாவிகளும் நீட்டிப்பு பதிப்புகளும் இங்கே தோன்றும்."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "இணைக்கப்பட்ட உலாவிகளும் நீட்டிப்பு பதிப்புகளும் இங்கே தோன்றும்.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "நீங்கள் பயன்படுத்தும் உலாவிகளை இணைக்கவும். பல உலாவிகளை ஒரே நேரத்தில் பயன்படுத்தலாம்.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "நீட்டிப்பு நிறுவப்பட்ட உலாவி சுயவிவரத்தில் மட்டுமே செயல்படும்.",
+    "연결 확인": "இணைப்பைச் சரிபார்க்கவும்",
+    "연결 확인 대기": "இணைப்புச் சரிபார்ப்புக்குக் காத்திருக்கிறது",
+    "스토어 열기": "அங்காடியைத் திறக்கவும்",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "நிறுவலுக்கு அனுமதி அளித்துக் காத்திருக்கவும் அல்லது இணைப்பைச் சரிபார்க்க உலாவியில் நீட்டிப்பைத் திறக்கவும்.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "மொழிபெயர்க்க வேண்டிய தளத்தில் NudeNyang நீட்டிப்பைக் கிளிக் செய்து மொழிபெயர்ப்பைத் தொடங்கவும்.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "இணைப்பைச் சரிபார்க்க உலாவியில் நீட்டிப்பைத் திறக்கவும்.",
+    "브라우저 설치를 찾지 못했습니다.": "நிறுவப்பட்ட உலாவி காணப்படவில்லை.",
+    "스토어 심사 중": "அங்காடி மதிப்பாய்வு நடைபெறுகிறது",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "உலாவி இணைப்பைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."
   },
   "fa": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
@@ -14055,7 +14286,18 @@
     "웹 번역 전환키": "میان‌بر روشن/خاموش کردن ترجمه وب",
     "웹 번역 전환키를 사용하지 않습니다.": "میان‌بر روشن/خاموش کردن ترجمه وب غیرفعال است.",
     "웹 번역 전환키를 적용하지 못했습니다": "اعمال میان‌بر روشن/خاموش کردن ترجمه وب ممکن نشد",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "مرورگرهای متصل و نسخه‌های افزونه در اینجا نمایش داده می‌شوند."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "مرورگرهای متصل و نسخه‌های افزونه در اینجا نمایش داده می‌شوند.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "مرورگرهای مورد استفاده را متصل کنید. می‌توانید هم‌زمان از چند مرورگر استفاده کنید.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "افزونه فقط در نمایهٔ مرورگری کار می‌کند که در آن نصب شده است.",
+    "연결 확인": "بررسی اتصال",
+    "연결 확인 대기": "در انتظار بررسی اتصال",
+    "스토어 열기": "باز کردن فروشگاه",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "نصب را تأیید کنید و منتظر بمانید، یا برای بررسی اتصال افزونه را در مرورگر باز کنید.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "در سایت مورد نظر، روی افزونهٔ NudeNyang کلیک کنید تا ترجمه آغاز شود.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "برای بررسی اتصال، افزونه را در مرورگر باز کنید.",
+    "브라우저 설치를 찾지 못했습니다.": "مرورگر نصب‌شده یافت نشد.",
+    "스토어 심사 중": "در حال بررسی در فروشگاه",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "بررسی اتصال مرورگر ممکن نشد. دوباره تلاش کنید."
   },
   "he": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
@@ -14694,7 +14936,18 @@
     "웹 번역 전환키": "קיצור דרך להפעלה או השבתה של תרגום אינטרנט",
     "웹 번역 전환키를 사용하지 않습니다.": "קיצור הדרך להפעלה או השבתה של תרגום אינטרנט מושבת.",
     "웹 번역 전환키를 적용하지 못했습니다": "לא ניתן היה להחיל את קיצור הדרך להפעלה או השבתה של תרגום אינטרנט",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "דפדפנים מחוברים וגרסאות של התוסף יופיעו כאן."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "דפדפנים מחוברים וגרסאות של התוסף יופיעו כאן.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "חברו את הדפדפנים שבהם אתם משתמשים. ניתן להשתמש בכמה דפדפנים במקביל.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "התוסף פועל רק בפרופיל הדפדפן שבו הוא מותקן.",
+    "연결 확인": "בדיקת חיבור",
+    "연결 확인 대기": "ממתין לבדיקת חיבור",
+    "스토어 열기": "פתיחת החנות",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "אשרו את ההתקנה והמתינו, או פתחו את התוסף בדפדפן כדי לבדוק את החיבור.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "באתר שברצונכם לתרגם, לחצו על התוסף NudeNyang כדי להתחיל בתרגום.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "פתחו את התוסף בדפדפן כדי לבדוק את החיבור.",
+    "브라우저 설치를 찾지 못했습니다.": "לא נמצא דפדפן מותקן.",
+    "스토어 심사 중": "בבדיקת החנות",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "לא ניתן לבדוק את חיבור הדפדפן. נסו שוב."
   },
   "cs": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
@@ -15333,6 +15586,17 @@
     "웹 번역 전환키": "Klávesová zkratka pro přepnutí webového překladu",
     "웹 번역 전환키를 사용하지 않습니다.": "Klávesová zkratka pro přepnutí webového překladu je zakázána.",
     "웹 번역 전환키를 적용하지 못했습니다": "Klávesovou zkratku pro přepnutí webového překladu se nepodařilo použít",
-    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Zde se zobrazí připojené prohlížeče a verze rozšíření."
+    "확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다.": "Zde se zobrazí připojené prohlížeče a verze rozšíření.",
+    "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": "Připojte používané prohlížeče. Můžete používat několik prohlížečů současně.",
+    "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": "Rozšíření funguje pouze v profilu prohlížeče, ve kterém je nainstalováno.",
+    "연결 확인": "Zkontrolovat připojení",
+    "연결 확인 대기": "Čeká na kontrolu připojení",
+    "스토어 열기": "Otevřít obchod",
+    "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Potvrďte instalaci a počkejte nebo otevřete rozšíření v prohlížeči a zkontrolujte připojení.",
+    "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": "Na webu, který chcete přeložit, klikněte na rozšíření NudeNyang a spusťte překlad.",
+    "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": "Otevřete rozšíření v prohlížeči a zkontrolujte připojení.",
+    "브라우저 설치를 찾지 못했습니다.": "Instalace prohlížeče nebyla nalezena.",
+    "스토어 심사 중": "Probíhá kontrola v obchodě",
+    "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": "Připojení prohlížeče se nepodařilo zkontrolovat. Zkuste to znovu."
   }
 }

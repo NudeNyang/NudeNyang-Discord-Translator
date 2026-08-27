@@ -25,6 +25,7 @@ function createBackground(tabState, {
       getManifest: () => ({ version: "0.7.4" }),
       onMessage: event("message"),
       onInstalled: event("installed"),
+      onStartup: event("startup"),
     },
     tabs: {
       onRemoved: event("removed"),
@@ -34,6 +35,7 @@ function createBackground(tabState, {
     },
     storage: { onChanged: event("storageChanged") },
     permissions: { onRemoved: event("permissionsRemoved") },
+    alarms: { create() {}, onAlarm: event("alarm") },
     commands: { onCommand: event("command") },
   };
   const bridgeModule = {
@@ -86,6 +88,40 @@ test("새 팝업의 초기 상태는 브라우저가 제공한 sender 탭과 문
   }, { tab, url: "https://example.com/popup", frameId: 0 });
   assert.equal(response.enabled, true);
   assert.deepEqual(reads, [{ tab, url: "https://example.com/popup" }]);
+});
+
+test("설치와 브라우저 시작은 번역이나 탭 이동 없이 앱 연결만 확인한다", async () => {
+  const requests = [];
+  const background = createBackground({}, {
+    nativeClient: { request: async (request) => { requests.push(request); return { type: "connection", appConnected: true }; } },
+  });
+  await background.listeners.installed({ reason: "install" });
+  await background.listeners.startup();
+  assert.deepEqual(requests.map(request => request.type), ["connectionPing", "connectionPing"]);
+  assert.ok(requests.every(request => !request.pageUrl && !request.items));
+});
+
+test("연결 확인은 중복 실행하지 않고 실패 후 다음 알람에서 재시도한다", async () => {
+  const requests = [];
+  let settle;
+  const background = createBackground({}, {
+    nativeClient: { request: (request) => {
+      requests.push(request);
+      return new Promise(resolve => { settle = resolve; });
+    } },
+  });
+  const pending = background.listeners.startup();
+  const duplicate = background.listeners.alarm({ name: "nudenyang-connection" });
+  assert.equal(requests.length, 1);
+  settle({ type: "error", code: "app_unavailable" });
+  await pending;
+  await duplicate;
+  await background.listeners.alarm({ name: "unrelated" });
+  assert.equal(requests.length, 1);
+  const retry = background.listeners.alarm({ name: "nudenyang-connection" });
+  assert.equal(requests.length, 2);
+  settle({ type: "connection", appConnected: true });
+  await retry;
 });
 
 test("토글 저장과 탭 종료는 요청 본문의 다른 탭 ID를 사용하지 않는다", async () => {

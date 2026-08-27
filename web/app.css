@@ -2812,6 +2812,7 @@ select:focus-visible,
 
 .web-client-row > div:first-child {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 9px;
   min-width: 0;
@@ -2831,6 +2832,57 @@ select:focus-visible,
   color: var(--accent-strong);
   font-size: 13px;
   font-weight: 700;
+}
+
+.web-browser-setup {
+  margin-bottom: 24px;
+}
+
+.web-client-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.web-client-actions button {
+  min-height: 34px;
+  font-size: 13px;
+}
+
+.web-client-row .web-client-status {
+  color: var(--muted);
+}
+
+.web-client-row[data-state="connected"] .web-client-status {
+  color: var(--accent-strong);
+}
+
+.web-client-detail,
+.web-profile-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.web-client-detail {
+  grid-column: 1 / -1;
+}
+
+.web-client-row {
+  row-gap: 6px;
+  padding-block: 16px;
+}
+
+.web-profile-note {
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .web-client-row { grid-template-columns: minmax(0, 1fr); }
+  .web-client-actions { justify-content: flex-start; }
 }
 
 .web-site-row > div {

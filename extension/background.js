@@ -24,6 +24,27 @@ const pageConnection = globalThis.NudeNyangPageConnection.createPageConnection(a
 const embeddedBridge = globalThis.NudeNyangEmbeddedBridge.createEmbeddedBridge(api);
 const messengerPrivacy = globalThis.NudeNyangMessengerPrivacy.createMessengerPrivacy(api, { firefox: CLIENT.browser === "firefox" });
 let messengerBroadcastEpoch = 0;
+const CONNECTION_ALARM = "nudenyang-connection";
+let connectionCheck = null;
+
+// This request carries no page data and must not prepare a model or open a tab.
+function checkAppConnection() {
+  if (connectionCheck) return connectionCheck;
+  connectionCheck = nativeClient.request({ type: "connectionPing", requestId: "connection" })
+    .catch(() => null)
+    .finally(() => { connectionCheck = null; });
+  return connectionCheck;
+}
+
+function startConnectionChecks() {
+  api.alarms?.create(CONNECTION_ALARM, { periodInMinutes: 1 });
+  return checkAppConnection();
+}
+
+api.runtime.onStartup?.addListener(startConnectionChecks);
+api.alarms?.onAlarm.addListener((alarm) => {
+  if (alarm.name === CONNECTION_ALARM) return checkAppConnection();
+});
 
 function nativeRequest(request) {
   return nativeClient.request(request);
@@ -122,12 +143,14 @@ function recoverActiveTabs() {
 api.runtime.onInstalled?.addListener(() => {
   ensureFallbackCommandShortcut();
   recoverActiveTabs();
+  return startConnectionChecks();
 });
 
 api.tabs.onActivated?.addListener(({ tabId }) => recoverPageConnection(tabId));
 
 api.windows?.onFocusChanged?.addListener((windowId) => {
   if (windowId === api.windows.WINDOW_ID_NONE) return;
+  void checkAppConnection();
   api.tabs.query({ active: true, windowId }, ([tab]) => {
     void api.runtime.lastError;
     recoverPageConnection(tab?.id);

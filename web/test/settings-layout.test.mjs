@@ -4,6 +4,7 @@ import test from "node:test";
 
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const browserConnections = readFileSync(new URL("../browser-connections.mjs", import.meta.url), "utf8");
 const i18nSource = readFileSync(new URL("../i18n.mjs", import.meta.url), "utf8");
 const rustMain = readFileSync(new URL("../../src-tauri/src/main.rs", import.meta.url), "utf8");
 const tauriConfig = readFileSync(new URL("../../src-tauri/tauri.conf.json", import.meta.url), "utf8");
@@ -180,7 +181,7 @@ test("settings apply immediately and the primary footer action only confirms", (
 test("web translation panel owns browser batching, usage protection, and site policies", () => {
   const webPanel = markup.match(/data-settings-view="web"[\s\S]*?<\/section>/)?.[0] || "";
   assert.match(markup, /Chrome, Whale과 Firefox/);
-  assert.match(script, /firefox:\s*"Mozilla Firefox"/);
+  assert.match(browserConnections, /"firefox", "Mozilla Firefox"/);
   assert.match(markup, /id="web-translation-enabled"/);
   assert.match(markup, /data-field="web_target_language"/);
   assert.match(markup, /data-field="web_processing_mode"/);
@@ -188,7 +189,7 @@ test("web translation panel owns browser batching, usage protection, and site po
   assert.doesNotMatch(webPanel, /id="web-quick-toggle-shortcut"/);
   assert.match(markup, /id="web-browser-clients"/);
   assert.match(markup, /id="web-site-policies"/);
-  assert.match(script, /browser_clients_status/);
+  assert.match(browserConnections, /browser_clients_status/);
   assert.doesNotMatch(script, /browser_shortcut_settings_open/);
   assert.match(script, /web_quick_toggle_shortcut/);
   assert.match(script, /web_site_policies/);
@@ -403,7 +404,7 @@ test("웹 번역 전환키는 편의 기능의 단축키 카드에서 관리한�
 });
 
 test("브라우저 연결 목록은 상태와 버전만 표시한다", () => {
-  assert.match(markup, /확장 프로그램이 연결되면 브라우저와 버전을 여기에 표시합니다\./);
+  assert.match(markup, /여러 브라우저를 함께 사용할 수 있습니다\./);
   assert.doesNotMatch(markup, /브라우저 단축키 변경/);
   assert.doesNotMatch(script, /web-client-shortcut-button/);
 });

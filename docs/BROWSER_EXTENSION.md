@@ -28,6 +28,21 @@ Discord와 웹은 같은 모델 런타임과 공급자 연결을 공유하지만
 
 ## 설정 위치
 
+### 브라우저 연결 안내 — 미공개 개발 변경
+
+`웹 번역` 설정 상단에 Chrome·Whale·Firefox 연결 목록을 항상 표시한다. 하나를 연결해도 화면을 닫거나 다른 브라우저를 숨기지 않으며, 각각의 설치 대기·오류·연결 확인 상태를 독립적으로 유지한다. 연결을 완료해도 체험 페이지를 열거나 번역을 자동으로 시작하지 않는다. 사용자가 원하는 사이트에서 확장을 눌러 시작하며, 연결된 브라우저의 `스토어 열기`로 다른 프로필에도 설치할 수 있다.
+
+- `연결`은 설치된 브라우저의 App Paths 또는 표준 설치 경로를 확인하고 **선택한 브라우저**로 고정된 공식 스토어 상세 페이지를 연다. 기본 브라우저로 대신 열거나 브라우저 프로필·방문 기록을 읽지 않는다. 확장 추가와 권한 승인은 사용자가 스토어에서 직접 수행한다.
+- Chrome: <https://chromewebstore.google.com/detail/nudenyang-web-translator/kpagdcdgomdlnnphakjakpodmgnhgaia>
+- Whale: <https://store.whale.naver.com/detail/afnknfkmicnmdcfgmddelbpmkadcgifk>
+- Firefox: 사용자가 2026-08-28에 AMO 심사 미통과 상태임을 확인했다. <https://addons.mozilla.org/firefox/addon/nudenyang-web-translator/>는 승인 후 사용할 주소이며, 현재는 `스토어 심사 중` 안내와 비활성 설치 버튼을 표시한다. 이미 설치한 개발 확장의 연결 확인은 허용한다. 승인 뒤 `browser_setup.rs`의 Firefox 스토어 경로를 활성화해야 한다.
+- `연결 확인`은 현재 실행 파일의 Native Messaging 등록을 다시 구성하고 새 응답을 기다린다. 확장을 강제로 설치·재설치하지 않으며 다른 브라우저를 종료하거나 설정·개인정보 동의를 바꾸지 않는다. 등록을 찾지 못했던 확장은 브라우저에서 팝업을 열어 다시 연결할 수 있다.
+- 확장은 설치·업데이트·브라우저 시작과 창 활성화 때 가벼운 `connectionPing` 요청을 보낸다. `alarms` 권한으로 1분 간격의 재확인도 예약하므로, 본체를 나중에 실행하거나 재시작한 경우에도 재연결한다. 요청에는 브라우저 종류·확장 버전과 연결 요청 식별자만 포함하며 페이지 내용·주소·프로필 이름을 보내지 않는다. 이 요청은 모델 준비나 Discord 연결을 요구하지 않는다.
+- 앱은 최근 4분 내 응답만 연결 상태로 표시한다. 무응답·휴면·브라우저 종료는 `연결 확인 대기`로 처리하며 확장 미설치로 단정하지 않는다. 수동 확인은 시작 전 기록을 성공으로 재사용하지 않고, 새 응답이 없으면 90초 뒤 팝업에서 확인하도록 안내한다. 브라우저가 알람을 늦추거나 긴 번역 요청을 처리 중이면 확인도 늦어질 수 있다.
+- 목록은 브라우저 종류별 최근 연결을 표시하며 모든 프로필의 설치 여부를 보장하지 않는다. 확장은 설치한 프로필에서만 사용할 수 있다는 안내를 유지하고, 연결 상태와 모델 준비·웹 번역 사용 여부를 분리한다.
+
+### 웹 번역 설정
+
 Windows 앱의 `웹 번역` 탭이 저장 설정의 기준이다.
 
 - 웹 번역 전체 사용 여부와 기본 목표 언어
@@ -79,7 +94,7 @@ X의 `더보기`처럼 이미 보이는 문단의 내용을 동적으로 펼치�
 
 이미 열린 페이지를 복구할 때는 일반 콘텐츠 스크립트와 별도로 제한된 임베드 제목 스크립트도 프레임에 다시 주입한다. 이 스크립트는 정확한 YouTube 임베드 하위 프레임인지 먼저 검사하며, 그 밖의 프레임에서는 DOM 수집이나 번역 요청 없이 종료한다. 같은 버전의 정상 실행기가 이미 있으면 중복 초기화하지 않는다. 백그라운드 워커가 재시작되어 프레임 등록 목록이 사라져도 부모의 끄기·언어 변경 신호는 같은 탭에 전달되며, 임베드는 부모의 승인을 다시 확인한다.
 
-Chromium 확장은 스토어 제출본과 개인 테스트본의 ID를 분리한다. `npm run extension:chromium`은 Chrome 웹 스토어 ID `kpagdcdgomdlnnphakjakpodmgnhgaia`용 ZIP을 만들고 manifest의 `key`를 제거한다. `npm run extension:personal`은 `dist/chromium-personal-extension`에 기존 개인용 ID `bdkkgjjmocmdknffadjgbljmnhdcchjl`을 유지하는 압축해제 확장을 만든다. 두 공개 키와 ID는 `extension/chromium-identities.json`에서 함께 검증하며, Windows 앱의 Chromium `allowed_origins`도 두 ID를 모두 허용한다. Firefox Add-on ID는 `web-translator@nudenyang.github.io`로 고정되어 있다. Windows 앱은 Chromium의 `allowed_origins`와 Firefox의 `allowed_extensions`를 별도 호스트 매니페스트로 등록하고 명시된 ID만 허용한다. Whale 스토어가 별도 ID를 발급하면 해당 ID도 허용 목록에 추가한 뒤 설치본을 만든다.
+Chromium 확장은 스토어 제출본과 개인 테스트본의 ID를 분리한다. `npm run extension:chromium`은 Chrome 웹 스토어 ID `kpagdcdgomdlnnphakjakpodmgnhgaia`용 ZIP을 만들고 manifest의 `key`를 제거한다. `npm run extension:personal`은 `dist/chromium-personal-extension`에 기존 개인용 ID `bdkkgjjmocmdknffadjgbljmnhdcchjl`을 유지하는 압축해제 확장을 만든다. 두 공개 키와 ID는 `extension/chromium-identities.json`에서 함께 검증한다. Windows 앱의 Chromium `allowed_origins`는 이 두 ID와 Whale 스토어 ID `afnknfkmicnmdcfgmddelbpmkadcgifk`를 명시적으로 허용한다. Firefox Add-on ID는 `web-translator@nudenyang.github.io`로 고정되어 있다. Windows 앱은 Chromium의 `allowed_origins`와 Firefox의 `allowed_extensions`를 별도 호스트 매니페스트로 등록하며 와일드카드나 임의의 확장 ID를 허용하지 않는다.
 
 `release/browser-extension/NudeNyang-Web-Translator-Firefox-<version>.xpi`는 Mozilla 제출과 개발 검증을 위한 패키지다. 일반 Firefox 사용자가 영구 설치하는 XPI는 Mozilla 서명이 필요하다. 서명되지 않은 로컬 패키지는 `about:debugging`의 임시 부가 기능으로 검증하며, 공개 배포는 AMO 검토 또는 자체 배포용 서명 후 진행한다.
 

@@ -4,7 +4,7 @@
   "version": "0.7.8",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
-  "permissions": ["nativeMessaging", "storage", "activeTab", "scripting"],
+  "permissions": ["nativeMessaging", "storage", "activeTab", "scripting", "alarms"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "browser_specific_settings": {
     "gecko": {

@@ -1,6 +1,17 @@
 import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 
 export const COPY = Object.freeze({
+  "사용할 브라우저를 연결하십시오. 여러 브라우저를 함께 사용할 수 있습니다.": ["Connect the browsers you use. You can use several browsers together.","使用するブラウザーを接続してください。複数のブラウザーを併用できます。","连接您使用的浏览器。可以同时使用多个浏览器。"],
+  "확장은 설치한 브라우저 프로필에서만 사용할 수 있습니다.": ["The extension works only in the browser profile where it is installed.","拡張機能はインストールしたブラウザープロファイルでのみ使用できます。","扩展仅可在安装它的浏览器个人资料中使用。"],
+  "연결 확인": ["Check connection","接続を確認","检查连接"],
+  "연결 확인 대기": ["Awaiting connection check","接続確認待ち","等待检查连接"],
+  "스토어 열기": ["Open store","ストアを開く","打开商店"],
+  "설치를 승인한 뒤 기다리거나, 브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": ["Approve installation and wait, or open the extension in your browser to check the connection.","インストールを承認して待つか、ブラウザーで拡張機能を開いて接続を確認してください。","批准安装后请稍候，或在浏览器中打开扩展以检查连接。"],
+  "번역할 사이트에서 NudeNyang 확장 프로그램을 눌러 번역을 시작하십시오.": ["On a site you want to translate, click the NudeNyang extension to start translation.","翻訳したいサイトでNudeNyang拡張機能をクリックして翻訳を開始してください。","在想要翻译的网站上，点击 NudeNyang 扩展开始翻译。"],
+  "브라우저에서 확장 프로그램을 열어 연결을 확인하십시오.": ["Open the extension in your browser to check the connection.","ブラウザーで拡張機能を開いて接続を確認してください。","请在浏览器中打开扩展以检查连接。"],
+  "브라우저 설치를 찾지 못했습니다.": ["Browser installation not found.","ブラウザーのインストールが見つかりません。","未找到已安装的浏览器。"],
+  "스토어 심사 중": ["Store review pending","ストア審査中","商店审核中"],
+  "브라우저 연결을 확인하지 못했습니다. 다시 시도하십시오.": ["Could not check the browser connection. Please try again.","ブラウザーの接続を確認できませんでした。もう一度お試しください。","无法检查浏览器连接，请重试。"],
   "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": ["Consent was not saved because the optional permission was not granted.","追加権限が許可されなかったため、同意を保存しませんでした。","由于未授予可选权限，未保存同意。"],
   "동의를 철회했습니다.": ["Consent has been withdrawn.","同意を撤回しました。","已撤回同意。"],
   "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": ["Could not save your consent. Please try again.","同意を保存できませんでした。もう一度お試しください。","无法保存您的同意，请重试。"],

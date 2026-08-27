@@ -20,9 +20,11 @@ const PROTOCOL_VERSION: u8 = 1;
 const MAX_NATIVE_MESSAGE_BYTES: usize = 1024 * 1024;
 const BRIDGE_FILE_NAME: &str = "browser-bridge.json";
 pub const CHROME_WEB_STORE_EXTENSION_ID: &str = "kpagdcdgomdlnnphakjakpodmgnhgaia";
+pub const WHALE_STORE_EXTENSION_ID: &str = "afnknfkmicnmdcfgmddelbpmkadcgifk";
 pub const LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID: &str = "bdkkgjjmocmdknffadjgbljmnhdcchjl";
 pub const CHROMIUM_EXTENSION_IDS: &[&str] = &[
     CHROME_WEB_STORE_EXTENSION_ID,
+    WHALE_STORE_EXTENSION_ID,
     LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID,
 ];
 pub const FIREFOX_EXTENSION_ID: &str = "web-translator@nudenyang.github.io";
@@ -297,6 +299,9 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
         .unwrap_or_default()
         .to_string();
     match request.get("type").and_then(Value::as_str) {
+        // Onboarding/liveness must work without starting inference, changing
+        // permissions, or depending on a Discord session.
+        Some("connectionPing") => connection_response(&request_id),
         Some("hello" | "status") => {
             let config = app.state::<ConfigStore>().get();
             let engine = app.state::<RustEngine>();
@@ -411,6 +416,16 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
             false,
         ),
     }
+}
+
+fn connection_response(request_id: &str) -> Value {
+    json!({
+        "type": "connection",
+        "requestId": request_id,
+        "protocolVersion": PROTOCOL_VERSION,
+        "appVersion": env!("CARGO_PKG_VERSION"),
+        "appConnected": true,
+    })
 }
 
 fn translation_error_response(request_id: &str, error: &str) -> Value {
@@ -956,6 +971,7 @@ mod tests {
             chromium["allowed_origins"],
             json!([
                 format!("chrome-extension://{CHROME_WEB_STORE_EXTENSION_ID}/"),
+                "chrome-extension://afnknfkmicnmdcfgmddelbpmkadcgifk/",
                 format!("chrome-extension://{LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID}/")
             ])
         );
@@ -963,12 +979,24 @@ mod tests {
             CHROMIUM_EXTENSION_IDS,
             &[
                 CHROME_WEB_STORE_EXTENSION_ID,
+                "afnknfkmicnmdcfgmddelbpmkadcgifk",
                 LEGACY_CHROMIUM_DEVELOPMENT_EXTENSION_ID
             ]
         );
         assert!(chromium.get("allowed_extensions").is_none());
         assert_eq!(firefox["allowed_extensions"], json!([FIREFOX_EXTENSION_ID]));
         assert!(firefox.get("allowed_origins").is_none());
+    }
+
+    #[test]
+    fn connection_ping_needs_no_model_discord_or_page_data() {
+        let response = super::connection_response("check");
+        assert_eq!(response["type"], "connection");
+        assert_eq!(response["requestId"], "check");
+        assert_eq!(response["appConnected"], true);
+        assert_eq!(response["appVersion"], env!("CARGO_PKG_VERSION"));
+        assert!(response.get("items").is_none());
+        assert!(response.get("webSettings").is_none());
     }
 
     #[test]

@@ -2,6 +2,7 @@
 
 mod app_paths;
 mod browser_bridge;
+mod browser_setup;
 pub mod cache;
 pub mod cdp;
 mod config;
@@ -1880,6 +1881,9 @@ fn main() {
             shortcut_capture_set_active,
             settings_get,
             browser_bridge::browser_clients_status,
+            browser_setup::browser_installations,
+            browser_setup::browser_open_extension_store,
+            browser_setup::browser_repair_connection,
             dictionary_status_get,
             dictionary_personal_list,
             dictionary_personal_query,

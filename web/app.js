@@ -18,6 +18,7 @@ import {
 import { DICTIONARY_NOTICES_TEXT, LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
 import { LANGUAGE_OPTIONS } from "./languages.mjs";
 import { filterLanguageOptions } from "./language-search.mjs";
+import { createBrowserConnections } from "./browser-connections.mjs";
 import {
   createLatestDictionaryRequestGate,
   dictionaryOverviewFingerprint,
@@ -176,7 +177,6 @@ const state = {
   dictionaryEditingEntry: null,
   dictionaryImportEntries: [],
   dictionaryPackProgress: new Map(),
-  browserClients: [],
   webSitePolicySearch: "",
 };
 const localizedText = new Map();
@@ -1454,33 +1454,14 @@ function webSettingsPanelIsVisible() {
   return Boolean(panel && !panel.hidden);
 }
 
+let browserConnections;
 function renderBrowserClients() {
-  elements.webBrowserClients.replaceChildren();
-  if (!state.browserClients.length) {
-    const empty = document.createElement("p");
-    empty.className = "web-empty";
-    setLocalizedText(empty, "연결된 브라우저를 기다리고 있습니다.");
-    elements.webBrowserClients.append(empty);
-    return;
-  }
-  for (const client of state.browserClients) {
-    const row = document.createElement("div");
-    row.className = "web-client-row";
-    const identity = document.createElement("div");
-    const name = document.createElement("strong");
-    const version = document.createElement("span");
-    const status = document.createElement("span");
-    name.textContent = {
-      whale: "Naver Whale",
-      firefox: "Mozilla Firefox",
-    }[client.browser] ?? "Google Chrome";
-    version.textContent = client.extensionVersion ? `v${client.extensionVersion}` : "";
-    setLocalizedText(status, "연결됨");
-    status.className = "web-client-status";
-    identity.append(name, version);
-    row.append(identity, status);
-    elements.webBrowserClients.append(row);
-  }
+  browserConnections ??= createBrowserConnections({
+    root: elements.webBrowserClients,
+    invoke,
+    translate: text => translateCopy(currentUiLanguage(), text),
+  });
+  browserConnections.render();
 }
 
 function observeProviderConnections() {
@@ -1501,8 +1482,8 @@ function observeProviderConnections() {
 }
 
 async function loadBrowserClients() {
-  state.browserClients = await invoke("browser_clients_status");
   renderBrowserClients();
+  await browserConnections.refresh();
 }
 
 async function updateWebSitePolicy(hostname, policy) {
@@ -3736,6 +3717,9 @@ if (tauriListen) {
 }
 
 window.addEventListener("focus", syncVisibleDictionaryPersonalData);
+window.addEventListener("focus", () => {
+  if (webSettingsPanelIsVisible()) void loadBrowserClients();
+});
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) syncVisibleDictionaryPersonalData();
 });
