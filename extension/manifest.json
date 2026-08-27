@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsQb6ooSh0XMll55fpPN2MShl7EqUWFUzCKz1n4SZJRaIcSUI8P0BUoZsTaNH+J/oXGPyp8p/30dZqCJONNUUKZIcJoQtIIY0lqN1zEhqZQlgdWWV3xHu8DUPXIyfi8EOQi4aMQcxM83JWS4f+KaG5tWxyE5CVl6Cn3qXDmv9XblSt1GkeEwe/7k1oBG9mt2AF87EmDoMEls6ejcUjqL4qreT+vXKk01wQldzADDUCs23RXSv+H9w5yj+15COrqqrAZBVqaiNMawadFqu+tf2W19RGu+YqmW7SpBcc/O4aMPC5p68DJTY45CxrmBKIWM/lZoLMHeVvE6hJJyAW0pBeQIDAQAB",
@@ -47,6 +47,15 @@
       ],
       "js": ["site-adapters.js", "content-helpers.js", "content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/embed/*",
+        "https://www.youtube-nocookie.com/embed/*"
+      ],
+      "js": ["embedded-title.js"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ]
 }

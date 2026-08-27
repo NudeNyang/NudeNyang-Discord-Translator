@@ -21,6 +21,8 @@ $SharedFiles = @(
     'background.js',
     'content-helpers.js',
     'content.js',
+    'embedded-bridge.js',
+    'embedded-title.js',
     'native-client.js',
     'page-connection.js',
     'popup.css',

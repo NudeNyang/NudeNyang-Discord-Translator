@@ -2,6 +2,7 @@ if (typeof importScripts === "function") {
   if (!globalThis.NudeNyangNativeClient) importScripts("native-client.js");
   if (!globalThis.NudeNyangTabTranslationState) importScripts("tab-state.js");
   if (!globalThis.NudeNyangPageConnection) importScripts("page-connection.js");
+  if (!globalThis.NudeNyangEmbeddedBridge) importScripts("embedded-bridge.js");
 }
 
 const api = globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
@@ -18,18 +19,20 @@ const CLIENT = Object.freeze({
 const nativeClient = globalThis.NudeNyangNativeClient.createNativeClient(api, HOST_NAME, CLIENT);
 const tabTranslationState = globalThis.NudeNyangTabTranslationState.createTabTranslationState(api);
 const pageConnection = globalThis.NudeNyangPageConnection.createPageConnection(api);
+const embeddedBridge = globalThis.NudeNyangEmbeddedBridge.createEmbeddedBridge(api);
 
 function nativeRequest(request) {
   return nativeClient.request(request);
 }
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (embeddedBridge.handle(message, sender, sendResponse)) return true;
   if (message?.type === "nudenyang-native-request") {
     nativeRequest(message.request).then(sendResponse);
     return true;
   }
   if (message?.type === "nudenyang-tab-enabled-get") {
-    tabTranslationState.get(sender.tab?.id).then((enabled) => sendResponse({ enabled }));
+    tabTranslationState.getForTab(sender.tab, sender.url).then((enabled) => sendResponse({ enabled }));
     return true;
   }
   if (message?.type === "nudenyang-tab-enabled-set") {
@@ -44,6 +47,7 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 api.tabs.onRemoved?.addListener((tabId) => {
+  embeddedBridge.clear(tabId);
   void tabTranslationState.clear(tabId);
 });
 

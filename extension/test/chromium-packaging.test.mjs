@@ -39,3 +39,32 @@ test("개인용 Chromium 확장은 스토어 제출본과 별도 ID로 패키징
   assert.match(personalPackager, /chromium-personal-extension/);
   assert.match(personalPackager, /PersonalIdentity\.publicKey/);
 });
+
+test("일반 본문은 최상위 문서에만, 삽입 영상 제목은 허용된 embed 문서에만 주입한다", () => {
+  for (const manifestName of ["manifest.json", "manifest.firefox.json"]) {
+    const manifest = JSON.parse(fs.readFileSync(new URL(`../${manifestName}`, import.meta.url), "utf8"));
+    assert.equal(manifest.content_scripts.length, 2, manifestName);
+    assert.deepEqual(manifest.content_scripts[0].matches, ["http://*/*", "https://*/*"]);
+    assert.deepEqual(manifest.content_scripts[0].js, ["site-adapters.js", "content-helpers.js", "content.js"]);
+    assert.notEqual(manifest.content_scripts[0].all_frames, true, manifestName);
+    assert.deepEqual(manifest.content_scripts[1], {
+      matches: ["https://www.youtube.com/embed/*", "https://www.youtube-nocookie.com/embed/*"],
+      js: ["embedded-title.js"],
+      run_at: "document_idle",
+      all_frames: true,
+    }, manifestName);
+  }
+});
+
+test("개인용과 모든 스토어 패키지에 삽입 영상 제목 스크립트와 브리지를 포함한다", () => {
+  for (const scriptName of [
+    "package_personal_chromium_extension.ps1",
+    "package_chromium_extension.ps1",
+    "package_firefox_extension.ps1",
+  ]) {
+    const script = fs.readFileSync(new URL(`../../scripts/${scriptName}`, import.meta.url), "utf8");
+    const sharedFiles = script.match(/\$SharedFiles\s*=\s*@\(([\s\S]*?)\)/)?.[1] ?? "";
+    assert.match(sharedFiles, /'embedded-title\.js'/, scriptName);
+    assert.match(sharedFiles, /'embedded-bridge\.js'/, scriptName);
+  }
+});

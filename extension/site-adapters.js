@@ -1,17 +1,24 @@
 (function exposeSiteAdapters(root) {
-  const COMMON_EXCLUDES = [
+  // These are never bypassed, including by public navigation and modal adapters.
+  const PROTECTED_EXCLUDES = [
     "script", "style", "noscript", "svg", "canvas", "iframe",
-    "input", "textarea", "select", "option", "button", "form", "label",
+    "input", "textarea", "select", "option", "[role='textbox']",
     "pre", "code", "kbd", "samp", "[contenteditable]",
-    "nav", "header", "footer", "aside",
-    "[role='navigation']", "[role='search']", "[role='textbox']",
-    "[role='button']", "[role='menu']", "[role='menubar']", "[role='toolbar']",
-    "[role='dialog']", "[role='alertdialog']", "[role='alert']", "[role='status']",
-    "[aria-live]", "[aria-modal='true']", "[aria-hidden='true']",
+    "[hidden]", "[inert]", "[aria-hidden='true']",
     "[translate='no']", ".notranslate", "[data-nudenyang-ignore]",
     "[class~='price']", "[class^='price-']", "[class*=' price-']",
     "[data-price]", "[itemprop='price']",
     "[class*='cookie']", "[id*='cookie']", "[class*='consent']", "[id*='consent']",
+  ];
+
+  const COMMON_EXCLUDES = [
+    ...PROTECTED_EXCLUDES,
+    "button", "form", "label",
+    "nav", "header", "footer", "aside",
+    "[role='navigation']", "[role='search']", "[role='textbox']",
+    "[role='button']", "[role='menu']", "[role='menubar']", "[role='toolbar']",
+    "[role='dialog']", "[role='alertdialog']", "[role='alert']", "[role='status']",
+    "[aria-live]", "[aria-modal='true']",
   ];
 
   const UNIVERSAL_BLOCKED_PATH_SEGMENTS = new Set([
@@ -60,27 +67,21 @@
     "body details > summary", "body table th", "body table td",
   ];
 
-  const PUBLIC_CONTENT_ROOTS = [
-    "main", "article", "[role='main']", "#main", "#content", "#contents", "#primary",
-    ".main-content", ".page-content", ".article-content",
-  ];
+  // Layout-only prose is discovered by a pruned text walk in content.js. This avoids
+  // guessing content IDs, expensive descendant :has() selectors, and missing direct
+  // text around nested paragraphs. Each text node still belongs to one block.
+  const PUBLIC_DOCUMENT_BLOCKS = DOCUMENT_BLOCKS;
 
-  // Many public pages render readable copy and CTA labels with layout elements instead of
-  // semantic paragraphs. Only collect terminal text blocks inside recognized content roots;
-  // semantic descendants remain grouped by DOCUMENT_BLOCKS to preserve sentence context.
-  const SEMANTIC_DOCUMENT_DESCENDANTS = [
-    "h1 *", "h2 *", "h3 *", "h4 *", "h5 *", "h6 *", "p *", "li *",
-    "blockquote *", "figcaption *", "dt *", "dd *", "summary *", "th *", "td *",
-  ].join(",");
-
-  const PUBLIC_CONTENT_LEAF_BLOCKS = PUBLIC_CONTENT_ROOTS.map((rootSelector) => (
-    `${rootSelector} :is(div,section,span,a,b,strong,small,em)`
-      + `:not(:has(*:not(br))):not(:is(${SEMANTIC_DOCUMENT_DESCENDANTS}))`
-  ));
-
-  const PUBLIC_DOCUMENT_BLOCKS = [
-    ...DOCUMENT_BLOCKS,
-    ...PUBLIC_CONTENT_LEAF_BLOCKS,
+  const TAKARA_PUBLIC_UI_BLOCKS = [
+    "header.l-header a[href]", "header.l-header button", "header.l-header label",
+    ".ul_Navi01 a[href]", ".ul_Navi01 .naviBtn", ".ul_Navi01 .tit",
+    ".c-tab-group .c-tab-buttons button[role='tab']",
+    "#search_cond p", "#search_cond label", "#search_cond button",
+    "#SS_searchForm label", "#SS_searchForm button",
+    "footer.l-footer a[href]", "footer.l-footer p", "footer.l-footer h2",
+    "footer.l-footer h3", "footer.l-footer h4",
+    // The shared footer uses accordion buttons as its visible sitemap headings.
+    "footer.l-footer button.l-footer-sitemap__trigger",
   ];
 
   const EISYS_PUBLIC_NAVIGATION_BLOCKS = [
@@ -89,6 +90,10 @@
     "footer.l-footer .corp_navi a[href]",
     "footer.l-footer .footer_parent_text",
     "footer.l-footer .corp_support",
+  ];
+
+  const SHOPRO_ANIME_PUBLIC_NAVIGATION_BLOCKS = [
+    "header .headerWrap .menu > ul > li > a[href]",
   ];
 
   const DLSITE_PRIVATE_LINK_FILTERS = [
@@ -157,6 +162,7 @@
       id: "dlsite",
       hosts: ["www.dlsite.com"],
       blockUniversalSensitivePaths: true,
+      collectLayoutText: true,
       blocks: [
         ...PUBLIC_DOCUMENT_BLOCKS,
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
@@ -173,12 +179,37 @@
     {
       id: "eisys",
       hosts: ["www.eisys.co.jp", "eisys.co.jp"],
+      collectLayoutText: true,
       blocks: [
         ...PUBLIC_DOCUMENT_BLOCKS,
         ...EISYS_PUBLIC_NAVIGATION_BLOCKS,
       ],
       excludes: [],
       exclusionBypassBlocks: EISYS_PUBLIC_NAVIGATION_BLOCKS,
+    },
+    {
+      id: "takaratomy",
+      hosts: ["www.takaratomy.co.jp", "takaratomy.co.jp", "dm.takaratomy.co.jp"],
+      blockUniversalSensitivePaths: true,
+      collectLayoutText: true,
+      blocks: [...PUBLIC_DOCUMENT_BLOCKS, ...TAKARA_PUBLIC_UI_BLOCKS],
+      publicUiBlocks: TAKARA_PUBLIC_UI_BLOCKS,
+      publicForms: ["#search_cond", "#SS_searchForm"],
+      visibilityRoots: ["header.l-header", ".ul_Navi01", "#search_cond", "footer.l-footer"],
+      excludes: [],
+    },
+    {
+      id: "shopro-anime",
+      hosts: ["www.shopro.co.jp"],
+      pathPattern: /^\/anime(?:\/|$)/u,
+      blockUniversalSensitivePaths: true,
+      // Preserve the generic page's opt-in policy while recognizing its public menu.
+      manualOnly: true,
+      collectLayoutText: true,
+      blocks: [...PUBLIC_DOCUMENT_BLOCKS, ...SHOPRO_ANIME_PUBLIC_NAVIGATION_BLOCKS],
+      publicUiBlocks: SHOPRO_ANIME_PUBLIC_NAVIGATION_BLOCKS,
+      visibilityRoots: ["header .headerWrap"],
+      excludes: ["button", "[role='button']"],
     },
     {
       id: "github",
@@ -201,6 +232,7 @@
     {
       id: "booth",
       hosts: ["booth.pm"],
+      collectLayoutText: true,
       blocks: [
         ...PUBLIC_DOCUMENT_BLOCKS,
         "[class*='description'] p", "[class*='description'] li",
@@ -283,6 +315,7 @@
   const UNIVERSAL_ADAPTER = Object.freeze({
     id: "web",
     manualOnly: true,
+    collectLayoutText: true,
     blocks: PUBLIC_DOCUMENT_BLOCKS,
     excludes: [],
   });
@@ -329,7 +362,13 @@
     return [...COMMON_EXCLUDES, ...(adapter?.excludes ?? [])].join(",");
   }
 
-  const api = Object.freeze({ ADAPTERS, UNIVERSAL_ADAPTER, adapterForLocation, exclusionSelector });
+  function protectedExclusionSelector(adapter) {
+    return [...PROTECTED_EXCLUDES, ...(adapter?.excludes ?? [])].join(",");
+  }
+
+  const api = Object.freeze({
+    ADAPTERS, UNIVERSAL_ADAPTER, adapterForLocation, exclusionSelector, protectedExclusionSelector,
+  });
   root.NudeNyangSiteAdapters = api;
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

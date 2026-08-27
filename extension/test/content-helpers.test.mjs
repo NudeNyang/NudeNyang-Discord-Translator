@@ -386,7 +386,7 @@ test("문자 제한을 넘는 다음 작업은 대기열에 보존한다", () =>
   assert.deepEqual(queue, [next]);
 });
 
-test("인라인 링크가 많은 한 문단은 항목 제한 때문에 요청 중간에서 잘리지 않는다", () => {
+test("항목 제한보다 큰 문단은 원래 노드와 문단 ID를 유지한 채 요청을 나눈다", () => {
   const paragraph = Array.from({ length: 27 }, (_, index) => ({
     id: `paragraph-${index}`,
     blockId: "paragraph",
@@ -398,16 +398,150 @@ test("인라인 링크가 많은 한 문단은 항목 제한 때문에 요청 �
   ];
   const queue = [...paragraph, ...nextParagraph];
 
-  const batch = takeTranslationBatch(queue, {
+  const options = {
     maxItems: 24,
     maxChars: 16000,
     isCurrent: () => true,
     isNearViewport: () => true,
     onDiscard: () => assert.fail("현재 문단을 버리면 안 된다"),
+  };
+  const batch = takeTranslationBatch(queue, options);
+
+  assert.deepEqual(batch, paragraph.slice(0, 24));
+  assert.deepEqual(queue, [...paragraph.slice(24), ...nextParagraph]);
+  const remaining = takeTranslationBatch(queue, options);
+  const sent = [...batch, ...remaining];
+  assert.deepEqual(sent, [...paragraph, ...nextParagraph]);
+  sent.forEach((item, index) => assert.equal(item, [...paragraph, ...nextParagraph][index]));
+  assert.deepEqual(queue, []);
+});
+
+for (const external of [false, true]) {
+  test(`${external ? "외부" : "로컬"} 번역의 큰 문단은 문자 한도 내에서 기존 텍스트 노드 경계로 나눈다`, () => {
+    const paragraph = Array.from({ length: 10 }, (_, index) => ({
+      id: `long-${index}`,
+      blockId: "long-paragraph",
+      node: { index },
+      text: String(index).repeat(2999),
+    }));
+    const queue = [...paragraph];
+    const options = {
+      maxItems: 24,
+      maxChars: 10000,
+      discardOversize: external,
+      isCurrent: () => true,
+      isNearViewport: () => true,
+      onDiscard: () => assert.fail("한도 내로 나눌 수 있는 노드를 버리면 안 된다"),
+    };
+    const batches = [];
+    while (queue.length > 0) {
+      const batch = takeTranslationBatch(queue, options);
+      assert.ok(batch.length > 0 && batch.length <= options.maxItems);
+      assert.ok(batch.reduce((sum, item) => sum + item.text.length, 0) <= options.maxChars);
+      batches.push(batch);
+    }
+
+    assert.deepEqual(batches.map((batch) => batch.length), [3, 3, 3, 1]);
+    const sent = batches.flat();
+    assert.deepEqual(sent, paragraph);
+    sent.forEach((item, index) => assert.equal(item, paragraph[index]));
+    assert.ok(sent.every((item) => item.blockId === "long-paragraph"));
+  });
+}
+
+test("외부 번역의 큰 문단은 남은 페이지 전송 예산을 초과하지 않는다", () => {
+  const paragraph = Array.from({ length: 10 }, (_, index) => ({
+    id: `long-${index}`,
+    blockId: "long-paragraph",
+    text: "x".repeat(2999),
+  }));
+  const queue = [...paragraph];
+  const discarded = [];
+  const pageLimit = 25000;
+  let sentChars = 0;
+  const batches = [];
+  while (queue.length > 0) {
+    const batch = takeTranslationBatch(queue, {
+      maxItems: 40,
+      maxChars: Math.min(32000, pageLimit - sentChars),
+      discardOversize: true,
+      isCurrent: () => true,
+      isNearViewport: () => true,
+      onDiscard: (item) => discarded.push(item),
+    });
+    sentChars += batch.reduce((sum, item) => sum + item.text.length, 0);
+    assert.ok(sentChars <= pageLimit);
+    batches.push(batch);
+  }
+
+  assert.deepEqual(batches[0], paragraph.slice(0, 8));
+  assert.deepEqual(batches[1], []);
+  assert.equal(sentChars, 23992);
+  assert.deepEqual(discarded, paragraph.slice(8));
+});
+
+test("남은 외부 예산보다 큰 단일 노드만 제외하고 같은 문단의 작은 노드는 보존한다", () => {
+  const oversized = { id: "large", blockId: "paragraph", text: "too long" };
+  const small = { id: "small", blockId: "paragraph", text: "abc" };
+  const tail = { id: "tail", blockId: "paragraph", text: "de" };
+  const queue = [oversized, small, tail];
+  const discarded = [];
+  const batch = takeTranslationBatch(queue, {
+    maxItems: 24,
+    maxChars: 5,
+    discardOversize: true,
+    isCurrent: () => true,
+    isNearViewport: () => true,
+    onDiscard: (item) => discarded.push(item),
   });
 
-  assert.deepEqual(batch, paragraph);
-  assert.deepEqual(queue, nextParagraph);
+  assert.deepEqual(batch, [small, tail]);
+  assert.deepEqual(discarded, [oversized]);
+  assert.deepEqual(queue, []);
+});
+
+test("로컬 번역도 요청 한도를 넘는 단일 노드를 보내거나 대기열에 가두지 않는다", () => {
+  const oversized = { id: "large", blockId: "paragraph", text: "too long" };
+  const small = { id: "small", blockId: "paragraph", text: "abc" };
+  const queue = [oversized, small];
+  const discarded = [];
+  const batch = takeTranslationBatch(queue, {
+    maxItems: 24,
+    maxChars: 5,
+    discardOversize: false,
+    isCurrent: () => true,
+    isNearViewport: () => true,
+    onDiscard: (item) => discarded.push(item),
+  });
+
+  assert.deepEqual(batch, [small]);
+  assert.deepEqual(discarded, [oversized]);
+  assert.deepEqual(queue, []);
+});
+
+test("큰 문단 분할 전 무효화되거나 화면 밖인 노드는 한 번만 제외한다", () => {
+  const items = Array.from({ length: 5 }, (_, index) => ({
+    id: String(index),
+    blockId: "paragraph",
+    text: "1234",
+  }));
+  const queue = [...items];
+  const discarded = [];
+  const options = {
+    maxItems: 2,
+    maxChars: 8,
+    discardOversize: true,
+    isCurrent: (item) => item !== items[1],
+    isNearViewport: (item) => item !== items[3],
+    onDiscard: (item) => discarded.push(item),
+  };
+
+  const first = takeTranslationBatch(queue, options);
+  assert.deepEqual(first, [items[0], items[2]]);
+  assert.deepEqual(queue, [items[4]]);
+  assert.deepEqual(takeTranslationBatch(queue, options), [items[4]]);
+  assert.deepEqual(discarded, [items[1], items[3]]);
+  assert.deepEqual(queue, []);
 });
 
 test("다음 문단 전체가 한도를 넘으면 현재 요청에 일부만 끼워 넣지 않는다", () => {

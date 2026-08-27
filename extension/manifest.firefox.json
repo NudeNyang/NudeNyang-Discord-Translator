@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "permissions": ["nativeMessaging", "storage", "activeTab", "scripting"],
@@ -16,7 +16,7 @@
     }
   },
   "background": {
-    "scripts": ["native-client.js", "tab-state.js", "page-connection.js", "background.js"]
+    "scripts": ["native-client.js", "tab-state.js", "page-connection.js", "embedded-bridge.js", "background.js"]
   },
   "icons": {
     "16": "icons/paw-16.png",
@@ -53,6 +53,15 @@
       "matches": ["http://*/*", "https://*/*"],
       "js": ["site-adapters.js", "content-helpers.js", "content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/embed/*",
+        "https://www.youtube-nocookie.com/embed/*"
+      ],
+      "js": ["embedded-title.js"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ]
 }

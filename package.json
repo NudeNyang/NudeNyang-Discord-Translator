@@ -29,6 +29,7 @@
     "tauri:build": "tauri build --no-bundle"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.11.0"
+    "@tauri-apps/cli": "^2.11.0",
+    "jsdom": "30.0.1"
   }
 }

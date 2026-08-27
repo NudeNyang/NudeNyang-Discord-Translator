@@ -35,7 +35,7 @@
     function sendOnce(tabId, message) {
       return new Promise((resolve) => {
         try {
-          api.tabs.sendMessage(tabId, message, (response) => {
+          api.tabs.sendMessage(tabId, message, { frameId: 0 }, (response) => {
             const error = runtimeError();
             resolve({ response: response ?? null, error });
           });
@@ -57,7 +57,7 @@
       });
     }
 
-    function inject(tabId) {
+    function inject(target, files) {
       return new Promise((resolve) => {
         if (!api.scripting?.executeScript) {
           resolve(false);
@@ -65,8 +65,8 @@
         }
         try {
           api.scripting.executeScript({
-            target: { tabId },
-            files: [...contentScripts],
+            target,
+            files: [...files],
           }, () => resolve(!runtimeError()));
         } catch {
           resolve(false);
@@ -79,7 +79,11 @@
       const recovery = (async () => {
         const currentTab = await tab(tabId);
         if (!isWebPageUrl(currentTab?.url)) return false;
-        return inject(tabId);
+        if (!await inject({ tabId, frameIds: [0] }, contentScripts)) return false;
+        // The guarded title script exits in every non-YouTube-embed document.
+        // A restricted/removed child frame must not undo a healthy top-frame recovery.
+        await inject({ tabId, allFrames: true }, ["embedded-title.js"]);
+        return true;
       })();
       recoveries.set(tabId, recovery);
       try {

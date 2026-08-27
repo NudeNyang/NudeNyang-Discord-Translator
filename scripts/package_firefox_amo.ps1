@@ -30,7 +30,7 @@ if (-not $ResolvedStaging.StartsWith($ProjectRoot, [System.StringComparison]::Or
 Remove-Item -LiteralPath $ResolvedStaging -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $ResolvedStaging -Force | Out-Null
 
-$RootFiles = @('LICENSE', 'PRIVACY.md', 'README.md', 'package.json')
+$RootFiles = @('LICENSE', 'PRIVACY.md', 'README.md', 'package.json', 'package-lock.json', 'THIRD_PARTY_NOTICES.md')
 foreach ($File in $RootFiles) {
     Copy-Item -LiteralPath (Join-Path $ProjectRoot $File) -Destination $ResolvedStaging -Force
 }
@@ -60,7 +60,14 @@ foreach ($File in $WebFiles) {
     Copy-Item -LiteralPath (Join-Path $ProjectRoot "web\$File") -Destination (Join-Path $ResolvedStaging 'web') -Force
 }
 
-Copy-Item -LiteralPath (Join-Path $ProjectRoot 'docs\FIREFOX_AMO_REVIEW.md') -Destination (Join-Path $ResolvedStaging 'docs') -Force
+$DocFiles = @('FIREFOX_AMO_REVIEW.md', 'BROWSER_EXTENSION.md', 'BROWSER_STORE_PRIVACY.md')
+foreach ($File in $DocFiles) {
+    Copy-Item -LiteralPath (Join-Path $ProjectRoot "docs\$File") -Destination (Join-Path $ResolvedStaging 'docs') -Force
+}
+
+# Extension contract tests inspect this source file; no Rust build is needed for the XPI.
+New-Item -ItemType Directory -Path (Join-Path $ResolvedStaging 'src-tauri\src') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $ProjectRoot 'src-tauri\src\browser_bridge.rs') -Destination (Join-Path $ResolvedStaging 'src-tauri\src') -Force
 
 $BaseName = "NudeNyang-Web-Translator-Firefox-$Version"
 $SourceArchive = Join-Path $ResolvedOutput "$BaseName-source.zip"

@@ -713,6 +713,17 @@ DeepL은 모델이나 SDK를 번들하지 않고 사용자가 제공한 API 키�
 TranslateGemma is provided under and subject to the Gemma Terms of Use found at
 <https://ai.google.dev/gemma/terms>.
 
+## 개발 및 검증 도구
+
+| 구성요소 | 용도 | 라이선스 및 출처 |
+|---|---|---|
+| jsdom 30.0.1 | 브라우저 확장의 DOM 수집·상태·복구 회귀 테스트 | MIT, Copyright (c) 2010 Elijah Insua, <https://github.com/jsdom/jsdom> |
+
+jsdom은 \`package.json\`의 개발 의존성과 \`package-lock.json\`에 버전을 고정한다. 개발·심사 재현
+환경에서 \`npm ci\`로 설치하며, Windows 앱이나 브라우저 확장 ZIP·XPI의 실행 코드에는 번들하지
+않는다. jsdom의 MIT 라이선스 원문은 설치된 패키지의 \`LICENSE.txt\`에 포함되며, 함께 설치되는
+의존성에는 각각의 라이선스가 적용된다.
+
 ## 사전 데이터와 외부 연결
 
 한·영·일·중 미니팩은 기능 검증을 위해 이 프로젝트에서 직접 작성했으며 앱과 같은

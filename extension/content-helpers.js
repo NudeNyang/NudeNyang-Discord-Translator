@@ -145,15 +145,29 @@
         continue;
       }
       const blockChars = current.reduce((total, item) => total + item.text.length, 0);
-      if (batch.length === 0 && blockChars > options.maxChars && options.discardOversize) {
-        for (const item of current) options.onDiscard(item);
-        continue;
-      }
       const exceedsItemLimit = batch.length > 0 && batch.length + current.length > options.maxItems;
       const exceedsCharLimit = batch.length > 0 && chars + blockChars > options.maxChars;
       if (exceedsItemLimit || exceedsCharLimit) {
         queue.unshift(...current);
         break;
+      }
+      if (current.length > options.maxItems || blockChars > options.maxChars) {
+        // Only an intrinsically oversized block may span requests. Keep each
+        // existing node and blockId intact, and never exceed the remaining budget.
+        for (let index = 0; index < current.length; index += 1) {
+          const item = current[index];
+          if (item.text.length > options.maxChars) {
+            options.onDiscard(item);
+            continue;
+          }
+          if (batch.length >= options.maxItems || chars + item.text.length > options.maxChars) {
+            queue.unshift(...current.slice(index));
+            return batch;
+          }
+          batch.push(item);
+          chars += item.text.length;
+        }
+        continue;
       }
       batch.push(...current);
       chars += blockChars;

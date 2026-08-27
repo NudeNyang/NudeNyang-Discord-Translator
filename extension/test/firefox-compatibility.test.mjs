@@ -23,7 +23,7 @@ test("Firefox Manifest V3는 고정 Add-on ID와 이벤트 백그라운드를 �
   assert.equal(manifest.browser_specific_settings.gecko.id, "web-translator@nudenyang.github.io");
   assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, "142.0");
   assert.deepEqual(manifest.background, {
-    scripts: ["native-client.js", "tab-state.js", "page-connection.js", "background.js"],
+    scripts: ["native-client.js", "tab-state.js", "page-connection.js", "embedded-bridge.js", "background.js"],
   });
   assert.equal(manifest.key, undefined);
 });
@@ -80,6 +80,11 @@ test("AMO 공개 심사 패키지는 생성 코드 원본과 검토자 안내를
   assert.match(amoScript, /ui-locales\.mjs/);
   assert.match(amoScript, /FIREFOX_AMO_REVIEW\.md/);
   assert.match(amoScript, /PRIVACY\.md/);
+  assert.match(amoScript, /\$RootFiles\s*=\s*@\([^\n]*'package-lock\.json'/);
+  assert.match(amoScript, /'THIRD_PARTY_NOTICES\.md'/);
+  assert.match(amoScript, /'BROWSER_EXTENSION\.md'/);
+  assert.match(amoScript, /'BROWSER_STORE_PRIVACY\.md'/);
+  assert.match(amoScript, /src-tauri[\\/]+src[\\/]+browser_bridge\.rs/);
   assert.doesNotMatch(amoScript, /Compress-Archive/);
   assert.match(amoScript, /\.Replace\('\\', '\/'\)/);
   assert.match(reviewerNotes, /public listing/i);
