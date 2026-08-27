@@ -213,6 +213,19 @@ test("subscription CLI disconnect only disables the provider inside NudeNyang Di
   assert.match(rustMain, /patch\["translator"\]\s*=\s*json!\("hymt_1_8b"\)/);
 });
 
+test("connection card edges do not clip tooltips and highlighted rows retain rounded corners", () => {
+  for (const selector of ["provider-list", "web-browser-clients"]) {
+    const rule = styles.match(new RegExp(`\\.${selector}\\s*\\{([^}]+)\\}`))?.[1] || "";
+    assert.match(rule, /overflow:\s*visible;/, `${selector} must not clip the first row tooltip`);
+  }
+  for (const [edge, corners] of [["first-child", "start"], ["last-child", "end"]]) {
+    const rule = styles.match(new RegExp(`\\.provider-row:${edge}\\s*\\{([^}]+)\\}`))?.[1] || "";
+    assert.match(rule, new RegExp(`border-${corners}-start-radius:`));
+    assert.match(rule, new RegExp(`border-${corners}-end-radius:`));
+    assert.doesNotMatch(rule, /overflow:\s*(?:hidden|clip)/);
+  }
+});
+
 test("provider actions use fixed icon buttons with localized accessible labels", () => {
   assert.match(markup, /button secondary provider-action provider-icon-button/);
   assert.match(markup, /button secondary provider-disconnect provider-icon-button/);

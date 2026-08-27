@@ -1302,7 +1302,7 @@ select:focus-visible,
 }
 
 .provider-list {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .storage-card {
@@ -1399,6 +1399,17 @@ select:focus-visible,
 
 .provider-row + .provider-row {
   border-top: 1px solid var(--border);
+}
+
+/* Round row backgrounds without clipping the action tooltips above the card. */
+.provider-row:first-child {
+  border-start-start-radius: calc(var(--radius-card) - 1px);
+  border-start-end-radius: calc(var(--radius-card) - 1px);
+}
+
+.provider-row:last-child {
+  border-end-start-radius: calc(var(--radius-card) - 1px);
+  border-end-end-radius: calc(var(--radius-card) - 1px);
 }
 
 .provider-row[data-highlight="true"] {
@@ -2733,7 +2744,7 @@ select:focus-visible,
 }
 
 .web-browser-clients {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .web-site-policies {
