@@ -24,8 +24,11 @@
         <span id="connection-text" data-i18n="connecting">엔진 연결 중</span>
       </div>
       <p id="detail" class="detail"></p>
-      <p id="messenger-notice" class="messenger-notice" role="status" aria-live="polite" hidden></p>
-      <button id="messenger-consent-start" class="messenger-consent-action" type="button" hidden>개인정보 안내 확인</button>
+      <div id="messenger-panel" class="messenger-panel" hidden>
+        <h2 id="messenger-title" data-i18n="messengerPrivacyConsent" hidden>웹 메신저 개인정보 동의</h2>
+        <p id="messenger-notice" class="messenger-notice" role="status" aria-live="polite" hidden></p>
+        <button id="messenger-consent-start" class="messenger-consent-action" type="button" hidden>개인정보 안내 확인</button>
+      </div>
       <div class="quick-controls">
         <div class="quick-select-row">
           <span data-i18n="translationLanguage">번역 언어</span>
@@ -62,9 +65,10 @@
           <kbd id="command-shortcut">Ctrl + Shift + L</kbd>
         </span>
       </div>
-      <button id="restore" type="button" data-i18n="viewOriginal">원문 보기</button>
-      <button id="open-settings" class="secondary-action" type="button"><span data-i18n="webTranslation">웹 번역</span> <span data-i18n="settings">설정</span> <span data-i18n="open">열기</span></button>
-      <button id="messenger-privacy" class="privacy-action" type="button" data-i18n="messengerPrivacyConsent">웹 메신저 개인정보 동의</button>
+      <div class="footer-actions">
+        <button id="open-settings" class="secondary-action" type="button"><span data-i18n="webTranslation">웹 번역</span> <span data-i18n="settings">설정</span></button>
+        <button id="messenger-privacy" class="privacy-action" type="button" data-i18n="reviewMessengerPrivacy">개인정보 안내 확인</button>
+      </div>
     </main>
     <script src="content-helpers.js"></script>
     <script src="popup-locales.js"></script>

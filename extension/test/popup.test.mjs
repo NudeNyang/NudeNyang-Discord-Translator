@@ -15,7 +15,15 @@ test("팝업의 사용자 문구는 공식체를 사용한다", () => {
   assert.doesNotMatch(productCopy, /아니야|해줘|복원했어|있어\./);
   assert.doesNotMatch(productCopy, /[—–]/);
   assert.match(productCopy, /data-i18n="webTranslation"/);
-  assert.match(productCopy, /data-i18n="viewOriginal"/);
+  assert.match(productCopy, /data-i18n="settings"/);
+});
+
+test("팝업은 중복 원문 버튼 없이 토글과 단축키 및 한 줄 관리 영역을 제공한다", () => {
+  assert.doesNotMatch(popupHtml, /id="restore"/);
+  assert.doesNotMatch(popupJs, /nudenyang-restore/);
+  assert.match(popupHtml, /class="footer-actions"/);
+  assert.match(popupCss, /\.footer-actions\s*\{[^}]*display:\s*flex/s);
+  assert.match(popupCss, /\.messenger-panel\.consent-required/);
 });
 
 test("팝업은 마지막으로 사용한 브라우저 창의 활성 탭을 조회한다", () => {

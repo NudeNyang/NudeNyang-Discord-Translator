@@ -72,6 +72,7 @@ const POPUP_SOURCE = Object.freeze({
   open: "열기",
   viewOriginal: "원문 보기",
   connected: "연결됨",
+  disabled: "사용 중지됨",
   preparing: "준비 중",
   connectionRequired: "연결 필요",
   unableToProcess: "요청을 처리할 수 없음",

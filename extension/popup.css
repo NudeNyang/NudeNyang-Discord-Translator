@@ -119,11 +119,16 @@ h1 {
 }
 
 .detail {
-  min-height: 34px;
+  min-height: 18px;
   margin: 10px 2px 14px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.connection.disabled .dot {
+  background: var(--muted);
+  box-shadow: none;
 }
 
 .messenger-notice {
@@ -132,6 +137,32 @@ h1 {
   font-size: 12px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.messenger-panel.consent-required {
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-card);
+  background: var(--accent-soft);
+}
+
+.messenger-panel h2 {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.consent-required .messenger-notice {
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.messenger-panel[hidden],
+.messenger-panel [hidden],
+.footer-actions [hidden] {
+  display: none;
 }
 
 .quick-controls {
@@ -443,27 +474,36 @@ button:disabled:hover {
   background: var(--control);
 }
 
-.secondary-action {
-  margin-top: 8px;
-  color: var(--muted);
-  background: transparent;
+.footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.secondary-action,
+.privacy-action {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .privacy-action {
-  margin-top: 8px;
-  padding: 5px 8px;
-  border-color: transparent;
-  color: var(--muted);
-  background: transparent;
-  font-size: 11px;
+  color: var(--accent-strong);
 }
 
 .messenger-consent-action {
-  margin-bottom: 16px;
+  border-color: var(--accent-strong);
+  color: var(--bg);
+  background: var(--accent-strong);
+  font-weight: 600;
 }
 
-.messenger-consent-action[hidden] {
-  display: none;
+.messenger-consent-action:hover {
+  background: var(--accent-strong);
+  border-color: var(--text);
 }
 
 .switch {

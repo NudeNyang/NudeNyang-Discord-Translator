@@ -24,7 +24,15 @@ async function popup(options = {}) {
     i18n: { getUILanguage: () => "en-US" },
     tabs: {
       query(_query, callback) { callback([{ id: 7, url: "https://discord.com/channels/@me/12345" }]); },
-      create(details, callback) { tabs.push({ ...details }); callback?.({ id: 8, ...details }); },
+      create(details, callback) {
+        if (options.privacyOpenFails) {
+          dom.window.chrome.runtime.lastError = { message: "Test: tab creation denied" };
+          callback?.();
+          delete dom.window.chrome.runtime.lastError;
+          return;
+        }
+        tabs.push({ ...details }); callback?.({ id: 8, ...details });
+      },
     },
     commands: { getAll(callback) { callback([]); } },
     runtime: {
@@ -33,12 +41,16 @@ async function popup(options = {}) {
         messages.push(JSON.parse(JSON.stringify(message)));
         if (message.type === "nudenyang-page-request") {
           if (message.message.type === "nudenyang-toggle-enabled") state = { ...state, enabled: !state.enabled };
+          if (message.message.type === "nudenyang-set-enabled") state = { ...state, enabled: message.message.enabled };
           callback({ ...state });
         } else if (message.type === "nudenyang-native-request") {
+          if (message.request.type === "openWebSettings") { callback({ type: "opened" }); return; }
+          if (message.request.type === "webSettingsUpdate" && options.webSettingsResponse) { callback(options.webSettingsResponse); return; }
           callback({
             type: "status", appConnected: true, modelReady: true,
             translator: "hymt_1_8b", targetLanguage: "ko", resolvedUiLanguage: options.language ?? "en",
             webSettings: { messengerEnabled: true, quickToggleShortcut: "F4" },
+            ...options.nativeStatus,
           });
         } else throw new Error(`Unexpected message: ${message.type}`);
       },
@@ -61,9 +73,9 @@ test("메신저 동의는 팝업 열기로 자동 표시·저장하지 않고 �
   try {
     assert.deepEqual(p.tabs, []);
     assert.ok(p.messages.every((message) => !message.type.includes("consent-set")));
-    assert.equal(p.get("messenger-privacy").textContent, "Review privacy notice");
-    p.get("messenger-privacy").click();
-    assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/messenger-privacy.html" }]);
+    assert.equal(p.get("messenger-privacy").hidden, true, "동의 카드와 하단에 같은 진입을 중복 표시하지 않는다");
+    p.get("messenger-consent-start").click();
+    assert.equal(p.tabs.length, 1);
     assert.ok(p.messages.every((message) => !message.type.includes("consent-set")));
   } finally { p.dispose(); }
 });
@@ -73,6 +85,10 @@ test("동의 차단 안내 옆 버튼은 원래 대화의 임시 식별자만 �
   try {
     const button = p.get("messenger-consent-start");
     assert.equal(button.hidden, false);
+    assert.equal(p.get("messenger-panel").hidden, false);
+    assert.ok(p.get("messenger-panel").classList.contains("consent-required"));
+    assert.equal(p.get("messenger-title").hidden, false);
+    assert.equal(p.get("messenger-title").textContent, "Web messenger privacy consent");
     button.click();
     const url = new URL(p.tabs[0].url);
     assert.equal(url.pathname, "/messenger-privacy.html");
@@ -133,7 +149,10 @@ test("일반 페이지에서는 메신저 안내를 숨기고 기존 전환을 �
   const p = await popup({ status: { messengerService: "", messengerGate: "", site: "github" } });
   try {
     assert.equal(p.get("messenger-notice").hidden, true);
-    assert.equal(p.get("messenger-privacy").textContent, "Web messenger privacy consent");
+    assert.equal(p.get("messenger-panel").hidden, true);
+    assert.equal(p.get("messenger-privacy").hidden, false);
+    assert.equal(p.get("messenger-privacy").textContent, "Review privacy notice");
+    assert.equal(p.get("messenger-privacy").getAttribute("aria-label"), "Review privacy notice · Web messenger privacy consent");
     p.pressF4();
     await settle();
     assert.equal(p.toggleCalls().length, 1);
@@ -157,5 +176,84 @@ test("메신저 안내와 개인정보 버튼도 본체 UI 언어를 따른다",
     assert.equal(p.dom.window.document.documentElement.lang, "ko");
     assert.equal(p.get("messenger-privacy").textContent, "개인정보 안내 확인");
     assert.equal(p.get("messenger-notice").textContent, "웹 메신저 읽기 번역에 대한 개인정보 동의가 필요합니다.");
+  } finally { p.dispose(); }
+});
+
+test("원문 버튼을 없애도 상단 토글과 F4로 번역을 끄고 다시 켤 수 있다", async () => {
+  const p = await popup({ status: { messengerGate: "", enabled: true } });
+  try {
+    assert.equal(p.get("restore"), null);
+    p.get("enabled").click();
+    await settle();
+    assert.equal(p.get("enabled").checked, false);
+    assert.ok(p.messages.some((message) => message.message?.type === "nudenyang-set-enabled" && !message.message.enabled));
+    p.pressF4();
+    await settle();
+    assert.equal(p.get("enabled").checked, true);
+    assert.ok(p.messages.every((message) => message.message?.type !== "nudenyang-restore"));
+    p.get("messenger-privacy").click();
+    assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/messenger-privacy.html" }], "관리 진입은 번역 재개 문맥을 전달하지 않는다");
+  } finally { p.dispose(); }
+});
+
+test("브라우저 연결 해제는 응답 언어로 사용 중지를 안내하고 설정·동의 관리만 허용한다", async () => {
+  for (const language of ["ko", "en", "ar"]) {
+    const p = await popup({
+      status: { enabled: true },
+      nativeStatus: { type: "error", code: "browser_connection_disabled", appConnected: false, resolvedUiLanguage: language },
+    });
+    try {
+      const copy = (id) => p.dom.window.NudeNyangPopupLocales.message(language, id);
+      assert.equal(p.dom.window.document.documentElement.lang, language);
+      assert.equal(p.get("connection-text").textContent, copy("disabled"));
+      assert.equal(p.get("detail").textContent, `${copy("webTranslation")} · ${copy("settings")}`);
+      assert.ok(p.get("connection").classList.contains("disabled"));
+      assert.equal(p.get("enabled").checked, false);
+      assert.equal(p.get("enabled").disabled, true);
+      assert.equal(p.get("target-language-trigger").disabled, true);
+      assert.equal(p.get("always-translate-site").disabled, true);
+      assert.equal(p.get("messenger-panel").hidden, true);
+      assert.equal(p.get("messenger-consent-start").hidden, true);
+      p.pressF4();
+      await settle();
+      assert.equal(p.toggleCalls().length, 0);
+      assert.equal(p.get("messenger-privacy").hidden, false);
+      assert.equal(p.get("open-settings").disabled, false);
+      p.get("open-settings").click();
+      await settle();
+      assert.ok(p.messages.some((message) => message.request?.type === "openWebSettings"));
+    } finally { p.dispose(); }
+  }
+});
+
+test("일반 페이지에서 개인정보 안내 열기에 실패하면 숨긴 안내 영역을 다시 표시한다", async () => {
+  const p = await popup({ privacyOpenFails: true, status: { messengerService: "", messengerGate: "" } });
+  try {
+    assert.equal(p.get("messenger-panel").hidden, true);
+    p.get("messenger-privacy").click();
+    assert.equal(p.get("messenger-panel").hidden, false);
+    assert.equal(p.get("messenger-notice").hidden, false);
+    assert.equal(p.get("messenger-notice").textContent, p.dom.window.NudeNyangPopupLocales.message("en", "unableToProcess"));
+    assert.deepEqual(p.tabs, []);
+  } finally { p.dispose(); }
+});
+
+test("팝업을 연 뒤 사이트 설정 요청 중 연결이 해제되어도 안내와 잠금 상태를 갱신한다", async () => {
+  const p = await popup({
+    status: { messengerService: "", messengerGate: "" },
+    webSettingsResponse: { type: "error", code: "browser_connection_disabled", appConnected: false, uiLanguage: "ko" },
+  });
+  try {
+    p.get("always-translate-site").click();
+    await settle();
+    assert.equal(p.get("connection-text").textContent, "사용 중지됨");
+    assert.equal(p.get("enabled").disabled, true);
+    assert.equal(p.get("always-translate-site").checked, false);
+    assert.equal(p.get("always-translate-site").disabled, true);
+    assert.equal(p.get("target-language-trigger").disabled, true);
+    p.pressF4();
+    await settle();
+    assert.equal(p.toggleCalls().length, 0);
+    assert.equal(p.get("open-settings").disabled, false);
   } finally { p.dispose(); }
 });

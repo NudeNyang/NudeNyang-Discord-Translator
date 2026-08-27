@@ -7,12 +7,13 @@ const site = document.querySelector("#site");
 const connection = document.querySelector("#connection");
 const connectionText = document.querySelector("#connection-text");
 const detail = document.querySelector("#detail");
+const messengerPanel = document.querySelector("#messenger-panel");
+const messengerTitle = document.querySelector("#messenger-title");
 const messengerNotice = document.querySelector("#messenger-notice");
 const messengerConsentStart = document.querySelector("#messenger-consent-start");
 const messengerPrivacy = document.querySelector("#messenger-privacy");
 const commandShortcut = document.querySelector("#command-shortcut");
 const quickToggleShortcutElement = document.querySelector("#quick-toggle-shortcut");
-const restore = document.querySelector("#restore");
 const targetLanguage = document.querySelector("#target-language");
 const targetLanguageTrigger = document.querySelector("#target-language-trigger");
 const targetLanguageLabel = document.querySelector("#target-language-label");
@@ -33,6 +34,7 @@ const LANGUAGE_OPTIONS = [
   ["bn", "বাংলা"], ["ur", "اردو"], ["ta", "தமிழ்"], ["fa", "فارسی"], ["he", "עברית"], ["cs", "Čeština"],
 ];
 let appStatus = null;
+let browserConnectionDisabled = false;
 let quickToggleShortcut = "F4";
 let targetLanguageValue = "";
 let uiLanguage = popupLocales.resolve(
@@ -61,6 +63,8 @@ function applyUiLanguage(language) {
   for (const element of document.querySelectorAll("[data-i18n-aria-label]")) {
     element.setAttribute("aria-label", copy(element.dataset.i18nAriaLabel));
   }
+  messengerPrivacy.title = copy("messengerPrivacyConsent");
+  messengerPrivacy.setAttribute("aria-label", `${copy("reviewMessengerPrivacy")} · ${copy("messengerPrivacyConsent")}`);
 }
 
 function normalizeLanguageSearch(value) {
@@ -180,10 +184,13 @@ async function pageStatus(tabId) {
 
 function renderPageStatus(status) {
   const messengerGate = status?.messengerService ? status.messengerGate : "";
-  enabled.checked = status?.enabled ?? false;
-  enabled.disabled = !status?.supported || Boolean(messengerGate);
-  restore.disabled = !status?.supported;
-  messengerNotice.hidden = !status?.messengerService;
+  const needsConsent = !browserConnectionDisabled && messengerGate === "messenger_consent_required";
+  enabled.checked = !browserConnectionDisabled && (status?.enabled ?? false);
+  enabled.disabled = browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
+  messengerPanel.hidden = browserConnectionDisabled || !status?.messengerService;
+  messengerPanel.classList.toggle("consent-required", needsConsent);
+  messengerTitle.hidden = !needsConsent;
+  messengerNotice.hidden = messengerPanel.hidden;
   const messengerCopy = {
     messenger_consent_required: "messengerConsentRequired",
     messenger_disabled: "messengerDisabled",
@@ -195,11 +202,12 @@ function renderPageStatus(status) {
   messengerNotice.textContent = messengerGate === "web_translation_disabled"
     ? `${copy("enableWebTranslation")} · ${copy("settings")}`
     : copy(messengerCopy[messengerGate] ?? (messengerGate ? "unableToProcess" : "messengerReadTranslation"));
-  messengerPrivacy.textContent = copy(messengerGate === "messenger_consent_required"
-    ? "reviewMessengerPrivacy" : "messengerPrivacyConsent");
-  messengerConsentStart.hidden = messengerGate !== "messenger_consent_required";
+  messengerPrivacy.hidden = needsConsent;
+  messengerConsentStart.hidden = !needsConsent;
   messengerConsentStart.textContent = copy("reviewMessengerPrivacy");
-  if (!status) {
+  if (browserConnectionDisabled) {
+    site.textContent = copy("disabled");
+  } else if (!status) {
     site.textContent = copy("unableToProcess");
   } else if (status.supported && status.manualOnly && !status.enabled) {
     site.textContent = quickToggleShortcut
@@ -218,15 +226,20 @@ function renderPageStatus(status) {
     ? status.targetLanguage
     : "");
   alwaysTranslateSite.checked = status?.sitePolicy === "always";
-  alwaysTranslateSite.disabled = !status?.supported || Boolean(messengerGate);
-  targetLanguageTrigger.disabled = !status?.supported;
+  alwaysTranslateSite.disabled = browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
+  targetLanguageTrigger.disabled = browserConnectionDisabled || !status?.supported;
   if (targetLanguageTrigger.disabled) closeTargetLanguageMenu();
 }
 
 function renderConnection(response) {
   connection.className = "connection";
   const appConnected = response?.appConnected ?? response?.type === "status";
-  if (response?.type === "status" && appConnected) {
+  if (browserConnectionDisabled) {
+    appStatus = null;
+    connection.classList.add("disabled");
+    connectionText.textContent = copy("disabled");
+    detail.textContent = `${copy("webTranslation")} · ${copy("settings")}`;
+  } else if (response?.type === "status" && appConnected) {
     appStatus = response;
     const modelReady = response.modelReady ?? response.ready;
     connection.classList.add(modelReady ? "ready" : "waiting");
@@ -246,9 +259,12 @@ async function initialize() {
   const tab = await activeTab();
   let status = tab?.id ? await pageStatus(tab.id) : null;
   const nativeStatus = await nativeRequest({ type: "status", requestId: `popup-${Date.now()}` });
-  if (nativeStatus?.type === "status") {
+  browserConnectionDisabled = nativeStatus?.code === "browser_connection_disabled";
+  if (nativeStatus?.type === "status" || browserConnectionDisabled) {
     applyUiLanguage(nativeStatus.resolvedUiLanguage || nativeStatus.uiLanguage);
     renderTargetLanguageOptions();
+  }
+  if (nativeStatus?.type === "status") {
     quickToggleShortcut = nativeStatus.webSettings?.quickToggleShortcut ?? "F4";
     quickToggleShortcutElement.textContent = quickToggleShortcut || "-";
   }
@@ -284,18 +300,6 @@ async function initialize() {
       site.textContent = copy("unableToProcess");
     }
   });
-  restore.addEventListener("click", async () => {
-    if (tab?.id) {
-      const updated = await tabMessage(tab.id, { type: "nudenyang-restore" });
-      if (updated) {
-        status = updated;
-        renderPageStatus(status);
-        site.textContent = `${status.site.toUpperCase()} · ${copy("original")}`;
-      } else {
-        site.textContent = copy("unableToProcess");
-      }
-    }
-  });
   targetLanguageTrigger.addEventListener("click", () => {
     if (targetLanguage.classList.contains("open")) closeTargetLanguageMenu();
     else openTargetLanguageMenu();
@@ -312,7 +316,7 @@ async function initialize() {
   });
   targetLanguageOptions.addEventListener("click", async (event) => {
     const option = event.target.closest(".language-option");
-    if (!option || !tab?.id) return;
+    if (!option || !tab?.id || targetLanguageTrigger.disabled) return;
     const previous = targetLanguageValue;
     setTargetLanguageValue(option.dataset.value);
     closeTargetLanguageMenu();
@@ -333,7 +337,7 @@ async function initialize() {
     if (!targetLanguage.contains(event.target)) closeTargetLanguageMenu();
   });
   alwaysTranslateSite.addEventListener("change", async () => {
-    if (!tab?.id || !tab.url || !appStatus?.webSettings) return;
+    if (!tab?.id || !tab.url || !appStatus?.webSettings || alwaysTranslateSite.disabled) return;
     const hostname = new URL(tab.url).hostname.toLowerCase().replace(/^www\./, "");
     const sitePolicies = { ...(appStatus.webSettings.sitePolicies ?? {}) };
     if (alwaysTranslateSite.checked) sitePolicies[hostname] = "always";
@@ -345,6 +349,13 @@ async function initialize() {
     });
     if (response?.type !== "webSettings") {
       alwaysTranslateSite.checked = status?.sitePolicy === "always";
+      if (response?.code === "browser_connection_disabled") {
+        browserConnectionDisabled = true;
+        applyUiLanguage(response.resolvedUiLanguage || response.uiLanguage);
+        renderPageStatus(status);
+        renderConnection(response);
+        return;
+      }
       detail.textContent = copy("error");
       return;
     }
@@ -379,11 +390,13 @@ async function initialize() {
       }
       api.tabs.create({ url: url.href }, () => {
         if (api.runtime.lastError) {
+          messengerPanel.hidden = false;
           messengerNotice.hidden = false;
           messengerNotice.textContent = copy("unableToProcess");
         }
       });
     } catch {
+      messengerPanel.hidden = false;
       messengerNotice.hidden = false;
       messengerNotice.textContent = copy("unableToProcess");
     }
