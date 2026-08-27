@@ -81,6 +81,24 @@ function createBackground(tabState, {
 
 const flushConnection = () => new Promise(resolve => setImmediate(resolve));
 
+test("페이지 동의 안내 열기는 발신자 검증과 최신 대화 상태 확인을 개인정보 모듈에 위임한다", async () => {
+  const sender = { tab: { id: 23 }, frameId: 0 };
+  const calls = [];
+  const background = createBackground({}, {
+    pageConnection: { async request(tabId, message) { calls.push({ tabId, message }); return { messengerContextId: "opaque" }; } },
+    privacy: { async openNotice(contextId, source, currentStatus) {
+      assert.equal(contextId, "opaque");
+      assert.equal(source, sender);
+      assert.equal((await currentStatus(source.tab.id)).messengerContextId, "opaque");
+      return { ok: true };
+    } },
+  });
+  assert.equal((await background.message({ type: "nudenyang-messenger-privacy-open", contextId: "opaque", tabId: 999 }, sender)).ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].tabId, 23);
+  assert.equal(calls[0].message.type, "nudenyang-status");
+});
+
 test("백그라운드가 다시 시작되면 별도 버튼이나 브라우저 재시작 없이 연결 신호를 보낸다", async () => {
   const requests = [];
   createBackground({}, {

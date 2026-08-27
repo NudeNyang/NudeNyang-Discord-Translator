@@ -23,7 +23,7 @@ async function popup(options = {}) {
   dom.window.chrome = {
     i18n: { getUILanguage: () => "en-US" },
     tabs: {
-      query(_query, callback) { callback([{ id: 7, url: "https://discord.com/channels/@me/12345" }]); },
+      query(_query, callback) { callback([{ id: 7, url: options.tabUrl ?? "https://discord.com/channels/@me/12345" }]); },
       create(details, callback) {
         if (options.privacyOpenFails) {
           dom.window.chrome.runtime.lastError = { message: "Test: tab creation denied" };
@@ -67,6 +67,18 @@ async function popup(options = {}) {
     dispose() { dom.window.close(); },
   };
 }
+
+test("개인정보 페이지의 팝업은 오류 대신 안내 페이지임을 표시하고 중복 진입을 숨긴다", async () => {
+  const p = await popup({ language: "ko", tabUrl: "chrome-extension://test/messenger-privacy.html?tab=7&context=opaque" });
+  try {
+    assert.equal(p.get("site").textContent, "웹 메신저 읽기 번역 개인정보 안내");
+    assert.equal(p.get("enabled").disabled, true);
+    assert.equal(p.get("messenger-privacy").hidden, true);
+    assert.equal(p.get("messenger-panel").hidden, true);
+    assert.equal(p.get("open-settings").disabled, false);
+    assert.ok(!p.messages.some((m) => m.type === "nudenyang-page-request"));
+  } finally { p.dispose(); }
+});
 
 test("메신저 동의는 팝업 열기로 자동 표시·저장하지 않고 명시적인 클릭으로만 안내 탭을 연다", async () => {
   const p = await popup();

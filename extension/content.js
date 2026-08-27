@@ -64,6 +64,11 @@
   let messengerStartContextId = "";
   let messengerStartRevision = 0;
   let messengerFailure = "";
+  let consentNotice = null;
+  let consentNoticeDismissed = false;
+  let consentNoticeRequested = false;
+  let uiLanguage = globalThis.NudeNyangPopupLocales.resolve("auto");
+  let appStatusAvailable = false;
   let lastMessengerStatusAt = 0;
   let refreshingStatus = false;
   let appStatusEpoch = 0;
@@ -133,6 +138,8 @@
   }
 
   function assignPageContext(next) {
+    removeConsentNotice();
+    consentNoticeRequested = false;
     messengerStartContextId = "";
     messengerSite = next.site;
     messengerContext = next.context;
@@ -156,6 +163,91 @@
 
   function canReadConversation() {
     return !messengerSite || (!messengerGate() && !document.hidden);
+  }
+
+  function removeConsentNotice() {
+    consentNotice?.remove();
+    consentNotice = null;
+  }
+
+  function updateConsentNotice({ requested = false } = {}) {
+    if (requested) {
+      consentNoticeRequested = true;
+      consentNoticeDismissed = false;
+    }
+    const wantsTranslation = consentNoticeRequested || pageTranslationEnabled({
+      adapter, storedEnabled, tabEnabled, webEnabled: webSettings.enabled, sitePolicy,
+    });
+    if (disposed || !appStatusAvailable || document.hidden || !messengerContext?.root.isConnected
+      || messengerGate() !== "messenger_consent_required" || sitePolicy === "never"
+      || !wantsTranslation || consentNoticeDismissed) {
+      removeConsentNotice();
+      return;
+    }
+    if (consentNotice?.isConnected) return;
+    const copy = (key) => globalThis.NudeNyangPopupLocales.message(uiLanguage, key);
+    const contextId = messengerPageId;
+    const host = document.createElement("div");
+    host.id = "nudenyang-consent-notice";
+    host.setAttribute("translate", "no");
+    // Keep site styles and translation scans out of the extension-owned card.
+    host.style.cssText = "all:initial!important;position:fixed!important;top:16px!important;right:16px!important;width:min(380px,calc(100vw - 32px))!important;z-index:2147483647!important;";
+    const shadow = host.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = `
+      :host { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      section { font: 14px/1.55 system-ui, sans-serif; color: #edf6ff; background: #102530;
+        border: 1px solid #427da2; border-radius: 14px; padding: 18px;
+        box-shadow: 0 8px 32px #0005; max-height: calc(100vh - 32px); overflow: auto; word-break: keep-all; overflow-wrap: anywhere; }
+      header { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+      strong { color: #78bfff; font-size: 12px; letter-spacing: 1.5px; }
+      p { margin: 12px 0 16px; }
+      button { font: inherit; cursor: pointer; border-radius: 8px; }
+      button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+      [data-action=close] { background: transparent; color: #c6dce9; border: 1px solid #426174; padding: 4px 10px; }
+      [data-action=review] { width: 100%; background: #79beff; color: #081b2a; border: 0; padding: 10px 14px; font-weight: 650; }
+      button:disabled { opacity: .65; cursor: wait; }
+    `;
+    const card = document.createElement("section");
+    card.lang = uiLanguage;
+    card.dir = ["ar", "ur", "fa", "he"].includes(uiLanguage) ? "rtl" : "ltr";
+    card.setAttribute("aria-label", copy("messengerPrivacyConsent"));
+    const header = document.createElement("header");
+    const brand = document.createElement("strong");
+    brand.textContent = "NUDENYANG";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.dataset.action = "close";
+    close.textContent = copy("close");
+    close.addEventListener("click", () => {
+      consentNoticeDismissed = true;
+      consentNoticeRequested = false;
+      removeConsentNotice();
+    });
+    const reason = document.createElement("p");
+    reason.setAttribute("role", "status");
+    reason.textContent = copy("messengerConsentRequired");
+    const review = document.createElement("button");
+    review.type = "button";
+    review.dataset.action = "review";
+    review.textContent = copy("reviewMessengerPrivacy");
+    review.addEventListener("click", async (event) => {
+      // A site script may see this shadow root but cannot synthesize a user gesture.
+      if (!event.isTrusted || review.disabled) return;
+      handleNavigation();
+      if (!host.isConnected || contextId !== messengerPageId || messengerGate() !== "messenger_consent_required") return;
+      review.disabled = true;
+      const result = await extensionRequest({ type: "nudenyang-messenger-privacy-open", contextId });
+      if (!host.isConnected || disposed) return;
+      review.disabled = false;
+      if (!result?.ok) reason.textContent = `${copy("messengerConsentRequired")} ${copy("unableToProcess")}`;
+    });
+    header.append(brand, close);
+    card.append(header, reason, review);
+    shadow.append(style, card);
+    consentNotice = host;
+    (document.body ?? document.documentElement).append(host);
   }
 
   function nearViewport(block) {
@@ -286,7 +378,11 @@
   }
 
   function applyAppStatus(response) {
+    appStatusAvailable = response?.type === "status";
     if (response?.type !== "status") return;
+    const nextLanguage = globalThis.NudeNyangPopupLocales.resolve(response.resolvedUiLanguage || response.uiLanguage || "auto");
+    if (nextLanguage !== uiLanguage) removeConsentNotice();
+    uiLanguage = nextLanguage;
     translator = response.translator ?? translator;
     appTargetLanguage = response.targetLanguage ?? appTargetLanguage;
     externalProvider = EXTERNAL_TRANSLATORS.has(response.translator);
@@ -309,6 +405,7 @@
         const oldKey = translationKey();
         const oldSettings = JSON.stringify(webSettings);
         const oldFailure = messengerFailure;
+        appStatusAvailable = response?.type === "status";
         messengerConsent = consent?.granted === true && consent.consentVersion === 2;
         if (response?.type === "status") {
           applyAppStatus(response);
@@ -321,6 +418,7 @@
           replayTranslations();
           scan(document, { enqueueVisible: true });
         }
+        updateConsentNotice();
       });
     } finally {
       lastMessengerStatusAt = refreshEpoch === appStatusEpoch ? Date.now() : 0;
@@ -453,6 +551,7 @@
   }
 
   function handleVisibilityChange() {
+    updateConsentNotice();
     if (document.hidden) cancelEmbeddedRequests("stale");
     if (messengerSite) {
       if (document.hidden) restoreOriginals();
@@ -466,6 +565,7 @@
 
   function handlePageHide() {
     if (!messengerSite || disposed) return;
+    removeConsentNotice();
     pageEpoch += 1;
     enabled = false;
     restoreOriginals({ discard: true });
@@ -1023,6 +1123,7 @@
   function shutdownInvalidatedContext() {
     if (disposed) return;
     disposed = true;
+    removeConsentNotice();
     enabled = false;
     translating = false;
     observer?.disconnect();
@@ -1179,6 +1280,7 @@
     sitePolicy = webSettings.sitePolicies[currentHostname()] ?? "default";
     enabled = initialEnabled();
     lastError = "";
+    updateConsentNotice();
     scheduleScan(document);
     notifyEmbeddedFrames();
   }
@@ -1197,7 +1299,15 @@
       lastError = "이 사이트는 번역하지 않도록 설정되어 있습니다.";
       return status();
     }
-    if (value && messengerGate()) return status();
+    if (value && messengerGate()) {
+      updateConsentNotice({ requested: true });
+      return status();
+    }
+    if (!value) {
+      consentNoticeRequested = false;
+      consentNoticeDismissed = true;
+      removeConsentNotice();
+    }
     tabEnabled = await saveTabEnabled(value);
     if (disposed) return status();
     handleNavigation();
@@ -1240,6 +1350,7 @@
         if (epoch !== appStatusEpoch) return null;
         const oldKey = translationKey();
         messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 2;
+        appStatusAvailable = app?.type === "status";
         if (app?.type === "status") {
           applyAppStatus(app);
           messengerFailure = "";
@@ -1311,6 +1422,7 @@
     observedBlocks = new WeakSet();
     configureIntersectionObserver();
     enabled = initialEnabled();
+    updateConsentNotice();
     if (!enabled) restoreOriginals();
     else {
       replayTranslations();
@@ -1414,6 +1526,7 @@
     lastMessengerStatusAt = startupEpoch === appStatusEpoch ? Date.now() : 0;
     enabled = initialEnabled();
     configureIntersectionObserver();
+    updateConsentNotice();
     visibilityObserver = new MutationObserver((mutations) => {
       if (!enabled || disposed) return;
       for (const mutation of mutations) scheduleScan(mutation.target);

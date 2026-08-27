@@ -45,7 +45,7 @@ test("일반 본문은 최상위 문서에만, 삽입 영상 제목은 허용된
     const manifest = JSON.parse(fs.readFileSync(new URL(`../${manifestName}`, import.meta.url), "utf8"));
     assert.equal(manifest.content_scripts.length, 2, manifestName);
     assert.deepEqual(manifest.content_scripts[0].matches, ["http://*/*", "https://*/*"]);
-    assert.deepEqual(manifest.content_scripts[0].js, ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"]);
+    assert.deepEqual(manifest.content_scripts[0].js, ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "popup-locales.js", "content.js"]);
     assert.notEqual(manifest.content_scripts[0].all_frames, true, manifestName);
     assert.deepEqual(manifest.content_scripts[1], {
       matches: ["https://www.youtube.com/embed/*", "https://www.youtube-nocookie.com/embed/*"],

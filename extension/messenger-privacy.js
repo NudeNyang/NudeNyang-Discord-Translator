@@ -97,7 +97,24 @@
       return response;
     }
 
-    return Object.freeze({ getConsent, setConsent, forward, invalidate });
+    async function openNotice(contextId, sender, currentStatus) {
+      const service = typeof contextId === "string" ? contextId.split(":")[1] : "";
+      if (!validContext({ pageId: contextId, privateContext: { service, consentVersion: CONSENT_VERSION } }, sender)) return { ok: false };
+      const status = await currentStatus(sender.tab.id);
+      if (status?.messengerContextId !== contextId || status?.messengerService !== service
+        || status?.messengerGate !== "messenger_consent_required") return { ok: false };
+      // Use the browser's sender tab, never a page-supplied destination or URL.
+      const url = new URL(api.runtime.getURL("messenger-privacy.html"));
+      url.searchParams.set("tab", String(sender.tab.id));
+      url.searchParams.set("context", contextId);
+      return new Promise((resolve) => {
+        try {
+          api.tabs.create({ url: url.href }, (tab) => resolve({ ok: !api.runtime.lastError && Number.isInteger(tab?.id) }));
+        } catch { resolve({ ok: false }); }
+      });
+    }
+
+    return Object.freeze({ getConsent, setConsent, forward, invalidate, openNotice });
   }
 
   const exported = Object.freeze({ CONSENT_VERSION, CONSENT_KEY, createMessengerPrivacy });

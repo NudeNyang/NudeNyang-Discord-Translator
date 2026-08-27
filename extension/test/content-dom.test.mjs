@@ -5,7 +5,7 @@ import { JSDOM } from "jsdom";
 import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
 import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
 
-const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "content.js"].map((file) => (
+const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "popup-locales.js", "content.js"].map((file) => (
   fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
 ));
 const FRAME_URL = "https://www.youtube-nocookie.com/embed/video123?rel=0";
@@ -30,6 +30,12 @@ function page(t, html, options = {}) {
     pretendToBeVisual: true,
   });
   const w = dom.window;
+  const clickHandlers = new WeakMap();
+  const addListener = w.HTMLElement.prototype.addEventListener;
+  w.HTMLElement.prototype.addEventListener = function(type, listener, ...args) {
+    if (type === "click") clickHandlers.set(this, listener);
+    return addListener.call(this, type, listener, ...args);
+  };
   const observers = new Set();
   const intersections = new Set();
   const MutationObserver = w.MutationObserver;
@@ -49,7 +55,7 @@ function page(t, html, options = {}) {
   let releaseStatus;
   let releaseTranslation;
   const appStatus = {
-    type: "status", translator: options.translator ?? "hymt_1_8b", targetLanguage: "KO",
+    type: "status", translator: options.translator ?? "hymt_1_8b", targetLanguage: "KO", resolvedUiLanguage: "ko",
     webSettings: { enabled: true, processingMode: "responsive", ...options.settings },
   };
   w.console.info = () => {};
@@ -128,6 +134,7 @@ function page(t, html, options = {}) {
   for (const source of sources) w.eval(source);
   return {
     w, requests, savedStates, message, listeners, runtimeMessages, appStatus,
+    trustedClick: (button) => clickHandlers.get(button)({ isTrusted: true }),
     releaseStatus: () => releaseStatus?.(),
     releaseTranslation: () => releaseTranslation?.(),
     pendingApplicationFrames: () => applicationFrames.size,
@@ -155,6 +162,93 @@ const PRIVATE_CHAT = `<nav><span>Private contact list</span></nav>
     </div></li></ol><div role="textbox" contenteditable="true">Unsent private draft</div>`;
 const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", consent: true,
   settings: { messengerEnabled: true } };
+
+const consentNotice = (p) => p.w.document.getElementById("nudenyang-consent-notice")?.shadowRoot;
+
+test("동의 없는 자동 번역은 본문을 읽지 않고 페이지에 이유와 안내 버튼을 표시한다", async (t) => {
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, consent: false,
+    settings: { messengerEnabled: true, sitePolicies: { "x.com": "always" } } });
+  const reads = watchNodeValueReads(p.w, p.w.document.querySelector("#body-one span").firstChild);
+  await p.message({ type: "nudenyang-ready" });
+  const notice = consentNotice(p);
+  assert.ok(notice, "auto start must explain missing consent without opening the popup");
+  assert.match(notice.textContent, /개인정보 동의가 필요합니다/);
+  assert.equal(notice.querySelector("[data-action=review]").textContent, "개인정보 안내 확인");
+  assert.equal(reads(), 0);
+  assert.deepEqual(p.sent(), []);
+  assert.ok(!p.runtimeMessages.some((m) => m.type === "nudenyang-messenger-privacy-open"));
+  notice.querySelector("[data-action=close]").click();
+  assert.equal(consentNotice(p), undefined);
+  p.w.document.dispatchEvent(new p.w.Event("scroll"));
+  await p.message({ type: "nudenyang-status" });
+  assert.equal(consentNotice(p), undefined, "dismissed notices must not reappear on scroll");
+  p.w.dispatchEvent(new p.w.KeyboardEvent("keydown", { key: "F4", code: "F4", bubbles: true }));
+  await waitFor(() => consentNotice(p), "manual retry should explain the gate again");
+});
+
+test("수동 메신저의 F4는 안내만 표시하고 실제 클릭만 대화 식별자로 동의 페이지를 연다", async (t) => {
+  const options = { ...PRIVATE_OPTIONS, consent: false, tabEnabled: false };
+  const p = page(t, PRIVATE_CHAT, options);
+  await p.message({ type: "nudenyang-ready" });
+  assert.equal(consentNotice(p), undefined);
+  await p.message({ type: "nudenyang-toggle-enabled" });
+  const review = consentNotice(p).querySelector("[data-action=review]");
+  review.click();
+  assert.ok(!p.runtimeMessages.some((m) => m.type === "nudenyang-messenger-privacy-open"), "page-script clicks are not user gestures");
+  await p.trustedClick(review);
+  const opened = p.runtimeMessages.filter((m) => m.type === "nudenyang-messenger-privacy-open");
+  assert.equal(opened.length, 1);
+  assert.deepEqual(Object.keys(opened[0]).sort(), ["contextId", "type"]);
+  assert.equal(opened[0].contextId, (await p.message({ type: "nudenyang-status" })).messengerContextId);
+  assert.deepEqual(p.savedStates, []);
+  assert.deepEqual(p.sent(), []);
+  options.consent = true;
+  await p.message({ type: "nudenyang-messenger-start", contextId: opened[0].contextId });
+  assert.equal(consentNotice(p), undefined);
+  await waitFor(() => p.sent().length > 0, "explicit consent resumes the same conversation");
+});
+
+test("동의 안내는 끄기·대화 떠나기·설정 끄기·페이지 숨김 시 제거하고 차단 사이트에는 표시하지 않는다", async (t) => {
+  for (const action of ["off", "leave", "settings", "hidden", "dispose"]) {
+    const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, consent: false, tabEnabled: true });
+    await p.message({ type: "nudenyang-ready" });
+    assert.ok(consentNotice(p), action);
+    if (action === "off") await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    if (action === "leave") {
+      p.w.history.pushState({}, "", "/channels/@me");
+      p.w.document.querySelector("ol").remove();
+      await p.message({ type: "nudenyang-status" });
+    }
+    if (action === "settings") await p.message({ type: "nudenyang-apply-web-settings", webSettings: { enabled: false, messengerEnabled: true } });
+    if (action === "hidden") {
+      Object.defineProperty(p.w.document, "hidden", { value: true, configurable: true });
+      p.w.document.dispatchEvent(new p.w.Event("visibilitychange"));
+    }
+    if (action === "dispose") p.w.__nudeNyangContentRuntime.dispose();
+    assert.equal(consentNotice(p), undefined, action);
+  }
+  for (const settings of [{ messengerEnabled: false }, { enabled: false, messengerEnabled: true },
+    { messengerEnabled: true, sitePolicies: { "discord.com": "never" } }]) {
+    const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, settings, consent: false });
+    await p.message({ type: "nudenyang-ready" });
+    await p.message({ type: "nudenyang-toggle-enabled" });
+    assert.equal(consentNotice(p), undefined);
+  }
+});
+
+test("페이지 안내는 본체 언어 변경을 따르며 브라우저 연결 해제 뒤에는 동의가 유일한 원인인 것처럼 남지 않는다", async (t) => {
+  const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, consent: false, tabEnabled: true });
+  await p.message({ type: "nudenyang-ready" });
+  p.appStatus.resolvedUiLanguage = "ar";
+  p.w.dispatchEvent(new p.w.Event("focus"));
+  await waitFor(() => consentNotice(p)?.querySelector("section").lang === "ar", "notice language should refresh");
+  assert.equal(consentNotice(p).querySelector("section").dir, "rtl");
+  p.appStatus.type = "error";
+  p.appStatus.code = "browser_connection_disabled";
+  p.w.dispatchEvent(new p.w.Event("focus"));
+  await waitFor(() => !consentNotice(p), "disabled connection must remove the consent prompt");
+  assert.deepEqual(p.sent(), []);
+});
 
 const DISCORD_WEB_OPTIONS = { ...PRIVATE_OPTIONS, url: DISCORD_WEB_URL, renderAriaHidden: true };
 const DISCORD_WEB_TEXT = ["General room", "Help desk", "General room", "A neutral message.",

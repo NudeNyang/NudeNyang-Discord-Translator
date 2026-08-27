@@ -50,6 +50,47 @@ function pauseConsentRead(s, targetRead) {
   return { paused, resume: () => resume() };
 }
 
+test("페이지 안내 클릭은 신뢰한 발신 탭과 현재 대화 식별자만 동의 화면으로 전달한다", async () => {
+  const s = setup();
+  s.request.pageId = "messenger:discord:opaque_notice_nonce";
+  const opened = [];
+  s.api.tabs = { create(details, callback) { opened.push(details); callback({ id: 9 }); } };
+  const current = async (tabId) => {
+    assert.equal(tabId, 8);
+    return { messengerService: "discord", messengerContextId: s.request.pageId, messengerGate: "messenger_consent_required" };
+  };
+  assert.equal((await s.privacy.openNotice(s.request.pageId, s.sender, current)).ok, true);
+  const url = new URL(opened[0].url);
+  assert.equal(url.origin, new URL(s.api.runtime.getURL("messenger-privacy.html")).origin);
+  assert.equal(url.pathname, "/messenger-privacy.html");
+  assert.equal(url.searchParams.get("tab"), "8");
+  assert.equal(url.searchParams.get("context"), s.request.pageId);
+  assert.ok(!url.href.includes("123456789"));
+  assert.equal(s.storage.messengerConsentVersion, 0);
+  assert.deepEqual(s.calls, []);
+});
+
+test("안내 열기도 잘못된 프레임·출처·문맥 및 대화 변경을 거부하고 탭 열기 실패를 반환한다", async () => {
+  const s = setup();
+  const opened = [];
+  s.api.tabs = { create(details, callback) { opened.push(details); callback({ id: 9 }); } };
+  const current = async () => ({ messengerService: "discord", messengerContextId: s.request.pageId, messengerGate: "messenger_consent_required" });
+  for (const sender of [{ ...s.sender, frameId: 1 }, { ...s.sender, id: "other-extension" },
+    { ...s.sender, url: "https://example.com/" }, { ...s.sender, url: "http://discord.com/channels/@me/123" }]) {
+    assert.equal((await s.privacy.openNotice(s.request.pageId, sender, current)).ok, false);
+  }
+  assert.equal((await s.privacy.openNotice("https://evil.invalid/", s.sender, current)).ok, false);
+  assert.equal((await s.privacy.openNotice(s.request.pageId, s.sender, async () => ({ ...(await current()), messengerContextId: "different" }))).ok, false);
+  assert.equal((await s.privacy.openNotice(s.request.pageId, s.sender, async () => ({ ...(await current()), messengerGate: "" }))).ok, false);
+  assert.deepEqual(opened, []);
+  s.api.tabs.create = (_details, callback) => {
+    s.api.runtime.lastError = { message: "synthetic failure" };
+    callback();
+    delete s.api.runtime.lastError;
+  };
+  assert.equal((await s.privacy.openNotice(s.request.pageId, s.sender, current)).ok, false);
+});
+
 test("메시지 전용 v1 동의는 채널명·미리보기 범위로 자동 갱신하지 않는다", async () => {
   const s = setup({ consent: 1 });
   assert.equal((await s.privacy.getConsent()).granted, false);

@@ -3,6 +3,7 @@
     "site-adapters.js",
     "messenger-adapters.js",
     "content-helpers.js",
+    "popup-locales.js",
     "content.js",
   ]);
 

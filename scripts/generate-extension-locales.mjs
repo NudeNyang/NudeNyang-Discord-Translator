@@ -43,6 +43,7 @@ const POPUP_SOURCE = Object.freeze({
   messengerNoConversation: "현재 열린 대화가 없습니다.",
   messengerWaiting: "번역할 메시지를 기다리고 있습니다.",
   reviewMessengerPrivacy: "개인정보 안내 확인",
+  close: "닫기",
   messengerPrivacyTitle: "웹 메신저 읽기 번역 개인정보 안내",
   messengerPrivacyIntro: "웹 메신저 읽기 번역은 기본적으로 꺼져 있습니다. 동의한 브라우저에서만 사용할 수 있습니다.",
   messengerPrivacyData: "현재 열린 대화의 메시지 본문·링크 미리보기 텍스트와 현재 Discord 서버의 보이는 채널 이름만 별도로 설치한 NudeNyang Windows 앱에서 로컬 AI로 번역합니다.",

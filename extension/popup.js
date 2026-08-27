@@ -202,11 +202,13 @@ function renderPageStatus(status) {
   messengerNotice.textContent = messengerGate === "web_translation_disabled"
     ? `${copy("enableWebTranslation")} · ${copy("settings")}`
     : copy(messengerCopy[messengerGate] ?? (messengerGate ? "unableToProcess" : "messengerReadTranslation"));
-  messengerPrivacy.hidden = needsConsent;
+  messengerPrivacy.hidden = needsConsent || status?.privacyPage === true;
   messengerConsentStart.hidden = !needsConsent;
   messengerConsentStart.textContent = copy("reviewMessengerPrivacy");
   if (browserConnectionDisabled) {
     site.textContent = copy("disabled");
+  } else if (status?.privacyPage) {
+    site.textContent = copy("messengerPrivacyTitle");
   } else if (!status) {
     site.textContent = copy("unableToProcess");
   } else if (status.supported && status.manualOnly && !status.enabled) {
@@ -257,7 +259,9 @@ async function initialize() {
   renderTargetLanguageOptions();
   const commandsPromise = extensionCommands();
   const tab = await activeTab();
-  let status = tab?.id ? await pageStatus(tab.id) : null;
+  const privacyPage = tab?.url?.split(/[?#]/u)[0] === api.runtime.getURL("messenger-privacy.html");
+  let status = privacyPage ? { privacyPage: true, supported: false }
+    : tab?.id ? await pageStatus(tab.id) : null;
   const nativeStatus = await nativeRequest({ type: "status", requestId: `popup-${Date.now()}` });
   browserConnectionDisabled = nativeStatus?.code === "browser_connection_disabled";
   if (nativeStatus?.type === "status" || browserConnectionDisabled) {

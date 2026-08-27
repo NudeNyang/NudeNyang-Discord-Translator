@@ -91,6 +91,12 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     tabTranslationState.set(sender.tab?.id, message.enabled).then((enabled) => sendResponse({ enabled }));
     return true;
   }
+  if (message?.type === "nudenyang-messenger-privacy-open") {
+    messengerPrivacy.openNotice(message.contextId, sender,
+      (tabId) => pageConnection.request(tabId, { type: "nudenyang-status" }))
+      .then(sendResponse, () => sendResponse({ ok: false }));
+    return true;
+  }
   if (message?.type === "nudenyang-page-request") {
     pageConnection.request(message.tabId, message.message).then(sendResponse);
     return true;
