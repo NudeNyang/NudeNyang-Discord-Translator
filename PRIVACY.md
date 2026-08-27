@@ -4,7 +4,7 @@
 
 NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개발자가 Discord 메시지, 웹페이지 텍스트, 이미지, 번역 기록, 방문한 페이지 주소 또는 인증 정보를 수집하거나 보관하지 않습니다.
 
-이 문서의 **웹 메신저 읽기 번역**은 아직 공개하지 않은 개발 변경을 설명합니다. 현재 공개된 Windows 본체 `0.7.2-beta`는 이 기능의 설정과 처리 경로를 지원하지 않습니다. 해당 기능은 이를 지원하는 본체와 확장이 함께 제공된 후 사용할 수 있습니다. 나머지 일반 웹·Discord 번역의 처리 방식과 구분하여 안내합니다.
+이 문서의 **웹 메신저 읽기 번역**은 Windows 본체 `0.7.3-beta`와 웹 확장 `0.7.8`을 기준으로 설명합니다. 이전 공개 본체 `0.7.2-beta`는 이 기능의 설정과 처리 경로를 지원하지 않습니다. 확장의 제공 시점은 각 스토어의 심사 상태에 따라 다릅니다. 나머지 일반 웹·Discord 번역의 처리 방식과 구분하여 안내합니다.
 
 ## 로컬 처리
 
@@ -15,7 +15,9 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 
 ## 브라우저 확장
 
-- Chrome, Naver Whale과 Firefox 확장은 일반 HTTP/HTTPS 웹사이트에서 동작할 수 있으므로 브라우저가 모든 웹사이트의 데이터를 읽고 변경할 수 있다는 권한 경고를 표시할 수 있습니다. Firefox는 일반 웹 번역에서 Windows 앱으로 전달되는 허용 영역 텍스트를 `websiteContent`, 번역 중인 현재 페이지의 주소 범주를 `browsingActivity`로 명시합니다. 개발 중인 메신저 기능에는 별도 선택 항목인 `personalCommunications`를 추가합니다.
+- Chrome, Naver Whale과 Firefox 확장은 일반 HTTP/HTTPS 웹사이트에서 동작할 수 있으므로 브라우저가 모든 웹사이트의 데이터를 읽고 변경할 수 있다는 권한 경고를 표시할 수 있습니다. Firefox는 일반 웹 번역에서 Windows 앱으로 전달되는 허용 영역 텍스트를 `websiteContent`, 번역 중인 현재 페이지의 주소 범주를 `browsingActivity`로 명시합니다. 메신저 기능에는 별도 선택 항목인 `personalCommunications`를 사용합니다.
+- 확장 백그라운드 시작·설치·브라우저 시작·창 포커스 변경과 주기적인 알람에서 같은 PC의 본체 연결을 확인하며, 일시 실패는 제한된 횟수로 재시도합니다. 연결 확인에는 브라우저 종류와 확장 버전이 포함되며, 페이지 본문이나 주소는 포함되지 않습니다. 연결 확인만으로 모델을 준비하거나 번역·개인정보 동의를 활성화하지 않습니다.
+- 본체의 브라우저별 `연결 해제`는 해당 종류의 모든 프로필에서 본체 사용을 중지하는 로컬 설정입니다. 새 번역·설정 요청을 차단하고 대기 결과를 무효화하지만 확장 삭제, 브라우저 권한 또는 메신저 동의 철회를 대신하지 않으며 이미 표시한 번역문을 강제로 복원하지 않습니다. 다른 브라우저와 Discord의 설정은 유지됩니다. 연결 확인의 브라우저 종류·버전 기록은 갱신될 수 있지만 저장한 해제 상태를 자동으로 취소하지 않습니다.
 - 전용 지원 사이트가 아닌 일반 웹사이트에서는 사용자가 해당 탭에서 F4를 누르거나 팝업 토글을 켜기 전까지 텍스트를 추출하거나 번역 요청을 보내지 않습니다. 사용자가 선택한 켜짐·꺼짐 상태는 탭을 닫을 때까지 유지되며, 같은 탭에서 페이지를 이동하거나 새로 고쳐도 이어집니다. 사이트 자동 번역 정책을 직접 저장하면 이후 해당 사이트 방문에서도 자동으로 시작할 수 있습니다.
 - 일반 웹 번역 요청에는 화면과 가까운 제목, 문단, 목록, 인용문과 그림 설명의 허용된 텍스트와 페이지 구분용 주소가 포함됩니다. 페이지 구분용 주소는 프로토콜·호스트 이름·경로만 포함하며 쿼리 문자열과 해시는 포함하지 않습니다. Windows 앱은 이 값을 번역 요청과 문맥을 페이지별로 분리하는 데 사용합니다. 메신저의 대화 구분 방식은 아래에 별도로 설명합니다.
 - 전체 HTML, 쿠키, 로그인 토큰과 방문 기록 목록은 읽거나 전달하지 않습니다. 현재 페이지 주소와 사이트 정책은 사용자가 요청한 웹 번역을 제공하기 위해서만 PC 안에서 처리하며, 개발자에게 전송되지 않습니다. 사이트별 정책에는 호스트 이름과 사용자가 선택한 동작만 로컬 설정으로 저장됩니다.
@@ -23,7 +25,7 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 - 일반 웹 번역에서 로컬 모델을 선택하면 추출된 텍스트는 PC 안에서 처리됩니다. 외부 번역 서비스를 선택한 경우에만 번역에 필요한 허용 영역 텍스트가 해당 공급자에게 전달됩니다. 웹 메신저 읽기 번역에는 외부 서비스를 사용하지 않습니다.
 - 개발자는 웹페이지 텍스트나 주소를 판매하거나 광고, 사용자 추적, 분석, 신용 평가 또는 번역과 무관한 목적으로 사용하지 않으며 사람이 열람할 수 있는 개발자 운영 서버로 전송하지 않습니다.
 
-## 웹 메신저 읽기 번역 — 개발 중인 선택 기능
+## 웹 메신저 읽기 번역 — 선택 기능
 
 ### 사용 조건과 처리 범위
 
@@ -70,11 +72,15 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 
 NudeNyang Discord Translator does not operate a developer-controlled backend. The developer does not collect or retain Discord messages, webpage text, images, translation history, visited page addresses, or credentials. Local processing and storage by the application are described separately below.
 
-The web-messenger reading feature described below is an **unreleased development change**. The currently published Windows companion `0.7.2-beta` does not support its setting or processing path. It requires a compatible companion and extension when those are made available; it is separate from ordinary webpage and Discord translation.
+The web-messenger reading feature below describes Windows companion `0.7.3-beta` with extension `0.7.8`. The earlier published companion `0.7.2-beta` does not support its setting or processing path. Extension availability depends on each store's review status. This feature is separate from ordinary webpage and Discord translation.
 
 Local models process translation on the user's PC. Image pixels remain local for OCR and compositing. For ordinary webpage and Discord translation, if the user explicitly selects ChatGPT, Claude, Gemini, or DeepL, only the text required for translation is sent to that provider under its own terms and privacy policy. Ordinary settings, caches, and history remain in the Windows user data directory. The web-messenger feature does not use those content-storage paths or external translation providers. DeepL credentials are stored in Windows Credential Manager, and subscription providers use their official local CLI authentication. Diagnostic logs do not record message bodies, local-model prompts, or authentication secrets.
 
-The Chrome, Naver Whale, and Firefox extensions can run on ordinary HTTP/HTTPS websites, which may produce a browser warning that they can read and change data on all websites. Firefox declares eligible ordinary page text passed to the Windows app as `websiteContent` and the address category of the page being translated as `browsingActivity`. The development change adds the separate optional category `personalCommunications` for web-messenger reading.
+The Chrome, Naver Whale, and Firefox extensions can run on ordinary HTTP/HTTPS websites, which may produce a browser warning that they can read and change data on all websites. Firefox declares eligible ordinary page text passed to the Windows app as `websiteContent` and the address category of the page being translated as `browsingActivity`. Web-messenger reading uses the separate optional category `personalCommunications`.
+
+At background startup, installation, browser startup, window-focus changes, and periodic alarms, the extension checks its connection to the same-computer companion, with bounded retries for temporary failures. These checks include browser type and extension version, not webpage text or addresses. A connection check alone does not initialize a translation model, enable translation, or grant messenger consent.
+
+The companion's browser-specific Disconnect action stores a local disabled setting for all profiles of that browser kind. It rejects new translation/settings requests and invalidates pending results, but does not uninstall the extension, revoke browser permissions or messenger consent, or force already displayed translations back to their originals. Other browser kinds and Discord settings are unchanged. Connection-only signals may update local browser-kind/version presence without cancelling the saved disabled setting.
 
 On generic sites, extraction remains off until the user explicitly presses F4 or enables the popup toggle. The selected on or off state continues while that tab remains open, including after navigation or refresh. A site can also start automatically on future visits only when the user explicitly saves an automatic-translation policy for that hostname.
 
@@ -82,7 +88,7 @@ An ordinary webpage translation request contains eligible visible text near the 
 
 Input values, editable content, code, prices, account, login, payment, order, administration, and private-message surfaces are excluded from generic translation. Explicitly supported public fixed menus, instructions, and article bodies have narrowly scoped exceptions. Messenger consent does not remove the generic sensitive-page blocks. The extension does not inject into browser-internal pages or local files. The developer does not sell webpage text or addresses, use them for advertising, tracking, analytics, credit assessment, or unrelated purposes, or transmit them to a developer-operated server where a person could access them.
 
-### Optional web-messenger reading — in development
+### Optional web-messenger reading
 
 The feature is off by default. It requires both the Windows app's web-messenger setting and explicit consent in the current browser profile. Enabling ordinary translation or the app setting alone does not grant consent; consent in another browser or profile does not apply. Firefox also requests optional `personalCommunications` permission from the consent action. Refusal or cancellation does not save consent, and removing that permission prevents a previously saved consent from authorizing translation.
 

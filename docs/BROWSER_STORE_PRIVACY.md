@@ -1,17 +1,17 @@
 # Browser store privacy declarations
 
-This document contains draft privacy answers for the current NudeNyang Web Translator development
-change, including optional web-messenger reading. The public policy source is `PRIVACY.md`.
+This document contains privacy answers for NudeNyang Web Translator 0.7.8 with Windows companion
+0.7.3-beta, including optional web-messenger reading. The public policy source is `PRIVACY.md`.
 
 ## Submission readiness
 
-The messenger feature has not been publicly released. The published Windows companion
-`0.7.2-beta` does not implement its setting or private-message processing path and must not be
-presented as a working reviewer download for this feature. Before submission, publish a compatible
-companion, update the reviewer download link in the submission materials, and publish the matching
-privacy policy. This document does not assert that a new companion version or download already
-exists. Logged-in, real-account validation of all eight messenger services has not been completed;
-fixture tests are not a substitute for that validation.
+Before requesting review, verify that the Windows companion `0.7.3-beta` x64 and ARM64 installers
+are publicly downloadable at `https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.3-beta`
+and that the public privacy-policy URL contains this revision. The earlier `0.7.2-beta` does not
+implement the messenger setting or private-message path. Package creation alone does not satisfy
+these publication checks. Logged-in, real-account validation of all eight messenger services has
+not been completed; fixture tests are not a substitute for that validation. See
+`BROWSER_STORE_SUBMISSION_0.7.8.md` for the submission checklist and listing copy.
 
 ## Single purpose
 
@@ -66,8 +66,8 @@ external fallback paths. It does not authorize sending the conversation to that 
 
 ## Consent experience
 
-If browser-profile consent is missing, the popup places a privacy-review action immediately below
-the explanation. This opens the bundled notice; it does not grant consent. The user must check
+If browser-profile consent is missing, the popup places a prominent privacy-review card above
+the translation controls, without duplicating the action in the footer. This opens the bundled notice; it does not grant consent. The user must check
 the acknowledgement and explicitly accept, including Firefox's optional permission prompt. Only
 then may the extension resume the originating conversation and return to its tab without a
 reload, after rechecking the app setting, local model, and browser consent. The handoff uses a
@@ -81,6 +81,13 @@ The user must explicitly accept the updated notice. No linked pages are fetched 
 text is read. No additional browser permission category is introduced.
 
 ## Messenger retention and withdrawal
+
+The companion's browser-specific Disconnect action is separate from consent withdrawal. It stores
+the disabled browser kind locally, rejects new translation/settings requests through existing
+ports, and invalidates pending results for that kind. Other browser kinds and Discord remain
+unchanged. It does not uninstall the extension, revoke browser permissions, clear consent, or
+force already displayed text back to its original form. Connection-only signals may still update
+local browser-kind/version presence, but cannot re-enable a disconnected browser.
 
 The extension holds eligible messenger text and translations only in memory for the current
 conversation, including the added Discord channel names and link-preview text.
@@ -131,11 +138,19 @@ same behavior. See [Chrome's privacy-practices form guidance](https://developer.
 - `scripting`: Reconnects the extension's bundled content scripts to an already-open HTTP/HTTPS
   tab after an extension install, update, or reload invalidates the old script. Injection occurs only
   when the bundled receiver is missing; no remote code is executed.
+- `alarms`: Periodically checks the same-computer companion connection and reconnects after a
+  browser restart. This connection-only request contains no webpage text or address, does not
+  initialize a translation model, and does not grant messenger consent or open a tab.
 - `http://*/*` and `https://*/*`: Allows eligible visible text to be translated on ordinary
   webpages after the user activates translation or saves an automatic site policy. Browser-internal
   pages and generic sensitive routes remain blocked. Supported messenger conversations have a
   separate HTTPS-only, local-AI-only path gated by the app setting and browser-profile consent;
   this does not permit reading composers, attachments, or arbitrary private pages.
+
+Chrome and Whale now explicitly declare these same origins in `host_permissions`, as Firefox
+already does. Programmatic recovery of an old tab requires this host access; static content-script
+matches alone do not grant it. This removes reliance on the popup's temporary `activeTab` grant.
+User-restricted site access is still respected, and no additional URL scheme or text category is added.
 
 ## Firefox AMO manifest declarations
 

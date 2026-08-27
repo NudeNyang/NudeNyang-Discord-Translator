@@ -6,15 +6,14 @@
 - Add-on ID: `web-translator@nudenyang.github.io`
 - Add-on version: `0.7.8`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
-- Companion application: a compatible NudeNyang Windows application with the web-messenger
-  opt-in setting and private, local-only translation path described below
-- Reviewer download: pending publication of that compatible companion application
+- Companion application: NudeNyang Windows 0.7.3-beta with the web-messenger opt-in setting
+  and private, local-only translation path described below
+- Reviewer download: https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.3-beta
 
-These notes describe unreleased development changes. The currently published `0.7.2-beta`
-companion does not implement the new web-messenger setting or private translation path and must
-not be used as the test download for this feature. Before submitting this revision for review,
-publish the compatible companion and matching privacy documentation, then replace the pending
-download entry with its actual public release URL. No new companion release is claimed here.
+Before requesting review, verify that the download above provides both x64 and ARM64 installers
+and that the linked privacy policy matches this revision. The earlier `0.7.2-beta` companion does
+not implement the web-messenger setting or private translation path and must not be used to test
+this feature. A prepared package or this URL alone is not evidence of publication.
 
 The add-on is not useful on its own. It sends translation requests to the separately installed
 NudeNyang Windows application through Firefox Native Messaging. If the companion application is
@@ -28,6 +27,28 @@ keeps web-messenger reading disabled.
 
 ## Changes in 0.7.8
 
+- Check fresh companion settings and browser consent before a manual translation start, including
+  F4. OFF cancels a pending ON without waiting for the native lookup; stale replies after navigation
+  or consent withdrawal cannot restart translation. The user confirmed the old-tab F4 fix in Whale;
+  this is not a claim of equivalent live Firefox testing.
+- Show a page-level consent explanation when a supported open conversation cannot translate due
+  to missing consent, without collecting its body. Only a real user click opens the notice. Dismissal
+  prevents scroll/polling from repeatedly showing it; a new manual attempt can show it again.
+- Check the companion immediately when the extension background starts and when browser focus
+  moves to another app. Retry temporary connection failures after 1, 2, 4, and 8 seconds at most,
+  stopping on success or explicit browser disconnection; retain the one-minute alarm. These
+  signals contain only browser kind/version and request metadata, not page or profile data.
+- Simplify the popup: use the toggle or F4 to restore originals, highlight missing messenger
+  consent in a dedicated card, and retain a separate non-starting privacy-management action.
+  A companion `browser_connection_disabled` response disables translation controls while
+  preserving access to companion settings and privacy/withdrawal. This is an app-level switch,
+  not extension uninstall or browser-permission revocation.
+
+- Add the `alarms` permission for connection-only checks at install, browser startup, and periodic
+  intervals. These checks contain no webpage body or address, do not initialize a model, and do
+  not enable translation, open a tab, or grant messenger consent. The companion distinguishes
+  connection checks from model-preparation requests.
+
 - Keep X Chat conversation identity stable when virtual scrolling replaces the first message
   or temporarily empties the list. Only the modern panel/scroller on an explicit conversation
   route uses this identity; route/panel changes and unsupported public drawers remain guarded.
@@ -35,8 +56,9 @@ keeps web-messenger reading disabled.
   scrolling clips them from view. Permission refresh does not restore these nodes to the original
   text, reread them, or submit new offscreen content. Detached, hidden or repurposed nodes do not
   receive this retention exception. Navigation, revocation and explicit OFF still clear state.
-- Add synthetic scroll/lifecycle regressions. Live Whale scroll behavior still requires user
-  confirmation after reload. Consent remains version 2; no new scope or permission is introduced.
+- Add synthetic scroll/lifecycle regressions. The user confirmed that the Whale X scroll fix
+  works after updating to 0.7.8. This does not establish live testing in Firefox or every messenger.
+  Consent remains version 2; the connection alarm does not expand message-processing scope.
 
 ## Changes in 0.7.7
 
@@ -148,7 +170,7 @@ The public privacy explanation is available at:
 
 ## Optional web-messenger reading
 
-This development feature covers X DM, Discord web, WhatsApp Web, Telegram Web, Messenger, Slack,
+This optional feature covers X DM, Discord web, WhatsApp Web, Telegram Web, Messenger, Slack,
 Microsoft Teams, and Google Messages. A service name is not permission to scan the entire service:
 only supported HTTPS conversation views with an unambiguously identified, currently open
 conversation are eligible. Login, account, payment, unsupported private-message, and webmail pages
@@ -204,6 +226,8 @@ model KV-cache contents, and these notes do not make that guarantee.
 - `scripting`: reinjects only the add-on's bundled content scripts when an already-open HTTP/HTTPS
   tab has lost its receiver after the add-on was installed, updated, or reloaded. It does not fetch
   or execute remote code.
+- `alarms`: schedules connection-only checks with the local companion. No webpage content or
+  address is included; these checks do not initialize a model or enable messenger reading.
 - `http://*/*` and `https://*/*`: allows the user to translate ordinary webpages. Sensitive routes
   and browser-internal pages remain blocked in the ordinary collector. Only the separately gated,
   supported HTTPS conversation views can use the optional private collector.
@@ -227,8 +251,8 @@ regression tests and their documentation/companion-source fixtures,
 `package.json`, `package-lock.json`, and `THIRD_PARTY_NOTICES.md`. The included companion bridge
 source is inspected by contract tests; it is not compiled or bundled into the XPI. This archive
 does not contain the complete Windows model engine. Review of the native private-processing
-implementation requires the matching companion source and release, to be made available with the
-compatible companion before submission.
+implementation requires the matching companion source and release linked above. Confirm that
+both are accessible before requesting review.
 
 `jsdom 30.0.1` (MIT) is a pinned development dependency used for DOM-based regression tests. It and
 its dependencies are installed by `npm ci` for development and verification, not bundled into the
@@ -254,7 +278,7 @@ Validation commands:
 
 ```powershell
 npm run test:extension
-npx --yes web-ext lint --source-dir dist/firefox-extension --warnings-as-errors
+npx --yes web-ext@10.6.0 lint --source-dir dist/firefox-extension --warnings-as-errors
 ```
 
 ## Functional test outline
@@ -262,13 +286,16 @@ npx --yes web-ext lint --source-dir dist/firefox-extension --warnings-as-errors
 The companion-download prerequisite above must be resolved before presenting this outline as a
 ready-to-run submission. Use only test conversations the reviewer is authorized to access.
 
-1. Install and run the compatible NudeNyang Windows companion application described above, not
-   the currently published `0.7.2-beta` for the new messenger tests.
+1. Install and run NudeNyang Windows `0.7.3-beta` from the download above, not `0.7.2-beta` for
+   the messenger tests. Download a local Hy-MT2 model in the app before testing translation.
 2. Register its Native Messaging host by running the installed executable once with
    `--register-browser-native-host`. The installer performs this automatically.
-3. Install the signed XPI and open an ordinary HTTP/HTTPS page.
+3. Install the XPI through the review environment and open an ordinary HTTP/HTTPS page. For local
+   pre-submission testing of an unsigned build, use Firefox's temporary add-on loading in
+   `about:debugging`; do not disable Firefox's signature protection. Public permanent installs
+   require the AMO-signed add-on.
 4. Press the quick toggle shortcut configured in the Windows app (`F4` by default), use the registered Firefox command (`Ctrl+Shift+L` by default), or use the popup switch to translate the current page.
-5. Use `Restore this page to the original` in the popup and verify that the original text returns.
+5. Turn off the popup translation toggle or press F4 and verify that the original text returns.
 6. Stop the companion application and verify that the add-on reports the connection requirement
    without translating or transmitting page content.
 7. With the companion running, explicitly enable or disable translation in a public page and open
