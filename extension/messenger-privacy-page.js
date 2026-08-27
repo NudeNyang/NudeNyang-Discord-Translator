@@ -79,6 +79,22 @@
     catch { /* Stored consent is independently required even if permission removal fails. */ }
   }
 
+  async function resumeConversation() {
+    const params = new URL(location.href).searchParams;
+    const rawTab = params.get("tab");
+    const tabId = Number(rawTab);
+    const contextId = params.get("context") ?? "";
+    if (!/^\d+$/.test(rawTab ?? "") || !Number.isSafeInteger(tabId)
+      || !/^messenger:[a-z]+:[a-zA-Z0-9_-]{16,128}$/.test(contextId)) return;
+    const response = await runtimeMessage({ type: "nudenyang-page-request", tabId,
+      message: { type: "nudenyang-messenger-start", contextId } });
+    if (disposed || !response?.enabled || response.messengerContextId !== contextId) return;
+    try {
+      if (isFirefox) await api.tabs.update(tabId, { active: true });
+      else api.tabs.update(tabId, { active: true }, () => { void api.runtime.lastError; });
+    } catch { /* The source tab may have closed; consent management remains usable. */ }
+  }
+
   async function finishAcceptance(permission) {
     let permitted = false;
     try { permitted = await permission === true; }
@@ -99,6 +115,7 @@
       granted = true;
       confirmation.checked = false;
       setStatus("messengerPrivacySaved", "success");
+      await resumeConversation();
     } else {
       await removeFirefoxPermission();
       if (disposed) return;

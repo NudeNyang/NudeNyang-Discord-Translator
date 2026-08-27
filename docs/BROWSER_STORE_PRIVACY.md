@@ -61,6 +61,17 @@ names, contact lists, profiles, composers, drafts, send actions, attachments, an
 translation targets. Selecting an external provider blocks messenger translation, including
 external fallback paths. It does not authorize sending the conversation to that provider.
 
+## Consent experience
+
+If browser-profile consent is missing, the popup places a privacy-review action immediately below
+the explanation. This opens the bundled notice; it does not grant consent. The user must check
+the acknowledgement and explicitly accept, including Firefox's optional permission prompt. Only
+then may the extension resume the originating conversation and return to its tab without a
+reload, after rechecking the app setting, local model, and browser consent. The handoff uses a
+tab handle and random conversation nonce, not a real conversation URL or message body. A changed
+conversation, revoked consent, or explicit OFF action cancels the pending start. Hidden tabs do
+not collect message bodies. The standalone consent-management link has no automatic-start action.
+
 ## Messenger retention and withdrawal
 
 The extension holds message bodies and translations only in memory for the current conversation.

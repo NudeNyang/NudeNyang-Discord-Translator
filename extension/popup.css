@@ -458,6 +458,14 @@ button:disabled:hover {
   font-size: 11px;
 }
 
+.messenger-consent-action {
+  margin-bottom: 16px;
+}
+
+.messenger-consent-action[hidden] {
+  display: none;
+}
+
 .switch {
   position: relative;
   width: 40px;

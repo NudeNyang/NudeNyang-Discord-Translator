@@ -4,7 +4,7 @@
 
 - Channel: public listing (`On this site` / listed)
 - Add-on ID: `web-translator@nudenyang.github.io`
-- Add-on version: `0.7.4`
+- Add-on version: `0.7.5`
 - Supported platform: Firefox desktop on Windows 10 and Windows 11
 - Companion application: a compatible NudeNyang Windows application with the web-messenger
   opt-in setting and private, local-only translation path described below
@@ -25,6 +25,22 @@ Major and minor versions identify the product generation; patch versions are ind
 matching generation alone does not establish support for the new privacy contract. The extension
 must receive `webSettings.messengerEnabled: true` from the compatible companion and otherwise
 keeps web-messenger reading disabled.
+
+## Changes in 0.7.5
+
+- Place a privacy-review action directly beside the missing-consent explanation. Turning on the
+  companion setting or a site policy still does not grant browser-profile consent.
+- After the user checks the notice and explicitly accepts, recheck the local companion and
+  browser consent, resume only the originating conversation, and return to its tab without a
+  webpage reload. Firefox's optional personal-communications permission remains mandatory.
+- Pass only a tab handle and random conversation nonce to the notice page, never a conversation
+  URL or message content. Do not resume a different conversation, overwrite an explicit OFF
+  action, or collect messages from a hidden tab. The consent-management link alone does not start
+  translation. Existing site and tab policies remain unchanged.
+- Add synthetic DOM and consent-flow regressions, including X incoming/outgoing message bodies,
+  excluded composers, visibility, conversation changes, and cancellation races. These tests are
+  not a claim of live validation on every supported messenger.
+- No additional permissions or data-processing scope are introduced by this UX revision.
 
 ## Changes in 0.7.4
 

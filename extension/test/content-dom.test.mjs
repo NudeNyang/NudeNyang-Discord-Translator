@@ -144,6 +144,105 @@ const PRIVATE_CHAT = `<nav><span>Private contact list</span></nav>
 const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", consent: true,
   settings: { messengerEnabled: true } };
 
+test("동의 후 시작은 새 동의 상태를 확인하여 새로고침 없이 기존 대화를 번역한다", async (t) => {
+  const options = { ...PRIVATE_OPTIONS, consent: false, tabEnabled: false };
+  const p = page(t, PRIVATE_CHAT, options);
+  await p.message({ type: "nudenyang-ready" });
+  const before = await p.message({ type: "nudenyang-status" });
+  assert.equal(before.enabled, false);
+  assert.match(before.messengerContextId, /^messenger:discord:/);
+  assert.equal(p.requests.length, 0);
+  options.consent = true;
+  const after = await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+  assert.equal(after.enabled, true);
+  await waitFor(() => p.sent().length > 0, "consented conversation resumes without navigation");
+  assert.ok(!p.sent().some((text) => /draft|sender|timestamp/.test(text)));
+});
+
+test("동의 후 시작도 본체 OFF·외부 AI·동의 미완료·다른 대화에는 적용되지 않는다", async (t) => {
+  for (const extra of [{ consent: false }, { settings: { messengerEnabled: false } }, { translator: "deepl" }, { changed: true }]) {
+    const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, tabEnabled: false, ...extra });
+    await p.message({ type: "nudenyang-ready" });
+    const before = await p.message({ type: "nudenyang-status" });
+    if (extra.changed) p.w.history.pushState({}, "", "/channels/@me/987654321");
+    const after = await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+    assert.equal(after.enabled, false);
+    assert.equal(p.requests.length, 0);
+    assert.equal(p.savedStates.length, 0);
+  }
+});
+
+test("X DM 동의 후 받은·보낸 메시지만 번역하고 작성창과 전송 버튼은 그대로 둔다", async (t) => {
+  const options = { ...PRIVATE_OPTIONS, url: "https://x.com/messages/101-202", consent: false, tabEnabled: false };
+  const p = page(t, `<div data-testid="DmActivityViewport">
+    <div data-testid="messageEntry"><span data-testid="messageSender">Example Sender</span>
+      <span dir="auto" id="incoming">A neutral incoming message.</span><time>12:01</time></div>
+    <button data-testid="messageEntry"><span dir="auto" id="outgoing">A neutral reply.</span></button>
+    </div><div contenteditable="true" role="textbox">Unsent private draft</div><button id="send">Send</button>`, options);
+  await p.message({ type: "nudenyang-ready" });
+  const before = await p.message({ type: "nudenyang-status" });
+  assert.equal(before.messengerGate, "messenger_consent_required");
+  options.consent = true;
+  // The consent page has focus: accepting must not read a background conversation.
+  let hidden = true;
+  Object.defineProperty(p.w.document, "hidden", { configurable: true, get: () => hidden });
+  const after = await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+  assert.equal(after.enabled, true);
+  assert.equal(p.requests.length, 0);
+  hidden = false;
+  p.w.document.dispatchEvent(new p.w.Event("visibilitychange"));
+  p.w.dispatchEvent(new p.w.FocusEvent("focus"));
+  await waitFor(() => ["incoming", "outgoing"].every((id) => p.w.document.getElementById(id).textContent.startsWith("번역(")), "both X message directions resume on returning to the tab");
+  assert.deepEqual(p.sent().sort(), ["A neutral incoming message.", "A neutral reply."].sort());
+  assert.ok(p.requests.every((request) => request.privateContext.service === "x"));
+  assert.equal(p.w.document.querySelector("[contenteditable]").textContent, "Unsent private draft");
+  assert.equal(p.w.document.getElementById("send").textContent, "Send");
+});
+
+test("동의로 시작한 임시 상태는 다른 대화로 따라가지 않고 탭 상태도 저장하지 않는다", async (t) => {
+  const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, tabEnabled: false });
+  await p.message({ type: "nudenyang-ready" });
+  const before = await p.message({ type: "nudenyang-status" });
+  await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+  await waitFor(() => p.sent().length > 0, "source conversation translates");
+  const count = p.requests.length;
+  p.w.history.pushState({}, "", "/channels/@me/987654321");
+  p.w.document.querySelector("[data-list-id]").innerHTML = '<li><div id="message-content-2">Another conversation</div></li>';
+  const after = await p.message({ type: "nudenyang-status" });
+  assert.equal(after.enabled, false);
+  assert.notEqual(after.messengerContextId, before.messengerContextId);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.equal(p.requests.length, count);
+  assert.deepEqual(p.savedStates, []);
+});
+
+test("동의 후 시작의 느린 상태 응답보다 최신 OFF·철회·대화 이동이 우선한다", async (t) => {
+  for (const action of ["off", "revoke", "navigate", "main-off"]) {
+    const options = { ...PRIVATE_OPTIONS, tabEnabled: false };
+    const p = page(t, PRIVATE_CHAT, options);
+    await p.message({ type: "nudenyang-ready" });
+    const before = await p.message({ type: "nudenyang-status" });
+    options.deferStatus = true;
+    const pending = p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
+    await waitFor(() => p.runtimeMessages.some((m) => m.request?.requestId?.startsWith("messenger-start-")), "resume status lookup pending");
+    if (action === "off") await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    if (action === "revoke") {
+      options.consent = false;
+      await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
+    }
+    if (action === "navigate") p.w.history.pushState({}, "", "/channels/@me/987654321");
+    if (action === "main-off") {
+      p.appStatus.webSettings.messengerEnabled = false;
+      await p.message({ type: "nudenyang-apply-web-settings", webSettings: p.appStatus.webSettings });
+    }
+    options.deferStatus = false;
+    p.releaseStatus();
+    assert.equal((await pending).enabled, false, action);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(p.requests.length, 0, action);
+  }
+});
+
 test("웹 메신저는 본체 허용·브라우저 동의·로컬 AI가 모두 있어야 본문을 읽는다", async (t) => {
   for (const extra of [{ settings: {} }, { consent: false }, { translator: "deepl" }, { translator: "unknown" }]) {
     const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, ...extra });

@@ -17,6 +17,7 @@ async function popup(options = {}) {
   let state = {
     supported: true, enabled: false, site: "discord", translatedNodes: 0,
     messengerService: "discord", messengerGate: "messenger_consent_required",
+    messengerContextId: "messenger:discord:opaque-conversation-token",
     requestCount: 0, sentChars: 0, targetLanguage: "ko", ...options.status,
   };
   dom.window.chrome = {
@@ -65,6 +66,26 @@ test("메신저 동의는 팝업 열기로 자동 표시·저장하지 않고 �
     assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/messenger-privacy.html" }]);
     assert.ok(p.messages.every((message) => !message.type.includes("consent-set")));
   } finally { p.dispose(); }
+});
+
+test("동의 차단 안내 옆 버튼은 원래 대화의 임시 식별자만 전달한다", async () => {
+  const p = await popup();
+  try {
+    const button = p.get("messenger-consent-start");
+    assert.equal(button.hidden, false);
+    button.click();
+    const url = new URL(p.tabs[0].url);
+    assert.equal(url.pathname, "/messenger-privacy.html");
+    assert.equal(url.searchParams.get("tab"), "7");
+    assert.equal(url.searchParams.get("context"), "messenger:discord:opaque-conversation-token");
+    assert.ok(!url.href.includes("12345"));
+    assert.ok(p.messages.every((message) => !message.type.includes("consent-set")));
+  } finally { p.dispose(); }
+  for (const messengerGate of ["", "messenger_disabled", "messenger_local_only"]) {
+    const other = await popup({ status: { messengerGate } });
+    try { assert.equal(other.get("messenger-consent-start").hidden, true); }
+    finally { other.dispose(); }
+  }
 });
 
 test("메신저 차단 원인을 엔진 연결 상태와 별도로 표시하고 F4로 동의를 우회하지 않는다", async () => {

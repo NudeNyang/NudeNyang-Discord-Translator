@@ -8,6 +8,7 @@ const connection = document.querySelector("#connection");
 const connectionText = document.querySelector("#connection-text");
 const detail = document.querySelector("#detail");
 const messengerNotice = document.querySelector("#messenger-notice");
+const messengerConsentStart = document.querySelector("#messenger-consent-start");
 const messengerPrivacy = document.querySelector("#messenger-privacy");
 const commandShortcut = document.querySelector("#command-shortcut");
 const quickToggleShortcutElement = document.querySelector("#quick-toggle-shortcut");
@@ -196,6 +197,8 @@ function renderPageStatus(status) {
     : copy(messengerCopy[messengerGate] ?? (messengerGate ? "unableToProcess" : "messengerReadTranslation"));
   messengerPrivacy.textContent = copy(messengerGate === "messenger_consent_required"
     ? "reviewMessengerPrivacy" : "messengerPrivacyConsent");
+  messengerConsentStart.hidden = messengerGate !== "messenger_consent_required";
+  messengerConsentStart.textContent = copy("reviewMessengerPrivacy");
   if (!status) {
     site.textContent = copy("unableToProcess");
   } else if (status.supported && status.manualOnly && !status.enabled) {
@@ -366,9 +369,15 @@ async function initialize() {
       detail.textContent = copy("error");
     }
   });
-  messengerPrivacy.addEventListener("click", () => {
+  function openMessengerPrivacy(resumeConversation = false) {
     try {
-      api.tabs.create({ url: api.runtime.getURL("messenger-privacy.html") }, () => {
+      const url = new URL(api.runtime.getURL("messenger-privacy.html"));
+      if (resumeConversation && Number.isInteger(tab?.id) && status?.messengerContextId) {
+        // Carry only a tab handle and an opaque document/conversation nonce.
+        url.searchParams.set("tab", String(tab.id));
+        url.searchParams.set("context", status.messengerContextId);
+      }
+      api.tabs.create({ url: url.href }, () => {
         if (api.runtime.lastError) {
           messengerNotice.hidden = false;
           messengerNotice.textContent = copy("unableToProcess");
@@ -378,7 +387,9 @@ async function initialize() {
       messengerNotice.hidden = false;
       messengerNotice.textContent = copy("unableToProcess");
     }
-  });
+  }
+  messengerPrivacy.addEventListener("click", () => openMessengerPrivacy());
+  messengerConsentStart.addEventListener("click", () => openMessengerPrivacy(true));
 }
 
 void initialize();

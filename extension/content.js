@@ -61,6 +61,8 @@
   let messengerContext = null;
   let messengerConsent = false;
   let messengerPageId = "";
+  let messengerStartContextId = "";
+  let messengerStartRevision = 0;
   let messengerFailure = "";
   let lastMessengerStatusAt = 0;
   let refreshingStatus = false;
@@ -131,6 +133,7 @@
   }
 
   function assignPageContext(next) {
+    messengerStartContextId = "";
     messengerSite = next.site;
     messengerContext = next.context;
     messengerFailure = "";
@@ -333,6 +336,9 @@
   }
 
   function initialEnabled() {
+    if (messengerStartContextId && messengerStartContextId === messengerPageId) {
+      return !messengerGate() && webSettings.enabled && sitePolicy !== "never";
+    }
     return !messengerGate() && pageTranslationEnabled({
       adapter,
       storedEnabled,
@@ -1146,6 +1152,7 @@
     if (!adapter) {
       return status();
     }
+    messengerStartContextId = "";
     if (value && !webSettings.enabled) {
       lastError = "Windows 앱에서 웹 번역 사용이 꺼져 있습니다.";
       return status();
@@ -1172,7 +1179,43 @@
   }
 
   function toggleEnabled() {
+    messengerStartRevision += 1;
     return changeState(() => setEnabled(!enabled));
+  }
+
+  async function startConsentedConversation(contextId) {
+    const revision = ++messengerStartRevision;
+    await startupPromise;
+    // Native/permission lookup stays outside the state lock so OFF/revocation
+    // can cancel this request while the companion app is waking up.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      handleNavigation();
+      if (disposed || !contextId || contextId !== messengerPageId
+        || revision !== messengerStartRevision) return status();
+      const epoch = appStatusEpoch;
+      const [app, consent] = await Promise.all([
+        nativeRequest({ type: "status", requestId: `messenger-start-${Date.now()}` }),
+        extensionRequest({ type: "nudenyang-messenger-consent-get" }),
+      ]);
+      const result = await changeState(() => {
+        handleNavigation();
+        if (disposed || contextId !== messengerPageId || revision !== messengerStartRevision) return status();
+        // A consent-saved broadcast may race this lookup; read a fresh snapshot.
+        if (epoch !== appStatusEpoch) return null;
+        const oldKey = translationKey();
+        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 1;
+        if (app?.type === "status") {
+          applyAppStatus(app);
+          messengerFailure = "";
+        } else messengerFailure = "messenger_request_cancelled";
+        // Resume only this conversation. Do not change site policy or persist
+        // a tab-wide ON override which could start a different conversation.
+        if (!messengerGate() && sitePolicy !== "never") messengerStartContextId = contextId;
+        return refreshPageSettings(oldKey);
+      });
+      if (result !== null) return result;
+    }
+    return status();
   }
 
   function handleQuickToggle(event) {
@@ -1192,6 +1235,7 @@
       site: adapter?.id ?? "",
       manualOnly: Boolean(adapter?.manualOnly),
       messengerService: messengerSite?.id ?? "",
+      messengerContextId: messengerPageId,
       messengerGate: messengerGate(),
       translatedNodes: [...trackedNodes].filter((node) => {
         const state = nodeStates.get(node);
@@ -1258,6 +1302,7 @@
     }
     if (message?.type === "nudenyang-messenger-refresh" && sender?.id === api.runtime.id) {
       appStatusEpoch += 1;
+      if (message.consent?.granted !== true) messengerStartRevision += 1;
       changeState(() => {
         const oldKey = translationKey();
         messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 1;
@@ -1267,7 +1312,12 @@
       }).then(sendResponse);
       return true;
     }
+    if (message?.type === "nudenyang-messenger-start" && sender?.id === api.runtime.id) {
+      startConsentedConversation(message.contextId).then(sendResponse, () => sendResponse(status()));
+      return true;
+    }
     if (message?.type === "nudenyang-set-enabled") {
+      messengerStartRevision += 1;
       changeState(() => setEnabled(message.enabled)).then(sendResponse);
       return true;
     }
@@ -1276,6 +1326,7 @@
       return true;
     }
     if (message?.type === "nudenyang-restore") {
+      messengerStartRevision += 1;
       changeState(() => setEnabled(false)).then(sendResponse);
       return true;
     }

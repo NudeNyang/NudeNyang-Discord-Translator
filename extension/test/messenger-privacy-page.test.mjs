@@ -10,13 +10,14 @@ const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 function page(options = {}) {
   const dom = new JSDOM(html, {
-    url: "https://extension.invalid/messenger-privacy.html",
+    url: options.url ?? "https://extension.invalid/messenger-privacy.html",
     runScripts: "outside-only",
     pretendToBeVisual: true,
   });
   const messages = [];
   const requests = [];
   const removals = [];
+  const focused = [];
   let inClick = false;
   let closed = false;
   const permissions = {
@@ -30,6 +31,9 @@ function page(options = {}) {
     },
   };
   function responseFor(message) {
+    if (message.type === "nudenyang-page-request") {
+      return options.startResponse ?? { enabled: true, messengerContextId: "messenger:discord:opaque-conversation-token" };
+    }
     if (message.type === "nudenyang-messenger-consent-get") {
       return options.getConsent?.() ?? { ok: true, granted: options.granted === true };
     }
@@ -45,6 +49,7 @@ function page(options = {}) {
     throw new Error(`Unexpected message: ${message.type}`);
   }
   const api = {
+    tabs: { update(id, details, callback) { focused.push({ id, ...details }); callback?.({ id }); return Promise.resolve({ id }); } },
     i18n: { getUILanguage: () => "en-US" },
     permissions,
     runtime: {
@@ -68,7 +73,7 @@ function page(options = {}) {
   dom.window.eval(script);
   const get = (id) => dom.window.document.getElementById(id);
   return {
-    dom, get, messages, requests, removals,
+    dom, get, messages, requests, removals, focused,
     get closed() { return closed; },
     consentChanges() { return messages.filter((message) => message.type === "nudenyang-messenger-consent-set"); },
     click(id) {
@@ -105,6 +110,53 @@ test("동의 페이지는 지역화한 안내와 접근성 구조를 사용하�
     assert.doesNotMatch(html, /<script[^>]+src=["']https?:/);
     assert.doesNotMatch(script, /localStorage|sessionStorage|fetch\(|XMLHttpRequest|console\./);
   } finally { p.dispose(); }
+});
+
+const HANDOFF_URL = "https://extension.invalid/messenger-privacy.html?tab=7&context=messenger%3Adiscord%3Aopaque-conversation-token";
+
+test("명시적으로 동의한 뒤에만 원래 대화의 번역을 시작하고 탭으로 돌아간다", async () => {
+  for (const firefox of [false, true]) {
+    const p = page({ url: HANDOFF_URL, firefox });
+    try {
+      await settle();
+      assert.deepEqual(p.focused, []);
+      p.check(); p.click("privacy-accept");
+      await settle();
+      const writes = p.messages.filter((m) => m.type === "nudenyang-messenger-consent-set" || m.type === "nudenyang-page-request");
+      assert.deepEqual(writes, [
+        { type: "nudenyang-messenger-consent-set", granted: true },
+        { type: "nudenyang-page-request", tabId: 7, message: { type: "nudenyang-messenger-start", contextId: "messenger:discord:opaque-conversation-token" } },
+      ]);
+      assert.deepEqual(p.focused, [{ id: 7, active: true }]);
+    } finally { p.dispose(); }
+  }
+});
+
+test("동의 거절·관리 페이지·잘못된 출처 정보는 대화를 시작하지 않는다", async () => {
+  for (const options of [
+    {}, { url: HANDOFF_URL.replace("tab=7", "tab=-1") },
+    { url: HANDOFF_URL.replace("messenger%3Adiscord%3Aopaque-conversation-token", "https://private.invalid/chat") },
+    { url: HANDOFF_URL, firefox: true, permissionGranted: false },
+    { url: HANDOFF_URL, granted: true },
+  ]) {
+    const p = page(options);
+    try {
+      await settle(); p.check(); p.click("privacy-accept"); await settle();
+      assert.equal(p.messages.some((m) => m.type === "nudenyang-page-request"), false);
+      assert.deepEqual(p.focused, []);
+    } finally { p.dispose(); }
+  }
+});
+
+test("원래 대화가 바뀌거나 시작할 수 없어도 동의만 저장하고 다른 탭으로 이동하지 않는다", async () => {
+  for (const startResponse of [{ enabled: false }, { enabled: true, messengerContextId: "different" }]) {
+    const p = page({ url: HANDOFF_URL, startResponse });
+    try {
+      await settle(); p.check(); p.click("privacy-accept"); await settle();
+      assert.equal(p.get("privacy-status").dataset.message, "messengerPrivacySaved");
+      assert.deepEqual(p.focused, []);
+    } finally { p.dispose(); }
+  }
 });
 
 test("체크박스 변경만으로는 저장하지 않고 승인 클릭에서만 저장한다", async () => {
