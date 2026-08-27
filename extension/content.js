@@ -103,6 +103,7 @@
   let usageLimited = false;
   let startupPromise;
   let stateChanges = Promise.resolve();
+  let manualIntent = null;
 
   globalThis[INSTANCE_KEY] = {
     version,
@@ -1285,7 +1286,8 @@
     notifyEmbeddedFrames();
   }
 
-  async function setEnabled(value) {
+  async function setEnabled(value, revision = messengerStartRevision) {
+    if (disposed || revision !== messengerStartRevision) return status();
     handleNavigation();
     if (!adapter) {
       return status();
@@ -1309,7 +1311,7 @@
       removeConsentNotice();
     }
     tabEnabled = await saveTabEnabled(value);
-    if (disposed) return status();
+    if (disposed || revision !== messengerStartRevision) return status();
     handleNavigation();
     enabled = tabEnabled && !messengerGate();
     usageLimited = false;
@@ -1324,9 +1326,55 @@
     return status();
   }
 
+  async function requestEnabled(value) {
+    const revision = ++messengerStartRevision;
+    manualIntent = { revision, value: Boolean(value) };
+    try {
+      await startupPromise;
+      if (disposed || revision !== messengerStartRevision) return status();
+      // OFF must not wait for a disconnected companion or a pending ON lookup.
+      if (!value) return await changeState(() => setEnabled(false, revision));
+      handleNavigation();
+      const requestedUrl = location.href;
+      const requestedContext = messengerPageId;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const epoch = appStatusEpoch;
+        const [app, consent] = await Promise.all([
+          nativeRequest({ type: "status", requestId: `content-toggle-${Date.now()}` }),
+          extensionRequest({ type: "nudenyang-messenger-consent-get" }),
+        ]);
+        const result = await changeState(() => {
+          handleNavigation();
+          if (disposed || revision !== messengerStartRevision || requestedUrl !== location.href
+            || requestedContext !== messengerPageId) return status();
+          if (epoch !== appStatusEpoch) return null;
+          // F4 and popup/command starts use the same fresh settings/connection.
+          // A failed lookup never turns stale permissions into an enabled page.
+          appStatusAvailable = app?.type === "status";
+          if (!appStatusAvailable) {
+            if (messengerSite) messengerFailure = "messenger_request_cancelled";
+            else lastError = "Windows 앱 연결을 확인하지 못했습니다.";
+            updateConsentNotice();
+            return status();
+          }
+          const oldKey = translationKey();
+          applyAppStatus(app);
+          messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 2;
+          messengerFailure = "";
+          refreshPageSettings(oldKey);
+          return setEnabled(true, revision);
+        });
+        if (result !== null) return result;
+      }
+      return status();
+    } finally {
+      if (manualIntent?.revision === revision) manualIntent = null;
+    }
+  }
+
   function toggleEnabled() {
-    messengerStartRevision += 1;
-    return changeState(() => setEnabled(!enabled));
+    const previous = manualIntent?.revision === messengerStartRevision ? manualIntent.value : enabled;
+    return requestEnabled(!previous);
   }
 
   async function startConsentedConversation(contextId) {
@@ -1465,8 +1513,7 @@
       return true;
     }
     if (message?.type === "nudenyang-set-enabled") {
-      messengerStartRevision += 1;
-      changeState(() => setEnabled(message.enabled)).then(sendResponse);
+      requestEnabled(Boolean(message.enabled)).then(sendResponse);
       return true;
     }
     if (message?.type === "nudenyang-toggle-enabled") {
@@ -1474,8 +1521,7 @@
       return true;
     }
     if (message?.type === "nudenyang-restore") {
-      messengerStartRevision += 1;
-      changeState(() => setEnabled(false)).then(sendResponse);
+      requestEnabled(false).then(sendResponse);
       return true;
     }
     if (message?.type === "nudenyang-set-target-language") {

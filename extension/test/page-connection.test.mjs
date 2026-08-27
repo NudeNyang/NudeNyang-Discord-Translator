@@ -107,6 +107,19 @@ test("이미 연결된 탭은 스크립트를 중복 삽입하지 않는다", as
   assert.equal(fake.injectionCount(), 0);
 });
 
+test("Chromium의 오래 열린 탭은 팝업 activeTab 허용 전에 선언된 사이트 권한으로 복구된다", async () => {
+  const manifest = JSON.parse(fs.readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+  const declaredHosts = manifest.host_permissions ?? [];
+  // scripting.executeScript requires explicit host access; content_scripts.matches
+  // alone does not grant programmatic injection or tabs.get's URL access.
+  const canRecover = declaredHosts.includes('https://*/*');
+  const fake = fakeApi({ topInjectionError: canRecover ? '' : 'Cannot access contents of the page. Extension manifest must request permission.' });
+  if (!canRecover) fake.api.tabs.get = (_id, callback) => callback({ id: 17 });
+  const result = await createPageConnection(fake.api).ensure(17);
+  assert.equal(result?.supported, true, 'Automatic recovery must not depend on opening the popup');
+  assert.deepEqual(declaredHosts, manifest.content_scripts[0].matches, 'Do not add unrelated origins');
+});
+
 test("상태·언어·설정·전환 요청은 iframe 응답과 섞이지 않도록 최상위 문서에만 보낸다", async () => {
   const fake = fakeApi({ receiverReady: true, iframeReceiverReady: true });
   const connection = createPageConnection(fake.api);

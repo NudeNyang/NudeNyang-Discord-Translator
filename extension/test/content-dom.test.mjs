@@ -1380,8 +1380,75 @@ test("시작 중의 연속 토글은 초기 상태 조회에 덮어써지지 않
   const second = p.message({ type: "nudenyang-toggle-enabled" });
   p.releaseStatus();
   await Promise.all([first, second]);
-  assert.deepEqual(p.savedStates, [true, false]);
+  assert.deepEqual(p.savedStates, [false], "an ON cancelled during startup must not be persisted");
   assert.equal((await p.message({ type: "nudenyang-status" })).enabled, false);
+});
+
+test("일반 페이지 F4는 팝업이나 포커스 이동 없이 번역을 시작한다", async (t) => {
+  const p = page(t, "<p>通常の文章</p>", { tabEnabled: false });
+  await p.message({ type: "nudenyang-ready" });
+  p.w.dispatchEvent(new p.w.KeyboardEvent("keydown", { key: "F4", code: "F4", bubbles: true }));
+  await waitFor(() => p.w.document.body.textContent === "번역(通常の文章)", "F4 alone must translate");
+  assert.deepEqual(p.savedStates, [true]);
+});
+
+test("본체 설정이 바뀐 일반 페이지도 F4 시작 전에 최신 상태를 확인한다", async (t) => {
+  const p = page(t, "<p>通常の文章</p>", { tabEnabled: false, settings: { enabled: false } });
+  await p.message({ type: "nudenyang-ready" });
+  p.appStatus.webSettings.enabled = true;
+  p.w.dispatchEvent(new p.w.KeyboardEvent("keydown", { key: "F4", code: "F4", bubbles: true }));
+  await waitFor(() => p.w.document.body.textContent === "번역(通常の文章)", "F4 must not need the popup/focus to refresh settings");
+  assert.deepEqual(p.savedStates, [true]);
+});
+
+test("F4 시작 전 확인은 새로 꺼진 본체·사이트 차단·연결 해제를 우회하지 않는다", async (t) => {
+  for (const blocked of ['disabled', 'never', 'disconnected']) {
+    const p = page(t, '<p>通常の文章</p>', { tabEnabled: false });
+    await p.message({ type: 'nudenyang-ready' });
+    if (blocked === 'disabled') p.appStatus.webSettings.enabled = false;
+    if (blocked === 'never') p.appStatus.webSettings.sitePolicies = { 'dm.takaratomy.co.jp': 'never' };
+    if (blocked === 'disconnected') Object.assign(p.appStatus, { type: 'error', code: 'browser_connection_disabled' });
+    assert.equal((await p.message({ type: 'nudenyang-toggle-enabled' })).enabled, false, blocked);
+    assert.deepEqual(p.savedStates, [], blocked);
+    assert.deepEqual(p.sent(), [], blocked);
+  }
+});
+
+test("본체 응답 대기 중 다시 F4를 누르면 즉시 끄고 늦은 시작 응답을 버린다", async (t) => {
+  const options = { tabEnabled: false };
+  const p = page(t, '<p>通常の文章</p>', options);
+  await p.message({ type: 'nudenyang-ready' });
+  options.deferStatus = true;
+  const pending = p.message({ type: 'nudenyang-toggle-enabled' });
+  await waitFor(() => p.runtimeMessages.some(m => m.request?.requestId.startsWith('content-toggle-')), 'ON must check the app');
+  const off = await p.message({ type: 'nudenyang-toggle-enabled' });
+  assert.equal(off.enabled, false, 'OFF must not wait for the deferred native response');
+  p.releaseStatus();
+  assert.equal((await pending).enabled, false);
+  assert.deepEqual(p.savedStates, [false]);
+  assert.deepEqual(p.sent(), []);
+});
+
+test("늦은 F4 시작 응답은 다른 페이지·대화 이동 또는 동의 철회 뒤 적용하지 않는다", async (t) => {
+  for (const action of ['navigate', 'revoke']) {
+    const options = { ...PRIVATE_OPTIONS, tabEnabled: false };
+    const p = page(t, PRIVATE_CHAT, options);
+    await p.message({ type: 'nudenyang-ready' });
+    options.deferStatus = true;
+    const pending = p.message({ type: 'nudenyang-toggle-enabled' });
+    await waitFor(() => p.runtimeMessages.some(m => m.request?.requestId.startsWith('content-toggle-')), 'ON must check the app');
+    if (action === 'navigate') {
+      p.w.history.pushState({}, '', '/channels/@me/987654321');
+      await p.message({ type: 'nudenyang-status' });
+    } else {
+      options.consent = false;
+      await p.message({ type: 'nudenyang-messenger-refresh', consent: { granted: false } });
+    }
+    p.releaseStatus();
+    assert.equal((await pending).enabled, false, action);
+    assert.deepEqual(p.savedStates, [], action);
+    assert.deepEqual(p.sent(), [], action);
+  }
 });
 
 test("복구 주입과 정적 주입이 겹쳐도 페이지 실행기는 하나만 유지한다", async (t) => {
