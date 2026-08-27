@@ -311,7 +311,10 @@ fn dispatch_request(app: &AppHandle, request: Value) -> Value {
     match request.get("type").and_then(Value::as_str) {
         // Onboarding/liveness must work without starting inference, changing
         // permissions, or depending on a Discord session.
-        Some("connectionPing") => connection_response(&request_id),
+        Some("connectionPing") => {
+            let _ = app.emit("browser-clients-changed", ());
+            connection_response(&request_id)
+        }
         Some("hello" | "status") => {
             let config = app.state::<ConfigStore>().get();
             let engine = app.state::<RustEngine>();

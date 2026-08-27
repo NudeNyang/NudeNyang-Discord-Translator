@@ -19,6 +19,8 @@ function createBackground(tabState, {
   const listeners = {};
   const imports = [];
   const bridgeApis = [];
+  const timers = new Map();
+  let timerId = 0;
   const event = (name) => ({ addListener(listener) { listeners[name] = listener; } });
   const api = {
     runtime: {
@@ -36,6 +38,7 @@ function createBackground(tabState, {
     storage: { onChanged: event("storageChanged") },
     permissions: { onRemoved: event("permissionsRemoved") },
     alarms: { create() {}, onAlarm: event("alarm") },
+    windows: { WINDOW_ID_NONE: -1, onFocusChanged: event("focusChanged") },
     commands: { onCommand: event("command") },
   };
   const bridgeModule = {
@@ -46,6 +49,8 @@ function createBackground(tabState, {
   };
   const context = {
     URL,
+    setTimeout(callback, delay) { timers.set(++timerId, { callback, delay }); return timerId; },
+    clearTimeout(id) { timers.delete(id); },
     chrome: api,
     navigator: { userAgent: "Chrome" },
     NudeNyangNativeClient: { createNativeClient: () => nativeClient },
@@ -65,7 +70,7 @@ function createBackground(tabState, {
   }
   vm.runInNewContext(source, context);
   return {
-    api, listeners, imports, bridgeApis,
+    api, listeners, imports, bridgeApis, timers,
     message(message, sender) {
       return new Promise((resolve) => {
         assert.equal(listeners.message(message, sender, resolve), true);
@@ -73,6 +78,70 @@ function createBackground(tabState, {
     },
   };
 }
+
+const flushConnection = () => new Promise(resolve => setImmediate(resolve));
+
+test("백그라운드가 다시 시작되면 별도 버튼이나 브라우저 재시작 없이 연결 신호를 보낸다", async () => {
+  const requests = [];
+  createBackground({}, {
+    nativeClient: { request: async request => { requests.push(request); return { type: "connection", appConnected: true }; } },
+  });
+  await flushConnection();
+  assert.deepEqual(requests.map(request => request.type), ["connectionPing"]);
+});
+
+test("브라우저에서 본체로 돌아오면 페이지를 조회하지 않고 연결만 확인한다", async () => {
+  const requests = [];
+  const queries = [];
+  const background = createBackground({}, {
+    nativeClient: { request: async request => { requests.push(request); return { type: "connection", appConnected: true }; } },
+    queryTabs(query, callback) { queries.push(query); callback([]); },
+  });
+  await flushConnection();
+  requests.length = 0;
+  background.listeners.focusChanged(-1);
+  await flushConnection();
+  assert.deepEqual(requests.map(request => request.type), ["connectionPing"]);
+  assert.deepEqual(queries, []);
+});
+
+test("본체가 켜지는 중이면 짧게 재시도하고 성공·명시적 해제 후에는 재시도를 멈춘다", async () => {
+  const requests = [];
+  let response = { type: "error", code: "app_unavailable", retryable: true };
+  const background = createBackground({}, {
+    nativeClient: { request: async request => { requests.push(request); return response; } },
+  });
+  await background.listeners.startup();
+  assert.equal(background.timers.size, 1);
+  const [id, timer] = [...background.timers][0];
+  assert.ok(timer.delay <= 2000);
+  background.timers.delete(id);
+  response = { type: "connection", appConnected: true };
+  timer.callback();
+  await flushConnection();
+  assert.equal(requests.length, 2);
+  assert.equal(background.timers.size, 0);
+  response = { type: "error", code: "browser_connection_disabled", retryable: false };
+  await background.listeners.alarm({ name: "nudenyang-connection" });
+  assert.equal(background.timers.size, 0);
+  assert.ok(requests.every(request => Object.keys(request).sort().join() === "requestId,type"));
+});
+
+test("본체가 계속 꺼져 있으면 짧은 재시도 횟수를 제한하고 다음 알람을 기다린다", async () => {
+  let requests = 0;
+  const background = createBackground({}, {
+    nativeClient: { request: async () => { requests++; return { type: "error", code: "app_unavailable", retryable: true }; } },
+  });
+  await background.listeners.startup();
+  while (background.timers.size && requests < 10) {
+    const [id, timer] = [...background.timers][0];
+    background.timers.delete(id);
+    timer.callback();
+    await flushConnection();
+  }
+  assert.equal(requests, 5);
+  assert.equal(background.timers.size, 0);
+});
 
 test("새 팝업의 초기 상태는 브라우저가 제공한 sender 탭과 문서 URL로 해석한다", async () => {
   const reads = [];
@@ -251,7 +320,7 @@ test("bridge가 처리한 메시지는 기존 Native 경로로 중복 전달하�
   });
   const response = await background.message({ type: "nudenyang-native-request", request: { type: "status" } }, {});
   assert.deepEqual(response, { from: "bridge" });
-  assert.deepEqual(nativeRequests, []);
+  assert.deepEqual(nativeRequests.filter(request => request.type !== "connectionPing"), []);
 });
 
 test("bridge가 거절한 일반 Native·페이지 요청은 기존 경로를 유지한다", async () => {
@@ -271,7 +340,7 @@ test("bridge가 거절한 일반 Native·페이지 요청은 기존 경로를 �
   assert.deepEqual(await background.message({ type: "nudenyang-native-request", request: nativeRequest }, {}), { from: "native" });
   assert.deepEqual(await background.message({ type: "nudenyang-page-request", tabId: 23, message: pageMessage }, {}), { from: "page" });
   assert.deepEqual(checked, ["nudenyang-native-request", "nudenyang-page-request"]);
-  assert.deepEqual(nativeRequests, [nativeRequest]);
+  assert.deepEqual(nativeRequests.filter(request => request.type !== "connectionPing"), [nativeRequest]);
   assert.deepEqual(pageRequests, [{ tabId: 23, message: pageMessage }]);
   assert.equal(background.listeners.message({ type: "unrelated-message" }, {}, () => assert.fail("unexpected response")), false);
 });

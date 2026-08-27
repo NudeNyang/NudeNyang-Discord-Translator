@@ -25,13 +25,30 @@ const embeddedBridge = globalThis.NudeNyangEmbeddedBridge.createEmbeddedBridge(a
 const messengerPrivacy = globalThis.NudeNyangMessengerPrivacy.createMessengerPrivacy(api, { firefox: CLIENT.browser === "firefox" });
 let messengerBroadcastEpoch = 0;
 const CONNECTION_ALARM = "nudenyang-connection";
+const CONNECTION_RETRY_DELAYS = [1000, 2000, 4000, 8000];
 let connectionCheck = null;
+let connectionRetry = null;
 
 // This request carries no page data and must not prepare a model or open a tab.
-function checkAppConnection() {
+function checkAppConnection(attempt = 0) {
   if (connectionCheck) return connectionCheck;
+  if (connectionRetry !== null) clearTimeout(connectionRetry);
+  connectionRetry = null;
   connectionCheck = nativeClient.request({ type: "connectionPing", requestId: "connection" })
     .catch(() => null)
+    .then(response => {
+      // The desktop app may still be starting when the browser loses focus.
+      // Retry briefly; the alarm remains the backstop if the worker sleeps.
+      const retryable = !response || (response.type === "error"
+        && response.retryable !== false && response.code !== "browser_connection_disabled");
+      if (retryable && attempt < CONNECTION_RETRY_DELAYS.length) {
+        connectionRetry = setTimeout(() => {
+          connectionRetry = null;
+          void checkAppConnection(attempt + 1);
+        }, CONNECTION_RETRY_DELAYS[attempt]);
+      }
+      return response;
+    })
     .finally(() => { connectionCheck = null; });
   return connectionCheck;
 }
@@ -149,8 +166,8 @@ api.runtime.onInstalled?.addListener(() => {
 api.tabs.onActivated?.addListener(({ tabId }) => recoverPageConnection(tabId));
 
 api.windows?.onFocusChanged?.addListener((windowId) => {
-  if (windowId === api.windows.WINDOW_ID_NONE) return;
   void checkAppConnection();
+  if (windowId === api.windows.WINDOW_ID_NONE) return;
   api.tabs.query({ active: true, windowId }, ([tab]) => {
     void api.runtime.lastError;
     recoverPageConnection(tab?.id);
@@ -176,3 +193,7 @@ api.commands.onCommand.addListener((command, tab) => {
     sendPageToggle(activeTab?.id);
   });
 });
+
+// A recreated service worker does not receive onStartup/onInstalled again.
+// Re-establish the metadata-only heartbeat whenever this background starts.
+void startConnectionChecks();

@@ -3701,6 +3701,9 @@ if (tauriListen) {
   tauriListen("settings-changed", event => {
     if (state.settingsUpdatesPending === 0) renderConfig(event.payload);
   });
+  tauriListen("browser-clients-changed", () => {
+    if (webSettingsPanelIsVisible()) return loadBrowserClients().catch(() => {});
+  });
   tauriListen("open-settings-panel", event => {
     if (event.payload === "web") activateSettingsPanel("web");
   });

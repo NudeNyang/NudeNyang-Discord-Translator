@@ -10,6 +10,31 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const appScript = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
+test("연결 신호를 받으면 버튼 클릭 없이 즉시 갱신하고 명시적 해제는 유지한다", async () => {
+  const h = harness();
+  await h.view.refresh();
+  let listener;
+  let visible = true;
+  const source = appScript.match(/tauriListen\("browser-clients-changed", \(\) => \{[\s\S]*?\n  \}\);/);
+  assert.ok(source, "listen to native connection changes instead of waiting for a button");
+  vm.runInNewContext(source[0], {
+    tauriListen(_name, callback) { listener = callback; },
+    webSettingsPanelIsVisible: () => visible,
+    loadBrowserClients: () => h.view.refresh(),
+  });
+  h.setClients([{ browser: "chrome", lastSeenAt: 999_999 }]);
+  await listener();
+  assert.equal(h.row("chrome").dataset.state, "connected");
+  h.setInstallations([{ browser: "chrome", installed: true, storeAvailable: true, connectionEnabled: false }]);
+  await listener();
+  assert.equal(h.row("chrome").dataset.state, "disabled");
+  assert.ok(h.calls.every(call => ["browser_clients_status", "browser_installations"].includes(call.command)));
+  const before = h.calls.length;
+  visible = false;
+  await listener();
+  assert.equal(h.calls.length, before);
+});
+
 test("브라우저마다 연결 또는 해제 버튼 하나만 표시한다", async () => {
   const h = harness();
   await h.view.refresh();
