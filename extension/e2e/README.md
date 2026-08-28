@@ -26,10 +26,21 @@ privacy gate, `native-client.js`를 그대로 사용한다. Chromium의 실제 C
 MutationObserver·IntersectionObserver·이벤트·확장 메시지 경계를 거쳐 수집, 비동기 응답,
 DOM 적용과 원문 복구를 확인한다.
 
-Native Messaging **포트만** 결정적인 테스트 응답(`번역(원문)`)으로 대체한다. 테스트용
+Native Messaging 포트는 결정적인 테스트 응답(`번역(원문)`)으로 대체한다. 테스트용
 manifest에서는 `nativeMessaging` 권한도 제거하여 실수로 사용자 본체에 접속할 수 없게
 한다. 따라서 Rust 브리지, OS Native Messaging 등록, 실제 AI 모델, 번역 품질을 이 결과로
 검증했다고 해석하지 않는다. 이 범위는 별도 Rust 테스트와 실제 통합 확인이 필요하다.
+
+F4는 Playwright의 실제 페이지 키 입력으로 검사하며 팝업을 미리 열거나 번역을 켜지 않는다.
+보조 단축키는 이 PC의 headless Chromium이 `commands.getAll()`에서 키 배정을 빈 문자열로
+보고하고 키 입력에도 명령 이벤트를 발생시키지 않아, `extension.command(tabId)`로
+명령 이벤트 경계만 모사한다. 이후 등록된 실제 background 핸들러, 탭 선택·연결 복구·
+메시징·번역 전환은 그대로 실행한다. 보조키의 OS 입력과 브라우저 키 배정까지 검증한 것은 아니다.
+
+탭 복구 검사는 제품 런타임을 dispose해 수신자가 사라진 상태를 만든 뒤 실제 탭 활성화로
+복구한다. 브라우저의 확장 재로드 전체를 검증한 것으로 해석하지 않는다. 이 환경에서는
+`runtime.reload()` 뒤 새 worker를 기다리는 시도가 타임아웃되어, 재현 가능한 연결 단절
+경계를 검사하고 실제 재로드 검증은 별도로 남긴다.
 
 웹페이지는 테스트가 작성한 HTML fixture이며 요청을 가로채 공급한다. 나머지 HTTP(S)
 요청은 모두 차단한다. 특정 사이트 URL을 쓰는 회귀 테스트도 실제 서버나 사용자 계정을

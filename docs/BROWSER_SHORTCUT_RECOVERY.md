@@ -26,3 +26,41 @@
 5. 메신저 동의가 없을 때는 본문 대신 기존 동의 안내만 표시되는지 확인한다.
 
 공식 권한 기준: [Chrome scripting](https://developer.chrome.com/docs/extensions/reference/api/scripting), [activeTab](https://developer.chrome.com/docs/extensions/develop/concepts/activeTab).
+
+## 0.7.10 후속 수정: 팝업 없는 F4의 키 이벤트 선점
+
+일반 페이지에서 팝업을 한 번도 열지 않고 F4로 처음 번역을 켜는 경우는 기존 코드에서도
+통과했다. 반면 사이트가 먼저 window의 capture 단계에서 키 이벤트를 중단하는 최소 HTML
+fixture에서는 실패했다. 콘텐츠 스크립트가 document_idle에 등록되므로 사이트의 선행
+키 처리 뒤에 실행되어, F4가 확장 핸들러까지 도달하지 않는 공통 원인이었다.
+
+Chrome·Whale·Firefox의 최상위 콘텐츠 스크립트 주입을 document_start로 앞당겼다.
+키 리스너는 먼저 등록하되, 본문 수집·관찰·자동 번역은 DOMContentLoaded와 기존 본체
+상태·브라우저 동의 확인이 끝난 뒤에만 시작한다. 로딩 중 받은 F4도 초기화 후 단축키
+설정을 다시 확인하여 사용자가 바꾸거나 끈 키를 임시 기본값으로 실행하지 않는다.
+사이트별 selector나 허용 예외, 추가 권한, iframe 수집 범위 변경은 없다.
+
+주입 시점의 기준은 [Chrome 콘텐츠 스크립트 문서](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts#run_time)를 따른다.
+수정본 확장을 다시 로드하고 기존 페이지도 한 번 새로고침해야 선행 키 등록이 적용된다.
+이미 로드된 사이트의 리스너보다 과거 시점으로 재주입할 수는 없다. 주소창·브라우저 내부
+화면·자식 iframe에 포커스한 경우까지 최상위 페이지 F4가 동작한다고 보장하지 않는다.
+
+### 재현 및 검증 경계
+
+- 수정 전 실패: 사이트의 선행 capture 핸들러가 F4를 차단하는 도메인 독립 HTML E2E.
+- 새 회귀: 팝업 미실행 상태의 실제 F4 ON/OFF, 선행 키 처리 충돌, 연결이 끊긴 탭 활성화
+  복구 후 F4, F8로 변경한 설정과 단축키 해제, 입력값 보호.
+- 보조키: headless Chromium에서 키 배정이 비어 있고 키 입력이 명령 이벤트를 발생시키지
+  않는 것을 확인했다. 명령 이벤트 경계만 주입해 실제 등록된 background 처리와 ON/OFF를
+  검증한다. OS 키 입력·사용자 브라우저의 실제 단축키 배정 성공으로 보고하지 않는다.
+- 확장 재로드 전체 검증은 worker 재생성 대기 타임아웃으로 완료하지 못했다. E2E의 탭
+  복구 검사는 런타임 dispose 후 실제 탭 활성화로 수행한다.
+
+각 테스트는 격리 Chromium과 합성 HTML을 사용하고 번역 엔진 응답은 모사한다.
+실제 로그인 사이트·Whale·Firefox의 키 입력 결과나 실제 본체 추론과 구분한다.
+자세한 테스트 경계는 [E2E 안내](../extension/e2e/README.md)에 있다.
+
+최종 실행 결과: `npm run test:e2e` 전체 95개 통과(재시도·제외 0개),
+`npm test` 741개 통과(UI 246, 랜딩 37, 확장 449, 사전 9).
+변경 JS의 `node --check`와 `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`도 통과했다.
+로그는 커밋하지 않는 `artifacts/web-policy/shortcut-*.log`에 보관한다.

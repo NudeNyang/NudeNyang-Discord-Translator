@@ -67,6 +67,9 @@ export const test = base.extend({
       const pages = [];
       const controller = {
         context, worker, extensionId,
+        command(tabId) {
+          return worker.evaluate(id => globalThis.__NudeNyangE2E.dispatchCommand(id), tabId);
+        },
         async open({ html, url = "https://fixture.example.test/article/", settings = {},
           consent = false, consentVersion = 3, enabled = true, deferTranslations = false,
           translator = "hymt_1_8b", documents = {} } = {}) {

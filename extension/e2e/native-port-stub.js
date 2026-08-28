@@ -6,6 +6,14 @@
   const pending = new Set();
   let deferred = false;
   let status = defaultStatus();
+  // This host's headless Chromium leaves the command accelerator unassigned.
+  // Only inject the event boundary; the production handler/routing stays real.
+  const commandListeners = new Set();
+  const addCommandListener = chrome.commands.onCommand.addListener.bind(chrome.commands.onCommand);
+  chrome.commands.onCommand.addListener = listener => {
+    commandListeners.add(listener);
+    addCommandListener(listener);
+  };
 
   function defaultStatus(options = {}) {
     return {
@@ -65,6 +73,10 @@
 
   Object.defineProperty(chrome.runtime, "connectNative", { value: connectNative, configurable: false });
   root.__NudeNyangE2E = Object.freeze({
+    async dispatchCommand(tabId) {
+      const tab = await chrome.tabs.get(tabId);
+      for (const listener of commandListeners) listener("toggle-page-translation", tab);
+    },
     configure(options) {
       if (pending.size) throw new Error("Release previous pending translations before reconfiguring the stub");
       status = defaultStatus(options);

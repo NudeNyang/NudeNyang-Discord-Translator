@@ -1,5 +1,74 @@
 import { test, expect } from "./harness.mjs";
 
+test("팝업을 한 번도 열지 않은 페이지에서 실제 F4로 번역을 켜고 끈다", async ({ extension }) => {
+  const p = await extension.open({ html: "<main><p id=body>Public shortcut paragraph</p></main>", enabled: false });
+  expect((await p.status()).enabled).toBe(false);
+  await p.page.keyboard.press("F4");
+  await expect(p.page.locator("#body")).toHaveText("번역(Public shortcut paragraph)");
+  await p.page.keyboard.press("F4");
+  await expect(p.page.locator("#body")).toHaveText("Public shortcut paragraph");
+});
+
+test("팝업 없는 F4는 사이트의 선행 키보드 처리에도 한 번만 전환한다", async ({ extension }) => {
+  const p = await extension.open({ enabled: false, html: `<script>
+    window.addEventListener('keydown', event => {
+      if (event.key === 'F4') { event.preventDefault(); event.stopImmediatePropagation(); }
+    }, true);
+  </script><main><p id=body>Keyboard-handled public paragraph</p></main>` });
+  await p.page.keyboard.press("F4");
+  await expect(p.page.locator("#body")).toHaveText("번역(Keyboard-handled public paragraph)");
+  await p.page.keyboard.press("F4");
+  await expect(p.page.locator("#body")).toHaveText("Keyboard-handled public paragraph");
+});
+
+test("팝업 없이 보조 단축키 명령 이벤트로 번역을 켜고 끈다", async ({ extension }) => {
+  const p = await extension.open({ html: "<main><p id=body>Command shortcut paragraph</p></main>", enabled: false });
+  await extension.command(p.tabId);
+  await expect(p.page.locator("#body")).toHaveText("번역(Command shortcut paragraph)");
+  await extension.command(p.tabId);
+  await expect(p.page.locator("#body")).toHaveText("Command shortcut paragraph");
+});
+
+test("수신자가 사라진 탭은 팝업 없이 활성화 복구 후 실제 F4가 작동한다", async ({ extension }) => {
+  const p = await extension.open({ html: "<main><p id=body>Recovered shortcut paragraph</p></main>", enabled: false });
+  // Fault-inject the same disposed content state as an invalidated extension.
+  // This verifies recovery; it is not an end-to-end browser extension reload.
+  await extension.worker.evaluate(id => chrome.scripting.executeScript({
+    target: { tabId: id, frameIds: [0] },
+    func: () => globalThis.__nudeNyangContentRuntime.dispose(),
+  }), p.tabId);
+  const other = await extension.context.newPage();
+  await extension.worker.evaluate(id => chrome.tabs.update(id, { active: true }), p.tabId);
+  await expect.poll(async () => {
+    try { return (await p.status()).supported; } catch { return false; }
+  }).toBe(true);
+  expect(await p.sent()).toEqual([]);
+  await p.page.keyboard.press("F4");
+  await expect(p.page.locator("#body")).toHaveText("번역(Recovered shortcut paragraph)");
+  await p.page.keyboard.press("F4");
+  await expect(p.page.locator("#body")).toHaveText("Recovered shortcut paragraph");
+  await other.close();
+});
+
+for (const shortcut of ["F8", ""]) {
+  test("초기 주입은 변경·해제한 F4 설정을 보존한다: " + (shortcut || "off"), async ({ extension }) => {
+    const p = await extension.open({
+      html: "<main><p id=body>Configured shortcut paragraph</p><input id=draft value='Unsent draft'></main>",
+      enabled: false, settings: { quickToggleShortcut: shortcut },
+    });
+    await p.page.keyboard.press("F4");
+    await p.page.waitForTimeout(250);
+    expect(await p.sent()).toEqual([]);
+    expect((await p.status()).enabled).toBe(false);
+    if (shortcut) {
+      await p.page.locator("#draft").focus();
+      await p.page.keyboard.press(shortcut);
+      await expect(p.page.locator("#body")).toHaveText("번역(Configured shortcut paragraph)");
+      await expect(p.page.locator("#draft")).toHaveValue("Unsent draft");
+      expect(await p.sent()).not.toContain("Unsent draft");
+    }
+  });
+}
 test("팝업 개인정보 툴팁은 제품 스타일로 호버·키보드에 표시되고 화면 안에 배치된다", async ({ extension }, testInfo) => {
   await extension.open({ html: "<main><p>Public paragraph</p></main>" });
   const popup = await extension.context.newPage();

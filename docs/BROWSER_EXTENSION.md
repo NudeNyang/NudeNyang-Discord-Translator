@@ -260,7 +260,7 @@ cargo test --manifest-path src-tauri/Cargo.toml browser_translation
 cargo test --manifest-path src-tauri/Cargo.toml browser_bridge::tests
 ```
 
-`test:e2e`는 실제 Chromium에 Manifest V3 확장을 로드하여 전체 브라우저 회귀 검사를 실행한다. 사이트는 합성 HTML이고 Native Messaging 포트만 테스트 응답으로 대체한다. 수집부터 확장 메시지·비동기 결과·DOM 적용·복원까지 검사하지만 실제 로그인 사이트, Rust 호스트와 AI 번역 품질, Whale·Firefox 실행을 대신하지 않는다. 설치 방식과 테스트 작성은 [E2E 안내](../extension/e2e/README.md)를 따른다.
+`test:e2e`는 실제 Chromium에 Manifest V3 확장을 로드하여 전체 브라우저 회귀 검사를 실행한다. 사이트는 합성 HTML이고 Native Messaging 포트를 테스트 응답으로 대체한다. F4는 실제 페이지 키 입력을 검사하며, 보조 단축키는 테스트 환경의 키 미배정으로 명령 이벤트 경계만 모사한다. 수집부터 확장 메시지·비동기 결과·DOM 적용·복원까지 검사하지만 실제 로그인 사이트, Rust 호스트와 AI 번역 품질, Whale·Firefox 실행을 대신하지 않는다. 설치 방식과 테스트 작성은 [E2E 안내](../extension/e2e/README.md)를 따른다.
 
 다음은 Chrome, Whale과 Firefox에서 추가로 수행할 실제 서비스·본체 통합 검증 항목이다. 목록의 존재는 검증 완료 기록이 아니며, 특히 새 메신저 기능의 8개 서비스 로그인 실사용 검증은 아직 완료하지 않았다.
 

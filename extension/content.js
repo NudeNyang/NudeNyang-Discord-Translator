@@ -1426,12 +1426,17 @@
     return status();
   }
 
-  function handleQuickToggle(event) {
+  async function handleQuickToggle(event) {
     if (!adapter || !isQuickToggleShortcut(event, webSettings.quickToggleShortcut)) {
       return;
     }
     event.preventDefault();
     event.stopImmediatePropagation();
+    // document_start may receive a key before the companion has supplied the
+    // user's shortcut. Recheck after startup so a disabled/remapped F4 cannot
+    // start translation using the temporary default.
+    await startupPromise;
+    if (disposed || !adapter || !isQuickToggleShortcut(event, webSettings.quickToggleShortcut)) return;
     void toggleEnabled();
   }
 
@@ -1570,6 +1575,11 @@
       nativeRequest({ type: "status", requestId: `content-${Date.now()}` }),
       loadTabEnabled(),
       extensionRequest({ type: "nudenyang-messenger-consent-get" }),
+      // Register keyboard capture at document_start, ahead of page handlers,
+      // but do not inspect/observe a partially parsed document or editor.
+      document.readyState === "loading"
+        ? new Promise(resolve => document.addEventListener("DOMContentLoaded", resolve, { once: true }))
+        : Promise.resolve(),
     ]);
     if (disposed) return;
     storedEnabled = stored.enabled !== false;
