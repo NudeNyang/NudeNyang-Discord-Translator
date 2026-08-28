@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
-    <title>Web messenger privacy consent</title>
+    <title>Web translation privacy notice</title>
     <link rel="icon" type="image/png" href="icons/paw-32.png">
     <link rel="stylesheet" href="messenger-privacy.css">
     <script src="popup-locales.js" defer></script>
@@ -16,13 +16,12 @@
         <img class="brand-icon" src="icons/paw-128.png" width="48" height="48" alt="">
         <div>
           <p class="eyebrow">NUDENYANG</p>
-          <h1 id="privacy-title" data-i18n="messengerPrivacyTitle">Privacy notice for web messenger reading translation</h1>
+          <h1 id="privacy-title" data-i18n="webPrivacyTitle">Web translation privacy notice</h1>
         </div>
       </header>
 
-      <p class="intro" data-i18n="messengerPrivacyIntro">After consent in this browser, messenger translation uses the app settings without a separate messenger switch.</p>
+      <p class="intro" data-i18n="globalPrivacyIntro">F4 and the switch control automatic translation in all tabs, including new tabs. This includes visible webpage text and the current messenger conversation, using the translator selected in the Windows app.</p>
       <p class="services">X · Discord · WhatsApp · Telegram · Messenger · Slack · Microsoft Teams · Google Messages</p>
-      <p id="messenger-privacy-link" hidden><a href="messenger-privacy.html" data-i18n="messengerPrivacyConsent">Web messenger privacy consent</a></p>
 
       <section class="notice" aria-labelledby="privacy-title">
         <ul class="privacy-details">
@@ -35,10 +34,10 @@
       </section>
 
       <section class="consent" aria-labelledby="consent-title" id="privacy-controls" aria-busy="false">
-        <h2 id="consent-title" data-i18n="messengerPrivacyConsent">Web messenger privacy consent</h2>
+        <h2 id="consent-title" data-i18n="reviewMessengerPrivacy">Review privacy notice</h2>
         <label class="confirmation" id="privacy-confirmation" for="privacy-confirm">
           <input type="checkbox" id="privacy-confirm" autocomplete="off" disabled>
-          <span data-i18n="messengerPrivacyConfirm">Only consent records and settings are saved in this browser. I have read the information above and consent to web messenger reading translation.</span>
+          <span data-i18n="globalPrivacyConfirm">I agree to automatic webpage and messenger translation, including new tabs, and to the data transmission and storage described above.</span>
         </label>
         <p id="privacy-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
         <div class="actions">

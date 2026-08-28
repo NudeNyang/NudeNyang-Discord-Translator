@@ -104,7 +104,7 @@ test("개인정보 버튼은 기본 title 대신 번역된 제품 툴팁과 접�
 test("개인정보 페이지의 팝업은 오류 대신 안내 페이지임을 표시하고 중복 진입을 숨긴다", async () => {
   const p = await popup({ language: "ko", tabUrl: "chrome-extension://test/messenger-privacy.html?tab=7&context=opaque" });
   try {
-    assert.equal(p.get("site").textContent, "웹 메신저 읽기 번역 개인정보 안내");
+    assert.equal(p.get("site").textContent, "웹 번역 개인정보 안내");
     assert.equal(p.get("enabled").disabled, false);
     assert.equal(p.get("messenger-privacy").hidden, true);
     assert.equal(p.get("messenger-panel").hidden, true);
@@ -312,7 +312,7 @@ test("원문 버튼을 없애도 상단 토글과 F4로 번역을 끄고 다시 
     assert.equal(p.get("enabled").checked, true);
     assert.ok(p.messages.every((message) => message.message?.type !== "nudenyang-restore"));
     p.get("messenger-privacy").click();
-    assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/messenger-privacy.html?scope=web" }], "관리 진입은 번역 재개 문맥을 전달하지 않는다");
+    assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/messenger-privacy.html" }], "관리 진입은 번역 재개 문맥을 전달하지 않는다");
   } finally { p.dispose(); }
 });
 

@@ -129,7 +129,7 @@
       });
     }
 
-    return Object.freeze({ getConsent, setConsent, forward, invalidate, openNotice });
+    return Object.freeze({ getConsent, setConsent, dataPermissionGranted, forward, invalidate, openNotice });
   }
 
   const exported = Object.freeze({ CONSENT_VERSION, CONSENT_KEY, createMessengerPrivacy });

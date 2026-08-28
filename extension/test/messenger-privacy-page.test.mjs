@@ -20,10 +20,13 @@ function page(options = {}) {
   const focused = [];
   let inClick = false;
   let closed = false;
+  let permissionAllowed = options.permissionGranted !== false;
   const permissions = {
     request(permission) {
       requests.push({ permission: JSON.parse(JSON.stringify(permission)), inClick });
-      return options.permissionRequest?.() ?? Promise.resolve(options.permissionGranted !== false);
+      return Promise.resolve(options.permissionRequest?.() ?? permissionAllowed).then(value => {
+        permissionAllowed = value === true; return value;
+      }, error => { permissionAllowed = false; throw error; });
     },
     remove(permission) {
       removals.push(JSON.parse(JSON.stringify(permission)));
@@ -34,11 +37,14 @@ function page(options = {}) {
     if (message.type === "nudenyang-page-request") {
       return options.startResponse ?? { enabled: true, messengerContextId: "messenger:discord:opaque-conversation-token" };
     }
-    if (message.type === "nudenyang-messenger-consent-get") {
-      return options.getConsent?.() ?? { ok: true, granted: options.granted === true };
+    if (message.type === "nudenyang-privacy-consent-get") {
+      return options.getConsent?.() ?? { ok: true, granted: options.granted === true,
+        anyGranted: options.granted === true || options.partial === true,
+        messengerPermissionGranted: options.hadPermission === true };
     }
-    if (message.type === "nudenyang-messenger-consent-set") {
-      return options.setConsent?.(message.granted) ?? { ok: true, granted: message.granted };
+    if (message.type === "nudenyang-privacy-consent-set") {
+      return options.setConsent?.(message.granted) ?? { ok: true, granted: message.granted && permissionAllowed,
+        anyGranted: message.granted, webGranted: message.granted, messengerGranted: message.granted && permissionAllowed };
     }
     if (message.type === "nudenyang-native-request") {
       return options.nativeStatus?.() ?? {
@@ -75,7 +81,7 @@ function page(options = {}) {
   return {
     dom, get, messages, requests, removals, focused,
     get closed() { return closed; },
-    consentChanges() { return messages.filter((message) => message.type === "nudenyang-messenger-consent-set"); },
+    consentChanges() { return messages.filter((message) => message.type === "nudenyang-privacy-consent-set"); },
     click(id) {
       inClick = true;
       get(id).click();
@@ -114,6 +120,19 @@ test("동의 페이지는 지역화한 안내와 접근성 구조를 사용하�
 
 const HANDOFF_URL = "https://extension.invalid/messenger-privacy.html?tab=7&context=messenger%3Adiscord%3Aopaque-conversation-token";
 
+test("기존 웹·메신저 주소는 같은 통합 안내를 표시하고 별도 동의 페이지 링크가 없다", async () => {
+  const pages = [page(), page({ url: "https://extension.invalid/messenger-privacy.html?scope=web" })];
+  try {
+    await settle();
+    for (const p of pages) {
+      assert.equal(p.get("privacy-title").dataset.i18n, "webPrivacyTitle");
+      assert.equal(p.get("messenger-privacy-link"), null);
+      assert.equal(p.dom.window.document.querySelectorAll(".privacy-details li").length, 5);
+    }
+    assert.equal(pages[0].dom.window.document.body.textContent, pages[1].dom.window.document.body.textContent);
+  } finally { for (const p of pages) p.dispose(); }
+});
+
 test("명시적으로 동의한 뒤에만 원래 대화의 번역을 시작하고 탭으로 돌아간다", async () => {
   for (const firefox of [false, true]) {
     const p = page({ url: HANDOFF_URL, firefox });
@@ -122,9 +141,9 @@ test("명시적으로 동의한 뒤에만 원래 대화의 번역을 시작하�
       assert.deepEqual(p.focused, []);
       p.check(); p.click("privacy-accept");
       await settle();
-      const writes = p.messages.filter((m) => m.type === "nudenyang-messenger-consent-set" || m.type === "nudenyang-page-request");
+      const writes = p.messages.filter((m) => m.type === "nudenyang-privacy-consent-set" || m.type === "nudenyang-page-request");
       assert.deepEqual(writes, [
-        { type: "nudenyang-messenger-consent-set", granted: true },
+        { type: "nudenyang-privacy-consent-set", granted: true },
         { type: "nudenyang-page-request", tabId: 7, message: { type: "nudenyang-messenger-start", contextId: "messenger:discord:opaque-conversation-token" } },
       ]);
       assert.deepEqual(p.focused, [{ id: 7, active: true }]);
@@ -174,7 +193,7 @@ test("체크박스 변경만으로는 저장하지 않고 승인 클릭에서만
     p.click("privacy-accept");
     p.click("privacy-accept");
     await settle();
-    assert.deepEqual(p.consentChanges(), [{ type: "nudenyang-messenger-consent-set", granted: true }]);
+    assert.deepEqual(p.consentChanges(), [{ type: "nudenyang-privacy-consent-set", granted: true }]);
     assert.equal(p.get("privacy-status").dataset.message, "messengerPrivacySaved");
     assert.equal(p.get("privacy-confirm").checked, false);
     assert.equal(p.get("privacy-revoke").hidden, false);
@@ -194,6 +213,34 @@ test("이미 저장된 동의를 조회해도 체크박스를 자동 선택하�
   } finally { p.dispose(); }
 });
 
+test("동의 상태 조회에 실패하면 기존 권한을 추측하지 않고 승인 조작을 막는다", async () => {
+  const p = page({ firefox: true, getConsent: () => ({ ok: false }) });
+  try {
+    await settle();
+    p.check();
+    assert.equal(p.get("privacy-accept").disabled, true);
+    p.click("privacy-accept");
+    assert.deepEqual(p.requests, []);
+    assert.deepEqual(p.consentChanges(), []);
+  } finally { p.dispose(); }
+});
+
+test("부분 동의도 같은 화면에서 철회하며 기존 Firefox 권한은 승인 실패로 제거하지 않는다", async () => {
+  const partial = page({ partial: true });
+  const existing = page({ firefox: true, partial: true, hadPermission: true, setConsent: () => ({ ok: false }) });
+  try {
+    await settle();
+    assert.equal(partial.get("privacy-revoke").hidden, false);
+    assert.equal(partial.get("privacy-accept").hidden, false);
+    partial.click("privacy-revoke");
+    existing.check(); existing.click("privacy-accept");
+    await settle();
+    assert.deepEqual(partial.consentChanges(), [{ type: "nudenyang-privacy-consent-set", granted: false }]);
+    assert.deepEqual(existing.removals, []);
+    assert.equal(existing.get("privacy-status").dataset.message, "messengerPrivacySaveFailed");
+  } finally { partial.dispose(); existing.dispose(); }
+});
+
 test("Firefox 추가 권한은 실제 클릭 스택에서 요청하고 허용 후에만 저장한다", async () => {
   let grantPermission;
   const permission = new Promise((resolve) => { grantPermission = resolve; });
@@ -211,28 +258,30 @@ test("Firefox 추가 권한은 실제 클릭 스택에서 요청하고 허용 �
   } finally { p.dispose(); }
 });
 
-test("Firefox 권한을 거절하면 동의를 저장하지 않는다", async () => {
+test("Firefox 권한을 거절하면 웹만 승인하고 메신저는 허용하지 않는다", async () => {
   const p = page({ firefox: true, permissionGranted: false });
   try {
     await settle();
     p.check();
     p.click("privacy-accept");
     await settle();
-    assert.deepEqual(p.consentChanges(), []);
-    assert.equal(p.get("privacy-status").dataset.message, "messengerPrivacyPermissionDenied");
-    assert.equal(p.get("privacy-accept").disabled, false);
+    assert.deepEqual(p.consentChanges(), [{ type: "nudenyang-privacy-consent-set", granted: true }]);
+    assert.equal(p.get("privacy-status").dataset.message, "webPrivacyPartial");
+    assert.equal(p.get("privacy-revoke").hidden, false);
+    assert.equal(p.get("privacy-accept").disabled, true);
   } finally { p.dispose(); }
 });
 
-test("Firefox 추가 권한 API가 실패해도 동의를 저장하지 않는다", async () => {
+test("Firefox 추가 권한 API가 실패하면 웹만 승인하고 부분 허용을 알린다", async () => {
   const p = page({ firefox: true, permissionRequest: () => Promise.reject(new Error("Not available")) });
   try {
     await settle();
     p.check();
     p.click("privacy-accept");
     await settle();
-    assert.deepEqual(p.consentChanges(), []);
-    assert.equal(p.get("privacy-status").dataset.message, "messengerPrivacyPermissionDenied");
+    assert.deepEqual(p.consentChanges(), [{ type: "nudenyang-privacy-consent-set", granted: true }]);
+    assert.equal(p.get("privacy-status").dataset.message, "webPrivacyPartial");
+    assert.equal(p.get("privacy-revoke").hidden, false);
   } finally { p.dispose(); }
 });
 
@@ -242,7 +291,7 @@ test("동의 철회는 기록을 끄고 Firefox 선택 권한도 제거한다", 
     await settle();
     p.click("privacy-revoke");
     await settle();
-    assert.deepEqual(p.consentChanges(), [{ type: "nudenyang-messenger-consent-set", granted: false }]);
+    assert.deepEqual(p.consentChanges(), [{ type: "nudenyang-privacy-consent-set", granted: false }]);
     assert.deepEqual(p.removals, [{ data_collection: ["personalCommunications"] }]);
     assert.equal(p.get("privacy-status").dataset.message, "messengerPrivacyRevoked");
     assert.equal(p.get("privacy-confirm").checked, false);
@@ -285,7 +334,7 @@ test("메인 앱의 UI 언어와 RTL 방향을 재사용한다", async () => {
     const { document, NudeNyangPopupLocales } = p.dom.window;
     assert.equal(document.documentElement.lang, "ar");
     assert.equal(document.documentElement.dir, "rtl");
-    assert.equal(document.title, NudeNyangPopupLocales.message("ar", "messengerPrivacyTitle"));
+    assert.equal(document.title, NudeNyangPopupLocales.message("ar", "webPrivacyTitle"));
     assert.equal(p.get("privacy-accept").textContent, NudeNyangPopupLocales.message("ar", "messengerPrivacyAccept"));
   } finally { p.dispose(); }
 });

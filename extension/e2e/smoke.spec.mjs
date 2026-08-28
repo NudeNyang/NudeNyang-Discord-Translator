@@ -1,6 +1,37 @@
 import { test, expect } from "./harness.mjs";
 import { MESSENGER_CASES } from "./fixtures/compatibility.mjs";
 
+test("통합 안내 한 번의 승인·철회로 웹과 메신저를 함께 관리한다", async ({ extension }, testInfo) => {
+  const p = await extension.open({ html: "<main><p id=body>Unified consent public text</p></main>", enabled: null, globalConsent: false });
+  const opened = extension.context.waitForEvent("page");
+  await p.page.keyboard.press("F4");
+  const notice = await opened;
+  await expect(notice.locator("#privacy-title")).toHaveText("웹 번역 개인정보 안내");
+  await expect(notice.locator("#messenger-privacy-link")).toHaveCount(0);
+  expect(await p.sent()).toEqual([]);
+  await notice.screenshot({ path: testInfo.outputPath("unified-privacy.png"), fullPage: true });
+  await notice.locator("#privacy-confirm").check();
+  await notice.locator("#privacy-accept").click();
+  await expect(notice.locator("#privacy-accept")).toBeHidden();
+  await p.page.bringToFront();
+  await expect(p.page.locator("#body")).toHaveText("번역(Unified consent public text)");
+  const entry = MESSENGER_CASES.find(item => item.id === "discord");
+  const conversation = await extension.context.newPage();
+  await conversation.route(entry.url, route => route.fulfill({ contentType: "text/html", body: entry.html }));
+  await conversation.goto(entry.url);
+  for (const [selector, source] of entry.copies) await expect(conversation.locator(selector)).toHaveText(`번역(${source})`);
+  const oldLink = await extension.context.newPage();
+  await oldLink.goto(`chrome-extension://${extension.extensionId}/messenger-privacy.html?scope=web`);
+  await expect(oldLink.locator("#privacy-title")).toHaveText("웹 번역 개인정보 안내");
+  await expect(oldLink.locator("#privacy-accept")).toBeHidden();
+  await oldLink.locator("#privacy-revoke").click();
+  await expect(p.page.locator("#body")).toHaveText("Unified consent public text");
+  for (const [selector, source] of entry.copies) await expect(conversation.locator(selector)).toHaveText(source);
+  await expect(notice.locator("#privacy-accept")).toBeVisible();
+  await expect(notice.locator("#privacy-confirm")).not.toBeChecked();
+  await oldLink.close(); await notice.close(); await conversation.close();
+});
+
 test("메신저 번역 대기 중 빠른 전체 OFF·ON은 이전 응답을 버리고 새 번역을 계속한다", async ({ extension }) => {
   const entry = MESSENGER_CASES.find(item => item.id === "discord");
   const p = await extension.open({ html: entry.html, url: entry.url, consent: true, deferTranslations: true });
@@ -56,7 +87,7 @@ test("전체 번역은 이전 동의를 승격하지 않고 기존 개인정보 
   const opened = extension.context.waitForEvent("page");
   await p.page.keyboard.press("F4");
   const notice = await opened;
-  await notice.waitForURL(/messenger-privacy\.html\?scope=web$/u);
+  await notice.waitForURL(/messenger-privacy\.html$/u);
   await expect(notice.locator("#privacy-confirm")).toBeEnabled();
   await expect(notice.locator("#privacy-accept")).toBeDisabled();
   expect(await p.sent()).toEqual([]);

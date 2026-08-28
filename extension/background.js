@@ -31,10 +31,10 @@ function rememberConnection(response) {
   }
   return response;
 }
-const globalTranslationState = globalThis.NudeNyangGlobalTranslationState.createGlobalTranslationState(api);
 const pageConnection = globalThis.NudeNyangPageConnection.createPageConnection(api);
 const embeddedBridge = globalThis.NudeNyangEmbeddedBridge.createEmbeddedBridge(api);
 const messengerPrivacy = globalThis.NudeNyangMessengerPrivacy.createMessengerPrivacy(api, { firefox: CLIENT.browser === "firefox" });
+const globalTranslationState = globalThis.NudeNyangGlobalTranslationState.createGlobalTranslationState(api, { messengerPrivacy });
 let messengerBroadcastEpoch = 0;
 const CONNECTION_ALARM = "nudenyang-connection";
 const CONNECTION_RETRY_DELAYS = [1000, 2000, 4000, 8000];
@@ -118,6 +118,15 @@ async function forwardPageRequest(request, sender) {
 }
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "nudenyang-privacy-consent-get") {
+    globalTranslationState.privacyState().then(sendResponse, () => sendResponse({ ok: false })); return true;
+  }
+  if (message?.type === "nudenyang-privacy-consent-set") {
+    globalTranslationState.privacyConsent(message.granted, sender).then(state => {
+      broadcastMessengerPrivacy();
+      return notifyGlobalState(state);
+    }).then(sendResponse, () => sendResponse({ ok: false })); return true;
+  }
   if (message?.type === "nudenyang-global-get") {
     globalTranslationState.get().then(sendResponse); return true;
   }

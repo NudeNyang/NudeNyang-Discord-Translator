@@ -5,16 +5,6 @@
   const api = firefoxApi ?? globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
   const isFirefox = Boolean(firefoxApi) || typeof api?.runtime?.getBrowserInfo === "function";
   const locales = globalThis.NudeNyangPopupLocales;
-  const globalMode = new URL(location.href).searchParams.get("scope") === "web";
-  if (globalMode) {
-    document.querySelector("#privacy-title").dataset.i18n = "globalWebTranslation";
-    document.querySelector(".intro").dataset.i18n = "globalPrivacyIntro";
-    document.querySelector(".services").hidden = true;
-    document.querySelector('[data-i18n="messengerPrivacyData"]').hidden = true;
-    document.querySelector("#consent-title").dataset.i18n = "globalWebTranslation";
-    document.querySelector('[data-i18n="messengerPrivacyConfirm"]').dataset.i18n = "globalPrivacyConfirm";
-    document.querySelector("#messenger-privacy-link").hidden = false;
-  }
   const confirmation = document.getElementById("privacy-confirm");
   const confirmationRow = document.getElementById("privacy-confirmation");
   const accept = document.getElementById("privacy-accept");
@@ -25,15 +15,19 @@
   let uiLanguage = locales.resolve("auto", api?.i18n?.getUILanguage?.() || navigator.language);
   let ready = false;
   let granted = false;
+  let anyGranted = false;
   let busy = false;
   let disposed = false;
+  let consentRevision = 0;
+  let refreshAfterBusy = false;
+  let hadMessengerPermission = false;
 
   // Do not let browser form restoration count as a new affirmative choice.
   confirmation.checked = false;
 
   function copy(key) {
-    if (globalMode && key === "messengerPrivacySaved") key = "globalPrivacySaved";
-    if (globalMode && key === "messengerConsentRequired") key = "reviewMessengerPrivacy";
+    if (key === "messengerPrivacySaved") key = "globalPrivacySaved";
+    if (key === "messengerConsentRequired") key = "reviewMessengerPrivacy";
     return locales.message(uiLanguage, key);
   }
 
@@ -41,7 +35,7 @@
     uiLanguage = locales.resolve(language || uiLanguage, api?.i18n?.getUILanguage?.() || navigator.language);
     document.documentElement.lang = uiLanguage;
     document.documentElement.dir = ["ar", "ur", "fa", "he"].includes(uiLanguage) ? "rtl" : "ltr";
-    document.title = copy(globalMode ? "globalWebTranslation" : "messengerPrivacyTitle");
+    document.title = copy("webPrivacyTitle");
     for (const element of document.querySelectorAll("[data-i18n]")) {
       element.textContent = copy(element.dataset.i18n);
     }
@@ -59,14 +53,12 @@
     confirmation.disabled = !ready || busy || granted;
     accept.hidden = granted;
     accept.disabled = !ready || busy || granted || !confirmation.checked;
-    revoke.hidden = !granted;
-    revoke.disabled = !ready || busy || !granted;
+    revoke.hidden = !anyGranted;
+    revoke.disabled = !ready || busy || !anyGranted;
     controls.setAttribute("aria-busy", String(busy));
   }
 
   function runtimeMessage(message) {
-    if (globalMode && message.type === "nudenyang-messenger-consent-get") message = { type: "nudenyang-global-get" };
-    if (globalMode && message.type === "nudenyang-messenger-consent-set") message = { ...message, type: "nudenyang-global-consent-set" };
     return new Promise((resolve) => {
       if (disposed || !api?.runtime?.sendMessage) { resolve(null); return; }
       let finished = false;
@@ -77,7 +69,7 @@
         finished = true;
         clearTimeout(timer);
         pendingTimers.delete(timer);
-        resolve(globalMode && response && "consent" in response ? { ...response, granted: response.consent } : response);
+        resolve(response);
       }
       try {
         if (isFirefox) Promise.resolve(api.runtime.sendMessage(message)).then(finish, () => finish(null));
@@ -87,14 +79,16 @@
   }
 
   async function removeFirefoxPermission() {
-    if (globalMode) return;
     if (!isFirefox || typeof api.permissions?.remove !== "function") return;
     try { await api.permissions.remove({ data_collection: ["personalCommunications"] }); }
     catch { /* Stored consent is independently required even if permission removal fails. */ }
   }
 
+  function removeNewFirefoxPermission() {
+    if (!hadMessengerPermission) return removeFirefoxPermission();
+  }
+
   async function resumeConversation() {
-    if (globalMode) return;
     const params = new URL(location.href).searchParams;
     const rawTab = params.get("tab");
     const tabId = Number(rawTab);
@@ -115,68 +109,96 @@
     try { permitted = await permission === true; }
     catch { /* Missing or denied optional permission must fail closed. */ }
     if (disposed) {
-      if (permitted) void removeFirefoxPermission();
+      if (permitted) void removeNewFirefoxPermission();
       return;
     }
-    if (!permitted) {
-      busy = false;
-      setStatus("messengerPrivacyPermissionDenied", "error");
-      render();
-      return;
-    }
-    const response = await runtimeMessage({ type: "nudenyang-messenger-consent-set", granted: true });
+    // Denying the optional Firefox messenger permission must not take away
+    // ordinary webpage translation. The background independently checks it.
+    const response = await runtimeMessage({ type: "nudenyang-privacy-consent-set", granted: true });
     if (disposed) return;
-    if (response?.ok === true && response.granted === true) {
-      granted = true;
+    if (response?.ok === true && response.anyGranted === true) {
+      granted = response.granted === true;
+      anyGranted = true;
       confirmation.checked = false;
-      setStatus("messengerPrivacySaved", "success");
-      await resumeConversation();
+      setStatus(granted ? "messengerPrivacySaved" : "webPrivacyPartial", granted ? "success" : "");
+      if (granted) await resumeConversation();
     } else {
-      await removeFirefoxPermission();
+      await removeNewFirefoxPermission();
       if (disposed) return;
       setStatus("messengerPrivacySaveFailed", "error");
     }
     busy = false;
     render();
+    if (refreshAfterBusy) { refreshAfterBusy = false; void refreshConsent(); }
   }
 
   function acceptConsent() {
     if (disposed || !ready || busy || granted || !confirmation.checked) return;
     busy = true;
+    consentRevision += 1;
     setStatus("checking");
     render();
     let permission = true;
     try {
       // This call must stay in the actual click handler before the first await:
       // Firefox optional data permissions require an active user gesture.
-      if (isFirefox && !globalMode) permission = typeof api.permissions?.request === "function"
+      if (isFirefox) permission = typeof api.permissions?.request === "function"
         ? api.permissions.request({ data_collection: ["personalCommunications"] }) : false;
     } catch { permission = false; }
     void finishAcceptance(permission);
   }
 
   async function revokeConsent() {
-    if (disposed || !ready || busy || !granted) return;
+    if (disposed || !ready || busy || !anyGranted) return;
     busy = true;
+    consentRevision += 1;
     setStatus("checking");
     render();
-    const response = await runtimeMessage({ type: "nudenyang-messenger-consent-set", granted: false });
+    const response = await runtimeMessage({ type: "nudenyang-privacy-consent-set", granted: false });
     await removeFirefoxPermission();
     if (disposed) return;
     if (response?.ok === true && response.granted === false) {
       granted = false;
+      anyGranted = false;
       confirmation.checked = false;
       setStatus("messengerPrivacyRevoked", "success");
     } else setStatus("messengerPrivacySaveFailed", "error");
     busy = false;
     render();
+    if (refreshAfterBusy) { refreshAfterBusy = false; void refreshConsent(); }
   }
 
   function dispose() {
     disposed = true;
     for (const timer of pendingTimers) clearTimeout(timer);
     pendingTimers.clear();
+    api.storage?.onChanged?.removeListener(storageChanged);
+    api.permissions?.onRemoved?.removeListener(permissionsRemoved);
   }
+
+  async function refreshConsent() {
+    if (busy) { refreshAfterBusy = true; return; }
+    const revision = ++consentRevision;
+    const response = await runtimeMessage({ type: "nudenyang-privacy-consent-get" });
+    if (disposed || busy || revision !== consentRevision) return;
+    ready = response?.ok === true;
+    granted = response?.ok === true && response.granted === true;
+    anyGranted = response?.ok === true && response.anyGranted === true;
+    hadMessengerPermission = response?.messengerPermissionGranted === true;
+    confirmation.checked = false;
+    setStatus(response?.ok === true
+      ? (granted ? "messengerPrivacySaved" : anyGranted ? "webPrivacyPartial" : "messengerConsentRequired")
+      : "messengerPrivacySaveFailed", response?.ok === true ? "" : "error");
+    render();
+  }
+  function storageChanged(changes, area) {
+    if (area === "local" && (changes.webTranslationConsentVersion || changes.messengerConsentVersion)) void refreshConsent();
+  }
+  function permissionsRemoved(permissions) {
+    if (permissions.data_collection?.includes("personalCommunications")) void refreshConsent();
+  }
+  api.storage?.onChanged?.addListener(storageChanged);
+  api.permissions?.onRemoved?.addListener(permissionsRemoved);
 
   confirmation.addEventListener("change", render);
   accept.addEventListener("click", acceptConsent);
@@ -190,15 +212,7 @@
   applyLanguage(uiLanguage);
   setStatus("checking");
   render();
-  void runtimeMessage({ type: "nudenyang-messenger-consent-get" }).then((response) => {
-    if (disposed) return;
-    ready = true;
-    granted = response?.ok === true && response.granted === true;
-    setStatus(response?.ok === true
-      ? (granted ? "messengerPrivacySaved" : "messengerConsentRequired")
-      : "messengerPrivacySaveFailed", response?.ok === true ? "" : "error");
-    render();
-  });
+  void refreshConsent();
   // Native status is only for language. A
   // sleeping or disconnected engine must not block browser consent management.
   void runtimeMessage({

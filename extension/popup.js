@@ -210,7 +210,7 @@ function renderPageStatus(status) {
   if (browserConnectionDisabled) {
     site.textContent = copy("disabled");
   } else if (status?.privacyPage) {
-    site.textContent = copy("messengerPrivacyTitle");
+    site.textContent = copy("webPrivacyTitle");
   } else if (!status) {
     site.textContent = copy("unableToProcess");
   } else if (status.supported && status.manualOnly && !status.enabled) {
@@ -430,7 +430,7 @@ async function initialize() {
   });
   function openMessengerPrivacy(resumeConversation = false) {
     try {
-      const url = new URL(api.runtime.getURL(resumeConversation ? "messenger-privacy.html" : "messenger-privacy.html?scope=web"));
+      const url = new URL(api.runtime.getURL("messenger-privacy.html"));
       if (resumeConversation && Number.isInteger(tab?.id) && status?.messengerContextId) {
         // Carry only a tab handle and an opaque document/conversation nonce.
         url.searchParams.set("tab", String(tab.id));
