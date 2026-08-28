@@ -38,7 +38,14 @@ static EMOJI_RE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 static MARKER_ARTIFACT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\bZ\s*X\s*Q\s*KEEP(?:\s*0*\d{1,3})?(?:\s*Q(?:\s*X(?:\s*Z)?)?)?\b").unwrap()
+    // Full generated markers may touch any script, including Latin text. For
+    // partial artifacts use ASCII boundaries: Japanese/Hangul and the long-vowel
+    // decoration ー must not hide a marker, but ordinary ZXQKEEPER is not one.
+    Regex::new(concat!(
+        r"(?i)Z\s*X\s*Q\s*KEEP\s*[0-9]+\s*Q\s*X\s*Z",
+        r"|(?-u:\b)Z\s*X\s*Q\s*KEEP(?:\s*0*[0-9]{1,3})?(?:\s*Q(?:\s*X(?:\s*Z)?)?)?(?-u:\b)",
+    ))
+    .unwrap()
 });
 static REPEATED_HORIZONTAL_SPACE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[ \t]{2,}").unwrap());
@@ -104,14 +111,69 @@ impl ProtectedText {
 }
 
 pub fn contains_unexpected_marker_artifact(source: &str, translated: &str) -> bool {
-    !MARKER_ARTIFACT_RE.is_match(source) && MARKER_ARTIFACT_RE.is_match(translated)
+    !unexpected_marker_spans(source, translated).is_empty()
+}
+
+fn marker_identity(value: &str) -> String {
+    let compact: String = value
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .map(|character| character.to_ascii_uppercase())
+        .collect();
+    if let Some(index) = compact
+        .strip_prefix(MARKER_PREFIX)
+        .and_then(|tail| tail.strip_suffix(MARKER_SUFFIX))
+        .filter(|index| !index.is_empty() && index.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        let index = index.trim_start_matches('0');
+        return format!(
+            "{MARKER_PREFIX}{}{MARKER_SUFFIX}",
+            if index.is_empty() { "0" } else { index }
+        );
+    }
+    compact
+}
+
+fn unexpected_marker_spans(source: &str, translated: &str) -> Vec<std::ops::Range<usize>> {
+    // Compare identity and multiplicity, not whether either string happens to
+    // contain a boundary-visible marker. Keep source-authored literal markers,
+    // while still rejecting extra IDs, corrupt fragments and duplicated markers.
+    let mut available = HashMap::<String, usize>::new();
+    for found in MARKER_ARTIFACT_RE.find_iter(source) {
+        *available
+            .entry(marker_identity(found.as_str()))
+            .or_default() += 1;
+    }
+    MARKER_ARTIFACT_RE
+        .find_iter(translated)
+        .filter_map(|found| {
+            let expected = available
+                .get_mut(&marker_identity(found.as_str()))
+                .is_some_and(|count| {
+                    if *count == 0 {
+                        false
+                    } else {
+                        *count -= 1;
+                        true
+                    }
+                });
+            (!expected).then(|| found.range())
+        })
+        .collect()
 }
 
 pub fn sanitize_unexpected_marker_artifacts(source: &str, translated: &str) -> String {
-    if !contains_unexpected_marker_artifact(source, translated) {
+    let unexpected = unexpected_marker_spans(source, translated);
+    if unexpected.is_empty() {
         return translated.to_string();
     }
-    let stripped = MARKER_ARTIFACT_RE.replace_all(translated, "");
+    let mut stripped = String::with_capacity(translated.len());
+    let mut cursor = 0;
+    for span in unexpected {
+        stripped.push_str(&translated[cursor..span.start]);
+        cursor = span.end;
+    }
+    stripped.push_str(&translated[cursor..]);
     let cleaned = stripped
         .split('\n')
         .map(|line| {
@@ -302,7 +364,89 @@ fn is_text_emoticon(token: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{protect_text, remove_unwritten_decorations};
+    use super::{
+        contains_unexpected_marker_artifact, protect_text, remove_unwritten_decorations,
+        sanitize_unexpected_marker_artifacts,
+    };
+
+    #[test]
+    fn preserved_markers_do_not_depend_on_surrounding_script_or_punctuation() {
+        for prefix in [
+            "限定販売",
+            "한정판매",
+            "限量销售",
+            "ーーーーーーーー",
+            "LimitedSale",
+        ] {
+            let protected = protect_text(&format!("【{prefix}🎉】 新しい衣装です"));
+            for marker in ["ZXQKEEP000QXZ", "z x q keep 0 q x z"] {
+                let translated = format!("【한정 판매】{marker}새로운 의상입니다");
+                assert!(
+                    !contains_unexpected_marker_artifact(&protected.masked, &translated),
+                    "prefix={prefix}; marker={marker}",
+                );
+                assert_eq!(
+                    protected.restore(&translated),
+                    "【한정 판매】🎉새로운 의상입니다"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn an_existing_marker_does_not_allow_new_ids_fragments_or_duplicates() {
+        let source = "説明 ZXQKEEP000QXZ 続き";
+        for extra in ["ZXQKEEP001QXZ", "ZXQKEEP000QXZ", "ZXQKEEP000", "ZXQKEEP"] {
+            let translated = format!("설명 ZXQKEEP000QXZ {extra} 계속");
+            assert!(
+                contains_unexpected_marker_artifact(source, &translated),
+                "{extra}"
+            );
+            assert_eq!(
+                sanitize_unexpected_marker_artifacts(source, &translated),
+                "설명 ZXQKEEP000QXZ 계속",
+                "{extra}",
+            );
+        }
+    }
+
+    #[test]
+    fn leaked_markers_are_removed_next_to_non_latin_text() {
+        for leaked in ["ZXQKEEP000QXZ", "ZXQKEEP000QX", "ZXQKEEP000", "ZXQKEEP"] {
+            let translated = format!("설명{leaked}입니다");
+            assert!(
+                contains_unexpected_marker_artifact("説明です", &translated),
+                "{leaked}"
+            );
+            assert_eq!(
+                sanitize_unexpected_marker_artifacts("説明です", &translated),
+                "설명입니다"
+            );
+        }
+    }
+
+    #[test]
+    fn literal_marker_words_are_preserved_without_allowing_unrelated_artifacts() {
+        for word in ["ZXQKEEP", "ZXQKEEPER", "myZXQKEEP", "ZXQKEEP007QXZ"] {
+            let source = format!("文字列{word}です");
+            let translated = format!("문자열 {word}입니다");
+            assert!(
+                !contains_unexpected_marker_artifact(&source, &translated),
+                "{word}"
+            );
+            assert_eq!(
+                sanitize_unexpected_marker_artifacts(&source, &translated),
+                translated
+            );
+        }
+        assert_eq!(
+            sanitize_unexpected_marker_artifacts(
+                "ZXQKEEP is literal",
+                "ZXQKEEP 원문 ZXQKEEP001QXZ"
+            ),
+            "ZXQKEEP 원문",
+        );
+    }
 
     #[test]
     fn masks_and_restores_mentions_emoji_and_emoticons() {

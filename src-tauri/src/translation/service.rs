@@ -4550,6 +4550,74 @@ mod tests {
     }
 
     #[test]
+    fn preview_marker_repositioning_survives_incoming_web_and_cache_replay() {
+        struct PreviewTranslator(Arc<Mutex<usize>>);
+        impl Translator for PreviewTranslator {
+            fn display_name(&self) -> &str {
+                "preview-fixture"
+            }
+            fn cache_namespace(&self) -> &str {
+                "preview-fixture:v1"
+            }
+            fn isolate_incoming_failures(&self) -> bool {
+                true
+            }
+            fn translate(
+                &mut self,
+                _text: &str,
+                _source: Language,
+                _target: Language,
+            ) -> Result<String, String> {
+                *self.0.lock().unwrap() += 1;
+                Ok("【한정 판매】ZXQKEEP000QXZ 새로운 의상입니다".into())
+            }
+        }
+        let source = "【限定販売🎉】 新しい衣装です".to_string();
+        let expected = "【한정 판매】🎉 새로운 의상입니다";
+        for web in [false, true] {
+            let calls = Arc::new(Mutex::new(0));
+            let mut service = TranslationService::new(
+                Box::new(ResilientTranslator::new(
+                    Box::new(PreviewTranslator(calls.clone())),
+                    None,
+                )),
+                TranslationCache::in_memory(16).unwrap(),
+            );
+            for _ in 0..2 {
+                let translated = if web {
+                    service.translate_many_for_web_contextual_filtered(
+                        std::slice::from_ref(&source),
+                        &[None],
+                        "preview-fixture",
+                        Language::Korean,
+                        None,
+                    )
+                } else {
+                    service.translate_many_for_incoming_contextual(
+                        std::slice::from_ref(&source),
+                        &[None],
+                        "preview-fixture",
+                        Language::Korean,
+                    )
+                }
+                .unwrap();
+                assert_eq!(translated, [expected], "web={web}");
+                assert!(service.web_result_is_cacheable(
+                    &source,
+                    &translated[0],
+                    Language::Korean,
+                    None
+                ));
+            }
+            assert_eq!(
+                *calls.lock().unwrap(),
+                1,
+                "successful translation must be reused"
+            );
+        }
+    }
+
+    #[test]
     fn long_text_is_translated_in_bounded_chunks_without_losing_content() {
         let path = cache_path("long-text-chunks");
         let inputs = Arc::new(Mutex::new(Vec::new()));
@@ -4992,6 +5060,51 @@ mod tests {
             "unexpected terminal punctuation: {translated}"
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_local_model_translates_decorated_preview_without_marker_rejection() {
+        // A truncated product description with no domain, account or DOM selector.
+        let source = "【発売記念セール🎉】 9月11日までフルセットの価格が 3500円 -> 3000円 になります！ アバター個別版は9月4日に発売予定です🥨 ーーーーーーーー🐾ーーーーーーーー コーギーの愛らしさをぎゅっと詰め込んだ、 パン屋さんモチーフの衣装🍞 エプロンやスカ...".to_string();
+        let translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(
+            translator.model_is_ready(),
+            "Existing verified local model required; do not download"
+        );
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(Box::new(translator), None)),
+            TranslationCache::in_memory(16).unwrap(),
+        );
+        let output = service
+            .translate_many_for_incoming_contextual(
+                std::slice::from_ref(&source),
+                &[None],
+                "decorated-preview-fixture",
+                Language::Korean,
+            )
+            .unwrap();
+        let replay = service
+            .translate_many_for_incoming_contextual(
+                std::slice::from_ref(&source),
+                &[None],
+                "decorated-preview-fixture",
+                Language::Korean,
+            )
+            .unwrap();
+        service.translator_mut().close();
+        assert_ne!(output[0], source, "description was discarded as original");
+        assert_eq!(replay, output);
+        assert!(!output[0].contains("ZXQKEEP"));
+        for token in ["🎉", "🥨", "🐾", "🍞", "ーーーーーーーー"] {
+            assert_eq!(
+                output[0].matches(token).count(),
+                source.matches(token).count(),
+                "{token}"
+            );
+        }
+        assert!(service.web_result_is_cacheable(&source, &output[0], Language::Korean, None));
+        println!("local preview: {}", output[0]);
     }
 
     #[test]

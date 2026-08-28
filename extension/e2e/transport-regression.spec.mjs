@@ -5,6 +5,35 @@ const ORIGINAL = PARTS.join("");
 const TRANSLATED = PARTS.map(part => `번역(${part})`).join("");
 const URL = "https://fixture.example.test/long-article/";
 
+test("공통 미리보기: 이모지 인접 본문의 번역·재생·원문 복원이 링크를 보존한다", async ({ extension }) => {
+  const source = "【限定販売🎉】 新しい衣装です";
+  const translated = "【한정 판매】🎉 새로운 의상입니다";
+  const p = await extension.open({
+    html: `<main><article><h2><a href="https://example.invalid/product">新しい衣装</a></h2><p id="preview">${source}</p></article></main>`,
+    deferTranslations: true,
+  });
+  await expect.poll(p.sent).toContain(source);
+  const item = (await p.requests()).flatMap(request => request.items).find(item => item.text === source);
+  // The real protected-marker quality/cache path is covered by the Rust service
+  // regression. This transport fixture checks only the browser DOM contract.
+  await p.releaseTranslations({ itemOverrides: { [item.id]: { text: translated, cacheable: true } } });
+  await expect(p.page.locator("#preview")).toHaveText(translated);
+  await expect(p.page.locator("a")).toHaveAttribute("href", "https://example.invalid/product");
+  const sent = await p.sent();
+  await p.page.locator("#preview").evaluate((node, original) => {
+    const replacement = node.cloneNode(false);
+    replacement.textContent = original;
+    node.replaceWith(replacement);
+  }, source);
+  await expect(p.page.locator("#preview")).toHaveText(translated);
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  await expect(p.page.locator("#preview")).toHaveText(source);
+  await p.message({ type: "nudenyang-set-enabled", enabled: true });
+  await expect(p.page.locator("#preview")).toHaveText(translated);
+  expect(await p.sent()).toEqual(sent);
+  await expect(p.page.locator("a")).toHaveAttribute("href", "https://example.invalid/product");
+});
+
 test("일반 BR 본문: 품질 실패 원문은 완료 캐시에서 제외하고 수동 재시도는 실패한 노드만 전송", async ({ extension }) => {
   const lines = ["新しいお知らせを皆様に紹介いたします。", "そのようなお言葉をいただき嬉しく思います。", "もちろん結果には個人差がありますが、その時々の状態を確認しております。"];
   const p = await extension.open({
