@@ -10,7 +10,7 @@ import {
   PUBLIC_SURFACES_HTML, PUBLIC_SURFACE_COPY,
 } from "./fixtures/dom-translation.mjs";
 
-const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "dom-policy.js", "text-segments.js", "popup-locales.js", "content.js"].map((file) => (
+const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "dom-policy.js", "translation-audit.js", "text-segments.js", "popup-locales.js", "content.js"].map((file) => (
   fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
 ));
 const FRAME_URL = "https://www.youtube-nocookie.com/embed/video123?rel=0";

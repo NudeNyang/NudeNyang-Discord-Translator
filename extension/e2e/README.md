@@ -52,6 +52,13 @@ F4는 Playwright의 실제 페이지 키 입력으로 검사하며 팝업을 미
 
 ## 테스트 작성
 
+공통 누락 검사와 자동 생성 구조 테스트는 `coverage.spec.mjs`에서 실행한다. 원문을
+미리 지정한 2,048개 조합의 수집 검사는 `npm test`, 실제 DOM 변경을 포함한 32개 표본은
+전체 E2E에 포함한다. 자세한 경계는 [누락 진단 문서](../../docs/WEB_TRANSLATION_COVERAGE.md)를 따른다.
+`npm run test:public`은 네트워크를 사용하는 별도 공개 표본 검사다. 일반 E2E에서는 실행하지
+않으며, 실제 로그인과 번역 엔진 대신 새 프로필과 모사 Native Messaging을 사용한다.
+집계는 `test-results/extension-public/`에 보관하고 실패해도 페이지 본문은 저장하지 않는다.
+
 ```js
 import { test, expect } from "./harness.mjs";
 

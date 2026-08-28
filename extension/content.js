@@ -50,6 +50,8 @@
   let disposed = false;
   let blockIds = new WeakMap();
   let observedBlocks = new WeakSet();
+  const boxlessBlocks = new Set();
+  let boxlessTimer;
   const queue = [];
   let enabled = false;
   let storedEnabled = true;
@@ -102,6 +104,11 @@
   let sentChars = 0;
   let usageLimited = false;
   let startupPromise;
+  let auditTimer;
+  let auditPromise;
+  let auditReport = null;
+  let auditRevision = 0;
+  let lastAuditAt = 0;
   let stateChanges = Promise.resolve();
   let manualIntent = null;
 
@@ -343,6 +350,60 @@
   function logDiagnostic(event, detail = {}) {
     if (messengerSite) return;
     console.info("[NudeNyang Web Translator]", event, detail);
+  }
+
+  function auditStage(node, block) {
+    const state = nodeStates.get(node);
+    if (!state || state.epoch !== pageEpoch) {
+      if (usageLimited) return "usage_limited";
+      return observedBlocks.has(block) ? "not_queued" : "undiscovered";
+    }
+    const value = node.nodeValue;
+    if (value !== state.original && value !== state.translated) return "source_changed";
+    if (state.pending) return state.diagnosticStage ?? "queued";
+    if (state.translated != null) {
+      if (state.cacheable === false) return "quality_failed";
+      if (value !== state.translated) return "apply_lost";
+      if (state.translated === state.original) return "unchanged_result";
+      return state.diagnosticStage === "replayed" ? "replayed" : "applied";
+    }
+    return state.diagnosticStage ?? "cancelled";
+  }
+
+  async function inspectCoverage() {
+    if (disposed || !enabled || !publicDom || messengerSite || document.hidden) {
+      return { status: "unavailable", reason: messengerSite ? "private_scope" : "inactive" };
+    }
+    if (auditPromise) return auditPromise;
+    const epoch = pageEpoch;
+    const revision = auditRevision;
+    const policy = publicDom;
+    const visibility = new WeakMap();
+    auditPromise = globalThis.NudeNyangTranslationAudit.inspect(document, {
+      boundary: element => policy.auditBoundary(element, { visibility }),
+      explain: node => policy.explain(node, { visibility }),
+      visible: element => isElementNearViewport(element, innerHeight, 0), stage: auditStage,
+      isCurrent: () => !disposed && enabled && !document.hidden && epoch === pageEpoch
+        && revision === auditRevision && policy === publicDom,
+    });
+    try {
+      const report = await auditPromise;
+      // A result describes one observed viewport, never total website coverage.
+      if (report.status !== "cancelled") auditReport = { ...report, epoch, revision };
+      return report;
+    } catch {
+      return { status: "unavailable", reason: "inspection_failed" };
+    } finally { auditPromise = undefined; lastAuditAt = performance.now(); }
+  }
+
+  function scheduleCoverage() {
+    auditRevision += 1;
+    auditReport = null;
+    if (auditTimer || disposed || !enabled || messengerSite) return;
+    auditTimer = setTimeout(() => {
+      auditTimer = undefined;
+      void inspectCoverage();
+    }, Math.max(750, 5000 - (performance.now() - lastAuditAt)));
   }
 
   function currentHostname() {
@@ -596,7 +657,12 @@
     const state = nodeStates.get(item.node);
     if (state?.itemId === item.recordId) {
       if (!isCurrentText(item.node)) forgetText(item.node);
-      else if (state.pending) cancelTextRecord(state);
+      else if (state.pending) {
+        cancelTextRecord(state);
+        if (!["request_failed", "missing_result"].includes(state.diagnosticStage)) {
+          state.diagnosticStage = usageLimited ? "usage_limited" : "cancelled";
+        }
+      }
     }
   }
 
@@ -820,6 +886,7 @@
       record.translated = values[index];
       record.pending = false;
       record.replayKey = snapshot.key;
+      record.diagnosticStage = "replayed";
       nodeStates.set(node, record);
       trackedNodes.add(node);
       if (node.nodeValue !== record.translated) node.nodeValue = record.translated;
@@ -839,6 +906,7 @@
       const original = node.nodeValue;
       const itemId = `${id}-${++sequence}`;
       const record = createTextRecord(original, itemId, pageEpoch, MAX_ITEM_CHARS);
+      record.diagnosticStage = "queued";
       nodeStates.set(node, record);
       trackedNodes.add(node);
       for (const [segmentIndex, text] of record.segments.entries()) {
@@ -913,6 +981,7 @@
       }
       for (const write of writes) {
         write.node.nodeValue = write.translated;
+        nodeStates.get(write.node).diagnosticStage = "applied";
       }
       if (writes.length) rememberBlock(block.applications[0]?.item.block);
       if (writes.length > 0) {
@@ -921,6 +990,7 @@
       }
     }
     if (appliedBlocks > 0) {
+      scheduleCoverage();
       logDiagnostic("dom-blocks-applied", {
         appliedBlocks,
         appliedNodes,
@@ -933,6 +1003,16 @@
   }
 
   function noteViewportActivity() {
+    scheduleCoverage();
+    if (boxlessBlocks.size && !boxlessTimer) {
+      boxlessTimer = setTimeout(() => {
+        boxlessTimer = undefined;
+        for (const block of boxlessBlocks) {
+          if (!block.isConnected) boxlessBlocks.delete(block);
+          else enqueueBlock(block);
+        }
+      }, 120);
+    }
     viewportActiveUntil = performance.now() + scheduling.applyDelayMs;
     if (queue.length > 0) scheduleFlush();
     if (pendingApplications.length > 0) scheduleApplications();
@@ -994,6 +1074,10 @@
     const batchChars = batch.reduce((total, item) => total + item.text.length, 0);
     requestCount += 1;
     sentChars += batchChars;
+    for (const item of batch) {
+      const state = nodeStates.get(item.node);
+      if (state && state.itemId === item.recordId) state.diagnosticStage = "requesting";
+    }
     const response = await nativeRequest({
       type: "translate",
       requestId,
@@ -1029,7 +1113,12 @@
       }
       const results = new Map(response.items.map((item) => [item.id, item.text]));
       const incompleteIds = new Set(response.items.filter(item => item.cacheable === false).map(item => item.id));
-      for (const item of batch) item.cacheable = !incompleteIds.has(item.id);
+      for (const item of batch) {
+        item.cacheable = !incompleteIds.has(item.id);
+        const state = nodeStates.get(item.node);
+        if (state && state.itemId === item.recordId) state.diagnosticStage = typeof results.get(item.id) === "string" && results.get(item.id).trim()
+          ? "response_received" : "missing_result";
+      }
       const applications = groupTranslationApplications(batch, results);
       for (const item of applications.missing) releasePending(item);
       pendingApplications.push(...applications.blocks);
@@ -1051,6 +1140,8 @@
           completeEmbedded(item, { ok: false, code: "unavailable", retryable: Boolean(response?.retryable) });
           continue;
         }
+        const state = nodeStates.get(item.node);
+        if (state && state.itemId === item.recordId) state.diagnosticStage = "request_failed";
         releasePending(item);
       }
       lastError = response?.message ?? "Windows 앱에서 번역 결과를 받지 못했습니다.";
@@ -1088,6 +1179,7 @@
       }
     }
     translating = false;
+    scheduleCoverage();
     if (externalProvider && webSettings.externalPageCharLimit > 0 && sentChars >= webSettings.externalPageCharLimit) {
       stopForUsageLimit();
       return;
@@ -1121,6 +1213,8 @@
   }
 
   function restoreOriginals({ discard = false } = {}) {
+    auditRevision += 1;
+    auditReport = null;
     cancelEmbeddedRequests(enabled ? "stale" : "disabled");
     while (queue.length > 0) releasePending(queue.shift());
     settlePendingApplications();
@@ -1170,6 +1264,10 @@
   function shutdownInvalidatedContext() {
     if (disposed) return;
     disposed = true;
+    clearTimeout(auditTimer);
+    clearTimeout(boxlessTimer);
+    boxlessBlocks.clear();
+    auditReport = null;
     removeConsentNotice();
     enabled = false;
     translating = false;
@@ -1199,6 +1297,15 @@
 
   function observeBlock(block) {
     if (messengerSite && excludedBlock(block)) return;
+    const bounds = !messengerSite ? block.getBoundingClientRect() : null;
+    if (bounds && (bounds.width === 0 || bounds.height === 0) && getComputedStyle(block).display !== "none") {
+      boxlessBlocks.add(block);
+      for (const known of boxlessBlocks) if (!known.isConnected) boxlessBlocks.delete(known);
+      if (boxlessBlocks.size > 512) boxlessBlocks.delete(boxlessBlocks.values().next().value);
+      // IntersectionObserver cannot intersect a boxless element. Use its text
+      // range now and on coalesced viewport changes, without rescanning the DOM.
+      enqueueBlock(block);
+    }
     if (messengerSite && messengerContext.root.contains(block)) {
       for (const known of conversationBlocks) if (!known.isConnected) conversationBlocks.delete(known);
       conversationBlocks.add(block);
@@ -1228,6 +1335,7 @@
       else if (!messengerContext.root.contains(root)) return;
     }
     if (!messengerSite) {
+      scheduleCoverage();
       const count = publicDom.collectBlocks(root, (block) => {
         observeBlock(block);
         if (enqueueVisible) enqueueBlock(block);
@@ -1285,6 +1393,7 @@
     longDocument = false;
     blockIds = new WeakMap();
     observedBlocks = new WeakSet();
+    boxlessBlocks.clear();
     intersectionObserver?.disconnect();
     assignPageContext(next);
     configureIntersectionObserver();
@@ -1464,6 +1573,7 @@
       processingMode: webSettings.processingMode,
       quickToggleShortcut: webSettings.quickToggleShortcut,
       lastError,
+      coverage: auditReport,
     };
   }
 
@@ -1486,6 +1596,7 @@
     }
     intersectionObserver?.disconnect();
     observedBlocks = new WeakSet();
+    boxlessBlocks.clear();
     configureIntersectionObserver();
     enabled = initialEnabled();
     updateConsentNotice();
@@ -1500,6 +1611,10 @@
 
   function handleMessage(message, sender, sendResponse) {
     if (disposed) return false;
+    if (message?.type === "nudenyang-audit" && sender?.id === api.runtime.id) {
+      Promise.resolve(startupPromise).then(() => { handleNavigation(); return inspectCoverage(); }).then(sendResponse);
+      return true;
+    }
     if (message?.type === "nudenyang-embed-parent-request") {
       // Native work must not hold the state lock: OFF must cancel an in-flight title immediately.
       embeddedParentRequest(message, sender).then(sendResponse, () => sendResponse({ ok: false, code: "unavailable" }));
@@ -1597,6 +1712,8 @@
     configureIntersectionObserver();
     updateConsentNotice();
     observer = new MutationObserver((mutations) => {
+      auditRevision += 1;
+      auditReport = null;
       handleNavigation();
       if (!enabled || disposed || !canReadConversation()) {
         return;

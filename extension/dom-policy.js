@@ -61,12 +61,22 @@
       return adapter.collectPublicUi ? element?.closest(ARTICLE) : null;
     }
 
+    function sectionHeading(element) {
+      if (!adapter.collectPublicUi) return null;
+      const heading = element?.closest("h1,h2,h3,h4,h5,h6");
+      const header = heading?.closest("header");
+      const section = header?.parentElement?.closest("section,article,main");
+      // Article headers often contain author names. Only a section's own
+      // heading is a generic public title; do not open arbitrary bylines.
+      return section?.matches("section") && !header.closest("nav,aside,footer,form,[role='navigation'],[role='dialog'],[role='log']") ? heading : null;
+    }
+
     // A navigation landmark is not itself private. Only its public link labels
     // are eligible; arbitrary account values and unclassified dialogs stay out.
     // A semantic article remains prose when a viewer wraps it in a modal or a
     // clickable row. Leaf action buttons are still controls, not article text.
     function genericScope(element) {
-      return navigationLink(element) || articleFor(element);
+      return navigationLink(element) || sectionHeading(element) || articleFor(element);
     }
 
     function genericExcludes(element, policy) {
@@ -74,10 +84,12 @@
       const link = navigationLink(element);
       const article = articleFor(element);
       const prose = element.closest(PROSE);
+      const heading = sectionHeading(element);
       for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
         if (ancestor.matches(policy.protected)) return true;
         if (!ancestor.matches(policy.excluded)) continue;
         if (link && ancestor.matches(NAVIGATION) && ancestor.contains(link)) continue;
+        if (heading && ancestor.matches("header") && ancestor.contains(heading)) continue;
         if (article && ancestor.matches("[role='dialog'],[aria-modal='true']") && ancestor.contains(article)) continue;
         if (article && prose && article.contains(prose) && ancestor.matches("[role='button']")
           && ancestor !== prose && ancestor.contains(prose)) continue;
@@ -166,6 +178,31 @@
       return Boolean(block && eligibility(block, options)(node));
     }
 
+    // Metadata-only boundaries used by the independent audit before it reads a
+    // text value. Reuse safety policy, never the collector's discovery selectors.
+    function auditBoundary(element, { visibility = new WeakMap() } = {}) {
+      if (element.matches("iframe,canvas,svg")) return `unsupported_${element.localName === "iframe" ? "frame" : "drawing"}`;
+      if (element.matches("[hidden],[inert],[aria-hidden='true']")) return "hidden";
+      if (element.matches(active.protected)) return "protected";
+      if (element.matches("[role='log'],[rel~='author'],[itemprop~='author'],[itemprop~='creator']")) return "private_scope";
+      if (element.matches("[role='form']") || (element.matches("form") && !publicForm(element))) return "private_scope";
+      if (!textIsVisible(element, visibility)) return "hidden";
+      return "";
+    }
+
+    function explain(node, { visibility = new WeakMap() } = {}) {
+      const element = elementFor(node);
+      if (!node?.isConnected || !element) return { eligible: false, reason: "detached" };
+      for (let parent = element; parent; parent = parent.parentElement) {
+        const reason = auditBoundary(parent, { visibility });
+        if (reason) return { eligible: false, reason };
+      }
+      const block = blockFor(node);
+      if (!block) return { eligible: false, reason: element.closest(active.excluded) ? "excluded_scope" : "outside_scope" };
+      if (eligibility(block, { visibility })(node)) return { eligible: true, reason: "eligible", block };
+      return { eligible: false, reason: element.closest("a[href]") ? "identity_link" : "excluded_scope", block };
+    }
+
     function collectBlocks(scanRoot, visit) {
       if (!scanRoot?.querySelectorAll || !blockSelector) return 0;
       const found = new Set();
@@ -218,7 +255,7 @@
       return found.size;
     }
 
-    return Object.freeze({ blockFor, collectBlocks, eligibility, allowsText, excludesBlock });
+    return Object.freeze({ blockFor, collectBlocks, eligibility, allowsText, excludesBlock, explain, auditBoundary });
   }
 
   root.NudeNyangDomPolicy = Object.freeze({ createPublicDomPolicy, hasTranslatableText, interactionRoot, textIsVisible });

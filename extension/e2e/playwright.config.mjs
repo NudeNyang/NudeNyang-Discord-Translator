@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: ".",
   testMatch: "**/*.spec.mjs",
-  outputDir: "../../test-results/extension-e2e",
+  outputDir: process.env.NUDENYANG_PUBLIC_CHECK === "1" ? "../../test-results/extension-public" : "../../test-results/extension-e2e",
   fullyParallel: true,
   workers: 2,
   forbidOnly: Boolean(process.env.CI),

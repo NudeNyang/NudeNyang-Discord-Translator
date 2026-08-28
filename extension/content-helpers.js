@@ -102,7 +102,16 @@
 
   function isElementNearViewport(element, viewportHeight, margin = 500) {
     if (!element?.isConnected) return false;
-    const rect = element.getBoundingClientRect?.();
+    let rect = element.getBoundingClientRect?.();
+    // display:contents and inline parents of floated children can have an empty
+    // principal box. Their rendered content still has text ranges.
+    const document = element.ownerDocument;
+    if (rect && (rect.width === 0 || rect.height === 0) && document?.createRange
+      && document.defaultView.getComputedStyle(element).display !== "none") {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      rect = range.getBoundingClientRect?.() ?? rect;
+    }
     if (!rect || rect.width <= 0 || rect.height <= 0) return false;
     return rect.bottom >= -margin && rect.top <= viewportHeight + margin;
   }

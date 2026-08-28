@@ -4,6 +4,7 @@
     "messenger-adapters.js",
     "content-helpers.js",
     "dom-policy.js",
+    "translation-audit.js",
     "text-segments.js",
     "popup-locales.js",
     "content.js",

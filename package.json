@@ -10,6 +10,7 @@
     "test:landing": "node --test landing/test/*.test.mjs",
     "test:extension": "node scripts/generate-extension-locales.mjs --check && node --test extension/test/*.test.mjs",
     "test:e2e": "node scripts/run-extension-e2e.mjs",
+    "test:public": "node scripts/run-extension-e2e.mjs --public",
     "test:e2e:install": "node scripts/run-extension-e2e.mjs --install",
     "extension:locales": "node scripts/generate-extension-locales.mjs",
     "extension:personal": "npm run extension:locales && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_personal_chromium_extension.ps1",

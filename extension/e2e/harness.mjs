@@ -67,10 +67,11 @@ export const test = base.extend({
       const pages = [];
       const controller = {
         context, worker, extensionId,
+        publicCheck: false,
         command(tabId) {
           return worker.evaluate(id => globalThis.__NudeNyangE2E.dispatchCommand(id), tabId);
         },
-        async open({ html, url = "https://fixture.example.test/article/", settings = {},
+        async open({ html, url = "https://fixture.example.test/article/", settings = {}, publicSample = null,
           consent = false, consentVersion = 3, enabled = true, deferTranslations = false,
           translator = "hymt_1_8b", documents = {} } = {}) {
           if (typeof html !== "string") throw new TypeError("extension.open requires an HTML fixture string");
@@ -81,11 +82,26 @@ export const test = base.extend({
             await chrome.storage.local.set({ enabled: true, messengerConsentVersion: options.consent ? options.consentVersion : 0 });
           }, { settings, consent, consentVersion, deferTranslations, translator });
           const page = await context.newPage();
+          if (publicSample) {
+            if (process.env.NUDENYANG_PUBLIC_CHECK !== "1" || publicSample.url !== url) throw new Error("Public checks require explicit opt-in and a matching sample URL");
+            controller.publicCheck = true;
+          }
           pages.push(page);
           page.on("pageerror", error => errors.push(error.message));
           const fixtures = new Map(Object.entries(documents).map(([address, fixture]) => [requestKey(address), fixture]));
           fixtures.set(requestKey(url), html);
           await page.route(/^https?:\/\//u, async route => {
+            if (publicSample) {
+              const request = route.request();
+              const address = new URL(request.url());
+              const sameDocument = address.origin === destination.origin && address.pathname === destination.pathname;
+              const permittedAsset = ["stylesheet", "script", "image", "font"].includes(request.resourceType())
+                && publicSample.assetHosts.includes(address.hostname);
+              // Fresh test profile, GET-only public documents/assets. No login,
+              // forms, telemetry, API POSTs or native/external translator calls.
+              if (address.protocol === "https:" && request.method() === "GET" && (sameDocument || permittedAsset)) return route.continue();
+              return route.abort("blockedbyclient");
+            }
             const requestUrl = route.request().url();
             const fixture = fixtures.get(requestUrl);
             if (fixture === undefined) return route.abort("blockedbyclient");
@@ -105,7 +121,10 @@ export const test = base.extend({
               else resolve(response);
             });
           }), { id: tabId, value });
-          await page.goto(url, { waitUntil: "domcontentloaded" });
+          const navigation = await page.goto(url, { waitUntil: "domcontentloaded" });
+          if (publicSample && (!navigation || navigation.status() !== 200)) {
+            throw new Error(`Public sample unavailable: HTTP ${navigation?.status() ?? "none"}`);
+          }
           await expect.poll(async () => {
             try { return (await message({ type: "nudenyang-ready" }))?.ready; }
             catch { return false; }
@@ -126,7 +145,11 @@ export const test = base.extend({
         },
       };
       await use(controller);
-      if (testInfo.status !== testInfo.expectedStatus) {
+      if (controller.publicCheck) {
+        // Real public HTML is not a redistributable fixture. Never persist raw
+        // text, screenshots, native payloads or traces from these checks.
+        await context.tracing.stop();
+      } else if (testInfo.status !== testInfo.expectedStatus) {
         await testInfo.attach("native-requests", {
           body: JSON.stringify(await worker.evaluate(() => globalThis.__NudeNyangE2E.requests()), null, 2),
           contentType: "application/json",
