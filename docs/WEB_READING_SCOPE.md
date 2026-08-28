@@ -191,7 +191,7 @@ Outlook 연결 후(v5) 실행 결과:
 모두 완료 가능으로 판정됐다. 앱 창 표시 직후 아직 브리지가 준비되지 않은 시점의 연결
 실패는 별도로 구분했으며, 준비 완료 후 같은 명령을 다시 실행해 통과를 확인했다.
 
-## 로컬 빌드 확인
+## 초기 개발 변경의 로컬 빌드 확인
 
 - 구현 커밋: `06fa110` (`codex/web-translation-dom-refactor`).
 - `npm run tauri:build`: 성공. 본체 `0.7.3-beta`의 최신 실행 파일을 생성했다.
@@ -203,6 +203,20 @@ Outlook 연결 후(v5) 실행 결과:
 - 사용 중인 브라우저 확장을 자동 재로드하거나 사용자 대신 확대 동의를 승인하지 않았다.
   새 본체와 개발용 확장을 함께 사용해야 하며, 확대된 안내에 한 번 동의해야 적용된다.
 - 원격 푸시·공개 릴리스·스토어 제출은 하지 않았다.
+
+### Outlook 연결 후 로컬 실행 확인
+
+- 구현 커밋 `041e926`. `npm run tauri:build` 성공 후 프로젝트 바로가기의 대상·작업 폴더·
+  아이콘을 동기화하고, 해당 경로의 기존 프로세스만 종료해 새 실행 파일을 시작했다.
+  실행 경로·제품 버전 `0.7.3-beta`·창 응답 및 파일 SHA-256을 확인했다.
+- `npm run extension:personal`, `npm run extension:chromium`, `npm run extension:firefox`
+  성공. 개발용 확장 `0.7.11`의 개인용 폴더와 ZIP/XPI의 변경된 제품 파일 7개가 원본과
+  일치하고 테스트 fixture는 포함하지 않는 것을 확인했다. 확장 자동 재로드·동의 대리 승인은
+  하지 않았다. 사용자는 확장을 다시 로드하고 Outlook이 추가된 통합 안내에 한 번 동의해야 한다.
+- `node scripts/verify-live-reading-bridge.mjs --run`은 v5 본체 → 실제 Hy-MT2 1.8B에서
+  합성 Gmail 문구 3개 × 2회 및 거절 조건 3개 통과. 로그인 메일 접근·Outlook 실사용
+  검사·디스크 캐시 사용 없이 공통 Native Messaging 경로만 확인했다.
+- 앱/확장 버전 번호는 올리지 않았으며, 푸시·공개 릴리스·스토어 제출은 하지 않았다.
 
 정책 참고: [Chrome 고지 요건](https://developer.chrome.com/docs/webstore/program-policies/disclosure-requirements),
 [Firefox 데이터 전송·동의 요건](https://extensionworkshop.com/documentation/publish/add-on-policies/).
