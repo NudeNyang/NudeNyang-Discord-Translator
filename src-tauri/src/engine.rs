@@ -261,6 +261,9 @@ fn browser_connection_cancelled() -> String {
 pub struct BrowserTranslationResultItem {
     pub id: String,
     pub text: String,
+    // Best-effort source/partial fallback may be displayed, but is not a
+    // completed translation for the extension's replay cache.
+    pub cacheable: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -3091,6 +3094,12 @@ fn run_translation_worker(
                                 .into_iter()
                                 .zip(values)
                                 .map(|(item, text)| BrowserTranslationResultItem {
+                                    cacheable: service.web_result_is_cacheable(
+                                        &item.text,
+                                        &text,
+                                        target,
+                                        allowed_sources.as_ref(),
+                                    ),
                                     id: item.id,
                                     text,
                                 })

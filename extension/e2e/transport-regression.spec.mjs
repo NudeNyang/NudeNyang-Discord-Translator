@@ -5,6 +5,29 @@ const ORIGINAL = PARTS.join("");
 const TRANSLATED = PARTS.map(part => `번역(${part})`).join("");
 const URL = "https://fixture.example.test/long-article/";
 
+test("일반 BR 본문: 품질 실패 원문은 완료 캐시에서 제외하고 수동 재시도는 실패한 노드만 전송", async ({ extension }) => {
+  const lines = ["新しいお知らせを皆様に紹介いたします。", "そのようなお言葉をいただき嬉しく思います。", "もちろん結果には個人差がありますが、その時々の状態を確認しております。"];
+  const p = await extension.open({
+    html: `<main><article><span id="caption">${lines.join("<br><br>")}</span></article></main>`,
+    deferTranslations: true,
+  });
+  await expect.poll(p.sent).toEqual(lines);
+  const items = (await p.requests()).flatMap(request => request.items);
+  const incomplete = items.find(item => item.text === lines[2]);
+  await p.releaseTranslations({ itemOverrides: { [incomplete.id]: { text: lines[2], cacheable: false } } });
+  await expect(p.page.locator("#caption")).toHaveText(`번역(${lines[0]})번역(${lines[1]})${lines[2]}`);
+  // Failed results stay stable while viewing, without a mutation/scroll retry loop.
+  await p.page.evaluate(() => document.querySelector("#caption").setAttribute("data-render", "tick"));
+  await p.page.waitForTimeout(350);
+  expect(await p.sent()).toEqual(lines);
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  await expect(p.page.locator("#caption")).toHaveText(lines.join(""));
+  await p.message({ type: "nudenyang-set-enabled", enabled: true });
+  await expect.poll(p.sent).toEqual([...lines, lines[2]]);
+  await expect(p.page.locator("#caption")).toHaveText(lines.map(line => `번역(${line})`).join(""));
+  await expect(p.page.locator("#caption br")).toHaveCount(4);
+});
+
 function fixture({ control = false } = {}) {
   return `<style>#long { max-height: 80px; overflow: auto; overflow-wrap: anywhere; }</style>
     <main>${control ? "<p id=control>Budget control</p>" : ""}<p id="long">${ORIGINAL}</p></main>

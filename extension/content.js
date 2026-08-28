@@ -802,7 +802,8 @@
     const snapshot = snapshotBlock(block);
     if (snapshot.nodes.some((node, index) => {
       const state = nodeStates.get(node);
-      return !state || state.invalid || state.pending || state.original !== snapshot.originals[index];
+      return !state || state.invalid || state.pending || state.cacheable === false
+        || state.original !== snapshot.originals[index];
     })) return;
     const values = snapshot.nodes.map(node => nodeStates.get(node)?.translated);
     if (!values.length || values.some(value => typeof value !== "string" || !value.trim())) return;
@@ -1027,6 +1028,8 @@
         }
       }
       const results = new Map(response.items.map((item) => [item.id, item.text]));
+      const incompleteIds = new Set(response.items.filter(item => item.cacheable === false).map(item => item.id));
+      for (const item of batch) item.cacheable = !incompleteIds.has(item.id);
       const applications = groupTranslationApplications(batch, results);
       for (const item of applications.missing) releasePending(item);
       pendingApplications.push(...applications.blocks);
@@ -1131,6 +1134,11 @@
     const removed = pruneMessengerTranslations({ restoring: true }) + prunePublicTranslations({ restoring: true });
     const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, false);
     result.removed += removed;
+    // A manual OFF/ON retries only unfinished nodes from their original text.
+    // Keep partial output stable while viewing; never loop on scroll/mutations.
+    for (const node of trackedNodes) {
+      if (nodeStates.get(node)?.cacheable === false) forgetText(node);
+    }
     if (discard) {
       for (const node of trackedNodes) nodeStates.delete(node);
       trackedNodes.clear();

@@ -56,6 +56,7 @@
       original, itemId, epoch, segments, partial,
       pending: partial.size < segments.length,
       translated: null,
+      cacheable: true,
       invalid: false,
     };
   }
@@ -87,6 +88,7 @@
       return false;
     }
     const source = record.segments[item.segmentIndex];
+    record.cacheable = record.cacheable && item.cacheable !== false;
     // Preserve the established display behavior for an unsplit node. At newly
     // introduced transport boundaries, restore source whitespace exactly so a
     // provider trimming a segment cannot join words or discard line breaks.

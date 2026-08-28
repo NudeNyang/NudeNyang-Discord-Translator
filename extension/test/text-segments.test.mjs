@@ -17,6 +17,15 @@ function itemFor(record, segmentIndex, overrides = {}) {
   };
 }
 
+test("하나라도 미완료인 조각이 있으면 표시만 허용하고 전체 노드를 재사용 캐시에서 제외한다", () => {
+  const record = createTextRecord("first second", "quality", 1, 6);
+  assert.equal(acceptTextSegment(record, itemFor(record, 0, { cacheable: false }), "first "), true);
+  assert.equal(acceptTextSegment(record, itemFor(record, 1), "둘째"), true);
+  assert.equal(record.pending, false);
+  assert.equal(record.translated, "first 둘째");
+  assert.equal(record.cacheable, false);
+});
+
 test("한 글자와 한도 안의 텍스트는 원래 문자열 그대로 한 항목에 보존한다", () => {
   for (const original of ["夢", "を", "a", "🚀", " \t원문\r\n", "字".repeat(4000)]) {
     assert.deepEqual(splitTranslationText(original), [original]);

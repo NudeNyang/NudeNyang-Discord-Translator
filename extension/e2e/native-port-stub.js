@@ -74,7 +74,7 @@
     requests: () => structuredClone(requests),
     pending: () => pending.size,
     releaseTranslations({ count = pending.size, keepDeferred = false,
-      omitItemIds = [], emptyItemIds = [], errorCode = "" } = {}) {
+      omitItemIds = [], emptyItemIds = [], itemOverrides = {}, errorCode = "" } = {}) {
       deferred = keepDeferred;
       const ready = [...pending].slice(0, count);
       const omitted = new Set(omitItemIds);
@@ -84,7 +84,7 @@
         const response = errorCode
           ? { type: "error", requestId: entry.response.requestId, code: errorCode, retryable: false }
           : { ...entry.response, items: entry.response.items.filter(item => !omitted.has(item.id))
-            .map(item => empty.has(item.id) ? { ...item, text: "" } : item) };
+            .map(item => empty.has(item.id) ? { ...item, text: "" } : { ...item, ...itemOverrides[item.id] }) };
         entry.resolve(response);
       }
       return ready.length;

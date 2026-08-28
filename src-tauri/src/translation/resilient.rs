@@ -37,7 +37,7 @@ impl ResilientTranslator {
             .as_ref()
             .map_or("local-only", |translator| translator.cache_namespace());
         let cache_namespace = format!(
-            "{}:quality-repair-v11:{fallback_namespace}",
+            "{}:quality-repair-v12:{fallback_namespace}",
             primary.cache_namespace()
         );
         Self {
@@ -359,7 +359,8 @@ pub fn translation_needs_repair(
             // name or clause. Judge the longest contiguous run instead of the total:
             // this repairs embed fragments such as `おきゅーとぱー`, while allowing
             // short preserved names/terms such as `すてら` and `ダンス部`.
-            return remaining_kana >= 5 && max_kana_run(translated_text) >= 5;
+            return (remaining_kana >= 5 && max_kana_run(translated_text) >= 5)
+                || has_kana_suffix_after_hangul(source_text, translated_text);
         }
         if source == Language::English {
             let source_latin = count_latin(source_text);
@@ -453,6 +454,30 @@ fn count_in_ranges(text: &str, ranges: &[(u32, u32)]) -> usize {
                 .any(|(start, end)| (*start..=*end).contains(&value))
         })
         .count()
+}
+
+fn has_kana_suffix_after_hangul(source: &str, translated: &str) -> bool {
+    // A short name followed by a Korean particle (すてら의) is valid. A newly
+    // spliced Korean stem followed by Japanese grammar (그ような) is not.
+    translated.split(|c: char| !c.is_alphabetic()).any(|word| {
+        if source.contains(word) {
+            return false;
+        }
+        let mut hangul = false;
+        let mut suffix = 0;
+        for ch in word.chars() {
+            if hangul && matches!(ch as u32, 0x3041..=0x3096) {
+                suffix += 1;
+                if suffix >= 2 {
+                    return true;
+                }
+            } else {
+                hangul = matches!(ch as u32, 0xac00..=0xd7af);
+                suffix = 0;
+            }
+        }
+        false
+    })
 }
 
 fn count_hangul(text: &str) -> usize {
@@ -762,6 +787,22 @@ mod tests {
         assert!(!translation_needs_repair(
             "第4回すてらダンス部コラボ授業です！",
             "제4회 すてら댄스부 컬래버레이션 수업입니다!",
+            Language::Japanese,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn rejects_kana_suffix_spliced_onto_a_translated_korean_word() {
+        assert!(translation_needs_repair(
+            "そのようなお言葉をいただき、私たちも嬉しく思います。",
+            "그ような 말을 듣고 있어서 저희도 매우 기쁩니다.",
+            Language::Japanese,
+            Language::Korean,
+        ));
+        assert!(!translation_needs_repair(
+            "すてらの新しい授業を紹介します。",
+            "すてら의 새로운 수업을 소개합니다.",
             Language::Japanese,
             Language::Korean,
         ));

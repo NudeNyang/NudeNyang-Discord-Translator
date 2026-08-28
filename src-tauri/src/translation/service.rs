@@ -64,6 +64,59 @@ fn split_visual_lines_preserving_endings(text: &str) -> Vec<(String, String)> {
         .collect()
 }
 
+fn split_failed_web_clauses(text: &str) -> Vec<(String, String)> {
+    if text.contains(MESSAGE_CONTEXT_SEPARATOR.trim()) {
+        // Context groups must first be reconciled back to their original DOM
+        // nodes; splitting across that boundary can mix neighboring paragraphs.
+        return vec![(text.to_string(), String::new())];
+    }
+    // Only a failed single visual line gets this bounded, non-recursive retry.
+    // Do not split tokens (URLs, handles, hashtags, emoji), tiny fragments or
+    // every comma in a long list. Keep punctuation in its original clause.
+    let protected = protect_text(text);
+    let protected_ranges = protected
+        .tokens
+        .iter()
+        .flat_map(|token| {
+            text.match_indices(token)
+                .map(|(start, value)| start..start + value.len())
+        })
+        .collect::<Vec<_>>();
+    let mut parts = Vec::new();
+    let mut start = 0;
+    for (index, ch) in text.char_indices() {
+        if !matches!(
+            ch,
+            '、' | '，' | '；' | '。' | '！' | '？' | ',' | ';' | '.' | '!' | '?'
+        ) {
+            continue;
+        }
+        let end = index + ch.len_utf8();
+        if ch.is_ascii() && !text[end..].starts_with(char::is_whitespace) {
+            continue;
+        }
+        if protected_ranges.iter().any(|range| range.contains(&index)) {
+            continue;
+        }
+        if text[start..end]
+            .chars()
+            .filter(|c| c.is_alphabetic())
+            .count()
+            < 12
+            || text[end..].chars().filter(|c| c.is_alphabetic()).count() < 12
+        {
+            continue;
+        }
+        parts.push((text[start..end].to_string(), String::new()));
+        start = end;
+        if parts.len() == 3 {
+            break;
+        }
+    }
+    parts.push((text[start..].to_string(), String::new()));
+    parts
+}
+
 pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
     let segments = DiscordFormatTemplate::parse(text).translatable_texts();
     let meaningful = segments
@@ -541,7 +594,11 @@ impl TranslationService {
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
     ) -> Option<String> {
-        let lines = split_visual_lines_preserving_endings(text);
+        let mut lines = split_visual_lines_preserving_endings(text);
+        let clause_retry = lines.len() == 1;
+        if clause_retry {
+            lines = split_failed_web_clauses(text);
+        }
         if lines
             .iter()
             .filter(|(line, _)| !line.trim().is_empty())
@@ -561,27 +618,43 @@ impl TranslationService {
             ),
         );
 
-        Some(
-            lines
-                .into_iter()
-                .enumerate()
-                .map(|(index, (line, ending))| {
-                    if line.trim().is_empty() {
-                        return format!("{line}{ending}");
-                    }
-                    if index > 0 {
-                        yield_between_web_inferences();
-                    }
-                    let (translated, _) = self.translate_one_best_effort_with_hint(
-                        &line,
-                        source_hint,
-                        target,
-                        allowed_sources,
-                    );
-                    format!("{translated}{ending}")
-                })
-                .collect(),
-        )
+        let mut output = String::new();
+        let mut previous_translated = false;
+        for (index, (line, ending)) in lines.into_iter().enumerate() {
+            if line.trim().is_empty() {
+                output.push_str(&line);
+                output.push_str(&ending);
+                continue;
+            }
+            if index > 0 {
+                yield_between_web_inferences();
+            }
+            let (translated, succeeded) = self.translate_one_best_effort_with_hint(
+                &line,
+                source_hint,
+                target,
+                allowed_sources,
+            );
+            let changed = succeeded && translated != line;
+            if clause_retry
+                && (previous_translated || changed)
+                && !output.is_empty()
+                && !output.ends_with(char::is_whitespace)
+                && !translated.starts_with(char::is_whitespace)
+                && !matches!(
+                    target,
+                    Language::Japanese | Language::ChineseSimplified | Language::ChineseTraditional
+                )
+            {
+                // Avoid fusing target-language words. Untranslated source
+                // clauses must still rejoin byte-for-byte on total failure.
+                output.push(' ');
+            }
+            output.push_str(&translated);
+            output.push_str(&ending);
+            previous_translated = changed;
+        }
+        Some(output)
     }
 
     pub fn translate_many_for_incoming(
@@ -1264,6 +1337,32 @@ impl TranslationService {
             }
         }
         Ok(hints)
+    }
+
+    pub fn web_result_is_cacheable(
+        &self,
+        original: &str,
+        translated: &str,
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+    ) -> bool {
+        let protected = protect_text(original);
+        let source = detect_language(original).language;
+        // Intentional passthrough and protected identity text are not failures.
+        if !protected.has_translatable_text()
+            || source == Language::Unknown
+            || source == target
+            || allowed_sources.is_some_and(|allowed| !allowed.contains(&source))
+            || translated == CONTEXT_COLLAPSED_PLACEHOLDER
+        {
+            return true;
+        }
+        let masked = protected.mask_preserved_tokens_in(translated);
+        self.translator
+            .translation_is_acceptable(&protected.masked, &masked, source, target)
+            && self
+                .translator
+                .should_cache(&protected.masked, &masked, source, target)
     }
 
     fn translate_many_unchunked(
@@ -4236,6 +4335,164 @@ mod tests {
     }
 
     #[test]
+    fn web_cache_quality_distinguishes_failure_from_protected_or_filtered_passthrough() {
+        let path = cache_path("web-cache-quality");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let service = TranslationService::new(Box::new(PartiallyFailingWebChunkTranslator), cache);
+        let source = "そのようなお言葉をいただき嬉しく思います。";
+        assert!(!service.web_result_is_cacheable(source, source, Language::Korean, None));
+        assert!(!service.web_result_is_cacheable(
+            source,
+            "그ような 말씀에 저희도 기쁩니다.",
+            Language::Korean,
+            None
+        ));
+        assert!(service.web_result_is_cacheable(
+            source,
+            "그런 말씀에 저희도 기쁩니다.",
+            Language::Korean,
+            None
+        ));
+        assert!(service.web_result_is_cacheable(
+            source,
+            source,
+            Language::Korean,
+            Some(&HashSet::from([Language::English]))
+        ));
+        assert!(service.web_result_is_cacheable(
+            "#日本語のタグ",
+            "#日本語のタグ",
+            Language::Korean,
+            None
+        ));
+        assert!(service.web_result_is_cacheable(
+            "これは紹介です #日本語のタグ",
+            "소개입니다 #日本語のタグ",
+            Language::Korean,
+            None
+        ));
+        assert!(service.web_result_is_cacheable(
+            "이미 번역된 문장입니다.",
+            "이미 번역된 문장입니다.",
+            Language::Korean,
+            None
+        ));
+        drop(service);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn failed_web_clause_splitting_is_bounded_and_preserves_protected_tokens() {
+        let url = "https://example.test/very-long-path、another-very-long-path";
+        let source = format!("その時々の状態を確認しながら、詳しくはこちらをご覧ください {url}、一人ひとりに合わせて調整しております。");
+        let parts = super::split_failed_web_clauses(&source);
+        assert!(parts.len() > 1);
+        assert_eq!(
+            parts
+                .iter()
+                .map(|(s, e)| format!("{s}{e}"))
+                .collect::<String>(),
+            source
+        );
+        assert!(parts.iter().any(|(part, _)| part.contains(url)));
+        let repeated = "その時々の状態を確認しながら、".repeat(20);
+        assert_eq!(super::split_failed_web_clauses(&repeated).len(), 4);
+        assert_eq!(super::split_failed_web_clauses("短い、文。").len(), 1);
+        assert_eq!(
+            super::split_failed_web_clauses(&format!(
+                "{repeated}{MESSAGE_CONTEXT_SEPARATOR}{repeated}"
+            ))
+            .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn failed_web_clauses_keep_the_original_exactly_when_every_retry_fails() {
+        let path = cache_path("web-clause-total-failure");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service =
+            TranslationService::new(Box::new(PartiallyFailingWebChunkTranslator), cache);
+        let source = "コンセプトアートの詳細についてご紹介しますが、コンセプトアートの完成までお待ちください。".to_string();
+        let output = service
+            .translate_many_for_web_contextual_filtered(
+                std::slice::from_ref(&source),
+                &[None],
+                "public-prose",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+        assert_eq!(output, [source]);
+        drop(service);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn web_translation_retries_a_failed_unbroken_paragraph_at_clause_boundaries() {
+        struct ClauseTranslator;
+        impl Translator for ClauseTranslator {
+            fn display_name(&self) -> &str {
+                "clause-retry"
+            }
+            fn cache_namespace(&self) -> &str {
+                "clause-retry:v1"
+            }
+            fn isolate_incoming_failures(&self) -> bool {
+                true
+            }
+            fn translate(
+                &mut self,
+                text: &str,
+                _: Language,
+                _: Language,
+            ) -> Result<String, String> {
+                Ok(match text {
+                    "もちろん結果には個人差がありますが、" => {
+                        "물론 결과에는 개인차가 있지만,"
+                    }
+                    "その時々の状態を確認しながら、" => {
+                        "그때그때 상태를 확인하면서,"
+                    }
+                    "一人ひとりに合わせて調整しております。" => {
+                        "한 사람 한 사람에게 맞춰 조정하고 있습니다."
+                    }
+                    _ => text,
+                }
+                .to_string())
+            }
+            fn translation_is_acceptable(
+                &self,
+                a: &str,
+                b: &str,
+                s: Language,
+                t: Language,
+            ) -> bool {
+                !translation_needs_repair(a, b, s, t)
+            }
+            fn should_cache(&self, a: &str, b: &str, s: Language, t: Language) -> bool {
+                self.translation_is_acceptable(a, b, s, t)
+            }
+        }
+        let path = cache_path("web-clause-fallback");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(ClauseTranslator), cache);
+        let source = "もちろん結果には個人差がありますが、その時々の状態を確認しながら、一人ひとりに合わせて調整しております。".to_string();
+        let output = service
+            .translate_many_for_web_contextual_filtered(
+                &[source],
+                &[None],
+                "generic-public-document",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+        assert_eq!(output, ["물론 결과에는 개인차가 있지만, 그때그때 상태를 확인하면서, 한 사람 한 사람에게 맞춰 조정하고 있습니다."]);
+        drop(service);
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn incoming_translation_keeps_whole_text_when_one_paragraph_chunk_fails_quality() {
         let path = cache_path("incoming-whole-text-quality-failure");
         let cache = TranslationCache::open(path.clone(), 32).unwrap();
@@ -4734,6 +4991,60 @@ mod tests {
             !has_terminal_punctuation(&translated),
             "unexpected terminal punctuation: {translated}"
         );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_local_model_completes_br_separated_public_prose() {
+        let path = cache_path("live-public-prose-quality");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(
+            translator.model_is_ready(),
+            "Existing verified local model required; do not download"
+        );
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(Box::new(translator), None)),
+            cache,
+        );
+        let texts = [
+            "そのようなお言葉をいただき、私たちもとても嬉しく思っております✨",
+            "もちろん症状や改善のスピードには個人差がありますが、当院ではその時々のお身体の状態を確認しながら、一人ひとりに合わせて処方を調整しております🌿",
+            "体質改善は焦らず、少しずつ身体の土台を整えていくことが大切です😊",
+        ].map(String::from);
+        let output = service
+            .translate_many_for_web_contextual_filtered(
+                &texts,
+                &[
+                    Some("caption".into()),
+                    Some("caption".into()),
+                    Some("caption".into()),
+                ],
+                "public-prose-fixture",
+                Language::Korean,
+                None,
+            )
+            .expect("translate actual local-model prose");
+        for (source, translated) in texts.iter().zip(&output) {
+            assert!(
+                service.web_result_is_cacheable(source, translated, Language::Korean, None),
+                "incomplete: {translated}"
+            );
+            assert!(
+                !translation_needs_repair(source, translated, Language::Japanese, Language::Korean),
+                "unrepaired: {translated}"
+            );
+            assert!(
+                !translated
+                    .chars()
+                    .any(|c| matches!(c as u32, 0x3041..=0x3096)),
+                "untranslated hiragana: {translated}"
+            );
+            println!("local public prose: {translated}");
+        }
+        service.translator_mut().close();
+        drop(service);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 
