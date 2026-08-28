@@ -68,7 +68,7 @@ async function popup(options = {}) {
           callback({
             type: "status", appConnected: true, modelReady: true,
             translator: "hymt_1_8b", targetLanguage: "ko", resolvedUiLanguage: options.language ?? "en",
-            webSettings: { messengerPolicyVersion: 3, quickToggleShortcut: "F4" },
+            webSettings: { messengerPolicyVersion: 4, quickToggleShortcut: "F4" },
             ...options.nativeStatus,
           });
         } else throw new Error(`Unexpected message: ${message.type}`);

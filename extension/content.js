@@ -159,7 +159,7 @@
   function messengerGate() {
     if (!messengerSite) return "";
     if (!webSettings.enabled) return "web_translation_disabled";
-    if (webSettings.messengerPolicyVersion !== 3) return "messenger_update_required";
+    if (webSettings.messengerPolicyVersion !== 4) return "messenger_update_required";
     if (!messengerConsent) return "messenger_consent_required";
     if (!messengerContext?.root.isConnected) return "messenger_no_conversation";
     return messengerFailure;
@@ -358,7 +358,7 @@
   }
 
   async function inspectCoverage() {
-    if (disposed || !enabled || !publicDom || messengerSite || document.hidden) {
+    if (disposed || !enabled || !publicDom || messengerSite || adapter?.staticUiOnly || document.hidden) {
       return { status: "unavailable", reason: messengerSite ? "private_scope" : "inactive" };
     }
     if (auditPromise) return auditPromise;
@@ -404,7 +404,7 @@
       : {};
     return {
       enabled: source.enabled !== false,
-      messengerPolicyVersion: source.messengerPolicyVersion === 3 ? 3 : 0,
+      messengerPolicyVersion: source.messengerPolicyVersion === 4 ? 4 : 0,
       targetLanguage: typeof source.targetLanguage === "string" ? source.targetLanguage : "display",
       processingMode: ["responsive", "balanced", "economy"].includes(source.processingMode)
         ? source.processingMode
@@ -456,7 +456,7 @@
         const oldSettings = JSON.stringify(webSettings);
         const oldFailure = messengerFailure;
         appStatusAvailable = response?.type === "status";
-        messengerConsent = consent?.granted === true && consent.consentVersion === 3;
+        messengerConsent = consent?.granted === true && consent.consentVersion === 4;
         if (response?.type === "status") {
           applyAppStatus(response);
           messengerFailure = "";
@@ -511,7 +511,7 @@
   }
 
   function visibleEmbed(frameUrl) {
-    if (!adapter || messengerSite || document.hidden) return null;
+    if (!adapter || adapter.staticUiOnly || adapters.adapterForLocation(location)?.staticUiOnly || messengerSite || document.hidden) return null;
     let url;
     try { url = new URL(frameUrl); } catch { return null; }
     if (url.protocol !== "https:" || !EMBED_HOSTS.has(url.hostname) || url.port
@@ -519,7 +519,8 @@
     for (const frame of document.querySelectorAll("iframe[src]")) {
       if (frame.src !== url.href
         || frame.matches("[hidden],[inert],[aria-hidden='true'],[translate='no'],.notranslate,[data-nudenyang-ignore]")
-        || frame.parentElement?.closest(excludedSelector)) continue;
+        || frame.parentElement?.closest(excludedSelector)
+        || frame.parentElement?.closest("[class*='cookie'],[id*='cookie'],[class*='consent'],[id*='consent']")) continue;
       if (!isElementNearViewport(frame, innerHeight, 0)) continue;
       const rect = frame.getBoundingClientRect();
       if (rect.right <= 0 || rect.left >= innerWidth) continue;
@@ -536,7 +537,8 @@
 
   function embeddedContext() {
     return {
-      ok: true, enabled: enabled && Boolean(adapter) && !messengerSite && !disposed,
+      ok: true, enabled: enabled && Boolean(adapter) && !adapter.staticUiOnly
+        && !adapters.adapterForLocation(location)?.staticUiOnly && !messengerSite && !disposed,
       epoch: pageEpoch, translationKey: translationKey(),
       targetLanguage: effectiveTargetLanguage() ?? appTargetLanguage,
     };
@@ -1073,7 +1075,7 @@
       requestId,
       pageId: messengerSite ? messengerPageId
         : `${adapter.id}:${location.origin}${location.pathname}`.slice(0, 240),
-      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 3 } } : {}),
+      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 4 } } : {}),
       targetLanguage: effectiveTargetLanguage(),
       items: batch.map(({ id, blockId: itemBlockId, text }) => ({ id, blockId: itemBlockId, text })),
     });
@@ -1447,7 +1449,7 @@
         // A consent-saved broadcast may race this lookup; read a fresh snapshot.
         if (epoch !== appStatusEpoch) return null;
         const oldKey = translationKey();
-        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 3;
+        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 4;
         appStatusAvailable = app?.type === "status";
         if (app?.type === "status") {
           applyAppStatus(app);
@@ -1568,7 +1570,7 @@
       if (message.consent?.granted !== true) messengerStartRevision += 1;
       changeState(() => {
         const oldKey = translationKey();
-        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 3;
+        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 4;
         messengerFailure = "";
         handleNavigation();
         return refreshPageSettings(oldKey);
@@ -1636,7 +1638,7 @@
     // Keep the private gate closed until they apply instead of scanning with
     // a now-obsolete consent snapshot even for a single microtask.
     if (startupEpoch === appStatusEpoch) {
-      messengerConsent = consent?.granted === true && consent.consentVersion === 3;
+      messengerConsent = consent?.granted === true && consent.consentVersion === 4;
       applyAppStatus(appStatus);
     }
     assignPageContext(pageContext());
@@ -1679,6 +1681,16 @@
           }
         } else if (mutation.type === "attributes") {
           scheduleScan(mutation.target);
+          if (!messengerSite && adapter?.collectReadOnlyUi && mutation.attributeName === "aria-describedby") {
+            // The newly eligible description is a sibling, not inside the
+            // input. Scan metadata in the containing form, never its values.
+            const form = mutation.target.closest("form");
+            if (form) scheduleScan(form);
+            else for (const id of (mutation.target.getAttribute("aria-describedby") ?? "").split(/\s+/u)) {
+              const description = id && document.getElementById(id);
+              if (description) scheduleScan(description);
+            }
+          }
         }
       }
     });

@@ -21,7 +21,7 @@ test("DOM 진단은 보호·비가시성·링크 식별자·허용 본문을 이
     <p contenteditable id="editor">private draft</p><p hidden id="hidden">hidden</p>
     <p><a id="url" href="https://example.org">https://example.org</a></p>
     <form><p id="form">private form</p></form><button id="control">Action</button></main>`);
-  for (const [id, reason] of Object.entries({ body: "eligible", editor: "protected", hidden: "hidden", url: "identity_link", form: "private_scope", control: "excluded_scope" })) {
+  for (const [id, reason] of Object.entries({ body: "eligible", editor: "protected", hidden: "hidden", url: "identity_link", form: "excluded_scope", control: "eligible" })) {
     assert.equal(policy.explain(document.getElementById(id).firstChild).reason, reason, id);
   }
 });
@@ -59,6 +59,25 @@ test("독립 검사는 작업량 제한과 취소를 완료로 위장하지 않�
   const timeLimited = await audit.inspect(document, { ...options, maxDurationMs: 0 });
   assert.equal(timeLimited.status, "limited");
   assert.equal(timeLimited.visited, 0);
+});
+
+test("읽기 UI 구조 생성: 96개 조합의 라벨·설명은 한 번 수집하고 보호 값은 읽지 않는다", t => {
+  const { document, policy } = fixture(t, "");
+  const controls = ['button', 'label', 'legend', 'div role="button"', 'div role="tab"', 'div role="menuitem"'];
+  for (const control of controls) for (const wrapper of ['form', 'nav', 'section', 'div role="dialog"']) {
+    for (const protectedAttribute of ['hidden', 'contenteditable', 'data-sensitive', 'itemprop="email"']) {
+      const close = value => value.split(' ')[0];
+      document.body.innerHTML = `<${wrapper}><${control}><span>Visible action</span><span ${protectedAttribute} id="secret">private sentinel</span></${close(control)}></${close(wrapper)}>`;
+      Object.defineProperty(document.getElementById('secret').firstChild, 'nodeValue', { get() { throw Error('protected text read'); } });
+      const found=[];
+      policy.collectBlocks(document, block => {
+        const allowed=policy.eligibility(block);
+        const walker=document.createTreeWalker(block,4);
+        while(walker.nextNode()) if(allowed(walker.currentNode)) found.push(walker.currentNode.nodeValue);
+      });
+      assert.deepEqual(found,['Visible action'], `${control}/${wrapper}/${protectedAttribute}`);
+    }
+  }
 });
 
 test("자동 생성한 2048개 구조는 본문을 중복·누락 없이 수집하며 보호 텍스트를 제외한다", async t => {

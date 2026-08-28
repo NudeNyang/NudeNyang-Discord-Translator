@@ -6,13 +6,17 @@
     "pre", "code", "kbd", "samp", "[contenteditable]",
     "[hidden]", "[inert]", "[aria-hidden='true']",
     "[translate='no']", ".notranslate", "[data-nudenyang-ignore]",
-    "[class~='price']", "[class^='price-']", "[class*=' price-']",
     "[data-price]", "[itemprop='price']",
-    "[class*='cookie']", "[id*='cookie']", "[class*='consent']", "[id*='consent']",
+    "address", "output", "[data-sensitive]", "[rel~='author']",
+    "[itemprop~='author']", "[itemprop~='creator']", "[itemprop~='email']", "[itemprop~='telephone']",
+    "[itemprop~='identifier']", "[itemprop~='orderNumber']", "[itemprop~='paymentAccountId']",
+    "[itemprop~='streetAddress']", "[itemprop~='postalCode']",
+    "[itemtype$='/Person']", "[itemtype$='/PostalAddress']",
   ];
 
   const COMMON_EXCLUDES = [
     ...PROTECTED_EXCLUDES,
+    "[class~='price']", "[class^='price-']", "[class*=' price-']",
     "button", "form", "label",
     "nav", "header", "footer", "aside",
     "[role='navigation']", "[role='search']", "[role='textbox']",
@@ -34,6 +38,28 @@
     "teams.microsoft.com", "web.whatsapp.com", "web.telegram.org",
     "messenger.com", "www.messenger.com", "outlook.live.com", "outlook.office.com",
   ]);
+
+  const PRIVATE_PATH_SEGMENTS = new Set(["compose", "direct", "dm", "dms", "inbox", "mail", "message", "messages"]);
+
+  function routeSegments(path) {
+    const segments = String(path).split(/[/?&=]+/u).filter(Boolean).map(segment => {
+      try { return decodeURIComponent(segment).toLowerCase(); } catch { return segment.toLowerCase(); }
+    });
+    // A language prefix is routing metadata, not the page's semantic scope.
+    if (/^[a-z]{2}(?:-[a-z]{2})?$/u.test(segments[0] ?? "") && segments.length > 1) segments.shift();
+    return segments;
+  }
+
+  function staticUiLocation(locationLike) {
+    const publicSections = new Set(["help", "docs", "guide", "reference", "news", "articles"]);
+    const restricted = route => {
+      const parts = routeSegments(route);
+      return !publicSections.has(parts[0]) && parts.some(part => UNIVERSAL_BLOCKED_PATH_SEGMENTS.has(part));
+    };
+    const hash = String(locationLike?.hash ?? "");
+    return restricted(locationLike?.pathname)
+      || (/^#!?\//u.test(hash) && restricted(hash.replace(/^#!/u, "").replace(/^#/u, "")));
+  }
 
   const X_TWEET_BLOCKS = [
     "article [data-testid='tweetText']",
@@ -294,6 +320,7 @@
     manualOnly: true,
     collectLayoutText: true,
     collectPublicUi: true,
+    collectReadOnlyUi: true,
     blocks: PUBLIC_DOCUMENT_BLOCKS,
     excludes: [],
   });
@@ -317,7 +344,7 @@
     const protocol = String(locationLike?.protocol ?? "").toLowerCase();
     return (protocol === "http:" || protocol === "https:")
       && !UNIVERSAL_BLOCKED_HOSTS.has(host)
-      && !pathSegments(locationLike).some((segment) => UNIVERSAL_BLOCKED_PATH_SEGMENTS.has(segment));
+      && !pathSegments(locationLike).some((segment) => PRIVATE_PATH_SEGMENTS.has(segment));
   }
 
   function adapterForLocation(locationLike) {
@@ -331,9 +358,11 @@
       const blockedByPrefix = (specific.blockedPaths ?? []).some((prefix) => path.startsWith(prefix));
       const blockedBySensitiveSegment = specific.blockUniversalSensitivePaths
         && pathSegments(locationLike).some((segment) => UNIVERSAL_BLOCKED_PATH_SEGMENTS.has(segment));
-      return blockedByPrefix || blockedBySensitiveSegment ? null : specific;
+      if (blockedByPrefix || pathSegments(locationLike).some(segment => PRIVATE_PATH_SEGMENTS.has(segment))) return null;
+      return { ...specific, collectReadOnlyUi: true, staticUiOnly: blockedBySensitiveSegment || staticUiLocation(locationLike) };
     }
-    return isUniversalLocationAllowed(locationLike, host) ? UNIVERSAL_ADAPTER : null;
+    return isUniversalLocationAllowed(locationLike, host)
+      ? (staticUiLocation(locationLike) ? { ...UNIVERSAL_ADAPTER, staticUiOnly: true } : UNIVERSAL_ADAPTER) : null;
   }
 
   const RESTORABLE_EXCLUDES = new Set(["[hidden]", "[inert]", "[aria-hidden='true']"]);
@@ -346,7 +375,10 @@
   function isPublicNavigationUrl(href, base) {
     try {
       const url = new URL(href, base);
-      return isUniversalLocationAllowed(url, url.hostname.toLowerCase());
+      // An account link can display the user's name, not a static menu label.
+      // Opening that screen's read-only UI does not make identity links public.
+      return isUniversalLocationAllowed(url, url.hostname.toLowerCase())
+        && !pathSegments(url).some(segment => UNIVERSAL_BLOCKED_PATH_SEGMENTS.has(segment));
     } catch {
       return false;
     }

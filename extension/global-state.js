@@ -1,5 +1,5 @@
 (function exposeGlobalTranslationState(root) {
-  const CONSENT_VERSION = 1;
+  const CONSENT_VERSION = 2;
   const ENABLED_KEY = "webTranslationEnabled";
   const CONSENT_KEY = "webTranslationConsentVersion";
 
@@ -87,12 +87,13 @@
     async function readPrivacy() {
       const saved = await storage("get", { ...defaults, messengerConsentVersion: 0 });
       const webGranted = saved?.[CONSENT_KEY] === CONSENT_VERSION;
-      const messengerRecorded = saved?.messengerConsentVersion === 3;
+      const messengerRecorded = saved?.messengerConsentVersion === 4;
       const messengerPermissionGranted = await messengerPrivacy.dataPermissionGranted();
       const messengerGranted = messengerRecorded && messengerPermissionGranted;
       return { ok: true, enabled: !forcedOff && webGranted && saved?.[ENABLED_KEY] === true,
         webGranted, messengerGranted, messengerPermissionGranted,
-        granted: webGranted && messengerGranted, anyGranted: webGranted || messengerRecorded };
+        granted: webGranted && messengerGranted,
+        anyGranted: Number(saved?.[CONSENT_KEY]) > 0 || Number(saved?.messengerConsentVersion) > 0 };
     }
     function privacyState() { return serialize(readPrivacy); }
     function privacyConsent(granted, sender) {
@@ -103,10 +104,10 @@
         try {
           const allowMessenger = granted === true && await messengerPrivacy.dataPermissionGranted();
           // One explicit approval, one storage write. The native protocol still
-          // checks messenger v3 independently; a missing browser permission only
+          // checks private reading v4 independently; a missing browser permission only
           // blocks personal communications, not ordinary webpage translation.
           await storage("set", { [CONSENT_KEY]: granted === true ? CONSENT_VERSION : 0,
-            [ENABLED_KEY]: granted === true, messengerConsentVersion: allowMessenger ? 3 : 0 });
+            [ENABLED_KEY]: granted === true, messengerConsentVersion: allowMessenger ? 4 : 0 });
           forcedOff = granted !== true;
           messengerPrivacy.invalidate?.();
           return await readPrivacy();

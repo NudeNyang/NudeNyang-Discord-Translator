@@ -256,14 +256,16 @@ test("MV3 격리 영역과 실제 브라우저의 DOM 적용·F4 원문 복구",
   expect(requests[0].client.browser).toBe("chrome");
   expect(await p.page.evaluate(() => "__NudeNyangE2E" in globalThis || "NudeNyangSiteAdapters" in globalThis)).toBe(false);
   const sent = await p.sent();
-  for (const protectedText of ["https://example.com/", "do_not_translate()", "Unsent draft", "Click here"]) {
+  for (const protectedText of ["https://example.com/", "do_not_translate()", "Unsent draft"]) {
     expect(sent).not.toContain(protectedText);
   }
+  await expect(p.page.locator("#button")).toHaveText("번역(Click here)");
   await expect(p.page.locator("#address a")).toHaveAttribute("href", "https://example.com/");
   await p.page.locator("#button").click();
   await expect(p.page.locator("#button")).toHaveAttribute("data-clicked", "yes");
   await p.page.keyboard.press("F4");
   await expect(p.page.locator("#intro")).toHaveText("A short important paragraph.");
+  await expect(p.page.locator("#button")).toHaveText("Click here");
   expect((await p.status()).enabled).toBe(false);
   await expect(p.page.locator("#emphasis")).toHaveJSProperty("tagName", "STRONG");
 });

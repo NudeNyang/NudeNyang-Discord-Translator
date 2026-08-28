@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
+import { READING_UI_HTML, READING_UI_EXPECTED, ACCOUNT_UI_HTML, ACCOUNT_UI_EXPECTED } from "./fixtures/reading-policy.mjs";
 import "../site-adapters.js";
 import "../content-helpers.js";
 import "../dom-policy.js";
@@ -26,6 +27,34 @@ function collectPublicTexts(document, adapter) {
   assert.equal(new Set(nodes).size, nodes.length, "each text node must belong to exactly one collected block");
   return nodes.map((node) => node.nodeValue.trim()).sort();
 }
+
+test("읽기 정책: 공개 문서의 경로 단어와 일반 앵커는 계정 화면으로 오인하지 않는다", () => {
+  for (const path of ["/help/settings", "/news/orders", "/guide#settings", "/reference/account"]) {
+    const adapter = adapterForLocation(new URL(`https://example.test${path}`));
+    assert.equal(adapter?.id, "web", path);
+    assert.notEqual(adapter.staticUiOnly, true, path);
+  }
+});
+
+test("읽기 정책: 공통 메뉴·버튼·연결된 설명·쿠키 문구와 가격 설명을 번역한다", () => {
+  const url = "https://example.test/catalogue";
+  const dom = new JSDOM(READING_UI_HTML, { url });
+  try {
+    assert.deepEqual(collectPublicTexts(dom.window.document, adapterForLocation(new URL(url))), [...READING_UI_EXPECTED].sort());
+  } finally { dom.window.close(); }
+});
+
+test("읽기 정책: 계정·주문 화면은 정적 UI만 허용하고 데이터 값은 읽지 않는다", () => {
+  for (const path of ["/settings", "/account", "/checkout", "/dashboard", "/ko/orders", "/app/settings", "/shop/account", "/app#/settings"]) {
+    const url = `https://example.test${path}`;
+    const adapter = adapterForLocation(new URL(url));
+    assert.equal(adapter?.staticUiOnly, true, path);
+    const dom = new JSDOM(ACCOUNT_UI_HTML, { url });
+    try {
+      assert.deepEqual(collectPublicTexts(dom.window.document, adapter), [...ACCOUNT_UI_EXPECTED].sort(), path);
+    } finally { dom.window.close(); }
+  }
+});
 
 test("지원 사이트와 차단 경로를 구분한다", () => {
   assert.equal(adapterForLocation(new URL("https://github.com/NudeNyang/project/issues/1")).id, "github");
@@ -87,11 +116,11 @@ test("서클 리포트도 일반 DLsite의 계정·포인트 수치 보호를 �
   }
 });
 
-test("서클 리포트 경로도 계정·장바구니·로그인·결제 차단을 우회하지 않는다", () => {
+test("서클 리포트 경로도 계정·장바구니·로그인·결제의 정적 UI 경계를 우회하지 않는다", () => {
   const base = "https://www.dlsite.com/home/circle/report/=/report/123";
   assert.equal(adapterForLocation(new URL(base)).id, "dlsite-report");
   for (const suffix of ["/account", "/cart", "/login", "/%61ccount/", "#/payment"]) {
-    assert.equal(adapterForLocation(new URL(base + suffix)), null, suffix);
+    assert.equal(adapterForLocation(new URL(base + suffix)).staticUiOnly, true, suffix);
   }
 });
 
@@ -129,12 +158,12 @@ test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역�
     assert.ok(dlsite.exclusionBypassBlocks.includes(publicNavigationLink));
   }
   assert.equal(
-    adapterForLocation(new URL("https://www.dlsite.com/maniax/mypage")),
-    null,
+    adapterForLocation(new URL("https://www.dlsite.com/maniax/mypage")).staticUiOnly,
+    true,
   );
   assert.equal(
-    adapterForLocation(new URL("https://www.dlsite.com/maniax/cart")),
-    null,
+    adapterForLocation(new URL("https://www.dlsite.com/maniax/cart")).staticUiOnly,
+    true,
   );
 });
 
@@ -273,9 +302,10 @@ test("Takara Tomy의 공개 검색 폼 예외는 입력값·임의 폼·보호 �
       assert.ok(element.closest(exclusionSelector(adapter)), id);
       assert.equal(element.closest(protectedExclusionSelector(adapter)), null, id);
     }
-    for (const id of ["keyword", "selection", "selected-value", "hidden-text", "editor-text", "price-text"]) {
+    for (const id of ["keyword", "selection", "selected-value", "hidden-text", "editor-text"]) {
       assert.ok(document.getElementById(id).closest(protectedExclusionSelector(adapter)), id);
     }
+    assert.equal(createPublicDomPolicy(document, adapter).allowsText(document.getElementById("price-text").firstChild), false);
   } finally {
     dom.window.close();
   }
@@ -327,7 +357,7 @@ test("Takara Tomy 공용 검색 탭은 탭 그룹 안의 탭 버튼만 공개 �
       assert.ok(element.matches(adapter.blocks.join(",")));
       assert.equal(element.querySelector("small").closest(protectedExclusionSelector(adapter)), null);
     }
-    assert.equal(adapterForLocation(new URL("https://www.takaratomy.co.jp/account/")), null);
+    assert.equal(adapterForLocation(new URL("https://www.takaratomy.co.jp/account/")).staticUiOnly, true);
     assert.equal(adapterForLocation(new URL("https://example.org/")).publicUiBlocks, undefined);
   } finally {
     dom.window.close();
@@ -341,11 +371,11 @@ test("Takara Tomy의 민감 경로가 범용 어댑터로 우회되지 않는다
     "https://dm.takaratomy.co.jp/card/#/payment",
     "https://dm.takaratomy.co.jp/card/LOGIN",
     "https://dm.takaratomy.co.jp/card/%6Cogin",
-    "https://dm.takaratomy.co.jp/messages/123",
     "https://dm.takaratomy.co.jp/register/",
   ]) {
-    assert.equal(adapterForLocation(new URL(url)), null, url);
+    assert.equal(adapterForLocation(new URL(url)).staticUiOnly, true, url);
   }
+  assert.equal(adapterForLocation(new URL("https://dm.takaratomy.co.jp/messages/123")), null);
   for (const url of [
     "https://dm.takaratomy.co.jp/card/?keyword=account",
     "https://www.takaratomy.co.jp/product/accounting/",
@@ -376,7 +406,7 @@ test("ShoPro 공개 애니메이션 어댑터는 호스트·경로를 제한하�
     "https://www.shopro.co.jp/anime/account/", "https://www.shopro.co.jp/anime/duelmasters_lost/login/",
     "https://www.shopro.co.jp/anime/duelmasters_lost/%6Cogin/",
     "https://www.shopro.co.jp/anime/duelmasters_lost/#/payment",
-  ]) assert.equal(adapterForLocation(new URL(url)), null, url);
+  ]) assert.equal(adapterForLocation(new URL(url)).staticUiOnly, true, url);
 });
 
 test("ShoPro는 실제 헤더 메뉴 목록 링크만 허용하고 로고·SNS·다른 메뉴를 제외한다", () => {
@@ -457,19 +487,18 @@ test("범용 어댑터는 일반 HTTP 문서를 지원하고 브라우저 내부
   assert.equal(adapterForLocation(new URL("file:///C:/private/document.html")), null);
 });
 
-test("범용 어댑터는 민감한 계정·결제·메시지 경로를 차단한다", () => {
+test("범용 어댑터는 계정·결제를 정적 UI로 제한하고 미분류 메시지는 차단한다", () => {
   for (const url of [
     "https://example.com/login",
     "https://example.com/account/settings",
     "https://example.com/cart",
     "https://example.com/checkout/payment",
     "https://example.com/#/checkout",
-    "https://example.com/messages/123",
-    "https://example.com/direct/t/123",
     "https://example.com/admin/dashboard",
   ]) {
-    assert.equal(adapterForLocation(new URL(url)), null, url);
+    assert.equal(adapterForLocation(new URL(url)).staticUiOnly, true, url);
   }
+  for (const path of ["messages/123", "direct/t/123"]) assert.equal(adapterForLocation(new URL(`https://example.com/${path}`)), null);
   assert.equal(adapterForLocation(new URL("https://discord.com/channels/123/456")), null);
   assert.equal(adapterForLocation(new URL("https://example.com/articles/orders-of-magnitude")).id, "web");
 });
@@ -706,11 +735,14 @@ test("레이아웃 보완 수집은 숨김·입력·편집기·명시적 번역 
       const selector = protectedExclusionSelector(adapter);
       for (const id of [
         "input", "textarea", "textbox", "hidden", "inert", "aria-hidden", "editor",
-        "translate-no", "notranslate", "ignored", "price", "cookie", "code",
+        "translate-no", "notranslate", "ignored", "code",
       ]) {
         assert.ok(dom.window.document.getElementById(id).closest(selector), `${url}: ${id}`);
       }
       assert.equal(dom.window.document.getElementById("public").closest(selector), null, url);
+      const policy = createPublicDomPolicy(dom.window.document, adapter);
+      assert.equal(policy.allowsText(dom.window.document.getElementById("price").firstChild), false);
+      assert.equal(policy.allowsText(dom.window.document.getElementById("cookie").firstChild), true);
     }
   } finally {
     dom.window.close();

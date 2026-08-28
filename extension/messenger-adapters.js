@@ -143,6 +143,15 @@
       ],
     },
     {
+      id: "gmail", label: "Gmail",
+      hosts: ["mail.google.com"],
+      route: path => /^\/mail(?:\/u\/\d+)?\/?$/u.test(path),
+      roots: ['[role="main"]'],
+      blocks: ['.ha > h2.hP', '[data-message-id] .ii > .a3s'],
+      reading: { roots: ['[role="main"]'], title: '.ha > h2.hP', body: '[data-message-id] .ii > .a3s' },
+      excludes: ['[email]', '[data-hovercard-id]', '.gE', '.aHl', '[role="grid"]', 'address', '[itemprop~="author"]'],
+    },
+    {
       id: "google-messages", label: "Google Messages",
       hosts: ["messages.google.com"],
       route: (path) => /^\/web(?:\/u\/\d+)?(?:\/conversations(?:\/[A-Za-z0-9_-]+)?)?\/?$/.test(path),
@@ -174,8 +183,15 @@
   }
 
   function serviceForUrl(url) {
-    if (!url || BLOCKED_ROUTE_SEGMENT.test(`${url.pathname}${url.hash}`)) return null;
-    return SERVICES.find((service) => service.hosts.includes(url.hostname) && service.route(url.pathname)) ?? null;
+    if (!url) return null;
+    const service = SERVICES.find(item => item.hosts.includes(url.hostname) && item.route(url.pathname));
+    if (service?.reading) {
+      // Mail search can open a single result in the reading pane. The DOM
+      // contract still requires a subject and a visible body, never list text.
+      return /^#(?:drafts|settings|contacts)(?:\/|$)/iu.test(url.hash)
+        || url.searchParams.has("compose") ? null : service;
+    }
+    return BLOCKED_ROUTE_SEGMENT.test(`${url.pathname}${url.hash}`) ? null : service ?? null;
   }
 
   function siteForLocation(location) {
@@ -195,9 +211,10 @@
 
   function canHostConversation(location, serviceId) {
     const url = parsedLocation(location);
-    if (!url || BLOCKED_ROUTE_SEGMENT.test(`${url.pathname}${url.hash}`)) return false;
+    if (!url) return false;
     const service = serviceForUrl(url);
     if (service) return service.id === serviceId;
+    if (BLOCKED_ROUTE_SEGMENT.test(`${url.pathname}${url.hash}`)) return false;
     // X may host a private drawer on a public profile or timeline, but never on
     // an unsupported private route or an authentication/settings/search page.
     return serviceId === "x" && SERVICES[0].hosts.includes(url.hostname)
@@ -329,6 +346,7 @@
       return channelNameTextAllowed(element, element, context);
     }
     return Boolean(context?.root && element?.nodeType === 1 && element !== context.root
+      && (!context.readingBlocks || context.readingBlocks.has(element))
       && context.root.isConnected && context.root.contains(element)
       && element.matches(context.blocks.join(","))
       && !excludedInsideRoot(element, context)
@@ -369,6 +387,7 @@
     const url = parsedLocation(location);
     if (!url) return null;
     let service = serviceForUrl(url);
+    if (service?.reading) return readingDocumentContext(document, url, service);
     let scopes = [document];
     if (!service) {
       // A visible X DM drawer is private even while the main page is a public
@@ -438,11 +457,34 @@
     return xContext;
   }
 
+  // A mail provider supplies only its verified reading-pane boundaries. This
+  // contract is independent of domains, wording, and the mail's HTML layout.
+  // Resolve using metadata only; consent is checked by the caller before text.
+  function readingDocumentContext(document, location, service) {
+    const { reading } = service;
+    const roots = [...document.querySelectorAll(reading.roots.join(","))]
+      .filter(element => isVisibleElement(element) && !element.closest('[contenteditable],form,[role="textbox"],[role="search"]'));
+    if (roots.length !== 1) return null;
+    const root = roots[0];
+    const context = { id: service.id, label: service.label, root,
+      blocks: [reading.title, reading.body], excludes: service.excludes, protectedExcludes: service.excludes,
+      routeKey: `${service.id}:${location.pathname}${location.hash}`, identityNodes: [] };
+    const allowed = element => isVisibleElement(element) && !excludedInsideRoot(element, context);
+    const bodies = [...root.querySelectorAll(reading.body)].filter(allowed);
+    const titles = [...root.querySelectorAll(reading.title)]
+      .filter(element => allowed(element) && !bodies.some(body => body.contains(element)));
+    if (!bodies.length || titles.length !== 1) return null;
+    context.readingBlocks = new Set([titles[0], ...bodies]);
+    context.identityNodes = [root, titles[0]];
+    return context;
+  }
+
   globalThis.NudeNyangMessengerAdapters = Object.freeze({
     siteForLocation,
     privateSiteForLocation,
     canHostConversation,
     contextForDocument,
+    readingDocumentContext,
     isVisibleElement,
     isEligibleMessageBlock,
     selectMessageBlocks,

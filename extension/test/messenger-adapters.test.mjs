@@ -4,6 +4,7 @@ import { JSDOM } from "jsdom";
 import "../messenger-adapters.js";
 import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
 import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
+import { MAIL_DOCUMENT, MAIL_URL, GENERIC_MAIL, GENERIC_READING_SCOPE } from "./fixtures/mail-reading.mjs";
 
 const {
   siteForLocation,
@@ -14,6 +15,53 @@ const {
   isVisibleElement,
   selectChannelNameBlocks,
 } = globalThis.NudeNyangMessengerAdapters;
+
+test("메일 읽기: 도메인 없는 문서 계약도 제목·본문만 선택하고 모호한 읽기 창은 거절한다", () => {
+  const dom = new JSDOM(GENERIC_MAIL, { url: "https://example.test/read/one" });
+  try {
+    const { document, location } = dom.window;
+    const create = () => globalThis.NudeNyangMessengerAdapters.readingDocumentContext(document, location,
+      { id: "test-mail", label: "Test mail", excludes: ["[contenteditable]", "[hidden]"], reading: GENERIC_READING_SCOPE });
+    const context = create();
+    assert.ok(context);
+    assert.deepEqual(selectMessageBlocks(context).map(el => el.id), ["mail-subject", "mail-body"]);
+    document.body.append(document.querySelector('[role="main"]').cloneNode(true));
+    assert.equal(create(), null);
+  } finally { dom.window.close(); }
+});
+
+test("메일 읽기: Gmail 메타데이터를 문서 계약에 연결하고 목록·초안은 공개 번역으로 우회하지 않는다", () => {
+  const dom = new JSDOM(MAIL_DOCUMENT, { url: MAIL_URL });
+  try {
+    const { document, location } = dom.window;
+    const context = contextForDocument(location, document);
+    assert.equal(context?.id, "gmail");
+    assert.deepEqual(selectMessageBlocks(context).map(el => el.id), ["mail-subject", "mail-body"]);
+    document.getElementById("mail-body").remove();
+    assert.equal(contextForDocument(location, document), null);
+    for (const hash of ["#inbox", "#drafts/test-one", "#settings/general"]) {
+      assert.equal(privateSiteForLocation(`https://mail.google.com/mail/u/0/${hash}`)?.id, "gmail");
+    }
+  } finally { dom.window.close(); }
+});
+
+test("메일 읽기: 문서 경계 탐색은 본문을 읽지 않으며 숨김·작성창·초안 경로를 거절한다", () => {
+  const dom = new JSDOM(MAIL_DOCUMENT, { url: MAIL_URL });
+  try {
+    const { document, location, Node } = dom.window;
+    Object.defineProperty(Node.prototype, "textContent", { configurable: true, get() { throw Error("unexpected mail read"); } });
+    assert.equal(contextForDocument(location, document)?.id, "gmail");
+    for (const [attribute, value] of [["hidden", ""], ["contenteditable", "true"], ["role", "textbox"]]) {
+      const body = document.getElementById("mail-body");
+      body.setAttribute(attribute, value);
+      assert.equal(contextForDocument(location, document), null, attribute);
+      body.removeAttribute(attribute);
+    }
+    for (const hash of ["#drafts/example", "#settings/general"]) {
+      assert.equal(contextForDocument(new URL(`https://mail.google.com/mail/u/0/${hash}`), document), null);
+    }
+  } finally { dom.window.close(); }
+});
 
 test("Discord 채널명 탐색은 텍스트를 읽지 않고 정확한 채널 링크와 현재 제목만 선택한다", () => {
   const dom = new JSDOM(DISCORD_WEB, { url: DISCORD_WEB_URL, pretendToBeVisual: true });

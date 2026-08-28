@@ -49,7 +49,7 @@ function page(options = {}) {
     if (message.type === "nudenyang-native-request") {
       return options.nativeStatus?.() ?? {
         type: "status", uiLanguage: "auto", resolvedUiLanguage: options.language ?? "en",
-        webSettings: { messengerPolicyVersion: 3 },
+        webSettings: { messengerPolicyVersion: 4 },
       };
     }
     throw new Error(`Unexpected message: ${message.type}`);

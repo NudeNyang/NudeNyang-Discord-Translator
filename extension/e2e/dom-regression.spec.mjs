@@ -1,4 +1,42 @@
 import { test, expect } from "./harness.mjs";
+import { READING_UI_HTML, READING_UI_EXPECTED, ACCOUNT_UI_HTML, ACCOUNT_UI_EXPECTED } from "../test/fixtures/reading-policy.mjs";
+
+test("읽기 정책: 공통 UI 번역은 입력값·동작·원문 복원과 독립 진단을 보존한다", async ({ extension }) => {
+  const p = await extension.open({ url: "https://fixture.example.test/help/settings", html: READING_UI_HTML });
+  await expect.poll(async () => (await p.sent()).sort()).toEqual([...READING_UI_EXPECTED].sort());
+  await expect(p.page.locator("#query")).toHaveValue("private-input-sentinel");
+  await expect(p.page.locator("#amount")).toHaveText("1200 JPY");
+  await expect(p.page.locator("#tab")).toHaveAttribute("aria-selected", "true");
+  await expect(p.page.locator("#account-link")).toHaveAttribute("href", "/account");
+  await p.page.evaluate(() => { document.querySelector("#search").addEventListener("click", () => { document.querySelector("#search").dataset.clicked = "yes"; }); });
+  await p.page.locator("#search").click();
+  await expect(p.page.locator("#search")).toHaveAttribute("data-clicked", "yes");
+  const report = await p.message({ type: "nudenyang-audit" });
+  expect(report.status).toBe("complete");
+  expect(report.counts.undiscovered ?? 0).toBe(0);
+  expect(JSON.stringify(report)).not.toMatch(/private-|example/);
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  await expect(p.page.locator("#search")).toHaveText("Search catalogue now");
+  await expect(p.page.locator("#cookie-help")).toHaveText("Choose which cookies to allow");
+});
+
+test("읽기 정책: 계정 화면의 정적 안내만 전송하고 독립 본문 진단은 금지한다", async ({ extension }) => {
+  const p = await extension.open({ url: "https://fixture.example.test/account", html: ACCOUNT_UI_HTML });
+  await expect.poll(async () => (await p.sent()).sort()).toEqual([...ACCOUNT_UI_EXPECTED].sort());
+  expect((await p.message({ type: "nudenyang-audit" })).status).toBe("unavailable");
+  await expect(p.page.locator("#password")).toHaveValue("private-password-sentinel");
+  await expect(p.page.locator("#unclassified")).toHaveText("private-unclassified-sentinel");
+});
+
+test("읽기 정책: 나중에 연결된 입력 설명도 입력값을 읽지 않고 번역한다", async ({ extension }) => {
+  const p = await extension.open({ url: "https://fixture.example.test/settings", html: `<form>
+    <label for="field">Password</label><input id="field" type="password" value="private-value">
+    <p id="help"><span id="nested">Use a longer password.</span></p></form>` });
+  await expect.poll(p.sent).toEqual(["Password"]);
+  await p.page.locator("#field").evaluate(element => element.setAttribute("aria-describedby", "help"));
+  await expect(p.page.locator("#nested")).toHaveText("번역(Use a longer password.)");
+  await expect(p.page.locator("#field")).toHaveValue("private-value");
+});
 import {
   CSS_REVEAL_HTML, FRAGMENTED_TEXT_HTML, LONG_TEXT, PUBLIC_DOCUMENT_URL,
   PUBLIC_NODE_CHANGES, REUSED_TEXT_HTML, SHORT_TEXT_HTML, VIRTUAL_LIST_HTML,

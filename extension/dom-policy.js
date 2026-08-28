@@ -5,6 +5,10 @@
   const ARTICLE = "article,[role='article']";
   const PROSE = "p,h1,h2,h3,h4,h5,h6,li,blockquote,figcaption,dt,dd";
   const PRIVATE_UI = "form,[role='form'],[role='log'],[rel~='author'],[itemprop~='author'],[itemprop~='creator']";
+  const PRICE_CONTAINER = "[class~='price'],[class^='price-'],[class*=' price-']";
+  const UI_LABEL = "button,label,legend,[role='button'],[role='tab'],[role='menuitem']";
+  const STATIC_HEADING = "h1,h2,h3,h4,h5,h6,dt,th";
+  const UI_CANDIDATE = `${UI_LABEL},${STATIC_HEADING},[id],[role='note'],[itemprop~='name'],[itemprop~='orderStatus'],${PRICE_CONTAINER} > *`;
 
   function hasTranslatableText(text) {
     // A one-character word is valid prose; a standalone count, symbol or emoji
@@ -49,6 +53,39 @@
       return !form || Boolean(adapter.publicForms?.some(selector => form.matches(selector)));
     };
 
+    function readOnlyUiScope(element) {
+      if (!adapter.collectReadOnlyUi || !element || element.closest("[role='log']")) return null;
+      const label = element.closest(UI_LABEL);
+      if (label && !label.querySelector(ARTICLE)) return label;
+      for (let description = element.closest("[id]"); description; description = description.parentElement?.closest("[id]")) {
+        // Query the reference, not all fields' values. Re-evaluate on dispatch
+        // and replay so a removed description relationship takes effect at once.
+        const id = description.id.replace(/[^\w-]/gu, character => `\\${character.codePointAt(0).toString(16)} `);
+        if (id && [...document.querySelectorAll(`input[aria-describedby~="${id}"],select[aria-describedby~="${id}"],textarea[aria-describedby~="${id}"]`)]
+          .some(control => control.closest("form") === description.closest("form"))) return description;
+      }
+      if (adapter.staticUiOnly) {
+        const heading = element.closest(STATIC_HEADING);
+        if (heading) return heading;
+        const product = element.closest("[itemprop~='name']");
+        if (product?.closest("[itemtype$='/Product']")) return product;
+        return element.closest("[itemprop~='orderStatus']");
+      }
+      const price = element.closest(PRICE_CONTAINER);
+      if (price && price !== element) {
+        let child = element;
+        while (child.parentElement !== price) child = child.parentElement;
+        return child;
+      }
+      return null;
+    }
+
+    function hardProtected(element) {
+      if (element.closest(active.protected)) return true;
+      // A price leaf is a value; a container can also have separately marked copy.
+      return Boolean(element.closest(PRICE_CONTAINER)?.childElementCount === 0);
+    }
+
     function navigationLink(element) {
       if (!adapter.collectPublicUi) return null;
       const anchor = element?.closest("a[href]");
@@ -74,13 +111,15 @@
     // A navigation landmark is not itself private. Only its public link labels
     // are eligible; arbitrary account values and unclassified dialogs stay out.
     // A semantic article remains prose when a viewer wraps it in a modal or a
-    // clickable row. Leaf action buttons are still controls, not article text.
+    // clickable row. Leaf action labels have their own owner.
     function genericScope(element) {
-      return navigationLink(element) || sectionHeading(element) || articleFor(element);
+      return readOnlyUiScope(element) || navigationLink(element) || sectionHeading(element) || articleFor(element);
     }
 
     function genericExcludes(element, policy) {
-      if (!genericScope(element) || element.closest(PRIVATE_UI)) return true;
+      const ui = readOnlyUiScope(element);
+      if (!genericScope(element) || (!ui && element.closest(PRIVATE_UI))) return true;
+      if (adapter.staticUiOnly && !ui && !navigationLink(element)) return true;
       const link = navigationLink(element);
       const article = articleFor(element);
       const prose = element.closest(PROSE);
@@ -88,6 +127,7 @@
       for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
         if (ancestor.matches(policy.protected)) return true;
         if (!ancestor.matches(policy.excluded)) continue;
+        if (ui && ancestor.contains(ui) && ancestor.matches(`${UI_LABEL},form,[role='form'],${NAVIGATION},[role='dialog'],[aria-modal='true'],${PRICE_CONTAINER}`)) continue;
         if (link && ancestor.matches(NAVIGATION) && ancestor.contains(link)) continue;
         if (heading && ancestor.matches("header") && ancestor.contains(heading)) continue;
         if (article && ancestor.matches("[role='dialog'],[aria-modal='true']") && ancestor.contains(article)) continue;
@@ -100,7 +140,8 @@
 
     function excludesBlock(block, { restoring = false } = {}) {
       const policy = restoring ? restore : active;
-      if (!block || block.closest(policy.protected)) return true;
+      if (!block || block.closest(policy.protected) || (!restoring && hardProtected(block))) return true;
+      if (adapter.staticUiOnly && !readOnlyUiScope(block) && !navigationLink(block)) return true;
       if (genericScope(block)) return genericExcludes(block, policy);
       if (publicUi(block)) return !publicForm(block);
       return !isExplicitExclusionBypassBlock(block, adapter) && Boolean(block.closest(policy.excluded));
@@ -109,6 +150,8 @@
     function blockFor(node, { restoring = false } = {}) {
       const element = elementFor(node);
       if (!element || !blockSelector) return null;
+      const ui = readOnlyUiScope(element);
+      if (ui && !excludesBlock(ui, { restoring })) return ui;
       const link = navigationLink(element);
       if (link && !excludesBlock(link, { restoring })) return link;
       // A matched heading inside an allowed navigation link is not necessarily
@@ -146,7 +189,10 @@
       return node => {
         const parent = node.parentElement;
         if (!node.isConnected || !parent || !block.contains(node) || parent.closest(policy.protected)
+          || (!restoring && hardProtected(parent))
           || (!restoring && !textIsVisible(parent, visibility))) return false;
+        // Do not send unmarked numeric price fragments from mixed price wrappers.
+        if (parent.closest(PRICE_CONTAINER) && /\p{N}/u.test(node.nodeValue ?? "")) return false;
         // Every text node has exactly one owner, including nested semantic
         // paragraphs and layout-only prose around them.
         if (blockFor(node, { restoring }) !== block) return false;
@@ -183,9 +229,9 @@
     function auditBoundary(element, { visibility = new WeakMap() } = {}) {
       if (element.matches("iframe,canvas,svg")) return `unsupported_${element.localName === "iframe" ? "frame" : "drawing"}`;
       if (element.matches("[hidden],[inert],[aria-hidden='true']")) return "hidden";
-      if (element.matches(active.protected)) return "protected";
+      if (element.matches(active.protected) || hardProtected(element)) return "protected";
       if (element.matches("[role='log'],[rel~='author'],[itemprop~='author'],[itemprop~='creator']")) return "private_scope";
-      if (element.matches("[role='form']") || (element.matches("form") && !publicForm(element))) return "private_scope";
+      if (!adapter.collectReadOnlyUi && (element.matches("[role='form']") || (element.matches("form") && !publicForm(element)))) return "private_scope";
       if (!textIsVisible(element, visibility)) return "hidden";
       return "";
     }
@@ -212,6 +258,12 @@
         visit(block);
       };
       if (scanRoot.nodeType === Node.ELEMENT_NODE) add(blockFor(scanRoot));
+      if (adapter.collectReadOnlyUi) {
+        for (const element of scanRoot.querySelectorAll(UI_CANDIDATE)) {
+          const scope = readOnlyUiScope(element);
+          if (scope) add(scope);
+        }
+      }
       for (const block of scanRoot.querySelectorAll(blockSelector)) add(block);
       if (adapter.collectPublicUi) {
         for (const anchor of scanRoot.querySelectorAll("a[href]")) {
@@ -235,7 +287,7 @@
           while (walker.nextNode()) add(blockFor(walker.currentNode));
         }
       }
-      if (adapter.collectLayoutText) {
+      if (adapter.collectLayoutText && !adapter.staticUiOnly) {
         const element = scanRoot.nodeType === Node.DOCUMENT_NODE ? document.body : scanRoot;
         if (element && !element.closest(active.excluded) && !element.closest(blockSelector)) {
           // Never read text values in a pruned editor/private/protected subtree.

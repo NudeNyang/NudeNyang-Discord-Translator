@@ -247,7 +247,7 @@ pub fn browser_clients_status() -> Vec<BrowserClientInfo> {
 fn web_settings_value(config: &crate::config::AppConfig) -> Value {
     json!({
         "enabled": config.web_translation_enabled,
-        "messengerPolicyVersion": 3,
+        "messengerPolicyVersion": 4,
         "targetLanguage": config.web_target_language,
         "processingMode": config.web_processing_mode,
         "externalPageCharLimit": config.web_external_page_char_limit,
@@ -967,7 +967,7 @@ mod tests {
     fn web_settings_expose_shared_policy_capability_without_messenger_switch() {
         let config = crate::config::AppConfig::default();
         let settings = super::web_settings_value(&config);
-        assert_eq!(settings["messengerPolicyVersion"], 3);
+        assert_eq!(settings["messengerPolicyVersion"], 4);
         assert_eq!(settings["enabled"], false);
         assert!(settings.get("messengerEnabled").is_none());
     }

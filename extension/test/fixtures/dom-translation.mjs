@@ -26,8 +26,8 @@ export const PUBLIC_SURFACES_HTML = `<main><p id="control">Visible control text<
     <ul><div role="button"><li><a id="handle" role="link" href="/alice_42/">alice_42</a>
       <div><h1 id="caption" dir="auto">A public post caption<br>Another caption line</h1></div></li></div></ul>
     <div id="post-layout"><span>More public details</span></div>
-    <form><label id="private-label">Secret reply draft</label><textarea>Secret input</textarea></form>
-    <button id="post-action">Secret action</button><div role="button" id="post-control">Secret control</div>
+    <form><label id="reply-label">Reply message</label><textarea>Secret input</textarea></form>
+    <button id="post-action">Send reply</button><div role="button" id="post-control">Reply options</div>
   </article></div>
   <nav><a id="account-link" href="/account/summary">Secret account name</a>
     <a id="private-host-link" href="https://mail.google.com/">Secret mailbox name</a>
@@ -44,6 +44,7 @@ export const PUBLIC_SURFACE_COPY = [
   ["category", "Shopping categories"], ["video-menu", "Latest videos"],
   ["sidebar-link", "Science and nature"], ["menu-link", "Travel guides"],
   ["footer-link", "Help and support"], ["post-layout", "More public details"],
+  ["reply-label", "Reply message"], ["post-action", "Send reply"], ["post-control", "Reply options"],
 ];
 
 export const SHORT_TEXT_HTML = `<main><p><span id="word">夢</span>

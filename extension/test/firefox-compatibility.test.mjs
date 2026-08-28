@@ -47,8 +47,10 @@ test("Firefox의 개인 대화 데이터 권한은 필수가 아닌 별도 동�
   assert.ok(manifest.background.scripts.indexOf("messenger-privacy.js") < manifest.background.scripts.indexOf("background.js"));
 });
 
-test("브라우저 심사 고지는 실제 탭 유지 동작과 주소 처리 범위를 설명한다", () => {
-  assert.match(privacyPolicy, /탭을 닫을 때까지/);
+test("브라우저 심사 고지는 전체 탭 상태·메일 범위와 주소 처리를 설명한다", () => {
+  assert.match(privacyPolicy, /모든 탭과 새 탭/);
+  assert.match(privacyPolicy, /Gmail/);
+  assert.match(privacyPolicy, /이전 웹 v1 및 메신저 v1\/v2\/v3 동의는 자동 승격하지 않습니다/);
   assert.match(privacyPolicy, /쿼리 문자열과 해시/);
   assert.doesNotMatch(privacyPolicy, /새 페이지를 열거나 새로 고치면 다시 꺼진 상태로 시작합니다/);
   assert.doesNotMatch(privacyPolicy, /it resets to off on each page load/i);

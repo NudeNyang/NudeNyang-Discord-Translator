@@ -62,7 +62,7 @@ function page(t, html, options = {}) {
   let releaseTranslation;
   const appStatus = {
     type: "status", translator: options.translator ?? "hymt_1_8b", targetLanguage: "KO", resolvedUiLanguage: "ko",
-    webSettings: { enabled: true, messengerPolicyVersion: 3, processingMode: "responsive", ...options.settings },
+    webSettings: { enabled: true, messengerPolicyVersion: 4, processingMode: "responsive", ...options.settings },
   };
   w.console.info = () => {};
   if (options.deferApplications) {
@@ -118,7 +118,7 @@ function page(t, html, options = {}) {
           savedStates.push(testGlobalEnabled);
           callback({ enabled: testGlobalEnabled });
         } else if (message.type === "nudenyang-messenger-consent-get") {
-          callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? (options.consentVersion ?? 3) : 0 });
+          callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? (options.consentVersion ?? 4) : 0 });
         } else if (message.type === "nudenyang-native-request") {
           if (message.request.type === "status") {
             if (options.deferStatus) releaseStatus = () => callback(appStatus);
@@ -172,7 +172,7 @@ const PRIVATE_CHAT = `<nav><span>Private contact list</span></nav>
       <time>Private timestamp</time><a href="https://example.com/">https://example.com/</a>
     </div></li></ol><div role="textbox" contenteditable="true">Unsent private draft</div>`;
 const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", consent: true,
-  settings: { messengerPolicyVersion: 3 } };
+  settings: { messengerPolicyVersion: 4 } };
 
 const consentNotice = (p) => p.w.document.getElementById("nudenyang-consent-notice")?.shadowRoot;
 
@@ -233,14 +233,14 @@ test("메신저 공통: 화면 밖 번역도 유지하되 상태 확인은 본�
   await waitFor(() => body.textContent === "번역(Secondary synthetic message)", "initial translation");
   body.setAttribute("data-offscreen", "");
   const reads = watchNodeValueReads(p.w, body.firstChild);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 3 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
   assert.equal(reads(), 0, "clipped messages must not be re-read or restored");
   assert.equal(body.textContent, "번역(Secondary synthetic message)");
 });
 
 test("동의 없는 자동 번역은 본문을 읽지 않고 페이지에 이유와 안내 버튼을 표시한다", async (t) => {
   const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, consent: false,
-    settings: { messengerPolicyVersion: 3, sitePolicies: { "x.com": "always" } } });
+    settings: { messengerPolicyVersion: 4, sitePolicies: { "x.com": "always" } } });
   const reads = watchNodeValueReads(p.w, p.w.document.querySelector("#body-one span").firstChild);
   await p.message({ type: "nudenyang-ready" });
   const notice = consentNotice(p);
@@ -294,7 +294,7 @@ test("동의 안내는 끄기·대화 떠나기·설정 끄기·페이지 숨김
       p.w.document.querySelector("ol").remove();
       await p.message({ type: "nudenyang-status" });
     }
-    if (action === "settings") await p.message({ type: "nudenyang-apply-web-settings", webSettings: { enabled: false, messengerPolicyVersion: 3 } });
+    if (action === "settings") await p.message({ type: "nudenyang-apply-web-settings", webSettings: { enabled: false, messengerPolicyVersion: 4 } });
     if (action === "hidden") {
       Object.defineProperty(p.w.document, "hidden", { value: true, configurable: true });
       p.w.document.dispatchEvent(new p.w.Event("visibilitychange"));
@@ -302,8 +302,8 @@ test("동의 안내는 끄기·대화 떠나기·설정 끄기·페이지 숨김
     if (action === "dispose") p.w.__nudeNyangContentRuntime.dispose();
     assert.equal(consentNotice(p), undefined, action);
   }
-  for (const settings of [{ enabled: false }, { enabled: false, messengerPolicyVersion: 3 },
-    { messengerPolicyVersion: 3, sitePolicies: { "discord.com": "never" } }]) {
+  for (const settings of [{ enabled: false }, { enabled: false, messengerPolicyVersion: 4 },
+    { messengerPolicyVersion: 4, sitePolicies: { "discord.com": "never" } }]) {
     const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, settings, consent: false });
     await p.message({ type: "nudenyang-ready" });
     await p.message({ type: "nudenyang-toggle-enabled" });
@@ -421,7 +421,7 @@ test("웹 Discord 채널명이 숨김·입력·다른 서버 링크로 바뀌면
 
 test("새 X 채팅은 기존 동의와 자동 번역 설정으로 본문만 추출한다", async (t) => {
   const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL,
-    settings: { messengerPolicyVersion: 3, sitePolicies: { "x.com": "always" } } });
+    settings: { messengerPolicyVersion: 4, sitePolicies: { "x.com": "always" } } });
   await p.message({ type: "nudenyang-ready" });
   const state = await p.message({ type: "nudenyang-status" });
   assert.equal(state.messengerGate, "");
@@ -516,7 +516,7 @@ test("X 스크롤로 가려진 번역은 상태 갱신에도 보존하고 새 �
   const translated = body.textContent;
   body.setAttribute("data-offscreen", "");
   const reads = watchNodeValueReads(p.w, body.firstChild.firstChild);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 3 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
   assert.equal(body.textContent, translated, "permission refresh must not restore clipped translations");
   assert.equal(reads(), 0, "retaining an existing result must not reread offscreen text");
   body.removeAttribute("data-offscreen");
@@ -593,7 +593,7 @@ test("X 화면 밖 노드가 입력·작성자·숨김 영역으로 바뀌면 �
     if (action === "hidden") body.hidden = true;
     body.firstChild.firstChild.nodeValue = "A repurposed synthetic value.";
     const reads = watchNodeValueReads(p.w, body.firstChild.firstChild);
-    await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 3 } });
+    await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
     assert.equal(reads(), 0, action);
     assert.equal(body.textContent, "A repurposed synthetic value.", action);
     assert.equal(p.requests.length, 1, action);
@@ -722,7 +722,7 @@ test("동의한 웹 Discord는 본문만 사적 컨텍스트로 보내고 원문
   assert.equal(p.sent().length, 1);
   assert.ok(!p.sent().some((text) => /sender|draft|timestamp|person|secret_code|https:/.test(text)));
   for (const request of p.requests) {
-    assert.deepEqual(JSON.parse(JSON.stringify(request.privateContext)), { service: "discord", consentVersion: 3 });
+    assert.deepEqual(JSON.parse(JSON.stringify(request.privateContext)), { service: "discord", consentVersion: 4 });
     assert.match(request.pageId, /^messenger:discord:[a-zA-Z0-9_-]{16,128}$/);
     assert.ok(!JSON.stringify(request).includes("123456789"));
   }
@@ -743,7 +743,7 @@ test("메신저 동의 철회와 외부 모델 전환은 원문을 복원하고 
   await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
   assert.ok(!body.textContent.includes("번역("));
   assert.equal((await p.message({ type: "nudenyang-status" })).translatedNodes, 0);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 3 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
   await waitFor(() => p.requests.length >= 2 && body.textContent.includes("번역("), "re-consent starts fresh");
   p.appStatus.webSettings.messengerPolicyVersion = 0;
   p.w.dispatchEvent(new p.w.FocusEvent("focus"));
@@ -756,7 +756,7 @@ for (const { label, update, gate } of [
   { label: "동의 철회", update: { type: "nudenyang-messenger-refresh",
     consent: { granted: false, consentVersion: 0 } }, gate: "messenger_consent_required" },
   { label: "본체 설정 끄기", update: { type: "nudenyang-apply-web-settings",
-    webSettings: { enabled: false, messengerPolicyVersion: 3 } }, gate: "web_translation_disabled" },
+    webSettings: { enabled: false, messengerPolicyVersion: 4 } }, gate: "web_translation_disabled" },
 ]) {
   test(`늦게 도착한 상태 조회는 최신 ${label}를 덮어쓰지 않는다`, async (t) => {
     const options = { ...PRIVATE_OPTIONS };
@@ -1008,11 +1008,11 @@ test("X 공개 타임라인의 DM 서랍도 별도 동의가 없으면 절대 �
   const p = page(t, `<main><article><div data-testid="tweetText">Public timeline message</div></article></main>
     <div data-testid="DMDrawer"><div data-testid="DmActivityViewport">
       <div data-testid="messageEntry"><span dir="auto">Private drawer conversation</span></div>
-    </div></div>`, { url: "https://x.com/home", settings: { messengerPolicyVersion: 3 }, consent: false });
+    </div></div>`, { url: "https://x.com/home", settings: { messengerPolicyVersion: 4 }, consent: false });
   await p.message({ type: "nudenyang-ready" });
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   assert.equal(p.requests.length, 0);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 3 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
   await waitFor(() => p.sent().includes("Private drawer conversation"), "consented drawer translates");
   assert.ok(!p.sent().includes("Public timeline message"));
   assert.equal(p.requests[0].privateContext.service, "x");
@@ -1173,7 +1173,7 @@ test("하단 펼침 버튼의 클릭·접힘 속성과 펼친 링크는 번역 �
   assert.equal(p.sent().filter((text) => text === "商品情報").length, 1);
 });
 
-test("하단 펼침 제목 예외도 계정 폼·입력값·숨김·보호 문구와 임의 버튼을 제외한다", async (t) => {
+test("하단 버튼의 정적 문구는 허용하고 계정 입력값·숨김·보호 문구는 제외한다", async (t) => {
   const p = page(t, `<footer class="l-footer">
     <button class="l-footer-sitemap__trigger"><span id="public-footer-title">公開の商品案内</span>
       <span hidden>秘密の非表示</span><span style="display:none">秘密の補足</span>
@@ -1182,18 +1182,18 @@ test("하단 펼침 제목 예외도 계정 폼·입력값·숨김·보호 문�
     <button class="l-footer-sitemap__trigger" hidden>秘密の隠したボタン</button>
     <button class="l-footer-sitemap__trigger" aria-hidden="true">秘密の非表示ボタン</button>
     <button class="l-footer-sitemap__trigger" style="visibility:hidden">秘密の不可視ボタン</button>
-    <form id="private-account"><button class="l-footer-sitemap__trigger">秘密のアカウント</button>
+    <form id="private-account"><button class="l-footer-sitemap__trigger">アカウント設定</button>
       <input id="private-value" value="秘密の入力値"><input id="private-check" type="checkbox" checked>
       <select><option selected>秘密の選択値</option></select>
     </form>
     <div contenteditable="true"><button class="l-footer-sitemap__trigger">秘密の編集中</button></div>
     <div data-nudenyang-ignore><button class="l-footer-sitemap__trigger">秘密の保護領域</button></div>
-    <button aria-expanded="false" aria-controls="other-panel">秘密の別操作</button>
-  </footer><button class="l-footer-sitemap__trigger">秘密の本文外操作</button>`);
+    <button aria-expanded="false" aria-controls="other-panel">別の操作</button>
+  </footer><button class="l-footer-sitemap__trigger">商品一覧</button>`);
   await p.message({ type: "nudenyang-ready" });
   await waitFor(() => p.w.document.getElementById("public-footer-title").textContent === "번역(公開の商品案内)",
     "only the visible public sitemap title should translate");
-  assert.deepEqual(p.sent(), ["公開の商品案内"]);
+  assert.deepEqual(p.sent().sort(), ["公開の商品案内", "アカウント設定", "別の操作", "商品一覧"].sort());
   assert.equal(p.w.document.getElementById("private-value").value, "秘密の入力値");
   assert.equal(p.w.document.getElementById("private-check").checked, true);
   assert.equal(p.w.document.querySelector("option").selected, true);
@@ -1221,7 +1221,7 @@ test("공용 검색 탭의 제목·small을 번역해도 선택 상태와 숨긴
       aria-hidden="true" data-tab-target><p>好きな商品を探す</p>
       <form class="p-favorite-block__form" method="get" action="/products/favorite/result.html">
         <label class="c-card-favorite"><input type="checkbox" value="private-choice" checked>
-        <span class="hiragana">秘密の選択ラベル</span><span class="title">秘密のフォーム項目</span></label>
+        <span class="hiragana">好きな分類</span><span class="title">商品分類</span></label>
       </form></div>
     </div>`, { url: "https://www.takaratomy.co.jp/" });
   const buttons = [...p.w.document.querySelectorAll(".c-tab-button")];
@@ -1278,36 +1278,39 @@ test("공용 검색 탭의 제목·small을 번역해도 선택 상태와 숨긴
   assert.equal(p.w.document.getElementById(buttons[2].id), buttons[2]);
   assert.equal(buttons[2].querySelector("small"), smallNodes[2]);
   assert.equal(p.sent().some((text) => /秘密|private-choice/.test(text)), false);
+  assert.ok(p.sent().includes("好きな分類"));
+  assert.ok(p.sent().includes("商品分類"));
   assert.equal(p.w.document.querySelector(".p-favorite-block__form input").checked, true);
   assert.equal(p.w.document.querySelector(".p-favorite-block__form input").value, "private-choice");
 });
 
-test("공용 검색 탭 예외도 임의 폼·보호 텍스트를 제외하고 다른 사이트와 민감 경로에 적용하지 않는다", async (t) => {
+test("공통 검색 탭은 다른 사이트와 계정 UI에서도 문구만 번역하고 입력·보호 텍스트는 제외한다", async (t) => {
   const html = `<div class="c-tab-group"><div class="c-tab-buttons" role="tablist">
     <button role="tab" id="public-tab">公開の分類<small>から探す</small>
       <span hidden>秘密の非表示</span><span translate="no">秘密の原文</span>
       <span style="display:none">秘密の補足</span><span class="price">秘密の価格</span></button>
     <button role="tab" aria-hidden="true">秘密の隠したタブ</button>
-    <button>秘密の別操作</button>
+    <button>別の操作</button>
   </div></div>
   <form id="private-account"><div class="c-tab-group"><div class="c-tab-buttons">
-    <button role="tab">秘密のアカウント</button><input value="秘密の入力値">
+    <button role="tab">アカウント設定</button><input value="秘密の入力値">
   </div></div></form>
   <div data-nudenyang-ignore><div class="c-tab-group"><div class="c-tab-buttons">
     <button role="tab">秘密の保護されたタブ</button></div></div></div>
-  <div class="c-tab-buttons"><button role="tab">秘密の別タブ</button></div>`;
+  <div class="c-tab-buttons"><button role="tab">別の分類</button></div>`;
   const publicPage = page(t, html, { url: "https://www.takaratomy.co.jp/" });
   await publicPage.message({ type: "nudenyang-ready" });
   await waitFor(() => publicPage.w.document.querySelector("#public-tab small").textContent === "번역(から探す)",
     "only the public tab title should translate");
-  assert.deepEqual(publicPage.sent(), ["公開の分類", "から探す"]);
+  const expected = ["公開の分類", "から探す", "別の操作", "アカウント設定", "別の分類"].sort();
+  assert.deepEqual(publicPage.sent().sort(), expected);
   assert.equal(publicPage.w.document.querySelector("input").value, "秘密の入力値");
   for (const url of ["https://example.org/", "https://www.takaratomy.co.jp/account/"]) {
     const p = page(t, html, { url });
     await p.message({ type: "nudenyang-ready" });
     await p.message({ type: "nudenyang-set-enabled", enabled: true });
     await new Promise((resolve) => setTimeout(resolve, 350));
-    assert.deepEqual(p.sent(), [], url);
+    assert.deepEqual(p.sent().sort(), expected, url);
   }
 });
 
@@ -1412,11 +1415,11 @@ test("ShoPro의 기존 범위와 범용 공개 메뉴 모두 숨김·편집·개
     <li aria-hidden="true"><a href="#aria-hidden">秘密の隠したリンク</a></li>
     <li contenteditable="true"><a href="#editor">秘密の編集中</a></li>
     <li data-nudenyang-ignore><a href="#protected">秘密の保護項目</a></li>
-    <li><a href="#button" role="button">秘密のボタン操作</a></li>
-  </ul><button>秘密の無関係操作</button><div class="sns03"><a href="https://example.org/">秘密の別リンク</a></div></div>
+    <li><a href="#button" role="button">操作する</a></li>
+  </ul><button>別の操作</button><div class="sns03"><a href="https://example.org/">公開の別リンク</a></div></div>
   <form id="private-account"><div class="menu"><ul><li><a href="#account">秘密のアカウント内容</a></li></ul></div>
     <input value="秘密の入力値"><textarea>秘密の編集中の値</textarea></form>
-  <div class="header-logo"><a href="#logo">秘密の別案内</a></div><button class="btn">秘密の操作文</button>
+  <div class="header-logo"><a href="#logo">公開の別案内</a></div><button class="btn">開く</button>
   </div></header>`;
   const publicPage = page(t, html, {
     url: "https://www.shopro.co.jp/anime/duelmasters_lost/", tabEnabled: true,
@@ -1434,10 +1437,10 @@ test("ShoPro의 기존 범위와 범용 공개 메뉴 모두 숨김·편집·개
     const p = page(t, html, { url, tabEnabled: true });
     await p.message({ type: "nudenyang-ready" });
     await new Promise((resolve) => setTimeout(resolve, 350));
-    // Outside the scoped adapter, ordinary navigation now uses the common
-    // public-link policy; protected descendants and sensitive routes stay out.
+    // Account screens have the same read-only action labels. The scoped
+    // adapter's existing protected header containers still take precedence.
     assert.deepEqual(p.sent().sort(), url.endsWith("/account/") ? []
-      : ["公開の作品案内", "秘密の別リンク", "秘密の別案内"].sort(), url);
+      : ["公開の作品案内", "公開の別リンク", "公開の別案内", "操作する", "別の操作", "開く"].sort(), url);
   }
 });
 
@@ -1571,7 +1574,7 @@ for (const mode of ["pending", "replay"]) {
 
 test("범용 본문 수집 범위가 넓어져도 임의의 폼·메뉴·숨긴 텍스트는 번역하지 않는다", async (t) => {
   const p = page(t, `<div id="unrecognized-root">通常の<strong>説明です</strong></div>
-    <nav><span>秘密のメニュー</span></nav><form><label>秘密のラベル</label></form>
+    <nav><span>秘密のメニュー</span></nav><form><label>検索条件</label><input value="秘密の入力値"></form>
     <div hidden>秘密の非表示文</div><div translate="no">秘密の原文</div>`, {
     url: "https://example.org/articles/one",
   });
@@ -1579,6 +1582,7 @@ test("범용 본문 수집 범위가 넓어져도 임의의 폼·메뉴·숨긴 
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   await waitFor(() => p.sent().includes("通常の"), "generic layout prose should translate");
   assert.ok(!p.sent().some((text) => text.includes("秘密")));
+  assert.ok(p.sent().includes("検索条件"));
 });
 
 test("시작 중의 연속 토글은 초기 상태 조회에 덮어써지지 않는다", async (t) => {
@@ -1671,7 +1675,7 @@ test("복구 주입과 정적 주입이 겹쳐도 페이지 실행기는 하나�
 test("공개 메뉴 안에서도 숨긴 문구와 별도 개인정보 폼은 전송하지 않는다", async (t) => {
   const p = page(t, `<header class="l-header"><a href="/product/">公開案内
     <span style="display:none">秘密の文章</span><span translate="no">秘密の原文</span></a>
-    <form id="private-account"><label>秘密のログイン</label><button>秘密の送信</button></form>
+    <form id="private-account"><label>ログイン</label><button>送信</button><input value="秘密の入力値"></form>
     </header><p>公開本文<span style="visibility:hidden">秘密の補足</span></p>`);
   await p.message({ type: "nudenyang-ready" });
   await waitFor(() => p.sent().includes("公開本文"), "visible prose should translate");

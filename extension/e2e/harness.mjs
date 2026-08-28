@@ -72,7 +72,7 @@ export const test = base.extend({
           return worker.evaluate(id => globalThis.__NudeNyangE2E.dispatchCommand(id), tabId);
         },
         async open({ html, url = "https://fixture.example.test/article/", settings = {}, publicSample = null,
-          consent = false, consentVersion = 3, enabled = true, globalConsent = true, deferTranslations = false,
+          consent = false, consentVersion = 4, enabled = true, globalConsent = true, deferTranslations = false,
           translator = "hymt_1_8b", documents = {} } = {}) {
           if (typeof html !== "string") throw new TypeError("extension.open requires an HTML fixture string");
           const destination = new URL(url);
@@ -80,7 +80,7 @@ export const test = base.extend({
           await worker.evaluate(async options => {
             globalThis.__NudeNyangE2E.configure(options);
             await chrome.storage.local.set({ enabled: true, messengerConsentVersion: options.consent ? options.consentVersion : 0,
-              webTranslationConsentVersion: options.globalConsent ? 1 : 0, webTranslationEnabled: options.enabled === null });
+              webTranslationConsentVersion: options.globalConsent ? 2 : 0, webTranslationEnabled: options.enabled === null });
           }, { settings, consent, consentVersion, deferTranslations, translator, globalConsent, enabled });
           const page = await context.newPage();
           if (publicSample) {
@@ -135,7 +135,7 @@ export const test = base.extend({
             pendingTranslations: () => worker.evaluate(() => globalThis.__NudeNyangE2E.pending()),
             releaseTranslations: options => worker.evaluate(value => globalThis.__NudeNyangE2E.releaseTranslations(value), options),
             setConsent: granted => worker.evaluate(async value => {
-              await chrome.storage.local.set({ messengerConsentVersion: value ? 3 : 0 });
+              await chrome.storage.local.set({ messengerConsentVersion: value ? 4 : 0 });
             }, granted),
           };
         },

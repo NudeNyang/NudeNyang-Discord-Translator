@@ -886,9 +886,9 @@ fn validate_browser_private_context(request: &BrowserTranslationRequest) -> Resu
         }
         return Ok(());
     };
-    // Version 3 discloses the app's provider and persistent-cache policy.
-    // Earlier local-only, no-storage consent never authorizes this path.
-    if context.consent_version != 3 {
+    // Version 4 adds opened-mail reading to the shared provider/cache policy.
+    // Earlier consent (including v3 messenger-only consent) cannot authorize it.
+    if context.consent_version != 4 {
         return Err("[messenger_consent_required] 웹 메신저 번역 동의를 확인하지 못했습니다. 브라우저 확장에서 개인정보 안내를 확인해 주십시오.".to_string());
     }
     if !matches!(
@@ -900,6 +900,7 @@ fn validate_browser_private_context(request: &BrowserTranslationRequest) -> Resu
             | "slack"
             | "teams"
             | "google-messages"
+            | "gmail"
     ) {
         return Err("[messenger_invalid_context] 지원하지 않는 웹 메신저 요청입니다.".to_string());
     }
@@ -3983,7 +3984,7 @@ mod tests {
         request.page_id = "messenger:discord:01234567-89ab-cdef-0123-456789abcdef".to_string();
         request.private_context = Some(BrowserPrivateContext {
             service: "discord".to_string(),
-            consent_version: 3,
+            consent_version: 4,
         });
         request
     }
@@ -4013,6 +4014,7 @@ mod tests {
             "slack",
             "teams",
             "google-messages",
+            "gmail",
         ] {
             request.private_context.as_mut().unwrap().service = service.to_string();
             request.page_id = format!("messenger:{service}:01234567-89ab-cdef-0123-456789abcdef");
@@ -4035,6 +4037,10 @@ mod tests {
             .unwrap_err()
             .starts_with("[messenger_consent_required]"));
         request.private_context.as_mut().unwrap().consent_version = 3;
+        assert!(validate_browser_translation_request(&request)
+            .unwrap_err()
+            .starts_with("[messenger_consent_required]"));
+        request.private_context.as_mut().unwrap().consent_version = 4;
         request.private_context.as_mut().unwrap().service = "email".to_string();
         assert!(validate_browser_translation_request(&request)
             .unwrap_err()
