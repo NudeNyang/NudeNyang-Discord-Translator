@@ -64,7 +64,7 @@ function applyUiLanguage(language) {
   for (const element of document.querySelectorAll("[data-i18n-aria-label]")) {
     element.setAttribute("aria-label", copy(element.dataset.i18nAriaLabel));
   }
-  messengerPrivacy.title = copy("messengerPrivacyConsent");
+  messengerPrivacy.dataset.tooltip = copy("messengerPrivacyConsent");
   messengerPrivacy.setAttribute("aria-label", `${copy("reviewMessengerPrivacy")} · ${copy("messengerPrivacyConsent")}`);
 }
 

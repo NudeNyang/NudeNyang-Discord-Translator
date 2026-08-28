@@ -85,6 +85,16 @@ async function popup(options = {}) {
   };
 }
 
+test("개인정보 버튼은 기본 title 대신 번역된 제품 툴팁과 접근성 이름을 사용한다", async () => {
+  const p = await popup({ language: "ko" });
+  try {
+    const button = p.get("messenger-privacy");
+    assert.equal(button.hasAttribute("title"), false);
+    assert.equal(button.dataset.tooltip, "웹 메신저 개인정보 동의");
+    assert.ok(button.getAttribute("aria-label").includes(button.dataset.tooltip));
+  } finally { p.dispose(); }
+});
+
 test("개인정보 페이지의 팝업은 오류 대신 안내 페이지임을 표시하고 중복 진입을 숨긴다", async () => {
   const p = await popup({ language: "ko", tabUrl: "chrome-extension://test/messenger-privacy.html?tab=7&context=opaque" });
   try {

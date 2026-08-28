@@ -1,5 +1,40 @@
 import { test, expect } from "./harness.mjs";
 
+test("팝업 개인정보 툴팁은 제품 스타일로 호버·키보드에 표시되고 화면 안에 배치된다", async ({ extension }, testInfo) => {
+  await extension.open({ html: "<main><p>Public paragraph</p></main>" });
+  const popup = await extension.context.newPage();
+  await popup.setViewportSize({ width: 360, height: 720 });
+  await popup.goto(`chrome-extension://${extension.extensionId}/popup.html`);
+  const button = popup.locator("#messenger-privacy");
+  await expect(button).toBeVisible();
+  await expect(button).not.toHaveAttribute("title");
+  // An extension-owned tab uses the browser's fallback UI locale. The JSDOM
+  // popup test separately verifies the Korean language supplied by the app.
+  await expect(button).toHaveAttribute("data-tooltip", "Web messenger privacy consent");
+  for (const colorScheme of ["light", "dark"]) {
+    await popup.emulateMedia({ colorScheme });
+    await button.hover();
+    await expect.poll(() => button.evaluate(el => getComputedStyle(el, "::after").opacity)).toBe("1");
+    const box = await button.evaluate(el => {
+      const style = getComputedStyle(el, "::after"), rect = el.getBoundingClientRect();
+      return { left: rect.right - parseFloat(style.width), top: rect.top - parseFloat(style.height) - 7,
+        border: style.borderTopWidth, background: style.backgroundColor, visibility: style.visibility };
+    });
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.border).toBe("0px");
+    expect(box.visibility).toBe("visible");
+    const screenshot = testInfo.outputPath(`popup-tooltip-${colorScheme}.png`);
+    await popup.screenshot({ path: screenshot });
+    await testInfo.attach(`popup-tooltip-${colorScheme}`, { path: screenshot, contentType: "image/png" });
+  }
+  await popup.mouse.move(0, 0);
+  await popup.keyboard.press("Tab");
+  await button.focus();
+  await expect.poll(() => button.evaluate(el => el.matches(":focus-visible") && getComputedStyle(el, "::after").opacity === "1")).toBe(true);
+  await popup.close();
+});
+
 test("MV3 격리 영역과 실제 브라우저의 DOM 적용·F4 원문 복구", async ({ extension }) => {
   const p = await extension.open({ html: `<main><p id="intro">A short <strong id="emphasis">important</strong> paragraph.</p>
     <p id="address"><a href="https://example.com/">https://example.com/</a></p>
