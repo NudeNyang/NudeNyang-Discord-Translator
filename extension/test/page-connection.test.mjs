@@ -80,7 +80,7 @@ test("수신자가 사라진 일반 웹 탭은 콘텐츠 스크립트를 다시 
   assert.equal(response?.supported, true);
   assert.equal(fake.injectionCount(), 2);
   assert.deepEqual(fake.injections, [
-    { target: { tabId: 17, frameIds: [0] }, files: ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "popup-locales.js", "content.js"] },
+    { target: { tabId: 17, frameIds: [0] }, files: ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "dom-policy.js", "text-segments.js", "popup-locales.js", "content.js"] },
     { target: { tabId: 17, allFrames: true }, files: ["embedded-title.js"] },
   ]);
   assert.deepEqual(fake.sent, ["nudenyang-status", "nudenyang-ready", "nudenyang-status"]);

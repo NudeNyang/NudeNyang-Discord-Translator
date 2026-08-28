@@ -67,7 +67,7 @@
     "body details > summary", "body table th", "body table td",
   ];
 
-  // Layout-only prose is discovered by a pruned text walk in content.js. This avoids
+  // Layout-only prose is discovered by the shared DOM policy. This avoids
   // guessing content IDs, expensive descendant :has() selectors, and missing direct
   // text around nested paragraphs. Each text node still belongs to one block.
   const PUBLIC_DOCUMENT_BLOCKS = DOCUMENT_BLOCKS;
@@ -130,33 +130,19 @@
     "#header .globalNav > .globalNav-item.type-guide > a > i",
   ];
 
+  // Public report pages share the same account-value protection as other
+  // DLsite documents; using the generic collector must not widen that boundary.
+  const DLSITE_PROTECTED_EXCLUDES = ["#header .login_information .number"];
+
   const ADAPTERS = [
     {
       id: "dlsite-report",
       hosts: ["www.dlsite.com"],
       pathPattern: /^\/[^/]+\/circle\/report(?:\/|$)/u,
-      blocks: [
-        "article.circle_report .work_name",
-        "article.circle_report .catchphrase",
-        "article.circle_report .report_info .label",
-        "article.circle_report .report_info .content",
-        "article.circle_report .report_title",
-        "article.circle_report .report_section .content",
-        "article.circle_report .btn_report.type_cart",
-        "#left .left_module h3",
-        "#left .list_head h4",
-        "#left .list_content_text_item > a",
-        "#left .list_text_indent > a",
-        "#left .link_list_item > a",
-        "#footer .floor_list_item > a",
-        "#footer .label",
-        "#footer .link_list_item > a",
-        "#footer .img_list_text",
-        "#footer .footer_sns_item > a",
-        "#footer .recruit a",
-        "#footer #system",
-      ],
-      excludes: [],
+      blockUniversalSensitivePaths: true,
+      collectLayoutText: true,
+      blocks: PUBLIC_DOCUMENT_BLOCKS,
+      excludes: DLSITE_PROTECTED_EXCLUDES,
     },
     {
       id: "dlsite",
@@ -168,9 +154,7 @@
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
         ...DLSITE_STATIC_HEADER_LABELS,
       ],
-      excludes: [
-        "#header .login_information .number",
-      ],
+      excludes: DLSITE_PROTECTED_EXCLUDES,
       exclusionBypassBlocks: [
         ...DLSITE_PUBLIC_NAVIGATION_LINKS,
         ...DLSITE_STATIC_HEADER_LABELS,
@@ -195,7 +179,6 @@
       blocks: [...PUBLIC_DOCUMENT_BLOCKS, ...TAKARA_PUBLIC_UI_BLOCKS],
       publicUiBlocks: TAKARA_PUBLIC_UI_BLOCKS,
       publicForms: ["#search_cond", "#SS_searchForm"],
-      visibilityRoots: ["header.l-header", ".ul_Navi01", "#search_cond", "footer.l-footer"],
       excludes: [],
     },
     {
@@ -208,7 +191,6 @@
       collectLayoutText: true,
       blocks: [...PUBLIC_DOCUMENT_BLOCKS, ...SHOPRO_ANIME_PUBLIC_NAVIGATION_BLOCKS],
       publicUiBlocks: SHOPRO_ANIME_PUBLIC_NAVIGATION_BLOCKS,
-      visibilityRoots: ["header .headerWrap"],
       excludes: ["button", "[role='button']"],
     },
     {
@@ -235,18 +217,13 @@
       collectLayoutText: true,
       blocks: [
         ...PUBLIC_DOCUMENT_BLOCKS,
-        "[class*='description'] p", "[class*='description'] li",
-        "[class~='description'] > span.autolink",
-        ".booth-description > .autolink > div",
         "nav.js-accordion-content a.no-underline[href^='https://booth.pm/']",
         ".js-agreement-banner .text-white.text-14.font-bold",
         ".js-agreement-banner a[href^='https://booth.pm/']",
         ".booth-message > a[href^='https://booth.pm/announcements/']",
-        "details.booth-messages > summary",
         "details.booth-messages .booth-message > a[href^='https://booth.pm/announcements/']",
         "a[href*='/downloadables/'] [class~='text-ellipsis']",
         ".cart-button-wrap [class~='text-left'][class~='mb-8']",
-        "[class*='notice'] p",
       ],
       excludes: [
         "[class*='price']", "[class*='checkout']",
@@ -358,12 +335,16 @@
     return isUniversalLocationAllowed(locationLike, host) ? UNIVERSAL_ADAPTER : null;
   }
 
-  function exclusionSelector(adapter) {
-    return [...COMMON_EXCLUDES, ...(adapter?.excludes ?? [])].join(",");
+  const RESTORABLE_EXCLUDES = new Set(["[hidden]", "[inert]", "[aria-hidden='true']"]);
+
+  function exclusionSelector(adapter, { restoring = false } = {}) {
+    return [...COMMON_EXCLUDES, ...(adapter?.excludes ?? [])]
+      .filter(selector => !restoring || !RESTORABLE_EXCLUDES.has(selector)).join(",");
   }
 
-  function protectedExclusionSelector(adapter) {
-    return [...PROTECTED_EXCLUDES, ...(adapter?.excludes ?? [])].join(",");
+  function protectedExclusionSelector(adapter, { restoring = false } = {}) {
+    return [...PROTECTED_EXCLUDES, ...(adapter?.excludes ?? [])]
+      .filter(selector => !restoring || !RESTORABLE_EXCLUDES.has(selector)).join(",");
   }
 
   const api = Object.freeze({

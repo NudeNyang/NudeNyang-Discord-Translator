@@ -736,11 +736,19 @@ Whale 원본은 <https://whale.naver.com/>의 아이콘 링크에서 확인했�
 | 구성요소 | 용도 | 라이선스 및 출처 |
 |---|---|---|
 | jsdom 30.0.1 | 브라우저 확장의 DOM 수집·상태·복구 회귀 테스트 | MIT, Copyright (c) 2010 Elijah Insua, <https://github.com/jsdom/jsdom> |
+| Playwright / @playwright/test 1.62.1 | 격리된 Chromium MV3 확장의 실제 브라우저 E2E 테스트 | Apache-2.0, Copyright (c) Microsoft Corporation, <https://github.com/microsoft/playwright>, <https://github.com/microsoft/playwright/blob/v1.62.1/LICENSE>, <https://github.com/microsoft/playwright/blob/v1.62.1/NOTICE> |
 
 jsdom은 \`package.json\`의 개발 의존성과 \`package-lock.json\`에 버전을 고정한다. 개발·심사 재현
 환경에서 \`npm ci\`로 설치하며, Windows 앱이나 브라우저 확장 ZIP·XPI의 실행 코드에는 번들하지
 않는다. jsdom의 MIT 라이선스 원문은 설치된 패키지의 \`LICENSE.txt\`에 포함되며, 함께 설치되는
 의존성에는 각각의 라이선스가 적용된다.
+
+Playwright도 개발 의존성으로 버전을 고정하며 앱·확장 패키지에 포함하지 않는다. 설치된
+\`@playwright/test\`, \`playwright\`, \`playwright-core\` 패키지의 \`LICENSE\`·\`NOTICE\`를 유지한다.
+Playwright에는 Apache-2.0으로 제공되는 Puppeteer 유래 코드가 포함되어 있다.
+테스트 브라우저는 \`npm run test:e2e:install\`이 별도로 내려받는 Chrome for Testing/Chromium이며
+앱·확장과 함께 재배포하지 않는다. 브라우저에는 그 배포본의 라이선스와 제3자 고지가 적용된다.
+공식 확장 테스트 방식: <https://playwright.dev/docs/chrome-extensions>.
 
 ## 사전 데이터와 외부 연결
 

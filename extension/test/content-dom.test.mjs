@@ -4,8 +4,12 @@ import test from "node:test";
 import { JSDOM } from "jsdom";
 import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
 import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
+import {
+  CSS_REVEAL_HTML, FRAGMENTED_TEXT_HTML, LONG_TEXT, PUBLIC_DOCUMENT_URL,
+  PUBLIC_NODE_CHANGES, REUSED_TEXT_HTML, SHORT_TEXT_HTML,
+} from "./fixtures/dom-translation.mjs";
 
-const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "popup-locales.js", "content.js"].map((file) => (
+const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "dom-policy.js", "text-segments.js", "popup-locales.js", "content.js"].map((file) => (
   fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
 ));
 const FRAME_URL = "https://www.youtube-nocookie.com/embed/video123?rel=0";
@@ -1360,6 +1364,84 @@ test("ShoPro 메뉴 예외도 숨김·inert·편집·개인 폼·무관 버튼�
     await new Promise((resolve) => setTimeout(resolve, 350));
     assert.deepEqual(p.sent(), [], url);
   }
+});
+
+for (const change of ["class", "style"]) {
+  test(`범용 DOM: ${change}만 바뀌어 나타난 본문을 사이트 설정 없이 수집한다`, async (t) => {
+    const html = change === "class" ? CSS_REVEAL_HTML
+      : CSS_REVEAL_HTML.replace('class="concealed"', 'style="visibility:hidden"');
+    const p = page(t, html, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+    await p.message({ type: "nudenyang-ready" });
+    await waitFor(() => p.w.document.querySelector("#control").textContent.includes("번역("), "visible control");
+    assert.ok(!p.sent().includes("Delayed public text"));
+    const element = p.w.document.querySelector("#changing");
+    if (change === "class") element.classList.remove("concealed");
+    else element.style.visibility = "visible";
+    await waitFor(() => element.textContent === "번역(Delayed public text)", "CSS reveal must trigger collection", 1200);
+    assert.equal(p.sent().filter((text) => text === "Delayed public text").length, 1);
+  });
+}
+
+for (const { label, attribute, value } of PUBLIC_NODE_CHANGES) {
+  test(`범용 DOM: 응답 대기 중 ${label}으로 바뀐 노드에 늦은 결과를 쓰지 않는다`, async (t) => {
+    const p = page(t, REUSED_TEXT_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true, deferTranslation: true });
+    await p.message({ type: "nudenyang-ready" });
+    await waitFor(() => p.sent().includes("Original public text"), "request must be in flight");
+    const element = p.w.document.querySelector("#changing");
+    element.setAttribute(attribute, value);
+    p.releaseTranslation();
+    await waitFor(() => p.w.document.querySelector("#control").textContent.includes("번역("), "unchanged control applies");
+    assert.equal(element.textContent, "Original public text");
+  });
+
+  test(`범용 DOM: 원문 비교 중 ${label}으로 바뀐 노드에 캐시를 재적용하지 않는다`, async (t) => {
+    const p = page(t, REUSED_TEXT_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+    await p.message({ type: "nudenyang-ready" });
+    const element = p.w.document.querySelector("#changing");
+    await waitFor(() => element.textContent.includes("번역("), "initial translation");
+    await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    element.setAttribute(attribute, value);
+    const before = p.requests.length;
+    await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    assert.equal(element.textContent, "Original public text");
+    assert.equal(p.requests.length, before);
+  });
+}
+
+test("범용 DOM: 긴 단일 노드와 한 글자 인라인도 전송 한도 안에서 수집하고 복원한다", async (t) => {
+  const p = page(t, FRAGMENTED_TEXT_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+  const longNode = p.w.document.querySelector("#long").firstChild;
+  const fragments = [...p.w.document.querySelector("#fragmented").children];
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => longNode.nodeValue.includes("번역("), "long text must not be silently discarded", 1500);
+  await waitFor(() => fragments.every((node) => node.textContent.includes("번역(")), "single-character inline text must not disappear");
+  assert.ok(p.requests.every((request) => request.items.length <= 32
+    && request.items.every((item) => item.text.length <= 4000)
+    && request.items.reduce((sum, item) => sum + item.text.length, 0) <= 32000));
+  assert.equal(p.w.document.querySelector("#long").firstChild, longNode);
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  assert.equal(longNode.nodeValue, LONG_TEXT);
+  assert.equal(p.w.document.querySelector("#fragmented").textContent, "夢を見る");
+  fragments.forEach((node, index) => assert.equal(p.w.document.querySelector("#fragmented").children[index], node));
+});
+
+test("범용 DOM: 표시 프레임 직전 민감한 경로로 이동하면 이전 결과를 쓰지 않는다", async (t) => {
+  const p = page(t, REUSED_TEXT_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true, deferApplications: true });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.pendingApplicationFrames() > 0, "response should be waiting for its display frame");
+  p.w.history.pushState({}, "", "/account");
+  p.releaseApplications();
+  assert.equal(p.w.document.querySelector("#changing").textContent, "Original public text");
+});
+
+test("범용 DOM: 한 글자 자연어를 허용해도 숫자·기호·그림문자는 원문으로 유지한다", async (t) => {
+  const p = page(t, SHORT_TEXT_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.w.document.querySelector("#word").textContent === "번역(夢)", "single letter word");
+  assert.equal(p.w.document.querySelector("#count").textContent, "3");
+  assert.equal(p.w.document.querySelector("#punctuation").textContent, "...");
+  assert.equal(p.w.document.querySelector("#icon").textContent, "🐱");
+  assert.deepEqual(p.sent(), ["夢"]);
 });
 
 test("범용 본문 수집 범위가 넓어져도 임의의 폼·메뉴·숨긴 텍스트는 번역하지 않는다", async (t) => {

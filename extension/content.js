@@ -13,7 +13,6 @@
     createScanBatch,
     groupTranslationApplications,
     isElementNearViewport,
-    isExplicitExclusionBypassBlock,
     isQuickToggleShortcut,
     isUrlLikeLinkText,
     pageTranslationEnabled,
@@ -25,6 +24,8 @@
     translationBatchLimits,
     webSchedulingProfile,
   } = globalThis.NudeNyangContentHelpers;
+  const { createPublicDomPolicy, hasTranslatableText, interactionRoot, textIsVisible } = globalThis.NudeNyangDomPolicy;
+  const { createTextRecord, recordMatchesItem, acceptTextSegment, cancelTextRecord } = globalThis.NudeNyangTextSegments;
   const MAX_ITEM_CHARS = 4000;
   const EXTERNAL_TRANSLATORS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
   const LOCAL_TRANSLATORS = new Set(["hymt_1_8b", "hymt_7b", "translategemma_4b"]);
@@ -38,15 +39,12 @@
     sitePolicies: {},
   });
   const APPLY_BLOCKS_PER_FRAME = 2;
-  const LAYOUT_OWNER = "p,h1,h2,h3,h4,h5,h6,li,blockquote,figcaption,dt,dd,summary,th,td,div,section,article,main,body";
   const EMBED_HOSTS = new Set(["www.youtube.com", "www.youtube-nocookie.com"]);
   const RESTORABLE_HIDDEN_SELECTORS = new Set(["[hidden]", "[inert]", '[aria-hidden="true"]']);
   const trackedNodes = new Set();
   const nodeStates = new WeakMap();
   const embeddedRequests = new Map();
   let disposed = false;
-  let layoutBlocks = new WeakSet();
-  let visibilityRoots = new WeakSet();
   let blockIds = new WeakMap();
   let observedBlocks = new WeakSet();
   const queue = [];
@@ -73,12 +71,11 @@
   let refreshingStatus = false;
   let appStatusEpoch = 0;
   let adapter = adapters.adapterForLocation(location);
+  let publicDom = null;
   let blockSelector = adapter?.blocks.join(",") ?? "";
   let excludedSelector = adapter ? adapters.exclusionSelector(adapter) : "";
-  let protectedSelector = adapter ? adapters.protectedExclusionSelector(adapter) : "";
   let messengerRestoreSelector = "";
   let observer;
-  let visibilityObserver;
   let intersectionObserver;
   let rescanTimer;
   let navigationTimer;
@@ -113,11 +110,10 @@
 
   function assignAdapter(nextAdapter) {
     adapter = nextAdapter;
+    publicDom = adapter && !messengerSite ? createPublicDomPolicy(document, adapter) : null;
     blockSelector = adapter?.blocks.join(",") ?? "";
     excludedSelector = messengerSite ? (messengerContext?.excludes.join(",") ?? "")
       : adapter ? adapters.exclusionSelector(adapter) : "";
-    protectedSelector = messengerSite ? excludedSelector
-      : adapter ? adapters.protectedExclusionSelector(adapter) : "";
     messengerRestoreSelector = messengerSite
       ? (messengerContext?.excludes ?? []).filter((selector) => !RESTORABLE_HIDDEN_SELECTORS.has(selector)).join(",")
       : "";
@@ -597,9 +593,9 @@
       return;
     }
     const state = nodeStates.get(item.node);
-    if (state?.itemId === item.id) {
-      if (messengerSite && !isCurrentMessengerText(item.node)) forgetMessengerText(item.node);
-      else state.pending = false;
+    if (state?.itemId === item.recordId) {
+      if (!isCurrentText(item.node)) forgetText(item.node);
+      else if (state.pending) cancelTextRecord(state);
     }
   }
 
@@ -625,56 +621,30 @@
     return blockIds.get(block);
   }
 
-  function isPublicUiBlock(block) {
-    return Boolean(adapter?.publicUiBlocks?.some((selector) => block.matches(selector)));
-  }
-
-  function allowedPublicForm(element) {
-    const form = element.closest("form");
-    return !form || Boolean(adapter?.publicForms?.some((selector) => form.matches(selector)));
-  }
-
   function excludedBlock(block) {
     if (messengerSite) return !canReadConversation()
       || !messengerAdapters.isEligibleMessageBlock(block, messengerContext);
-    if (!block || !excludedSelector || block.closest(protectedSelector)) return true;
-    if (isPublicUiBlock(block)) return !allowedPublicForm(block);
-    return !isExplicitExclusionBypassBlock(block, adapter) && Boolean(block.closest(excludedSelector));
-  }
-
-  function textIsVisible(element, cache) {
-    if (!element) return true;
-    if (cache.has(element)) return cache.get(element);
-    const style = getComputedStyle(element);
-    const visible = style.display !== "none" && style.visibility !== "hidden"
-      && style.visibility !== "collapse" && style.contentVisibility !== "hidden"
-      && style.opacity !== "0" && textIsVisible(element.parentElement, cache);
-    cache.set(element, visible);
-    return visible;
+    return !publicDom || publicDom.excludesBlock(block);
   }
 
   function translationBlockFor(node) {
     if (!adapter) return null;
+    if (!messengerSite) return publicDom?.blockFor(node) ?? null;
     const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
-    if (messengerSite && (!messengerContext || !element)) return null;
-    if (messengerSite && !messengerContext.root.contains(element)) {
+    if (!messengerContext || !element) return null;
+    if (!messengerContext.root.contains(element)) {
       return messengerAdapters.channelNameBlockFor(element, messengerContext);
     }
-    const semantic = closestTranslationBlock(node, blockSelector);
-    if (semantic) return semantic;
-    if (messengerSite) return null;
-    if (!adapter.collectLayoutText || !element || element.closest(excludedSelector)) return null;
-    const block = element.closest(LAYOUT_OWNER);
-    if (block) layoutBlocks.add(block);
-    return block;
+    return closestTranslationBlock(node, blockSelector);
   }
 
   function textEligibility(block, visibility = new WeakMap()) {
+    if (!messengerSite) return publicDom?.eligibility(block, { visibility }) ?? (() => false);
     if (excludedBlock(block)) return () => false;
-    if (messengerSite && messengerAdapters.channelNameBlockFor(block, messengerContext) === block) {
+    if (messengerAdapters.channelNameBlockFor(block, messengerContext) === block) {
       return (node) => canReadConversation() && messengerAdapters.channelNameTextAllowed(node, block, messengerContext);
     }
-    if (messengerSite) return (node) => {
+    return (node) => {
       const parent = node.parentElement;
       if (!canReadConversation() || !parent || !block.contains(node)
         || !messengerContext.root.contains(node) || !textIsVisible(parent, visibility)) return false;
@@ -694,21 +664,6 @@
       }
       return !isUrlLikeLinkText(anchor.textContent, anchor.href);
     };
-    const publicUi = isPublicUiBlock(block);
-    const bypassExclusion = publicUi || isExplicitExclusionBypassBlock(block, adapter);
-    return (node) => {
-      const parent = node.parentElement;
-      if (!parent || !block.contains(node) || parent.closest(protectedSelector)
-        || !textIsVisible(parent, visibility)) return false;
-      if (layoutBlocks.has(block) && parent.closest(LAYOUT_OWNER) !== block) return false;
-      const nearestExcluded = parent.closest(excludedSelector);
-      const excludedInsideBypass = bypassExclusion
-        && nearestExcluded !== block && block.contains(nearestExcluded);
-      if ((!bypassExclusion && nearestExcluded) || (!publicUi && excludedInsideBypass)
-        || (publicUi && !allowedPublicForm(parent))) return false;
-      const anchor = parent.closest("a[href]");
-      return !anchor || !isUrlLikeLinkText(anchor.textContent, anchor.href);
-    };
   }
 
   function isCurrentMessengerText(node) {
@@ -717,6 +672,10 @@
     // its value, retaining a result, or replaying a cached translation.
     const block = translationBlockFor(node);
     return Boolean(block && canReadConversation() && nearViewport(block) && textEligibility(block)(node));
+  }
+
+  function isCurrentText(node) {
+    return messengerSite ? isCurrentMessengerText(node) : Boolean(publicDom?.allowsText(node));
   }
 
   function isRestorableMessengerText(node) {
@@ -741,6 +700,28 @@
       && state?.translated != null && node.nodeValue === state.translated) node.nodeValue = state.original;
     nodeStates.delete(node);
     trackedNodes.delete(node);
+  }
+
+  function forgetText(node, { restore = false } = {}) {
+    if (messengerSite) return forgetMessengerText(node, { restore });
+    const state = nodeStates.get(node);
+    if (restore && publicDom?.allowsText(node, { restoring: true })
+      && state?.translated != null && node.nodeValue === state.translated) node.nodeValue = state.original;
+    nodeStates.delete(node);
+    trackedNodes.delete(node);
+  }
+
+  function prunePublicTranslations({ restoring = false } = {}) {
+    if (messengerSite) return 0;
+    let removed = 0;
+    for (const node of trackedNodes) {
+      if (publicDom?.allowsText(node, { restoring })) continue;
+      // Hidden, unchanged read-only content may be restored. An editor, author
+      // label or protected node is no longer ours to read or write.
+      forgetText(node, { restore: !restoring });
+      removed += 1;
+    }
+    return removed;
   }
 
   function retainClippedXTranslation(node) {
@@ -774,7 +755,7 @@
       acceptNode(node) {
         if (!isEligible(node)) return NodeFilter.FILTER_REJECT;
         const text = node.nodeValue ?? "";
-        if (text.trim().length < 2 || text.length > MAX_ITEM_CHARS) {
+        if (!hasTranslatableText(text)) {
           return NodeFilter.FILTER_REJECT;
         }
         const state = nodeStates.get(node);
@@ -804,9 +785,14 @@
     for (const node of eligibleTextNodes(block)) {
       const original = node.nodeValue;
       const itemId = `${id}-${++sequence}`;
-      nodeStates.set(node, { original, translated: null, pending: true, itemId, epoch: pageEpoch });
+      const record = createTextRecord(original, itemId, pageEpoch, MAX_ITEM_CHARS);
+      nodeStates.set(node, record);
       trackedNodes.add(node);
-      items.push({ id: itemId, blockId: id, text: original, node, block, epoch: pageEpoch, priority });
+      for (const [segmentIndex, text] of record.segments.entries()) {
+        if (record.partial.has(segmentIndex)) continue;
+        items.push({ id: `${itemId}:${segmentIndex}`, recordId: itemId, segmentIndex,
+          blockId: id, text, node, block, epoch: pageEpoch, priority });
+      }
     }
     addTranslationItems(queue, items, priority);
     if (items.length > 0) scheduleFlush(priority ? 0 : scheduling.collectDelayMs);
@@ -838,7 +824,7 @@
 
   function applyApplicationChunk() {
     applyingFrame = undefined;
-    if (!disposed && messengerSite) handleNavigation();
+    if (!disposed) handleNavigation();
     if (disposed) return;
     if (performance.now() < viewportActiveUntil) {
       scheduleApplications();
@@ -857,23 +843,20 @@
           continue;
         }
         const state = nodeStates.get(item.node);
-        if (messengerSite && state?.itemId === item.id && !isCurrentMessengerText(item.node)) {
-          forgetMessengerText(item.node);
+        if (state?.itemId === item.recordId && !isCurrentText(item.node)) {
+          forgetText(item.node);
           continue;
         }
         if (
           translated != null
-          && state?.itemId === item.id
+          && recordMatchesItem(state, item)
           && state.epoch === pageEpoch
           && item.node.isConnected
           && item.node.nodeValue === state.original
         ) {
-          state.pending = false;
-          state.translated = translated;
-          if (enabled && canReadConversation()) writes.push({ node: item.node, translated });
-        } else if (state?.itemId === item.id) {
-          state.pending = false;
-        }
+          if (acceptTextSegment(state, item, translated) && state.translated != null
+            && enabled && canReadConversation()) writes.push({ node: item.node, translated: state.translated });
+        } else releasePending(item);
       }
       for (const write of writes) {
         write.node.nodeValue = write.translated;
@@ -929,14 +912,15 @@
         }
         const state = nodeStates.get(item.node);
         return item.epoch === pageEpoch
-          && state?.itemId === item.id
+          && recordMatchesItem(state, item)
+          && state.pending && !state.partial.has(item.segmentIndex)
           && state.epoch === pageEpoch
           && item.node.isConnected
-          // A queued private message can become an editor, author label or
+          // Any queued text can become an editor, author label or
           // hidden node before dispatch. Do not read its newly protected value.
-          && (!messengerSite || (nearViewport(item.block) && eligibilityByBlock.get(item.block)(item.node)))
-          && item.node.nodeValue === state.original
-          && (messengerSite || eligibilityByBlock.get(item.block)(item.node));
+          && (!messengerSite || nearViewport(item.block))
+          && eligibilityByBlock.get(item.block)(item.node)
+          && item.node.nodeValue === state.original;
       },
       isNearViewport(item) {
         return nearViewport(item.block);
@@ -1011,10 +995,7 @@
           completeEmbedded(item, { ok: false, code: "unavailable", retryable: Boolean(response?.retryable) });
           continue;
         }
-        const state = nodeStates.get(item.node);
-        if (state?.itemId === item.id) {
-          state.pending = false;
-        }
+        releasePending(item);
       }
       lastError = response?.message ?? "Windows 앱에서 번역 결과를 받지 못했습니다.";
       if (response?.code === "extension_context_invalidated") {
@@ -1060,22 +1041,19 @@
       for (const { item, translated } of block.applications) {
         if (item.embedded) { releasePending(item); continue; }
         const state = nodeStates.get(item.node);
-        if (messengerSite && state?.itemId === item.id && !isCurrentMessengerText(item.node)) {
-          forgetMessengerText(item.node);
+        if (state?.itemId === item.recordId && !isCurrentText(item.node)) {
+          forgetText(item.node);
           continue;
         }
         if (
           translated != null
-          && state?.itemId === item.id
+          && recordMatchesItem(state, item)
           && state.epoch === pageEpoch
           && item.node.isConnected
           && item.node.nodeValue === state.original
         ) {
-          state.pending = false;
-          state.translated = translated;
-        } else if (state?.itemId === item.id) {
-          state.pending = false;
-        }
+          acceptTextSegment(state, item, translated);
+        } else releasePending(item);
       }
     }
     pendingApplications.length = 0;
@@ -1092,7 +1070,7 @@
     flushDueAt = 0;
     applyTimer = undefined;
     applyingFrame = undefined;
-    const removed = pruneMessengerTranslations({ restoring: true });
+    const removed = pruneMessengerTranslations({ restoring: true }) + prunePublicTranslations({ restoring: true });
     const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, false);
     result.removed += removed;
     if (discard) {
@@ -1105,7 +1083,7 @@
   function replayTranslations() {
     if (!canReadConversation()) return { changed: 0, removed: 0 };
     const clipped = new Set();
-    const removed = pruneMessengerTranslations({ clipped });
+    const removed = pruneMessengerTranslations({ clipped }) + prunePublicTranslations();
     // A retained, clipped X node is left untouched, not read/replayed offscreen.
     const displayNodes = clipped.size ? new Set([...trackedNodes].filter((node) => !clipped.has(node))) : trackedNodes;
     const result = syncTrackedTranslationDisplay(displayNodes, nodeStates, true);
@@ -1128,7 +1106,6 @@
     enabled = false;
     translating = false;
     observer?.disconnect();
-    visibilityObserver?.disconnect();
     intersectionObserver?.disconnect();
     pendingScanBatch.clear();
     clearTimeout(rescanTimer);
@@ -1157,50 +1134,9 @@
     if (intersectionObserver) registerTranslationBlock(block, observedBlocks, intersectionObserver);
   }
 
-  function collectLayoutBlocks(root, visit) {
-    if (!adapter.collectLayoutText) return;
-    const element = root.nodeType === Node.DOCUMENT_NODE ? document.body : root;
-    if (!element || element.closest(excludedSelector) || element.closest(blockSelector)) return;
-    const blocks = new Set();
-    // Prune semantic blocks and protected subtrees. Only initial/dirty subtrees are walked;
-    // scroll events never cause a full-page traversal.
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          return node.matches(excludedSelector) || node.matches(blockSelector)
-            ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
-        }
-        const text = node.nodeValue ?? "";
-        return text.trim().length >= 2 && text.length <= MAX_ITEM_CHARS
-          ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      },
-    });
-    while (walker.nextNode()) {
-      const block = walker.currentNode.parentElement?.closest(LAYOUT_OWNER);
-      if (block && !blocks.has(block)) {
-        blocks.add(block);
-        layoutBlocks.add(block);
-        visit(block);
-      }
-    }
-  }
-
-  function observeVisibilityRoots(root) {
-    const selector = adapter?.visibilityRoots?.join(",");
-    if (!selector || !visibilityObserver) return;
-    const roots = [...root.querySelectorAll(selector)];
-    if (root.nodeType === Node.ELEMENT_NODE && root.matches(selector)) roots.push(root);
-    for (const element of roots) {
-      if (visibilityRoots.has(element)) continue;
-      visibilityRoots.add(element);
-      visibilityObserver.observe(element, { attributes: true, subtree: true, attributeFilter: ["class", "style"] });
-    }
-  }
-
   function handleMenuInteraction(event) {
     if (!enabled || disposed) return;
-    const selector = adapter?.visibilityRoots?.join(",");
-    const root = event.target?.closest?.(selector ? `${selector},details` : "details");
+    const root = interactionRoot(event.target);
     if (root && !root.contains(event.relatedTarget)) scheduleScan(root);
   }
 
@@ -1218,7 +1154,15 @@
       if (root === document || root.contains(messengerContext.root)) root = messengerContext.root;
       else if (!messengerContext.root.contains(root)) return;
     }
-    observeVisibilityRoots(root);
+    if (!messengerSite) {
+      const count = publicDom.collectBlocks(root, (block) => {
+        observeBlock(block);
+        if (enqueueVisible) enqueueBlock(block);
+      });
+      if (root === document && count >= 200) longDocument = true;
+      pruneDisconnectedNodes();
+      return;
+    }
     const containingBlock = root.nodeType === Node.ELEMENT_NODE ? translationBlockFor(root) : null;
     if (containingBlock) {
       observeBlock(containingBlock);
@@ -1236,10 +1180,6 @@
       observeBlock(block);
       if (enqueueVisible) enqueueBlock(block);
     }
-    collectLayoutBlocks(root, (block) => {
-      observeBlock(block);
-      if (enqueueVisible) enqueueBlock(block);
-    });
     pruneDisconnectedNodes();
   }
 
@@ -1269,9 +1209,6 @@
     longDocument = false;
     blockIds = new WeakMap();
     observedBlocks = new WeakSet();
-    layoutBlocks = new WeakSet();
-    visibilityRoots = new WeakSet();
-    visibilityObserver?.disconnect();
     intersectionObserver?.disconnect();
     assignPageContext(next);
     configureIntersectionObserver();
@@ -1434,7 +1371,7 @@
       messengerGate: messengerGate(),
       translatedNodes: [...trackedNodes].filter((node) => {
         const state = nodeStates.get(node);
-        return state?.translated != null && (!messengerSite || isCurrentMessengerText(node))
+        return state?.translated != null && isCurrentText(node)
           && node.nodeValue === state.translated;
       }).length,
       requestCount,
@@ -1573,10 +1510,6 @@
     enabled = initialEnabled();
     configureIntersectionObserver();
     updateConsentNotice();
-    visibilityObserver = new MutationObserver((mutations) => {
-      if (!enabled || disposed) return;
-      for (const mutation of mutations) scheduleScan(mutation.target);
-    });
     observer = new MutationObserver((mutations) => {
       handleNavigation();
       if (!enabled || disposed || !canReadConversation()) {
@@ -1597,8 +1530,8 @@
             }
           }
         } else if (mutation.type === "characterData") {
-          if (messengerSite && !isCurrentMessengerText(mutation.target)) {
-            forgetMessengerText(mutation.target);
+          if (!isCurrentText(mutation.target)) {
+            forgetText(mutation.target);
             continue;
           }
           const state = nodeStates.get(mutation.target);
@@ -1615,7 +1548,9 @@
     });
     observer.observe(document.documentElement, {
       childList: true, subtree: true, characterData: true,
-      attributes: true, attributeFilter: ["hidden", "aria-hidden", "open"],
+      // Any attribute may affect CSS or a node's role, including data-* state.
+      // Coalesce only the changed subtrees; scroll never scans the full DOM.
+      attributes: true,
     });
     document.addEventListener("scroll", noteViewportActivity, { capture: true, passive: true });
     document.addEventListener("pointerover", handleMenuInteraction, true);

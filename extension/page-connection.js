@@ -3,6 +3,8 @@
     "site-adapters.js",
     "messenger-adapters.js",
     "content-helpers.js",
+    "dom-policy.js",
+    "text-segments.js",
     "popup-locales.js",
     "content.js",
   ]);

@@ -4,10 +4,28 @@ import fs from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import "../site-adapters.js";
+import "../content-helpers.js";
+import "../dom-policy.js";
 
 const {
   adapterForLocation, exclusionSelector, protectedExclusionSelector,
 } = globalThis.NudeNyangSiteAdapters;
+const { createPublicDomPolicy } = globalThis.NudeNyangDomPolicy;
+
+function collectPublicTexts(document, adapter) {
+  const policy = createPublicDomPolicy(document, adapter);
+  const nodes = [];
+  policy.collectBlocks(document, (block) => {
+    const eligible = policy.eligibility(block);
+    const walker = document.createTreeWalker(block, document.defaultView.NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (eligible(node) && node.nodeValue.trim()) nodes.push(node);
+    }
+  });
+  assert.equal(new Set(nodes).size, nodes.length, "each text node must belong to exactly one collected block");
+  return nodes.map((node) => node.nodeValue.trim()).sort();
+}
 
 test("지원 사이트와 차단 경로를 구분한다", () => {
   assert.equal(adapterForLocation(new URL("https://github.com/NudeNyang/project/issues/1")).id, "github");
@@ -20,20 +38,61 @@ test("지원 사이트와 차단 경로를 구분한다", () => {
   assert.equal(adapterForLocation(new URL("https://example.com/articles/hello")).id, "web");
 });
 
-test("DLsite 서클 리포트의 div 기반 작품 소개와 구매 버튼 문구를 번역한다", () => {
-  const report = adapterForLocation(new URL(
-    "https://www.dlsite.com/maniax/circle/report/=/report/202607202",
-  ));
-
-  assert.equal(report.id, "dlsite-report");
-  assert.ok(report.blocks.includes("article.circle_report .work_name"));
-  assert.ok(report.blocks.includes("article.circle_report .catchphrase"));
-  assert.ok(report.blocks.includes("article.circle_report .report_section .content"));
-  assert.ok(report.blocks.includes("article.circle_report .btn_report.type_cart"));
+test("DLsite 서클 리포트는 콘텐츠 클래스와 태그가 바뀌어도 공개 본문만 한 번 수집한다", () => {
+  const url = "https://www.dlsite.com/maniax/circle/report/=/report/202607202";
+  const legacy = `<article class="circle_report">
+    <div class="work_name">作品紹介</div><div class="catchphrase">新しい物語</div>
+    <div class="report_info"><span class="label">発売日</span><span class="content">初夏発売</span></div>
+    <h2 class="report_title">制作について</h2>
+    <section class="report_section"><div class="content">説明文<strong>強調部分</strong>続きの説明
+      <code>protected_code()</code><span translate="no">保護された原文</span>
+      <span class="price">100円</span><span hidden>非表示の説明</span>
+    </div></section><a class="btn_report type_cart" href="/cart/">作品を購入する</a>
+    <form><p>未送信の入力</p><input value="private input"></form>
+    <div contenteditable="true">編集中の文章</div><nav><p>保護するナビゲーション</p></nav>
+  </article>`;
+  const renamed = legacy.replace(/ class="(?:circle_report|work_name|catchphrase|report_info|label|content|report_title|report_section|btn_report type_cart)"/gu, "")
+    .replace("<article>", "<section>").replace("</article>", "</section>");
+  const expected = ["作品紹介", "新しい物語", "発売日", "初夏発売", "制作について", "説明文", "強調部分", "続きの説明", "作品を購入する"].sort();
+  for (const location of [url, "https://example.org/public/article/"]) {
+    const adapter = adapterForLocation(new URL(location));
+    for (const html of [legacy, renamed]) {
+      const dom = new JSDOM(html, { url: location });
+      try {
+        assert.deepEqual(collectPublicTexts(dom.window.document, adapter), expected, location);
+      } finally {
+        dom.window.close();
+      }
+    }
+  }
   assert.equal(
     adapterForLocation(new URL("https://www.dlsite.com/maniax/work/=/product_id/RJ01669233.html")).id,
     "dlsite",
   );
+});
+
+test("서클 리포트도 일반 DLsite의 계정·포인트 수치 보호를 유지한다", () => {
+  const html = `<div id="header"><div class="login_information"><span class="number">1200 ポイント</span></div></div>
+    <article class="circle_report"><div class="work_name">公開商品紹介</div></article>`;
+  for (const url of [
+    "https://www.dlsite.com/home/work/=/product_id/123.html",
+    "https://www.dlsite.com/home/circle/report/=/report/123",
+  ]) {
+    const dom = new JSDOM(html, { url });
+    try {
+      assert.deepEqual(collectPublicTexts(dom.window.document, adapterForLocation(new URL(url))), ["公開商品紹介"], url);
+    } finally {
+      dom.window.close();
+    }
+  }
+});
+
+test("서클 리포트 경로도 계정·장바구니·로그인·결제 차단을 우회하지 않는다", () => {
+  const base = "https://www.dlsite.com/home/circle/report/=/report/123";
+  assert.equal(adapterForLocation(new URL(base)).id, "dlsite-report");
+  for (const suffix of ["/account", "/cart", "/login", "/%61ccount/", "#/payment"]) {
+    assert.equal(adapterForLocation(new URL(base + suffix)), null, suffix);
+  }
 });
 
 test("DLsite 공개 페이지의 상단 카테고리와 탐색 링크를 번역한다", () => {
@@ -182,9 +241,6 @@ test("Takara Tomy의 공개 메뉴·검색 설명·하단 안내만 정적 UI �
     ].sort());
     for (const selector of adapter.publicUiBlocks) {
       assert.ok(adapter.blocks.includes(selector), selector);
-    }
-    for (const root of dom.window.document.querySelectorAll(adapter.visibilityRoots.join(","))) {
-      assert.ok(selectedElements.some((element) => root.contains(element)));
     }
   } finally {
     dom.window.close();
@@ -341,7 +397,6 @@ test("ShoPro는 실제 헤더 메뉴 목록 링크만 허용하고 로고·SNS·
       assert.ok(element.matches(adapter.blocks.join(",")));
       assert.equal(element.closest(protectedExclusionSelector(adapter)), null);
     }
-    assert.deepEqual(adapter.visibilityRoots, ["header .headerWrap"]);
   } finally {
     dom.window.close();
   }
@@ -365,20 +420,34 @@ test("EISYS 공개 기업 페이지의 상단 메뉴와 하단 안내를 번역�
   }
 });
 
-test("특집형 상품 페이지의 카테고리와 정적 하단 안내를 번역한다", () => {
-  const report = adapterForLocation(new URL(
-    "https://www.dlsite.com/maniax/circle/report/=/report/202607202",
-  ));
-
-  assert.ok(report.blocks.includes("#left .left_module h3"));
-  assert.ok(report.blocks.includes("#left .list_head h4"));
-  assert.ok(report.blocks.includes("#left .list_content_text_item > a"));
-  assert.ok(report.blocks.includes("#left .list_text_indent > a"));
-  assert.ok(report.blocks.includes("#footer .floor_list_item > a"));
-  assert.ok(report.blocks.includes("#footer .label"));
-  assert.ok(report.blocks.includes("#footer .link_list_item > a"));
-  assert.ok(report.blocks.includes("#footer .img_list_text"));
-  assert.ok(report.blocks.includes("#footer .recruit a"));
+test("특집형 상품 페이지의 div 안내는 ID에 의존하지 않고 실제 탐색·폼 영역은 제외한다", () => {
+  const url = "https://www.dlsite.com/maniax/circle/report/=/report/202607202";
+  const report = adapterForLocation(new URL(url));
+  const legacy = `<div id="left">
+    <div class="left_module"><h3>カテゴリー一覧</h3></div><div class="list_head"><h4>作品種類</h4></div>
+    <div class="list_content_text_item"><a href="/works/">全年齢作品</a></div>
+    <div class="list_text_indent"><a href="/news/">新着作品</a></div>
+    <div class="link_list_item"><a href="/feature/">特集案内</a></div>
+  </div><div id="footer">
+    <div class="floor_list_item"><a href="/category/">作品カテゴリ</a></div><span class="label">関連サービス</span>
+    <div class="link_list_item"><a href="/help/">ヘルプ情報</a></div><span class="img_list_text">画像の説明</span>
+    <div class="footer_sns_item"><a href="/social/">公式のお知らせ</a></div>
+    <div class="recruit"><a href="/careers/">採用情報</a></div><div id="system">システム情報</div>
+  </div>`;
+  const renamed = legacy.replace(/ id="[^"]*"| class="[^"]*"/gu, "");
+  const protectedMarkup = `<nav><p>秘密のメニュー</p></nav><header><p>秘密のヘッダー</p></header>
+    <footer><p>秘密のフッター</p></footer><aside><p>秘密の補助領域</p></aside>
+    <form><p>秘密のフォーム</p><input value="private input"></form><div class="price">100円</div>`;
+  const expected = ["カテゴリー一覧", "作品種類", "全年齢作品", "新着作品", "特集案内", "作品カテゴリ", "関連サービス",
+    "ヘルプ情報", "画像の説明", "公式のお知らせ", "採用情報", "システム情報"].sort();
+  for (const html of [legacy, renamed]) {
+    const dom = new JSDOM(html + protectedMarkup, { url });
+    try {
+      assert.deepEqual(collectPublicTexts(dom.window.document, report), expected);
+    } finally {
+      dom.window.close();
+    }
+  }
 });
 
 test("범용 어댑터는 일반 HTTP 문서를 지원하고 브라우저 내부 페이지는 건드리지 않는다", () => {
@@ -456,6 +525,26 @@ test("공개 UI 예외에서도 사이트별 보호 규칙을 제거하지 않�
     dom.window.close();
   }
 });
+
+for (const { label, url, container, className, href } of [
+  { label: "공개 UI", url: "https://www.takaratomy.co.jp/product/", container: "header", className: "l-header", href: "/product/" },
+  { label: "제외 우회 읽기 범위", url: "https://www.eisys.co.jp/company/", container: "nav", className: "header_navi", href: "https://www.eisys.co.jp/company/" },
+]) {
+  test(`${label}의 중첩 제목은 수집 소유자를 잃지 않고 절대 보호 영역을 제외한다`, () => {
+    const dom = new JSDOM(`<${container} class="${className}"><a href="${href}">
+      <h2>Allowed nested heading</h2>
+      <div contenteditable="true"><h2>Private editable heading</h2></div>
+      <h2 translate="no">Protected original heading</h2><h2 hidden>Hidden heading</h2>
+      <h2><code>protected_code()</code><span class="price">100円</span><input value="private input"></h2>
+      <form><h2>Private form heading</h2></form>
+      </a><h2>Unapproved surrounding heading</h2></${container}>`, { url });
+    try {
+      assert.deepEqual(collectPublicTexts(dom.window.document, adapterForLocation(new URL(url))), ["Allowed nested heading"]);
+    } finally {
+      dom.window.close();
+    }
+  });
+}
 
 test("GitHub Markdown 표의 셀도 번역 블록에 포함한다", () => {
   const github = adapterForLocation(new URL("https://github.com/NudeNyang/project"));
@@ -537,16 +626,40 @@ test("BOOTH Tailwind order 레이아웃 클래스는 주문 영역으로 오인�
   assert.match(selector, /form\[action\*='order'\]/);
 });
 
-test("BOOTH 판매자 페이지의 span 기반 데스크톱 상품 설명을 번역한다", () => {
-  const booth = adapterForLocation(new URL("https://shop.booth.pm/items/123"));
-
-  assert.ok(booth.blocks.includes("[class~='description'] > span.autolink"));
+test("BOOTH의 span·혼합 인라인·중첩 문단은 클래스가 바뀌어도 중복 없이 수집한다", () => {
+  const url = "https://shop.booth.pm/items/123";
+  const booth = adapterForLocation(new URL(url));
+  const legacy = `<div class="description"><span class="autolink">商品説明<strong>強調内容</strong>
+    <a href="/detail/">詳しい案内</a><a href="https://example.org/">https://example.org/</a></span>
+    <p>独立した段落</p><ul><li>一覧の説明<p>一覧内の段落</p></li></ul></div>
+    <div class="public-notice"><p>公開のお知らせ</p></div>`;
+  const protectedMarkup = `<div class="price">100円</div><form><p>秘密の入力</p></form>
+    <div contenteditable="true">編集中の文章</div><nav><p>秘密のメニュー</p></nav>`;
+  for (const html of [legacy, legacy.replace(/ class="[^"]*"/gu, "")]) {
+    const dom = new JSDOM(html + protectedMarkup, { url });
+    try {
+      assert.deepEqual(collectPublicTexts(dom.window.document, booth), [
+        "商品説明", "強調内容", "詳しい案内", "独立した段落", "一覧の説明", "一覧内の段落", "公開のお知らせ",
+      ].sort());
+    } finally {
+      dom.window.close();
+    }
+  }
 });
 
 test("BOOTH 판매자 소개의 긴 단일 텍스트를 번역한다", () => {
-  const booth = adapterForLocation(new URL("https://shop.booth.pm/"));
-
-  assert.ok(booth.blocks.includes(".booth-description > .autolink > div"));
+  const url = "https://shop.booth.pm/";
+  const booth = adapterForLocation(new URL(url));
+  const original = "長い紹介文です。".repeat(600);
+  const legacy = `<div class="booth-description"><span class="autolink"><div>${original}</div></span></div>`;
+  for (const html of [legacy, `<section><div><span>${original}</span></div></section>`]) {
+    const dom = new JSDOM(html, { url });
+    try {
+      assert.deepEqual(collectPublicTexts(dom.window.document, booth), [original]);
+    } finally {
+      dom.window.close();
+    }
+  }
 });
 
 test("BOOTH 공개 안내 페이지의 비시맨틱 텍스트 블록을 범용으로 번역한다", () => {
@@ -612,20 +725,23 @@ test("BOOTH 공개 안내 내비게이션만 공통 nav 제외를 안전하게 �
   assert.ok(booth.exclusionBypassBlocks.includes(publicGuideSelector));
 });
 
-test("BOOTH 상단 약관 안내와 공개 공지 링크를 번역한다", () => {
-  const booth = adapterForLocation(new URL("https://booth.pm/ko"));
-  const bannerText = ".js-agreement-banner .text-white.text-14.font-bold";
-  const bannerLink = ".js-agreement-banner a[href^='https://booth.pm/']";
-  const announcementLink = ".booth-message > a[href^='https://booth.pm/announcements/']";
-  const moreAnnouncements = "details.booth-messages > summary";
-
-  assert.ok(booth.blocks.includes(bannerText));
-  assert.ok(booth.blocks.includes(bannerLink));
-  assert.ok(booth.blocks.includes(announcementLink));
-  assert.ok(booth.blocks.includes(moreAnnouncements));
-  assert.ok(booth.exclusionBypassBlocks.includes(bannerText));
-  assert.ok(booth.exclusionBypassBlocks.includes(bannerLink));
-  assert.ok(!booth.blocks.includes(".js-agreement-banner button"));
+test("BOOTH 상단 약관 안내·공지·일반 summary는 수집하고 동의 버튼은 제외한다", () => {
+  const url = "https://booth.pm/ko";
+  const booth = adapterForLocation(new URL(url));
+  const dom = new JSDOM(`<div class="js-agreement-banner" role="alert">
+    <span class="text-white text-14 font-bold">利用規約のお知らせ</span>
+    <a href="https://booth.pm/terms/">規約の詳細</a><button>同意する</button>
+    </div><div class="booth-message"><a href="https://booth.pm/announcements/one">公開のお知らせ</a></div>
+    <details class="booth-messages" open><summary>さらに表示</summary>
+      <div class="booth-message"><a href="https://booth.pm/announcements/two">追加のお知らせ</a></div>
+    </details><details open><summary>一般の見出し</summary><p>一般の説明</p></details>`, { url });
+  try {
+    assert.deepEqual(collectPublicTexts(dom.window.document, booth), [
+      "利用規約のお知らせ", "規約の詳細", "公開のお知らせ", "さらに表示", "追加のお知らせ", "一般の見出し", "一般の説明",
+    ].sort());
+  } finally {
+    dom.window.close();
+  }
 });
 
 test("BOOTH 다운로드 파일명은 버전과 확장자를 유지하며 번역 대상으로 포함한다", () => {

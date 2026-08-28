@@ -7,6 +7,8 @@ settings.local.json
 *.db
 .env
 node_modules/
+playwright-report/
+test-results/
 infra/update-worker/worker-configuration.d.ts
 src-tauri/target/
 src-tauri/bundle-resources/runtime/*
@@ -15,7 +17,7 @@ NudeNyang Discord Translator (Tauri).lnk
 Nude Translator (Tauri).lnk
 
 # Maintainer-only documentation kept in the local worktree
-/AGENTS.md
+# AGENTS.md is versioned so the web translation regression rules travel with branches.
 /ARCHITECTURE.md
 /HYMT.md
 /MACOS.md

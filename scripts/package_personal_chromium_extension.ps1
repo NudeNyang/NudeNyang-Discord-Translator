@@ -25,6 +25,8 @@ $SharedFiles = @(
     'download-feed.js',
     'background.js',
     'content-helpers.js',
+    'dom-policy.js',
+    'text-segments.js',
     'content.js',
     'embedded-bridge.js',
     'embedded-title.js',
