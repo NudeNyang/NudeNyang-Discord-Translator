@@ -89,6 +89,19 @@ Gmail 실제 화면에서는 읽기 경계의 DOM 구조만 확인했다. 실제
 정상인지 추가 확인해야 한다. Outlook은 실제 읽기 화면의 안전한 경계 확인과 구현부터
 남아 있다. 따라서 메일 전체 지원 목표는 진행 중이다.
 
+## 로컬 빌드 확인
+
+- 구현 커밋: `06fa110` (`codex/web-translation-dom-refactor`).
+- `npm run tauri:build`: 성공. 본체 `0.7.3-beta`의 최신 실행 파일을 생성했다.
+- 프로젝트 바로가기의 대상·작업 폴더·아이콘을 최신 실행 파일에 동기화했다.
+  해당 경로의 기존 앱만 종료하고 바로가기로 실행해 경로·제품 버전·창 응답을 확인했다.
+- `npm run extension:personal`, `npm run extension:chromium`, `npm run extension:firefox`:
+  개발용 `0.7.11` 생성 성공. 두 압축 파일의 버전과 변경된 주요 제품 파일 8개의
+  원본 일치를 검사했다. 기존 `0.7.10-share` 파일은 기존 체크섬과 일치한다.
+- 사용 중인 브라우저 확장을 자동 재로드하거나 사용자 대신 확대 동의를 승인하지 않았다.
+  새 본체와 개발용 확장을 함께 사용해야 하며, 확대된 안내에 한 번 동의해야 적용된다.
+- 원격 푸시·공개 릴리스·스토어 제출은 하지 않았다.
+
 정책 참고: [Chrome 고지 요건](https://developer.chrome.com/docs/webstore/program-policies/disclosure-requirements),
 [Firefox 데이터 전송·동의 요건](https://extensionworkshop.com/documentation/publish/add-on-policies/).
 메일 번역 자체를 금지한다는 규칙은 아니지만 데이터 범위·전송·저장을 명확히 고지해야 한다.
