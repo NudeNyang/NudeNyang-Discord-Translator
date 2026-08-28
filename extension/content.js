@@ -54,8 +54,8 @@
   let boxlessTimer;
   const queue = [];
   let enabled = false;
-  let storedEnabled = true;
-  let tabEnabled = null;
+  let globalEnabled = false;
+  let globalEpoch = 0;
   let translating = false;
   let sequence = 0;
   let pageEpoch = 0;
@@ -73,7 +73,7 @@
   let uiLanguage = globalThis.NudeNyangPopupLocales.resolve("auto");
   let appStatusAvailable = false;
   let lastMessengerStatusAt = 0;
-  let refreshingStatus = false;
+  let statusRefreshPromise = null;
   let appStatusEpoch = 0;
   let adapter = adapters.adapterForLocation(location);
   let publicDom = null;
@@ -110,7 +110,6 @@
   let auditRevision = 0;
   let lastAuditAt = 0;
   let stateChanges = Promise.resolve();
-  let manualIntent = null;
 
   globalThis[INSTANCE_KEY] = {
     version,
@@ -181,7 +180,7 @@
       consentNoticeDismissed = false;
     }
     const wantsTranslation = consentNoticeRequested || pageTranslationEnabled({
-      adapter, storedEnabled, tabEnabled, webEnabled: webSettings.enabled, sitePolicy,
+      adapter, globalEnabled, webEnabled: webSettings.enabled, sitePolicy,
     });
     if (disposed || !appStatusAvailable || document.hidden || !messengerContext?.root.isConnected
       || messengerGate() !== "messenger_consent_required" || sitePolicy === "never"
@@ -290,10 +289,6 @@
     return next;
   }
 
-  function storageGet(defaults) {
-    return new Promise((resolve) => api.storage.local.get(defaults, resolve));
-  }
-
   function extensionRequest(message) {
     return new Promise((resolve) => {
       try {
@@ -315,17 +310,9 @@
     });
   }
 
-  async function loadTabEnabled() {
-    const response = await extensionRequest({ type: "nudenyang-tab-enabled-get" });
-    return typeof response?.enabled === "boolean" ? response.enabled : null;
-  }
-
-  async function saveTabEnabled(value) {
-    const response = await extensionRequest({
-      type: "nudenyang-tab-enabled-set",
-      enabled: Boolean(value),
-    });
-    return typeof response?.enabled === "boolean" ? response.enabled : Boolean(value);
+  async function loadGlobalEnabled() {
+    const response = await extensionRequest({ type: "nudenyang-global-get" });
+    return response?.enabled === true;
   }
 
   function nativeRequest(request) {
@@ -448,9 +435,13 @@
     applyWebSettings(response.webSettings);
   }
 
-  async function refreshAppStatus() {
-    if (refreshingStatus || disposed) return;
-    refreshingStatus = true;
+  function refreshAppStatus() {
+    if (disposed) return Promise.resolve();
+    if (!statusRefreshPromise) statusRefreshPromise = performAppStatusRefresh().finally(() => { statusRefreshPromise = null; });
+    return statusRefreshPromise;
+  }
+
+  async function performAppStatusRefresh() {
     const refreshEpoch = ++appStatusEpoch;
     try {
       const [response, consent] = await Promise.all([
@@ -481,7 +472,6 @@
       });
     } finally {
       lastMessengerStatusAt = refreshEpoch === appStatusEpoch ? Date.now() : 0;
-      refreshingStatus = false;
     }
   }
 
@@ -492,13 +482,13 @@
   }
 
   function initialEnabled() {
+    if (!appStatusAvailable) return false;
     if (messengerStartContextId && messengerStartContextId === messengerPageId) {
-      return !messengerGate() && webSettings.enabled && sitePolicy !== "never";
+      return globalEnabled && !messengerGate() && webSettings.enabled && sitePolicy !== "never";
     }
     return !messengerGate() && pageTranslationEnabled({
       adapter,
-      storedEnabled,
-      tabEnabled,
+      globalEnabled,
       webEnabled: webSettings.enabled,
       sitePolicy,
     });
@@ -1408,95 +1398,33 @@
     notifyEmbeddedFrames();
   }
 
-  async function setEnabled(value, revision = messengerStartRevision) {
-    if (disposed || revision !== messengerStartRevision) return status();
-    handleNavigation();
-    if (!adapter) {
-      return status();
-    }
-    messengerStartContextId = "";
-    if (value && !webSettings.enabled) {
-      lastError = "Windows 앱에서 웹 번역 사용이 꺼져 있습니다.";
-      return status();
-    }
-    if (value && sitePolicy === "never") {
-      lastError = "이 사이트는 번역하지 않도록 설정되어 있습니다.";
-      return status();
-    }
-    if (value && messengerGate()) {
-      updateConsentNotice({ requested: true });
-      return status();
-    }
-    if (!value) {
-      consentNoticeRequested = false;
-      consentNoticeDismissed = true;
-      removeConsentNotice();
-    }
-    tabEnabled = await saveTabEnabled(value);
-    if (disposed || revision !== messengerStartRevision) return status();
-    handleNavigation();
-    enabled = tabEnabled && !messengerGate();
-    usageLimited = false;
-    lastError = "";
-    if (enabled) {
-      replayTranslations();
-      scan(document, { enqueueVisible: true });
-    } else {
-      restoreOriginals();
-    }
-    notifyEmbeddedFrames();
-    return status();
-  }
-
   async function requestEnabled(value) {
-    const revision = ++messengerStartRevision;
-    manualIntent = { revision, value: Boolean(value) };
-    try {
-      await startupPromise;
-      if (disposed || revision !== messengerStartRevision) return status();
-      // OFF must not wait for a disconnected companion or a pending ON lookup.
-      if (!value) return await changeState(() => setEnabled(false, revision));
-      handleNavigation();
-      const requestedUrl = location.href;
-      const requestedContext = messengerPageId;
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const epoch = appStatusEpoch;
-        const [app, consent] = await Promise.all([
-          nativeRequest({ type: "status", requestId: `content-toggle-${Date.now()}` }),
-          extensionRequest({ type: "nudenyang-messenger-consent-get" }),
-        ]);
-        const result = await changeState(() => {
-          handleNavigation();
-          if (disposed || revision !== messengerStartRevision || requestedUrl !== location.href
-            || requestedContext !== messengerPageId) return status();
-          if (epoch !== appStatusEpoch) return null;
-          // F4 and popup/command starts use the same fresh settings/connection.
-          // A failed lookup never turns stale permissions into an enabled page.
-          appStatusAvailable = app?.type === "status";
-          if (!appStatusAvailable) {
-            if (messengerSite) messengerFailure = "messenger_request_cancelled";
-            else lastError = "Windows 앱 연결을 확인하지 못했습니다.";
-            updateConsentNotice();
-            return status();
-          }
-          const oldKey = translationKey();
-          applyAppStatus(app);
-          messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 3;
-          messengerFailure = "";
-          refreshPageSettings(oldKey);
-          return setEnabled(true, revision);
-        });
-        if (result !== null) return result;
-      }
-      return status();
-    } finally {
-      if (manualIntent?.revision === revision) manualIntent = null;
-    }
+    await extensionRequest({ type: "nudenyang-global-set", enabled: Boolean(value) });
+    return refreshGlobalEnabled();
   }
 
-  function toggleEnabled() {
-    const previous = manualIntent?.revision === messengerStartRevision ? manualIntent.value : enabled;
-    return requestEnabled(!previous);
+  async function toggleEnabled() {
+    // The background serializes toggles across tabs, including during startup.
+    await extensionRequest({ type: "nudenyang-global-toggle" });
+    return refreshGlobalEnabled();
+  }
+
+  async function refreshGlobalEnabled() {
+    const epoch = ++globalEpoch;
+    const value = await loadGlobalEnabled();
+    if (value && !globalEnabled) await refreshAppStatus();
+    if (disposed || epoch !== globalEpoch) return status();
+    return changeState(() => {
+      if (disposed || epoch !== globalEpoch) return status();
+      globalEnabled = value;
+      usageLimited = false;
+      if (!value) {
+        consentNoticeRequested = false;
+        consentNoticeDismissed = true;
+        removeConsentNotice();
+      } else consentNoticeDismissed = false;
+      return refreshPageSettings(translationKey());
+    });
   }
 
   async function startConsentedConversation(contextId) {
@@ -1536,7 +1464,7 @@
   }
 
   async function handleQuickToggle(event) {
-    if (!adapter || !isQuickToggleShortcut(event, webSettings.quickToggleShortcut)) {
+    if (!isQuickToggleShortcut(event, webSettings.quickToggleShortcut)) {
       return;
     }
     event.preventDefault();
@@ -1545,7 +1473,7 @@
     // user's shortcut. Recheck after startup so a disabled/remapped F4 cannot
     // start translation using the temporary default.
     await startupPromise;
-    if (disposed || !adapter || !isQuickToggleShortcut(event, webSettings.quickToggleShortcut)) return;
+    if (disposed || !isQuickToggleShortcut(event, webSettings.quickToggleShortcut)) return;
     void toggleEnabled();
   }
 
@@ -1553,6 +1481,7 @@
     return {
       origin: location.origin,
       enabled,
+      globalEnabled,
       supported: Boolean(adapter),
       site: adapter?.id ?? "",
       manualOnly: Boolean(adapter?.manualOnly),
@@ -1611,6 +1540,11 @@
 
   function handleMessage(message, sender, sendResponse) {
     if (disposed) return false;
+    if (message?.type === "nudenyang-global-refresh" && sender?.id === api.runtime.id) {
+      messengerStartRevision += 1;
+      refreshGlobalEnabled().then(sendResponse);
+      return true;
+    }
     if (message?.type === "nudenyang-audit" && sender?.id === api.runtime.id) {
       Promise.resolve(startupPromise).then(() => { handleNavigation(); return inspectCoverage(); }).then(sendResponse);
       return true;
@@ -1684,11 +1618,11 @@
   window.addEventListener("focus", refreshAppStatus, true);
 
   async function start() {
+    const startupGlobalEpoch = globalEpoch;
     const startupEpoch = appStatusEpoch;
-    const [stored, appStatus, restoredTabEnabled, consent] = await Promise.all([
-      storageGet({ enabled: true }),
+    const [appStatus, restoredGlobalEnabled, consent] = await Promise.all([
       nativeRequest({ type: "status", requestId: `content-${Date.now()}` }),
-      loadTabEnabled(),
+      loadGlobalEnabled(),
       extensionRequest({ type: "nudenyang-messenger-consent-get" }),
       // Register keyboard capture at document_start, ahead of page handlers,
       // but do not inspect/observe a partially parsed document or editor.
@@ -1697,8 +1631,7 @@
         : Promise.resolve(),
     ]);
     if (disposed) return;
-    storedEnabled = stored.enabled !== false;
-    tabEnabled = restoredTabEnabled;
+    globalEnabled = startupGlobalEpoch === globalEpoch && restoredGlobalEnabled;
     // Notifications received during startup are queued behind this promise.
     // Keep the private gate closed until they apply instead of scanning with
     // a now-obsolete consent snapshot even for a single microtask.

@@ -72,15 +72,16 @@ export const test = base.extend({
           return worker.evaluate(id => globalThis.__NudeNyangE2E.dispatchCommand(id), tabId);
         },
         async open({ html, url = "https://fixture.example.test/article/", settings = {}, publicSample = null,
-          consent = false, consentVersion = 3, enabled = true, deferTranslations = false,
+          consent = false, consentVersion = 3, enabled = true, globalConsent = true, deferTranslations = false,
           translator = "hymt_1_8b", documents = {} } = {}) {
           if (typeof html !== "string") throw new TypeError("extension.open requires an HTML fixture string");
           const destination = new URL(url);
           if (!["http:", "https:"].includes(destination.protocol)) throw new Error("E2E fixtures require HTTP(S) URLs");
           await worker.evaluate(async options => {
             globalThis.__NudeNyangE2E.configure(options);
-            await chrome.storage.local.set({ enabled: true, messengerConsentVersion: options.consent ? options.consentVersion : 0 });
-          }, { settings, consent, consentVersion, deferTranslations, translator });
+            await chrome.storage.local.set({ enabled: true, messengerConsentVersion: options.consent ? options.consentVersion : 0,
+              webTranslationConsentVersion: options.globalConsent ? 1 : 0, webTranslationEnabled: options.enabled === null });
+          }, { settings, consent, consentVersion, deferTranslations, translator, globalConsent, enabled });
           const page = await context.newPage();
           if (publicSample) {
             if (process.env.NUDENYANG_PUBLIC_CHECK !== "1" || publicSample.url !== url) throw new Error("Public checks require explicit opt-in and a matching sample URL");
@@ -109,11 +110,6 @@ export const test = base.extend({
           });
           await page.goto(`chrome-extension://${extensionId}/e2e-control.html`);
           const tabId = await page.evaluate(() => new Promise(resolve => chrome.tabs.getCurrent(tab => resolve(tab.id))));
-          // Start OFF so enabling is deterministic even on auto-enabled sites.
-          // Pass enabled:null to exercise the production automatic-start policy.
-          if (enabled !== null) await worker.evaluate(async id => {
-            await chrome.storage.session.set({ [`nudenyang-tab-enabled:${id}`]: false });
-          }, tabId);
           const message = value => worker.evaluate(({ id, value: payload }) => new Promise((resolve, reject) => {
             chrome.tabs.sendMessage(id, payload, { frameId: 0 }, response => {
               const error = chrome.runtime.lastError;

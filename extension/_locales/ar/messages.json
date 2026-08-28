@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "السماح للإضافة بترجمة فقرات الصفحة الحالية."
+    "message": "ترجمة جميع علامات التبويب"
   },
   "togglePageTranslation": {
-    "message": "تفعيل ترجمة صفحات الويب"
+    "message": "ترجمة جميع علامات التبويب"
   }
 }

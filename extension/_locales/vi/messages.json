@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Cho phép tiện ích dịch các đoạn văn trên trang hiện tại."
+    "message": "Dịch web trên mọi thẻ"
   },
   "togglePageTranslation": {
-    "message": "Bật dịch trang web"
+    "message": "Dịch web trên mọi thẻ"
   }
 }

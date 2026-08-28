@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Der Erweiterung erlauben, Absätze auf der aktuellen Seite zu übersetzen."
+    "message": "Webübersetzung für alle Tabs"
   },
   "togglePageTranslation": {
-    "message": "Webseitenübersetzung aktivieren"
+    "message": "Webübersetzung für alle Tabs"
   }
 }

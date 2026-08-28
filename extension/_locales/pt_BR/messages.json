@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Permita que a extensão traduza parágrafos na página atual."
+    "message": "Tradução de todas as abas"
   },
   "togglePageTranslation": {
-    "message": "Ativar tradução de páginas da Web"
+    "message": "Tradução de todas as abas"
   }
 }

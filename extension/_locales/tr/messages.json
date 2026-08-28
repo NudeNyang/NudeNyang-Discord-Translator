@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Uzantının geçerli sayfadaki paragrafları çevirmesine izin verin."
+    "message": "Tüm sekmelerde web çevirisi"
   },
   "togglePageTranslation": {
-    "message": "Web sayfası çevirisini etkinleştir"
+    "message": "Tüm sekmelerde web çevirisi"
   }
 }

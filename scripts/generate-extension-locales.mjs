@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { COPY, DYNAMIC_TEMPLATE_COPY } from "../web/i18n.mjs";
 import { UI_LOCALE_COPY } from "../web/ui-locales.mjs";
 import { EXTENSION_SETUP_COPY } from "./extension-setup-copy.mjs";
+import { EXTENSION_GLOBAL_COPY } from "./extension-global-copy.mjs";
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const EXTENSION_ROOT = join(PROJECT_ROOT, "extension");
@@ -100,7 +101,7 @@ function translated(locale, korean) {
 const popupCopy = Object.fromEntries(LOCALES.map(locale => [
   locale,
   { ...Object.fromEntries(Object.entries(POPUP_SOURCE).map(([id, korean]) => [id, translated(locale, korean)])),
-    ...EXTENSION_SETUP_COPY[locale] },
+    ...EXTENSION_SETUP_COPY[locale], ...EXTENSION_GLOBAL_COPY[locale] },
 ]));
 
 const runtime = `(function exposePopupLocales(root) {\n` +
@@ -131,9 +132,9 @@ for (const locale of LOCALES) {
   const messages = {
     extensionName: { message: "NudeNyang Web Translator" },
     extensionDescription: {
-      message: translated(locale, "확장 프로그램에서 현재 페이지의 문단을 번역할 수 있도록 합니다."),
+      message: EXTENSION_GLOBAL_COPY[locale].globalWebTranslation,
     },
-    togglePageTranslation: { message: translated(locale, "웹페이지 번역 사용") },
+    togglePageTranslation: { message: EXTENSION_GLOBAL_COPY[locale].globalWebTranslation },
   };
   expectedBrowserFiles.set(
     join(BROWSER_LOCALES_ROOT, directory, "messages.json"),

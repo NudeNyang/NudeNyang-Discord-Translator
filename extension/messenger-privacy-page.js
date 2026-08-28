@@ -5,6 +5,16 @@
   const api = firefoxApi ?? globalThis.chrome ?? globalThis.browser ?? globalThis.whale;
   const isFirefox = Boolean(firefoxApi) || typeof api?.runtime?.getBrowserInfo === "function";
   const locales = globalThis.NudeNyangPopupLocales;
+  const globalMode = new URL(location.href).searchParams.get("scope") === "web";
+  if (globalMode) {
+    document.querySelector("#privacy-title").dataset.i18n = "globalWebTranslation";
+    document.querySelector(".intro").dataset.i18n = "globalPrivacyIntro";
+    document.querySelector(".services").hidden = true;
+    document.querySelector('[data-i18n="messengerPrivacyData"]').hidden = true;
+    document.querySelector("#consent-title").dataset.i18n = "globalWebTranslation";
+    document.querySelector('[data-i18n="messengerPrivacyConfirm"]').dataset.i18n = "globalPrivacyConfirm";
+    document.querySelector("#messenger-privacy-link").hidden = false;
+  }
   const confirmation = document.getElementById("privacy-confirm");
   const confirmationRow = document.getElementById("privacy-confirmation");
   const accept = document.getElementById("privacy-accept");
@@ -21,13 +31,17 @@
   // Do not let browser form restoration count as a new affirmative choice.
   confirmation.checked = false;
 
-  function copy(key) { return locales.message(uiLanguage, key); }
+  function copy(key) {
+    if (globalMode && key === "messengerPrivacySaved") key = "globalPrivacySaved";
+    if (globalMode && key === "messengerConsentRequired") key = "reviewMessengerPrivacy";
+    return locales.message(uiLanguage, key);
+  }
 
   function applyLanguage(language) {
     uiLanguage = locales.resolve(language || uiLanguage, api?.i18n?.getUILanguage?.() || navigator.language);
     document.documentElement.lang = uiLanguage;
     document.documentElement.dir = ["ar", "ur", "fa", "he"].includes(uiLanguage) ? "rtl" : "ltr";
-    document.title = copy("messengerPrivacyTitle");
+    document.title = copy(globalMode ? "globalWebTranslation" : "messengerPrivacyTitle");
     for (const element of document.querySelectorAll("[data-i18n]")) {
       element.textContent = copy(element.dataset.i18n);
     }
@@ -51,6 +65,8 @@
   }
 
   function runtimeMessage(message) {
+    if (globalMode && message.type === "nudenyang-messenger-consent-get") message = { type: "nudenyang-global-get" };
+    if (globalMode && message.type === "nudenyang-messenger-consent-set") message = { ...message, type: "nudenyang-global-consent-set" };
     return new Promise((resolve) => {
       if (disposed || !api?.runtime?.sendMessage) { resolve(null); return; }
       let finished = false;
@@ -61,7 +77,7 @@
         finished = true;
         clearTimeout(timer);
         pendingTimers.delete(timer);
-        resolve(response);
+        resolve(globalMode && response && "consent" in response ? { ...response, granted: response.consent } : response);
       }
       try {
         if (isFirefox) Promise.resolve(api.runtime.sendMessage(message)).then(finish, () => finish(null));
@@ -71,12 +87,14 @@
   }
 
   async function removeFirefoxPermission() {
+    if (globalMode) return;
     if (!isFirefox || typeof api.permissions?.remove !== "function") return;
     try { await api.permissions.remove({ data_collection: ["personalCommunications"] }); }
     catch { /* Stored consent is independently required even if permission removal fails. */ }
   }
 
   async function resumeConversation() {
+    if (globalMode) return;
     const params = new URL(location.href).searchParams;
     const rawTab = params.get("tab");
     const tabId = Number(rawTab);
@@ -131,7 +149,7 @@
     try {
       // This call must stay in the actual click handler before the first await:
       // Firefox optional data permissions require an active user gesture.
-      if (isFirefox) permission = typeof api.permissions?.request === "function"
+      if (isFirefox && !globalMode) permission = typeof api.permissions?.request === "function"
         ? api.permissions.request({ data_collection: ["personalCommunications"] }) : false;
     } catch { permission = false; }
     void finishAcceptance(permission);

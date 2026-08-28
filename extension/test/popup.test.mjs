@@ -40,7 +40,7 @@ test("팝업과 보조 단축키는 끊어진 현재 탭 연결을 백그라운�
   assert.match(backgroundJs, /NudeNyangPageConnection\.createPageConnection/);
   assert.match(backgroundJs, /tabs\.onActivated/);
   assert.match(backgroundJs, /windows\?\.onFocusChanged/);
-  assert.match(backgroundJs, /pageConnection\.request\(tabId,\s*\{\s*type:\s*"nudenyang-toggle-enabled"/);
+  assert.match(backgroundJs, /globalTranslationState\.set\("toggle"\)/);
   assert.match(contentJs, /message\?\.type === "nudenyang-ready"/);
 });
 
@@ -57,20 +57,21 @@ test("설정한 빠른 전환키는 지원 페이지에서 번역과 원문을 �
   assert.match(contentJs, /addEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
   assert.match(contentJs, /isQuickToggleShortcut\(event,\s*webSettings\.quickToggleShortcut\)/);
   assert.match(contentJs, /event\.stopImmediatePropagation\(\)/);
-  assert.match(contentJs, /return requestEnabled\(!previous\)/);
+  assert.match(contentJs, /nudenyang-global-toggle/);
   assert.match(contentJs, /removeEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
 });
 
 test("팝업에 포커스가 있어도 설정한 빠른 전환키는 현재 페이지 번역을 전환한다", () => {
   assert.match(popupJs, /document\.addEventListener\("keydown",\s*handleQuickToggle,\s*true\)/);
   assert.match(popupJs, /isQuickToggleShortcut\(event,\s*quickToggleShortcut\)/);
-  assert.match(popupJs, /type:\s*"nudenyang-toggle-enabled"/);
+  assert.match(popupJs, /type:\s*"nudenyang-global-toggle"/);
   assert.match(popupJs, /event\.preventDefault\(\)/);
   assert.match(popupJs, /event\.stopImmediatePropagation\(\)/);
 });
 
-test("차단 페이지에서는 보조 단축키도 번역 설정을 바꾸지 않는다", () => {
-  assert.match(contentJs, /async function setEnabled\(value, revision = messengerStartRevision\) \{[\s\S]*?handleNavigation\(\);\s*if \(!adapter\) \{\s*return status\(\);/);
+test("전체 단축키는 현재 페이지의 수집 허용과 독립적이다", () => {
+  assert.match(backgroundJs, /globalTranslationState\.set\("toggle"\)/);
+  assert.match(contentJs, /globalEnabled/);
 });
 
 test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호출한다", () => {
@@ -82,7 +83,7 @@ test("Ctrl Shift L 보조 단축키는 현재 탭의 같은 전환 동작을 호
   });
   assert.match(backgroundJs, /commands\.onCommand\.addListener/);
   assert.match(backgroundJs, /toggle-page-translation/);
-  assert.match(backgroundJs, /nudenyang-toggle-enabled/);
+  assert.match(backgroundJs, /nudenyang-global-toggle/);
   assert.match(contentJs, /nudenyang-toggle-enabled/);
   assert.match(backgroundJs, /FALLBACK_COMMAND_SHORTCUT\s*=\s*"Ctrl\+Shift\+L"/);
   assert.match(backgroundJs, /commands\.update/);
@@ -97,12 +98,12 @@ test("팝업은 빠른 단축키와 실제 등록된 보조 단축키를 안내�
   assert.match(popupCss, /\.shortcut-row/);
 });
 
-test("페이지 번역 상태는 현재 탭에 저장되어 다음 페이지에서도 유지된다", () => {
-  assert.match(backgroundJs, /nudenyang-tab-enabled-get/);
-  assert.match(backgroundJs, /nudenyang-tab-enabled-set/);
+test("전체 번역 상태는 브라우저 공통으로 조회하고 저장한다", () => {
+  assert.match(backgroundJs, /nudenyang-global-get/);
+  assert.match(backgroundJs, /nudenyang-global-set/);
   assert.match(backgroundJs, /tabs\.onRemoved/);
-  assert.match(contentJs, /nudenyang-tab-enabled-get/);
-  assert.match(contentJs, /nudenyang-tab-enabled-set/);
+  assert.match(contentJs, /nudenyang-global-get/);
+  assert.match(contentJs, /nudenyang-global-set/);
 });
 
 test("웹 번역을 다시 켜면 저장된 번역을 즉시 재생하고 미완료 문단만 다시 수집한다", () => {
@@ -119,8 +120,8 @@ test("동적으로 펼친 게시물은 일반 웹 대기열보다 먼저 번역�
 });
 
 test("사이트 자동 번역은 범위와 동작을 분명하게 안내한다", () => {
-  assert.match(popupHtml, /data-i18n="autoTranslateThisSite"/);
-  assert.match(popupHtml, /data-i18n="autoTranslateThisSiteDescription"/);
+  assert.match(popupHtml, /data-i18n="globalWebTranslation"/);
+  assert.doesNotMatch(popupHtml, /always-translate-site/);
 });
 
 test("상단 번역 토글은 웹 번역 제목 줄에 맞춰 아래로 정렬한다", () => {
@@ -135,11 +136,10 @@ test("범용 사이트의 수동 시작 안내를 공식체로 표시한다", ()
 
 test("팝업은 현재 페이지 언어, 사이트 정책, 사용량과 본체 설정 이동을 제공한다", () => {
   assert.match(popupHtml, /id="target-language"/);
-  assert.match(popupHtml, /id="always-translate-site"/);
+  assert.doesNotMatch(popupHtml, /id="always-translate-site"/);
   assert.match(popupHtml, /id="usage"/);
   assert.match(popupHtml, /id="open-settings"/);
   assert.match(popupJs, /nudenyang-set-target-language/);
-  assert.match(popupJs, /webSettingsUpdate/);
   assert.match(popupJs, /openWebSettings/);
   assert.match(popupJs, /response\?\.type === "opened"[\s\S]*?window\.close\(\)/);
   assert.match(popupJs, /requestCount/);

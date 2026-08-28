@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "允許擴充功能翻譯目前頁面上的段落。"
+    "message": "所有分頁翻譯"
   },
   "togglePageTranslation": {
-    "message": "啟用網頁翻譯"
+    "message": "所有分頁翻譯"
   }
 }

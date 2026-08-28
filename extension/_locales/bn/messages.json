@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "এক্সটেনশনটিকে বর্তমান পৃষ্ঠার অনুচ্ছেদগুলো অনুবাদ করার অনুমতি দিন।"
+    "message": "সব ট্যাবের ওয়েব অনুবাদ"
   },
   "togglePageTranslation": {
-    "message": "ওয়েবপেজ অনুবাদ চালু করুন"
+    "message": "সব ট্যাবের ওয়েব অনুবাদ"
   }
 }

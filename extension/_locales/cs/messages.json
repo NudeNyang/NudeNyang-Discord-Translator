@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Povolte rozšíření překládat odstavce na aktuální stránce."
+    "message": "Překlad všech karet"
   },
   "togglePageTranslation": {
-    "message": "Povolit překlad webových stránek"
+    "message": "Překlad všech karet"
   }
 }

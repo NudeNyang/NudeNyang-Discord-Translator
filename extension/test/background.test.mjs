@@ -6,7 +6,8 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../background.js", import.meta.url), "utf8");
 const bridgeSource = fs.readFileSync(new URL("../embedded-bridge.js", import.meta.url), "utf8");
 
-function createBackground(tabState, {
+function createBackground(_legacy, {
+  globalState = { get: async () => ({ enabled: true, consent: true }), set: async () => ({}), invalidate() {}, revision: 0 },
   bridge = { handle: () => false, clear: () => {} },
   nativeClient = { request: async () => ({ ok: true }) },
   pageConnection = { request: async () => ({}), ensure: async () => ({}) },
@@ -24,6 +25,7 @@ function createBackground(tabState, {
   const event = (name) => ({ addListener(listener) { listeners[name] = listener; } });
   const api = {
     runtime: {
+      id: "test",
       getManifest: () => ({ version: "0.7.4" }),
       getURL: path => `chrome-extension://test/${path}`,
       onMessage: event("message"),
@@ -55,7 +57,7 @@ function createBackground(tabState, {
     chrome: api,
     navigator: { userAgent: "Chrome" },
     NudeNyangNativeClient: { createNativeClient: () => nativeClient },
-    NudeNyangTabTranslationState: { createTabTranslationState: () => tabState },
+    NudeNyangGlobalTranslationState: { createGlobalTranslationState: () => globalState },
     NudeNyangPageConnection: { createPageConnection: () => pageConnection },
     NudeNyangEmbeddedBridge: loadBridgeThroughImportScripts || realBridge ? undefined : bridgeModule,
     NudeNyangMessengerAdapters: {},
@@ -81,6 +83,25 @@ function createBackground(tabState, {
 }
 
 const flushConnection = () => new Promise(resolve => setImmediate(resolve));
+
+test("개인정보 확인 중 OFF/ON하면 이전 번역 본문은 Native Messaging으로 보내지 않는다", async () => {
+  let resume;
+  const sent = [];
+  const globalState = { revision: 0, get: async () => ({ enabled: true, consent: true }) };
+  const b = createBackground({}, { globalState,
+    nativeClient: { request: async request => { sent.push(request); return {}; } },
+    privacy: { forward: async (request, _sender, forward) => {
+      await new Promise(resolve => { resume = resolve; });
+      return forward(request);
+    } },
+  });
+  const pending = b.message({ type: "nudenyang-native-request", request: { type: "translate", requestId: "old", items: [{ text: "Synthetic private text" }] } }, { id: "test" });
+  await flushConnection();
+  globalState.revision += 2;
+  resume();
+  assert.equal((await pending).code, "web_translation_disabled");
+  assert.equal(sent.filter(request => request.type === "translate").length, 0);
+});
 
 test("짧은 팝업 연결 확인은 확장 팝업만 요청할 수 있고 페이지 데이터 없이 처리한다", async () => {
   const requests = [];
@@ -174,20 +195,9 @@ test("본체가 계속 꺼져 있으면 짧은 재시도 횟수를 제한하고 
   assert.equal(background.timers.size, 0);
 });
 
-test("새 팝업의 초기 상태는 브라우저가 제공한 sender 탭과 문서 URL로 해석한다", async () => {
-  const reads = [];
-  const background = createBackground({
-    get: async () => null,
-    getForTab: async (tab, url) => { reads.push({ tab, url }); return true; },
-  });
-  const tab = { id: 23, openerTabId: 17 };
-  const response = await background.message({
-    type: "nudenyang-tab-enabled-get",
-    tab: { id: 999, openerTabId: 888 },
-    url: "https://untrusted.example/",
-  }, { tab, url: "https://example.com/popup", frameId: 0 });
-  assert.equal(response.enabled, true);
-  assert.deepEqual(reads, [{ tab, url: "https://example.com/popup" }]);
+test("전체 상태는 탭 ID나 opener에 의존하지 않는다", async () => {
+  const background = createBackground({});
+  assert.equal((await background.message({ type: "nudenyang-global-get", tabId: 999 }, { id: "test" })).enabled, true);
 });
 
 test("설치와 브라우저 시작은 번역이나 탭 이동 없이 앱 연결만 확인한다", async () => {
@@ -224,21 +234,21 @@ test("연결 확인은 중복 실행하지 않고 실패 후 다음 알람에서
   await retry;
 });
 
-test("토글 저장과 탭 종료는 요청 본문의 다른 탭 ID를 사용하지 않는다", async () => {
-  const writes = [];
-  const clears = [];
-  const frameClears = [];
-  const background = createBackground({
-    set: async (tabId, enabled) => { writes.push({ tabId, enabled }); return enabled; },
-    clear: async (tabId) => { clears.push(tabId); },
-  }, { bridge: { handle: () => false, clear: (tabId) => frameClears.push(tabId) } });
-  const response = await background.message({
-    type: "nudenyang-tab-enabled-set", enabled: false, tabId: 999,
-  }, { tab: { id: 23 } });
+test("전체 토글은 확장 팝업과 최상위 콘텐츠만 요청할 수 있다", async () => {
+  const writes = [], frameClears = [];
+  const background = createBackground({}, {
+    globalState: { set: async value => { writes.push(value); return { enabled: value }; } },
+    bridge: { handle: () => false, clear: id => frameClears.push(id) },
+  });
+  for (const sender of [{}, { id: "other", url: "chrome-extension://test/popup.html" },
+    { id: "test", tab: { id: 23 }, frameId: 2, url: "https://example.test/" }]) {
+    assert.equal((await background.message({ type: "nudenyang-global-set", enabled: true }, sender)).ok, false);
+  }
+  const response = await background.message({ type: "nudenyang-global-set", enabled: false, tabId: 999 },
+    { id: "test", tab: { id: 23 }, frameId: 0, url: "https://example.test/" });
   assert.equal(response.enabled, false);
-  assert.deepEqual(writes, [{ tabId: 23, enabled: false }]);
+  assert.deepEqual(writes, [false]);
   background.listeners.removed(23);
-  assert.deepEqual(clears, [23]);
   assert.deepEqual(frameClears, [23]);
 });
 

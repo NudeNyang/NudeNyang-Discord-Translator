@@ -1,6 +1,6 @@
 if (typeof importScripts === "function") {
   if (!globalThis.NudeNyangNativeClient) importScripts("native-client.js");
-  if (!globalThis.NudeNyangTabTranslationState) importScripts("tab-state.js");
+  if (!globalThis.NudeNyangGlobalTranslationState) importScripts("global-state.js");
   if (!globalThis.NudeNyangPageConnection) importScripts("page-connection.js");
   if (!globalThis.NudeNyangEmbeddedBridge) importScripts("embedded-bridge.js");
   if (!globalThis.NudeNyangMessengerAdapters) importScripts("messenger-adapters.js");
@@ -31,7 +31,7 @@ function rememberConnection(response) {
   }
   return response;
 }
-const tabTranslationState = globalThis.NudeNyangTabTranslationState.createTabTranslationState(api);
+const globalTranslationState = globalThis.NudeNyangGlobalTranslationState.createGlobalTranslationState(api);
 const pageConnection = globalThis.NudeNyangPageConnection.createPageConnection(api);
 const embeddedBridge = globalThis.NudeNyangEmbeddedBridge.createEmbeddedBridge(api);
 const messengerPrivacy = globalThis.NudeNyangMessengerPrivacy.createMessengerPrivacy(api, { firefox: CLIENT.browser === "firefox" });
@@ -76,11 +76,59 @@ api.alarms?.onAlarm.addListener((alarm) => {
   if (alarm.name === CONNECTION_ALARM) return checkAppConnection();
 });
 
-function nativeRequest(request) {
-  return nativeClient.request(request).then(rememberConnection);
+async function nativeRequest(request) {
+  if (request?.type !== "translate") return nativeClient.request(request).then(rememberConnection);
+  const revision = globalTranslationState.revision;
+  const state = await globalTranslationState.get();
+  const blocked = () => ({ type: "error", requestId: request.requestId, code: "web_translation_disabled", retryable: false });
+  if (!state.enabled || revision !== globalTranslationState.revision) return blocked();
+  const response = await nativeClient.request(request).then(rememberConnection);
+  if (revision !== globalTranslationState.revision || !(await globalTranslationState.get()).enabled) return blocked();
+  return response;
+}
+
+function globalSender(sender) {
+  if (sender?.id !== api.runtime.id) return false;
+  if (sender.url?.split(/[?#]/u)[0] === api.runtime.getURL("popup.html")) return true;
+  return sender.frameId === 0 && Number.isInteger(sender.tab?.id) && /^https?:\/\//u.test(sender.url ?? "");
+}
+
+function broadcastGlobalState() {
+  api.tabs.query({}, tabs => {
+    void api.runtime.lastError;
+    for (const tab of tabs ?? []) if (Number.isInteger(tab.id)) {
+      try { api.tabs.sendMessage(tab.id, { type: "nudenyang-global-refresh" }, { frameId: 0 }, () => { void api.runtime.lastError; }); }
+      catch { /* Restricted/discarded tabs are checked on their next startup. */ }
+    }
+  });
+}
+function notifyGlobalState(state) { broadcastGlobalState(); return state; }
+
+async function forwardPageRequest(request, sender) {
+  const revision = globalTranslationState.revision;
+  const blocked = () => ({ type: "error", requestId: request?.requestId, code: "web_translation_disabled", retryable: false });
+  if (request?.type === "translate" && (!(await globalTranslationState.get()).enabled
+    || revision !== globalTranslationState.revision)) return blocked();
+  // An OFF/ON while messenger permission or companion checks are waiting must
+  // not revive the old page payload after those asynchronous checks finish.
+  return messengerPrivacy.forward(request, sender, native => {
+    if (native?.type === "translate" && revision !== globalTranslationState.revision) return Promise.resolve(blocked());
+    return nativeRequest(native);
+  });
 }
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "nudenyang-global-get") {
+    globalTranslationState.get().then(sendResponse); return true;
+  }
+  if (message?.type === "nudenyang-global-consent-set") {
+    globalTranslationState.consent(message.granted, sender).then(notifyGlobalState).then(sendResponse); return true;
+  }
+  if (["nudenyang-global-set", "nudenyang-global-toggle"].includes(message?.type)) {
+    if (!globalSender(sender)) { sendResponse({ ok: false }); return true; }
+    globalTranslationState.set(message.type === "nudenyang-global-toggle" ? "toggle" : message.enabled).then(notifyGlobalState).then(sendResponse);
+    return true;
+  }
   if (embeddedBridge.handle(message, sender, sendResponse)) return true;
   if (message?.type === "nudenyang-setup-status") {
     if (sender?.url !== api.runtime.getURL("popup.html") || sender?.tab) {
@@ -93,7 +141,7 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "nudenyang-native-request") {
-    messengerPrivacy.forward(message.request, sender, nativeRequest).then(sendResponse).catch(() => sendResponse({
+    forwardPageRequest(message.request, sender).then(sendResponse).catch(() => sendResponse({
       type: "error", code: "messenger_request_cancelled", retryable: false,
     }));
     return true;
@@ -104,14 +152,6 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message?.type === "nudenyang-messenger-consent-set") {
     messengerPrivacy.setConsent(message.granted, sender).then(sendResponse);
-    return true;
-  }
-  if (message?.type === "nudenyang-tab-enabled-get") {
-    tabTranslationState.getForTab(sender.tab, sender.url).then((enabled) => sendResponse({ enabled }));
-    return true;
-  }
-  if (message?.type === "nudenyang-tab-enabled-set") {
-    tabTranslationState.set(sender.tab?.id, message.enabled).then((enabled) => sendResponse({ enabled }));
     return true;
   }
   if (message?.type === "nudenyang-messenger-privacy-open") {
@@ -150,6 +190,10 @@ function broadcastMessengerPrivacy() {
 
 api.storage?.onChanged?.addListener((changes, area) => {
   if (area === "local" && changes.messengerConsentVersion) broadcastMessengerPrivacy();
+  if (area === "local" && (changes.webTranslationEnabled || changes.webTranslationConsentVersion)) {
+    globalTranslationState.invalidate();
+    broadcastGlobalState();
+  }
 });
 api.permissions?.onRemoved?.addListener((permissions) => {
   if (permissions.data_collection?.includes("personalCommunications")) broadcastMessengerPrivacy();
@@ -157,7 +201,6 @@ api.permissions?.onRemoved?.addListener((permissions) => {
 
 api.tabs.onRemoved?.addListener((tabId) => {
   embeddedBridge.clear(tabId);
-  void tabTranslationState.clear(tabId);
 });
 
 function ensureFallbackCommandShortcut() {
@@ -186,7 +229,10 @@ function recoverActiveTabs() {
   });
 }
 
-api.runtime.onInstalled?.addListener(() => {
+api.runtime.onInstalled?.addListener((details) => {
+  if (details?.reason === "install" || details?.reason === "update") {
+    void globalTranslationState.get().then(state => { if (!state.consent) return globalTranslationState.openNotice(); });
+  }
   ensureFallbackCommandShortcut();
   recoverActiveTabs();
   return startConnectionChecks();
@@ -203,24 +249,11 @@ api.windows?.onFocusChanged?.addListener((windowId) => {
   });
 });
 
-function sendPageToggle(tabId) {
-  if (typeof tabId !== "number") {
-    return;
-  }
-  void pageConnection.request(tabId, { type: "nudenyang-toggle-enabled" });
-}
-
 api.commands.onCommand.addListener((command, tab) => {
   if (command !== "toggle-page-translation") {
     return;
   }
-  if (typeof tab?.id === "number") {
-    sendPageToggle(tab.id);
-    return;
-  }
-  api.tabs.query({ active: true, lastFocusedWindow: true }, ([activeTab]) => {
-    sendPageToggle(activeTab?.id);
-  });
+  void globalTranslationState.set("toggle").then(notifyGlobalState);
 });
 
 // A recreated service worker does not receive onStartup/onInstalled again.

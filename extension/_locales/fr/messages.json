@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Autorisez l’extension à traduire les paragraphes de la page actuelle."
+    "message": "Traduction de tous les onglets"
   },
   "togglePageTranslation": {
-    "message": "Activer la traduction des pages web"
+    "message": "Traduction de tous les onglets"
   }
 }

@@ -21,6 +21,7 @@ async function popup(options = {}) {
     dom.window.clearTimeout = id => timers.delete(id);
   }
   const preferences = { ...options.preferences };
+  let globalEnabled = options.status?.globalEnabled ?? options.status?.enabled ?? false;
   let state = {
     supported: true, enabled: false, site: "discord", translatedNodes: 0,
     messengerService: "discord", messengerGate: "messenger_consent_required",
@@ -50,7 +51,12 @@ async function popup(options = {}) {
       getURL(path) { return `chrome-extension://test/${path}`; },
       sendMessage(message, callback) {
         messages.push(JSON.parse(JSON.stringify(message)));
-        if (message.type === "nudenyang-page-request") {
+        if (message.type === "nudenyang-global-get") {
+          callback({ ok: true, enabled: globalEnabled, consent: true });
+        } else if (["nudenyang-global-toggle", "nudenyang-global-set"].includes(message.type)) {
+          globalEnabled = message.type === "nudenyang-global-toggle" ? !globalEnabled : message.enabled;
+          callback({ ok: true, enabled: globalEnabled, consent: true });
+        } else if (message.type === "nudenyang-page-request") {
           if (options.pageUnresponsive) return;
           if (message.message.type === "nudenyang-toggle-enabled") state = { ...state, enabled: !state.enabled };
           if (message.message.type === "nudenyang-set-enabled") state = { ...state, enabled: message.message.enabled };
@@ -79,7 +85,7 @@ async function popup(options = {}) {
       timers.delete(key); timer.fn(); await settle(); await settle();
     },
     get(id) { return dom.window.document.getElementById(id); },
-    toggleCalls() { return messages.filter((message) => message.message?.type === "nudenyang-toggle-enabled"); },
+    toggleCalls() { return messages.filter((message) => message.type === "nudenyang-global-toggle"); },
     pressF4() { dom.window.document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "F4", code: "F4", bubbles: true, cancelable: true })); },
     dispose() { dom.window.close(); },
   };
@@ -90,7 +96,7 @@ test("개인정보 버튼은 기본 title 대신 번역된 제품 툴팁과 접�
   try {
     const button = p.get("messenger-privacy");
     assert.equal(button.hasAttribute("title"), false);
-    assert.equal(button.dataset.tooltip, "웹 메신저 개인정보 동의");
+    assert.equal(button.dataset.tooltip, "전체 웹 번역");
     assert.ok(button.getAttribute("aria-label").includes(button.dataset.tooltip));
   } finally { p.dispose(); }
 });
@@ -99,7 +105,7 @@ test("개인정보 페이지의 팝업은 오류 대신 안내 페이지임을 �
   const p = await popup({ language: "ko", tabUrl: "chrome-extension://test/messenger-privacy.html?tab=7&context=opaque" });
   try {
     assert.equal(p.get("site").textContent, "웹 메신저 읽기 번역 개인정보 안내");
-    assert.equal(p.get("enabled").disabled, true);
+    assert.equal(p.get("enabled").disabled, false);
     assert.equal(p.get("messenger-privacy").hidden, true);
     assert.equal(p.get("messenger-panel").hidden, true);
     assert.equal(p.get("open-settings").disabled, false);
@@ -226,10 +232,10 @@ test("메신저 차단 원인을 엔진 연결 상태와 별도로 표시하고 
     assert.equal(p.get("messenger-notice").textContent, "Privacy consent is required for web messenger reading translation.");
     assert.equal(p.get("messenger-notice").hidden, false);
     assert.equal(p.get("messenger-notice").getAttribute("role"), "status");
-    assert.equal(p.get("enabled").disabled, true);
+    assert.equal(p.get("enabled").disabled, false);
     p.pressF4();
     await settle();
-    assert.deepEqual(p.toggleCalls(), []);
+    assert.equal(p.toggleCalls().length, 1);
   } finally { p.dispose(); }
 });
 
@@ -242,7 +248,7 @@ test("메인 OFF·외부 AI·열린 대화 없음은 각각 올바른 메신저 
     const p = await popup({ status: { messengerGate: gate } });
     try {
       assert.equal(p.get("messenger-notice").textContent, expected, gate);
-      assert.equal(p.get("enabled").disabled, true, gate);
+      assert.equal(p.get("enabled").disabled, false, gate);
     } finally { p.dispose(); }
   }
 });
@@ -266,7 +272,7 @@ test("일반 페이지에서는 메신저 안내를 숨기고 기존 전환을 �
     assert.equal(p.get("messenger-panel").hidden, true);
     assert.equal(p.get("messenger-privacy").hidden, false);
     assert.equal(p.get("messenger-privacy").textContent, "Review privacy notice");
-    assert.equal(p.get("messenger-privacy").getAttribute("aria-label"), "Review privacy notice · Web messenger privacy consent");
+    assert.equal(p.get("messenger-privacy").getAttribute("aria-label"), "Review privacy notice · All-tab web translation");
     p.pressF4();
     await settle();
     assert.equal(p.toggleCalls().length, 1);
@@ -277,7 +283,7 @@ test("일반 페이지에서는 메신저 안내를 숨기고 기존 전환을 �
 test("미지원 페이지에서도 개인정보 동의 설정에 접근할 수 있다", async () => {
   const p = await popup({ status: { supported: false, messengerService: "", messengerGate: "", site: "" } });
   try {
-    assert.equal(p.get("enabled").disabled, true);
+    assert.equal(p.get("enabled").disabled, false);
     assert.equal(p.get("messenger-privacy").disabled, false);
     p.get("messenger-privacy").click();
     assert.equal(p.tabs.length, 1);
@@ -300,13 +306,13 @@ test("원문 버튼을 없애도 상단 토글과 F4로 번역을 끄고 다시 
     p.get("enabled").click();
     await settle();
     assert.equal(p.get("enabled").checked, false);
-    assert.ok(p.messages.some((message) => message.message?.type === "nudenyang-set-enabled" && !message.message.enabled));
+    assert.ok(p.messages.some((message) => message.type === "nudenyang-global-set" && !message.enabled));
     p.pressF4();
     await settle();
     assert.equal(p.get("enabled").checked, true);
     assert.ok(p.messages.every((message) => message.message?.type !== "nudenyang-restore"));
     p.get("messenger-privacy").click();
-    assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/messenger-privacy.html" }], "관리 진입은 번역 재개 문맥을 전달하지 않는다");
+    assert.deepEqual(p.tabs, [{ url: "chrome-extension://test/messenger-privacy.html?scope=web" }], "관리 진입은 번역 재개 문맥을 전달하지 않는다");
   } finally { p.dispose(); }
 });
 
@@ -322,15 +328,15 @@ test("브라우저 연결 해제는 응답 언어로 사용 중지를 안내하�
       assert.equal(p.get("connection-text").textContent, copy("disabled"));
       assert.equal(p.get("detail").textContent, `${copy("webTranslation")} · ${copy("settings")}`);
       assert.ok(p.get("connection").classList.contains("disabled"));
-      assert.equal(p.get("enabled").checked, false);
-      assert.equal(p.get("enabled").disabled, true);
+      assert.equal(p.get("enabled").checked, true);
+      assert.equal(p.get("enabled").disabled, false);
       assert.equal(p.get("target-language-trigger").disabled, true);
-      assert.equal(p.get("always-translate-site").disabled, true);
+      assert.equal(p.get("always-translate-site"), null);
       assert.equal(p.get("messenger-panel").hidden, true);
       assert.equal(p.get("messenger-consent-start").hidden, true);
       p.pressF4();
       await settle();
-      assert.equal(p.toggleCalls().length, 0);
+      assert.equal(p.toggleCalls().length, 1);
       assert.equal(p.get("messenger-privacy").hidden, false);
       assert.equal(p.get("open-settings").disabled, false);
       p.get("open-settings").click();
@@ -352,22 +358,8 @@ test("일반 페이지에서 개인정보 안내 열기에 실패하면 숨긴 �
   } finally { p.dispose(); }
 });
 
-test("팝업을 연 뒤 사이트 설정 요청 중 연결이 해제되어도 안내와 잠금 상태를 갱신한다", async () => {
-  const p = await popup({
-    status: { messengerService: "", messengerGate: "" },
-    webSettingsResponse: { type: "error", code: "browser_connection_disabled", appConnected: false, uiLanguage: "ko" },
-  });
-  try {
-    p.get("always-translate-site").click();
-    await settle();
-    assert.equal(p.get("connection-text").textContent, "사용 중지됨");
-    assert.equal(p.get("enabled").disabled, true);
-    assert.equal(p.get("always-translate-site").checked, false);
-    assert.equal(p.get("always-translate-site").disabled, true);
-    assert.equal(p.get("target-language-trigger").disabled, true);
-    p.pressF4();
-    await settle();
-    assert.equal(p.toggleCalls().length, 0);
-    assert.equal(p.get("open-settings").disabled, false);
-  } finally { p.dispose(); }
+test("팝업에는 중복 사이트 자동 번역 스위치가 없다", async () => {
+  const p = await popup();
+  try { assert.equal(p.get("always-translate-site"), null); }
+  finally { p.dispose(); }
 });

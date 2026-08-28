@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Izinkan ekstensi menerjemahkan paragraf di halaman saat ini."
+    "message": "Terjemahan semua tab"
   },
   "togglePageTranslation": {
-    "message": "Aktifkan penerjemahan halaman web"
+    "message": "Terjemahan semua tab"
   }
 }

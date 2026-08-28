@@ -55,6 +55,7 @@ function page(t, html, options = {}) {
   const requests = [];
   const runtimeMessages = [];
   const savedStates = [];
+  let testGlobalEnabled = options.tabEnabled ?? true;
   const applicationFrames = new Map();
   let nextApplicationFrame = 0;
   let releaseStatus;
@@ -106,11 +107,16 @@ function page(t, html, options = {}) {
       },
       sendMessage(message, callback = () => {}) {
         runtimeMessages.push(message);
-        if (message.type === "nudenyang-tab-enabled-get") {
-          callback({ enabled: options.tabEnabled ?? null });
-        } else if (message.type === "nudenyang-tab-enabled-set") {
+        if (message.type === "nudenyang-global-get") {
+          callback({ enabled: testGlobalEnabled });
+        } else if (message.type === "nudenyang-global-set") {
+          testGlobalEnabled = message.enabled;
           savedStates.push(message.enabled);
           callback({ enabled: message.enabled });
+        } else if (message.type === "nudenyang-global-toggle") {
+          testGlobalEnabled = !testGlobalEnabled;
+          savedStates.push(testGlobalEnabled);
+          callback({ enabled: testGlobalEnabled });
         } else if (message.type === "nudenyang-messenger-consent-get") {
           callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? (options.consentVersion ?? 3) : 0 });
         } else if (message.type === "nudenyang-native-request") {
@@ -250,7 +256,9 @@ test("동의 없는 자동 번역은 본문을 읽지 않고 페이지에 이유
   await p.message({ type: "nudenyang-status" });
   assert.equal(consentNotice(p), undefined, "dismissed notices must not reappear on scroll");
   p.w.dispatchEvent(new p.w.KeyboardEvent("keydown", { key: "F4", code: "F4", bubbles: true }));
-  await waitFor(() => consentNotice(p), "manual retry should explain the gate again");
+  await waitFor(async () => !consentNotice(p), "global OFF hides the notice");
+  await p.message({ type: "nudenyang-toggle-enabled" });
+  assert.ok(consentNotice(p), "global ON explains the existing messenger consent gate");
 });
 
 test("수동 메신저의 F4는 안내만 표시하고 실제 클릭만 대화 식별자로 동의 페이지를 연다", async (t) => {
@@ -267,7 +275,7 @@ test("수동 메신저의 F4는 안내만 표시하고 실제 클릭만 대화 �
   assert.equal(opened.length, 1);
   assert.deepEqual(Object.keys(opened[0]).sort(), ["contextId", "type"]);
   assert.equal(opened[0].contextId, (await p.message({ type: "nudenyang-status" })).messengerContextId);
-  assert.deepEqual(p.savedStates, []);
+  assert.deepEqual(p.savedStates, [true], "global ON is saved without granting messenger consent");
   assert.deepEqual(p.sent(), []);
   options.consent = true;
   await p.message({ type: "nudenyang-messenger-start", contextId: opened[0].contextId });
@@ -429,7 +437,7 @@ test("새 X 채팅은 기존 동의와 자동 번역 설정으로 본문만 추�
 });
 
 test("새 X 채팅도 동의 전에는 본문을 읽지 않고 동의 후 같은 대화만 재개한다", async (t) => {
-  const options = { ...PRIVATE_OPTIONS, url: X_CHAT_URL, consent: false, tabEnabled: false };
+  const options = { ...PRIVATE_OPTIONS, url: X_CHAT_URL, consent: false, tabEnabled: true };
   const p = page(t, X_CHAT, options);
   const reads = watchNodeValueReads(p.w, p.w.document.querySelector("#body-one span").firstChild);
   await p.message({ type: "nudenyang-ready" });
@@ -458,7 +466,7 @@ test("새 X 채팅의 스크롤러 밖으로 잘린 본문은 수집하지 않�
 });
 
 test("X 가상 스크롤의 첫 메시지 추가·제거는 같은 대화의 번역을 초기화하지 않는다", async (t) => {
-  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false });
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: true });
   await p.message({ type: "nudenyang-ready" });
   const before = await p.message({ type: "nudenyang-status" });
   await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
@@ -482,7 +490,7 @@ test("X 가상 스크롤의 첫 메시지 추가·제거는 같은 대화의 번
 });
 
 test("X 스크롤 중 잠시 비는 메시지 목록은 대화 전환으로 처리하지 않는다", async (t) => {
-  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false, deferTranslation: true });
+  const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: true, deferTranslation: true });
   await p.message({ type: "nudenyang-ready" });
   const before = await p.message({ type: "nudenyang-status" });
   await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
@@ -522,7 +530,7 @@ test("X 스크롤로 가려진 번역은 상태 갱신에도 보존하고 새 �
 
 test("새 X 채팅의 대화 이동·동의 철회는 진행 중 결과와 사본을 폐기한다", async (t) => {
   for (const action of ["navigate", "revoke"]) {
-    const options = { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false, deferTranslation: true };
+    const options = { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: true, deferTranslation: true };
     const p = page(t, X_CHAT, options);
     await p.message({ type: "nudenyang-ready" });
     const before = await p.message({ type: "nudenyang-status" });
@@ -537,18 +545,19 @@ test("새 X 채팅의 대화 이동·동의 철회는 진행 중 결과와 사�
       await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
     }
     const after = await p.message({ type: "nudenyang-status" });
-    assert.equal(after.enabled, false, action);
+    assert.equal(after.enabled, action === "navigate", action);
     assert.equal(after.translatedNodes, 0, action);
     p.releaseTranslation();
     await new Promise((resolve) => setTimeout(resolve, 150));
-    assert.equal(p.requests.length, count, action);
+    if (action === "navigate") await waitFor(() => p.requests.length > count, "global ON starts the new conversation with fresh context");
+    else assert.equal(p.requests.length, count, action);
     assert.ok(!p.w.document.querySelector('[data-testid="dm-message-scroller"]').textContent.includes("번역("), action);
   }
 });
 
 test("X 스크롤 보존 중에도 패널 교체·대화 이동·철회·OFF는 사본을 정리한다", async (t) => {
   for (const action of ["panel", "navigate", "revoke", "off"]) {
-    const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: false });
+    const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, tabEnabled: true });
     await p.message({ type: "nudenyang-ready" });
     const before = await p.message({ type: "nudenyang-status" });
     await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
@@ -565,7 +574,7 @@ test("X 스크롤 보존 중에도 패널 교체·대화 이동·철회·OFF는 
       await p.message({ type: "nudenyang-set-enabled", enabled: false });
     }
     const after = await p.message({ type: "nudenyang-status" });
-    assert.equal(after.enabled, false, action);
+    assert.equal(after.enabled, action === "panel" || action === "navigate", action);
     assert.equal(after.translatedNodes, 0, action);
     assert.equal(p.w.document.querySelector("#body-two").textContent, "A neutral outgoing message.", action);
     assert.equal(p.requests.length, 1, action);
@@ -592,7 +601,7 @@ test("X 화면 밖 노드가 입력·작성자·숨김 영역으로 바뀌면 �
 });
 
 test("동의 후 시작은 새 동의 상태를 확인하여 새로고침 없이 기존 대화를 번역한다", async (t) => {
-  const options = { ...PRIVATE_OPTIONS, consent: false, tabEnabled: false };
+  const options = { ...PRIVATE_OPTIONS, consent: false, tabEnabled: true };
   const p = page(t, PRIVATE_CHAT, options);
   await p.message({ type: "nudenyang-ready" });
   const before = await p.message({ type: "nudenyang-status" });
@@ -620,7 +629,7 @@ test("동의 후 시작도 본체 OFF·외부 AI·동의 미완료·다른 대�
 });
 
 test("X DM 동의 후 받은·보낸 메시지만 번역하고 작성창과 전송 버튼은 그대로 둔다", async (t) => {
-  const options = { ...PRIVATE_OPTIONS, url: "https://x.com/messages/101-202", consent: false, tabEnabled: false };
+  const options = { ...PRIVATE_OPTIONS, url: "https://x.com/messages/101-202", consent: false, tabEnabled: true };
   const p = page(t, `<div data-testid="DmActivityViewport">
     <div data-testid="messageEntry"><span data-testid="messageSender">Example Sender</span>
       <span dir="auto" id="incoming">A neutral incoming message.</span><time>12:01</time></div>
@@ -646,12 +655,12 @@ test("X DM 동의 후 받은·보낸 메시지만 번역하고 작성창과 전�
   assert.equal(p.w.document.getElementById("send").textContent, "Send");
 });
 
-test("동의로 시작한 임시 상태는 다른 대화로 따라가지 않고 탭 상태도 저장하지 않는다", async (t) => {
+test("전체 OFF에서는 메신저 동의 재개가 번역을 켜거나 탭 상태를 저장하지 않는다", async (t) => {
   const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, tabEnabled: false });
   await p.message({ type: "nudenyang-ready" });
   const before = await p.message({ type: "nudenyang-status" });
   await p.message({ type: "nudenyang-messenger-start", contextId: before.messengerContextId });
-  await waitFor(() => p.sent().length > 0, "source conversation translates");
+  assert.equal((await p.message({ type: "nudenyang-status" })).enabled, false);
   const count = p.requests.length;
   p.w.history.pushState({}, "", "/channels/@me/987654321");
   p.w.document.querySelector("[data-list-id]").innerHTML = '<li><div id="message-content-2">Another conversation</div></li>';
@@ -1316,7 +1325,7 @@ test("ShoPro의 헤더 메뉴는 직접 켠 뒤 본문과 함께 번역하며 �
   </div></header><main><h2>作品の紹介</h2><p>物語を紹介する文章です。</p>
     <div class="main_top mainBox"><div class="main_left"><ul class="contentsList">
       <li><a href="special/">作品の詳細</a></li></ul></div></div></main>`, {
-    url: "https://www.shopro.co.jp/anime/duelmasters_lost/",
+    url: "https://www.shopro.co.jp/anime/duelmasters_lost/", tabEnabled: false,
   });
   const links = [...p.w.document.querySelectorAll("header .menu > ul > li > a")];
   const originalNodes = links.map((link) => link.firstChild);
@@ -1578,7 +1587,7 @@ test("시작 중의 연속 토글은 초기 상태 조회에 덮어써지지 않
   const second = p.message({ type: "nudenyang-toggle-enabled" });
   p.releaseStatus();
   await Promise.all([first, second]);
-  assert.deepEqual(p.savedStates, [false], "an ON cancelled during startup must not be persisted");
+  assert.deepEqual(p.savedStates, [true, false], "serialized toggles retain the final global OFF");
   assert.equal((await p.message({ type: "nudenyang-status" })).enabled, false);
 });
 
@@ -1607,7 +1616,7 @@ test("F4 시작 전 확인은 새로 꺼진 본체·사이트 차단·연결 해
     if (blocked === 'never') p.appStatus.webSettings.sitePolicies = { 'dm.takaratomy.co.jp': 'never' };
     if (blocked === 'disconnected') Object.assign(p.appStatus, { type: 'error', code: 'browser_connection_disabled' });
     assert.equal((await p.message({ type: 'nudenyang-toggle-enabled' })).enabled, false, blocked);
-    assert.deepEqual(p.savedStates, [], blocked);
+    assert.deepEqual(p.savedStates, [true], "global state does not bypass page eligibility");
     assert.deepEqual(p.sent(), [], blocked);
   }
 });
@@ -1618,12 +1627,12 @@ test("본체 응답 대기 중 다시 F4를 누르면 즉시 끄고 늦은 시�
   await p.message({ type: 'nudenyang-ready' });
   options.deferStatus = true;
   const pending = p.message({ type: 'nudenyang-toggle-enabled' });
-  await waitFor(() => p.runtimeMessages.some(m => m.request?.requestId.startsWith('content-toggle-')), 'ON must check the app');
+  await waitFor(() => p.runtimeMessages.some(m => m.request?.requestId.startsWith('content-focus-')), 'ON must check the app');
   const off = await p.message({ type: 'nudenyang-toggle-enabled' });
   assert.equal(off.enabled, false, 'OFF must not wait for the deferred native response');
   p.releaseStatus();
   assert.equal((await pending).enabled, false);
-  assert.deepEqual(p.savedStates, [false]);
+  assert.deepEqual(p.savedStates, [true, false]);
   assert.deepEqual(p.sent(), []);
 });
 
@@ -1634,7 +1643,7 @@ test("늦은 F4 시작 응답은 다른 페이지·대화 이동 또는 동의 �
     await p.message({ type: 'nudenyang-ready' });
     options.deferStatus = true;
     const pending = p.message({ type: 'nudenyang-toggle-enabled' });
-    await waitFor(() => p.runtimeMessages.some(m => m.request?.requestId.startsWith('content-toggle-')), 'ON must check the app');
+    await waitFor(() => p.runtimeMessages.some(m => m.request?.requestId.startsWith('content-focus-')), 'ON must check the app');
     if (action === 'navigate') {
       p.w.history.pushState({}, '', '/channels/@me/987654321');
       await p.message({ type: 'nudenyang-status' });
@@ -1643,8 +1652,8 @@ test("늦은 F4 시작 응답은 다른 페이지·대화 이동 또는 동의 �
       await p.message({ type: 'nudenyang-messenger-refresh', consent: { granted: false } });
     }
     p.releaseStatus();
-    assert.equal((await pending).enabled, false, action);
-    assert.deepEqual(p.savedStates, [], action);
+    assert.equal((await pending).enabled, action === 'navigate', action);
+    assert.deepEqual(p.savedStates, [true], action);
     assert.deepEqual(p.sent(), [], action);
   }
 });

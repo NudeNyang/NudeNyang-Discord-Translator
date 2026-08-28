@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Permite que la extensión traduzca párrafos de la página actual."
+    "message": "Traducción de todas las pestañas"
   },
   "togglePageTranslation": {
-    "message": "Activar la traducción de páginas web"
+    "message": "Traducción de todas las pestañas"
   }
 }

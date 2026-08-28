@@ -56,7 +56,11 @@
     "latestBuild": "최신 공개 버전 · 프리릴리스 포함",
     "downloadPrivacy": "이 화면에서 GitHub의 공개 다운로드 목록을 조회합니다. 페이지 주소·본문·대화 내용은 보내지 않습니다. 파일은 설치 버튼을 눌러야 다운로드됩니다.",
     "downloadUnavailable": "최신 다운로드 정보를 확인하지 못했습니다. 다시 확인하거나 GitHub 릴리스에서 설치 파일을 선택하십시오.",
-    "architectureHelp": "Windows 설정 → 시스템 → 정보의 시스템 종류를 확인한 뒤 x64 또는 ARM64를 선택하십시오."
+    "architectureHelp": "Windows 설정 → 시스템 → 정보의 시스템 종류를 확인한 뒤 x64 또는 ARM64를 선택하십시오.",
+    "globalWebTranslation": "전체 웹 번역",
+    "globalPrivacyIntro": "F4와 토글은 이 브라우저의 모든 탭과 새 탭에 적용됩니다. 켜면 보이는 웹페이지 내용과 이미 동의한 메신저 대화를 Windows 앱에서 선택한 로컬 또는 외부 번역기로 자동 전달합니다. 아래 전송·저장 정책이 적용됩니다.",
+    "globalPrivacyConfirm": "위 안내에 따른 새 탭 포함 자동 번역과 데이터 전송·저장에 동의합니다.",
+    "globalPrivacySaved": "전체 웹 번역 동의를 저장하고 켰습니다. F4 또는 팝업 토글로 모든 탭의 번역을 끌 수 있습니다."
   },
   "en": {
     "checkConnection": "Check connection",
@@ -114,7 +118,11 @@
     "latestBuild": "Latest published build · Includes prereleases",
     "downloadPrivacy": "This screen checks GitHub's public download list. No page addresses, page text, or conversations are sent. Files download only when you select an installer.",
     "downloadUnavailable": "Could not check the latest downloads. Try again or choose an installer on GitHub Releases.",
-    "architectureHelp": "Check System type in Windows Settings → System → About, then choose x64 or ARM64."
+    "architectureHelp": "Check System type in Windows Settings → System → About, then choose x64 or ARM64.",
+    "globalWebTranslation": "All-tab web translation",
+    "globalPrivacyIntro": "F4 and the switch apply to all tabs and new tabs in this browser. When enabled, visible webpage text and messenger conversations you have already consented to are automatically passed to the local or external translator selected in the Windows app. The transmission and storage policies below apply.",
+    "globalPrivacyConfirm": "I agree to automatic translation, including new tabs, and the data transmission and storage described above.",
+    "globalPrivacySaved": "Consent saved and all-tab translation enabled. Use F4 or the popup switch to turn translation off for all tabs."
   },
   "ja": {
     "checkConnection": "接続を確認",
@@ -172,7 +180,11 @@
     "latestBuild": "最新の公開ビルド · プレリリースを含む",
     "downloadPrivacy": "この画面ではGitHubの公開ダウンロード一覧を確認します。ページのアドレス・本文・会話は送信しません。インストーラーを選択した場合のみダウンロードします。",
     "downloadUnavailable": "最新のダウンロード情報を確認できませんでした。再試行するか、GitHub Releasesでインストーラーを選択してください。",
-    "architectureHelp": "Windowsの設定 → システム → バージョン情報でシステムの種類を確認し、x64またはARM64を選択してください。"
+    "architectureHelp": "Windowsの設定 → システム → バージョン情報でシステムの種類を確認し、x64またはARM64を選択してください。",
+    "globalWebTranslation": "全タブのウェブ翻訳",
+    "globalPrivacyIntro": "F4とスイッチは、このブラウザーの全タブと新しいタブに適用されます。有効にすると、表示中のウェブページの文章と同意済みのメッセンジャーの会話が、Windowsアプリで選択したローカルまたは外部翻訳サービスに自動的に渡されます。以下の送信・保存方針が適用されます。",
+    "globalPrivacyConfirm": "新しいタブを含む自動翻訳と、上記のデータ送信・保存に同意します。",
+    "globalPrivacySaved": "同意を保存し、全タブの翻訳を有効にしました。F4またはポップアップのスイッチで全タブの翻訳を停止できます。"
   },
   "zh": {
     "checkConnection": "检查连接",
@@ -230,7 +242,11 @@
     "latestBuild": "最新公开版本 · 包含预发布版",
     "downloadPrivacy": "此页面会查询 GitHub 的公开下载列表，不会发送网页地址、正文或聊天内容。仅在选择安装程序后下载文件。",
     "downloadUnavailable": "无法获取最新下载信息。请重试，或在 GitHub Releases 中选择安装程序。",
-    "architectureHelp": "请在 Windows 设置 → 系统 → 系统信息中查看系统类型，然后选择 x64 或 ARM64。"
+    "architectureHelp": "请在 Windows 设置 → 系统 → 系统信息中查看系统类型，然后选择 x64 或 ARM64。",
+    "globalWebTranslation": "所有标签页翻译",
+    "globalPrivacyIntro": "F4和开关适用于此浏览器中的所有标签页及新标签页。开启后，可见网页文本和您已同意处理的聊天内容会自动传递给Windows应用中选择的本地或外部翻译服务。适用以下传输和存储政策。",
+    "globalPrivacyConfirm": "我同意包含新标签页的自动翻译及上述数据传输和存储。",
+    "globalPrivacySaved": "已保存同意并开启所有标签页翻译。使用F4或弹出窗口开关可关闭所有标签页的翻译。"
   },
   "zh-Hant": {
     "checkConnection": "檢查連線",
@@ -288,7 +304,11 @@
     "latestBuild": "最新公開版本 · 包含預先發行版",
     "downloadPrivacy": "此畫面會查詢 GitHub 的公開下載清單，不會傳送網頁位址、本文或對話內容。僅在選擇安裝程式後下載檔案。",
     "downloadUnavailable": "無法取得最新下載資訊。請重試，或在 GitHub Releases 中選擇安裝程式。",
-    "architectureHelp": "請在 Windows 設定 → 系統 → 關於中查看系統類型，再選擇 x64 或 ARM64。"
+    "architectureHelp": "請在 Windows 設定 → 系統 → 關於中查看系統類型，再選擇 x64 或 ARM64。",
+    "globalWebTranslation": "所有分頁翻譯",
+    "globalPrivacyIntro": "F4和開關適用於此瀏覽器的所有分頁及新分頁。啟用後，可見網頁文字和您已同意處理的聊天內容會自動傳遞給Windows應用程式中選擇的本機或外部翻譯服務。適用以下傳輸和儲存政策。",
+    "globalPrivacyConfirm": "我同意包含新分頁的自動翻譯及上述資料傳輸和儲存。",
+    "globalPrivacySaved": "已儲存同意並啟用所有分頁翻譯。使用F4或彈出視窗開關可關閉所有分頁的翻譯。"
   },
   "pt-BR": {
     "checkConnection": "Verificar conexão",
@@ -346,7 +366,11 @@
     "latestBuild": "Versão publicada mais recente · Inclui pré-lançamentos",
     "downloadPrivacy": "Esta tela consulta a lista pública de downloads do GitHub. Nenhum endereço, texto de página ou conversa é enviado. O download só começa ao selecionar um instalador.",
     "downloadUnavailable": "Não foi possível consultar os downloads mais recentes. Tente novamente ou escolha um instalador no GitHub Releases.",
-    "architectureHelp": "Confira o tipo de sistema em Configurações do Windows → Sistema → Sobre e escolha x64 ou ARM64."
+    "architectureHelp": "Confira o tipo de sistema em Configurações do Windows → Sistema → Sobre e escolha x64 ou ARM64.",
+    "globalWebTranslation": "Tradução de todas as abas",
+    "globalPrivacyIntro": "F4 e o interruptor se aplicam a todas as abas, inclusive novas, deste navegador. Quando ativados, textos visíveis e conversas já autorizadas são enviados automaticamente ao tradutor local ou externo selecionado no aplicativo Windows. Aplicam-se as políticas de transmissão e armazenamento abaixo.",
+    "globalPrivacyConfirm": "Concordo com a tradução automática, incluindo novas abas, e com a transmissão e o armazenamento descritos acima.",
+    "globalPrivacySaved": "Consentimento salvo e tradução de todas as abas ativada. Use F4 ou o interruptor do popup para desativá-la."
   },
   "hi": {
     "checkConnection": "कनेक्शन जाँचें",
@@ -404,7 +428,11 @@
     "latestBuild": "नवीनतम प्रकाशित बिल्ड · प्रीरिलीज़ सहित",
     "downloadPrivacy": "यह स्क्रीन GitHub की सार्वजनिक डाउनलोड सूची जाँचती है। पेज के पते, टेक्स्ट या बातचीत नहीं भेजी जाती। इंस्टॉलर चुनने पर ही डाउनलोड होता है।",
     "downloadUnavailable": "नवीनतम डाउनलोड की जानकारी नहीं मिली। फिर कोशिश करें या GitHub Releases पर इंस्टॉलर चुनें।",
-    "architectureHelp": "Windows सेटिंग → सिस्टम → परिचय में सिस्टम का प्रकार देखें, फिर x64 या ARM64 चुनें।"
+    "architectureHelp": "Windows सेटिंग → सिस्टम → परिचय में सिस्टम का प्रकार देखें, फिर x64 या ARM64 चुनें।",
+    "globalWebTranslation": "सभी टैब का वेब अनुवाद",
+    "globalPrivacyIntro": "F4 और स्विच इस ब्राउज़र के सभी टैब और नए टैब पर लागू होते हैं। चालू होने पर दिखाई देने वाला वेबपेज पाठ और पहले से सहमति प्राप्त चैट Windows ऐप में चुने गए स्थानीय या बाहरी अनुवादक को अपने आप भेजे जाते हैं। नीचे दी गई प्रेषण और संग्रहण नीतियाँ लागू होती हैं।",
+    "globalPrivacyConfirm": "मैं नए टैब सहित स्वचालित अनुवाद और ऊपर बताए गए डेटा प्रेषण तथा संग्रहण के लिए सहमत हूँ।",
+    "globalPrivacySaved": "सहमति सहेजी गई और सभी टैब का अनुवाद चालू है। बंद करने के लिए F4 या पॉपअप स्विच का उपयोग करें।"
   },
   "es-419": {
     "checkConnection": "Verificar conexión",
@@ -462,7 +490,11 @@
     "latestBuild": "Última versión publicada · Incluye versiones preliminares",
     "downloadPrivacy": "Esta pantalla consulta la lista pública de descargas de GitHub. No envía direcciones, texto de páginas ni conversaciones. La descarga comienza solo al seleccionar un instalador.",
     "downloadUnavailable": "No se pudieron consultar las últimas descargas. Inténtelo de nuevo o elija un instalador en GitHub Releases.",
-    "architectureHelp": "Revise el tipo de sistema en Configuración de Windows → Sistema → Acerca de y elija x64 o ARM64."
+    "architectureHelp": "Revise el tipo de sistema en Configuración de Windows → Sistema → Acerca de y elija x64 o ARM64.",
+    "globalWebTranslation": "Traducción de todas las pestañas",
+    "globalPrivacyIntro": "F4 y el interruptor se aplican a todas las pestañas de este navegador, incluidas las nuevas. Al activarlos, el texto visible y las conversaciones ya autorizadas se envían automáticamente al traductor local o externo seleccionado en la aplicación Windows. Se aplican las políticas de transmisión y almacenamiento siguientes.",
+    "globalPrivacyConfirm": "Acepto la traducción automática, incluidas las pestañas nuevas, y la transmisión y el almacenamiento descritos arriba.",
+    "globalPrivacySaved": "Consentimiento guardado y traducción de todas las pestañas activada. Use F4 o el interruptor de la ventana emergente para desactivarla."
   },
   "de": {
     "checkConnection": "Verbindung prüfen",
@@ -520,7 +552,11 @@
     "latestBuild": "Neuester veröffentlichter Build · Einschließlich Vorabversionen",
     "downloadPrivacy": "Diese Seite prüft die öffentliche Downloadliste von GitHub. Seitenadressen, Seitentext und Gespräche werden nicht gesendet. Der Download beginnt erst nach Auswahl eines Installationsprogramms.",
     "downloadUnavailable": "Die neuesten Downloads konnten nicht geprüft werden. Versuchen Sie es erneut oder wählen Sie ein Installationsprogramm auf GitHub Releases.",
-    "architectureHelp": "Prüfen Sie den Systemtyp unter Windows-Einstellungen → System → Info und wählen Sie x64 oder ARM64."
+    "architectureHelp": "Prüfen Sie den Systemtyp unter Windows-Einstellungen → System → Info und wählen Sie x64 oder ARM64.",
+    "globalWebTranslation": "Webübersetzung für alle Tabs",
+    "globalPrivacyIntro": "F4 und der Schalter gelten für alle und neue Tabs dieses Browsers. Bei Aktivierung werden sichtbare Webseitentexte und bereits freigegebene Messenger-Unterhaltungen automatisch an den in der Windows-App gewählten lokalen oder externen Übersetzer übergeben. Es gelten die folgenden Übertragungs- und Speicherregeln.",
+    "globalPrivacyConfirm": "Ich stimme der automatischen Übersetzung einschließlich neuer Tabs sowie der oben beschriebenen Datenübertragung und Speicherung zu.",
+    "globalPrivacySaved": "Zustimmung gespeichert und Übersetzung für alle Tabs aktiviert. Mit F4 oder dem Popup-Schalter können Sie sie für alle Tabs ausschalten."
   },
   "ru": {
     "checkConnection": "Проверить подключение",
@@ -578,7 +614,11 @@
     "latestBuild": "Последняя опубликованная сборка · Включая предварительные версии",
     "downloadPrivacy": "Этот экран запрашивает открытый список загрузок GitHub. Адреса страниц, их текст и переписка не отправляются. Загрузка начинается только после выбора установщика.",
     "downloadUnavailable": "Не удалось проверить последние загрузки. Повторите попытку или выберите установщик на GitHub Releases.",
-    "architectureHelp": "Проверьте тип системы в Параметры Windows → Система → О системе и выберите x64 или ARM64."
+    "architectureHelp": "Проверьте тип системы в Параметры Windows → Система → О системе и выберите x64 или ARM64.",
+    "globalWebTranslation": "Перевод всех вкладок",
+    "globalPrivacyIntro": "F4 и переключатель действуют на все вкладки этого браузера, включая новые. При включении видимый текст страниц и ранее разрешённые переписки автоматически передаются локальному или внешнему переводчику, выбранному в приложении Windows. Применяются указанные ниже правила передачи и хранения.",
+    "globalPrivacyConfirm": "Я согласен на автоматический перевод, включая новые вкладки, и описанные выше передачу и хранение данных.",
+    "globalPrivacySaved": "Согласие сохранено, перевод всех вкладок включён. Для отключения используйте F4 или переключатель во всплывающем окне."
   },
   "id": {
     "checkConnection": "Periksa koneksi",
@@ -636,7 +676,11 @@
     "latestBuild": "Build publik terbaru · Termasuk prarilis",
     "downloadPrivacy": "Layar ini memeriksa daftar unduhan publik GitHub. Alamat halaman, teks halaman, dan percakapan tidak dikirim. Unduhan hanya dimulai setelah memilih penginstal.",
     "downloadUnavailable": "Tidak dapat memeriksa unduhan terbaru. Coba lagi atau pilih penginstal di GitHub Releases.",
-    "architectureHelp": "Periksa jenis sistem di Pengaturan Windows → Sistem → Tentang, lalu pilih x64 atau ARM64."
+    "architectureHelp": "Periksa jenis sistem di Pengaturan Windows → Sistem → Tentang, lalu pilih x64 atau ARM64.",
+    "globalWebTranslation": "Terjemahan semua tab",
+    "globalPrivacyIntro": "F4 dan sakelar berlaku untuk semua tab dan tab baru di browser ini. Saat aktif, teks halaman yang terlihat dan percakapan yang telah disetujui dikirim otomatis ke penerjemah lokal atau eksternal yang dipilih di aplikasi Windows. Kebijakan pengiriman dan penyimpanan di bawah berlaku.",
+    "globalPrivacyConfirm": "Saya menyetujui terjemahan otomatis termasuk tab baru, serta pengiriman dan penyimpanan data yang dijelaskan di atas.",
+    "globalPrivacySaved": "Persetujuan disimpan dan terjemahan semua tab diaktifkan. Gunakan F4 atau sakelar popup untuk menonaktifkannya."
   },
   "fr": {
     "checkConnection": "Vérifier la connexion",
@@ -694,7 +738,11 @@
     "latestBuild": "Dernière version publiée · Préversions incluses",
     "downloadPrivacy": "Cet écran consulte la liste publique des téléchargements GitHub. Aucune adresse de page, aucun texte ni aucune conversation n’est envoyé. Le téléchargement ne commence qu’après sélection d’un programme d’installation.",
     "downloadUnavailable": "Impossible de vérifier les derniers téléchargements. Réessayez ou choisissez un programme d’installation sur GitHub Releases.",
-    "architectureHelp": "Vérifiez le type du système dans Paramètres Windows → Système → Informations système, puis choisissez x64 ou ARM64."
+    "architectureHelp": "Vérifiez le type du système dans Paramètres Windows → Système → Informations système, puis choisissez x64 ou ARM64.",
+    "globalWebTranslation": "Traduction de tous les onglets",
+    "globalPrivacyIntro": "F4 et l’interrupteur s’appliquent à tous les onglets de ce navigateur, y compris les nouveaux. Une fois activés, le texte visible et les conversations déjà autorisées sont automatiquement transmis au traducteur local ou externe choisi dans l’application Windows. Les règles de transmission et de stockage ci-dessous s’appliquent.",
+    "globalPrivacyConfirm": "J’accepte la traduction automatique, y compris des nouveaux onglets, ainsi que la transmission et le stockage décrits ci-dessus.",
+    "globalPrivacySaved": "Consentement enregistré et traduction de tous les onglets activée. Utilisez F4 ou l’interrupteur de la fenêtre contextuelle pour la désactiver."
   },
   "tr": {
     "checkConnection": "Bağlantıyı kontrol et",
@@ -752,7 +800,11 @@
     "latestBuild": "En yeni yayımlanan sürüm · Ön sürümler dahil",
     "downloadPrivacy": "Bu ekran GitHub’ın herkese açık indirme listesini kontrol eder. Sayfa adresleri, metinler veya konuşmalar gönderilmez. İndirme yalnızca yükleyici seçildiğinde başlar.",
     "downloadUnavailable": "En yeni indirmeler kontrol edilemedi. Tekrar deneyin veya GitHub Releases üzerinden bir yükleyici seçin.",
-    "architectureHelp": "Windows Ayarları → Sistem → Hakkında bölümünde sistem türünü kontrol edip x64 veya ARM64 seçin."
+    "architectureHelp": "Windows Ayarları → Sistem → Hakkında bölümünde sistem türünü kontrol edip x64 veya ARM64 seçin.",
+    "globalWebTranslation": "Tüm sekmelerde web çevirisi",
+    "globalPrivacyIntro": "F4 ve anahtar bu tarayıcıdaki tüm sekmeler ve yeni sekmeler için geçerlidir. Açıldığında, görünür sayfa metni ve önceden izin verilen sohbetler Windows uygulamasında seçilen yerel veya harici çevirmene otomatik gönderilir. Aşağıdaki aktarım ve saklama ilkeleri geçerlidir.",
+    "globalPrivacyConfirm": "Yeni sekmeler dahil otomatik çeviriyi ve yukarıda açıklanan veri aktarımı ile saklamayı kabul ediyorum.",
+    "globalPrivacySaved": "Onay kaydedildi ve tüm sekmelerde çeviri açıldı. Kapatmak için F4 veya açılır pencere anahtarını kullanın."
   },
   "ar": {
     "checkConnection": "التحقق من الاتصال",
@@ -810,7 +862,11 @@
     "latestBuild": "أحدث إصدار منشور · يشمل الإصدارات التجريبية",
     "downloadPrivacy": "تتحقق هذه الشاشة من قائمة التنزيلات العامة في GitHub. لا تُرسل عناوين الصفحات أو نصوصها أو المحادثات. يبدأ التنزيل فقط عند اختيار برنامج تثبيت.",
     "downloadUnavailable": "تعذر التحقق من أحدث التنزيلات. أعد المحاولة أو اختر برنامج تثبيت من GitHub Releases.",
-    "architectureHelp": "تحقق من نوع النظام في إعدادات Windows ← النظام ← حول، ثم اختر x64 أو ARM64."
+    "architectureHelp": "تحقق من نوع النظام في إعدادات Windows ← النظام ← حول، ثم اختر x64 أو ARM64.",
+    "globalWebTranslation": "ترجمة جميع علامات التبويب",
+    "globalPrivacyIntro": "ينطبق F4 والمفتاح على جميع علامات التبويب والجديدة في هذا المتصفح. عند التشغيل، يُرسل نص الصفحات المرئي والمحادثات التي وافقت عليها سابقًا تلقائيًا إلى المترجم المحلي أو الخارجي المحدد في تطبيق Windows. تسري سياسات النقل والتخزين أدناه.",
+    "globalPrivacyConfirm": "أوافق على الترجمة التلقائية بما فيها علامات التبويب الجديدة وعلى نقل البيانات وتخزينها كما هو موضح أعلاه.",
+    "globalPrivacySaved": "حُفظت الموافقة وشُغلت ترجمة جميع علامات التبويب. استخدم F4 أو مفتاح النافذة المنبثقة لإيقافها."
   },
   "vi": {
     "checkConnection": "Kiểm tra kết nối",
@@ -868,7 +924,11 @@
     "latestBuild": "Bản dựng công khai mới nhất · Gồm bản phát hành trước",
     "downloadPrivacy": "Màn hình này kiểm tra danh sách tải xuống công khai của GitHub. Không gửi địa chỉ trang, văn bản hay hội thoại. Chỉ tải tệp khi bạn chọn trình cài đặt.",
     "downloadUnavailable": "Không thể kiểm tra bản tải xuống mới nhất. Hãy thử lại hoặc chọn trình cài đặt trên GitHub Releases.",
-    "architectureHelp": "Kiểm tra loại hệ thống trong Cài đặt Windows → Hệ thống → Giới thiệu, rồi chọn x64 hoặc ARM64."
+    "architectureHelp": "Kiểm tra loại hệ thống trong Cài đặt Windows → Hệ thống → Giới thiệu, rồi chọn x64 hoặc ARM64.",
+    "globalWebTranslation": "Dịch web trên mọi thẻ",
+    "globalPrivacyIntro": "F4 và công tắc áp dụng cho mọi thẻ và thẻ mới trong trình duyệt này. Khi bật, văn bản trang hiển thị và các cuộc trò chuyện đã được đồng ý sẽ tự động chuyển đến trình dịch cục bộ hoặc bên ngoài được chọn trong ứng dụng Windows. Áp dụng các chính sách truyền và lưu trữ bên dưới.",
+    "globalPrivacyConfirm": "Tôi đồng ý dịch tự động, bao gồm thẻ mới, cùng việc truyền và lưu trữ dữ liệu được mô tả ở trên.",
+    "globalPrivacySaved": "Đã lưu đồng ý và bật dịch mọi thẻ. Dùng F4 hoặc công tắc cửa sổ bật lên để tắt."
   },
   "it": {
     "checkConnection": "Verifica connessione",
@@ -926,7 +986,11 @@
     "latestBuild": "Ultima build pubblicata · Include versioni preliminari",
     "downloadPrivacy": "Questa schermata consulta l’elenco pubblico dei download di GitHub. Non invia indirizzi, testo delle pagine o conversazioni. Il download inizia solo dopo aver scelto un programma di installazione.",
     "downloadUnavailable": "Impossibile verificare gli ultimi download. Riprova o scegli un programma di installazione su GitHub Releases.",
-    "architectureHelp": "Controlla il tipo di sistema in Impostazioni Windows → Sistema → Informazioni e scegli x64 o ARM64."
+    "architectureHelp": "Controlla il tipo di sistema in Impostazioni Windows → Sistema → Informazioni e scegli x64 o ARM64.",
+    "globalWebTranslation": "Traduzione di tutte le schede",
+    "globalPrivacyIntro": "F4 e l’interruttore si applicano a tutte le schede di questo browser, incluse quelle nuove. Se attivi, il testo visibile e le conversazioni già autorizzate vengono inviati automaticamente al traduttore locale o esterno scelto nell’app Windows. Si applicano le regole di trasmissione e archiviazione seguenti.",
+    "globalPrivacyConfirm": "Acconsento alla traduzione automatica, incluse le nuove schede, e alla trasmissione e archiviazione dei dati descritte sopra.",
+    "globalPrivacySaved": "Consenso salvato e traduzione di tutte le schede attivata. Per disattivarla, usare F4 o l’interruttore del popup."
   },
   "pl": {
     "checkConnection": "Sprawdź połączenie",
@@ -984,7 +1048,11 @@
     "latestBuild": "Najnowsza opublikowana kompilacja · Z wersjami wstępnymi",
     "downloadPrivacy": "Ten ekran sprawdza publiczną listę plików GitHub. Adresy i tekst stron ani rozmowy nie są wysyłane. Pobieranie zaczyna się dopiero po wybraniu instalatora.",
     "downloadUnavailable": "Nie udało się sprawdzić najnowszych plików. Spróbuj ponownie lub wybierz instalator w GitHub Releases.",
-    "architectureHelp": "Sprawdź typ systemu w Ustawienia Windows → System → Informacje, a następnie wybierz x64 lub ARM64."
+    "architectureHelp": "Sprawdź typ systemu w Ustawienia Windows → System → Informacje, a następnie wybierz x64 lub ARM64.",
+    "globalWebTranslation": "Tłumaczenie wszystkich kart",
+    "globalPrivacyIntro": "F4 i przełącznik dotyczą wszystkich kart tej przeglądarki, także nowych. Po włączeniu widoczny tekst stron i wcześniej zatwierdzone rozmowy są automatycznie przekazywane do lokalnego lub zewnętrznego tłumacza wybranego w aplikacji Windows. Obowiązują poniższe zasady przesyłania i przechowywania.",
+    "globalPrivacyConfirm": "Zgadzam się na automatyczne tłumaczenie, także nowych kart, oraz opisane powyżej przesyłanie i przechowywanie danych.",
+    "globalPrivacySaved": "Zgoda zapisana, tłumaczenie wszystkich kart włączone. Aby je wyłączyć, użyj F4 lub przełącznika w oknie rozszerzenia."
   },
   "uk": {
     "checkConnection": "Перевірити підключення",
@@ -1042,7 +1110,11 @@
     "latestBuild": "Найновіша опублікована збірка · З попередніми версіями",
     "downloadPrivacy": "Цей екран перевіряє відкритий список завантажень GitHub. Адреси сторінок, їхній текст і розмови не надсилаються. Завантаження починається лише після вибору інсталятора.",
     "downloadUnavailable": "Не вдалося перевірити останні завантаження. Спробуйте ще раз або виберіть інсталятор на GitHub Releases.",
-    "architectureHelp": "Перевірте тип системи в Настройки Windows → Система → Про систему й виберіть x64 або ARM64."
+    "architectureHelp": "Перевірте тип системи в Настройки Windows → Система → Про систему й виберіть x64 або ARM64.",
+    "globalWebTranslation": "Переклад усіх вкладок",
+    "globalPrivacyIntro": "F4 і перемикач діють на всі вкладки цього браузера, зокрема нові. Після ввімкнення видимий текст сторінок і раніше дозволені розмови автоматично передаються локальному або зовнішньому перекладачеві, вибраному в застосунку Windows. Діють наведені нижче правила передавання та зберігання.",
+    "globalPrivacyConfirm": "Я погоджуюся на автоматичний переклад, включно з новими вкладками, та описані вище передавання і зберігання даних.",
+    "globalPrivacySaved": "Згоду збережено, переклад усіх вкладок увімкнено. Щоб вимкнути, скористайтеся F4 або перемикачем спливного вікна."
   },
   "ms": {
     "checkConnection": "Semak sambungan",
@@ -1100,7 +1172,11 @@
     "latestBuild": "Binaan terbitan terkini · Termasuk prapelancaran",
     "downloadPrivacy": "Skrin ini menyemak senarai muat turun awam GitHub. Alamat halaman, teks dan perbualan tidak dihantar. Muat turun hanya bermula apabila pemasang dipilih.",
     "downloadUnavailable": "Tidak dapat menyemak muat turun terkini. Cuba lagi atau pilih pemasang di GitHub Releases.",
-    "architectureHelp": "Semak jenis sistem di Tetapan Windows → Sistem → Perihal, kemudian pilih x64 atau ARM64."
+    "architectureHelp": "Semak jenis sistem di Tetapan Windows → Sistem → Perihal, kemudian pilih x64 atau ARM64.",
+    "globalWebTranslation": "Terjemahan semua tab",
+    "globalPrivacyIntro": "F4 dan suis digunakan untuk semua tab dan tab baharu dalam pelayar ini. Apabila dihidupkan, teks halaman yang kelihatan dan perbualan yang telah dipersetujui dihantar secara automatik kepada penterjemah setempat atau luaran yang dipilih dalam aplikasi Windows. Dasar penghantaran dan penyimpanan di bawah terpakai.",
+    "globalPrivacyConfirm": "Saya bersetuju dengan terjemahan automatik termasuk tab baharu serta penghantaran dan penyimpanan data yang diterangkan di atas.",
+    "globalPrivacySaved": "Persetujuan disimpan dan terjemahan semua tab dihidupkan. Gunakan F4 atau suis tetingkap timbul untuk mematikannya."
   },
   "nl": {
     "checkConnection": "Verbinding controleren",
@@ -1158,7 +1234,11 @@
     "latestBuild": "Nieuwste gepubliceerde build · Inclusief voorlopige versies",
     "downloadPrivacy": "Dit scherm controleert de openbare downloadlijst van GitHub. Pagina-adressen, paginatekst en gesprekken worden niet verzonden. Downloaden begint pas nadat u een installatieprogramma kiest.",
     "downloadUnavailable": "De nieuwste downloads konden niet worden gecontroleerd. Probeer opnieuw of kies een installatieprogramma op GitHub Releases.",
-    "architectureHelp": "Controleer het systeemtype in Windows-instellingen → Systeem → Info en kies x64 of ARM64."
+    "architectureHelp": "Controleer het systeemtype in Windows-instellingen → Systeem → Info en kies x64 of ARM64.",
+    "globalWebTranslation": "Webvertaling voor alle tabbladen",
+    "globalPrivacyIntro": "F4 en de schakelaar gelden voor alle tabbladen in deze browser, ook nieuwe. Bij inschakeling worden zichtbare paginatekst en eerder goedgekeurde gesprekken automatisch doorgegeven aan de lokale of externe vertaler die in de Windows-app is gekozen. Het onderstaande overdrachts- en opslagbeleid is van toepassing.",
+    "globalPrivacyConfirm": "Ik ga akkoord met automatische vertaling, inclusief nieuwe tabbladen, en de hierboven beschreven gegevensoverdracht en opslag.",
+    "globalPrivacySaved": "Toestemming opgeslagen en vertaling voor alle tabbladen ingeschakeld. Gebruik F4 of de pop-upschakelaar om deze uit te schakelen."
   },
   "th": {
     "checkConnection": "ตรวจสอบการเชื่อมต่อ",
@@ -1216,7 +1296,11 @@
     "latestBuild": "บิลด์ที่เผยแพร่ล่าสุด · รวมรุ่นก่อนเผยแพร่จริง",
     "downloadPrivacy": "หน้าจอนี้ตรวจสอบรายการดาวน์โหลดสาธารณะของ GitHub โดยไม่ส่งที่อยู่หน้าเว็บ ข้อความ หรือบทสนทนา จะดาวน์โหลดไฟล์เมื่อเลือกตัวติดตั้งเท่านั้น",
     "downloadUnavailable": "ตรวจสอบดาวน์โหลดล่าสุดไม่ได้ โปรดลองอีกครั้งหรือเลือกตัวติดตั้งใน GitHub Releases",
-    "architectureHelp": "ตรวจสอบชนิดระบบใน การตั้งค่า Windows → ระบบ → เกี่ยวกับ แล้วเลือก x64 หรือ ARM64"
+    "architectureHelp": "ตรวจสอบชนิดระบบใน การตั้งค่า Windows → ระบบ → เกี่ยวกับ แล้วเลือก x64 หรือ ARM64",
+    "globalWebTranslation": "แปลเว็บทุกแท็บ",
+    "globalPrivacyIntro": "F4 และสวิตช์ใช้กับทุกแท็บและแท็บใหม่ในเบราว์เซอร์นี้ เมื่อเปิด ข้อความหน้าเว็บที่มองเห็นและบทสนทนาที่เคยยินยอมจะถูกส่งอัตโนมัติไปยังตัวแปลในเครื่องหรือภายนอกที่เลือกในแอป Windows โดยใช้นโยบายการส่งและจัดเก็บด้านล่าง",
+    "globalPrivacyConfirm": "ฉันยินยอมให้แปลอัตโนมัติรวมถึงแท็บใหม่ และส่งกับจัดเก็บข้อมูลตามที่อธิบายข้างต้น",
+    "globalPrivacySaved": "บันทึกความยินยอมและเปิดการแปลทุกแท็บแล้ว ใช้ F4 หรือสวิตช์ในป๊อปอัปเพื่อปิด"
   },
   "fil": {
     "checkConnection": "Suriin ang koneksyon",
@@ -1274,7 +1358,11 @@
     "latestBuild": "Pinakabagong inilabas na build · Kasama ang mga prerelease",
     "downloadPrivacy": "Sinusuri ng screen na ito ang pampublikong listahan ng download sa GitHub. Hindi ipinapadala ang mga address, teksto ng pahina, o usapan. Magsisimula lang ang download kapag pumili ng installer.",
     "downloadUnavailable": "Hindi masuri ang pinakabagong download. Subukan muli o pumili ng installer sa GitHub Releases.",
-    "architectureHelp": "Tingnan ang System type sa Windows Settings → System → About, at piliin ang x64 o ARM64."
+    "architectureHelp": "Tingnan ang System type sa Windows Settings → System → About, at piliin ang x64 o ARM64.",
+    "globalWebTranslation": "Pagsasalin ng lahat ng tab",
+    "globalPrivacyIntro": "Nalalapat ang F4 at switch sa lahat ng tab at bagong tab sa browser na ito. Kapag naka-on, awtomatikong ipinapasa ang nakikitang teksto at mga pag-uusap na dati nang pinahintulutan sa lokal o panlabas na tagasalin na pinili sa Windows app. Nalalapat ang mga patakaran sa pagpapadala at pag-iimbak sa ibaba.",
+    "globalPrivacyConfirm": "Sumasang-ayon ako sa awtomatikong pagsasalin, kasama ang mga bagong tab, at sa pagpapadala at pag-iimbak ng data na inilarawan sa itaas.",
+    "globalPrivacySaved": "Na-save ang pahintulot at naka-on ang pagsasalin ng lahat ng tab. Gamitin ang F4 o popup switch upang i-off ito."
   },
   "bn": {
     "checkConnection": "সংযোগ পরীক্ষা করুন",
@@ -1332,7 +1420,11 @@
     "latestBuild": "সর্বশেষ প্রকাশিত বিল্ড · প্রিরিলিজসহ",
     "downloadPrivacy": "এই পর্দা GitHub-এর উন্মুক্ত ডাউনলোড তালিকা পরীক্ষা করে। পৃষ্ঠার ঠিকানা, লেখা বা কথোপকথন পাঠানো হয় না। ইনস্টলার বেছে নিলেই ডাউনলোড শুরু হয়।",
     "downloadUnavailable": "সর্বশেষ ডাউনলোড যাচাই করা যায়নি। আবার চেষ্টা করুন অথবা GitHub Releases থেকে ইনস্টলার বেছে নিন।",
-    "architectureHelp": "Windows সেটিংস → সিস্টেম → সম্পর্কে থেকে সিস্টেমের ধরন দেখে x64 বা ARM64 বেছে নিন।"
+    "architectureHelp": "Windows সেটিংস → সিস্টেম → সম্পর্কে থেকে সিস্টেমের ধরন দেখে x64 বা ARM64 বেছে নিন।",
+    "globalWebTranslation": "সব ট্যাবের ওয়েব অনুবাদ",
+    "globalPrivacyIntro": "F4 এবং সুইচ এই ব্রাউজারের সব ট্যাব ও নতুন ট্যাবে প্রযোজ্য। চালু থাকলে দৃশ্যমান পৃষ্ঠার লেখা ও আগে সম্মতি দেওয়া কথোপকথন Windows অ্যাপে নির্বাচিত স্থানীয় বা বাহ্যিক অনুবাদকে স্বয়ংক্রিয়ভাবে পাঠানো হয়। নিচের প্রেরণ ও সংরক্ষণ নীতি প্রযোজ্য।",
+    "globalPrivacyConfirm": "নতুন ট্যাবসহ স্বয়ংক্রিয় অনুবাদ এবং উপরে বর্ণিত তথ্য প্রেরণ ও সংরক্ষণে সম্মতি দিচ্ছি।",
+    "globalPrivacySaved": "সম্মতি সংরক্ষিত হয়েছে এবং সব ট্যাবের অনুবাদ চালু হয়েছে। বন্ধ করতে F4 বা পপআপ সুইচ ব্যবহার করুন।"
   },
   "ur": {
     "checkConnection": "کنکشن چیک کریں",
@@ -1390,7 +1482,11 @@
     "latestBuild": "تازہ ترین شائع شدہ بلڈ · پری ریلیز سمیت",
     "downloadPrivacy": "یہ اسکرین GitHub کی عوامی ڈاؤن لوڈ فہرست چیک کرتی ہے۔ صفحات کے پتے، متن یا گفتگو نہیں بھیجی جاتی۔ انسٹالر منتخب کرنے پر ہی ڈاؤن لوڈ شروع ہوتا ہے۔",
     "downloadUnavailable": "تازہ ترین ڈاؤن لوڈ کی معلومات نہیں مل سکیں۔ دوبارہ کوشش کریں یا GitHub Releases پر انسٹالر منتخب کریں۔",
-    "architectureHelp": "Windows ترتیبات ← سسٹم ← تعارف میں سسٹم کی قسم دیکھیں، پھر x64 یا ARM64 منتخب کریں۔"
+    "architectureHelp": "Windows ترتیبات ← سسٹم ← تعارف میں سسٹم کی قسم دیکھیں، پھر x64 یا ARM64 منتخب کریں۔",
+    "globalWebTranslation": "تمام ٹیبز کا ویب ترجمہ",
+    "globalPrivacyIntro": "F4 اور سوئچ اس براؤزر کے تمام اور نئے ٹیبز پر لاگو ہوتے ہیں۔ آن ہونے پر نظر آنے والا صفحے کا متن اور پہلے سے منظور شدہ گفتگو Windows ایپ میں منتخب مقامی یا بیرونی مترجم کو خودکار طور پر بھیجی جاتی ہے۔ نیچے دی گئی ترسیل اور ذخیرہ کرنے کی پالیسیاں لاگو ہوتی ہیں۔",
+    "globalPrivacyConfirm": "میں نئے ٹیبز سمیت خودکار ترجمے اور اوپر بیان کردہ ڈیٹا کی ترسیل اور ذخیرہ کرنے سے اتفاق کرتا ہوں۔",
+    "globalPrivacySaved": "رضامندی محفوظ ہو گئی اور تمام ٹیبز کا ترجمہ آن ہے۔ بند کرنے کے لیے F4 یا پاپ اپ سوئچ استعمال کریں۔"
   },
   "ta": {
     "checkConnection": "இணைப்பைச் சரிபார்க்கவும்",
@@ -1448,7 +1544,11 @@
     "latestBuild": "சமீபத்திய வெளியிடப்பட்ட பதிப்பு · முன்வெளியீடுகள் உட்பட",
     "downloadPrivacy": "இந்தத் திரை GitHub-இன் பொதுப் பதிவிறக்கப் பட்டியலைச் சரிபார்க்கிறது. பக்க முகவரிகள், உரை அல்லது உரையாடல்கள் அனுப்பப்படாது. நிறுவியைத் தேர்ந்தெடுத்தால் மட்டுமே பதிவிறக்கம் தொடங்கும்.",
     "downloadUnavailable": "சமீபத்திய பதிவிறக்கங்களைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயலவும் அல்லது GitHub Releases-இல் நிறுவியைத் தேர்ந்தெடுக்கவும்.",
-    "architectureHelp": "Windows அமைப்புகள் → கணினி → பற்றி என்பதில் கணினி வகையைச் சரிபார்த்து x64 அல்லது ARM64-ஐத் தேர்ந்தெடுக்கவும்."
+    "architectureHelp": "Windows அமைப்புகள் → கணினி → பற்றி என்பதில் கணினி வகையைச் சரிபார்த்து x64 அல்லது ARM64-ஐத் தேர்ந்தெடுக்கவும்.",
+    "globalWebTranslation": "அனைத்துத் தாவல்களின் இணைய மொழிபெயர்ப்பு",
+    "globalPrivacyIntro": "F4 மற்றும் சுவிட்ச் இந்த உலாவியின் அனைத்துத் தாவல்களுக்கும் புதிய தாவல்களுக்கும் பொருந்தும். இயக்கப்பட்டால், தெரியும் பக்க உரையும் ஏற்கெனவே ஒப்புதல் பெற்ற உரையாடல்களும் Windows செயலியில் தேர்ந்தெடுத்த உள்ளூர் அல்லது வெளிப்புற மொழிபெயர்ப்பிக்கு தானாக அனுப்பப்படும். கீழுள்ள பரிமாற்றம் மற்றும் சேமிப்புக் கொள்கைகள் பொருந்தும்.",
+    "globalPrivacyConfirm": "புதிய தாவல்கள் உட்பட தானியங்கி மொழிபெயர்ப்புக்கும் மேலே விவரித்த தரவுப் பரிமாற்றம் மற்றும் சேமிப்புக்கும் ஒப்புக்கொள்கிறேன்.",
+    "globalPrivacySaved": "ஒப்புதல் சேமிக்கப்பட்டு அனைத்துத் தாவல்களின் மொழிபெயர்ப்பு இயக்கப்பட்டது. நிறுத்த F4 அல்லது பாப்அப் சுவிட்சைப் பயன்படுத்தவும்."
   },
   "fa": {
     "checkConnection": "بررسی اتصال",
@@ -1506,7 +1606,11 @@
     "latestBuild": "جدیدترین نسخه منتشرشده · شامل پیش‌انتشارها",
     "downloadPrivacy": "این صفحه فهرست عمومی دانلودهای GitHub را بررسی می‌کند. نشانی صفحات، متن یا گفتگوها ارسال نمی‌شوند. دانلود فقط پس از انتخاب نصب‌کننده آغاز می‌شود.",
     "downloadUnavailable": "بررسی جدیدترین دانلودها ممکن نشد. دوباره تلاش کنید یا نصب‌کننده‌ای در GitHub Releases انتخاب کنید.",
-    "architectureHelp": "نوع سیستم را در تنظیمات Windows ← سیستم ← درباره بررسی کرده و x64 یا ARM64 را انتخاب کنید."
+    "architectureHelp": "نوع سیستم را در تنظیمات Windows ← سیستم ← درباره بررسی کرده و x64 یا ARM64 را انتخاب کنید.",
+    "globalWebTranslation": "ترجمهٔ همهٔ زبانه‌ها",
+    "globalPrivacyIntro": "F4 و کلید برای همهٔ زبانه‌ها و زبانه‌های جدید این مرورگر اعمال می‌شوند. هنگام روشن بودن، متن قابل مشاهدهٔ صفحه و گفت‌وگوهای قبلاً تأییدشده به‌طور خودکار به مترجم محلی یا خارجی انتخاب‌شده در برنامهٔ Windows فرستاده می‌شوند. سیاست‌های انتقال و ذخیره‌سازی زیر اعمال می‌شوند.",
+    "globalPrivacyConfirm": "با ترجمهٔ خودکار، شامل زبانه‌های جدید، و انتقال و ذخیره‌سازی داده طبق توضیحات بالا موافقم.",
+    "globalPrivacySaved": "رضایت ذخیره شد و ترجمهٔ همهٔ زبانه‌ها روشن است. برای خاموش کردن از F4 یا کلید پنجرهٔ بازشو استفاده کنید."
   },
   "he": {
     "checkConnection": "בדיקת חיבור",
@@ -1564,7 +1668,11 @@
     "latestBuild": "הגרסה האחרונה שפורסמה · כולל גרסאות מקדימות",
     "downloadPrivacy": "מסך זה בודק את רשימת ההורדות הציבורית של GitHub. כתובות דפים, טקסט ושיחות אינם נשלחים. ההורדה מתחילה רק לאחר בחירת תוכנית התקנה.",
     "downloadUnavailable": "לא ניתן לבדוק את ההורדות העדכניות. נסו שוב או בחרו תוכנית התקנה ב-GitHub Releases.",
-    "architectureHelp": "בדקו את סוג המערכת בהגדרות Windows ← מערכת ← אודות, ובחרו x64 או ARM64."
+    "architectureHelp": "בדקו את סוג המערכת בהגדרות Windows ← מערכת ← אודות, ובחרו x64 או ARM64.",
+    "globalWebTranslation": "תרגום בכל הלשוניות",
+    "globalPrivacyIntro": "F4 והמתג חלים על כל הלשוניות בדפדפן זה, כולל חדשות. כשהתרגום מופעל, טקסט גלוי בדפים ושיחות שאושרו בעבר מועברים אוטומטית למתרגם המקומי או החיצוני שנבחר ביישום Windows. מדיניות ההעברה והאחסון שלהלן חלה.",
+    "globalPrivacyConfirm": "אני מסכים לתרגום אוטומטי, כולל לשוניות חדשות, ולהעברת הנתונים ולאחסונם כמתואר לעיל.",
+    "globalPrivacySaved": "ההסכמה נשמרה והתרגום בכל הלשוניות הופעל. לכיבוי השתמשו ב-F4 או במתג בחלונית."
   },
   "cs": {
     "checkConnection": "Zkontrolovat připojení",
@@ -1622,7 +1730,11 @@
     "latestBuild": "Nejnovější zveřejněné sestavení · Včetně předběžných verzí",
     "downloadPrivacy": "Tato obrazovka kontroluje veřejný seznam stažení na GitHubu. Adresy stránek, jejich text ani konverzace se neodesílají. Stahování začne až po výběru instalátoru.",
     "downloadUnavailable": "Nejnovější stažení nelze ověřit. Zkuste to znovu nebo vyberte instalátor na GitHub Releases.",
-    "architectureHelp": "Ověřte typ systému v Nastavení Windows → Systém → O systému a zvolte x64 nebo ARM64."
+    "architectureHelp": "Ověřte typ systému v Nastavení Windows → Systém → O systému a zvolte x64 nebo ARM64.",
+    "globalWebTranslation": "Překlad všech karet",
+    "globalPrivacyIntro": "F4 a přepínač platí pro všechny karty tohoto prohlížeče včetně nových. Po zapnutí se viditelný text stránek a dříve schválené konverzace automaticky předávají místnímu nebo externímu překladači zvolenému v aplikaci Windows. Platí níže uvedené zásady přenosu a ukládání.",
+    "globalPrivacyConfirm": "Souhlasím s automatickým překladem včetně nových karet a s výše popsaným přenosem a ukládáním dat.",
+    "globalPrivacySaved": "Souhlas byl uložen a překlad všech karet zapnut. Vypnete jej klávesou F4 nebo přepínačem ve vyskakovacím okně."
   }
 });
   const SUPPORTED = Object.freeze(["ko","en","ja","zh","zh-Hant","pt-BR","hi","es-419","de","ru","id","fr","tr","ar","vi","it","pl","uk","ms","nl","th","fil","bn","ur","ta","fa","he","cs"]);

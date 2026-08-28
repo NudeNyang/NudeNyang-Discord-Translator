@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "允许扩展程序翻译当前页面中的段落。"
+    "message": "所有标签页翻译"
   },
   "togglePageTranslation": {
-    "message": "启用网页翻译"
+    "message": "所有标签页翻译"
   }
 }

@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "לאפשר לתוסף לתרגם פסקאות בדף הנוכחי."
+    "message": "תרגום בכל הלשוניות"
   },
   "togglePageTranslation": {
-    "message": "הפעלת תרגום דפי אינטרנט"
+    "message": "תרגום בכל הלשוניות"
   }
 }

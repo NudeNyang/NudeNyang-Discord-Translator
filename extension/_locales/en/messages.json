@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Allow the extension to translate paragraphs on the current page."
+    "message": "All-tab web translation"
   },
   "togglePageTranslation": {
-    "message": "Enable webpage translation"
+    "message": "All-tab web translation"
   }
 }

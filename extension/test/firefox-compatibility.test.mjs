@@ -23,7 +23,7 @@ test("Firefox Manifest V3는 고정 Add-on ID와 이벤트 백그라운드를 �
   assert.equal(manifest.browser_specific_settings.gecko.id, "web-translator@nudenyang.github.io");
   assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, "142.0");
   assert.deepEqual(manifest.background, {
-    scripts: ["native-client.js", "tab-state.js", "page-connection.js", "embedded-bridge.js", "messenger-adapters.js", "messenger-privacy.js", "background.js"],
+    scripts: ["native-client.js", "global-state.js", "page-connection.js", "embedded-bridge.js", "messenger-adapters.js", "messenger-privacy.js", "background.js"],
   });
   assert.equal(manifest.key, undefined);
 });
@@ -71,7 +71,7 @@ test("Firefox 패키지는 전용 매니페스트와 라이선스를 XPI 루트�
   assert.match(packager, /NudeNyang-Web-Translator-Firefox-/);
   assert.match(packager, /popup-locales\.js/);
   assert.match(packager, /page-connection\.js/);
-  assert.match(packager, /tab-state\.js/);
+  assert.match(packager, /global-state\.js/);
   assert.match(packager, /'_locales'/);
   assert.doesNotMatch(packager, /Compress-Archive/);
   assert.match(packager, /\.Replace\('\\', '\/'\)/);

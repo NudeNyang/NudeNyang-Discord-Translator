@@ -72,7 +72,6 @@ const SELECT_GROUP_LABELS = Object.freeze({
 });
 const WEB_SITE_POLICY_OPTIONS = Object.freeze([
   ["always", "항상 번역"],
-  ["manual", "직접 시작"],
   ["never", "사용 안 함"],
 ]);
 const WEB_SITE_POLICY_SEARCH_THRESHOLD = 6;
@@ -1600,7 +1599,7 @@ function renderWebSitePolicies() {
     row.dataset.hostname = hostname.toLocaleLowerCase();
     const host = document.createElement("strong");
     const controls = document.createElement("div");
-    const policySelect = createWebPolicySelect(hostname, policy);
+    const policySelect = createWebPolicySelect(hostname, policy === "manual" ? "always" : policy);
     const remove = document.createElement("button");
     host.textContent = hostname;
     remove.type = "button";

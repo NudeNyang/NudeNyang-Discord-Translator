@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Разрешить расширению переводить абзацы на текущей странице."
+    "message": "Перевод всех вкладок"
   },
   "togglePageTranslation": {
-    "message": "Включить перевод веб-страниц"
+    "message": "Перевод всех вкладок"
   }
 }

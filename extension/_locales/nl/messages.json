@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Sta toe dat de extensie alinea's op de huidige pagina vertaalt."
+    "message": "Webvertaling voor alle tabbladen"
   },
   "togglePageTranslation": {
-    "message": "Webpaginavertaling inschakelen"
+    "message": "Webvertaling voor alle tabbladen"
   }
 }

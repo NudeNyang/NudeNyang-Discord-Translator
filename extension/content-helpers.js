@@ -306,30 +306,8 @@
       && browserShortcutFromEvent(event) === configuredShortcut;
   }
 
-  function initialTranslationEnabled(storedEnabled, adapter) {
-    return Boolean(storedEnabled && adapter && !adapter.manualOnly);
-  }
-
-  function pageTranslationEnabled({
-    adapter,
-    storedEnabled,
-    tabEnabled,
-    webEnabled,
-    sitePolicy,
-  }) {
-    if (!adapter || !webEnabled || sitePolicy === "never") {
-      return false;
-    }
-    if (typeof tabEnabled === "boolean") {
-      return tabEnabled;
-    }
-    if (sitePolicy === "manual") {
-      return false;
-    }
-    if (sitePolicy === "always") {
-      return true;
-    }
-    return initialTranslationEnabled(storedEnabled, adapter);
+  function pageTranslationEnabled({ globalEnabled, adapter, webEnabled, sitePolicy }) {
+    return Boolean(globalEnabled && adapter && webEnabled && sitePolicy !== "never");
   }
 
   function runtimeMessageFailure(requestId, error) {
@@ -355,7 +333,6 @@
     sameMessageContext,
     groupTranslationApplications,
     isElementNearViewport,
-    initialTranslationEnabled,
     isExplicitExclusionBypassBlock,
     isQuickToggleShortcut,
     isUrlLikeLinkText,

@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "拡張機能で現在のページの段落を翻訳できるようにします。"
+    "message": "全タブのウェブ翻訳"
   },
   "togglePageTranslation": {
-    "message": "ウェブページ翻訳を使用"
+    "message": "全タブのウェブ翻訳"
   }
 }

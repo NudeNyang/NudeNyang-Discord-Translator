@@ -21,7 +21,6 @@ const targetLanguageMenu = document.querySelector("#target-language-menu");
 const targetLanguageSearch = document.querySelector("#target-language-search");
 const targetLanguageOptions = document.querySelector("#target-language-options");
 const targetLanguageEmpty = document.querySelector("#target-language-empty");
-const alwaysTranslateSite = document.querySelector("#always-translate-site");
 const usage = document.querySelector("#usage");
 const openSettings = document.querySelector("#open-settings");
 const LANGUAGE_OPTIONS = [
@@ -36,6 +35,7 @@ const LANGUAGE_OPTIONS = [
 let appStatus = null;
 let browserConnectionDisabled = false;
 let connectionAvailable = false;
+let globalState = { enabled: false, consent: false };
 let quickToggleShortcut = "F4";
 let targetLanguageValue = "";
 let uiLanguage = popupLocales.resolve(
@@ -64,8 +64,8 @@ function applyUiLanguage(language) {
   for (const element of document.querySelectorAll("[data-i18n-aria-label]")) {
     element.setAttribute("aria-label", copy(element.dataset.i18nAriaLabel));
   }
-  messengerPrivacy.dataset.tooltip = copy("messengerPrivacyConsent");
-  messengerPrivacy.setAttribute("aria-label", `${copy("reviewMessengerPrivacy")} · ${copy("messengerPrivacyConsent")}`);
+  messengerPrivacy.dataset.tooltip = copy("globalWebTranslation");
+  messengerPrivacy.setAttribute("aria-label", `${copy("reviewMessengerPrivacy")} · ${copy("globalWebTranslation")}`);
 }
 
 function normalizeLanguageSearch(value) {
@@ -186,9 +186,9 @@ async function pageStatus(tabId) {
 function renderPageStatus(status) {
   const messengerGate = status?.messengerService ? status.messengerGate : "";
   const needsConsent = connectionAvailable && !browserConnectionDisabled && messengerGate === "messenger_consent_required";
-  enabled.checked = !browserConnectionDisabled && (status?.enabled ?? false);
+  enabled.checked = globalState.enabled;
   // Losing the engine must not prevent an already translated page going OFF.
-  enabled.disabled = (!connectionAvailable && !status?.enabled) || browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
+  enabled.disabled = !globalState.enabled && (!connectionAvailable || browserConnectionDisabled);
   messengerPanel.hidden = !connectionAvailable || browserConnectionDisabled || !status?.messengerService;
   messengerPanel.classList.toggle("consent-required", needsConsent);
   messengerTitle.hidden = !needsConsent;
@@ -229,8 +229,6 @@ function renderPageStatus(status) {
   setTargetLanguageValue(status?.targetLanguage && status.targetLanguage !== "display"
     ? status.targetLanguage
     : "");
-  alwaysTranslateSite.checked = status?.sitePolicy === "always";
-  alwaysTranslateSite.disabled = !connectionAvailable || browserConnectionDisabled || !status?.supported || Boolean(messengerGate);
   targetLanguageTrigger.disabled = !connectionAvailable || browserConnectionDisabled || !status?.supported;
   if (targetLanguageTrigger.disabled) closeTargetLanguageMenu();
 }
@@ -264,6 +262,15 @@ async function initialize() {
   const privacyPage = tab?.url?.split(/[?#]/u)[0] === api.runtime.getURL("messenger-privacy.html");
   let status = privacyPage ? { privacyPage: true, supported: false } : null;
   let pageRevision = 0;
+  async function refreshGlobalState() {
+    const value = await new Promise(resolve => api.runtime.sendMessage({ type: "nudenyang-global-get" }, resolve));
+    globalState = value ?? { enabled: false, consent: false };
+    renderPageStatus(status);
+  }
+  void refreshGlobalState();
+  api.storage?.onChanged?.addListener((changes, area) => {
+    if (area === "local" && (changes.webTranslationEnabled || changes.webTranslationConsentVersion)) void refreshGlobalState();
+  });
   function refreshPageStatus() {
     if (!tab?.id || privacyPage) return;
     const revision = ++pageRevision;
@@ -348,12 +355,13 @@ async function initialize() {
     if (!isQuickToggleShortcut(event, quickToggleShortcut)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (!tab?.id || enabled.disabled) return;
+    if (enabled.disabled) return;
     pageRevision++;
-    const updated = await tabMessage(tab.id, { type: "nudenyang-toggle-enabled" });
+    const updated = await new Promise(resolve => api.runtime.sendMessage({ type: "nudenyang-global-toggle" }, resolve));
     if (updated) {
-      status = updated;
+      globalState = updated;
       renderPageStatus(status);
+      if (!updated.ok) detail.textContent = copy("unableToProcess");
     } else {
       site.textContent = copy("unableToProcess");
     }
@@ -362,13 +370,14 @@ async function initialize() {
   document.addEventListener("keydown", handleQuickToggle, true);
 
   enabled.addEventListener("change", async () => {
-    if (!tab?.id || enabled.disabled) return;
+    if (enabled.disabled) return;
     pageRevision++;
-    const previous = status?.enabled ?? false;
-    const updated = await tabMessage(tab.id, { type: "nudenyang-set-enabled", enabled: enabled.checked });
+    const previous = globalState.enabled;
+    const updated = await new Promise(resolve => api.runtime.sendMessage({ type: "nudenyang-global-set", enabled: enabled.checked }, resolve));
     if (updated) {
-      status = updated;
+      globalState = updated;
       renderPageStatus(status);
+      if (!updated.ok) detail.textContent = copy("unableToProcess");
     } else {
       enabled.checked = previous;
       site.textContent = copy("unableToProcess");
@@ -411,43 +420,6 @@ async function initialize() {
   document.addEventListener("click", (event) => {
     if (!targetLanguage.contains(event.target)) closeTargetLanguageMenu();
   });
-  alwaysTranslateSite.addEventListener("change", async () => {
-    if (!tab?.id || !tab.url || !appStatus?.webSettings || alwaysTranslateSite.disabled) return;
-    pageRevision++;
-    const hostname = new URL(tab.url).hostname.toLowerCase().replace(/^www\./, "");
-    const sitePolicies = { ...(appStatus.webSettings.sitePolicies ?? {}) };
-    if (alwaysTranslateSite.checked) sitePolicies[hostname] = "always";
-    else delete sitePolicies[hostname];
-    const response = await nativeRequest({
-      type: "webSettingsUpdate",
-      requestId: `site-${Date.now()}`,
-      patch: { web_site_policies: sitePolicies },
-    });
-    if (response?.type !== "webSettings") {
-      alwaysTranslateSite.checked = status?.sitePolicy === "always";
-      if (response?.code === "browser_connection_disabled") {
-        browserConnectionDisabled = true;
-        applyUiLanguage(response.resolvedUiLanguage || response.uiLanguage);
-        renderPageStatus(status);
-        renderConnection(response);
-        return;
-      }
-      detail.textContent = copy("error");
-      return;
-    }
-    appStatus.webSettings = response.webSettings;
-    const updated = await tabMessage(tab.id, {
-      type: "nudenyang-apply-web-settings",
-      webSettings: response.webSettings,
-    });
-    if (updated) {
-      status = updated;
-      if (alwaysTranslateSite.checked && !status.enabled) {
-        status = await tabMessage(tab.id, { type: "nudenyang-set-enabled", enabled: true }) ?? status;
-      }
-      renderPageStatus(status);
-    }
-  });
   openSettings.addEventListener("click", async () => {
     const response = await nativeRequest({ type: "openWebSettings", requestId: `settings-${Date.now()}` });
     if (response?.type === "opened") {
@@ -458,7 +430,7 @@ async function initialize() {
   });
   function openMessengerPrivacy(resumeConversation = false) {
     try {
-      const url = new URL(api.runtime.getURL("messenger-privacy.html"));
+      const url = new URL(api.runtime.getURL(resumeConversation ? "messenger-privacy.html" : "messenger-privacy.html?scope=web"));
       if (resumeConversation && Number.isInteger(tab?.id) && status?.messengerContextId) {
         // Carry only a tab handle and an opaque document/conversation nonce.
         url.searchParams.set("tab", String(tab.id));

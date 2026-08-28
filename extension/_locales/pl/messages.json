@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Zezwól rozszerzeniu na tłumaczenie akapitów na bieżącej stronie."
+    "message": "Tłumaczenie wszystkich kart"
   },
   "togglePageTranslation": {
-    "message": "Włącz tłumaczenie stron internetowych"
+    "message": "Tłumaczenie wszystkich kart"
   }
 }

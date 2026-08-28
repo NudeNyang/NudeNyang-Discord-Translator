@@ -12,7 +12,6 @@ const {
   sameMessageContext,
   groupTranslationApplications,
   isElementNearViewport,
-  initialTranslationEnabled,
   isExplicitExclusionBypassBlock,
   isQuickToggleShortcut,
   isUrlLikeLinkText,
@@ -158,43 +157,21 @@ test("사이트가 명시한 공개 안내 블록만 공통 내비게이션 제�
   assert.equal(isExplicitExclusionBypassBlock(safeBlock, null), false);
 });
 
-test("범용 사이트는 저장된 전역 설정과 무관하게 사용자가 켜기 전까지 대기한다", () => {
-  assert.equal(initialTranslationEnabled(true, { id: "web", manualOnly: true }), false);
-  assert.equal(initialTranslationEnabled(false, { id: "web", manualOnly: true }), false);
-  assert.equal(initialTranslationEnabled(true, { id: "github" }), true);
-  assert.equal(initialTranslationEnabled(false, { id: "github" }), false);
-  assert.equal(initialTranslationEnabled(true, null), false);
+test("전체 상태가 범용·전용 어댑터와 이전 수동·자동 정책에 공통 적용된다", () => {
+  for (const adapter of [{ id: "web", manualOnly: true }, { id: "github" }]) {
+    for (const sitePolicy of ["default", "manual", "always"]) {
+      for (const globalEnabled of [false, true]) {
+        assert.equal(pageTranslationEnabled({ globalEnabled, adapter, webEnabled: true, sitePolicy }), globalEnabled);
+      }
+    }
+  }
 });
 
-test("탭에서 선택한 번역 상태는 페이지와 사이트가 바뀌어도 우선 유지한다", () => {
-  assert.equal(pageTranslationEnabled({
-    adapter: { id: "web", manualOnly: true },
-    storedEnabled: true,
-    tabEnabled: true,
-    webEnabled: true,
-    sitePolicy: "default",
-  }), true);
-  assert.equal(pageTranslationEnabled({
-    adapter: { id: "github" },
-    storedEnabled: true,
-    tabEnabled: false,
-    webEnabled: true,
-    sitePolicy: "always",
-  }), false);
-  assert.equal(pageTranslationEnabled({
-    adapter: { id: "web", manualOnly: true },
-    storedEnabled: true,
-    tabEnabled: null,
-    webEnabled: true,
-    sitePolicy: "always",
-  }), true);
-  assert.equal(pageTranslationEnabled({
-    adapter: null,
-    storedEnabled: true,
-    tabEnabled: true,
-    webEnabled: true,
-    sitePolicy: "default",
-  }), false);
+test("전체 ON이어도 미지원·본체 OFF·사이트 차단은 유지한다", () => {
+  const base = { globalEnabled: true, adapter: { id: "web" }, webEnabled: true, sitePolicy: "default" };
+  for (const blocked of [{ adapter: null }, { webEnabled: false }, { sitePolicy: "never" }, { globalEnabled: undefined }]) {
+    assert.equal(pageTranslationEnabled({ ...base, ...blocked }), false);
+  }
 });
 
 test("설정한 빠른 번역 전환키만 판정한다", () => {

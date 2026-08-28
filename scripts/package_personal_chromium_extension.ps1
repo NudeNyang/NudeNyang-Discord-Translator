@@ -43,7 +43,7 @@ $SharedFiles = @(
     'popup-locales.js',
     'popup.js',
     'site-adapters.js',
-    'tab-state.js'
+    'global-state.js'
 )
 foreach ($File in $SharedFiles) {
     Copy-Item -LiteralPath (Join-Path $ExtensionDirectory $File) -Destination $ResolvedOutput -Force

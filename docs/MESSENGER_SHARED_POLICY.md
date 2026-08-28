@@ -1,5 +1,7 @@
 # 웹 메신저와 앱 Discord의 처리 정책 통합
 
+현재 미공개 개발본의 전체 ON/OFF와 새 탭 동작은 [전체 웹 번역 정책](WEB_TRANSLATION_GLOBAL_SWITCH.md)을 따른다. 아래 탭별 수동 시작 설명은 이전 구현 기록이다.
+
 2026-08-28 · `codex/web-translation-dom-refactor` · 미공개 개발 변경
 
 ## 바꾼 이유

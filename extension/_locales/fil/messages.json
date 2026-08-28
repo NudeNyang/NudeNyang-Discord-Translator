@@ -3,9 +3,9 @@
     "message": "NudeNyang Web Translator"
   },
   "extensionDescription": {
-    "message": "Payagan ang extension na isalin ang mga talata sa kasalukuyang page."
+    "message": "Pagsasalin ng lahat ng tab"
   },
   "togglePageTranslation": {
-    "message": "I-enable ang pagsasalin ng webpage"
+    "message": "Pagsasalin ng lahat ng tab"
   }
 }
