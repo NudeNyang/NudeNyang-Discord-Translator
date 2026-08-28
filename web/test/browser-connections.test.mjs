@@ -54,7 +54,7 @@ test("브라우저마다 연결 또는 해제 버튼 하나만 표시한다", as
   assert.ok(h.calls.some(call => call.command === "browser_disconnect" && call.payload.browser === "chrome"));
 });
 
-test("웹 설정, 브라우저 연결, 사이트별 동작 순서이며 메신저 설명은 짧게 유지한다", () => {
+test("웹 설정, 브라우저 연결, 사이트별 동작 순서를 유지한다", () => {
   const document = new JSDOM(markup).window.document;
   const panel = document.querySelector('[data-settings-view="web"]');
   const content = [...panel.children].filter(element => !element.classList.contains("panel-heading"));
@@ -62,7 +62,6 @@ test("웹 설정, 브라우저 연결, 사이트별 동작 순서이며 메신�
   assert.ok(content[1].classList.contains("web-browser-setup"));
   assert.equal(content[2].getAttribute("aria-labelledby"), "web-sites-heading");
   assert.equal(document.querySelector("#web-translation-enabled").getAttribute("aria-checked"), "false");
-  assert.ok(document.querySelector("#web-messenger-description").textContent.length < 40);
 });
 
 test("웹 번역을 켜면 설치 안내를 표시하고 중복 클릭·끄기·저장 실패에는 안내하지 않는다", async () => {

@@ -8,14 +8,15 @@ import { DEFAULT_CONFIG, normalizeConfig } from "../state.mjs";
 
 const markup = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
-test("통합 정책: 별도 웹 메신저 토글 없이 공통 웹 번역 설정을 표시한다", () => {
+test("통합 정책: 메신저 전용 안내 행 없이 공통 웹 번역 설정만 표시한다", () => {
   const dom = new JSDOM(markup);
   try {
     const doc = dom.window.document;
     assert.equal(doc.querySelector("#web-messenger-enabled"), null);
     assert.equal(doc.querySelector("#web-messenger-model-note"), null);
     assert.ok(doc.querySelector("#web-translation-enabled"));
-    assert.match(doc.querySelector("#web-messenger-description").textContent, /동의.*앱 설정/);
+    assert.equal(doc.querySelector("#web-messenger-heading"), null);
+    assert.equal(doc.querySelector("#web-messenger-description"), null);
   } finally { dom.window.close(); }
 });
 
