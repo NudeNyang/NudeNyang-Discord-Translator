@@ -34,6 +34,13 @@ HTML 의미와 서비스 경계에 근거한 제한이지, 임의 본문에 포�
   `aria-describedby` 변경 때 해당 폼 또는 참조된 설명을 재검사한다. 입력값은 읽지 않는다.
 - 정적 UI 전용 페이지에서는 전체 본문 진단과 임베드 제목 수집을 금지한다.
   SPA 경로 변경 직후, 정기 감시가 실행되기 전에도 현재 경로를 확인한다.
+- 실제 본체에 합성 메일 문장을 전달하자 짧은 영어 제목은 언어 미확정으로 남고
+  뒤의 본문만 번역됐다. 공통 `web_source_hints`가 같은 요청의 뒤쪽 문장을 근거로
+  사용하도록 수정했다. 같은 문자군의 서로 다른 두 텍스트 조각 이상이 같은 언어로
+  확정될 때만 보완하며, 본문 조각이 한 DOM 블록을 공유해도 처리한다. 언어 충돌·
+  다른 문자군·다른 사적 읽기 문서에는 이 추론을 적용하지 않는다.
+- 언어 미확정 원문을 완료된 번역으로 캐시할 수 있던 판정을 수정했다. 보호된 URL
+  등의 의도적인 보존은 유지하고, 미확정 문구는 실제로 목표 언어로 바뀌었는지 확인한다.
 
 ## 메일 경계와 동의
 
@@ -66,6 +73,10 @@ Gmail도 기존 사적 요청 경로를 사용한다. 실제 메일 URL·ID·주
 - `node --test --test-name-pattern='메일 읽기|범위 확대' extension/test/messenger-adapters.test.mjs extension/test/global-state.test.mjs`: 3개 실패.
 - `npm run test:e2e -- compatibility.spec.mjs -g '메일 읽기'`: 3개 실패.
 - `npm run test:e2e -- dom-regression.spec.mjs -g '나중에 연결된'`: 1개 실패.
+- `cargo test --manifest-path src-tauri/Cargo.toml web_heading_uses_same_batch -- --nocapture`:
+  제목이 모델에 전달되지 않아 실패. 보완 로직을 일시 제거해 같은 실패를 다시 확인했다.
+- `cargo test --manifest-path src-tauri/Cargo.toml web_unknown_source_passthrough -- --nocapture`:
+  언어 미확정 원문을 완료로 판정해 실패.
 
 추가 검사는 공개 UI/계정 최소 HTML, 도메인 없는 메일 계약, 합성 Gmail 셸,
 96개 UI 구조 조합의 중복·보호 텍스트 비읽기, 기존 2,048개 생성 구조,
@@ -77,17 +88,39 @@ Gmail도 기존 사적 요청 경로를 사용한다. 실제 메일 URL·ID·주
 | `npm test` | 747개 통과 | 웹 246·랜딩 37·확장 455·사전 9, 사전/팩 검증 포함 |
 | `npm run test:e2e` | 148개 통과 | 실제 Chromium 확장 + 합성 사이트 + 모사 본체/번역 응답 |
 | `npm run test:public` | 6개 통과 | 실제 공개 HTML 표본 + 고정 번역 응답 |
-| `cargo test --manifest-path src-tauri/Cargo.toml` | 443개 통과·46개 ignored | 본체 단위/통합 검사; ignored는 통과로 계산하지 않음 |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | 446개 통과·46개 ignored | 제목 순서·문자군/문서 경계·미확정 캐시 검사 추가; ignored는 통과로 계산하지 않음 |
 | `cargo test --manifest-path src-tauri/Cargo.toml live_local_model_completes_br_separated_public_prose -- --ignored --nocapture` | 1개 통과 | 실제 Hy-MT2와 고정 공개 일본어 문장 3개 |
+| `node scripts/verify-live-reading-bridge.mjs --run` | 합성 메일 3개 항목 × 2회 통과, 거절 조건 3개 통과 | 실제 Native Messaging 호스트 → 실행 중인 본체 → Hy-MT2 1.8B; 실제 브라우저/메일 접근 없음 |
 | `npm run test:locales` | 통과 | 28개 언어 653/653 |
 | `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` | 통과 | Rust 포맷 |
 | `git diff --check` | 통과 | 공백/패치 검사 |
 
 Gmail 실제 화면에서는 읽기 경계의 DOM 구조만 확인했다. 실제 메일 내용과 실행 중인
-확장·본체를 연결한 번역 검사는 아직 하지 않았다. 위 실제 모델 검사는 Gmail 연동 검사가
-아니다. 민감하지 않은 테스트 메일에서 제목/본문만 번역되는지, 철회·화면 전환·캐시 복원이
+확장·본체를 연결한 번역 검사는 아직 하지 않았다. 모델 단독 검사와 합성 문장의 Native
+Messaging 검사 모두 실제 Gmail 화면 연동 검사는 아니다. 민감하지 않은 테스트 메일에서
+제목/본문만 번역되는지, 철회·화면 전환·캐시 복원이
 정상인지 추가 확인해야 한다. Outlook은 실제 읽기 화면의 안전한 경계 확인과 구현부터
 남아 있다. 따라서 메일 전체 지원 목표는 진행 중이다.
+
+### 실제 본체 합성 입력 검증
+
+`scripts/verify-live-reading-bridge.mjs`는 `--run`을 명시한 경우에만 실행한다.
+최신 로컬 본체를 실행하고 모델 준비가 끝난 뒤 사용한다. 선택된 번역기가 로컬 모델인지,
+웹 번역과 Chrome 연결이 이미 허용됐는지, 본체 정책이 v4인지 확인한다. 설정이나 브라우저
+동의는 변경하지 않으며 검사 도중 번역기를 바꾸면 안 된다.
+
+기존 합성 메일 fixture의 문구만 사용하고, 제목 하나와 같은 본문 블록의 텍스트 두 개로
+요청한다. v3 동의·동의 누락·URL 형태의 식별자를 거절하는지 검사한 뒤 정상 요청을 두 번
+실행해 각 항목의 대응, 한국어 결과, 완료 가능 여부를 확인한다. 요청은 `incognito: true`로
+처리해 디스크 번역 기록을 남기지 않는다. 원래 앱 캐시의 적중률을 검증하는 명령은 아니다.
+브라우저 프로필·로그인 메일·인증 토큰을 읽지 않고 실제 Native Messaging 호스트가 기존의
+인증된 본체 연결을 사용한다.
+
+첫 실행에서는 제목 `A neutral mail subject`가 원문이면서 `cacheable: true`로 반환돼
+실패했다. 본문 조각을 서로 다른 블록으로 가정하지 않고 같은 블록으로 묶어서도 실패를
+재현했다. 수정 후 제목은 `중립적인 메일 제목`, 두 본문 조각도 한국어로 반환됐고 두 회차
+모두 완료 가능으로 판정됐다. 앱 창 표시 직후 아직 브리지가 준비되지 않은 시점의 연결
+실패는 별도로 구분했으며, 준비 완료 후 같은 명령을 다시 실행해 통과를 확인했다.
 
 ## 로컬 빌드 확인
 

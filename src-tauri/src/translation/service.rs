@@ -1305,6 +1305,28 @@ impl TranslationService {
             })
             .collect::<HashMap<_, _>>();
 
+        // A heading precedes its supporting paragraphs in DOM order. Use two
+        // agreeing text fragments from this request as evidence in either
+        // direction; fragments may share a body block. Never borrow a different
+        // script or a conflicting batch, or count a repeated fragment twice.
+        let mut batch_languages = HashMap::<ScriptFamily, (Language, usize, bool)>::new();
+        let mut evidence_seen = HashSet::new();
+        for (text, block_key) in texts.iter().zip(block_keys) {
+            let Some(family) = detection_script_family(text) else {
+                continue;
+            };
+            let language = detect_explicit_language(text);
+            if block_key.is_none()
+                || language_script_family(language) != Some(family)
+                || !evidence_seen.insert(text)
+            {
+                continue;
+            }
+            let evidence = batch_languages.entry(family).or_insert((language, 0, true));
+            evidence.1 += 1;
+            evidence.2 &= evidence.0 == language;
+        }
+
         let mut remembered_groups = HashSet::new();
         let mut hints = Vec::with_capacity(texts.len());
         for (text, block_key) in texts.iter().zip(block_keys) {
@@ -1333,7 +1355,11 @@ impl TranslationService {
                 }
                 hints.push(Some(language));
             } else {
-                hints.push(self.web_detector.recent_language_for(text));
+                hints.push(match batch_languages.get(&family) {
+                    Some((language, count, true)) if *count >= 2 => Some(*language),
+                    Some((_, _, false)) => None,
+                    _ => self.web_detector.recent_language_for(text),
+                });
             }
         }
         Ok(hints)
@@ -1350,11 +1376,20 @@ impl TranslationService {
         let source = detect_language(original).language;
         // Intentional passthrough and protected identity text are not failures.
         if !protected.has_translatable_text()
-            || source == Language::Unknown
             || source == target
-            || allowed_sources.is_some_and(|allowed| !allowed.contains(&source))
             || translated == CONTEXT_COLLAPSED_PLACEHOLDER
         {
+            return true;
+        }
+        // Unknown is undecided, not an intentional source-language exclusion.
+        // Freezing the original here prevents later body context from ever
+        // repairing a short heading. Context-assisted results can be reused
+        // only when they have actually changed into the target language.
+        if source == Language::Unknown {
+            return original.trim() != translated.trim()
+                && detect_language(translated).language == target;
+        }
+        if allowed_sources.is_some_and(|allowed| !allowed.contains(&source)) {
             return true;
         }
         let masked = protected.mask_preserved_tokens_in(translated);
@@ -4332,6 +4367,125 @@ mod tests {
             .to_string()]
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn web_heading_uses_same_batch_language_evidence_before_body_order() {
+        let heading = "A neutral mail subject".to_string();
+        assert_eq!(detect_language(&heading).language, Language::Unknown);
+        let body = "The meeting starts tomorrow.".to_string();
+        let guide = "Read the meeting guide".to_string();
+        for texts in [
+            vec![heading.clone(), body.clone(), guide.clone()],
+            vec![guide, body, heading.clone()],
+        ] {
+            let inputs = Arc::new(Mutex::new(Vec::new()));
+            let mut service = TranslationService::new(
+                Box::new(RecordingIdentityTranslator {
+                    inputs: inputs.clone(),
+                }),
+                TranslationCache::in_memory(32).unwrap(),
+            );
+            let keys = texts
+                .iter()
+                .map(|text| Some(if text == &heading { "subject" } else { "body" }.to_string()))
+                .collect::<Vec<_>>();
+            service
+                .translate_many_for_private_web(
+                    &texts,
+                    &keys,
+                    "opaque-reading-document",
+                    Language::Korean,
+                    true,
+                    None,
+                    Box::new(|| Ok(())),
+                )
+                .unwrap();
+            assert!(
+                inputs
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .any(|input| input.contains(&heading)),
+                "Heading must reach the model even when it precedes the body"
+            );
+            // A different private reading document cannot reuse that language.
+            inputs.lock().unwrap().clear();
+            let isolated = service
+                .translate_many_for_private_web(
+                    std::slice::from_ref(&heading),
+                    &[Some("isolated-title".to_string())],
+                    "different-reading-document",
+                    Language::Korean,
+                    true,
+                    None,
+                    Box::new(|| Ok(())),
+                )
+                .unwrap();
+            assert_eq!(isolated, [heading.clone()]);
+            assert!(inputs.lock().unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn web_heading_does_not_guess_from_conflicting_or_unrelated_script_evidence() {
+        let mut service = TranslationService::new(
+            Box::new(MockTranslator),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        for neighbors in [
+            vec![
+                "The meeting starts tomorrow.",
+                "Read the meeting guide",
+                "Bonjour et merci pour votre invitation.",
+            ],
+            vec![
+                "これは明日の会議のお知らせです。",
+                "会議の案内を確認してください。",
+            ],
+        ] {
+            let texts = std::iter::once("A neutral mail subject")
+                .chain(neighbors)
+                .map(str::to_string)
+                .collect::<Vec<_>>();
+            let keys = (0..texts.len())
+                .map(|index| Some(format!("block-{index}")))
+                .collect::<Vec<_>>();
+            let hints = service
+                .web_source_hints(&texts, &keys, &format!("page-{}", texts.len()))
+                .unwrap();
+            assert_eq!(hints[0], None);
+        }
+    }
+
+    #[test]
+    fn web_unknown_source_passthrough_is_not_a_completed_translation() {
+        let service = TranslationService::new(
+            Box::new(MockTranslator),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        let source = "A neutral mail subject";
+        assert_eq!(detect_language(source).language, Language::Unknown);
+        for allowed in [None, Some(HashSet::from([Language::Japanese]))] {
+            assert!(!service.web_result_is_cacheable(
+                source,
+                source,
+                Language::Korean,
+                allowed.as_ref()
+            ));
+        }
+        assert!(service.web_result_is_cacheable(
+            source,
+            "중립적인 메일 제목",
+            Language::Korean,
+            None
+        ));
+        assert!(service.web_result_is_cacheable(
+            "https://example.invalid/",
+            "https://example.invalid/",
+            Language::Korean,
+            None
+        ));
     }
 
     #[test]
