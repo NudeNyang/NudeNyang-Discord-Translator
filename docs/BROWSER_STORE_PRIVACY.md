@@ -5,7 +5,7 @@ This document contains development privacy answers for NudeNyang Web Translator 
 
 ## Submission readiness
 
-This is the unpublished consent-v4 policy on the development branch. Do not submit the old v2 local-only listing or infer support from unchanged app/extension version numbers. Before any future review, publish matching companion builds, extension packages and privacy text together, verify capability `messengerPolicyVersion: 4`, and test consent migration. No release or submission is part of this work.
+This is the unpublished consent-v5 policy on the development branch. Do not submit the old v2 local-only listing or infer support from unchanged app/extension version numbers. Before any future review, publish matching companion builds, extension packages and privacy text together, verify capability `messengerPolicyVersion: 5`, and test consent migration. No release or submission is part of this work.
 
 Fixture E2E is not validation of all eight logged-in services. Store approval is not guaranteed. See `MESSENGER_SHARED_POLICY.md` for the implementation and remaining review checks.
 
@@ -35,12 +35,12 @@ See `BROWSER_STORE_SUBMISSION_0.7.9.md` for the new submission notes.
 NudeNyang Web Translator uses the translation engine in the separately installed NudeNyang Windows
 application to translate eligible visible text on webpages activated by the user while preserving
 the existing page layout. Explicitly consented private reading translates only visible
-message bodies in the currently open supported web-messenger conversation using the app-selected translator after consent v4, plus
+message bodies in the currently open supported web-messenger conversation using the app-selected translator after consent v5, plus
 Discord link-preview text in that conversation and visible channel names in the current server.
 
 ## Opened-mail and interface scope (unpublished)
 
-Private-reading consent v4 adds the currently opened Gmail subject and visible body under `personalCommunications`. Lists, sender/recipient UI, drafts and attachment contents remain excluded. Outlook and other mail services are not yet connected or live-verified. Web consent v2 additionally covers identifiable action labels, associated field descriptions and account/order UI, with input values and marked sensitive fields excluded. Both scopes use one prominent notice and one approval, with no extra enable switches. See `WEB_READING_SCOPE.md`.
+Private-reading consent v5 adds the currently opened Gmail/Outlook subject and visible body under `personalCommunications`. Lists, sender/recipient UI, drafts and attachment contents remain excluded. Outlook is connected under the same reading contract, with synthetic automated verification only and no live testing. Other mail services are not yet connected. Web consent v2 additionally covers identifiable action labels, associated field descriptions and account/order UI, with input values and marked sensitive fields excluded. Both scopes use one prominent notice and one approval, with no extra enable switches. See `WEB_READING_SCOPE.md`.
 
 ## Data handled
 
@@ -52,7 +52,7 @@ Private-reading consent v4 adds the currently opened Gmail subject and visible b
 - Personal communications / `personalCommunications`: visible message bodies in the currently
   open supported conversation, including Discord preview titles, descriptions, and textual fields,
   plus visible channel names in the current Discord server, only after common web controls and
-  browser-profile consent v4 permit it. DM contact lists and other servers' channels are excluded.
+  browser-profile consent v5 permit it. DM contact lists and other servers' channels are excluded.
 
 The extension does not read authentication tokens, cookies, input values, unsent drafts, contact
 lists, or attachment contents. It does not monitor browsing history as a list or log user typing.
@@ -67,7 +67,7 @@ or automatically removing all such information from messages.
 
 After consent in the current browser profile, messengers follow the common web switch, all-tab control and site policy. There is no separate messenger enable switch or separate external-provider/storage toggle. Refusing consent does not prevent ordinary webpage translation. Firefox additionally requires optional `personalCommunications` permission; refusal, cancellation or revocation blocks the private path.
 
-Consent v4 discloses the app's selected translator and shared retention/deletion policy. Earlier web v1 and messenger v1/v2/v3 consent is never upgraded automatically. The extension also requires companion capability `messengerPolicyVersion: 4`. This policy change is an unpublished development change, not a claim that the currently published builds implement it.
+Consent v5 discloses the app's selected translator and shared retention/deletion policy. Earlier web v1 and messenger v1/v2/v3/v4 consent is never upgraded automatically. The extension also requires companion capability `messengerPolicyVersion: 5`. This policy change is an unpublished development change, not a claim that the currently published builds implement it.
 
 Supported surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams and Google Messages. Only a safely identified open conversation is read: visible message bodies and link-preview text, plus visible channel names in the current Discord server. The extension does not open other conversations, retrieve hidden history, attachments or linked pages, or translate authors, handles, contact lists, profiles, composers, drafts, send controls or code. Sensitive information present in message bodies is not automatically redacted. Generic account, payment, email and unsupported-messenger blocks remain.
 

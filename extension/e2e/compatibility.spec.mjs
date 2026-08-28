@@ -1,14 +1,19 @@
 import { test, expect } from "./harness.mjs";
 import { MESSENGER_CASES, PUBLIC_CASES } from "./fixtures/compatibility.mjs";
-import { MAIL_DOCUMENT, MAIL_URL, MAIL_COPY } from "../test/fixtures/mail-reading.mjs";
+import { MAIL_DOCUMENT, MAIL_URL, MAIL_COPY, OUTLOOK_DOCUMENT, OUTLOOK_URL } from "../test/fixtures/mail-reading.mjs";
 
-test("메일 읽기: 열린 제목·본문만 번역하고 OFF·재표시와 보호 영역을 보존한다", async ({ extension }) => {
-  const p = await extension.open({ html: MAIL_DOCUMENT, url: MAIL_URL, consent: true });
+for (const mail of [
+  { id: "gmail", html: MAIL_DOCUMENT, url: MAIL_URL, body: "#mail-body", next: "#inbox/test-thread-two" },
+  { id: "outlook", html: OUTLOOK_DOCUMENT, url: OUTLOOK_URL, body: "#UniqueMessageBody", next: "/mail/0/inbox/id/synthetic-message-two" },
+]) {
+test(`메일 읽기 ${mail.id}: 열린 제목·본문만 번역하고 OFF·재표시와 보호 영역을 보존한다`, async ({ extension }) => {
+  const p = await extension.open({ html: mail.html, url: mail.url, consent: true });
   await expect.poll(async () => (await p.sent()).sort()).toEqual([...MAIL_COPY].sort());
   const requests = await p.requests();
-  expect(requests.every(request => request.privateContext?.service === "gmail")).toBe(true);
-  expect(JSON.stringify(requests)).not.toMatch(/private-|mail\.google|test-thread|synthetic-message/);
-  await expect(p.page.locator('[email="sender@example.invalid"]')).toHaveText("private-sender-sentinel");
+  expect(requests.every(request => request.privateContext?.service === mail.id)).toBe(true);
+  expect(JSON.stringify(requests)).not.toMatch(/private-|mail\.google|outlook\.live|test-thread|synthetic-message/);
+  await expect(p.page.locator('[email="recipient@example.invalid"]')).toHaveText("private-recipient-sentinel");
+  await expect(p.page.locator("#mail-link")).toHaveAttribute("href", "https://example.invalid/guide");
   const count = requests.length;
   await p.message({ type: "nudenyang-set-enabled", enabled: false });
   await expect(p.page.locator("#mail-prose")).toHaveText(MAIL_COPY[1]);
@@ -17,7 +22,7 @@ test("메일 읽기: 열린 제목·본문만 번역하고 OFF·재표시와 보
   expect((await p.requests()).length).toBe(count);
   expect((await p.message({ type: "nudenyang-audit" })).status).toBe("unavailable");
   const scope = (await p.status()).messengerContextId;
-  await p.page.locator("#mail-body").evaluate(element => {
+  await p.page.locator(mail.body).evaluate(element => {
     element.replaceWith(element.cloneNode(true));
     document.querySelector("#mail-prose").textContent = "The meeting starts tomorrow.";
     document.querySelector("#mail-link").textContent = "Read the meeting guide";
@@ -27,8 +32,8 @@ test("메일 읽기: 열린 제목·본문만 번역하고 OFF·재표시와 보
   expect((await p.status()).messengerContextId).toBe(scope);
 });
 
-test("메일 읽기: 동의 전에는 본문을 읽지 않고 철회 후 모든 결과를 복원한다", async ({ extension }) => {
-  const p = await extension.open({ html: MAIL_DOCUMENT, url: MAIL_URL, consent: false });
+test(`메일 읽기 ${mail.id}: 동의 전에는 본문을 읽지 않고 철회 후 모든 결과를 복원한다`, async ({ extension }) => {
+  const p = await extension.open({ html: mail.html, url: mail.url, consent: false });
   await expect(p.page.locator("#mail-prose")).toHaveText(MAIL_COPY[1]);
   expect(await p.sent()).toEqual([]);
   await p.setConsent(true);
@@ -37,14 +42,15 @@ test("메일 읽기: 동의 전에는 본문을 읽지 않고 철회 후 모든 
   await expect(p.page.locator("#mail-prose")).toHaveText(MAIL_COPY[1]);
 });
 
-test("메일 읽기: 다른 메일 전환 중 늦은 응답을 적용하지 않는다", async ({ extension }) => {
-  const p = await extension.open({ html: MAIL_DOCUMENT, url: MAIL_URL, consent: true, deferTranslations: true });
+test(`메일 읽기 ${mail.id}: 다른 메일 전환 중 늦은 응답을 적용하지 않는다`, async ({ extension }) => {
+  const p = await extension.open({ html: mail.html, url: mail.url, consent: true, deferTranslations: true });
   await expect.poll(p.sent).toContain(MAIL_COPY[1]);
-  await p.page.evaluate(() => { history.pushState({}, "", "#inbox/test-thread-two"); document.querySelector("#mail-prose").textContent = "A different mail body."; });
+  await p.page.evaluate(next => { history.pushState({}, "", next); document.querySelector("#mail-prose").textContent = "A different mail body."; }, mail.next);
   await p.releaseTranslations();
   await expect(p.page.locator("#mail-prose")).not.toContainText(MAIL_COPY[1]);
   await expect(p.page.locator("#mail-prose")).toHaveText("번역(A different mail body.)");
 });
+}
 
 // These run the production MV3 content/background/native-client path in Chromium.
 // Only the native port/model response is deterministic. Site HTML is synthetic;
@@ -97,13 +103,13 @@ for (const entry of PUBLIC_CASES) {
 
 for (const entry of MESSENGER_CASES) {
   test(`메신저 계약 fixture: ${entry.id}${entry.variant ? ` ${entry.variant}` : ""} 현재 대화만 번역`, async ({ extension }) => {
-    const p = await extension.open({ html: entry.html, url: entry.url, consent: true, settings: { messengerPolicyVersion: 4 } });
+    const p = await extension.open({ html: entry.html, url: entry.url, consent: true, settings: { messengerPolicyVersion: 5 } });
     await expectCopies(p.page, entry.copies);
     await expect.poll(async () => (await p.sent()).sort()).toEqual(sortedSources(entry));
     await expectGuards(p.page, entry.guards);
     const requests = await p.requests();
     for (const request of requests) {
-      expect(request.privateContext).toEqual({ service: entry.id, consentVersion: 4 });
+      expect(request.privateContext).toEqual({ service: entry.id, consentVersion: 5 });
       expect(request.pageId).toMatch(new RegExp(`^messenger:${entry.id}:[a-zA-Z0-9_-]{16,128}$`));
       expect(JSON.stringify(request)).not.toContain(new URL(entry.url).hostname);
       if (new URL(entry.url).pathname !== "/") {
@@ -215,8 +221,10 @@ for (const entry of MESSENGER_CASES.filter(item => item.variant !== "server")) {
 for (const policy of [
   { label: "이전 v2 동의", consentVersion: 2, settings: {}, gate: "messenger_consent_required" },
   { label: "이전 v3 동의", consentVersion: 3, settings: {}, gate: "messenger_consent_required" },
-  { label: "이전 v3 본체", consentVersion: 4, settings: { messengerPolicyVersion: 3 }, gate: "messenger_update_required" },
-  { label: "구형 본체 정책", consentVersion: 4, settings: { messengerPolicyVersion: 2 }, gate: "messenger_update_required" },
+  { label: "이전 Gmail 전용 v4 동의", consentVersion: 4, settings: {}, gate: "messenger_consent_required" },
+  { label: "이전 v4 본체", consentVersion: 5, settings: { messengerPolicyVersion: 4 }, gate: "messenger_update_required" },
+  { label: "이전 v3 본체", consentVersion: 5, settings: { messengerPolicyVersion: 3 }, gate: "messenger_update_required" },
+  { label: "구형 본체 정책", consentVersion: 5, settings: { messengerPolicyVersion: 2 }, gate: "messenger_update_required" },
 ]) {
   test(`통합 정책 fixture: ${policy.label}는 자동 확대하지 않음`, async ({ extension }) => {
     const entry = MESSENGER_CASES.find(item => item.id === "discord" && item.variant === "direct");
@@ -227,7 +235,7 @@ for (const policy of [
   });
 }
 
-test("통합 정책 fixture: 실제 동의 화면의 승인 후 v3만 저장하고 대화 번역을 시작", async ({ extension }) => {
+test("통합 정책 fixture: 실제 동의 화면의 승인 후 v5를 저장하고 대화 번역을 시작", async ({ extension }) => {
   const entry = MESSENGER_CASES.find(item => item.id === "discord" && item.variant === "direct");
   const p = await extension.open({ html: entry.html, url: entry.url, consent: true, consentVersion: 2, translator: "chatgpt" });
   expect(await p.requests()).toEqual([]);
@@ -235,28 +243,29 @@ test("통합 정책 fixture: 실제 동의 화면의 승인 후 v3만 저장하�
   await notice.goto(`chrome-extension://${extension.extensionId}/messenger-privacy.html`);
   await expect(notice.locator("#privacy-confirm")).toBeEnabled();
   await expect(notice.locator('[data-i18n="messengerPrivacyExternal"]')).toContainText("ChatGPT");
+  await expect(notice.locator('[data-i18n="webPrivacyExpandedScope"]')).toContainText("Outlook");
   await notice.locator("#privacy-confirm").check();
   await notice.locator("#privacy-accept").click();
   await expect(notice.locator("#privacy-revoke")).toBeVisible();
-  expect(await extension.worker.evaluate(async () => (await chrome.storage.local.get("messengerConsentVersion")).messengerConsentVersion)).toBe(4);
+  expect(await extension.worker.evaluate(async () => (await chrome.storage.local.get("messengerConsentVersion")).messengerConsentVersion)).toBe(5);
   await notice.close();
   await p.page.bringToFront();
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   await expectCopies(p.page, entry.copies);
-  expect((await p.requests())[0]).toMatchObject({ incognito: false, privateContext: { consentVersion: 4 } });
+  expect((await p.requests())[0]).toMatchObject({ incognito: false, privateContext: { consentVersion: 5 } });
   await expectGuards(p.page, entry.guards);
 });
 test("통합 정책 fixture: 새 동의 후 별도 토글 없이 외부 번역기 사용", async ({ extension }) => {
   const entry = MESSENGER_CASES.find(item => item.id === "discord" && item.variant === "direct");
-  const p = await extension.open({ html: entry.html, url: entry.url, consent: true, consentVersion: 4,
-    translator: "deepl", settings: { messengerPolicyVersion: 4, messengerEnabled: false } });
+  const p = await extension.open({ html: entry.html, url: entry.url, consent: true, consentVersion: 5,
+    translator: "deepl", settings: { messengerPolicyVersion: 5, messengerEnabled: false } });
   await expectCopies(p.page, entry.copies);
   await expect.poll(async () => (await p.sent()).sort()).toEqual(sortedSources(entry));
   await expectGuards(p.page, entry.guards);
 });
 for (const entry of services) {
   test(`개인정보 계약 fixture: ${entry.id} 동의 없으면 전송하지 않고 동의 후에만 시작`, async ({ extension }) => {
-    const p = await extension.open({ html: entry.html, url: entry.url, consent: false, settings: { messengerPolicyVersion: 4 } });
+    const p = await extension.open({ html: entry.html, url: entry.url, consent: false, settings: { messengerPolicyVersion: 5 } });
     expect(await p.status()).toMatchObject({ enabled: false, messengerGate: "messenger_consent_required" });
     await expectCopies(p.page, entry.copies, (source) => source);
     expect(await p.requests()).toEqual([]);
@@ -270,7 +279,7 @@ for (const entry of services) {
 
   test(`개인정보 계약 fixture: ${entry.id} 동의 후 앱의 외부 번역기를 사용`, async ({ extension }) => {
     const p = await extension.open({ html: entry.html, url: entry.url, consent: true,
-      settings: { messengerPolicyVersion: 4 }, translator: "deepl" });
+      settings: { messengerPolicyVersion: 5 }, translator: "deepl" });
     await expectCopies(p.page, entry.copies);
     await expect.poll(async () => (await p.sent()).sort()).toEqual(sortedSources(entry));
     await expectGuards(p.page, entry.guards);
@@ -281,7 +290,7 @@ test("개인정보 계약 fixture: 본체 기능 OFF와 사이트 차단은 동�
   const entry = MESSENGER_CASES.find((item) => item.id === "discord" && item.variant === "direct");
   for (const settings of [
     { enabled: false },
-    { messengerPolicyVersion: 4, sitePolicies: { "discord.com": "never" } },
+    { messengerPolicyVersion: 5, sitePolicies: { "discord.com": "never" } },
   ]) {
     const p = await extension.open({ html: entry.html, url: entry.url, consent: true, settings });
     expect((await p.status()).enabled).toBe(false);
@@ -296,7 +305,7 @@ test("개인정보 계약 fixture: X 공개 타임라인의 DM 서랍은 공개 
     <aside data-testid="DMDrawer"><div data-testid="DmActivityViewport"><div data-testid="messageEntry">
       <span data-testid="messageSender" id="sender">Synthetic Private Sender</span>
       <span dir="auto" id="private-body">A private drawer conversation.</span></div></div></aside>`;
-  const p = await extension.open({ html, url: "https://x.com/home", consent: false, settings: { messengerPolicyVersion: 4 } });
+  const p = await extension.open({ html, url: "https://x.com/home", consent: false, settings: { messengerPolicyVersion: 5 } });
   expect(await p.status()).toMatchObject({ enabled: false, messengerGate: "messenger_consent_required" });
   expect(await p.requests()).toEqual([]);
   await expect(p.page.locator("#public-post")).toHaveText("A public timeline post.");
@@ -306,7 +315,7 @@ test("개인정보 계약 fixture: X 공개 타임라인의 DM 서랍은 공개 
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   await expect(p.page.locator("#private-body")).toHaveText(translated("A private drawer conversation."));
   expect(await p.sent()).toEqual(["A private drawer conversation."]);
-  expect((await p.requests())[0].privateContext).toEqual({ service: "x", consentVersion: 4 });
+  expect((await p.requests())[0].privateContext).toEqual({ service: "x", consentVersion: 5 });
   await expect(p.page.locator("#public-post")).toHaveText("A public timeline post.");
   await expect(p.page.locator("#sender")).toHaveText("Synthetic Private Sender");
 });
@@ -322,7 +331,7 @@ test("메신저 계약 fixture: 닉네임·멘션·URL·코드·작성창 보호
     <script>document.getElementById('word-link').addEventListener('click', (event) => {
       event.preventDefault(); event.currentTarget.dataset.clicked = 'yes';
     });</script>`;
-  const p = await extension.open({ html, url: "https://discord.com/channels/@me/200", consent: true, settings: { messengerPolicyVersion: 4 } });
+  const p = await extension.open({ html, url: "https://discord.com/channels/@me/200", consent: true, settings: { messengerPolicyVersion: 5 } });
   const copies = [["#message-copy", "A neutral private message."], ["#word-link", "Read this article"]];
   await expectCopies(p.page, copies);
   await expect.poll(async () => (await p.sent()).sort()).toEqual(copies.map(([, text]) => text).sort());

@@ -24,6 +24,7 @@
   ]);
 
   const X_CHAT_ROOT = '[data-testid="dm-conversation-panel"] [data-testid="dm-conversation-content"] [data-testid="dm-message-scroller"][role="log"]';
+  const OUTLOOK_READING_BODY = '[id="UniqueMessageBody"][role="document"], .allowTextSelection:is([role="document"], [role="region"])';
 
   const SERVICES = Object.freeze([
     {
@@ -152,6 +153,23 @@
       excludes: ['[email]', '[data-hovercard-id]', '.gE', '.aHl', '[role="grid"]', 'address', '[itemprop~="author"]'],
     },
     {
+      id: "outlook", label: "Outlook",
+      hosts: ["outlook.live.com", "outlook.office.com", "outlook.office365.com"],
+      route: path => /^\/mail(?:\/|$)/iu.test(path),
+      roots: ['[data-app-section="MailReadCompose"][role="main"]'],
+      blocks: ['h1', 'h2', '[role="heading"][aria-level="2"]', OUTLOOK_READING_BODY],
+      // Service boundaries only; the common reading contract selects a single
+      // subject outside the body and never falls back to the whole mail page.
+      // Structural references and live-verification limits: WEB_READING_SCOPE.md.
+      reading: {
+        roots: ['[data-app-section="MailReadCompose"][role="main"]'],
+        title: 'h1, h2, [role="heading"][aria-level="2"]',
+        body: OUTLOOK_READING_BODY,
+      },
+      excludes: ['[email]', '.ms-Persona', '[data-app-section="MessageList"]', '[role="listbox"]',
+        '[role="option"]', 'address', '[itemprop~="author"]', '[itemprop~="email"]', '[rel~="author"]'],
+    },
+    {
       id: "google-messages", label: "Google Messages",
       hosts: ["messages.google.com"],
       route: (path) => /^\/web(?:\/u\/\d+)?(?:\/conversations(?:\/[A-Za-z0-9_-]+)?)?\/?$/.test(path),
@@ -188,8 +206,10 @@
     if (service?.reading) {
       // Mail search can open a single result in the reading pane. The DOM
       // contract still requires a subject and a visible body, never list text.
-      return /^#(?:drafts|settings|contacts)(?:\/|$)/iu.test(url.hash)
-        || url.searchParams.has("compose") ? null : service;
+      let route;
+      try { route = decodeURIComponent(`${url.pathname}${url.hash}`); } catch { return null; }
+      return /(?:^|[\/#])(?:drafts|compose|new|settings|options|contacts|people|calendar|login|logout|signin|signout|auth)(?:[\/#?]|$)/iu.test(route)
+        || [...url.searchParams.keys()].some(key => /^(?:compose|draft)$/iu.test(key)) ? null : service;
     }
     return BLOCKED_ROUTE_SEGMENT.test(`${url.pathname}${url.hash}`) ? null : service ?? null;
   }
@@ -457,7 +477,7 @@
     return xContext;
   }
 
-  // A mail provider supplies only its verified reading-pane boundaries. This
+  // A mail provider supplies only its explicit reading-pane boundaries. This
   // contract is independent of domains, wording, and the mail's HTML layout.
   // Resolve using metadata only; consent is checked by the caller before text.
   function readingDocumentContext(document, location, service) {
@@ -466,8 +486,12 @@
       .filter(element => isVisibleElement(element) && !element.closest('[contenteditable],form,[role="textbox"],[role="search"]'));
     if (roots.length !== 1) return null;
     const root = roots[0];
+    // A heading inside the selected reading document is content. Keeping the
+    // messenger-wide heading exclusion here would reject semantic subjects.
+    // The single-title/body whitelist still excludes unrelated UI headings.
+    const excludes = service.excludes.filter(selector => selector !== '[role="heading"]');
     const context = { id: service.id, label: service.label, root,
-      blocks: [reading.title, reading.body], excludes: service.excludes, protectedExcludes: service.excludes,
+      blocks: [reading.title, reading.body], excludes, protectedExcludes: excludes,
       routeKey: `${service.id}:${location.pathname}${location.hash}`, identityNodes: [] };
     const allowed = element => isVisibleElement(element) && !excludedInsideRoot(element, context);
     const bodies = [...root.querySelectorAll(reading.body)].filter(allowed);

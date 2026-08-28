@@ -1,7 +1,7 @@
 (function exposeMessengerPrivacy(root) {
-  const CONSENT_VERSION = 4;
+  const CONSENT_VERSION = 5;
   const CONSENT_KEY = "messengerConsentVersion";
-  const SERVICES = new Set(["x", "discord", "whatsapp", "telegram", "messenger", "slack", "teams", "google-messages", "gmail"]);
+  const SERVICES = new Set(["x", "discord", "whatsapp", "telegram", "messenger", "slack", "teams", "google-messages", "gmail", "outlook"]);
 
   function denied(request, code) {
     return { type: "error", requestId: request?.requestId ?? "", code, retryable: false };

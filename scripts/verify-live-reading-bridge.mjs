@@ -72,10 +72,10 @@ assert.equal(status.type, "status", `App unavailable or browser disabled: ${stat
 assert.ok(localModels.has(status.translator), "Select a local translator before running; no provider change is made by this check");
 assert.equal(status.modelReady, true, "Wait for the selected local model to become ready");
 assert.equal(status.webSettings?.enabled, true, "Web translation is disabled; no setting is changed by this check");
-assert.equal(status.webSettings?.messengerPolicyVersion, 4, "Native app must advertise reading policy v4");
+assert.equal(status.webSettings?.messengerPolicyVersion, 5, "Native app must advertise reading policy v5");
 const payload = {
   type: "translate", pageId: `messenger:gmail:${randomUUID()}`,
-  privateContext: { service: "gmail", consentVersion: 4 },
+  privateContext: { service: "gmail", consentVersion: 5 },
   targetLanguage: "ko", incognito: true,
   // Match the fixture's subject block and shared body block, not three
   // invented independent paragraphs that make language evidence easier.
@@ -108,6 +108,6 @@ for (let pass = 1; pass <= 2; pass += 1) {
   console.log(`Synthetic Gmail native round trip ${pass}: ${result.items.length} completed Korean results`);
 }
 console.log(JSON.stringify({ appVersion: status.appVersion, extensionVersion: version,
-  translator: status.translator, readingPolicy: 4, rejected: ["old-consent", "missing-consent", "non-opaque-context"],
+  translator: status.translator, readingPolicy: 5, rejected: ["old-consent", "missing-consent", "non-opaque-context"],
   syntheticNativeRoundTrips: 2, itemsPerRoundTrip: MAIL_COPY.length, ephemeral: true,
   actualMailAccessed: false, browserDomIntegrationTested: false }));

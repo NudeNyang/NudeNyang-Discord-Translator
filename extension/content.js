@@ -159,7 +159,7 @@
   function messengerGate() {
     if (!messengerSite) return "";
     if (!webSettings.enabled) return "web_translation_disabled";
-    if (webSettings.messengerPolicyVersion !== 4) return "messenger_update_required";
+    if (webSettings.messengerPolicyVersion !== 5) return "messenger_update_required";
     if (!messengerConsent) return "messenger_consent_required";
     if (!messengerContext?.root.isConnected) return "messenger_no_conversation";
     return messengerFailure;
@@ -404,7 +404,7 @@
       : {};
     return {
       enabled: source.enabled !== false,
-      messengerPolicyVersion: source.messengerPolicyVersion === 4 ? 4 : 0,
+      messengerPolicyVersion: source.messengerPolicyVersion === 5 ? 5 : 0,
       targetLanguage: typeof source.targetLanguage === "string" ? source.targetLanguage : "display",
       processingMode: ["responsive", "balanced", "economy"].includes(source.processingMode)
         ? source.processingMode
@@ -456,7 +456,7 @@
         const oldSettings = JSON.stringify(webSettings);
         const oldFailure = messengerFailure;
         appStatusAvailable = response?.type === "status";
-        messengerConsent = consent?.granted === true && consent.consentVersion === 4;
+        messengerConsent = consent?.granted === true && consent.consentVersion === 5;
         if (response?.type === "status") {
           applyAppStatus(response);
           messengerFailure = "";
@@ -1075,7 +1075,7 @@
       requestId,
       pageId: messengerSite ? messengerPageId
         : `${adapter.id}:${location.origin}${location.pathname}`.slice(0, 240),
-      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 4 } } : {}),
+      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 5 } } : {}),
       targetLanguage: effectiveTargetLanguage(),
       items: batch.map(({ id, blockId: itemBlockId, text }) => ({ id, blockId: itemBlockId, text })),
     });
@@ -1449,7 +1449,7 @@
         // A consent-saved broadcast may race this lookup; read a fresh snapshot.
         if (epoch !== appStatusEpoch) return null;
         const oldKey = translationKey();
-        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 4;
+        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 5;
         appStatusAvailable = app?.type === "status";
         if (app?.type === "status") {
           applyAppStatus(app);
@@ -1570,7 +1570,7 @@
       if (message.consent?.granted !== true) messengerStartRevision += 1;
       changeState(() => {
         const oldKey = translationKey();
-        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 4;
+        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 5;
         messengerFailure = "";
         handleNavigation();
         return refreshPageSettings(oldKey);
@@ -1638,7 +1638,7 @@
     // Keep the private gate closed until they apply instead of scanning with
     // a now-obsolete consent snapshot even for a single microtask.
     if (startupEpoch === appStatusEpoch) {
-      messengerConsent = consent?.granted === true && consent.consentVersion === 4;
+      messengerConsent = consent?.granted === true && consent.consentVersion === 5;
       applyAppStatus(appStatus);
     }
     assignPageContext(pageContext());

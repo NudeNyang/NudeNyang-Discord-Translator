@@ -25,13 +25,13 @@ function setup({ consent = 0, firefox = false, permission = false, settings = {}
   const native = async (request) => {
     calls.push(request);
     if (request.type === "status") return { type: "status", translator: state.translator,
-      webSettings: { enabled: true, messengerPolicyVersion: 4, ...state.settings } };
+      webSettings: { enabled: true, messengerPolicyVersion: 5, ...state.settings } };
     return { type: "translated", items: [{ id: "body", text: "번역문" }] };
   };
   const sender = { id: api.runtime.id, tab: { id: 8, incognito: false }, frameId: 0, url: "https://discord.com/channels/@me/123456789" };
   const owner = { id: api.runtime.id, url: api.runtime.getURL("messenger-privacy.html") };
   const request = { type: "translate", requestId: "private-test", pageId: "messenger:discord:0123456789abcdef",
-    privateContext: { service: "discord", consentVersion: 4 }, items: [{ id: "body", text: "Private example" }] };
+    privateContext: { service: "discord", consentVersion: 5 }, items: [{ id: "body", text: "Private example" }] };
   return { privacy, storage, calls, state, native, sender, owner, request, api };
 }
 
@@ -57,16 +57,16 @@ test("통합 정책: v2 동의는 외부 전송·재사용 캐시 동의로 자�
 });
 
 test("메일 전송도 새 동의·정확한 송신 서비스·현재 본체 정책을 모두 요구한다", async () => {
-  const s = setup({ consent: 4 });
+  const s = setup({ consent: 5 });
   const sender = { ...s.sender, url: "https://mail.google.com/mail/u/0/#inbox/test-message" };
-  const request = { ...s.request, pageId: "messenger:gmail:0123456789abcdef", privateContext: { service: "gmail", consentVersion: 4 } };
+  const request = { ...s.request, pageId: "messenger:gmail:0123456789abcdef", privateContext: { service: "gmail", consentVersion: 5 } };
   assert.equal((await s.privacy.forward(request, sender, s.native)).type, "translated");
   s.storage.messengerConsentVersion = 3;
   assert.equal((await s.privacy.forward(request, sender, s.native)).code, "messenger_consent_required");
-  s.storage.messengerConsentVersion = 4;
+  s.storage.messengerConsentVersion = 5;
   s.state.settings.messengerPolicyVersion = 3;
   assert.equal((await s.privacy.forward(request, sender, s.native)).code, "messenger_update_required");
-  s.state.settings.messengerPolicyVersion = 4;
+  s.state.settings.messengerPolicyVersion = 5;
   assert.equal((await s.privacy.forward(request, s.sender, s.native)).code, "messenger_invalid_context");
   for (const hash of ["#drafts/test", "#settings/general"]) {
     assert.equal((await s.privacy.forward(request, { ...sender, url: `https://mail.google.com/mail/u/0/${hash}` }, s.native)).code, "messenger_invalid_context");
@@ -75,16 +75,29 @@ test("메일 전송도 새 동의·정확한 송신 서비스·현재 본체 정
   assert.equal((await s.privacy.forward(ordinary, sender, s.native)).code, "messenger_invalid_context");
 });
 
+test("Outlook 메일 전송은 송신 호스트·읽기 경로와 확대 동의를 검증한다", async () => {
+  const s = setup({ consent: 5, settings: { messengerPolicyVersion: 5 } });
+  const sender = { ...s.sender, url: "https://outlook.office.com/mail/inbox/id/synthetic-one" };
+  const request = { ...s.request, pageId: "messenger:outlook:0123456789abcdef", privateContext: { service: "outlook", consentVersion: 5 } };
+  assert.equal((await s.privacy.forward(request, sender, s.native)).type, "translated");
+  assert.equal((await s.privacy.forward(request, s.sender, s.native)).code, "messenger_invalid_context");
+  for (const path of ["/mail/compose", "/mail/0/drafts", "/calendar", "/mail/options", "/mail/inbox?compose=1"]) {
+    assert.equal((await s.privacy.forward(request, { ...sender, url: `https://outlook.office.com${path}` }, s.native)).code, "messenger_invalid_context");
+  }
+  s.storage.messengerConsentVersion = 4;
+  assert.equal((await s.privacy.forward(request, sender, s.native)).code, "messenger_consent_required");
+});
+
 test("통합 정책: 최신 동의 후 앱 번역기를 사용하며 별도 메신저 스위치를 요구하지 않는다", async () => {
-  const s = setup({ consent: 4, translator: "deepl", settings: { messengerPolicyVersion: 4, messengerEnabled: false } });
-  s.request.privateContext.consentVersion = 4;
+  const s = setup({ consent: 5, translator: "deepl", settings: { messengerPolicyVersion: 5, messengerEnabled: false } });
+  s.request.privateContext.consentVersion = 5;
   assert.equal((await s.privacy.forward(s.request, s.sender, s.native)).type, "translated");
   assert.equal(s.calls.filter(r => r.type === "translate").length, 1);
 });
 
 test("시크릿 저장 여부는 요청 값이 아닌 브라우저 발신 탭에서 결정한다", async () => {
   for (const privatePage of [false, true]) for (const tabValue of [false, true, undefined]) {
-    const s = setup({ consent: 4 });
+    const s = setup({ consent: 5 });
     s.sender.tab.incognito = tabValue;
     const request = privatePage ? s.request : { type: "translate", pageId: "generic:example", items: [] };
     const sender = privatePage ? s.sender : { ...s.sender, url: "https://example.com/" };
@@ -151,8 +164,8 @@ test("메시지 전용 v1 동의는 채널명·미리보기 범위로 자동 갱
   assert.equal(s.calls.length, 0);
   assert.equal(s.storage.messengerConsentVersion, 1);
   const result = await s.privacy.setConsent(true, s.owner);
-  assert.equal(result.consentVersion, 4);
-  assert.equal(s.storage.messengerConsentVersion, 4);
+  assert.equal(result.consentVersion, 5);
+  assert.equal(s.storage.messengerConsentVersion, 5);
 });
 
 test("메신저 동의는 기본 꺼짐이며 웹 페이지 메시지로 켤 수 없다", async () => {
@@ -170,7 +183,7 @@ test("동의 페이지에서만 브라우저 설정을 기록하고 메시지는
   const result = await s.privacy.forward(s.request, s.sender, s.native);
   assert.equal(result.type, "translated");
   assert.deepEqual(s.calls.map((r) => r.type), ["status", "translate"]);
-  assert.deepEqual(s.storage, { messengerConsentVersion: 4 });
+  assert.deepEqual(s.storage, { messengerConsentVersion: 5 });
   assert.equal(s.calls[1].pageId.includes("conversation"), false);
 });
 
@@ -180,18 +193,18 @@ test("웹 번역 권한·최신 정책 브리지 모두 확인하기 전에는 �
     { settings: { messengerPolicyVersion: undefined }, code: "messenger_update_required" },
     { settings: { enabled: false }, code: "web_translation_disabled" },
   ]) {
-    const s = setup({ consent: 4, ...options });
+    const s = setup({ consent: 5, ...options });
     assert.equal((await s.privacy.forward(s.request, s.sender, s.native)).code, options.code);
     assert.deepEqual(s.calls.map((r) => r.type), ["status"]);
   }
 });
 
 test("개인 경로를 일반 번역으로 우회하거나 URL·서비스·프레임을 위조할 수 없다", async () => {
-  const s = setup({ consent: 4 });
+  const s = setup({ consent: 5 });
   for (const [request, sender] of [
     [{ ...s.request, privateContext: undefined }, s.sender],
     [{ ...s.request, pageId: "discord:https://discord.com/channels/@me/123" }, s.sender],
-    [{ ...s.request, privateContext: { service: "x", consentVersion: 4 } }, s.sender],
+    [{ ...s.request, privateContext: { service: "x", consentVersion: 5 } }, s.sender],
     [{ ...s.request, privateContext: { service: "discord", consentVersion: "1" } }, s.sender],
     [s.request, { ...s.sender, frameId: 3 }],
     [s.request, { ...s.sender, url: "https://discord.com.attacker.example/channels/123" }],
@@ -202,11 +215,11 @@ test("개인 경로를 일반 번역으로 우회하거나 URL·서비스·프�
 });
 
 test("공개 페이지는 기존 경로를 유지하며 X의 공개 페이지 위 DMDrawer는 사적 경로로 처리한다", async () => {
-  const s = setup({ consent: 4 });
+  const s = setup({ consent: 5 });
   const publicRequest = { type: "translate", items: [] };
   assert.equal((await s.privacy.forward(publicRequest, { ...s.sender, url: "https://example.com/article" }, s.native)).type, "translated");
   assert.equal(s.calls.length, 1);
-  const request = { ...s.request, privateContext: { service: "x", consentVersion: 4 }, pageId: "messenger:x:0123456789abcdef" };
+  const request = { ...s.request, privateContext: { service: "x", consentVersion: 5 }, pageId: "messenger:x:0123456789abcdef" };
   assert.equal((await s.privacy.forward(request, { ...s.sender, url: "https://x.com/home" }, s.native)).type, "translated");
 });
 
@@ -230,7 +243,7 @@ test("메신저의 로그인·목록·검색·미지원 경로는 일반 웹 번
       const publicRequest = { type: "translate", pageId: url, items: s.request.items };
       assert.equal((await s.privacy.forward(publicRequest, sender, s.native)).code, "messenger_invalid_context", url);
       const privateRequest = { ...s.request, pageId: `messenger:${service}:0123456789abcdef`,
-        privateContext: { service, consentVersion: 4 } };
+        privateContext: { service, consentVersion: 5 } };
       assert.equal((await s.privacy.forward(privateRequest, sender, s.native)).code, "messenger_invalid_context", url);
       assert.equal(s.calls.length, 0, url);
     }
@@ -238,8 +251,8 @@ test("메신저의 로그인·목록·검색·미지원 경로는 일반 웹 번
 });
 
 test("X 설정 화면은 공개 타임라인의 DMDrawer 예외를 이용할 수 없다", async () => {
-  const s = setup({ consent: 4 });
-  const request = { ...s.request, pageId: "messenger:x:0123456789abcdef", privateContext: { service: "x", consentVersion: 4 } };
+  const s = setup({ consent: 5 });
+  const request = { ...s.request, pageId: "messenger:x:0123456789abcdef", privateContext: { service: "x", consentVersion: 5 } };
   for (const url of ["https://x.com/settings/account", "https://x.com/i/flow/login", "https://twitter.com/search?q=test"]) {
     assert.equal((await s.privacy.forward(request, { ...s.sender, url }, s.native)).code, "messenger_invalid_context");
   }
@@ -247,7 +260,7 @@ test("X 설정 화면은 공개 타임라인의 DMDrawer 예외를 이용할 수
 });
 
 test("Firefox의 personalCommunications 권한이 없거나 철회되면 저장된 동의로 우회하지 않는다", async () => {
-  const s = setup({ consent: 4, firefox: true });
+  const s = setup({ consent: 5, firefox: true });
   assert.equal((await s.privacy.getConsent()).granted, false);
   assert.equal((await s.privacy.setConsent(true, s.owner)).granted, false);
   s.state.permission = true;
@@ -257,7 +270,7 @@ test("Firefox의 personalCommunications 권한이 없거나 철회되면 저장�
 });
 
 test("전송 대기 및 번역 중 동의 철회는 늦은 결과도 폐기한다", { timeout: 2000 }, async () => {
-  const s = setup({ consent: 4 });
+  const s = setup({ consent: 5 });
   let resume;
   let started;
   const translating = new Promise(resolve => { started = resolve; });
@@ -274,7 +287,7 @@ test("전송 대기 및 번역 중 동의 철회는 늦은 결과도 폐기한�
 });
 
 test("본문 전송 직전 동의 조회 중 OFF→ON으로 바뀌면 이전 요청을 전달하지 않는다", { timeout: 2000 }, async () => {
-  const s = setup({ consent: 4 });
+  const s = setup({ consent: 5 });
   const read = pauseConsentRead(s, 2);
   const pending = s.privacy.forward(s.request, s.sender, s.native);
   await read.paused;
@@ -286,7 +299,7 @@ test("본문 전송 직전 동의 조회 중 OFF→ON으로 바뀌면 이전 요
 });
 
 test("결과 반환 직전 동의 조회 중 OFF→ON으로 바뀌면 이전 번역문을 반환하지 않는다", { timeout: 2000 }, async () => {
-  const s = setup({ consent: 4 });
+  const s = setup({ consent: 5 });
   const read = pauseConsentRead(s, 3);
   const pending = s.privacy.forward(s.request, s.sender, s.native);
   await read.paused;

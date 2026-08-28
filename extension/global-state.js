@@ -87,7 +87,7 @@
     async function readPrivacy() {
       const saved = await storage("get", { ...defaults, messengerConsentVersion: 0 });
       const webGranted = saved?.[CONSENT_KEY] === CONSENT_VERSION;
-      const messengerRecorded = saved?.messengerConsentVersion === 4;
+      const messengerRecorded = saved?.messengerConsentVersion === 5;
       const messengerPermissionGranted = await messengerPrivacy.dataPermissionGranted();
       const messengerGranted = messengerRecorded && messengerPermissionGranted;
       return { ok: true, enabled: !forcedOff && webGranted && saved?.[ENABLED_KEY] === true,
@@ -104,10 +104,10 @@
         try {
           const allowMessenger = granted === true && await messengerPrivacy.dataPermissionGranted();
           // One explicit approval, one storage write. The native protocol still
-          // checks private reading v4 independently; a missing browser permission only
+          // checks private reading v5 independently; a missing browser permission only
           // blocks personal communications, not ordinary webpage translation.
           await storage("set", { [CONSENT_KEY]: granted === true ? CONSENT_VERSION : 0,
-            [ENABLED_KEY]: granted === true, messengerConsentVersion: allowMessenger ? 4 : 0 });
+            [ENABLED_KEY]: granted === true, messengerConsentVersion: allowMessenger ? 5 : 0 });
           forcedOff = granted !== true;
           messengerPrivacy.invalidate?.();
           return await readPrivacy();

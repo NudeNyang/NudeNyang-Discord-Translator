@@ -27,15 +27,26 @@ function setup(saved = {}, permission = true) {
   const context = { queueMicrotask }; vm.runInNewContext(source, context);
   const messengerPrivacy = {
     dataPermissionGranted: async () => permission,
-    getConsent: async () => ({ ok: true, granted: permission && saved.messengerConsentVersion === 4 }),
+    getConsent: async () => ({ ok: true, granted: permission && saved.messengerConsentVersion === 5 }),
   };
   const create = () => context.NudeNyangGlobalTranslationState.createGlobalTranslationState(api, { messengerPrivacy });
   return { state: create(), create, api, saved, opened, writes,
     sender: { id: "test", url: "chrome-extension://test/messenger-privacy.html?scope=web" } };
 }
 
+test("Outlook 범위 확대는 Gmail만 안내한 v4 동의를 자동 승격하지 않는다", async () => {
+  const p = setup({ webTranslationConsentVersion: 2, messengerConsentVersion: 4, webTranslationEnabled: true });
+  const state = await p.state.privacyState();
+  assert.equal(state.webGranted, true);
+  assert.equal(state.messengerGranted, false);
+  assert.equal(state.anyGranted, true);
+  assert.equal(p.writes.length, 0);
+  assert.equal((await p.state.privacyConsent(true, p.sender)).granted, true);
+  assert.equal(p.saved.messengerConsentVersion, 5);
+});
+
 test("이전 탭·사이트 켜짐과 메신저 동의는 전체 자동 번역 동의로 승격하지 않는다", async () => {
-  const p = setup({ enabled: true, messengerConsentVersion: 4, "nudenyang-tab-enabled:7": true, webTranslationEnabled: true });
+  const p = setup({ enabled: true, messengerConsentVersion: 5, "nudenyang-tab-enabled:7": true, webTranslationEnabled: true });
   assert.equal((await p.state.get()).enabled, false);
   assert.equal((await p.state.set(true)).needsConsent, true);
   assert.equal(p.writes.length, 0);
@@ -46,7 +57,7 @@ test("이전 탭·사이트 켜짐과 메신저 동의는 전체 자동 번역 �
 test("통합 동의는 웹·메신저 범위를 한 번에 저장하고 철회는 모두 끈다", async () => {
   const p = setup();
   assert.equal((await p.state.privacyConsent(true, p.sender)).granted, true);
-  assert.deepEqual(p.writes, [{ webTranslationConsentVersion: 2, webTranslationEnabled: true, messengerConsentVersion: 4 }]);
+  assert.deepEqual(p.writes, [{ webTranslationConsentVersion: 2, webTranslationEnabled: true, messengerConsentVersion: 5 }]);
   assert.equal((await p.create().privacyState()).granted, true);
   assert.equal((await p.state.privacyConsent(false, p.sender)).anyGranted, false);
   assert.equal(p.saved.messengerConsentVersion, 0);
@@ -54,14 +65,14 @@ test("통합 동의는 웹·메신저 범위를 한 번에 저장하고 철회�
 });
 
 test("통합 화면은 기존 부분 동의를 확대하지 않고 양쪽 동의가 있으면 재승인하지 않는다", async () => {
-  for (const saved of [{ messengerConsentVersion: 4 }, { webTranslationConsentVersion: 2 }]) {
+  for (const saved of [{ messengerConsentVersion: 5 }, { webTranslationConsentVersion: 2 }]) {
     const p = setup(saved);
     const state = await p.state.privacyState();
     assert.equal(state.granted, false);
     assert.equal(state.anyGranted, true);
     assert.equal(p.writes.length, 0);
   }
-  const p = setup({ messengerConsentVersion: 4, webTranslationConsentVersion: 2, webTranslationEnabled: false });
+  const p = setup({ messengerConsentVersion: 5, webTranslationConsentVersion: 2, webTranslationEnabled: false });
   assert.equal((await p.state.privacyState()).granted, true);
   assert.equal((await p.state.get()).enabled, false);
   assert.equal(p.writes.length, 0);
@@ -79,7 +90,7 @@ test("Firefox 메신저 권한이 없으면 통합 승인 뒤에도 메신저만
 });
 
 test("Firefox 권한을 잃어도 기존 메신저 동의 기록은 통합 화면에서 철회할 수 있다", async () => {
-  const p = setup({ messengerConsentVersion: 4 }, false);
+  const p = setup({ messengerConsentVersion: 5 }, false);
   const state = await p.state.privacyState();
   assert.equal(state.granted, false);
   assert.equal(state.anyGranted, true);
@@ -97,7 +108,7 @@ test("통합 동의는 웹페이지 발신자를 거절하고 저장 실패 시 
 });
 
 test("통합 철회 저장 실패도 현재 세션의 전체 전송을 막는다", async () => {
-  const p = setup({ webTranslationConsentVersion: 2, webTranslationEnabled: true, messengerConsentVersion: 4 });
+  const p = setup({ webTranslationConsentVersion: 2, webTranslationEnabled: true, messengerConsentVersion: 5 });
   p.api.storage.local.set = () => { throw new Error("disk unavailable"); };
   assert.equal((await p.state.privacyConsent(false, p.sender)).ok, false);
   assert.equal((await p.state.get()).enabled, false);
@@ -123,11 +134,11 @@ test("여러 탭의 연속 토글을 직렬화하고 마지막 OFF를 재시작�
 });
 
 test("철회는 전체 번역을 끄되 별도 메신저 동의나 본문 캐시는 임의로 변경하지 않는다", async () => {
-  const p = setup({ webTranslationConsentVersion: 2, webTranslationEnabled: true, messengerConsentVersion: 4 });
+  const p = setup({ webTranslationConsentVersion: 2, webTranslationEnabled: true, messengerConsentVersion: 5 });
   const before = p.state.revision;
   assert.equal((await p.state.consent(false, p.sender)).enabled, false);
   assert.equal((await p.create().get()).consent, false);
-  assert.equal(p.saved.messengerConsentVersion, 4);
+  assert.equal(p.saved.messengerConsentVersion, 5);
   assert.ok(p.state.revision > before);
 });
 

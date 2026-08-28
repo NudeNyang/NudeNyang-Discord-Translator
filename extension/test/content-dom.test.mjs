@@ -62,7 +62,7 @@ function page(t, html, options = {}) {
   let releaseTranslation;
   const appStatus = {
     type: "status", translator: options.translator ?? "hymt_1_8b", targetLanguage: "KO", resolvedUiLanguage: "ko",
-    webSettings: { enabled: true, messengerPolicyVersion: 4, processingMode: "responsive", ...options.settings },
+    webSettings: { enabled: true, messengerPolicyVersion: 5, processingMode: "responsive", ...options.settings },
   };
   w.console.info = () => {};
   if (options.deferApplications) {
@@ -118,7 +118,7 @@ function page(t, html, options = {}) {
           savedStates.push(testGlobalEnabled);
           callback({ enabled: testGlobalEnabled });
         } else if (message.type === "nudenyang-messenger-consent-get") {
-          callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? (options.consentVersion ?? 4) : 0 });
+          callback({ ok: true, granted: options.consent === true, consentVersion: options.consent ? (options.consentVersion ?? 5) : 0 });
         } else if (message.type === "nudenyang-native-request") {
           if (message.request.type === "status") {
             if (options.deferStatus) releaseStatus = () => callback(appStatus);
@@ -172,7 +172,7 @@ const PRIVATE_CHAT = `<nav><span>Private contact list</span></nav>
       <time>Private timestamp</time><a href="https://example.com/">https://example.com/</a>
     </div></li></ol><div role="textbox" contenteditable="true">Unsent private draft</div>`;
 const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", consent: true,
-  settings: { messengerPolicyVersion: 4 } };
+  settings: { messengerPolicyVersion: 5 } };
 
 const consentNotice = (p) => p.w.document.getElementById("nudenyang-consent-notice")?.shadowRoot;
 
@@ -233,14 +233,14 @@ test("메신저 공통: 화면 밖 번역도 유지하되 상태 확인은 본�
   await waitFor(() => body.textContent === "번역(Secondary synthetic message)", "initial translation");
   body.setAttribute("data-offscreen", "");
   const reads = watchNodeValueReads(p.w, body.firstChild);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 5 } });
   assert.equal(reads(), 0, "clipped messages must not be re-read or restored");
   assert.equal(body.textContent, "번역(Secondary synthetic message)");
 });
 
 test("동의 없는 자동 번역은 본문을 읽지 않고 페이지에 이유와 안내 버튼을 표시한다", async (t) => {
   const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, consent: false,
-    settings: { messengerPolicyVersion: 4, sitePolicies: { "x.com": "always" } } });
+    settings: { messengerPolicyVersion: 5, sitePolicies: { "x.com": "always" } } });
   const reads = watchNodeValueReads(p.w, p.w.document.querySelector("#body-one span").firstChild);
   await p.message({ type: "nudenyang-ready" });
   const notice = consentNotice(p);
@@ -294,7 +294,7 @@ test("동의 안내는 끄기·대화 떠나기·설정 끄기·페이지 숨김
       p.w.document.querySelector("ol").remove();
       await p.message({ type: "nudenyang-status" });
     }
-    if (action === "settings") await p.message({ type: "nudenyang-apply-web-settings", webSettings: { enabled: false, messengerPolicyVersion: 4 } });
+    if (action === "settings") await p.message({ type: "nudenyang-apply-web-settings", webSettings: { enabled: false, messengerPolicyVersion: 5 } });
     if (action === "hidden") {
       Object.defineProperty(p.w.document, "hidden", { value: true, configurable: true });
       p.w.document.dispatchEvent(new p.w.Event("visibilitychange"));
@@ -302,8 +302,8 @@ test("동의 안내는 끄기·대화 떠나기·설정 끄기·페이지 숨김
     if (action === "dispose") p.w.__nudeNyangContentRuntime.dispose();
     assert.equal(consentNotice(p), undefined, action);
   }
-  for (const settings of [{ enabled: false }, { enabled: false, messengerPolicyVersion: 4 },
-    { messengerPolicyVersion: 4, sitePolicies: { "discord.com": "never" } }]) {
+  for (const settings of [{ enabled: false }, { enabled: false, messengerPolicyVersion: 5 },
+    { messengerPolicyVersion: 5, sitePolicies: { "discord.com": "never" } }]) {
     const p = page(t, PRIVATE_CHAT, { ...PRIVATE_OPTIONS, settings, consent: false });
     await p.message({ type: "nudenyang-ready" });
     await p.message({ type: "nudenyang-toggle-enabled" });
@@ -421,7 +421,7 @@ test("웹 Discord 채널명이 숨김·입력·다른 서버 링크로 바뀌면
 
 test("새 X 채팅은 기존 동의와 자동 번역 설정으로 본문만 추출한다", async (t) => {
   const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL,
-    settings: { messengerPolicyVersion: 4, sitePolicies: { "x.com": "always" } } });
+    settings: { messengerPolicyVersion: 5, sitePolicies: { "x.com": "always" } } });
   await p.message({ type: "nudenyang-ready" });
   const state = await p.message({ type: "nudenyang-status" });
   assert.equal(state.messengerGate, "");
@@ -516,7 +516,7 @@ test("X 스크롤로 가려진 번역은 상태 갱신에도 보존하고 새 �
   const translated = body.textContent;
   body.setAttribute("data-offscreen", "");
   const reads = watchNodeValueReads(p.w, body.firstChild.firstChild);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 5 } });
   assert.equal(body.textContent, translated, "permission refresh must not restore clipped translations");
   assert.equal(reads(), 0, "retaining an existing result must not reread offscreen text");
   body.removeAttribute("data-offscreen");
@@ -593,7 +593,7 @@ test("X 화면 밖 노드가 입력·작성자·숨김 영역으로 바뀌면 �
     if (action === "hidden") body.hidden = true;
     body.firstChild.firstChild.nodeValue = "A repurposed synthetic value.";
     const reads = watchNodeValueReads(p.w, body.firstChild.firstChild);
-    await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
+    await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 5 } });
     assert.equal(reads(), 0, action);
     assert.equal(body.textContent, "A repurposed synthetic value.", action);
     assert.equal(p.requests.length, 1, action);
@@ -722,7 +722,7 @@ test("동의한 웹 Discord는 본문만 사적 컨텍스트로 보내고 원문
   assert.equal(p.sent().length, 1);
   assert.ok(!p.sent().some((text) => /sender|draft|timestamp|person|secret_code|https:/.test(text)));
   for (const request of p.requests) {
-    assert.deepEqual(JSON.parse(JSON.stringify(request.privateContext)), { service: "discord", consentVersion: 4 });
+    assert.deepEqual(JSON.parse(JSON.stringify(request.privateContext)), { service: "discord", consentVersion: 5 });
     assert.match(request.pageId, /^messenger:discord:[a-zA-Z0-9_-]{16,128}$/);
     assert.ok(!JSON.stringify(request).includes("123456789"));
   }
@@ -743,7 +743,7 @@ test("메신저 동의 철회와 외부 모델 전환은 원문을 복원하고 
   await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: false, consentVersion: 0 } });
   assert.ok(!body.textContent.includes("번역("));
   assert.equal((await p.message({ type: "nudenyang-status" })).translatedNodes, 0);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 5 } });
   await waitFor(() => p.requests.length >= 2 && body.textContent.includes("번역("), "re-consent starts fresh");
   p.appStatus.webSettings.messengerPolicyVersion = 0;
   p.w.dispatchEvent(new p.w.FocusEvent("focus"));
@@ -756,7 +756,7 @@ for (const { label, update, gate } of [
   { label: "동의 철회", update: { type: "nudenyang-messenger-refresh",
     consent: { granted: false, consentVersion: 0 } }, gate: "messenger_consent_required" },
   { label: "본체 설정 끄기", update: { type: "nudenyang-apply-web-settings",
-    webSettings: { enabled: false, messengerPolicyVersion: 4 } }, gate: "web_translation_disabled" },
+    webSettings: { enabled: false, messengerPolicyVersion: 5 } }, gate: "web_translation_disabled" },
 ]) {
   test(`늦게 도착한 상태 조회는 최신 ${label}를 덮어쓰지 않는다`, async (t) => {
     const options = { ...PRIVATE_OPTIONS };
@@ -1008,11 +1008,11 @@ test("X 공개 타임라인의 DM 서랍도 별도 동의가 없으면 절대 �
   const p = page(t, `<main><article><div data-testid="tweetText">Public timeline message</div></article></main>
     <div data-testid="DMDrawer"><div data-testid="DmActivityViewport">
       <div data-testid="messageEntry"><span dir="auto">Private drawer conversation</span></div>
-    </div></div>`, { url: "https://x.com/home", settings: { messengerPolicyVersion: 4 }, consent: false });
+    </div></div>`, { url: "https://x.com/home", settings: { messengerPolicyVersion: 5 }, consent: false });
   await p.message({ type: "nudenyang-ready" });
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   assert.equal(p.requests.length, 0);
-  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 4 } });
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 5 } });
   await waitFor(() => p.sent().includes("Private drawer conversation"), "consented drawer translates");
   assert.ok(!p.sent().includes("Public timeline message"));
   assert.equal(p.requests[0].privateContext.service, "x");

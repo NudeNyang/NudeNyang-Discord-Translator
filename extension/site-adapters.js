@@ -36,7 +36,7 @@
     "discord.com", "ptb.discord.com", "canary.discord.com",
     "mail.google.com", "messages.google.com", "app.slack.com",
     "teams.microsoft.com", "web.whatsapp.com", "web.telegram.org",
-    "messenger.com", "www.messenger.com", "outlook.live.com", "outlook.office.com",
+    "messenger.com", "www.messenger.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com",
   ]);
 
   const PRIVATE_PATH_SEGMENTS = new Set(["compose", "direct", "dm", "dms", "inbox", "mail", "message", "messages"]);

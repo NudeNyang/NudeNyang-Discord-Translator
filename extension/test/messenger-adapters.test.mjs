@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import "../messenger-adapters.js";
 import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-chat.mjs";
 import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
-import { MAIL_DOCUMENT, MAIL_URL, GENERIC_MAIL, GENERIC_READING_SCOPE } from "./fixtures/mail-reading.mjs";
+import { MAIL_DOCUMENT, MAIL_URL, GENERIC_MAIL, GENERIC_READING_SCOPE, OUTLOOK_DOCUMENT, OUTLOOK_URL } from "./fixtures/mail-reading.mjs";
 
 const {
   siteForLocation,
@@ -45,6 +45,17 @@ test("메일 읽기: Gmail 메타데이터를 문서 계약에 연결하고 목�
   } finally { dom.window.close(); }
 });
 
+test("메일 읽기: 공통 문서 계약은 읽기 제목의 ARIA heading을 탐색 UI와 구분한다", () => {
+  const dom = new JSDOM(GENERIC_MAIL, { url: "https://example.test/read/one" });
+  try {
+    const { document, location } = dom.window;
+    document.querySelector("#mail-subject").setAttribute("role", "heading");
+    const context = globalThis.NudeNyangMessengerAdapters.readingDocumentContext(document, location,
+      { id: "test-mail", label: "Test mail", excludes: ['[role="heading"]', '[contenteditable]', '[hidden]'], reading: GENERIC_READING_SCOPE });
+    assert.deepEqual(selectMessageBlocks(context).map(el => el.id), ["mail-subject", "mail-body"]);
+  } finally { dom.window.close(); }
+});
+
 test("메일 읽기: 문서 경계 탐색은 본문을 읽지 않으며 숨김·작성창·초안 경로를 거절한다", () => {
   const dom = new JSDOM(MAIL_DOCUMENT, { url: MAIL_URL });
   try {
@@ -60,6 +71,54 @@ test("메일 읽기: 문서 경계 탐색은 본문을 읽지 않으며 숨김·
     for (const hash of ["#drafts/example", "#settings/general"]) {
       assert.equal(contextForDocument(new URL(`https://mail.google.com/mail/u/0/${hash}`), document), null);
     }
+  } finally { dom.window.close(); }
+});
+
+test("Outlook 메일 읽기: 본문을 읽지 않고 단일 읽기 창의 제목·본문만 연결한다", () => {
+  const dom = new JSDOM(OUTLOOK_DOCUMENT, { url: OUTLOOK_URL });
+  try {
+    const { document, Node, location } = dom.window;
+    Object.defineProperty(Node.prototype, "textContent", { configurable: true, get() { throw Error("unexpected mail read"); } });
+    const context = contextForDocument(location, document);
+    assert.equal(context?.id, "outlook");
+    assert.deepEqual(selectMessageBlocks(context).map(el => el.id), ["mail-subject", "UniqueMessageBody"]);
+    for (const host of ["outlook.live.com", "outlook.office.com", "outlook.office365.com"]) {
+      assert.equal(contextForDocument(`https://${host}/mail/inbox/id/synthetic-one`, document)?.id, "outlook");
+      for (const path of ["/mail/0/drafts/id/synthetic-one", "/mail/0/%64rafts/id/synthetic-one", "/mail/compose", "/calendar/view/month", "/people/", "/mail/options/general", "/mail/inbox?compose=1", "/mail/inbox?Compose=1", "/mail/inbox#settings"]) {
+        const url = `https://${host}${path}`;
+        assert.equal(privateSiteForLocation(url)?.id, "outlook");
+        assert.equal(contextForDocument(url, document), null, path);
+      }
+    }
+    for (const attrs of [{ hidden: "" }, { contenteditable: "true" }, { role: "textbox" }]) {
+      const pane = document.querySelector('[data-app-section="MailReadCompose"]');
+      const copy = pane.cloneNode(true);
+      for (const [name, value] of Object.entries(attrs)) pane.setAttribute(name, value);
+      assert.equal(contextForDocument(location, document), null);
+      pane.replaceWith(copy);
+    }
+    document.body.append(document.querySelector('[data-app-section="MailReadCompose"]').cloneNode(true));
+    assert.equal(contextForDocument(location, document), null);
+  } finally { dom.window.close(); }
+});
+
+test("Outlook 메일 읽기: 언어별 라벨 없이 본문 변형을 선택하고 제목이 모호하면 거절한다", () => {
+  const dom = new JSDOM(OUTLOOK_DOCUMENT, { url: OUTLOOK_URL });
+  try {
+    const { document, location } = dom.window;
+    const body = document.querySelector("#UniqueMessageBody");
+    // An unrelated document/attachment in the same pane is not a mail body.
+    const attachment = document.createElement("div");
+    attachment.setAttribute("role", "document");
+    document.querySelector('[data-app-section="MailReadCompose"]').append(attachment);
+    assert.equal(selectMessageBlocks(contextForDocument(location, document)).includes(attachment), false);
+    body.removeAttribute("id");
+    body.setAttribute("role", "region");
+    body.setAttribute("aria-label", "언어에 의존하지 않는 레이블");
+    assert.equal(selectMessageBlocks(contextForDocument(location, document)).at(-1), body);
+    const title = document.querySelector("#mail-subject");
+    title.after(title.cloneNode(true));
+    assert.equal(contextForDocument(location, document), null);
   } finally { dom.window.close(); }
 });
 

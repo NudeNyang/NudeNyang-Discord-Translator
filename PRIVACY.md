@@ -4,13 +4,13 @@
 
 NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개발자가 Discord 메시지, 웹페이지 텍스트, 이미지, 번역 기록, 방문한 페이지 주소 또는 인증 정보를 수집하거나 보관하지 않습니다.
 
-이 문서는 웹 동의 v2·사적 읽기 동의 v4를 사용하는 미공개 개발 변경을 포함합니다. 버전 번호만으로 적용 여부를 판단하지 않으며 본체와 확장의 정책 기능 확인이 필요합니다. 공개 정책·설치 파일·스토어 고지는 이후 배포 시 함께 갱신해야 합니다.
+이 문서는 웹 동의 v2·사적 읽기 동의 v5를 사용하는 미공개 개발 변경을 포함합니다. 버전 번호만으로 적용 여부를 판단하지 않으며 본체와 확장의 정책 기능 확인이 필요합니다. 공개 정책·설치 파일·스토어 고지는 이후 배포 시 함께 갱신해야 합니다.
 
 ## 로컬 처리
 
 - Hy-MT2와 TranslateGemma 번역은 사용자 PC에서 처리됩니다.
 - 이미지 픽셀은 PC 안에서 OCR과 합성에 사용되며 외부 번역 서비스로 전송되지 않습니다.
-- 일반 번역의 설정, 번역 캐시와 번역 기록은 Windows 사용자 데이터 폴더에 저장됩니다. 보관 기간은 앱 설정에서 변경할 수 있습니다. 동의 v4를 받은 일반 창의 웹 메신저도 이 보관·삭제 정책을 공유합니다.
+- 일반 번역의 설정, 번역 캐시와 번역 기록은 Windows 사용자 데이터 폴더에 저장됩니다. 보관 기간은 앱 설정에서 변경할 수 있습니다. 동의 v5를 받은 일반 창의 웹 메신저도 이 보관·삭제 정책을 공유합니다.
 - 진단 로그에는 메시지 본문, 로컬 모델 프롬프트와 인증 비밀 값을 기록하지 않습니다.
 
 ## 브라우저 확장
@@ -25,7 +25,7 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 - 일반 웹 번역 요청에는 화면과 가까운 제목, 문단, 목록, 인용문과 그림 설명의 허용된 텍스트와 페이지 구분용 주소가 포함됩니다. 페이지 구분용 주소는 프로토콜·호스트 이름·경로만 포함하며 쿼리 문자열과 해시는 포함하지 않습니다. Windows 앱은 이 값을 번역 요청과 문맥을 페이지별로 분리하는 데 사용합니다. 메신저의 대화 구분 방식은 아래에 별도로 설명합니다.
 - 전체 HTML, 쿠키, 로그인 토큰과 방문 기록 목록은 읽거나 전달하지 않습니다. 현재 페이지 주소와 사이트 정책은 사용자가 요청한 웹 번역을 제공하기 위해서만 PC 안에서 처리하며, 개발자에게 전송되지 않습니다. 사이트별 정책에는 호스트 이름과 사용자가 선택한 동작만 로컬 설정으로 저장됩니다.
 - 입력값·편집기·코드·금액·명시된 연락처와 식별자 영역은 제외합니다. 공개 메뉴·버튼·라벨·연결된 설명·쿠키 안내를 번역하며, 계정·로그인·결제·주문·관리 화면은 구분 가능한 읽기용 UI 문구로 제한합니다. 임의의 데이터 값이나 개인 대화 전체를 읽는 권한은 아닙니다. HTML 표식이 없는 개인정보나 허용 본문 속 민감 정보를 완전히 탐지·익명화하는 기능은 아닙니다. 브라우저 내부 페이지와 로컬 파일에는 확장 스크립트를 주입하지 않습니다.
-- 일반 웹 번역에서 로컬 모델을 선택하면 추출된 텍스트는 PC 안에서 처리됩니다. 외부 번역 서비스를 선택한 경우에만 번역에 필요한 허용 영역 텍스트가 해당 공급자에게 전달됩니다. 동의 v4를 받은 웹 메신저에도 같은 번역기 선택이 적용됩니다.
+- 일반 웹 번역에서 로컬 모델을 선택하면 추출된 텍스트는 PC 안에서 처리됩니다. 외부 번역 서비스를 선택한 경우에만 번역에 필요한 허용 영역 텍스트가 해당 공급자에게 전달됩니다. 동의 v5를 받은 웹 메신저에도 같은 번역기 선택이 적용됩니다.
 - 개발자는 웹페이지 텍스트나 주소를 판매하거나 광고, 사용자 추적, 분석, 신용 평가 또는 번역과 무관한 목적으로 사용하지 않으며 사람이 열람할 수 있는 개발자 운영 서버로 전송하지 않습니다.
 
 ## 웹 메신저 읽기 번역
@@ -33,10 +33,10 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 ### 사용 조건과 처리 범위
 
 - 별도 메신저 사용 스위치 없이 공통 웹 번역 설정, 브라우저 전체 켜기/끄기, 사이트 정책을 따릅니다. 통합 안내를 거절하면 자동 번역은 시작하지 않습니다. 통합 안내에 동의하더라도 Firefox의 선택 통신 권한을 거절하면 개인 대화·메일은 차단하고 승인한 일반 웹 번역만 유지합니다.
-- 사적 읽기 동의 v4는 앱 번역기·캐시 정책에 더해 현재 연 Gmail의 제목·본문 범위를 안내합니다. 이전 웹 v1 및 메신저 v1/v2/v3 동의는 자동 승격하지 않습니다. 본체의 `messengerPolicyVersion: 4`도 확인하며, 구형 본체·확장은 함께 업데이트해야 합니다. 이 변경은 아직 공개 릴리스되지 않았습니다.
+- 사적 읽기 동의 v5는 앱 번역기·캐시 정책에 더해 현재 연 Gmail/Outlook의 제목·본문 범위를 안내합니다. 이전 웹 v1 및 메신저 v1/v2/v3/v4 동의는 자동 승격하지 않습니다. 본체의 `messengerPolicyVersion: 5`도 확인하며, 구형 본체·확장은 함께 업데이트해야 합니다. 이 변경은 아직 공개 릴리스되지 않았습니다.
 - Firefox의 선택 권한 `personalCommunications`는 동의 버튼에서 요청합니다. 거절·취소·권한 철회 상태에서는 저장된 동의로 우회하지 않습니다. 다른 브라우저 프로필의 동의는 대신하지 않습니다.
 - X DM, 웹 Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams, Google Messages의 안전하게 식별되는 현재 열린 대화만 지원합니다. 보이는 메시지 본문과 링크 미리보기 텍스트, 현재 Discord 서버의 보이는 채널 이름을 처리합니다. 다른 대화를 열거나 숨겨진 기록·첨부·링크 대상 페이지를 내려받지 않습니다.
-- Gmail은 현재 열린 읽기 화면의 제목·보이는 본문만 같은 정책으로 처리합니다. 메일 목록, 발신자·수신자 UI, 초안, 첨부 내용은 읽지 않습니다. Outlook 등 아직 검증·연결하지 않은 메일 서비스는 공개 본문 수집으로 우회하지 않습니다.
+- Gmail과 Outlook은 현재 열린 읽기 화면의 제목·보이는 본문만 같은 정책으로 처리합니다. 메일 목록, 발신자·수신자 UI, 초안, 첨부 내용은 읽지 않습니다. Outlook 연결은 합성 자동 검사로만 검증했으며 실사용 검증은 수행하지 않았습니다. 그 밖의 미연결 메일 서비스는 공개 본문 수집으로 우회하지 않습니다.
 - 작성자 이름·핸들·연락처 목록·프로필, 작성창·입력값·초안·전송 UI, 코드·첨부 파일·이미지·음성·영상은 제외합니다. 본문 자체의 민감한 정보까지 자동 익명화하는 기능은 아닙니다. 미지원 사적 서비스의 범용 본문 수집 차단은 유지합니다.
 - 번역기는 앱 Discord와 동일한 선택을 따릅니다. 로컬 모델은 PC에서 처리하고, 선택한 외부 서비스 또는 그 번역 경로에 포함된 대체 공급자는 필요한 대화 텍스트를 받아 자체 정책에 따라 처리합니다. 별도의 외부 전송 토글은 추가하지 않습니다.
 - Native Messaging 요청에는 허용 텍스트, 번역 설정, 서비스, 동의 버전과 임의의 대화 식별자가 포함됩니다. 실제 대화 URL·ID·참여자를 식별자로 보내지 않습니다. 시크릿 여부는 페이지가 아닌 브라우저가 제공한 탭 정보로 결정합니다.
@@ -77,9 +77,9 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 
 NudeNyang Discord Translator does not operate a developer-controlled backend. The developer does not collect or retain Discord messages, webpage text, images, translation history, visited page addresses, or credentials. Local processing and storage by the application are described separately below.
 
-This document includes the unpublished web-consent-v2 and private-reading-consent-v4 development policy. Version numbers alone do not establish support. The public policy, installers and store disclosures must be updated together before a future release.
+This document includes the unpublished web-consent-v2 and private-reading-consent-v5 development policy. Version numbers alone do not establish support. The public policy, installers and store disclosures must be updated together before a future release.
 
-Local models process translation on the user's PC. Image pixels remain local for OCR and compositing. For ordinary webpage and Discord translation, if the user explicitly selects ChatGPT, Claude, Gemini, or DeepL, only the text required for translation is sent to that provider under its own terms and privacy policy. Ordinary settings, caches, and history remain in the Windows user data directory. After consent v4, regular-window messenger translation uses the same translator and cache policy. DeepL credentials are stored in Windows Credential Manager, and subscription providers use their official local CLI authentication. Diagnostic logs do not record message bodies, local-model prompts, or authentication secrets.
+Local models process translation on the user's PC. Image pixels remain local for OCR and compositing. For ordinary webpage and Discord translation, if the user explicitly selects ChatGPT, Claude, Gemini, or DeepL, only the text required for translation is sent to that provider under its own terms and privacy policy. Ordinary settings, caches, and history remain in the Windows user data directory. After consent v5, regular-window messenger translation uses the same translator and cache policy. DeepL credentials are stored in Windows Credential Manager, and subscription providers use their official local CLI authentication. Diagnostic logs do not record message bodies, local-model prompts, or authentication secrets.
 
 The Chrome, Naver Whale, and Firefox extensions can run on ordinary HTTP/HTTPS websites, which may produce a browser warning that they can read and change data on all websites. Firefox declares eligible ordinary page text passed to the Windows app as `websiteContent` and the address category of the page being translated as `browsingActivity`. Web-messenger reading uses the separate optional category `personalCommunications`.
 
@@ -101,9 +101,9 @@ Input values, editable content, code, amounts, and marked contact/identifier fie
 
 After consent in the current browser profile, private reading follows the common web switch, all-tab control and site policy. There is no separate messenger enable switch or external-provider/storage toggle. Declining the unified notice does not start automatic translation. Firefox additionally requires optional `personalCommunications` permission; denying that optional permission blocks private reading while preserving explicitly approved ordinary webpage translation.
 
-Private-reading consent v4 adds the subject and body of an opened Gmail message to the app-selected translator and shared retention/deletion policy. Earlier web v1 and messenger v1/v2/v3 consent is never upgraded automatically. The extension also requires companion capability `messengerPolicyVersion: 4`. This policy change is unpublished and does not describe the currently published builds.
+Private-reading consent v5 adds the subject and body of an opened Gmail/Outlook message to the app-selected translator and shared retention/deletion policy. Earlier web v1 and messenger v1/v2/v3/v4 consent is never upgraded automatically. The extension also requires companion capability `messengerPolicyVersion: 5`. This policy change is unpublished and does not describe the currently published builds.
 
-Supported messenger surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams and Google Messages. Only an identified open conversation is read: visible message bodies and link-preview text, plus visible channel names in the current Discord server. Gmail reading is limited to the subject and visible body in the currently opened reading pane. Mail lists, sender/recipient UI, drafts and attachment contents are excluded. Outlook and other mail services not yet connected and verified remain blocked from public fallback. The extension does not open other conversations, retrieve hidden history, attachments or linked pages, or translate authors, handles, contact lists, profiles, composers, drafts, send controls or code. Sensitive information in permitted message bodies is not automatically redacted.
+Supported messenger surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams and Google Messages. Only an identified open conversation is read: visible message bodies and link-preview text, plus visible channel names in the current Discord server. Gmail and Outlook reading is limited to the subject and visible body in the currently opened reading pane. Mail lists, sender/recipient UI, drafts and attachment contents are excluded. Outlook integration has only synthetic automated verification; live testing was not performed. Other unconnected mail services remain blocked from public fallback. The extension does not open other conversations, retrieve hidden history, attachments or linked pages, or translate authors, handles, contact lists, profiles, composers, drafts, send controls or code. Sensitive information in permitted message bodies is not automatically redacted.
 
 The app's selected translator is shared with desktop Discord. Local models process text on the PC. Selecting ChatGPT, Claude, Gemini or DeepL permits the necessary conversation text to be sent to that provider, including its configured fallback path, under the provider's policies. Requests to the local companion use a random conversation identifier, not a real conversation URL, ID or participant list. Private-browsing state comes from browser-owned tab metadata.
 
