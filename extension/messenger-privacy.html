@@ -20,14 +20,15 @@
         </div>
       </header>
 
-      <p class="intro" data-i18n="messengerPrivacyIntro">Web messenger reading translation is off by default. It is available only in browsers where you have given consent.</p>
+      <p class="intro" data-i18n="messengerPrivacyIntro">After consent in this browser, messenger translation uses the app settings without a separate messenger switch.</p>
       <p class="services">X · Discord · WhatsApp · Telegram · Messenger · Slack · Microsoft Teams · Google Messages</p>
 
       <section class="notice" aria-labelledby="privacy-title">
         <ul class="privacy-details">
-          <li data-i18n="messengerPrivacyData">Only message bodies and link-preview text in the open conversation, plus visible channel names in the current Discord server, are translated with local AI by the separately installed NudeNyang Windows app.</li>
-          <li data-i18n="messengerPrivacyExternal">Conversation content is not sent to external translation services.</li>
-          <li data-i18n="messengerPrivacyRetention">Conversation content and translations held by the extension are processed only in memory and deleted when you switch or close the conversation. They are not saved to disk caches, translation history, or message-body logs.</li>
+          <li data-i18n="messengerPrivacyData">Message bodies and link previews in the open conversation, and visible channel names in the current Discord server, are passed to the Windows app.</li>
+          <li data-i18n="messengerPrivacyExternal">The translator selected in the app is used. Local models process text on your PC. Selecting an external service (ChatGPT, Claude, Gemini or DeepL) sends conversations to that service under its policies.</li>
+          <li data-i18n="messengerPrivacyRetention">Source text and translations are stored in the app's encrypted cache, following its retention period (30 days by default) and history deletion settings. Switching conversations or withdrawing consent does not delete existing cache entries. Private browsing content is not stored.</li>
+          <li data-i18n="privateBrowsingProviderUnsupported">In private browsing, use a local model or DeepL. Local records created by subscription CLIs cannot be controlled.</li>
           <li data-i18n="messengerPrivacyNoSending">No message composition or sending features are used, and user names and contacts are not translated.</li>
         </ul>
       </section>
@@ -39,7 +40,6 @@
           <span data-i18n="messengerPrivacyConfirm">Only consent records and settings are saved in this browser. I have read the information above and consent to web messenger reading translation.</span>
         </label>
         <p id="privacy-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
-        <p id="privacy-settings-hint" class="settings-hint" data-i18n="messengerDisabled" hidden>Enable web messenger reading translation in the main app.</p>
         <div class="actions">
           <button type="button" id="privacy-cancel" class="secondary" data-i18n="messengerPrivacyCancel">Cancel</button>
           <button type="button" id="privacy-revoke" class="revoke" data-i18n="messengerPrivacyRevoke" hidden disabled>Withdraw consent</button>

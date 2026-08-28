@@ -158,35 +158,43 @@ impl TranslationService {
     fn check_private_request(&self) -> Result<(), String> {
         if let Some(guard) = &self.private_request_guard {
             guard()?;
-            // ResilientTranslator includes every fallback in this answer. A local
-            // primary with a cloud fallback must never receive private text.
-            if self.translator.sends_text_externally() {
-                return Err("[messenger_local_only] 웹 메신저 번역에는 로컬 번역 모델만 사용할 수 있습니다. 메인 앱에서 로컬 모델을 선택해 주십시오.".to_string());
-            }
         }
         Ok(())
     }
 
-    /// Uses only request-lifetime memory and fresh language-detection context.
-    /// The normal webpage/Discord cache and all conversation hints are restored
-    /// before returning, including on errors and consent revocation.
+    /// Uses the app cache and selected translator after the browser's current
+    /// consent gate. Private browsing alone gets request-lifetime memory. Fresh
+    /// language hints prevent one conversation from influencing another.
+    #[allow(clippy::too_many_arguments)]
     pub fn translate_many_for_private_web(
         &mut self,
         texts: &[String],
         block_keys: &[Option<String>],
         page_scope: &str,
         target: Language,
+        ephemeral: bool,
+        allowed_sources: Option<&HashSet<Language>>,
         guard: Box<dyn Fn() -> Result<(), String> + Send>,
     ) -> Result<Vec<String>, String> {
         guard()?;
-        if self.translator.sends_text_externally() {
-            return Err("[messenger_local_only] 웹 메신저 번역에는 로컬 번역 모델만 사용할 수 있습니다. 메인 앱에서 로컬 모델을 선택해 주십시오.".to_string());
+        if ephemeral && !self.translator.supports_ephemeral_requests() {
+            return Err("[private_browsing_provider_unsupported] 시크릿 창에서는 로컬 모델 또는 DeepL을 선택해 주십시오. 구독 CLI의 로컬 기록을 제어할 수 없습니다.".into());
         }
         // Translator::translate/translate_many and their model retry diagnostics
         // run synchronously on this same worker; no request/body/hash is logged.
-        let _private_diagnostics = crate::diagnostics::sensitive_request_scope();
-        let private_cache = TranslationCache::in_memory(256)?;
-        let public_cache = std::mem::replace(&mut self.cache, private_cache);
+        let _private_diagnostics = if ephemeral {
+            crate::diagnostics::ephemeral_request_scope()
+        } else {
+            crate::diagnostics::sensitive_request_scope()
+        };
+        let public_cache = if ephemeral {
+            Some(std::mem::replace(
+                &mut self.cache,
+                TranslationCache::in_memory(256)?,
+            ))
+        } else {
+            None
+        };
         let detector = std::mem::take(&mut self.detector);
         let incoming_detector = std::mem::take(&mut self.incoming_detector);
         let incoming_context_scope = std::mem::take(&mut self.incoming_context_scope);
@@ -197,13 +205,19 @@ impl TranslationService {
         self.private_request_guard = Some(guard);
 
         let result = self.translate_many_for_web_contextual_filtered(
-            texts, block_keys, page_scope, target, None,
+            texts,
+            block_keys,
+            page_scope,
+            target,
+            allowed_sources,
         );
         // Best-effort paragraph retries can preserve a failed paragraph as its
         // original. A revoked permission must instead discard the entire reply.
         let result = self.check_private_request().and(result);
 
-        self.cache = public_cache;
+        if let Some(cache) = public_cache {
+            self.cache = cache;
+        }
         self.detector = detector;
         self.incoming_detector = incoming_detector;
         self.incoming_context_scope = incoming_context_scope;
@@ -2463,7 +2477,133 @@ mod tests {
     }
 
     #[test]
-    fn private_web_cache_is_request_only_and_never_reads_or_writes_public_cache() {
+    fn regular_messenger_cache_survives_reopen_and_uses_app_history_deletion() {
+        let path = cache_path("shared-messenger-persistence");
+        let calls = Arc::new(Mutex::new(0));
+        for round in 0..2 {
+            let mut service = TranslationService::new(
+                Box::new(CountingTranslator {
+                    calls: calls.clone(),
+                }),
+                TranslationCache::open(path.clone(), 32).unwrap(),
+            );
+            let page = format!("messenger:discord:opaque_conversation_{round}");
+            let text = "Synthetic repeatable conversation message".to_string();
+            let result = service
+                .translate_many_for_private_web(
+                    std::slice::from_ref(&text),
+                    &[None],
+                    &page,
+                    Language::Korean,
+                    false,
+                    None,
+                    Box::new(|| Ok(())),
+                )
+                .unwrap();
+            assert_eq!(result, [format!("[ko] {text}")]);
+            assert_eq!(
+                *calls.lock().unwrap(),
+                1,
+                "a fresh service must reuse the encrypted disk entry"
+            );
+            if round == 1 {
+                assert!(service.cache.clear_user_data().unwrap().removed_records > 0);
+                service
+                    .translate_many_for_private_web(
+                        &[text],
+                        &[None],
+                        &page,
+                        Language::Korean,
+                        false,
+                        None,
+                        Box::new(|| Ok(())),
+                    )
+                    .unwrap();
+                assert_eq!(
+                    *calls.lock().unwrap(),
+                    2,
+                    "history deletion removes reusable entries"
+                );
+            }
+        }
+        fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn private_browsing_rejects_uncontrolled_cli_storage_including_fallback() {
+        for fallback in [false, true] {
+            let calls = Arc::new(Mutex::new(0));
+            let external = Box::new(PrivateProbeTranslator {
+                calls: calls.clone(),
+                external: true,
+                revoke_after_call: None,
+            });
+            let translator: Box<dyn Translator> = if fallback {
+                Box::new(ResilientTranslator::new(
+                    Box::new(CountingTranslator {
+                        calls: calls.clone(),
+                    }),
+                    Some(external),
+                ))
+            } else {
+                external
+            };
+            let mut service =
+                TranslationService::new(translator, TranslationCache::in_memory(32).unwrap());
+            let error = service
+                .translate_many_for_private_web(
+                    &["Synthetic private browsing text".into()],
+                    &[None],
+                    "messenger:discord:opaque_ephemeral",
+                    Language::Korean,
+                    true,
+                    None,
+                    Box::new(|| Ok(())),
+                )
+                .unwrap_err();
+            assert!(error.starts_with("[private_browsing_provider_unsupported]"));
+            assert_eq!(*calls.lock().unwrap(), 0);
+            assert_eq!(
+                service.cache.storage_status().unwrap().translation_records,
+                0
+            );
+        }
+    }
+
+    #[test]
+    fn unified_messenger_policy_reuses_cache_and_allows_selected_external_translator() {
+        let calls = Arc::new(Mutex::new(0));
+        let mut service = TranslationService::new(
+            Box::new(PrivateProbeTranslator {
+                calls: calls.clone(),
+                external: true,
+                revoke_after_call: None,
+            }),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        for _ in 0..2 {
+            let result = service
+                .translate_many_for_private_web(
+                    &["Please translate this shared policy example.".to_string()],
+                    &[None],
+                    "messenger:discord:opaque_example_scope",
+                    Language::Korean,
+                    false,
+                    None,
+                    Box::new(|| Ok(())),
+                )
+                .unwrap();
+            assert_eq!(result, ["개인 대화의 번역 결과입니다."]);
+        }
+        assert_eq!(*calls.lock().unwrap(), 1);
+        assert_eq!(
+            service.cache.storage_status().unwrap().translation_records,
+            1
+        );
+    }
+
+    #[test]
+    fn private_browsing_cache_is_request_only_and_never_reads_or_writes_app_cache() {
         let path = cache_path("private-isolation");
         let cache = TranslationCache::open(path.clone(), 32).unwrap();
         let calls = Arc::new(Mutex::new(0));
@@ -2491,6 +2631,8 @@ mod tests {
                     &[Some("opaque-message".to_string())],
                     "messenger:discord:7a13470c-870a-44dc-8a8a-840833de8ca1",
                     Language::Korean,
+                    true,
+                    None,
                     Box::new(|| Ok(())),
                 )
                 .unwrap();
@@ -2518,7 +2660,7 @@ mod tests {
     }
 
     #[test]
-    fn private_web_rejects_actual_external_provider_and_hidden_fallback_before_inference() {
+    fn private_web_allows_selected_external_provider_and_app_fallback() {
         for hidden_fallback in [false, true] {
             let calls = Arc::new(Mutex::new(0));
             let external = Box::new(PrivateProbeTranslator {
@@ -2538,21 +2680,24 @@ mod tests {
             };
             let mut service =
                 TranslationService::new(translator, TranslationCache::in_memory(32).unwrap());
-            let error = service
+            let result = service
                 .translate_many_for_private_web(
                     &["Please keep this conversation private.".to_string()],
                     &[None],
                     "messenger:x:dc456b5d-edcc-476e-9bc2-17f39c6f1f8d",
                     Language::Korean,
+                    false,
+                    None,
                     Box::new(|| Ok(())),
                 )
-                .unwrap_err();
-            assert!(error.starts_with("[messenger_local_only]"));
-            assert_eq!(*calls.lock().unwrap(), 0);
-            assert_eq!(
-                service.cache.storage_status().unwrap().translation_records,
-                0
-            );
+                .unwrap();
+            assert_eq!(result.len(), 1);
+            if hidden_fallback {
+                assert!(*calls.lock().unwrap() >= 1);
+            } else {
+                assert_eq!(*calls.lock().unwrap(), 1);
+            }
+            assert!(service.cache.storage_status().unwrap().translation_records >= 1);
             assert!(service.private_request_guard.is_none());
         }
     }
@@ -2590,6 +2735,8 @@ mod tests {
                 &[Some("first".to_string()), Some("second".to_string())],
                 "messenger:slack:a58ab7d7-a831-432b-b8e2-c8dba4b10b4a",
                 Language::Korean,
+                false,
+                None,
                 Box::new(move || {
                     if allowed.load(Ordering::SeqCst) {
                         Ok(())
@@ -2648,6 +2795,8 @@ mod tests {
                 &[None],
                 "messenger:telegram:6049c614-a66c-4ab0-a5d6-53a8d7d53aeb",
                 Language::Korean,
+                false,
+                None,
                 Box::new(|| {
                     Err("[messenger_disabled] 웹 메신저 번역이 비활성화되어 있습니다.".to_string())
                 }),

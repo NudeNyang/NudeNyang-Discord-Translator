@@ -1057,7 +1057,7 @@ fn completion_payload(prompt: &str, output_limit: usize) -> Value {
         "top_k": 20,
         "repeat_penalty": 1.05,
     });
-    if crate::diagnostics::sensitive_request_active() {
+    if crate::diagnostics::ephemeral_request_active() {
         payload["cache_prompt"] = json!(false);
     }
     payload
@@ -1075,7 +1075,7 @@ fn translate_gemma_completion_payload(
         "n_predict": output_limit,
         "temperature": INFERENCE_TEMPERATURE,
         "stop": ["<end_of_turn>"],
-        "cache_prompt": !crate::diagnostics::sensitive_request_active(),
+        "cache_prompt": !crate::diagnostics::ephemeral_request_active(),
     })
 }
 
@@ -2837,7 +2837,14 @@ mod tests {
     }
 
     #[test]
-    fn private_model_payloads_disable_prompt_cache_without_changing_public_defaults() {
+    fn consented_messenger_diagnostics_do_not_disable_normal_prompt_reuse() {
+        let public = completion_payload("Synthetic message", 96);
+        let _scope = crate::diagnostics::sensitive_request_scope();
+        assert_eq!(completion_payload("Synthetic message", 96), public);
+    }
+
+    #[test]
+    fn private_browsing_model_payloads_disable_prompt_cache_without_changing_regular_defaults() {
         let public_hymt = completion_payload("translate", 96);
         let public_gemma = translate_gemma_completion_payload(
             "Test message",
@@ -2849,7 +2856,7 @@ mod tests {
         assert!(public_hymt.get("cache_prompt").is_none());
         assert_eq!(public_gemma["cache_prompt"], true);
         {
-            let _scope = crate::diagnostics::sensitive_request_scope();
+            let _scope = crate::diagnostics::ephemeral_request_scope();
             let mut private_hymt = completion_payload("translate", 96);
             let mut private_gemma = translate_gemma_completion_payload(
                 "Test message",

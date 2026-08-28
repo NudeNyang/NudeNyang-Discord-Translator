@@ -68,15 +68,15 @@ export const test = base.extend({
       const controller = {
         context, worker, extensionId,
         async open({ html, url = "https://fixture.example.test/article/", settings = {},
-          consent = false, enabled = true, deferTranslations = false,
+          consent = false, consentVersion = 3, enabled = true, deferTranslations = false,
           translator = "hymt_1_8b", documents = {} } = {}) {
           if (typeof html !== "string") throw new TypeError("extension.open requires an HTML fixture string");
           const destination = new URL(url);
           if (!["http:", "https:"].includes(destination.protocol)) throw new Error("E2E fixtures require HTTP(S) URLs");
           await worker.evaluate(async options => {
             globalThis.__NudeNyangE2E.configure(options);
-            await chrome.storage.local.set({ enabled: true, messengerConsentVersion: options.consent ? 2 : 0 });
-          }, { settings, consent, deferTranslations, translator });
+            await chrome.storage.local.set({ enabled: true, messengerConsentVersion: options.consent ? options.consentVersion : 0 });
+          }, { settings, consent, consentVersion, deferTranslations, translator });
           const page = await context.newPage();
           pages.push(page);
           page.on("pageerror", error => errors.push(error.message));
@@ -117,7 +117,7 @@ export const test = base.extend({
             pendingTranslations: () => worker.evaluate(() => globalThis.__NudeNyangE2E.pending()),
             releaseTranslations: options => worker.evaluate(value => globalThis.__NudeNyangE2E.releaseTranslations(value), options),
             setConsent: granted => worker.evaluate(async value => {
-              await chrome.storage.local.set({ messengerConsentVersion: value ? 2 : 0 });
+              await chrome.storage.local.set({ messengerConsentVersion: value ? 3 : 0 });
             }, granted),
           };
         },

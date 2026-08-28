@@ -62,7 +62,7 @@ async function popup(options = {}) {
           callback({
             type: "status", appConnected: true, modelReady: true,
             translator: "hymt_1_8b", targetLanguage: "ko", resolvedUiLanguage: options.language ?? "en",
-            webSettings: { messengerEnabled: true, quickToggleShortcut: "F4" },
+            webSettings: { messengerPolicyVersion: 3, quickToggleShortcut: "F4" },
             ...options.nativeStatus,
           });
         } else throw new Error(`Unexpected message: ${message.type}`);
@@ -201,7 +201,7 @@ test("동의 차단 안내 옆 버튼은 원래 대화의 임시 식별자만 �
     assert.ok(!url.href.includes("12345"));
     assert.ok(p.messages.every((message) => !message.type.includes("consent-set")));
   } finally { p.dispose(); }
-  for (const messengerGate of ["", "messenger_disabled", "messenger_local_only"]) {
+  for (const messengerGate of ["", "messenger_update_required", "private_browsing_provider_unsupported"]) {
     const other = await popup({ status: { messengerGate } });
     try { assert.equal(other.get("messenger-consent-start").hidden, true); }
     finally { other.dispose(); }
@@ -225,8 +225,8 @@ test("메신저 차단 원인을 엔진 연결 상태와 별도로 표시하고 
 
 test("메인 OFF·외부 AI·열린 대화 없음은 각각 올바른 메신저 안내를 표시한다", async () => {
   for (const [gate, expected] of [
-    ["messenger_disabled", "Enable web messenger reading translation in the main app."],
-    ["messenger_local_only", "Web messenger reading translation is available only with local AI."],
+    ["messenger_update_required", "Update both the companion app and the extension to use web messengers."],
+    ["private_browsing_provider_unsupported", "In private browsing, use a local model or DeepL. Local records created by subscription CLIs cannot be controlled."],
     ["messenger_no_conversation", "No conversation is currently open."],
   ]) {
     const p = await popup({ status: { messengerGate: gate } });

@@ -142,10 +142,20 @@ impl TranslationCache {
     }
 
     pub fn open_default() -> Result<Self, String> {
+        // Unit-test engine workers must never migrate, read or write the user's
+        // real history. Persistence/encryption tests use explicit temporary paths.
+        if cfg!(test) {
+            return Self::in_memory(4096);
+        }
         Self::open(default_cache_path(), 4096)
     }
 
     pub fn open(path: PathBuf, memory_capacity: usize) -> Result<Self, String> {
+        // Windows is the supported desktop target. Other platforms remain
+        // memory-only until an OS-backed encryption implementation is available.
+        if !cfg!(windows) {
+            return Self::in_memory(memory_capacity);
+        }
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|error| {
                 format!(
@@ -161,6 +171,7 @@ impl TranslationCache {
             .busy_timeout(Duration::from_secs(5))
             .map_err(|error| format!("SQLite 대기 시간을 설정하지 못했습니다: {error}"))?;
         initialize_schema(&mut connection)?;
+        protect_legacy_bodies(&mut connection)?;
         Ok(Self {
             path,
             connection: Mutex::new(connection),
@@ -214,11 +225,11 @@ impl TranslationCache {
                     |row| {
                         Ok(CacheEntry {
                             source_hash: source_hash.to_string(),
-                            source_text: row.get(0)?,
+                            source_text: read_body(row, 0)?,
                             source_language: row.get(1)?,
                             target_language: target_language.to_string(),
                             translator: translator.to_string(),
-                            translated_text: row.get(2)?,
+                            translated_text: read_body(row, 2)?,
                             updated_at: row.get(3)?,
                         })
                     },
@@ -291,11 +302,11 @@ impl TranslationCache {
                     |row| {
                         Ok(CacheEntry {
                             source_hash: row.get(0)?,
-                            source_text: row.get(1)?,
+                            source_text: read_body(row, 1)?,
                             source_language: source_language.to_string(),
                             target_language: target_language.to_string(),
                             translator: translator.to_string(),
-                            translated_text: row.get(2)?,
+                            translated_text: read_body(row, 2)?,
                             updated_at: row.get(3)?,
                         })
                     },
@@ -347,7 +358,8 @@ impl TranslationCache {
             translated_text: translated_text.to_string(),
             updated_at: now_seconds(),
         };
-        self.remember(entry.clone())?;
+        let source_payload = self.body_payload(source_text)?;
+        let translated_payload = self.body_payload(translated_text)?;
         self.connection
             .lock()
             .map_err(|_| "SQLite 번역 캐시 잠금을 열지 못했습니다.".to_string())?
@@ -362,16 +374,25 @@ impl TranslationCache {
                    updated_at=excluded.updated_at",
                 params![
                     entry.source_hash,
-                    entry.source_text,
+                    source_payload,
                     entry.source_language,
                     entry.target_language,
                     entry.translator,
-                    entry.translated_text,
+                    translated_payload,
                     entry.updated_at,
                 ],
             )
             .map_err(|error| format!("번역 캐시를 저장하지 못했습니다: {error}"))?;
+        self.remember(entry)?;
         Ok(())
+    }
+
+    fn body_payload(&self, text: &str) -> Result<rusqlite::types::Value, String> {
+        if self.path.as_os_str().is_empty() {
+            Ok(rusqlite::types::Value::Text(text.to_string()))
+        } else {
+            crate::cache_crypto::encrypt(text).map(rusqlite::types::Value::Blob)
+        }
     }
 
     pub fn memory_size(&self) -> Result<usize, String> {
@@ -499,6 +520,8 @@ impl TranslationCache {
     }
 
     pub fn put_outgoing_original(&self, record: &OutgoingOriginalRecord) -> Result<(), String> {
+        let original_payload = self.body_payload(&record.original_text)?;
+        let sent_payload = self.body_payload(&record.sent_text)?;
         let connection = self
             .connection
             .lock()
@@ -517,8 +540,8 @@ impl TranslationCache {
                 params![
                     record.message_id,
                     record.channel_key,
-                    record.original_text,
-                    record.sent_text,
+                    original_payload,
+                    sent_payload,
                     record.part_number,
                     record.total_parts,
                     record.created_at,
@@ -551,8 +574,8 @@ impl TranslationCache {
                 Ok(OutgoingOriginalRecord {
                     message_id: row.get(0)?,
                     channel_key: row.get(1)?,
-                    original_text: row.get(2)?,
-                    sent_text: row.get(3)?,
+                    original_text: read_body(row, 2)?,
+                    sent_text: read_body(row, 3)?,
                     part_number: row.get(4)?,
                     total_parts: row.get(5)?,
                     created_at: row.get(6)?,
@@ -629,6 +652,93 @@ fn table_row_count(connection: &Connection, table: &str) -> Result<u64, String> 
     connection
         .query_row(query, [], |row| row.get(0))
         .map_err(|error| format!("SQLite 저장 정보를 확인하지 못했습니다: {error}"))
+}
+
+// SQLite's value type distinguishes encrypted BLOBs from legacy TEXT. A
+// user's source beginning with an encryption-looking prefix is still plain text.
+fn read_body(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<String> {
+    use rusqlite::types::{Type, ValueRef};
+    match row.get_ref(index)? {
+        ValueRef::Text(_) => row.get(index),
+        ValueRef::Blob(bytes) => crate::cache_crypto::decrypt(bytes).map_err(|_| {
+            rusqlite::Error::FromSqlConversionFailure(
+                index,
+                Type::Blob,
+                std::io::Error::other("암호화된 번역 캐시를 읽지 못했습니다.").into(),
+            )
+        }),
+        _ => Err(rusqlite::Error::InvalidColumnType(
+            index,
+            "body".into(),
+            row.get_ref(index)?.data_type(),
+        )),
+    }
+}
+
+fn protect_legacy_bodies(connection: &mut Connection) -> Result<(), String> {
+    connection
+        .execute_batch("PRAGMA secure_delete=ON; PRAGMA temp_store=MEMORY;")
+        .map_err(|_| "캐시 보호 설정에 실패했습니다.")?;
+    connection.execute_batch("CREATE INDEX IF NOT EXISTS translations_plaintext ON translations(source_hash) WHERE typeof(source_text)='text' OR typeof(translated_text)='text';
+        CREATE INDEX IF NOT EXISTS outgoing_plaintext ON outgoing_originals(message_id) WHERE typeof(original_text)='text' OR typeof(sent_text)='text';")
+        .map_err(|_| "캐시 보호 색인을 만들지 못했습니다.")?;
+    let has_plaintext: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM translations WHERE typeof(source_text)='text' OR typeof(translated_text)='text') OR EXISTS(SELECT 1 FROM outgoing_originals WHERE typeof(original_text)='text' OR typeof(sent_text)='text')", [], |row| row.get(0))
+        .map_err(|_| "캐시 보호 상태를 확인하지 못했습니다.")?;
+    if !has_plaintext {
+        return Ok(());
+    }
+    // Atomic migration, bounded batches, no plaintext backup. A rollback keeps
+    // the old database readable if DPAPI fails. Existing encrypted rows are untouched.
+    let transaction = connection
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|_| "캐시 암호화 전환을 시작하지 못했습니다.")?;
+    let mut changed = false;
+    for (table, left, right) in [
+        ("translations", "source_text", "translated_text"),
+        ("outgoing_originals", "original_text", "sent_text"),
+    ] {
+        loop {
+            let records = {
+                let mut statement = transaction.prepare(&format!(
+                    "SELECT rowid, {left}, {right} FROM {table} WHERE typeof({left})='text' OR typeof({right})='text' LIMIT 256"
+                )).map_err(|_| "기존 캐시를 읽지 못했습니다.")?;
+                let rows = statement
+                    .query_map([], |row| {
+                        Ok((
+                            row.get::<_, i64>(0)?,
+                            read_body(row, 1)?,
+                            read_body(row, 2)?,
+                        ))
+                    })
+                    .map_err(|_| "기존 캐시를 읽지 못했습니다.")?;
+                rows.collect::<rusqlite::Result<Vec<_>>>()
+                    .map_err(|_| "기존 캐시를 읽지 못했습니다.")?
+            };
+            if records.is_empty() {
+                break;
+            }
+            for (id, first, second) in records {
+                let first = crate::cache_crypto::encrypt(&first)?;
+                let second = crate::cache_crypto::encrypt(&second)?;
+                transaction
+                    .execute(
+                        &format!("UPDATE {table} SET {left}=?1, {right}=?2 WHERE rowid=?3"),
+                        params![first, second, id],
+                    )
+                    .map_err(|_| "기존 캐시를 암호화하지 못했습니다.")?;
+                changed = true;
+            }
+        }
+    }
+    transaction
+        .commit()
+        .map_err(|_| "캐시 암호화 전환을 완료하지 못했습니다.")?;
+    if changed {
+        connection
+            .execute_batch("VACUUM")
+            .map_err(|_| "캐시 암호화 후 파일 정리를 완료하지 못했습니다.")?;
+    }
+    Ok(())
 }
 
 fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
@@ -816,6 +926,112 @@ mod tests {
         std::env::temp_dir()
             .join(format!("nude-translator-cache-{name}-{nonce}"))
             .join("cache.db")
+    }
+
+    #[test]
+    fn legacy_cache_migrates_both_body_tables_and_preserves_expiry_and_fuzzy_reuse() {
+        let path = temporary_cache_path("legacy-encryption");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut legacy = rusqlite::Connection::open(&path).unwrap();
+        super::initialize_schema(&mut legacy).unwrap();
+        legacy
+            .execute(
+                "INSERT INTO translations VALUES (?1,?2,'en','ko','test:v1',?3,1)",
+                rusqlite::params![
+                    "opaque",
+                    "Synthetic legacy sentence",
+                    "Synthetic legacy translation"
+                ],
+            )
+            .unwrap();
+        legacy
+            .execute(
+                "INSERT INTO outgoing_originals VALUES ('m','/channels/g/c',?1,?2,1,1,1)",
+                rusqlite::params!["Synthetic legacy draft", "Synthetic legacy sent"],
+            )
+            .unwrap();
+        drop(legacy);
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        assert_eq!(
+            cache.get("opaque", "ko", "test:v1").unwrap().as_deref(),
+            Some("Synthetic legacy translation")
+        );
+        assert_eq!(
+            cache
+                .get_message(
+                    "other",
+                    "Synthetic legacy sentencf",
+                    "en",
+                    "ko",
+                    "test:v1",
+                    true
+                )
+                .unwrap()
+                .as_deref(),
+            Some("Synthetic legacy translation")
+        );
+        assert_eq!(
+            cache
+                .outgoing_originals_for_channel("/channels/g/c", 10)
+                .unwrap()[0]
+                .original_text,
+            "Synthetic legacy draft"
+        );
+        let bytes = fs::read(&path).unwrap();
+        assert!(!bytes
+            .windows(b"Synthetic legacy".len())
+            .any(|part| part == b"Synthetic legacy"));
+        // Legacy timestamps are retained; only the newly reused fuzzy entry is fresh.
+        assert_eq!(
+            cache.cleanup_expired_records(30).unwrap().removed_records,
+            2
+        );
+        assert_eq!(cache.storage_status().unwrap().translation_records, 1);
+        drop(cache);
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        assert_eq!(
+            cache.get("other", "ko", "test:v1").unwrap().as_deref(),
+            Some("Synthetic legacy translation")
+        );
+        drop(cache);
+        fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn shared_cache_encrypts_bodies_and_reopens_without_losing_translations() {
+        let path = temporary_cache_path("encrypted-body");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        cache
+            .put(
+                "opaque-key",
+                "Synthetic private source marker",
+                "en",
+                "ko",
+                "Synthetic translated body marker",
+                "test:v1",
+            )
+            .unwrap();
+        drop(cache);
+        let database = fs::read(&path).unwrap();
+        for body in [
+            "Synthetic private source marker",
+            "Synthetic translated body marker",
+        ] {
+            assert!(
+                !database
+                    .windows(body.len())
+                    .any(|bytes| bytes == body.as_bytes()),
+                "plaintext body on disk"
+            );
+        }
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        assert_eq!(
+            cache.get("opaque-key", "ko", "test:v1").unwrap().as_deref(),
+            Some("Synthetic translated body marker")
+        );
+        assert_eq!(cache.clear_user_data().unwrap().removed_records, 1);
+        drop(cache);
+        fs::remove_dir_all(path.parent().unwrap()).unwrap();
     }
 
     #[test]

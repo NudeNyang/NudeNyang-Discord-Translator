@@ -5,13 +5,9 @@ This document contains privacy answers for NudeNyang Web Translator 0.7.9 with W
 
 ## Submission readiness
 
-Before requesting review, verify that the Windows companion `0.7.3-beta` x64 and ARM64 installers
-are publicly downloadable at `https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.3-beta`
-and that the public privacy-policy URL contains this revision. The earlier `0.7.2-beta` does not
-implement the messenger setting or private-message path. Package creation alone does not satisfy
-these publication checks. Logged-in, real-account validation of all eight messenger services has
-not been completed; fixture tests are not a substitute for that validation. See
-`BROWSER_STORE_SUBMISSION_0.7.8.md` for the submission checklist and listing copy.
+This is the unpublished consent-v3 policy on the development branch. Do not submit the old v2 local-only listing or infer support from unchanged app/extension version numbers. Before any future review, publish matching companion builds, extension packages and privacy text together, verify capability `messengerPolicyVersion: 3`, and test consent migration. No release or submission is part of this work.
+
+Fixture E2E is not validation of all eight logged-in services. Store approval is not guaranteed. See `MESSENGER_SHARED_POLICY.md` for the implementation and remaining review checks.
 
 ## Single purpose
 
@@ -39,7 +35,7 @@ See `BROWSER_STORE_SUBMISSION_0.7.9.md` for the new submission notes.
 NudeNyang Web Translator uses the translation engine in the separately installed NudeNyang Windows
 application to translate eligible visible text on webpages activated by the user while preserving
 the existing page layout. An optional, separately consented feature translates only visible
-message bodies in the currently open supported web-messenger conversation using local AI, plus
+message bodies in the currently open supported web-messenger conversation using the app-selected translator after consent v3, plus
 Discord link-preview text in that conversation and visible channel names in the current server.
 
 ## Data handled
@@ -51,8 +47,8 @@ Discord link-preview text in that conversation and visible channel names in the 
   policy. Query strings and URL fragments are excluded from these requests.
 - Personal communications / `personalCommunications`: visible message bodies in the currently
   open supported conversation, including Discord preview titles, descriptions, and textual fields,
-  plus visible channel names in the current Discord server, only after the app setting and
-  browser-profile consent permit it. DM contact lists and other servers' channels are excluded.
+  plus visible channel names in the current Discord server, only after common web controls and
+  browser-profile consent v3 permit it. DM contact lists and other servers' channels are excluded.
 
 The extension does not read authentication tokens, cookies, input values, unsent drafts, contact
 lists, or attachment contents. It does not monitor browsing history as a list or log user typing.
@@ -62,73 +58,33 @@ arbitrary private pages. Message bodies may themselves contain names, contact de
 health, or other sensitive information. Do not describe this feature as handling no personal data
 or automatically removing all such information from messages.
 
-## Processing and transmission
+## Processing, consent, retention and withdrawal
 
-Ordinary eligible webpage text and its page identifier are sent through Native Messaging to the
-NudeNyang Windows application on the same computer. With a local model, they remain on the device.
-If the user explicitly selects an external translation provider in the Windows application, only
-ordinary eligible text required for translation can be sent directly to that provider under its
-terms. The page identifier is not sent to the external translation provider.
+### Web-messenger reading
 
-Web-messenger reading is off by default and requires the app's `web_messenger_enabled` setting,
-explicit consent in the current browser profile, an enabled translation state, and a local Hy-MT2
-or TranslateGemma model. The app setting alone is not consent. Consent is not shared between
-browser profiles. The feature covers X DM, web Discord, WhatsApp Web, Telegram Web, Messenger,
-Slack, Microsoft Teams, and Google Messages only where the current visible conversation is safely
-identified. No background opening of other conversations is performed.
+After consent in the current browser profile, messengers follow the common web switch, current-tab control and site policy. There is no separate messenger enable switch or separate external-provider/storage toggle. Refusing consent does not prevent ordinary webpage translation. Firefox additionally requires optional `personalCommunications` permission; refusal, cancellation or revocation blocks the private path.
 
-All eligible messenger text, including Discord channel names and link previews, goes only to the same-computer companion. Their request includes translation
-settings, service identifier, consent version, and a random temporary conversation identifier;
-it does not use the real conversation URL, conversation ID, or participants as that identifier.
-Route information used for conversation-change detection stays within the extension. Author
-names, contact lists, profiles, composers, drafts, send actions, attachments, and media are not
-translation targets. Selecting an external provider blocks messenger translation, including
-external fallback paths. It does not authorize sending the conversation to that provider.
+Consent v3 discloses the app's selected translator and shared retention/deletion policy. Earlier v1/v2 local-only, no-disk-storage consent is never upgraded automatically. The extension also requires companion capability `messengerPolicyVersion: 3`. This policy change is an unpublished development change, not a claim that the currently published builds implement it.
 
-## Consent experience
+Supported surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams and Google Messages. Only a safely identified open conversation is read: visible message bodies and link-preview text, plus visible channel names in the current Discord server. The extension does not open other conversations, retrieve hidden history, attachments or linked pages, or translate authors, handles, contact lists, profiles, composers, drafts, send controls or code. Sensitive information present in message bodies is not automatically redacted. Generic account, payment, email and unsupported-messenger blocks remain.
 
-If browser-profile consent is missing, the popup places a prominent privacy-review card above
-the translation controls, without duplicating the action in the footer. This opens the bundled notice; it does not grant consent. The user must check
-the acknowledgement and explicitly accept, including Firefox's optional permission prompt. Only
-then may the extension resume the originating conversation and return to its tab without a
-reload, after rechecking the app setting, local model, and browser consent. The handoff uses a
-tab handle and random conversation nonce, not a real conversation URL or message body. A changed
-conversation, revoked consent, or explicit OFF action cancels the pending start. Hidden tabs do
-not collect message bodies. The standalone consent-management link has no automatic-start action.
+The app's selected translator is shared with desktop Discord. Local models process text on the PC. Selecting ChatGPT, Claude, Gemini or DeepL permits the necessary conversation text to be sent to that provider, including its configured fallback path, under the provider's policies. Requests to the local companion use a random conversation identifier, not a real conversation URL, ID or participant list. Private-browsing state comes from browser-owned tab metadata.
 
-Consent version 2 discloses the added Discord channel names and link-preview text. A previous
-version-1 message-only grant does not authorize this scope; it is not automatically upgraded.
-The user must explicitly accept the updated notice. No linked pages are fetched and no image
-text is read. No additional browser permission category is introduced.
+In regular windows the app reuses its shared translation cache. Source text, translations and saved outgoing message bodies are encrypted using Windows user-scoped DPAPI before SQLite storage. Existing plaintext bodies are migrated without discarding their retention timestamps. Metadata such as settings, languages and cache indexes is not whole-database encrypted. This protection does not prevent access by software running as the same Windows user or access to live process memory.
 
-## Messenger retention and withdrawal
+App retention is 30 days by default, with 7/30/90/180-day or unlimited options. Unlimited does not mean storage is disabled. The existing history-deletion action clears this cache. Changing conversations, disabling translation or withdrawing consent does not delete previously stored cache entries. Provider and subscription-CLI records are governed separately and cannot be deleted through the app cache controls.
 
-The companion's browser-specific Disconnect action is separate from consent withdrawal. It stores
-the disabled browser kind locally, rejects new translation/settings requests through existing
-ports, and invalidates pending results for that kind. Other browser kinds and Discord remain
-unchanged. It does not uninstall the extension, revoke browser permissions, clear consent, or
-force already displayed text back to its original form. Connection-only signals may still update
-local browser-kind/version presence, but cannot re-enable a disconnected browser.
+Private-browsing requests never read or write the app's disk cache and use request-scoped memory. Only local models and DeepL are allowed there because subscription CLI local-content records cannot be controlled. Regular-window messenger translation has no such provider restriction.
 
-The extension holds eligible messenger text and translations only in memory for the current
-conversation, including the added Discord channel names and link-preview text.
-It discards its copies when the conversation changes or ends, or consent is revoked. The companion
-uses a request-scoped in-memory translation cache and context separated from ordinary caches.
-Private bodies and translations are not written to disk caches, translation history, or body logs.
-Browser storage retains the consent version and preferences, not message bodies. Disabling the
-app setting also stops new work; results belonging to an old conversation or revoked consent are
-not applied. This does not delete messages from the messenger service.
+The extension persists settings and consent, not message bodies. It discards its current-conversation memory copies on navigation, closure or revocation, blocks new collection and requests, and ignores late responses for an old conversation or revoked consent. Requests already sent externally may not be retractable. This does not delete the messenger service's original messages or server records, or guarantee physical erasure of RAM, VRAM or OS-managed copies. App diagnostics do not record conversation bodies.
 
-An already running inference may take time to finish and release its data. `cache_prompt=false`
-restricts model prompt-cache reuse, but the model runtime is shared with other translations. It
-does not provide a dedicated isolated model process or guarantee immediate physical erasure of
-RAM, VRAM, model KV caches, or copies managed by the operating system or runtime.
+### Shared browser connection controls
 
-The project does not operate a relay, analytics, or storage server. The developer does not receive
-or retain webpage text, page addresses, browsing history, credentials, cookies, or translation
-history. Data is not sold or used for advertising, tracking, analytics, credit assessment, or any
-purpose unrelated to the user-requested translation. No person acting for the developer can read
-the data.
+Browser-specific Disconnect remains separate from consent withdrawal. It blocks requests and pending results for that browser kind without uninstalling the extension, removing browser permissions or affecting other browser kinds or desktop Discord. Connection checks do not reactivate a disabled browser.
+
+The consent page is prominent and bundled with the extension. Accepting it stores v3 only from that extension-owned page and, on Firefox, only after the browser grants personalCommunications. A decline leaves ordinary web translation available. There is no separate main-app messenger switch. A supported originating tab may resume only after rechecking the current conversation nonce, current consent and ordinary translation controls. Hidden tabs do not collect bodies.
+
+The developer operates no relay, analytics or content-storage server and does not receive, sell, use for advertising, or allow human access to user conversations. External transfers only support the disclosed translation chosen by the user.
 
 ## Chrome Web Store privacy form
 
@@ -139,8 +95,8 @@ the data.
   than claiming that messages cannot contain other sensitive information.
 - Remote code: No.
 - Data sale or transfer: No sale. Transfers are limited to the same-computer companion for
-  translation and, for ordinary translation only, eligible text sent directly to a provider
-  selected by the user for that purpose. Messenger bodies never use an external provider.
+  translation and eligible text sent to the provider selected by the user, including consented
+  messenger translation. Provider/CLI retention is disclosed separately.
 - Advertising, credit assessment, and unrelated use: No.
 - Privacy policy URL:
   `https://github.com/NudeNyang/NudeNyang-Discord-Translator/blob/main/PRIVACY.md`
@@ -165,7 +121,7 @@ same behavior. See [Chrome's privacy-practices form guidance](https://developer.
 - `http://*/*` and `https://*/*`: Allows eligible visible text to be translated on ordinary
   webpages after the user activates translation or saves an automatic site policy. Browser-internal
   pages and generic sensitive routes remain blocked. Supported messenger conversations have a
-  separate HTTPS-only, local-AI-only path gated by the app setting and browser-profile consent;
+  separate HTTPS-only path gated by common web controls, current browser-profile consent and companion capability;
   this does not permit reading composers, attachments, or arbitrary private pages.
 
 Chrome and Whale now explicitly declare these same origins in `host_permissions`, as Firefox
@@ -185,15 +141,14 @@ User-restricted site access is still respected, and no additional URL scheme or 
 The consent page calls `permissions.request({ data_collection: ["personalCommunications"] })`
 from the user's affirmative action. It stores consent only when permission is granted. Refusal,
 cancellation, or subsequent permission removal prevents the private path from operating. The
-extension also rechecks its own consent and local-model/app settings before forwarding a request.
-The browser grant does not replace the app setting, and the app setting does not replace the
-browser grant. Same-device Native Messaging still crosses the extension/browser boundary and is
+extension also rechecks current consent, common web controls and companion policy before forwarding a request.
+The browser grant does not replace current disclosure acceptance; app settings do not grant browser consent. Same-device Native Messaging still crosses the extension/browser boundary and is
 described in the notice. See [Firefox's built-in data-consent documentation](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/).
 
 ## Naver Whale Store disclosure
 
 Use the same single-purpose, data-handling, permission, and privacy-policy statements above,
-including the optional personal-communications processing and its local-only retention limits.
+including optional personal-communications processing, selected external providers and encrypted local retention.
 The extension itself contains no adult content. Store screenshots and descriptions should
 demonstrate the general webpage translation workflow with neutral content. Do not use private
 conversations, names, or account information in submission screenshots.

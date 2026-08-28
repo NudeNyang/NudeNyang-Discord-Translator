@@ -52,6 +52,10 @@ The manifest injects an isolated, initially inert content script into ordinary H
 
 The native host manifest limits access to the extension's stable ID. Requests are limited to 32 nodes, 4,000 characters per node, 32,000 characters per batch, and the browser protocol's one-megabyte envelope. When an external provider is active, a configurable per-page source-character guard stops additional sends before unbounded scrolling can create unexpected usage. Local-model requests are not subject to that guard.
 
+Messenger policy v3 uses the common web controls and selected desktop translator without a separate messenger switch. Consent is versioned per browser profile; v1/v2 local-only grants cannot authorize external sends or persistent storage. Both content and background validate companion capability `messengerPolicyVersion: 3`; Firefox also requires its optional personal-communications permission. Supported-conversation DOM boundaries remain unchanged.
+
+Regular-window messenger requests share the app cache, retention and deletion. Translation/outgoing bodies use Windows user-scoped DPAPI BLOBs in SQLite; legacy TEXT bodies migrate atomically and retain timestamps. Read paths support encrypted bodies and existing fuzzy/cache namespaces. Private-browsing requests use isolated in-memory caches; trusted browser metadata overrides any page-supplied persistence flag. Subscription CLIs without verified local-storage control cannot handle these ephemeral requests, including through fallbacks. See [shared messenger policy](MESSENGER_SHARED_POLICY.md).
+
 ## Discord connection
 
 On Windows, NudeNyang starts Discord with `--remote-debugging-pipe`. Communication uses inherited anonymous pipe handles rather than a TCP debugging port.

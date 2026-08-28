@@ -111,6 +111,10 @@ impl Translator for DeepLTranslator {
         true
     }
 
+    fn supports_ephemeral_requests(&self) -> bool {
+        true
+    }
+
     fn translate(
         &mut self,
         text: &str,

@@ -4,6 +4,7 @@ mod app_paths;
 mod browser_bridge;
 mod browser_setup;
 pub mod cache;
+mod cache_crypto;
 pub mod cdp;
 mod config;
 mod credentials;

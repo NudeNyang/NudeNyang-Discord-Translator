@@ -18,23 +18,40 @@ const MAX_MESSAGE_CHARS: usize = 8_000;
 static LOG_WRITE_LOCK: Mutex<()> = Mutex::new(());
 thread_local! {
     static SENSITIVE_SCOPE_DEPTH: Cell<usize> = const { Cell::new(0) };
+    static EPHEMERAL_SCOPE_DEPTH: Cell<usize> = const { Cell::new(0) };
 }
 
 /// Private inference is synchronous on the translation worker. This guard is
 /// deliberately !Send/!Sync so it cannot silently move to a different thread.
 pub struct SensitiveRequestScope {
+    ephemeral: bool,
     _same_thread: PhantomData<Rc<()>>,
 }
 
 pub fn sensitive_request_scope() -> SensitiveRequestScope {
     SENSITIVE_SCOPE_DEPTH.with(|depth| depth.set(depth.get() + 1));
     SensitiveRequestScope {
+        ephemeral: false,
         _same_thread: PhantomData,
     }
 }
 
+pub(crate) fn ephemeral_request_scope() -> SensitiveRequestScope {
+    let mut scope = sensitive_request_scope();
+    EPHEMERAL_SCOPE_DEPTH.with(|depth| depth.set(depth.get() + 1));
+    scope.ephemeral = true;
+    scope
+}
+
+pub(crate) fn ephemeral_request_active() -> bool {
+    EPHEMERAL_SCOPE_DEPTH.with(|depth| depth.get() > 0)
+}
+
 impl Drop for SensitiveRequestScope {
     fn drop(&mut self) {
+        if self.ephemeral {
+            EPHEMERAL_SCOPE_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+        }
         SENSITIVE_SCOPE_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
     }
 }

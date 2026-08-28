@@ -195,8 +195,8 @@ function renderPageStatus(status) {
   messengerNotice.hidden = messengerPanel.hidden;
   const messengerCopy = {
     messenger_consent_required: "messengerConsentRequired",
-    messenger_disabled: "messengerDisabled",
-    messenger_local_only: "messengerLocalOnly",
+    messenger_update_required: "messengerUpdateRequired",
+    private_browsing_provider_unsupported: "privateBrowsingProviderUnsupported",
     messenger_no_conversation: "messengerNoConversation",
     messenger_request_cancelled: "messengerWaiting",
     messenger_invalid_context: "unableToProcess",

@@ -28,10 +28,9 @@
   const { createTextRecord, recordMatchesItem, acceptTextSegment, cancelTextRecord } = globalThis.NudeNyangTextSegments;
   const MAX_ITEM_CHARS = 4000;
   const EXTERNAL_TRANSLATORS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
-  const LOCAL_TRANSLATORS = new Set(["hymt_1_8b", "hymt_7b", "translategemma_4b"]);
   const DEFAULT_WEB_SETTINGS = Object.freeze({
     enabled: true,
-    messengerEnabled: false,
+    messengerPolicyVersion: 0,
     targetLanguage: "display",
     processingMode: "balanced",
     externalPageCharLimit: 25000,
@@ -151,9 +150,8 @@
   function messengerGate() {
     if (!messengerSite) return "";
     if (!webSettings.enabled) return "web_translation_disabled";
-    if (!webSettings.messengerEnabled) return "messenger_disabled";
+    if (webSettings.messengerPolicyVersion !== 3) return "messenger_update_required";
     if (!messengerConsent) return "messenger_consent_required";
-    if (!LOCAL_TRANSLATORS.has(translator)) return "messenger_local_only";
     if (!messengerContext?.root.isConnected) return "messenger_no_conversation";
     return messengerFailure;
   }
@@ -355,7 +353,7 @@
       : {};
     return {
       enabled: source.enabled !== false,
-      messengerEnabled: source.messengerEnabled === true,
+      messengerPolicyVersion: source.messengerPolicyVersion === 3 ? 3 : 0,
       targetLanguage: typeof source.targetLanguage === "string" ? source.targetLanguage : "display",
       processingMode: ["responsive", "balanced", "economy"].includes(source.processingMode)
         ? source.processingMode
@@ -403,7 +401,7 @@
         const oldSettings = JSON.stringify(webSettings);
         const oldFailure = messengerFailure;
         appStatusAvailable = response?.type === "status";
-        messengerConsent = consent?.granted === true && consent.consentVersion === 2;
+        messengerConsent = consent?.granted === true && consent.consentVersion === 3;
         if (response?.type === "status") {
           applyAppStatus(response);
           messengerFailure = "";
@@ -455,7 +453,7 @@
 
   function translationKey() {
     return JSON.stringify([translator, effectiveTargetLanguage() ?? appTargetLanguage,
-      messengerSite ? [messengerSite.id, webSettings.messengerEnabled, messengerConsent] : null]);
+      messengerSite ? [messengerSite.id, webSettings.messengerPolicyVersion, messengerConsent] : null]);
   }
 
   function visibleEmbed(frameUrl) {
@@ -945,7 +943,7 @@
       requestId,
       pageId: messengerSite ? messengerPageId
         : `${adapter.id}:${location.origin}${location.pathname}`.slice(0, 240),
-      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 2 } } : {}),
+      ...(messengerSite ? { privateContext: { service: messengerSite.id, consentVersion: 3 } } : {}),
       targetLanguage: effectiveTargetLanguage(),
       items: batch.map(({ id, blockId: itemBlockId, text }) => ({ id, blockId: itemBlockId, text })),
     });
@@ -998,14 +996,19 @@
         releasePending(item);
       }
       lastError = response?.message ?? "Windows 앱에서 번역 결과를 받지 못했습니다.";
+      const privacyErrorCopy = {
+        messenger_update_required: "messengerUpdateRequired",
+        private_browsing_provider_unsupported: "privateBrowsingProviderUnsupported",
+      }[response?.code];
+      if (privacyErrorCopy) lastError = globalThis.NudeNyangPopupLocales.message(uiLanguage, privacyErrorCopy);
       if (response?.code === "extension_context_invalidated") {
         shutdownInvalidatedContext();
         return;
       }
       if (messengerSite) {
         // Do not expose native/provider errors that could contain private text.
-        messengerFailure = ["messenger_disabled", "messenger_local_only", "messenger_consent_required",
-          "web_translation_disabled"].includes(response?.code) ? response.code : "messenger_request_cancelled";
+        messengerFailure = ["messenger_update_required", "messenger_consent_required",
+          "web_translation_disabled", "private_browsing_provider_unsupported"].includes(response?.code) ? response.code : "messenger_request_cancelled";
         lastError = "";
         translating = false;
         refreshPageSettings(translationKey());
@@ -1296,7 +1299,7 @@
           }
           const oldKey = translationKey();
           applyAppStatus(app);
-          messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 2;
+          messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 3;
           messengerFailure = "";
           refreshPageSettings(oldKey);
           return setEnabled(true, revision);
@@ -1334,7 +1337,7 @@
         // A consent-saved broadcast may race this lookup; read a fresh snapshot.
         if (epoch !== appStatusEpoch) return null;
         const oldKey = translationKey();
-        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 2;
+        messengerConsent = consent?.ok === true && consent.granted === true && consent.consentVersion === 3;
         appStatusAvailable = app?.type === "status";
         if (app?.type === "status") {
           applyAppStatus(app);
@@ -1438,7 +1441,7 @@
       if (message.consent?.granted !== true) messengerStartRevision += 1;
       changeState(() => {
         const oldKey = translationKey();
-        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 2;
+        messengerConsent = message.consent?.granted === true && message.consent.consentVersion === 3;
         messengerFailure = "";
         handleNavigation();
         return refreshPageSettings(oldKey);
@@ -1502,7 +1505,7 @@
     // Keep the private gate closed until they apply instead of scanning with
     // a now-obsolete consent snapshot even for a single microtask.
     if (startupEpoch === appStatusEpoch) {
-      messengerConsent = consent?.granted === true && consent.consentVersion === 2;
+      messengerConsent = consent?.granted === true && consent.consentVersion === 3;
       applyAppStatus(appStatus);
     }
     assignPageContext(pageContext());

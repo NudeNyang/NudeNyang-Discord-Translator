@@ -65,7 +65,7 @@ test("도메인과 무관한 최소 DOM 재현", async ({ extension }) => {
 `p.requests()`는 translate 요청 배열, `p.status()`는 content-script 상태다.
 `p.pendingTranslations()`와 `p.releaseTranslations()`로 늦은 응답 경합을 재현하고,
 `p.setConsent(false)`로 실제 extension storage 변경·동의 철회 broadcast를 실행한다.
-메신저 테스트는 `settings:{messengerEnabled:true}, consent:true`를 명시해야 한다.
+메신저 테스트는 `consent:true`를 명시한다. 기본 모사 본체는 정책 v3이며 `consentVersion:2` 또는 `settings:{messengerPolicyVersion:2}`로 구형 동의/본체 차단을 검증할 수 있다. 전용 메신저 사용 스위치는 없다.
 
 `p.releaseTranslations({count:1, keepDeferred:true})`는 현재 한 응답만 내보내고 후속
 요청도 보류한다. `omitItemIds`, `emptyItemIds`, `errorCode`로 누락·빈 결과·실패를

@@ -703,6 +703,7 @@ Apache License 2.0이 별도로 적용된다. 각 모델의 공식 라이선스 
 | PaddleOCR 모델 | PP-OCRv6 Small/Medium 감지·인식 및 한국어 PP-OCRv5 인식 | Apache-2.0, <https://github.com/PaddlePaddle/PaddleOCR> |
 | Lingua 1.8.0 및 선택 언어 모델 | 오프라인 채팅 언어 감지 | Apache-2.0, Copyright © 2020-present Peter M. Stahl, <https://github.com/pemistahl/lingua-rs> |
 | getrandom 0.3.4 | 브라우저 로컬 브리지의 시작별 인증 키 생성 | MIT OR Apache-2.0, <https://github.com/rust-random/getrandom> |
+| windows-sys 0.60.2 | Windows DPAPI를 통한 공통 번역 캐시 본문 암호화·복호화 바인딩 | MIT OR Apache-2.0, Microsoft, <https://github.com/microsoft/windows-rs> |
 | Tabler Icons | 설정 메뉴 아이콘 | MIT, Copyright (c) 2020-2026 Paweł Kuna, <https://github.com/tabler/tabler-icons> |
 | Microsoft Visual C++ Redistributable | \`llama-server.exe\`의 앱 로컬 Windows 런타임 | Microsoft Software License Terms, <https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist> |
 | Microsoft Edge WebView2 Runtime | Tauri 설정 및 트레이 UI 렌더링 | Microsoft Edge WebView2 Runtime Terms, <https://developer.microsoft.com/microsoft-edge/webview2/> |

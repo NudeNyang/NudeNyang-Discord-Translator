@@ -10,7 +10,6 @@
   const accept = document.getElementById("privacy-accept");
   const revoke = document.getElementById("privacy-revoke");
   const status = document.getElementById("privacy-status");
-  const settingsHint = document.getElementById("privacy-settings-hint");
   const controls = document.getElementById("privacy-controls");
   const pendingTimers = new Set();
   let uiLanguage = locales.resolve("auto", api?.i18n?.getUILanguage?.() || navigator.language);
@@ -18,7 +17,6 @@
   let granted = false;
   let busy = false;
   let disposed = false;
-  let mainSettingEnabled;
 
   // Do not let browser form restoration count as a new affirmative choice.
   confirmation.checked = false;
@@ -50,7 +48,6 @@
     revoke.hidden = !granted;
     revoke.disabled = !ready || busy || !granted;
     controls.setAttribute("aria-busy", String(busy));
-    settingsHint.hidden = !granted || mainSettingEnabled !== false;
   }
 
   function runtimeMessage(message) {
@@ -184,14 +181,13 @@
       : "messengerPrivacySaveFailed", response?.ok === true ? "" : "error");
     render();
   });
-  // Native status is only for language and the separate main-app setting. A
+  // Native status is only for language. A
   // sleeping or disconnected engine must not block browser consent management.
   void runtimeMessage({
     type: "nudenyang-native-request", request: { type: "status", requestId: `messenger-privacy-${Date.now()}` },
   }).then((response) => {
     if (disposed || response?.type !== "status") return;
     applyLanguage(response.resolvedUiLanguage || response.uiLanguage);
-    mainSettingEnabled = response.webSettings?.messengerEnabled;
     render();
   });
 })();

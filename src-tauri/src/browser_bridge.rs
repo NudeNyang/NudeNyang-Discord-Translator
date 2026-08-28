@@ -247,7 +247,7 @@ pub fn browser_clients_status() -> Vec<BrowserClientInfo> {
 fn web_settings_value(config: &crate::config::AppConfig) -> Value {
     json!({
         "enabled": config.web_translation_enabled,
-        "messengerEnabled": config.web_messenger_enabled,
+        "messengerPolicyVersion": 3,
         "targetLanguage": config.web_target_language,
         "processingMode": config.web_processing_mode,
         "externalPageCharLimit": config.web_external_page_char_limit,
@@ -266,7 +266,6 @@ fn interface_language_value(configured: &str) -> (&str, &'static str) {
 fn update_web_settings(app: &AppHandle, patch: Value) -> Result<Value, String> {
     let allowed = [
         "web_translation_enabled",
-        "web_messenger_enabled",
         "web_target_language",
         "web_processing_mode",
         "web_external_page_char_limit",
@@ -481,6 +480,7 @@ fn translation_error_response(request_id: &str, error: &str) -> Value {
         "messenger_consent_required",
         "messenger_invalid_context",
         "messenger_request_cancelled",
+        "private_browsing_provider_unsupported",
     ] {
         if let Some(message) = error.strip_prefix(&format!("[{code}] ")) {
             return error_response(request_id, code, message, false);
@@ -964,13 +964,12 @@ mod tests {
     }
 
     #[test]
-    fn web_settings_expose_messenger_consent_as_default_off() {
-        let mut config = crate::config::AppConfig::default();
+    fn web_settings_expose_shared_policy_capability_without_messenger_switch() {
+        let config = crate::config::AppConfig::default();
         let settings = super::web_settings_value(&config);
-        assert_eq!(settings["messengerEnabled"], false);
+        assert_eq!(settings["messengerPolicyVersion"], 3);
         assert_eq!(settings["enabled"], false);
-        config.web_messenger_enabled = true;
-        assert_eq!(super::web_settings_value(&config)["messengerEnabled"], true);
+        assert!(settings.get("messengerEnabled").is_none());
     }
 
     #[test]

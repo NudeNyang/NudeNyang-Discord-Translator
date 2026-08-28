@@ -12,7 +12,7 @@
       type: "status", appConnected: true,
       translator: options.translator ?? "hymt_1_8b",
       targetLanguage: "KO", resolvedUiLanguage: "ko",
-      webSettings: { enabled: true, processingMode: "responsive", ...options.settings },
+      webSettings: { enabled: true, messengerPolicyVersion: 3, processingMode: "responsive", ...options.settings },
     };
   }
 

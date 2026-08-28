@@ -70,6 +70,14 @@ impl Translator for ResilientTranslator {
         self.primary.isolate_incoming_failures()
     }
 
+    fn supports_ephemeral_requests(&self) -> bool {
+        self.primary.supports_ephemeral_requests()
+            && self
+                .fallback
+                .as_ref()
+                .is_none_or(|provider| provider.supports_ephemeral_requests())
+    }
+
     fn translate(
         &mut self,
         text: &str,

@@ -31,6 +31,11 @@ pub trait Translator: Send {
     fn sends_text_externally(&self) -> bool {
         false
     }
+    /// Can this provider process a request without creating local content files?
+    /// External CLI tools must opt in only after their storage paths are verified.
+    fn supports_ephemeral_requests(&self) -> bool {
+        !self.sends_text_externally()
+    }
     fn isolate_incoming_failures(&self) -> bool {
         false
     }

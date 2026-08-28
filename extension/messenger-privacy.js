@@ -1,7 +1,6 @@
 (function exposeMessengerPrivacy(root) {
-  const CONSENT_VERSION = 2;
+  const CONSENT_VERSION = 3;
   const CONSENT_KEY = "messengerConsentVersion";
-  const LOCAL_TRANSLATORS = new Set(["hymt_1_8b", "hymt_7b", "translategemma_4b"]);
   const SERVICES = new Set(["x", "discord", "whatsapp", "telegram", "messenger", "slack", "teams", "google-messages"]);
 
   function denied(request, code) {
@@ -74,20 +73,36 @@
       } catch { return false; }
     }
 
+    async function checkCompanionPolicy(request, nativeRequest) {
+      const status = await nativeRequest({ type: "status", requestId: `${request.requestId ?? "private"}-gate` });
+      if (status?.type !== "status") return denied(request, status?.code ?? "native_host_unavailable");
+      if (status.webSettings?.enabled !== true) return denied(request, "web_translation_disabled");
+      if (status.webSettings?.messengerPolicyVersion !== CONSENT_VERSION) return denied(request, "messenger_update_required");
+      return null;
+    }
+
     async function forward(request, sender, nativeRequest) {
       if (request?.type !== "translate") return nativeRequest(request);
+      // Only browser-owned tab metadata can authorize disk caching. Missing
+      // metadata is treated as private browsing, never as permission to persist.
+      request = { ...request, incognito: sender?.tab?.incognito !== false };
       const privateRequest = request.privateContext != null || senderService(sender) != null;
-      if (!privateRequest) return nativeRequest(request);
+      if (!privateRequest) {
+        // Old companions ignore incognito metadata and would persist an ordinary
+        // page. Require the new storage policy even without a messenger context.
+        if (request.incognito) {
+          const blocked = await checkCompanionPolicy(request, nativeRequest);
+          if (blocked) return blocked;
+        }
+        return nativeRequest(request);
+      }
       if (!validContext(request, sender)) return denied(request, "messenger_invalid_context");
       const epoch = consentEpoch;
       let consent = await getConsent();
       if (epoch !== consentEpoch || !consent.granted) return denied(request, "messenger_consent_required");
       // An older native app must never interpret private messages as ordinary cached website text.
-      const status = await nativeRequest({ type: "status", requestId: `${request.requestId ?? "private"}-gate` });
-      if (status?.type !== "status") return denied(request, status?.code ?? "native_host_unavailable");
-      if (status.webSettings?.enabled === false) return denied(request, "web_translation_disabled");
-      if (status.webSettings?.messengerEnabled !== true) return denied(request, "messenger_disabled");
-      if (!LOCAL_TRANSLATORS.has(status.translator)) return denied(request, "messenger_local_only");
+      const blocked = await checkCompanionPolicy(request, nativeRequest);
+      if (blocked) return blocked;
       // Storage/permission reads yield; revocation and regrant during either read invalidate this request.
       consent = await getConsent();
       if (epoch !== consentEpoch || !consent.granted) return denied(request, "messenger_consent_required");

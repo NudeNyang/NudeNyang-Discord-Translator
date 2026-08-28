@@ -2589,7 +2589,6 @@ fn invoke_codex_once(
     fs::create_dir_all(&temporary)
         .map_err(|error| format!("Codex 임시 폴더를 만들지 못했습니다: {error}"))?;
     let schema_path = temporary.join("schema.json");
-    let output_path = temporary.join("response.json");
     fs::write(&schema_path, schema.to_string())
         .map_err(|error| format!("Codex 응답 스키마를 저장하지 못했습니다: {error}"))?;
     let arguments = vec![
@@ -2608,8 +2607,6 @@ fn invoke_codex_once(
         "never".to_string(),
         "--output-schema".to_string(),
         schema_path.display().to_string(),
-        "--output-last-message".to_string(),
-        output_path.display().to_string(),
         "--cd".to_string(),
         workspace.display().to_string(),
         "-".to_string(),
@@ -2624,8 +2621,9 @@ fn invoke_codex_once(
             timeout,
         )?;
         raise_for_failure(&output, provider)?;
-        let raw = fs::read_to_string(&output_path)
-            .map_err(|_| "Codex CLI가 번역 결과 파일을 만들지 않았어.".to_string())?;
+        // codex exec emits only its final message on stdout; progress is stderr.
+        // Keep translated private messages in the pipe, never a plaintext file.
+        let raw = decode_process_output(&output.stdout);
         decode_payload(&raw)
     })();
     let _ = fs::remove_dir_all(&temporary);
@@ -3843,6 +3841,45 @@ mod tests {
             let values = validated_translations(&payload, &HashSet::from([0])).unwrap();
             assert_eq!(values[&0], "안녕");
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn codex_one_shot_receives_translation_without_a_plaintext_result_file() {
+        let directory = std::env::temp_dir().join(format!(
+            "nude translator codex stdout {}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let wrapper = directory.join("codex stdout mock.cmd");
+        std::fs::write(
+            &wrapper,
+            concat!(
+                "@echo off\r\n",
+                ":check\r\n",
+                "if \"%~1\"==\"\" goto reply\r\n",
+                "if \"%~1\"==\"--output-last-message\" exit /b 17\r\n",
+                "shift\r\ngoto check\r\n",
+                ":reply\r\nset /p prompt=\r\n",
+                "echo {\"translations\":[{\"id\":0,\"text\":\"\\uC548\\uB155\"}]}\r\n"
+            ),
+        )
+        .unwrap();
+        let result = super::invoke_codex_once(
+            &wrapper,
+            "Synthetic private fixture",
+            &super::translation_schema(),
+            &directory,
+            &subscription_environment(),
+            std::time::Duration::from_secs(5),
+            super::SubscriptionProvider::ChatGpt,
+            "fixture-model",
+            "low",
+        );
+        let _ = std::fs::remove_dir_all(&directory);
+        let payload = result.unwrap();
+        let values = validated_translations(&payload, &HashSet::from([0])).unwrap();
+        assert_eq!(values[&0], "안녕");
     }
 
     #[test]
