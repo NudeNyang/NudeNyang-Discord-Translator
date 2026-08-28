@@ -11,6 +11,8 @@
     addTranslationItems,
     closestTranslationBlock,
     createScanBatch,
+    createTranslationReplayCache,
+    sameMessageContext,
     groupTranslationApplications,
     isElementNearViewport,
     isQuickToggleShortcut,
@@ -42,6 +44,8 @@
   const RESTORABLE_HIDDEN_SELECTORS = new Set(["[hidden]", "[inert]", '[aria-hidden="true"]']);
   const trackedNodes = new Set();
   const nodeStates = new WeakMap();
+  const replayCache = createTranslationReplayCache();
+  const conversationBlocks = new Set();
   const embeddedRequests = new Map();
   let disposed = false;
   let blockIds = new WeakMap();
@@ -128,9 +132,8 @@
 
   function sameConversation(next) {
     return next.site?.id === messengerSite?.id
-      && next.context?.root === messengerContext?.root
-      && next.context?.routeKey === messengerContext?.routeKey
-      && (next.context?.identityNodes ?? []).every((node, index) => node === messengerContext?.identityNodes[index]);
+      && sameMessageContext(messengerContext, next.context, conversationBlocks,
+        block => messengerAdapters.isEligibleMessageBlock(block, next.context));
   }
 
   function assignPageContext(next) {
@@ -694,6 +697,7 @@
 
   function forgetMessengerText(node, { restore = false } = {}) {
     const state = nodeStates.get(node);
+    if (node.isConnected) replayCache.delete(state?.replayKey);
     if (restore && isRestorableMessengerText(node)
       && state?.translated != null && node.nodeValue === state.translated) node.nodeValue = state.original;
     nodeStates.delete(node);
@@ -703,6 +707,7 @@
   function forgetText(node, { restore = false } = {}) {
     if (messengerSite) return forgetMessengerText(node, { restore });
     const state = nodeStates.get(node);
+    if (node.isConnected) replayCache.delete(state?.replayKey);
     if (restore && publicDom?.allowsText(node, { restoring: true })
       && state?.translated != null && node.nodeValue === state.translated) node.nodeValue = state.original;
     nodeStates.delete(node);
@@ -722,11 +727,11 @@
     return removed;
   }
 
-  function retainClippedXTranslation(node) {
+  function retainClippedMessengerTranslation(node) {
     // Retain only an already acquired translation in this conversation. This
     // structural check must not read offscreen node values or authorize a new
     // extraction/application. Hidden, detached or repurposed UI still expires.
-    if (messengerSite?.id !== "x" || !canReadConversation()
+    if (!messengerSite || !canReadConversation()
       || nodeStates.get(node)?.translated == null || !isRestorableMessengerText(node)
       || !messengerAdapters.isVisibleElement(node.parentElement)) return false;
     return !nearViewport(translationBlockFor(node));
@@ -736,7 +741,7 @@
     if (!messengerSite) return 0;
     let removed = 0;
     for (const node of trackedNodes) {
-      if (!restoring && clipped && retainClippedXTranslation(node)) {
+      if (!restoring && clipped && retainClippedMessengerTranslation(node)) {
         clipped.add(node);
         continue;
       }
@@ -773,11 +778,60 @@
     return nodes;
   }
 
+  function snapshotBlock(block) {
+    const isEligible = textEligibility(block);
+    const nodes = [];
+    const originals = [];
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!isEligible(node)) continue;
+      const value = node.nodeValue ?? "";
+      const state = nodeStates.get(node);
+      const original = state && !state.invalid && (value === state.original || value === state.translated)
+        ? state.original : value;
+      if (!hasTranslatableText(original)) continue;
+      nodes.push(node);
+      originals.push(original);
+    }
+    return { nodes, originals, key: JSON.stringify(originals) };
+  }
+
+  function rememberBlock(block) {
+    if (!block || !enabled || !canReadConversation() || !nearViewport(block)) return;
+    const snapshot = snapshotBlock(block);
+    if (snapshot.nodes.some((node, index) => {
+      const state = nodeStates.get(node);
+      return !state || state.invalid || state.pending || state.original !== snapshot.originals[index];
+    })) return;
+    const values = snapshot.nodes.map(node => nodeStates.get(node)?.translated);
+    if (!values.length || values.some(value => typeof value !== "string" || !value.trim())) return;
+    replayCache.set(snapshot.key, values);
+    for (const node of snapshot.nodes) nodeStates.get(node).replayKey = snapshot.key;
+  }
+
+  function replayBlock(block) {
+    const snapshot = snapshotBlock(block);
+    const values = replayCache.get(snapshot.key);
+    if (!values || values.length !== snapshot.nodes.length) return false;
+    for (const [index, node] of snapshot.nodes.entries()) {
+      const record = createTextRecord(snapshot.originals[index], `${blockId(block)}-${++sequence}`, pageEpoch, MAX_ITEM_CHARS);
+      record.translated = values[index];
+      record.pending = false;
+      record.replayKey = snapshot.key;
+      nodeStates.set(node, record);
+      trackedNodes.add(node);
+      if (node.nodeValue !== record.translated) node.nodeValue = record.translated;
+    }
+    return true;
+  }
+
   function enqueueBlock(block, { priority = false } = {}) {
-    if (disposed || !enabled || !adapter || usageLimited || !block
+    if (disposed || !enabled || !adapter || !block
       || !canReadConversation() || !nearViewport(block)) {
       return;
     }
+    if (replayBlock(block) || usageLimited) return;
     const id = blockId(block);
     const items = [];
     for (const node of eligibleTextNodes(block)) {
@@ -859,6 +913,7 @@
       for (const write of writes) {
         write.node.nodeValue = write.translated;
       }
+      if (writes.length) rememberBlock(block.applications[0]?.item.block);
       if (writes.length > 0) {
         appliedBlocks += 1;
         appliedNodes += writes.length;
@@ -1079,6 +1134,8 @@
     if (discard) {
       for (const node of trackedNodes) nodeStates.delete(node);
       trackedNodes.clear();
+      replayCache.clear();
+      conversationBlocks.clear();
     }
     return result;
   }
@@ -1087,7 +1144,7 @@
     if (!canReadConversation()) return { changed: 0, removed: 0 };
     const clipped = new Set();
     const removed = pruneMessengerTranslations({ clipped }) + prunePublicTranslations();
-    // A retained, clipped X node is left untouched, not read/replayed offscreen.
+    // Retained, clipped messenger nodes are not read/replayed offscreen.
     const displayNodes = clipped.size ? new Set([...trackedNodes].filter((node) => !clipped.has(node))) : trackedNodes;
     const result = syncTrackedTranslationDisplay(displayNodes, nodeStates, true);
     if (clipped.size) {
@@ -1134,6 +1191,11 @@
 
   function observeBlock(block) {
     if (messengerSite && excludedBlock(block)) return;
+    if (messengerSite && messengerContext.root.contains(block)) {
+      for (const known of conversationBlocks) if (!known.isConnected) conversationBlocks.delete(known);
+      conversationBlocks.add(block);
+      if (conversationBlocks.size > 512) conversationBlocks.delete(conversationBlocks.values().next().value);
+    }
     if (intersectionObserver) registerTranslationBlock(block, observedBlocks, intersectionObserver);
   }
 
@@ -1203,7 +1265,10 @@
   function handleNavigation() {
     if (disposed) return;
     const next = pageContext();
-    if (location.href === currentUrl && sameConversation(next)) return;
+    if (location.href === currentUrl && sameConversation(next)) {
+      messengerContext = next.context;
+      return;
+    }
     currentUrl = location.href;
     pageEpoch += 1;
     restoreOriginals({ discard: true });

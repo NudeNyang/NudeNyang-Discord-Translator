@@ -465,6 +465,7 @@ test("범용 어댑터는 민감한 계정·결제·메시지 경로를 차단�
     "https://example.com/checkout/payment",
     "https://example.com/#/checkout",
     "https://example.com/messages/123",
+    "https://example.com/direct/t/123",
     "https://example.com/admin/dashboard",
   ]) {
     assert.equal(adapterForLocation(new URL(url)), null, url);

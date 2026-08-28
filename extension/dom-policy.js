@@ -1,6 +1,10 @@
 (function exposeDomPolicy(root) {
   const LAYOUT_OWNER = "p,h1,h2,h3,h4,h5,h6,li,blockquote,figcaption,dt,dd,summary,th,td,div,section,article,main,body";
   const INTERACTION_ROOT = "details,nav,header,footer,[role='navigation'],[role='dialog']";
+  const NAVIGATION = "nav,header,footer,aside,[role='navigation'],[role='menu'],[role='menubar'],[role='toolbar']";
+  const ARTICLE = "article,[role='article']";
+  const PROSE = "p,h1,h2,h3,h4,h5,h6,li,blockquote,figcaption,dt,dd";
+  const PRIVATE_UI = "form,[role='form'],[role='log'],[rel~='author'],[itemprop~='author'],[itemprop~='creator']";
 
   function hasTranslatableText(text) {
     // A one-character word is valid prose; a standalone count, symbol or emoji
@@ -45,9 +49,47 @@
       return !form || Boolean(adapter.publicForms?.some(selector => form.matches(selector)));
     };
 
+    function navigationLink(element) {
+      if (!adapter.collectPublicUi) return null;
+      const anchor = element?.closest("a[href]");
+      const landmark = anchor?.closest(NAVIGATION);
+      return landmark && !landmark.closest(ARTICLE)
+        && sites.isPublicNavigationUrl(anchor.getAttribute("href"), document.baseURI) ? anchor : null;
+    }
+
+    function articleFor(element) {
+      return adapter.collectPublicUi ? element?.closest(ARTICLE) : null;
+    }
+
+    // A navigation landmark is not itself private. Only its public link labels
+    // are eligible; arbitrary account values and unclassified dialogs stay out.
+    // A semantic article remains prose when a viewer wraps it in a modal or a
+    // clickable row. Leaf action buttons are still controls, not article text.
+    function genericScope(element) {
+      return navigationLink(element) || articleFor(element);
+    }
+
+    function genericExcludes(element, policy) {
+      if (!genericScope(element) || element.closest(PRIVATE_UI)) return true;
+      const link = navigationLink(element);
+      const article = articleFor(element);
+      const prose = element.closest(PROSE);
+      for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+        if (ancestor.matches(policy.protected)) return true;
+        if (!ancestor.matches(policy.excluded)) continue;
+        if (link && ancestor.matches(NAVIGATION) && ancestor.contains(link)) continue;
+        if (article && ancestor.matches("[role='dialog'],[aria-modal='true']") && ancestor.contains(article)) continue;
+        if (article && prose && article.contains(prose) && ancestor.matches("[role='button']")
+          && ancestor !== prose && ancestor.contains(prose)) continue;
+        return true;
+      }
+      return false;
+    }
+
     function excludesBlock(block, { restoring = false } = {}) {
       const policy = restoring ? restore : active;
       if (!block || block.closest(policy.protected)) return true;
+      if (genericScope(block)) return genericExcludes(block, policy);
       if (publicUi(block)) return !publicForm(block);
       return !isExplicitExclusionBypassBlock(block, adapter) && Boolean(block.closest(policy.excluded));
     }
@@ -55,6 +97,8 @@
     function blockFor(node, { restoring = false } = {}) {
       const element = elementFor(node);
       if (!element || !blockSelector) return null;
+      const link = navigationLink(element);
+      if (link && !excludesBlock(link, { restoring })) return link;
       // A matched heading inside an allowed navigation link is not necessarily
       // an allowed block itself. Keep looking for the closest permitted owner;
       // eligibility still checks every child's absolute protection separately.
@@ -62,7 +106,7 @@
         candidate = candidate.parentElement?.closest(blockSelector)) {
         if (!excludesBlock(candidate, { restoring })) return candidate;
       }
-      if (!adapter.collectLayoutText || element.closest((restoring ? restore : active).excluded)) return null;
+      if (!adapter.collectLayoutText || excludesBlock(element, { restoring })) return null;
       return element.closest(LAYOUT_OWNER);
     }
 
@@ -70,7 +114,23 @@
       if (excludesBlock(block, { restoring })) return () => false;
       const policy = restoring ? restore : active;
       const isPublicUi = publicUi(block);
+      const isGenericUi = Boolean(genericScope(block));
       const bypass = isPublicUi || isExplicitExclusionBypassBlock(block, adapter);
+      const linkLabels = new WeakMap();
+      function visibleLinkLabel(anchor) {
+        if (linkLabels.has(anchor)) return linkLabels.get(anchor);
+        const walker = document.createTreeWalker(anchor, NodeFilter.SHOW_TEXT);
+        let label = "";
+        while (walker.nextNode()) {
+          const parent = walker.currentNode.parentElement;
+          if (parent.closest(policy.protected) || !publicForm(parent)
+            || (!restoring && !textIsVisible(parent, visibility))
+            || (genericScope(anchor) && genericExcludes(parent, policy))) continue;
+          label += walker.currentNode.nodeValue ?? "";
+        }
+        linkLabels.set(anchor, label.trim());
+        return label.trim();
+      }
       return node => {
         const parent = node.parentElement;
         if (!node.isConnected || !parent || !block.contains(node) || parent.closest(policy.protected)
@@ -80,10 +140,24 @@
         if (blockFor(node, { restoring }) !== block) return false;
         const nearestExcluded = parent.closest(policy.excluded);
         const excludedInsideBypass = bypass && nearestExcluded !== block && block.contains(nearestExcluded);
-        if ((!bypass && nearestExcluded) || (!isPublicUi && excludedInsideBypass)
+        if (isGenericUi) {
+          if (genericExcludes(parent, policy)) return false;
+        } else if ((!bypass && nearestExcluded) || (!isPublicUi && excludedInsideBypass)
           || (isPublicUi && !publicForm(parent))) return false;
         const anchor = parent.closest("a[href]");
-        return !anchor || !isUrlLikeLinkText(anchor.textContent, anchor.href);
+        if (!anchor) return true;
+        const label = visibleLinkLabel(anchor);
+        if (isUrlLikeLinkText(label, anchor.href)) return false;
+        if (adapter.collectPublicUi && /^@[\p{L}\p{N}_.-]+$/u.test(label)) return false;
+        if (articleFor(parent) && anchor.getAttribute("role") === "link") {
+          try {
+            // A link whose complete label is its profile identifier is an
+            // identity, not natural-language navigation or article prose.
+            const segments = new URL(anchor.href).pathname.split("/").filter(Boolean);
+            if (segments.length === 1 && decodeURIComponent(segments[0]) === label) return false;
+          } catch { return false; }
+        }
+        return true;
       };
     }
 
@@ -102,6 +176,28 @@
       };
       if (scanRoot.nodeType === Node.ELEMENT_NODE) add(blockFor(scanRoot));
       for (const block of scanRoot.querySelectorAll(blockSelector)) add(block);
+      if (adapter.collectPublicUi) {
+        for (const anchor of scanRoot.querySelectorAll("a[href]")) {
+          if (navigationLink(anchor)) add(anchor);
+        }
+        const articles = [...scanRoot.querySelectorAll(ARTICLE)];
+        if (scanRoot.matches?.(ARTICLE)) articles.unshift(scanRoot);
+        const containingArticle = elementFor(scanRoot)?.closest(ARTICLE);
+        if (containingArticle && !articles.includes(containingArticle)) articles.push(containingArticle);
+        for (const article of articles) {
+          if (excludesBlock(article)) continue;
+          const walker = document.createTreeWalker(article, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+              if (node.nodeType === Node.ELEMENT_NODE) return excludesBlock(node) || node.matches(blockSelector)
+                ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
+              const block = blockFor(node);
+              return block && eligibility(block)(node) && hasTranslatableText(node.nodeValue)
+                ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+            },
+          });
+          while (walker.nextNode()) add(blockFor(walker.currentNode));
+        }
+      }
       if (adapter.collectLayoutText) {
         const element = scanRoot.nodeType === Node.DOCUMENT_NODE ? document.body : scanRoot;
         if (element && !element.closest(active.excluded) && !element.closest(blockSelector)) {

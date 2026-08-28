@@ -138,6 +138,35 @@ test("공개 UI 계약 fixture: ShoPro 메뉴의 CSS 펼침을 실제 브라우�
 });
 
 const services = MESSENGER_CASES.filter((entry, index, all) => all.findIndex((item) => item.id === entry.id) === index);
+for (const entry of MESSENGER_CASES.filter(item => item.variant !== "server")) {
+  test(`메신저 재사용 fixture: ${entry.id} ${entry.variant ?? "default"} 본문 노드 교체`, async ({ extension }) => {
+    const p = await extension.open({ html: entry.html, url: entry.url, consent: true });
+    const [selector, source] = entry.copies[0];
+    const body = p.page.locator(selector);
+    await expectCopies(p.page, entry.copies);
+    const count = (await p.requests()).length;
+    const scope = (await p.status()).messengerContextId;
+    await body.evaluate(element => { element.style.transform = "translateY(2400px)"; });
+    await p.status();
+    await expect(body).toHaveText(translated(source));
+    await body.evaluate(element => { element.style.removeProperty("transform"); });
+    for (let repeat = 0; repeat < 3; repeat += 1) {
+      await body.evaluate(element => {
+        const walk = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        while (walk.nextNode()) {
+          const node = walk.currentNode;
+          if (node.nodeValue.startsWith("번역(") && node.nodeValue.endsWith(")")) {
+            node.replaceWith(document.createTextNode(node.nodeValue.slice(3, -1)));
+          }
+        }
+      });
+      await expect(body).toHaveText(translated(source));
+      expect((await p.requests()).length).toBe(count);
+      expect((await p.status()).messengerContextId).toBe(scope);
+    }
+    await expectGuards(p.page, entry.guards);
+  });
+}
 for (const policy of [
   { label: "이전 v2 동의", consentVersion: 2, settings: {}, gate: "messenger_consent_required" },
   { label: "구형 본체 정책", consentVersion: 3, settings: { messengerPolicyVersion: 2 }, gate: "messenger_update_required" },

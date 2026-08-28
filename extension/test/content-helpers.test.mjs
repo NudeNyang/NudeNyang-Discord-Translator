@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { JSDOM } from "jsdom";
+import { VIRTUAL_LIST_HTML } from "./fixtures/dom-translation.mjs";
 import "../content-helpers.js";
 
 const {
   addTranslationItems,
   closestTranslationBlock,
   createScanBatch,
+  createTranslationReplayCache,
+  sameMessageContext,
   groupTranslationApplications,
   isElementNearViewport,
   initialTranslationEnabled,
@@ -21,6 +25,42 @@ const {
   translationBatchLimits,
   webSchedulingProfile,
 } = globalThis.NudeNyangContentHelpers;
+
+test("재표시 캐시는 항목·문자 수 상한과 LRU·삭제·전체 폐기를 지킨다", () => {
+  const cache = createTranslationReplayCache({ maxEntries: 2, maxChars: 20 });
+  cache.set("one", ["ONE"]);
+  cache.set("two", ["TWO"]);
+  assert.deepEqual(cache.get("one"), ["ONE"]);
+  cache.set("three", ["THREE"]);
+  assert.equal(cache.get("two"), null);
+  assert.equal(cache.size, 2);
+  assert.ok(cache.chars <= 20);
+  cache.set("large", ["x".repeat(30)]);
+  assert.equal(cache.get("large"), null);
+  cache.delete("one");
+  assert.equal(cache.size, 1);
+  cache.clear();
+  assert.equal(cache.size, 0);
+  assert.equal(cache.chars, 0);
+});
+
+test("범용 목록의 첫 행 교체와 실제 대화·루트·주소 전환을 구분한다", () => {
+  const dom = new JSDOM(VIRTUAL_LIST_HTML);
+  try {
+    const root = dom.window.document.querySelector("main");
+    const first = root.firstElementChild;
+    const witness = root.lastElementChild;
+    const context = { id: "fixture", root, routeKey: "conversation-a", identityNodes: [root, first] };
+    const nextFirst = first.cloneNode(true);
+    first.replaceWith(nextFirst);
+    const next = { ...context, identityNodes: [root, nextFirst] };
+    assert.equal(sameMessageContext(context, next, new Set([first, witness])), true);
+    assert.equal(sameMessageContext(context, { ...next, routeKey: "conversation-b" }, new Set([witness])), false);
+    assert.equal(sameMessageContext(context, { ...next, root: root.cloneNode(true) }, new Set([witness])), false);
+    witness.remove();
+    assert.equal(sameMessageContext(context, next, new Set([first, witness])), false);
+  } finally { dom.window.close(); }
+});
 
 test("웹 번역 토글은 저장된 번역을 버리지 않고 원문과 즉시 교체한다", () => {
   const translatedNode = { isConnected: true, nodeValue: "번역문" };

@@ -6,7 +6,8 @@ import { X_CHAT, X_CHAT_PANEL, X_CHAT_URL, xChatMessage } from "./fixtures/x-cha
 import { DISCORD_WEB, DISCORD_WEB_URL } from "./fixtures/discord-web.mjs";
 import {
   CSS_REVEAL_HTML, FRAGMENTED_TEXT_HTML, LONG_TEXT, PUBLIC_DOCUMENT_URL,
-  PUBLIC_NODE_CHANGES, REUSED_TEXT_HTML, SHORT_TEXT_HTML,
+  PUBLIC_NODE_CHANGES, REUSED_TEXT_HTML, SHORT_TEXT_HTML, VIRTUAL_LIST_HTML,
+  PUBLIC_SURFACES_HTML, PUBLIC_SURFACE_COPY,
 } from "./fixtures/dom-translation.mjs";
 
 const sources = ["site-adapters.js", "messenger-adapters.js", "content-helpers.js", "dom-policy.js", "text-segments.js", "popup-locales.js", "content.js"].map((file) => (
@@ -168,6 +169,68 @@ const PRIVATE_OPTIONS = { url: "https://discord.com/channels/@me/123456789", con
   settings: { messengerPolicyVersion: 3 } };
 
 const consentNotice = (p) => p.w.document.getElementById("nudenyang-consent-notice")?.shadowRoot;
+
+test("범용 가상 목록은 같은 본문의 노드 재생성과 원문 덮어쓰기를 재요청 없이 복원한다", async (t) => {
+  const p = page(t, VIRTUAL_LIST_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+  await p.message({ type: "nudenyang-ready" });
+  const body = p.w.document.querySelector("#changing");
+  await waitFor(() => body.textContent === "번역(Reusable list message)", "initial translation");
+  const count = p.requests.length;
+  for (const rebuild of [false, true]) {
+    if (rebuild) body.innerHTML = "<span>Reusable list message</span>";
+    else body.firstChild.firstChild.nodeValue = "Reusable list message";
+    await waitFor(() => body.textContent === "번역(Reusable list message)", "recycled row should replay immediately", 1000);
+    assert.equal(p.requests.length, count, "same source must not reach the native queue again");
+  }
+});
+
+test("메신저 공통: 첫 메시지 교체가 남은 대화 번역을 초기화하지 않는다", async (t) => {
+  const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+  await p.message({ type: "nudenyang-ready" });
+  const first = p.w.document.querySelector("#message-content-anchor");
+  const second = p.w.document.querySelector("#message-content-changing");
+  await waitFor(() => second.textContent === "번역(Secondary synthetic message)", "initial translation");
+  const before = await p.message({ type: "nudenyang-status" });
+  const replacement = first.cloneNode(false);
+  replacement.textContent = "Stable neutral anchor";
+  first.replaceWith(replacement);
+  const after = await p.message({ type: "nudenyang-status" });
+  assert.equal(after.messengerContextId, before.messengerContextId);
+  assert.equal(second.textContent, "번역(Secondary synthetic message)");
+  await waitFor(() => replacement.textContent === "번역(Stable neutral anchor)", "recycled first row should replay");
+  assert.equal(p.requests.length, before.requestCount);
+});
+
+test("재표시 캐시: 바뀐 문장·목표 언어·페이지에는 새 번역을 요청한다", async (t) => {
+  const p = page(t, VIRTUAL_LIST_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+  await p.message({ type: "nudenyang-ready" });
+  const body = p.w.document.querySelector("#changing");
+  await waitFor(() => body.textContent === "번역(Reusable list message)", "initial translation");
+  body.innerHTML = "<span>Edited list message</span>";
+  await waitFor(() => p.sent().includes("Edited list message") && body.textContent === "번역(Edited list message)", "edits translate afresh");
+  body.innerHTML = "<span>Reusable list message</span>";
+  await waitFor(() => body.textContent === "번역(Reusable list message)", "known source replays");
+  const beforeLanguage = p.requests.length;
+  await p.message({ type: "nudenyang-set-target-language", targetLanguage: "EN" });
+  await waitFor(() => p.requests.length > beforeLanguage && body.textContent === "번역(Reusable list message)", "new language needs fresh results");
+  assert.equal(p.requests.at(-1).targetLanguage, "EN");
+  const beforePage = p.requests.length;
+  p.w.history.pushState({}, "", "/articles/another");
+  await p.message({ type: "nudenyang-status" });
+  await waitFor(() => p.requests.length > beforePage, "page transition discards replay cache");
+});
+
+test("메신저 공통: 화면 밖 번역도 유지하되 상태 확인은 본문을 읽지 않는다", async (t) => {
+  const p = page(t, RECLASSIFIED_CHAT, PRIVATE_OPTIONS);
+  await p.message({ type: "nudenyang-ready" });
+  const body = p.w.document.querySelector("#message-content-changing");
+  await waitFor(() => body.textContent === "번역(Secondary synthetic message)", "initial translation");
+  body.setAttribute("data-offscreen", "");
+  const reads = watchNodeValueReads(p.w, body.firstChild);
+  await p.message({ type: "nudenyang-messenger-refresh", consent: { granted: true, consentVersion: 3 } });
+  assert.equal(reads(), 0, "clipped messages must not be re-read or restored");
+  assert.equal(body.textContent, "번역(Secondary synthetic message)");
+});
 
 test("동의 없는 자동 번역은 본문을 읽지 않고 페이지에 이유와 안내 버튼을 표시한다", async (t) => {
   const p = page(t, X_CHAT, { ...PRIVATE_OPTIONS, url: X_CHAT_URL, consent: false,
@@ -1331,7 +1394,7 @@ test("ShoPro 모바일 메뉴는 CSS로 펼친 뒤 수집하고 다시 숨긴 �
   assert.equal(wrapper.querySelector("button"), button);
 });
 
-test("ShoPro 메뉴 예외도 숨김·inert·편집·개인 폼·무관 버튼과 영역 밖 페이지를 제외한다", async (t) => {
+test("ShoPro의 기존 범위와 범용 공개 메뉴 모두 숨김·편집·개인 폼·계정 경로를 보호한다", async (t) => {
   const html = `<header><div class="headerWrap"><div class="menu"><ul>
     <li><a id="public-menu" href="news/"><span>公開の作品案内</span><span hidden>秘密の非表示</span>
       <span style="display:none">秘密の補足</span><span translate="no">秘密の原文</span></a></li>
@@ -1362,7 +1425,10 @@ test("ShoPro 메뉴 예외도 숨김·inert·편집·개인 폼·무관 버튼�
     const p = page(t, html, { url, tabEnabled: true });
     await p.message({ type: "nudenyang-ready" });
     await new Promise((resolve) => setTimeout(resolve, 350));
-    assert.deepEqual(p.sent(), [], url);
+    // Outside the scoped adapter, ordinary navigation now uses the common
+    // public-link policy; protected descendants and sensitive routes stay out.
+    assert.deepEqual(p.sent().sort(), url.endsWith("/account/") ? []
+      : ["公開の作品案内", "秘密の別リンク", "秘密の別案内"].sort(), url);
   }
 });
 
@@ -1443,6 +1509,56 @@ test("범용 DOM: 한 글자 자연어를 허용해도 숫자·기호·그림문
   assert.equal(p.w.document.querySelector("#icon").textContent, "🐱");
   assert.deepEqual(p.sent(), ["夢"]);
 });
+
+test("범용 공개 UI: 게시물 팝업과 분류 링크를 보호 영역 없이 수집하고 복원한다", async (t) => {
+  const p = page(t, PUBLIC_SURFACES_HTML, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+  await p.message({ type: "nudenyang-ready" });
+  const doc = p.w.document;
+  await waitFor(() => doc.querySelector("#control").textContent.includes("번역("), "control translates");
+  await waitFor(() => PUBLIC_SURFACE_COPY.every(([id, text]) => doc.getElementById(id).textContent === `번역(${text})`)
+    && doc.querySelector("#caption").textContent === "번역(A public post caption)번역(Another caption line)", "public surfaces translate");
+  assert.ok(!p.sent().some(text => /Secret|Alice Author|alice_42|@alice|https:\/\/example.org\//u.test(text)));
+  assert.equal(doc.querySelector("#category").href, "https://catalog.example.org/browse");
+  assert.equal(doc.querySelectorAll("#caption br").length, 1);
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  for (const [id, text] of PUBLIC_SURFACE_COPY) assert.equal(doc.getElementById(id).textContent, text);
+  assert.equal(doc.querySelector("#caption").textContent, "A public post captionAnother caption line");
+});
+
+test("범용 공개 UI: 링크 판별도 숨긴·편집·작성자 자식을 읽지 않는다", async (t) => {
+  const p = page(t, `<nav><a id="mixed" href="/guide"><span id="copy">Public guide</span>
+    <span id="hidden" hidden>Secret hidden</span><span id="editor" contenteditable>Secret draft</span>
+    <span id="author" itemprop="author">Secret author</span></a></nav>`, { url: PUBLIC_DOCUMENT_URL, tabEnabled: true });
+  const anchor = p.w.document.querySelector("#mixed");
+  const readText = Object.getOwnPropertyDescriptor(p.w.Node.prototype, "textContent").get;
+  let aggregateReads = 0;
+  Object.defineProperty(anchor, "textContent", { get() { aggregateReads++; return readText.call(this); } });
+  const reads = ["hidden", "editor", "author"].map(id => watchNodeValueReads(p.w, p.w.document.getElementById(id).firstChild));
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.sent().includes("Public guide"), "visible label translates");
+  assert.equal(aggregateReads, 0);
+  assert.deepEqual(reads.map(read => read()), [0, 0, 0]);
+});
+
+for (const mode of ["pending", "replay"]) {
+  test(`범용 공개 UI: ${mode} 중 계정 링크·작성자·편집 역할로 바뀐 영역은 보호한다`, async (t) => {
+    const options = { url: PUBLIC_DOCUMENT_URL, tabEnabled: true, deferTranslation: mode === "pending" };
+    const p = page(t, PUBLIC_SURFACES_HTML, options);
+    await p.message({ type: "nudenyang-ready" });
+    await waitFor(() => mode === "pending" ? p.requests.length > 0
+      : p.w.document.querySelector("#caption").textContent.includes("번역("), "initial processing");
+    if (mode === "replay") await p.message({ type: "nudenyang-set-enabled", enabled: false });
+    p.w.document.querySelector("#category").setAttribute("href", "/account");
+    p.w.document.querySelector("#caption").setAttribute("contenteditable", "true");
+    p.w.document.querySelector("#post-layout").setAttribute("itemprop", "author");
+    if (mode === "pending") p.releaseTranslation();
+    else await p.message({ type: "nudenyang-set-enabled", enabled: true });
+    await waitFor(() => p.w.document.querySelector("#control").textContent.includes("번역("), "safe control still translates");
+    assert.equal(p.w.document.querySelector("#category").textContent, "Shopping categories");
+    assert.equal(p.w.document.querySelector("#caption").textContent, "A public post captionAnother caption line");
+    assert.equal(p.w.document.querySelector("#post-layout").textContent, "More public details");
+  });
+}
 
 test("범용 본문 수집 범위가 넓어져도 임의의 폼·메뉴·숨긴 텍스트는 번역하지 않는다", async (t) => {
   const p = page(t, `<div id="unrecognized-root">通常の<strong>説明です</strong></div>

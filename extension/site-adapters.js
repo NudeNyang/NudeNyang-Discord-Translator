@@ -23,7 +23,7 @@
 
   const UNIVERSAL_BLOCKED_PATH_SEGMENTS = new Set([
     "account", "accounts", "admin", "billing", "cart", "checkout", "compose",
-    "dashboard", "dm", "dms", "inbox", "login", "log-in", "logout", "log-out",
+    "dashboard", "direct", "dm", "dms", "inbox", "login", "log-in", "logout", "log-out",
     "mail", "message", "messages", "mypage", "order", "orders", "payment", "payments",
     "register", "settings", "signin", "sign-in", "signup", "sign-up", "wallet",
   ]);
@@ -293,6 +293,7 @@
     id: "web",
     manualOnly: true,
     collectLayoutText: true,
+    collectPublicUi: true,
     blocks: PUBLIC_DOCUMENT_BLOCKS,
     excludes: [],
   });
@@ -342,6 +343,15 @@
       .filter(selector => !restoring || !RESTORABLE_EXCLUDES.has(selector)).join(",");
   }
 
+  function isPublicNavigationUrl(href, base) {
+    try {
+      const url = new URL(href, base);
+      return isUniversalLocationAllowed(url, url.hostname.toLowerCase());
+    } catch {
+      return false;
+    }
+  }
+
   function protectedExclusionSelector(adapter, { restoring = false } = {}) {
     return [...PROTECTED_EXCLUDES, ...(adapter?.excludes ?? [])]
       .filter(selector => !restoring || !RESTORABLE_EXCLUDES.has(selector)).join(",");
@@ -349,6 +359,7 @@
 
   const api = Object.freeze({
     ADAPTERS, UNIVERSAL_ADAPTER, adapterForLocation, exclusionSelector, protectedExclusionSelector,
+    isPublicNavigationUrl,
   });
   root.NudeNyangSiteAdapters = api;
   if (typeof module !== "undefined" && module.exports) {

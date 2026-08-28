@@ -1,4 +1,55 @@
 (function exposeContentHelpers(root) {
+  // Bounded, page-lifetime replay only. Keys are complete source-block snapshots;
+  // callers clear the cache on policy, provider, language and conversation changes.
+  function createTranslationReplayCache({ maxEntries = 512, maxChars = 2_000_000 } = {}) {
+    const entries = new Map();
+    let chars = 0;
+    function remove(key) {
+      const entry = entries.get(key);
+      if (!entry) return;
+      chars -= entry.chars;
+      entries.delete(key);
+    }
+    return Object.freeze({
+      get(key) {
+        const entry = entries.get(key);
+        if (!entry) return null;
+        entries.delete(key);
+        entries.set(key, entry);
+        return entry.values;
+      },
+      set(key, values) {
+        remove(key);
+        if (typeof key !== "string" || !Array.isArray(values) || !values.length
+          || values.some(value => typeof value !== "string" || !value.trim())) return;
+        const size = key.length + values.reduce((sum, value) => sum + value.length, 0);
+        if (size > maxChars || maxEntries < 1) return;
+        entries.set(key, { values: Object.freeze([...values]), chars: size });
+        chars += size;
+        while (entries.size > maxEntries || chars > maxChars) remove(entries.keys().next().value);
+      },
+      delete: remove,
+      clear() { entries.clear(); chars = 0; },
+      get size() { return entries.size; },
+      get chars() { return chars; },
+    });
+  }
+
+  function sameMessageContext(current, next, witnesses, accepts = () => true) {
+    if (current?.id !== next?.id || current?.root !== next?.root || current?.routeKey !== next?.routeKey) return false;
+    const previousIdentity = current?.identityNodes ?? [];
+    const nextIdentity = next?.identityNodes ?? [];
+    if (previousIdentity.length === nextIdentity.length
+      && nextIdentity.every((node, index) => node === previousIdentity[index])) return true;
+    // A changed first row is not a conversation switch while previously observed
+    // message blocks still belong to this same root and route. No text is read.
+    for (const block of witnesses) {
+      if (!block.isConnected) { witnesses.delete(block); continue; }
+      if (next?.root?.contains(block) && accepts(block)) return true;
+    }
+    return false;
+  }
+
   function createScanBatch() {
     const roots = new Set();
     return Object.freeze({
@@ -291,6 +342,8 @@
     addTranslationItems,
     closestTranslationBlock,
     createScanBatch,
+    createTranslationReplayCache,
+    sameMessageContext,
     groupTranslationApplications,
     isElementNearViewport,
     initialTranslationEnabled,
