@@ -88,6 +88,13 @@ The integration is deliberately limited:
 - live translation remains off until the user accepts the integration notice;
 - additional verification switches the app to verification compatibility mode, detaches the translation pipe, and waits for the user to reconnect after verification.
 
+The nickname translation setting covers every Discord identity surface collected by the app,
+including message authors, member and voice lists, direct-message rows, the account panel, and
+call or broadcast participant labels and composed broadcast titles. These nodes are classified as `nickname` before broader
+heading, event, onboarding, or channel-browser collectors run. When nickname translation is off,
+the Rust engine removes all `nickname` parts before language detection, caching, or provider
+dispatch, so an overlapping supplemental surface cannot send or rewrite a participant name.
+
 This is not an officially supported Discord extension interface. Discord updates can change the renderer and temporarily break the integration.
 
 ## Translation and data

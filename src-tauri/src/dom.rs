@@ -29,6 +29,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
+      if (!excludeNicknameDecorations && parent.closest('[data-dto-nickname-id]')) continue;
       if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
       nodes.push(node);
     }
@@ -121,6 +122,10 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     '[id^="message-username-"]',
     '[class*="username_"]',
     '[class*="nickname_"]',
+    '[class*="participantName_"]',
+    '[class*="pictureInPictureVideo_"] [class*="headerTitle_"] [class*="headerText_"]',
+    '[class*="voiceUser_"] [class*="name_"]',
+    '[data-list-item-id^="members-"] [class*="name_"]',
     'a[data-list-item-id^="private-channels-"][href^="/channels/@me/"] [class*="nameAndDecorators_"] > [class*="name_"] > [class*="overflowTooltip_"]',
     '[class*="panels_"] [class*="nameTag_"] [class*="panelTitleContainer_"] > [class*="title_"]',
     '[class*="panels_"] [class*="nameTag_"] [class*="panelSubtextContainer_"] [class*="hovered_"]'
@@ -449,6 +454,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
+      if (!excludeNicknameDecorations && parent.closest('[data-dto-nickname-id]')) continue;
       if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
       nodes.push(node);
     }
@@ -525,6 +531,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
         if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
         const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
         if (hiddenParent && hiddenParent !== root) continue;
+        if (!excludeNicknameDecorations && parent.closest('[data-dto-nickname-id]')) continue;
         if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
         nodes.push(node);
       }
@@ -673,6 +680,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       if (protectedParent && protectedParent !== root && root.contains(protectedParent)) continue;
       const hiddenParent = parent.closest('[class*="hiddenVisually"],[aria-hidden="true"]');
       if (hiddenParent && hiddenParent !== root) continue;
+      if (!excludeNicknameDecorations && parent.closest('[data-dto-nickname-id]')) continue;
       if (excludeNicknameDecorations && parent.closest('[class*="clanTag_"],[class*="botTag_"]')) continue;
       nodes.push(node);
     }}
@@ -822,6 +830,12 @@ mod tests {
     fn snapshot_and_apply_scripts_support_message_nicknames() {
         assert!(SNAPSHOT_SCRIPT.contains("[id^=\"message-username-\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("[class*=\"username_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"participantName_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains(
+            "[class*=\"pictureInPictureVideo_\"] [class*=\"headerTitle_\"] [class*=\"headerText_\"]"
+        ));
+        assert!(SNAPSHOT_SCRIPT.contains("[class*=\"voiceUser_\"] [class*=\"name_\"]"));
+        assert!(SNAPSHOT_SCRIPT.contains("[data-list-item-id^=\"members-\"] [class*=\"name_\"]"));
         assert!(SNAPSHOT_SCRIPT.contains("parts('nickname'"));
 
         let script = apply_script(&[DomChange {
@@ -851,6 +865,24 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("nameAndDecorators_"));
         assert!(SNAPSHOT_SCRIPT.contains("root.contains(candidate)"));
         assert!(SNAPSHOT_SCRIPT.contains("excludeNicknameDecorations"));
+        assert_eq!(
+            SNAPSHOT_SCRIPT
+                .matches("!excludeNicknameDecorations && parent.closest('[data-dto-nickname-id]')")
+                .count(),
+            1
+        );
+        assert_eq!(
+            RESTORE_TEXT_SCRIPT
+                .matches("!excludeNicknameDecorations && parent.closest('[data-dto-nickname-id]')")
+                .count(),
+            1
+        );
+        assert_eq!(
+            INSTALL_TEXT_RESTORE_SCRIPT
+                .matches("!excludeNicknameDecorations && parent.closest('[data-dto-nickname-id]')")
+                .count(),
+            1
+        );
     }
 
     #[test]
