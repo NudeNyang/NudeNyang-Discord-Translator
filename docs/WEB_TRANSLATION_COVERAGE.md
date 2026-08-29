@@ -119,8 +119,15 @@ npm run test:public
 3. **float 자식이 있는 inline 부모의 너비 0:** 데모 카탈로그 하단의 페이지 이동 링크를
    자동 검사가 `not_queued`로 발견했다. 도메인 없는 `li → float a`로 먼저 실패시킨 뒤
    같은 텍스트 범위 판단을 적용했다. 사이트 선택자는 추가하지 않았다.
+4. **읽기 전용 `contenteditable="false"`를 편집기로 오인:** X의 기사 카드는 일반적인
+   `role="link"`와 `dir="auto"`로 표시되지만, 상세 본문은 Draft.js가
+   `contenteditable="false"` 컨테이너 안의 여러 종류의 `data-block="true"` 요소로 만든다.
+   속성의 존재만 검사하던 공통 보호 규칙 때문에 상세 문단 전체가 제외됐다. 도메인 없는
+   공개 기사 fixture에서 수정 전 실패를 확인하고, 실제 편집 호스트와 그 자식은 계속
+   보호하면서 명시적인 읽기 전용 영역은 허용했다. 접힌 카드·동적 삽입·상세 화면을 함께
+   검사하며 게시물 ID나 생성 CSS 클래스 예외는 추가하지 않았다.
 
-세 재현 모두 실제 Chromium에서 수정 전 실패, 수정 후 통과를 확인했다. 진단 기능도
+앞의 세 재현은 모두 실제 Chromium에서 수정 전 실패, 수정 후 통과를 확인했다. 진단 기능도
 추가 전 테스트 실패를 확인했다. 공개 표본 검사는 처음 5개 통과/1개 실패였고 float 공통
 수정 뒤 6개 모두 통과했다. 사이트 예외 대신 최소 재현을 고정하는 흐름을 실제로 수행했다.
 
@@ -132,8 +139,8 @@ npm run test:public
 
 | 명령 | 결과 |
 | --- | --- |
-| `npm test` | 747개 통과: 웹 246, landing 37, 확장 455, 사전 9 |
-| `npm run test:e2e` | 전체 133개 통과, 실패·제외·재시도 0 |
+| `npm test` | 760개 통과: 웹 251, landing 37, 확장 463, 사전 9 |
+| `npm run test:e2e` | 전체 153개 통과, 실패·제외·재시도 0 |
 | `npm run test:public` | 6개 공개 표본, 각 4개 스크롤 지점 검사 통과 |
 | `cargo test --manifest-path src-tauri/Cargo.toml live_local_model_completes_br_separated_public_prose -- --ignored --nocapture` | 실제 Hy-MT2 문단 검사 1개 통과, 외부 공급자 없음 |
 | `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` | 통과 |

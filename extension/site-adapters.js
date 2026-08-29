@@ -3,7 +3,10 @@
   const PROTECTED_EXCLUDES = [
     "script", "style", "noscript", "svg", "canvas", "iframe",
     "input", "textarea", "select", "option", "[role='textbox']",
-    "pre", "code", "kbd", "samp", "[contenteditable]",
+    // contenteditable="false" is a read-only island used by article viewers
+    // such as Draft.js. Only actual editable hosts and inherited edit scopes
+    // are protected from collection.
+    "pre", "code", "kbd", "samp", "[contenteditable]:not([contenteditable='false' i])",
     "[hidden]", "[inert]", "[aria-hidden='true']",
     "[translate='no']", ".notranslate", "[data-nudenyang-ignore]",
     "[data-price]", "[itemprop='price']",
@@ -84,7 +87,7 @@
     "[data-testid='twitterArticleReadView'] .longform-unordered-list-item-narrow",
     "[data-testid='twitterArticleReadView'] .longform-ordered-list-item",
     "[data-testid='twitterArticleReadView'] .longform-ordered-list-item-narrow",
-    "[data-testid='twitterArticleReadView'] section[data-block='true']",
+    "[data-testid='twitterArticleReadView'] [data-block='true']",
   ];
 
   const DOCUMENT_BLOCKS = [

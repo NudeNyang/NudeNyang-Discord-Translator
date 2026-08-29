@@ -636,7 +636,7 @@ test("X 기사 카드와 긴 형식 기사 본문을 번역 대상으로 포함�
   const articleTitle =
     "[data-testid='twitterArticleReadView'] [data-testid='twitter-article-title']";
   const articleParagraph =
-    "[data-testid='twitterArticleReadView'] section[data-block='true']";
+    "[data-testid='twitterArticleReadView'] [data-block='true']";
 
   assert.ok(x.blocks.includes(articleCard));
   assert.ok(x.blocks.includes(semanticArticleCard));
@@ -646,7 +646,32 @@ test("X 기사 카드와 긴 형식 기사 본문을 번역 대상으로 포함�
   assert.ok(x.exclusionBypassBlocks.includes(semanticArticleCard));
   assert.ok(x.exclusionBypassBlocks.includes(articleTitle));
   assert.ok(x.exclusionBypassBlocks.includes(articleParagraph));
+  assert.ok(!x.blocks.some((selector) => selector.includes("section[data-block")));
   assert.ok(!x.blocks.some((selector) => selector.includes("markdown-code-block")));
+});
+
+test("X의 접힌 기사 카드와 읽기 화면은 생성 클래스 없이 본문만 수집한다", () => {
+  const url = "https://x.com/reviewer/status/123";
+  const dom = new JSDOM(`<main><article role="button">
+    <div role="link" tabindex="0">
+      <div data-testid="UserName"><span>Protected author name</span><span>@protected</span></div>
+      <div data-testid="tweetText" dir="auto">Public post introduction.</div>
+      <div><div dir="auto">Public article preview title.</div>
+      <div dir="auto">Public article preview summary.</div></div>
+    </div></article>
+    <article role="article" data-testid="twitterArticleReadView">
+      <div data-testid="twitter-article-title" dir="auto">Public article full title.</div>
+      <div contenteditable="false" data-testid="longformRichTextComponent">
+        <div data-block="true"><span>Public article paragraph.</span></div>
+        <h2 data-block="true"><span>Public article section.</span></h2>
+      </div>
+    </article></main>`, { url });
+  try {
+    assert.deepEqual(collectPublicTexts(dom.window.document, adapterForLocation(new URL(url))), [
+      "Public article full title.", "Public article paragraph.", "Public article preview summary.",
+      "Public article preview title.", "Public article section.", "Public post introduction.",
+    ].sort());
+  } finally { dom.window.close(); }
 });
 
 test("BOOTH Tailwind order 레이아웃 클래스는 주문 영역으로 오인하지 않는다", () => {

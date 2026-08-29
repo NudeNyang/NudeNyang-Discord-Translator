@@ -1537,6 +1537,40 @@ test("범용 공개 UI: 게시물 팝업과 분류 링크를 보호 영역 없�
   assert.equal(doc.querySelector("#caption").textContent, "A public post captionAnother caption line");
 });
 
+test("contenteditable=false 읽기 문서는 편집기로 오인하지 않고 실제 편집 내용만 보호한다", async (t) => {
+  const p = page(t, `<main><article>
+    <div contenteditable="false"><div data-block="true" id="readonly-copy">Read-only article paragraph.</div></div>
+    <div contenteditable="true"><p id="editable-copy">Unsent editable draft.</p></div>
+  </article></main>`, { url: PUBLIC_DOCUMENT_URL });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.w.document.getElementById("readonly-copy").textContent.startsWith("번역("),
+    "read-only contenteditable=false prose should translate");
+  assert.deepEqual(p.sent(), ["Read-only article paragraph."]);
+  assert.equal(p.w.document.getElementById("editable-copy").textContent, "Unsent editable draft.");
+});
+
+test("나중에 붙는 접힌 기사 카드와 읽기 본문도 같은 페이지에서 이어서 번역한다", async (t) => {
+  const p = page(t, `<main><article role="button"><div data-testid="tweetText" id="post-copy">Public post introduction.</div>
+    </article></main>`, { url: "https://x.com/reviewer/status/123" });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.w.document.getElementById("post-copy").textContent.startsWith("번역("),
+    "initial public post should translate");
+  p.w.document.querySelector("main").insertAdjacentHTML("beforeend", `<article role="button">
+    <div role="link"><div dir="auto" id="late-preview-title">Late article preview title.</div>
+    <div dir="auto" id="late-preview-summary">Late article preview summary.</div></div></article>
+    <article role="article" data-testid="twitterArticleReadView">
+      <div data-testid="twitter-article-title" id="late-full-title">Late full article title.</div>
+      <div contenteditable="false"><div data-block="true" id="late-full-copy">Late full article paragraph.</div></div>
+    </article>`);
+  await waitFor(() => ["late-preview-title", "late-preview-summary", "late-full-title", "late-full-copy"]
+    .every((id) => p.w.document.getElementById(id).textContent.startsWith("번역(")),
+  "late preview and reader blocks should translate");
+  assert.deepEqual(p.sent().sort(), [
+    "Late article preview summary.", "Late article preview title.", "Late full article paragraph.",
+    "Late full article title.", "Public post introduction.",
+  ].sort());
+});
+
 test("범용 공개 UI: 링크 판별도 숨긴·편집·작성자 자식을 읽지 않는다", async (t) => {
   const p = page(t, `<nav><a id="mixed" href="/guide"><span id="copy">Public guide</span>
     <span id="hidden" hidden>Secret hidden</span><span id="editor" contenteditable>Secret draft</span>

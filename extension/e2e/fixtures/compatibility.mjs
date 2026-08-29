@@ -54,7 +54,8 @@ export const PUBLIC_CASES = [
       <div role="dialog"><article><div data-testid="UserName" id="photo-nickname">Synthetic Photo Author</div>
       <div data-testid="tweetText" id="photo-copy">A public photo caption.</div></article>
       <div data-testid="twitterArticleReadView"><h2 data-testid="twitter-article-title" id="long-title">A long article title</h2>
-      <section data-block="true" id="long-copy">A long article paragraph.</section></div>
+      <div contenteditable="false" data-testid="longformRichTextComponent">
+      <div data-block="true" id="long-copy">A long article paragraph.</div></div></div>
       <p id="dialog-copy">An unrelated dialog message.</p>
       <div data-testid="tweetTextarea_0" contenteditable="true" id="x-composer">An unsent post.</div></div>`,
     copies: [["#preview-title", "A public article preview"], ["#biography", "A public profile description."],
