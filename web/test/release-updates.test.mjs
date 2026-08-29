@@ -79,7 +79,7 @@ test('서명 파일 안의 신뢰 주석도 변조하면 검증에 실패한다'
   assert.throws(() => f.helper.verifyUpdaterSignature(readFileSync(join(f.directory, name)), changed, f.options.pubkey));
 });
 
-for (const scenario of ['success', 'missing-arm', 'upload-digest-mismatch', 'publish-failed', 'draft-source-mismatch', 'draft-already-public', 'draft-missing']) {
+for (const scenario of ['success', 'eventual-consistency', 'existing-draft-resume', 'missing-arm', 'upload-digest-mismatch', 'publish-failed', 'draft-source-mismatch', 'draft-already-public', 'draft-missing']) {
   test(`실제 PowerShell 배포 흐름: ${scenario}`, { skip: process.platform !== 'win32' }, async (t) => {
     const f = await fixture(t);
     const root = join(f.directory, 'project');
@@ -100,10 +100,11 @@ for (const scenario of ['success', 'missing-arm', 'upload-digest-mismatch', 'pub
     git('add', '.');
     git('-c', 'user.name=Release Test', '-c', 'user.email=release@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-m', 'Synthetic fixture');
     const commit = git('rev-parse', 'HEAD');
+    let mainCommit = commit;
     const directory = join(root, 'release', f.options.version);
     for (const name of Object.values(f.names).flatMap(name => [name, `${name}.sig`])) copyFileSync(join(f.directory, name), join(directory, name));
     const result = f.helper.generateRelease({ ...f.options, directory, commit, notes: '한글 릴리스 안내' });
-    const remote = { id: 12345, tag_name: `v${f.options.version}`, target_commitish: commit, draft: true, prerelease: true, assets: result.artifacts.map(a => ({ ...a, state: 'uploaded', digest: `sha256:${a.sha256}` })) };
+    const remote = { id: 12345, tag_name: `v${f.options.version}`, target_commitish: commit, draft: true, prerelease: true, body: '한글 릴리스 안내', assets: result.artifacts.map(a => ({ ...a, state: 'uploaded', digest: `sha256:${a.sha256}` })) };
     if (scenario === 'draft-source-mismatch') remote.target_commitish = 'b'.repeat(40);
     if (scenario === 'draft-already-public') remote.draft = false;
     if (scenario === 'missing-arm') unlinkSync(join(directory, f.names['windows-aarch64']));
@@ -111,22 +112,35 @@ for (const scenario of ['success', 'missing-arm', 'upload-digest-mismatch', 'pub
     const remotePath = join(f.directory, 'remote.json');
     const logPath = join(f.directory, 'gh-calls.jsonl');
     writeFileSync(remotePath, JSON.stringify(remote));
+    if (scenario === 'existing-draft-resume') {
+      const deployPath = join(root, 'scripts/deploy_github_release.ps1');
+      writeFileSync(deployPath, `${readFileSync(deployPath, 'utf8')}\n# Resume fix committed after packaging.\n`);
+      git('add', 'scripts/deploy_github_release.ps1');
+      git('-c', 'user.name=Release Test', '-c', 'user.email=release@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-m', 'Resume deployment');
+      mainCommit = git('rev-parse', 'HEAD');
+    }
     const quote = value => `'${value.replaceAll("'", "''")}'`;
     const harness = `
 $ErrorActionPreference = 'Stop'
 $script:published = $false
+$script:created = $false
+$script:draftListCalls = 0
 function gh {
   [IO.File]::AppendAllText(${quote(logPath)}, (ConvertTo-Json -InputObject @($args) -Compress) + [Environment]::NewLine)
   $global:LASTEXITCODE = 0
-  if ($args[0] -eq 'api' -and $args[1] -like '*/commits/main') { return '${commit}' }
-  if ($args[0] -eq 'release' -and $args[1] -eq 'list') { return '[]' }
-  if ($args[0] -eq 'release' -and $args[1] -eq 'create') { return }
+  if ($args[0] -eq 'api' -and $args[1] -like '*/commits/main') { return '${mainCommit}' }
+  if ($args[0] -eq 'release' -and $args[1] -eq 'list') {
+    ${scenario === 'existing-draft-resume' ? `return '[{"tagName":"v${f.options.version}"}]'` : "return '[]'"}
+  }
+  if ($args[0] -eq 'release' -and $args[1] -eq 'create') { $script:created = $true; return }
   if ($args[0] -eq 'release' -and $args[1] -eq 'edit') {
     ${scenario === 'publish-failed' ? '$global:LASTEXITCODE = 1' : '$script:published = $true'}
     return
   }
   if ($args[0] -eq 'api' -and $args[1] -like '*/releases?per_page=100') {
-    ${scenario === 'draft-missing' ? "return '[]'" : `return '[' + [IO.File]::ReadAllText(${quote(remotePath)}) + ']'`}
+    $script:draftListCalls++
+    ${scenario === 'draft-missing' ? "return '[]'" : scenario === 'eventual-consistency' ? "if ($script:draftListCalls -lt 3) { return '[]' }" : ''}
+    return '[' + [IO.File]::ReadAllText(${quote(remotePath)}) + ']'
   }
   if ($args[0] -eq 'api' -and $args[1] -like '*/releases/tags/*' -and -not $script:published) {
     $global:LASTEXITCODE = 1
@@ -139,16 +153,20 @@ function gh {
   }
   throw 'Unexpected gh invocation'
 }
-& ${quote(join(root, 'scripts/deploy_github_release.ps1'))}
+& ${quote(join(root, 'scripts/deploy_github_release.ps1'))} ${scenario === 'existing-draft-resume' ? `-SourceCommit '${commit}'` : ''}
 `;
     const run = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(harness, 'utf16le').toString('base64')], { encoding: 'utf8', timeout: 30_000 });
     const calls = existsSync(logPath) ? readFileSync(logPath, 'utf8').trim().split(/\r?\n/).map(JSON.parse) : [];
     const create = calls.find(args => args[0] === 'release' && args[1] === 'create');
     const publish = calls.find(args => args[0] === 'release' && args[1] === 'edit');
-    if (scenario === 'success') {
+    if (['success', 'eventual-consistency', 'existing-draft-resume'].includes(scenario)) {
       assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
-      for (const flag of ['--draft', '--prerelease', '--latest=false']) assert.ok(create.includes(flag));
-      assert.equal(create.filter(arg => arg.startsWith(directory)).length, 6);
+      if (scenario === 'existing-draft-resume') {
+        assert.equal(create, undefined, 'existing verified draft must not be recreated or overwritten');
+      } else {
+        for (const flag of ['--draft', '--prerelease', '--latest=false']) assert.ok(create.includes(flag));
+        assert.equal(create.filter(arg => arg.startsWith(directory)).length, 6);
+      }
       assert.ok(publish.includes('--draft=false') && publish.includes('--prerelease') && publish.includes('--latest=false'));
       assert.equal(readFileSync(trackedManifest, 'utf8'), readFileSync(join(directory, 'latest.json'), 'utf8'));
     } else {
