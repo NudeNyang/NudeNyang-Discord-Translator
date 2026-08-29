@@ -2,7 +2,7 @@
 
 `extension/`은 NudeNyang Windows 앱을 번역 엔진으로 사용하는 Manifest V3 확장이다. Chrome, Naver Whale과 Firefox가 번역·팝업·사이트 어댑터 소스를 공유하며, 별도 모델이나 외부 번역 서버를 띄우지 않는다. Chromium은 `manifest.json`, Firefox는 `manifest.firefox.json`을 사용한다.
 
-현재 소스의 확장 버전은 `0.7.11`, 호환 본체 버전은 `0.7.4-beta`다. 0.7.11 제출 자료와 패키지는 [제출 자료](BROWSER_STORE_SUBMISSION_0.7.11.md)에 정리한다. 본체 설치형과 개인정보 처리방침이 실제 공개되고 기능 정책 5를 확인한 뒤 스토어에 제출한다. 친구 공유·재제출용 `0.7.10`은 저장된 0.7.9 소스로 별도 패키징하며 현재 개발 변경을 포함하지 않는다. 두 버전의 구분은 [버전 분리 기록](BROWSER_EXTENSION_VERSION_SPLIT.md)을 따른다. 각 스토어의 심사·공개 상태는 별개이며 이전 제출 기록은 `BROWSER_STORE_SUBMISSION_0.7.9.md`에 보존한다.
+현재 소스의 확장 버전은 `0.7.11`, 호환 본체 버전은 공개된 `0.7.4-beta`다. 0.7.11 제출 자료와 패키지는 [제출 자료](BROWSER_STORE_SUBMISSION_0.7.11.md)에 정리한다. 친구 공유·재제출용 `0.7.10`은 저장된 0.7.9 소스로 별도 패키징하며 현재 개발 변경을 포함하지 않는다. 두 버전의 구분은 [버전 분리 기록](BROWSER_EXTENSION_VERSION_SPLIT.md)을 따른다. 각 스토어의 심사·공개 상태는 별개이며 이전 제출 기록은 `BROWSER_STORE_SUBMISSION_0.7.9.md`에 보존한다.
 
 ### 확장 단독 설치와 연결 복구 (0.7.9)
 
@@ -18,7 +18,7 @@
 
 ## 동작 구조
 
-미공개 0.7.11의 F4·팝업 토글은 [전체 ON/OFF 정책](WEB_TRANSLATION_GLOBAL_SWITCH.md)을 따른다.
+0.7.11의 F4·팝업 토글은 [전체 ON/OFF 정책](WEB_TRANSLATION_GLOBAL_SWITCH.md)을 따른다.
 새 탭에도 같은 상태를 유지하며 최초 전체 범위 동의 전에는 자동으로 켜지지 않는다.
 
 공개 페이지의 단계별 누락 사유, 독립 검사, 구조 자동 생성과 공개 표본 검사 방법은

@@ -6,14 +6,12 @@
 - Add-on ID: `web-translator@nudenyang.github.io`
 - Add-on version: `0.7.11`
 - Platform: Firefox desktop 142+ on Windows 10/11
-- Companion: a matching NudeNyang Windows release that reports `messengerPolicyVersion: 5`
-- Companion download: `https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases`
+- Companion: NudeNyang Windows 0.7.4-beta, which reports `messengerPolicyVersion: 5`
+- Companion download: `https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.4-beta`
 
-This local package is a submission draft. Do not request review until the public companion offers
-the v5 capability and the public privacy-policy URL matches the bundled `PRIVACY.md`. The currently
-published 0.7.3-beta update feed still describes the older v2 local-only messenger policy. Reusing
-the same application version label does not make that binary compatible; publish an incremented
-companion build first.
+The matching companion, both Windows architectures, updater signatures and consent-v5 privacy policy
+were published on 2026-08-29. The add-on still requires the companion to report the v5 capability at
+runtime; an older companion cannot enable private reading.
 
 ## Purpose and user flow
 

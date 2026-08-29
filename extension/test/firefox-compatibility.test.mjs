@@ -73,8 +73,10 @@ test("브라우저 심사 고지는 전체 탭 상태·메일 범위와 주소 �
   assert.match(reviewerNotes, /consent v5/i);
   assert.match(reviewerNotes, /Gmail and Outlook/i);
   assert.doesNotMatch(reviewerNotes, /local-only translation path/i);
-  assert.match(submissionNotes, /공개 본체 0\.7\.4-beta 이상/);
+  assert.match(submissionNotes, /공개 본체 0\.7\.4-beta/);
   assert.match(submissionNotes, /공개 개인정보 처리방침/);
+  assert.match(submissionNotes, /\[x\] 공개 본체 0\.7\.4-beta/);
+  assert.doesNotMatch(reviewerNotes, /Do not request review until/i);
 });
 
 test("공용 스크립트는 Firefox API와 Firefox 클라이언트 식별을 지원한다", () => {

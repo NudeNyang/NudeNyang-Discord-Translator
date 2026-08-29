@@ -1,22 +1,22 @@
 # NudeNyang Web Translator 0.7.11 제출 자료
 
 이 문서는 Chrome·Naver Whale·Firefox용 0.7.11 제출 파일과 스토어 입력 문구를 한곳에
-정리한다. 패키지는 로컬에서 만들 수 있지만, 아래 공개 조건이 충족되기 전에는 업로드하지 않는다.
+정리한다. 공개 선행 조건은 2026-08-29에 충족했으며, 아래 파일을 다시 패키징하고 검증한 뒤
+각 스토어에 제출한다.
 
-## 제출 전 차단 조건
+## 공개 선행 조건 확인
 
-- **공개 본체 0.7.4-beta 이상**: `messengerPolicyVersion: 5`를 포함한 x64·ARM64 설치형과
-  업데이트 서명·체크섬을 공개한다. 현재 공개 0.7.3-beta는 동의 v2 로컬 전용 정책이므로
-  같은 버전 이름의 로컬 실행 파일로 바꾸어 해석하지 않는다.
-- **공개 개인정보 처리방침**: 저장소의 현재 `PRIVACY.md`를 공개 URL에 반영한다. 2026-08-29
-  확인한 공개 문서는 개인 대화 제외·동의 v2 정책이어서 0.7.11과 맞지 않는다.
-- 공개 업데이트 목록이 새 본체의 두 아키텍처를 가리키는지 확인한다. 파일 공개 전에는 목록을
-  먼저 갱신하지 않는다.
-- 새 본체 설치 후 Chrome·Whale·Firefox에서 연결과 동의 v5 승격을 확인한다. Outlook은
-  합성 검사만 수행한 사실을 심사 자료에서 유지한다.
+- **공개 본체 0.7.4-beta**: `messengerPolicyVersion: 5`를 포함한 x64·ARM64 설치형과 업데이트
+  서명·체크섬을 [GitHub 프리릴리스](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.4-beta)에 공개했다.
+- **공개 개인정보 처리방침**: 저장소의 현재 `PRIVACY.md`가 공개 `main`에 반영되어 있으며
+  동의 v5, 선택한 외부 공급자, 암호화 캐시와 열린 메일 범위를 설명한다.
+- 공개 업데이트 목록은 0.7.4-beta의 x64·ARM64 설치형을 가리키며 두 URL의 HTTP 200 응답과
+  원격 파일 크기를 확인했다. 릴리스 파일 공개 뒤에 목록을 갱신했다.
+- Outlook은 합성 검사만 수행한 사실을 심사 자료에 유지한다. 실제 스토어 설치본의 세 브라우저
+  연결과 동의 흐름은 제출 전·심사 중 수동 확인 항목으로 남긴다.
 
-이 작업은 위 본체 릴리스·정책 공개·스토어 업로드를 수행하지 않는다. 따라서 산출물 폴더명도
-`0.7.11-submission-draft`로 두며, 조건 충족 후 체크섬을 다시 생성한다.
+최종 산출물은 `release/browser-extension/0.7.11-submission`에 둔다. 스토어 업로드와 심사
+완료는 이 로컬 패키징과 별개다.
 
 ## 패키지
 
@@ -78,7 +78,7 @@ Privacy policy: https://github.com/NudeNyang/NudeNyang-Discord-Translator/blob/m
 - 판매·광고·신용 평가·분석·목적 외 이용: 없음.
 - 외부 전송: 같은 PC의 본체 Native Messaging 및 사용자가 명시적으로 선택한 번역 공급자.
 - 원격 코드: 없음.
-- 개인정보 처리방침 URL은 위 공개 조건을 충족한 뒤 등록한다.
+- 개인정보 처리방침 URL은 공개된 `PRIVACY.md`를 등록한다.
 
 권한 사유:
 
@@ -107,13 +107,13 @@ Build from source: npm ci; npm run extension:locales; powershell -NoProfile -Exe
 
 ## 최종 체크
 
-- [ ] 공개 본체 0.7.4-beta 이상과 x64·ARM64 파일·서명·체크섬 확인
-- [ ] 공개 `PRIVACY.md`가 로컬 정책과 일치
+- [x] 공개 본체 0.7.4-beta와 x64·ARM64 파일·서명·체크섬 확인
+- [x] 공개 `PRIVACY.md`가 로컬 정책과 일치
 - [ ] 새 본체 설치 환경에서 세 브라우저 연결·일반 번역·동의 v5 확인
-- [ ] Chrome 개인정보 항목과 상세 설명이 서로 모순되지 않음
-- [ ] Firefox XPI·소스 ZIP 재현 및 `web-ext` 경고 0
-- [ ] 실제 제출 직전 패키지 체크섬 재확인
-- [ ] 심사 자료에 Outlook 실사용 미검증을 유지
+- [x] Chrome 개인정보 항목과 상세 설명이 서로 모순되지 않음
+- [x] Firefox XPI·소스 ZIP 재현 및 `web-ext` 경고 0
+- [x] 실제 제출용 패키지 체크섬 재확인
+- [x] 심사 자료에 Outlook 실사용 미검증을 유지
 
 ## 로컬 준비 검증 (2026-08-29)
 
@@ -123,11 +123,11 @@ Build from source: npm ci; npm run extension:locales; powershell -NoProfile -Exe
 - `cargo test --manifest-path src-tauri/Cargo.toml`: 446개 통과, 기존 선택 실행 46개 ignored.
 - `npm run test:locales`: UI 원문 653개와 28개 언어 검사 통과.
 - Firefox 소스 ZIP을 새 폴더에서 `npm ci` 후 재빌드해 확장 테스트 460개를 통과했고,
-  Chromium 67개·Firefox 68개 런타임 항목이 제출 초안과 바이트 단위로 일치함.
+  Chromium 67개·Firefox 68개 런타임 항목이 제출 패키지와 바이트 단위로 일치함.
 - `web-ext@10.6.0 lint --warnings-as-errors`: 오류·알림·경고 0.
 
 최종 SHA-256은 산출물 폴더의 `SHA256SUMS.txt`에 기록한다. 소스 ZIP 자체에 자신의
 체크섬을 넣지 않아 재패키징 때 자기 참조로 체크섬이 계속 바뀌는 일을 피한다.
 
 자동 검사는 실제 로그인 메신저 전체, Outlook 실사용, Firefox·Whale 실브라우저, 외부 공급자
-계정과 스토어 심사를 대신하지 않는다. 위 차단 조건도 로컬 검증으로 해소되지 않는다.
+계정과 스토어 심사를 대신하지 않는다. 따라서 남은 수동 확인 결과를 심사 범위보다 넓게 표현하지 않는다.

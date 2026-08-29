@@ -1,11 +1,11 @@
 # Browser store privacy declarations
 
-This document contains submission-draft privacy answers for NudeNyang Web Translator 0.7.11 with Windows companion
+This document contains submission privacy answers for NudeNyang Web Translator 0.7.11 with Windows companion
 0.7.4-beta, including optional private reading for supported messengers and opened mail. The public policy source is `PRIVACY.md`.
 
 ## Submission readiness
 
-This is the consent-v5 policy implemented by the 0.7.11 source. Do not submit the old v2 local-only listing or infer support from unchanged app/extension version numbers. The submission remains blocked until matching public companion installers and the public privacy-policy URL describe this policy, capability `messengerPolicyVersion: 5` is verified, and consent migration is tested. Preparing local packages does not satisfy those publication prerequisites.
+This is the consent-v5 policy implemented by the 0.7.11 source. Do not submit the old v2 local-only listing or infer support from an older app/extension version. The matching 0.7.4-beta companion installers, update metadata and public privacy policy were published on 2026-08-29. Runtime capability `messengerPolicyVersion: 5` and consent migration remain enforced and tested rather than inferred from version text.
 
 Fixture E2E is not validation of all eight logged-in services. Store approval is not guaranteed. See `MESSENGER_SHARED_POLICY.md` for the implementation and remaining review checks.
 
@@ -67,7 +67,7 @@ or automatically removing all such information from messages.
 
 After consent in the current browser profile, messengers follow the common web switch, all-tab control and site policy. There is no separate messenger enable switch or separate external-provider/storage toggle. Refusing consent does not prevent ordinary webpage translation. Firefox additionally requires optional `personalCommunications` permission; refusal, cancellation or revocation blocks the private path.
 
-Consent v5 discloses the app's selected translator and shared retention/deletion policy. Earlier web v1 and messenger v1/v2/v3/v4 consent is never upgraded automatically. The extension also requires companion capability `messengerPolicyVersion: 5`. The currently published companion and public privacy text do not yet establish that capability; publish matching prerequisites before submitting this extension.
+Consent v5 discloses the app's selected translator and shared retention/deletion policy. Earlier web v1 and messenger v1/v2/v3/v4 consent is never upgraded automatically. The extension also requires companion capability `messengerPolicyVersion: 5`; the public 0.7.4-beta companion provides that capability, while an older companion remains blocked.
 
 Supported surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams and Google Messages, plus the subject and visible body of the currently opened Gmail and Outlook message. Only a safely identified open conversation or reading pane is read: visible message bodies and link-preview text, plus visible channel names in the current Discord server. Mail lists, sender/recipient UI, drafts and attachment contents are excluded. The extension does not open other conversations or messages, retrieve hidden history, attachments or linked pages, or translate authors, handles, contact lists, profiles, composers, drafts, send controls or code. Sensitive information present in permitted bodies is not automatically redacted. Generic account, payment, unsupported-mail and unsupported-messenger blocks remain.
 
