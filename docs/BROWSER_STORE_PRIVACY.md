@@ -1,7 +1,7 @@
 # Browser store privacy declarations
 
 This document contains submission-draft privacy answers for NudeNyang Web Translator 0.7.11 with Windows companion
-0.7.3-beta, including optional web-messenger reading. The public policy source is `PRIVACY.md`.
+0.7.4-beta, including optional private reading for supported messengers and opened mail. The public policy source is `PRIVACY.md`.
 
 ## Submission readiness
 

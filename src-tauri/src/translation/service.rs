@@ -45,6 +45,14 @@ enum BestEffortChunkPolicy {
     PreserveSuccessfulChunks,
 }
 
+#[derive(Clone, Copy)]
+struct ContextRetryPolicy<'a> {
+    source_hint: Option<Language>,
+    target: Language,
+    allowed_sources: Option<&'a HashSet<Language>>,
+    chunk_policy: BestEffortChunkPolicy,
+}
+
 fn yield_between_web_inferences() {
     #[cfg(not(test))]
     std::thread::sleep(std::time::Duration::from_millis(WEB_INFERENCE_YIELD_MS));
@@ -1009,10 +1017,12 @@ impl TranslationService {
                     &unit.members,
                     lines,
                     texts,
-                    unit.hint,
-                    target,
-                    allowed_sources,
-                    chunk_policy,
+                    ContextRetryPolicy {
+                        source_hint: unit.hint,
+                        target,
+                        allowed_sources,
+                        chunk_policy,
+                    },
                 )?;
                 for (index, line) in unit.members.into_iter().zip(lines) {
                     output[index] = Some(line);
@@ -1043,10 +1053,12 @@ impl TranslationService {
                     &unit.members,
                     reconciled,
                     texts,
-                    unit.hint,
-                    target,
-                    allowed_sources,
-                    chunk_policy,
+                    ContextRetryPolicy {
+                        source_hint: unit.hint,
+                        target,
+                        allowed_sources,
+                        chunk_policy,
+                    },
                 )?;
                 for (index, line) in unit.members.into_iter().zip(reconciled) {
                     output[index] = Some(line);
@@ -1112,12 +1124,12 @@ impl TranslationService {
         members: &[usize],
         mut translated_parts: Vec<String>,
         texts: &[String],
-        source_hint: Option<Language>,
-        target: Language,
-        allowed_sources: Option<&HashSet<Language>>,
-        chunk_policy: BestEffortChunkPolicy,
+        policy: ContextRetryPolicy<'_>,
     ) -> Result<Vec<String>, String> {
-        let Some(source) = source_hint.filter(|source| *source != Language::Unknown) else {
+        let Some(source) = policy
+            .source_hint
+            .filter(|source| *source != Language::Unknown)
+        else {
             return Ok(translated_parts);
         };
         let incomplete = members
@@ -1128,7 +1140,7 @@ impl TranslationService {
                     &texts[*text_index],
                     &translated_parts[part_index],
                     source,
-                    target,
+                    policy.target,
                 ))
                 .then_some((part_index, *text_index))
             })
@@ -1144,7 +1156,7 @@ impl TranslationService {
                 members.len(),
                 incomplete.len(),
                 source.code(),
-                target.code(),
+                policy.target.code(),
             ),
         );
         let retry_texts = incomplete
@@ -1156,16 +1168,16 @@ impl TranslationService {
             self.translate_many_best_effort_with_chunk_policy(
                 &retry_texts,
                 &retry_hints,
-                target,
-                allowed_sources,
-                chunk_policy,
+                policy.target,
+                policy.allowed_sources,
+                policy.chunk_policy,
             )
         } else {
             self.translate_many_with_source_hints(
                 &retry_texts,
                 &retry_hints,
-                target,
-                allowed_sources,
+                policy.target,
+                policy.allowed_sources,
             )?
         };
         for ((part_index, _), translated) in incomplete.into_iter().zip(retried) {
