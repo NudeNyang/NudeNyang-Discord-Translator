@@ -110,8 +110,10 @@ for (const scenario of ['success', 'eventual-consistency', 'existing-draft-resum
     if (scenario === 'missing-arm') unlinkSync(join(directory, f.names['windows-aarch64']));
     if (scenario === 'upload-digest-mismatch') remote.assets[0].digest = `sha256:${'0'.repeat(64)}`;
     const remotePath = join(f.directory, 'remote.json');
+    const olderRemotePath = join(f.directory, 'older-remote.json');
     const logPath = join(f.directory, 'gh-calls.jsonl');
     writeFileSync(remotePath, JSON.stringify(remote));
+    writeFileSync(olderRemotePath, JSON.stringify({ ...remote, id: 12344, tag_name: 'v0.7.2-beta', target_commitish: 'c'.repeat(40), draft: false }));
     if (scenario === 'existing-draft-resume') {
       const deployPath = join(root, 'scripts/deploy_github_release.ps1');
       writeFileSync(deployPath, `${readFileSync(deployPath, 'utf8')}\n# Resume fix committed after packaging.\n`);
@@ -140,7 +142,7 @@ function gh {
   if ($args[0] -eq 'api' -and $args[1] -like '*/releases?per_page=100') {
     $script:draftListCalls++
     ${scenario === 'draft-missing' ? "return '[]'" : scenario === 'eventual-consistency' ? "if ($script:draftListCalls -lt 3) { return '[]' }" : ''}
-    return '[' + [IO.File]::ReadAllText(${quote(remotePath)}) + ']'
+    return '[' + [IO.File]::ReadAllText(${quote(remotePath)}) + ',' + [IO.File]::ReadAllText(${quote(olderRemotePath)}) + ']'
   }
   if ($args[0] -eq 'api' -and $args[1] -like '*/releases/tags/*' -and -not $script:published) {
     $global:LASTEXITCODE = 1

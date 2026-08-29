@@ -42,7 +42,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw '릴리스 소스 커밋을 먼저 원격 main에 푸시하십시오.' }
     $ExistingJson = gh release list --repo $Repository --limit 1000 --json tagName
     if ($LASTEXITCODE -ne 0) { throw '기존 릴리스 목록을 확인하지 못했습니다.' }
-    $ExistingTags = @($ExistingJson | ConvertFrom-Json | Where-Object { $_.tagName -eq "v$Version" })
+    $ExistingReleases = $ExistingJson | ConvertFrom-Json
+    $ExistingTags = @($ExistingReleases | Where-Object { $_.tagName -eq "v$Version" })
     if ($ExistingTags.Count -gt 1) { throw '동일 버전의 릴리스가 둘 이상 있습니다.' }
 
     $Artifacts = @($Validation.artifacts | ForEach-Object { Join-Path $ReleaseDirectory $_.name })
@@ -58,7 +59,8 @@ try {
         for ($attempt = 0; $attempt -lt 8 -and $Drafts.Count -eq 0; $attempt++) {
             $DraftListJson = gh api "repos/$Repository/releases?per_page=100"
             if ($LASTEXITCODE -ne 0) { throw '업로드된 초안 목록을 확인하지 못했습니다.' }
-            $Drafts = @($DraftListJson | ConvertFrom-Json | Where-Object { $_.tag_name -eq "v$Version" })
+            $DraftList = $DraftListJson | ConvertFrom-Json
+            $Drafts = @($DraftList | Where-Object { $_.tag_name -eq "v$Version" })
             if ($Drafts.Count -eq 0 -and $attempt -lt 7) { Start-Sleep -Milliseconds 250 }
         }
     }
@@ -67,7 +69,8 @@ try {
         # only that exact draft; never overwrite a public or different-source release.
         $DraftListJson = gh api "repos/$Repository/releases?per_page=100"
         if ($LASTEXITCODE -ne 0) { throw '기존 릴리스 초안을 확인하지 못했습니다.' }
-        $Drafts = @($DraftListJson | ConvertFrom-Json | Where-Object { $_.tag_name -eq "v$Version" })
+        $DraftList = $DraftListJson | ConvertFrom-Json
+        $Drafts = @($DraftList | Where-Object { $_.tag_name -eq "v$Version" })
     }
     if ($Drafts.Count -ne 1 -or -not $Drafts[0].draft -or $Drafts[0].target_commitish -ne $SourceCommit -or ($Version.Contains('-') -and -not $Drafts[0].prerelease)) {
         throw '생성된 초안의 버전·소스 커밋·공개 상태가 예상과 다릅니다.'
