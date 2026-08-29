@@ -10,6 +10,7 @@ Firefox에서 이미 업로드 후 삭제된 0.7.9 번호를 다시 사용할 �
 | Firefox 직접 배포 서명 요청 | 0.7.10 | 보관한 0.7.9 | 같은 폴더의 `NudeNyang-Web-Translator-Firefox-0.7.10.xpi` |
 | Firefox 검토용 소스 | 0.7.10 | 위 XPI 재현 소스 | 같은 폴더의 `NudeNyang-Web-Translator-Firefox-0.7.10-source.zip` |
 | 개인용 개발 확장 | 0.7.11 | 현재 개발 소스 | `dist/chromium-personal-extension` |
+| 0.7.11 제출 초안 | 0.7.11 | 현재 개발 소스 | `release/browser-extension/0.7.11-submission-draft` |
 
 Chrome과 Whale은 동일한 Chromium ZIP을 제출한다. 기존 스토어 ID·Firefox Add-on ID와
 개인용 ID `bdkkgjjmocmdknffadjgbljmnhdcchjl`은 바꾸지 않는다. 기존 0.7.9 파일도 보존한다.
@@ -23,8 +24,9 @@ Chrome과 Whale은 동일한 Chromium ZIP을 제출한다. 기존 스토어 ID·
 암호화 캐시 정책이나 이후 DOM/F4 개선을 이 패키지에 섞지 않는다.
 본체의 제품 버전 문자열만으로 정책 호환성을 판단해서는 안 된다.
 
-현재 소스에서 일반 패키징 명령을 실행하면 개발용 0.7.11이 생성된다. **그 결과를
-공유용 0.7.10으로 이름만 바꾸어 제출하지 않는다.** 공유용 검토에는 해당 소스 ZIP에
+현재 소스에서 일반 패키징 명령을 실행하면 개발·제출 초안용 0.7.11이 생성된다. **그 결과를
+공유용 0.7.10으로 이름만 바꾸어 제출하지 않는다.** 0.7.11은 현재 본체·개인정보 정책과 함께
+별도 심사하며 [0.7.11 제출 자료](BROWSER_STORE_SUBMISSION_0.7.11.md)의 공개 선행 조건을 따른다. 공유용 검토에는 해당 소스 ZIP에
 포함된 개인정보 설명과 검토자 안내를 사용하며, 최신 개발 문서를 대신 첨부하지 않는다.
 
 원본은 `release/browser-extension`에 보관된 다음 파일이다. SHA-256:

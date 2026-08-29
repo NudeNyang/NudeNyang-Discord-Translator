@@ -45,6 +45,7 @@ Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'extension') | ForEach-Object
 }
 
 $ScriptFiles = @(
+    'extension-global-copy.mjs',
     'extension-setup-copy.mjs',
     'generate-extension-locales.mjs',
     'package_chromium_extension.ps1',
@@ -61,7 +62,7 @@ foreach ($File in $WebFiles) {
     Copy-Item -LiteralPath (Join-Path $ProjectRoot "web\$File") -Destination (Join-Path $ResolvedStaging 'web') -Force
 }
 
-$DocFiles = @('FIREFOX_AMO_REVIEW.md', 'BROWSER_EXTENSION.md', 'BROWSER_STORE_PRIVACY.md', 'BROWSER_STORE_SUBMISSION_0.7.8.md', 'BROWSER_STORE_SUBMISSION_0.7.9.md', 'BROWSER_SHORTCUT_RECOVERY.md')
+$DocFiles = @('FIREFOX_AMO_REVIEW.md', 'BROWSER_EXTENSION.md', 'BROWSER_STORE_PRIVACY.md', 'BROWSER_STORE_SUBMISSION_0.7.8.md', 'BROWSER_STORE_SUBMISSION_0.7.9.md', 'BROWSER_STORE_SUBMISSION_0.7.11.md', 'BROWSER_SHORTCUT_RECOVERY.md', 'WEB_READING_SCOPE.md', 'WEB_TRANSLATION_GLOBAL_SWITCH.md', 'MESSENGER_SHARED_POLICY.md')
 foreach ($File in $DocFiles) {
     Copy-Item -LiteralPath (Join-Path $ProjectRoot "docs\$File") -Destination (Join-Path $ResolvedStaging 'docs') -Force
 }

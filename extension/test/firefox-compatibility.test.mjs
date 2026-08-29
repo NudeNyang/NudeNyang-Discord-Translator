@@ -17,6 +17,14 @@ const storePrivacyNotes = fs.readFileSync(
   new URL("../../docs/BROWSER_STORE_PRIVACY.md", import.meta.url),
   "utf8",
 );
+const reviewerNotes = fs.readFileSync(
+  new URL("../../docs/FIREFOX_AMO_REVIEW.md", import.meta.url),
+  "utf8",
+);
+const submissionNotes = fs.readFileSync(
+  new URL("../../docs/BROWSER_STORE_SUBMISSION_0.7.11.md", import.meta.url),
+  "utf8",
+);
 
 test("Firefox Manifest V3는 고정 Add-on ID와 이벤트 백그라운드를 사용한다", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -58,6 +66,15 @@ test("브라우저 심사 고지는 전체 탭 상태·메일 범위와 주소 �
   assert.match(storePrivacyNotes, /browsingActivity/);
   assert.match(storePrivacyNotes, /Remote code:\s*No/i);
   assert.match(storePrivacyNotes, /Web history/i);
+  assert.match(storePrivacyNotes, /consent v5/i);
+  assert.match(storePrivacyNotes, /Gmail and Outlook/i);
+  assert.doesNotMatch(storePrivacyNotes, /stores v3 only/i);
+  assert.match(reviewerNotes, /Add-on version:\s*`0\.7\.11`/);
+  assert.match(reviewerNotes, /consent v5/i);
+  assert.match(reviewerNotes, /Gmail and Outlook/i);
+  assert.doesNotMatch(reviewerNotes, /local-only translation path/i);
+  assert.match(submissionNotes, /공개 본체 0\.7\.4-beta 이상/);
+  assert.match(submissionNotes, /공개 개인정보 처리방침/);
 });
 
 test("공용 스크립트는 Firefox API와 Firefox 클라이언트 식별을 지원한다", () => {
@@ -81,11 +98,11 @@ test("Firefox 패키지는 전용 매니페스트와 라이선스를 XPI 루트�
 
 test("AMO 공개 심사 패키지는 생성 코드 원본과 검토자 안내를 함께 제공한다", () => {
   const amoScript = fs.readFileSync(new URL("../../scripts/package_firefox_amo.ps1", import.meta.url), "utf8");
-  const reviewerNotes = fs.readFileSync(new URL("../../docs/FIREFOX_AMO_REVIEW.md", import.meta.url), "utf8");
 
   assert.match(amoScript, /\$BaseName-source\.zip/);
   assert.match(amoScript, /Get-ChildItem.+extension/);
   assert.match(amoScript, /generate-extension-locales\.mjs/);
+  assert.match(amoScript, /extension-global-copy\.mjs/);
   assert.match(amoScript, /package_personal_chromium_extension\.ps1/);
   assert.match(amoScript, /ui-locales\.mjs/);
   assert.match(amoScript, /FIREFOX_AMO_REVIEW\.md/);
@@ -94,6 +111,8 @@ test("AMO 공개 심사 패키지는 생성 코드 원본과 검토자 안내를
   assert.match(amoScript, /'THIRD_PARTY_NOTICES\.md'/);
   assert.match(amoScript, /'BROWSER_EXTENSION\.md'/);
   assert.match(amoScript, /'BROWSER_STORE_PRIVACY\.md'/);
+  assert.match(amoScript, /'BROWSER_STORE_SUBMISSION_0\.7\.11\.md'/);
+  assert.match(amoScript, /'WEB_READING_SCOPE\.md'/);
   assert.match(amoScript, /src-tauri[\\/]+src[\\/]+browser_bridge\.rs/);
   assert.doesNotMatch(amoScript, /Compress-Archive/);
   assert.match(amoScript, /\.Replace\('\\', '\/'\)/);
