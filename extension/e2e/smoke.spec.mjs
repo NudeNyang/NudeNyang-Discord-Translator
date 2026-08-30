@@ -12,7 +12,7 @@ test("통합 안내 한 번의 승인·철회로 웹과 메신저를 함께 관�
   await notice.screenshot({ path: testInfo.outputPath("unified-privacy.png"), fullPage: true });
   await notice.locator("#privacy-confirm").check();
   await notice.locator("#privacy-accept").click();
-  await expect(notice.locator("#privacy-accept")).toBeHidden();
+  await expect.poll(() => notice.isClosed()).toBe(true);
   await p.page.bringToFront();
   await expect(p.page.locator("#body")).toHaveText("번역(Unified consent public text)");
   const entry = MESSENGER_CASES.find(item => item.id === "discord");
@@ -27,9 +27,7 @@ test("통합 안내 한 번의 승인·철회로 웹과 메신저를 함께 관�
   await oldLink.locator("#privacy-revoke").click();
   await expect(p.page.locator("#body")).toHaveText("Unified consent public text");
   for (const [selector, source] of entry.copies) await expect(conversation.locator(selector)).toHaveText(source);
-  await expect(notice.locator("#privacy-accept")).toBeVisible();
-  await expect(notice.locator("#privacy-confirm")).not.toBeChecked();
-  await oldLink.close(); await notice.close(); await conversation.close();
+  await oldLink.close(); await conversation.close();
 });
 
 test("메신저 번역 대기 중 빠른 전체 OFF·ON은 이전 응답을 버리고 새 번역을 계속한다", async ({ extension }) => {
@@ -93,14 +91,16 @@ test("전체 번역은 이전 동의를 승격하지 않고 기존 개인정보 
   expect(await p.sent()).toEqual([]);
   await notice.locator("#privacy-confirm").check();
   await notice.locator("#privacy-accept").click();
-  await expect(notice.locator("#privacy-revoke")).toBeVisible();
+  await expect.poll(() => notice.isClosed()).toBe(true);
   await p.page.bringToFront();
   await expect(p.page.locator("#body")).toHaveText("번역(Consent protected public text)");
-  await notice.locator("#privacy-revoke").click();
+  const management = await extension.context.newPage();
+  await management.goto(`chrome-extension://${extension.extensionId}/messenger-privacy.html`);
+  await management.locator("#privacy-revoke").click();
   await expect(p.page.locator("#body")).toHaveText("Consent protected public text");
   await p.page.reload();
   await expect.poll(async () => (await p.status()).enabled).toBe(false);
-  await notice.close();
+  await management.close();
 });
 
 test("실제 팝업의 전체 OFF는 다른 탭의 지연 응답을 버리고 F4와 같은 상태를 쓴다", async ({ extension }) => {

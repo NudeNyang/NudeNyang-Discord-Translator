@@ -93,18 +93,31 @@
     const rawTab = params.get("tab");
     const tabId = Number(rawTab);
     const contextId = params.get("context") ?? "";
+    const handoffRequested = params.has("tab") || params.has("context");
+    if (!handoffRequested) return "not-requested";
     if (!/^\d+$/.test(rawTab ?? "") || !Number.isSafeInteger(tabId)
-      || !/^messenger:[a-z]+:[a-zA-Z0-9_-]{16,128}$/.test(contextId)) return;
+      || !/^messenger:[a-z]+:[a-zA-Z0-9_-]{16,128}$/.test(contextId)) return "failed";
     const response = await runtimeMessage({ type: "nudenyang-page-request", tabId,
       message: { type: "nudenyang-messenger-start", contextId } });
-    if (disposed || !response?.enabled || response.messengerContextId !== contextId) return;
+    if (disposed || !response?.enabled || response.messengerContextId !== contextId) return "failed";
     try {
-      if (isFirefox) await api.tabs.update(tabId, { active: true });
-      else api.tabs.update(tabId, { active: true }, () => { void api.runtime.lastError; });
-    } catch { /* The source tab may have closed; consent management remains usable. */ }
+      if (isFirefox) {
+        await api.tabs.update(tabId, { active: true });
+      } else {
+        const focused = await new Promise((resolve) => {
+          api.tabs.update(tabId, { active: true }, (tab) => resolve(api.runtime.lastError ? null : tab));
+        });
+        if (!focused) return "failed";
+      }
+      return "resumed";
+    } catch {
+      // The source tab may have closed; keep consent management usable.
+      return "failed";
+    }
   }
 
   async function finishAcceptance(permission) {
+    let closeAfterAcceptance = false;
     let permitted = false;
     try { permitted = await permission === true; }
     catch { /* Missing or denied optional permission must fail closed. */ }
@@ -121,7 +134,8 @@
       anyGranted = true;
       confirmation.checked = false;
       setStatus(granted ? "messengerPrivacySaved" : "webPrivacyPartial", granted ? "success" : "");
-      if (granted) await resumeConversation();
+      const resumeResult = granted ? await resumeConversation() : "failed";
+      closeAfterAcceptance = granted && resumeResult !== "failed";
     } else {
       await removeNewFirefoxPermission();
       if (disposed) return;
@@ -129,6 +143,11 @@
     }
     busy = false;
     render();
+    if (closeAfterAcceptance) {
+      dispose();
+      window.close();
+      return;
+    }
     if (refreshAfterBusy) { refreshAfterBusy = false; void refreshConsent(); }
   }
 

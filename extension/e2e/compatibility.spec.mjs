@@ -246,9 +246,8 @@ test("통합 정책 fixture: 실제 동의 화면의 승인 후 v5를 저장하�
   await expect(notice.locator('[data-i18n="webPrivacyExpandedScope"]')).toContainText("Outlook");
   await notice.locator("#privacy-confirm").check();
   await notice.locator("#privacy-accept").click();
-  await expect(notice.locator("#privacy-revoke")).toBeVisible();
+  await expect.poll(() => notice.isClosed()).toBe(true);
   expect(await extension.worker.evaluate(async () => (await chrome.storage.local.get("messengerConsentVersion")).messengerConsentVersion)).toBe(5);
-  await notice.close();
   await p.page.bringToFront();
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   await expectCopies(p.page, entry.copies);

@@ -147,8 +147,20 @@ test("명시적으로 동의한 뒤에만 원래 대화의 번역을 시작하�
         { type: "nudenyang-page-request", tabId: 7, message: { type: "nudenyang-messenger-start", contextId: "messenger:discord:opaque-conversation-token" } },
       ]);
       assert.deepEqual(p.focused, [{ id: 7, active: true }]);
+      assert.equal(p.closed, true);
     } finally { p.dispose(); }
   }
+});
+
+test("관리 화면에서 완전한 동의를 저장하면 안내 창을 자동으로 닫는다", async () => {
+  const p = page();
+  try {
+    await settle();
+    p.check(); p.click("privacy-accept");
+    await settle();
+    assert.deepEqual(p.consentChanges(), [{ type: "nudenyang-privacy-consent-set", granted: true }]);
+    assert.equal(p.closed, true);
+  } finally { p.dispose(); }
 });
 
 test("동의 거절·관리 페이지·잘못된 출처 정보는 대화를 시작하지 않는다", async () => {
@@ -174,6 +186,7 @@ test("원래 대화가 바뀌거나 시작할 수 없어도 동의만 저장하�
       await settle(); p.check(); p.click("privacy-accept"); await settle();
       assert.equal(p.get("privacy-status").dataset.message, "messengerPrivacySaved");
       assert.deepEqual(p.focused, []);
+      assert.equal(p.closed, false);
     } finally { p.dispose(); }
   }
 });
@@ -269,6 +282,7 @@ test("Firefox 권한을 거절하면 웹만 승인하고 메신저는 허용하�
     assert.equal(p.get("privacy-status").dataset.message, "webPrivacyPartial");
     assert.equal(p.get("privacy-revoke").hidden, false);
     assert.equal(p.get("privacy-accept").disabled, true);
+    assert.equal(p.closed, false);
   } finally { p.dispose(); }
 });
 
@@ -309,6 +323,7 @@ test("저장 실패는 성공으로 표시하지 않고 새 Firefox 선택 권�
     assert.equal(p.get("privacy-status").dataset.message, "messengerPrivacySaveFailed");
     assert.equal(p.get("privacy-revoke").hidden, true);
     assert.deepEqual(p.removals, [{ data_collection: ["personalCommunications"] }]);
+    assert.equal(p.closed, false);
   } finally { p.dispose(); }
 });
 
