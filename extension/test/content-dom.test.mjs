@@ -35,6 +35,12 @@ function page(t, html, options = {}) {
     pretendToBeVisual: true,
   });
   const w = dom.window;
+  if (options.initialHidden === true) {
+    Object.defineProperty(w.document, "hidden", { configurable: true, value: true });
+  }
+  if (Number.isFinite(options.performanceNow)) {
+    Object.defineProperty(w.performance, "now", { configurable: true, value: () => options.performanceNow });
+  }
   const clickHandlers = new WeakMap();
   const addListener = w.HTMLElement.prototype.addEventListener;
   w.HTMLElement.prototype.addEventListener = function(type, listener, ...args) {
@@ -55,6 +61,8 @@ function page(t, html, options = {}) {
   const requests = [];
   const runtimeMessages = [];
   const savedStates = [];
+  let layoutReads = 0;
+  let elementQueries = 0;
   let testGlobalEnabled = options.tabEnabled ?? true;
   const applicationFrames = new Map();
   let nextApplicationFrame = 0;
@@ -73,7 +81,13 @@ function page(t, html, options = {}) {
     };
     w.cancelAnimationFrame = (id) => applicationFrames.delete(id);
   }
+  const querySelectorAll = w.Element.prototype.querySelectorAll;
+  w.Element.prototype.querySelectorAll = function countedQuerySelectorAll(...args) {
+    elementQueries += 1;
+    return querySelectorAll.apply(this, args);
+  };
   w.HTMLElement.prototype.getBoundingClientRect = function rect() {
+    layoutReads += 1;
     const hidden = this.closest(options.renderAriaHidden ? "[hidden]" : "[hidden],[aria-hidden='true']")
       || w.getComputedStyle(this).display === "none";
     const top = this.closest("[data-offscreen]") ? 5000 : 10;
@@ -148,6 +162,8 @@ function page(t, html, options = {}) {
     trustedClick: (button) => clickHandlers.get(button)({ isTrusted: true }),
     releaseStatus: () => releaseStatus?.(),
     releaseTranslation: () => releaseTranslation?.(),
+    layoutReads: () => layoutReads,
+    elementQueries: () => elementQueries,
     pendingApplicationFrames: () => applicationFrames.size,
     releaseApplications() {
       const pending = [...applicationFrames.values()];
@@ -1535,6 +1551,61 @@ test("범용 공개 UI: 게시물 팝업과 분류 링크를 보호 영역 없�
   await p.message({ type: "nudenyang-set-enabled", enabled: false });
   for (const [id, text] of PUBLIC_SURFACE_COPY) assert.equal(doc.getElementById(id).textContent, text);
   assert.equal(doc.querySelector("#caption").textContent, "A public post captionAnother caption line");
+});
+
+test("동적 페이지 성능: 반복 class/style 상태 변경은 재수집·중복 레이아웃을 만들지 않는다", async (t) => {
+  const p = page(t, `<main><ytd-comment-thread-renderer>
+    <div id="content-text">Stable public paragraph</div>
+  </ytd-comment-thread-renderer></main>`, {
+    url: "https://www.youtube.com/watch?v=synthetic",
+  });
+  await p.message({ type: "nudenyang-ready" });
+  const node = p.w.document.querySelector("#content-text");
+  await waitFor(() => node.textContent === "번역(Stable public paragraph)", "initial paragraph translation");
+  const before = { layout: p.layoutReads(), queries: p.elementQueries(), requests: p.requests.length };
+
+  for (let index = 0; index < 5; index += 1) {
+    node.classList.toggle("animation-frame");
+    node.style.setProperty("transform", `translateX(${index}px)`);
+    await new Promise((resolve) => setTimeout(resolve, 140));
+  }
+
+  assert.equal(p.layoutReads(), before.layout, "이미 관찰한 블록을 다시 레이아웃 측정하면 안 된다");
+  assert.equal(p.elementQueries(), before.queries, "애니메이션 class/style은 DOM 재수집을 만들면 안 된다");
+  assert.equal(p.requests.length, before.requests, "같은 본문을 다시 번역 요청하면 안 된다");
+});
+
+test("누락 진단은 명시적 nudenyang-audit 요청에서만 실행한다", async (t) => {
+  const p = page(t, `<main><article><p>Public paragraph for manual audit</p></article></main>`, {
+    url: PUBLIC_DOCUMENT_URL,
+    performanceNow: 10_000,
+  });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.sent().includes("Public paragraph for manual audit"), "initial translation request");
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  assert.equal((await p.message({ type: "nudenyang-status" })).coverage, null);
+  assert.equal((await p.message({ type: "nudenyang-audit" })).status, "complete");
+  assert.equal((await p.message({ type: "nudenyang-status" })).coverage.status, "complete");
+});
+
+test("전체 ON 알림은 숨겨진 탭을 스캔하지 않고 활성화될 때 한 번만 재개한다", async (t) => {
+  const p = page(t, `<ytd-comment-thread-renderer>
+    <div id="content-text">Background tab paragraph</div>
+  </ytd-comment-thread-renderer>`, {
+    url: "https://www.youtube.com/watch?v=background",
+    initialHidden: true,
+  });
+  await p.message({ type: "nudenyang-ready" });
+  await p.message({ type: "nudenyang-global-refresh" });
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  assert.equal(p.requests.length, 0);
+  assert.equal(p.layoutReads(), 0);
+
+  Object.defineProperty(p.w.document, "hidden", { configurable: true, value: false });
+  p.w.document.dispatchEvent(new p.w.Event("visibilitychange"));
+  await waitFor(() => p.w.document.querySelector("#content-text").textContent
+    === "번역(Background tab paragraph)", "visible tab resumes translation");
+  assert.equal(p.requests.length, 1);
 });
 
 test("contenteditable=false 읽기 문서는 편집기로 오인하지 않고 실제 편집 내용만 보호한다", async (t) => {

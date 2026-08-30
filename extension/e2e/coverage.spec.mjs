@@ -74,7 +74,7 @@ test("독립 진단은 요청 중·결과 누락·품질 실패를 구분하고 
   expect((await audit()).status).toBe("unavailable");
 });
 
-test("독립 진단은 수집기 누락을 실제 페이지에서 찾아내고 자동 집계도 제공한다", async ({ extension }) => {
+test("독립 진단은 명시적 요청에서만 수집기 누락을 실제 페이지에서 찾아낸다", async ({ extension }) => {
   const p = await extension.open({ enabled: false, html: `<main><p id="known">Existing paragraph</p><div id="miss">Missed paragraph</div></main>` });
   // Deliberately fault the collector only. The independent walker is unchanged.
   await extension.worker.evaluate(async id => {
@@ -93,9 +93,9 @@ test("독립 진단은 수집기 누락을 실제 페이지에서 찾아내고 �
   await expect.poll(async () => (await p.message({ type: "nudenyang-ready" })).ready).toBe(true);
   await p.message({ type: "nudenyang-set-enabled", enabled: true });
   await expect(p.page.locator("#known")).toHaveText("번역(Existing paragraph)");
-  // Observe the scheduled audit BEFORE ever sending the explicit audit command.
-  await expect.poll(async () => (await p.status()).coverage?.counts?.undiscovered).toBe(1);
+  expect((await p.status()).coverage).toBeNull();
   await expect.poll(async () => (await p.message({ type: "nudenyang-audit" })).counts?.undiscovered).toBe(1);
+  expect((await p.status()).coverage?.counts?.undiscovered).toBe(1);
   expect(await p.sent()).toEqual(["Existing paragraph"]);
 });
 

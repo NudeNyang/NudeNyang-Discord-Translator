@@ -40,6 +40,7 @@
     sitePolicies: {},
   });
   const APPLY_BLOCKS_PER_FRAME = 2;
+  const STRUCTURAL_STYLE_PROPERTIES = ["display", "visibility", "content-visibility", "opacity"];
   const EMBED_HOSTS = new Set(["www.youtube.com", "www.youtube-nocookie.com"]);
   const RESTORABLE_HIDDEN_SELECTORS = new Set(["[hidden]", "[inert]", '[aria-hidden="true"]']);
   const trackedNodes = new Set();
@@ -50,6 +51,7 @@
   let disposed = false;
   let blockIds = new WeakMap();
   let observedBlocks = new WeakSet();
+  let blockStyleStates = new WeakMap();
   const boxlessBlocks = new Set();
   let boxlessTimer;
   const queue = [];
@@ -104,11 +106,12 @@
   let sentChars = 0;
   let usageLimited = false;
   let startupPromise;
-  let auditTimer;
   let auditPromise;
   let auditReport = null;
   let auditRevision = 0;
-  let lastAuditAt = 0;
+  let relevantAttributes = new Set();
+  let relevantClassNames = new Set();
+  let relevantClassFragments = new Set();
   let stateChanges = Promise.resolve();
 
   globalThis[INSTANCE_KEY] = {
@@ -126,6 +129,47 @@
     messengerRestoreSelector = messengerSite
       ? (messengerContext?.excludes ?? []).filter((selector) => !RESTORABLE_HIDDEN_SELECTORS.has(selector)).join(",")
       : "";
+    refreshMutationPolicy();
+  }
+
+  function refreshMutationPolicy() {
+    const selectors = [blockSelector, excludedSelector,
+      adapter ? adapters.protectedExclusionSelector(adapter) : ""].filter(Boolean).join(",");
+    relevantAttributes = new Set([
+      "hidden", "inert", "aria-hidden", "contenteditable", "role", "translate",
+      "href", "rel", "itemprop", "id", "aria-describedby", "aria-modal",
+      "aria-expanded", "aria-selected", "aria-controls",
+    ]);
+    relevantClassNames = new Set();
+    relevantClassFragments = new Set(["price"]);
+    for (const match of selectors.matchAll(/\[\s*([^\s~|^$*!=\]]+)/gu)) relevantAttributes.add(match[1]);
+    for (const match of selectors.matchAll(/\.([_a-zA-Z][\w-]*)/gu)) relevantClassNames.add(match[1]);
+    for (const match of selectors.matchAll(/\[class(?:[*^$~|]?=)["']([^"']+)["']\]/gu)) {
+      relevantClassFragments.add(match[1].trim());
+    }
+  }
+
+  function classMutationIsStructural(mutation) {
+    const before = new Set((mutation.oldValue ?? "").split(/\s+/u).filter(Boolean));
+    const afterValue = mutation.target.getAttribute("class") ?? "";
+    const after = new Set(afterValue.split(/\s+/u).filter(Boolean));
+    for (const name of relevantClassNames) if (before.has(name) !== after.has(name)) return true;
+    const beforeValue = mutation.oldValue ?? "";
+    for (const fragment of relevantClassFragments) {
+      if (beforeValue.includes(fragment) !== afterValue.includes(fragment)) return true;
+    }
+    return false;
+  }
+
+  function styleMutationIsStructural(mutation) {
+    const before = mutation.oldValue ?? "";
+    const after = mutation.target.style;
+    return STRUCTURAL_STYLE_PROPERTIES.some((property) => {
+      const escaped = property.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+      const previous = before.match(new RegExp(`(?:^|;)\\s*${escaped}\\s*:\\s*([^;]*)`, "iu"))?.[1]
+        ?.replace(/\s*!important\s*$/iu, "").trim() ?? "";
+      return previous !== after.getPropertyValue(property).trim();
+    });
   }
 
   function pageContext() {
@@ -380,17 +424,7 @@
       return report;
     } catch {
       return { status: "unavailable", reason: "inspection_failed" };
-    } finally { auditPromise = undefined; lastAuditAt = performance.now(); }
-  }
-
-  function scheduleCoverage() {
-    auditRevision += 1;
-    auditReport = null;
-    if (auditTimer || disposed || !enabled || messengerSite) return;
-    auditTimer = setTimeout(() => {
-      auditTimer = undefined;
-      void inspectCoverage();
-    }, Math.max(750, 5000 - (performance.now() - lastAuditAt)));
+    } finally { auditPromise = undefined; }
   }
 
   function currentHostname() {
@@ -610,6 +644,10 @@
         handleNavigation();
         void refreshAppStatus();
       }
+    } else if (!document.hidden && enabled) {
+      handleNavigation();
+      replayTranslations();
+      scan(document, { enqueueVisible: true });
     }
     notifyEmbeddedFrames();
   }
@@ -982,7 +1020,6 @@
       }
     }
     if (appliedBlocks > 0) {
-      scheduleCoverage();
       logDiagnostic("dom-blocks-applied", {
         appliedBlocks,
         appliedNodes,
@@ -995,7 +1032,6 @@
   }
 
   function noteViewportActivity() {
-    scheduleCoverage();
     if (boxlessBlocks.size && !boxlessTimer) {
       boxlessTimer = setTimeout(() => {
         boxlessTimer = undefined;
@@ -1176,7 +1212,6 @@
       }
     }
     translating = false;
-    scheduleCoverage();
     if (externalProvider && webSettings.externalPageCharLimit > 0 && sentChars >= webSettings.externalPageCharLimit) {
       stopForUsageLimit();
       return;
@@ -1262,7 +1297,6 @@
   function shutdownInvalidatedContext() {
     if (disposed) return;
     disposed = true;
-    clearTimeout(auditTimer);
     clearTimeout(boxlessTimer);
     boxlessBlocks.clear();
     auditReport = null;
@@ -1294,7 +1328,9 @@
   }
 
   function observeBlock(block) {
+    if (!block || observedBlocks.has(block)) return false;
     if (messengerSite && excludedBlock(block)) return;
+    if (!messengerSite) blockStyleStates.set(block, observedStyleState(block));
     const bounds = !messengerSite ? block.getBoundingClientRect() : null;
     if (bounds && (bounds.width === 0 || bounds.height === 0) && getComputedStyle(block).display !== "none") {
       boxlessBlocks.add(block);
@@ -1309,7 +1345,37 @@
       conversationBlocks.add(block);
       if (conversationBlocks.size > 512) conversationBlocks.delete(conversationBlocks.values().next().value);
     }
-    if (intersectionObserver) registerTranslationBlock(block, observedBlocks, intersectionObserver);
+    if (intersectionObserver) return registerTranslationBlock(block, observedBlocks, intersectionObserver);
+    return false;
+  }
+
+  function observedStyleState(block) {
+    const style = getComputedStyle(block);
+    return [style.display, style.visibility, style.contentVisibility, style.opacity];
+  }
+
+  function changedObservedStyle(block) {
+    if (!block || messengerSite) return { changed: true, layout: false };
+    const before = blockStyleStates.get(block);
+    const after = observedStyleState(block);
+    blockStyleStates.set(block, after);
+    return {
+      changed: !before || after.some((value, index) => value !== before[index]),
+      layout: !before || after[0] !== before[0],
+    };
+  }
+
+  function refreshObservedBlockLayout(block) {
+    if (!block?.isConnected) return;
+    if (!observedBlocks.has(block)) {
+      observeBlock(block);
+      return;
+    }
+    const bounds = !messengerSite ? block.getBoundingClientRect() : null;
+    if (bounds && (bounds.width === 0 || bounds.height === 0) && getComputedStyle(block).display !== "none") {
+      boxlessBlocks.add(block);
+      enqueueBlock(block, { priority: true });
+    } else boxlessBlocks.delete(block);
   }
 
   function handleMenuInteraction(event) {
@@ -1319,7 +1385,7 @@
   }
 
   function scan(root = document, { enqueueVisible = false } = {}) {
-    if (disposed || !enabled || !adapter || !blockSelector || !canReadConversation() || !root?.querySelectorAll) {
+    if (disposed || !enabled || document.hidden || !adapter || !blockSelector || !canReadConversation() || !root?.querySelectorAll) {
       return;
     }
     if (messengerSite) {
@@ -1333,7 +1399,6 @@
       else if (!messengerContext.root.contains(root)) return;
     }
     if (!messengerSite) {
-      scheduleCoverage();
       const count = publicDom.collectBlocks(root, (block) => {
         observeBlock(block);
         if (enqueueVisible) enqueueBlock(block);
@@ -1363,7 +1428,7 @@
   }
 
   function scheduleScan(root) {
-    if (disposed) return;
+    if (disposed || document.hidden) return;
     pendingScanBatch.add(root);
     if (rescanTimer) {
       return;
@@ -1391,6 +1456,7 @@
     longDocument = false;
     blockIds = new WeakMap();
     observedBlocks = new WeakSet();
+    blockStyleStates = new WeakMap();
     boxlessBlocks.clear();
     intersectionObserver?.disconnect();
     assignPageContext(next);
@@ -1533,12 +1599,13 @@
     }
     intersectionObserver?.disconnect();
     observedBlocks = new WeakSet();
+    blockStyleStates = new WeakMap();
     boxlessBlocks.clear();
     configureIntersectionObserver();
     enabled = initialEnabled();
     updateConsentNotice();
     if (!enabled) restoreOriginals();
-    else {
+    else if (!document.hidden) {
       replayTranslations();
       scan(document, { enqueueVisible: true });
     }
@@ -1656,7 +1723,8 @@
       auditRevision += 1;
       auditReport = null;
       handleNavigation();
-      if (!enabled || disposed || !canReadConversation()) {
+      if (!messengerSite) for (const mutation of mutations) publicDom?.noteMutation(mutation);
+      if (!enabled || disposed || document.hidden || !canReadConversation()) {
         return;
       }
       for (const mutation of mutations) {
@@ -1686,6 +1754,29 @@
             }
           }
         } else if (mutation.type === "attributes") {
+          const attribute = mutation.attributeName;
+          if (attribute === "class" || attribute === "style") {
+            const structural = attribute === "class"
+              ? classMutationIsStructural(mutation) : styleMutationIsStructural(mutation);
+            if (attribute === "class" && structural) {
+              scheduleScan(mutation.target);
+              continue;
+            }
+            const changedBlock = translationBlockFor(mutation.target);
+            if (changedBlock) {
+              const visual = changedObservedStyle(changedBlock);
+              if (visual.layout) refreshObservedBlockLayout(changedBlock);
+              if (visual.changed) enqueueBlock(changedBlock, { priority: true });
+            } else if (attribute === "class") {
+              // CSS-only menus often toggle a wrapper class above already known
+              // links. Restrict the fallback to an interaction landmark instead
+              // of rescanning arbitrary animated containers.
+              const menuRoot = interactionRoot(mutation.target);
+              if (menuRoot?.contains(mutation.target)) scheduleScan(mutation.target);
+            }
+            continue;
+          }
+          if (!relevantAttributes.has(attribute)) continue;
           scheduleScan(mutation.target);
           if (!messengerSite && adapter?.collectReadOnlyUi && mutation.attributeName === "aria-describedby") {
             // The newly eligible description is a sibling, not inside the
@@ -1702,9 +1793,11 @@
     });
     observer.observe(document.documentElement, {
       childList: true, subtree: true, characterData: true,
-      // Any attribute may affect CSS or a node's role, including data-* state.
-      // Coalesce only the changed subtrees; scroll never scans the full DOM.
+      // Observe broadly because selectors may use site data attributes, then
+      // classify cheaply in the callback. Animation-only class/style changes
+      // never become full DOM scans.
       attributes: true,
+      attributeOldValue: true,
     });
     document.addEventListener("scroll", noteViewportActivity, { capture: true, passive: true });
     document.addEventListener("pointerover", handleMenuInteraction, true);

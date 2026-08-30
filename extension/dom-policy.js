@@ -52,17 +52,68 @@
       const form = element.closest("form");
       return !form || Boolean(adapter.publicForms?.some(selector => form.matches(selector)));
     };
+    const DESCRIPTION_CONTROL = "input[aria-describedby],select[aria-describedby],textarea[aria-describedby]";
+    const descriptionControls = new Map();
+    const controlDescriptions = new WeakMap();
+    let descriptionIndexReady = false;
+
+    function removeDescriptionControl(control) {
+      for (const id of controlDescriptions.get(control) ?? []) {
+        const controls = descriptionControls.get(id);
+        controls?.delete(control);
+        if (controls?.size === 0) descriptionControls.delete(id);
+      }
+      controlDescriptions.delete(control);
+    }
+
+    function indexDescriptionControl(control) {
+      removeDescriptionControl(control);
+      if (!control?.matches?.("input,select,textarea")) return;
+      const ids = new Set((control.getAttribute("aria-describedby") ?? "").split(/\s+/u).filter(Boolean));
+      if (!ids.size) return;
+      controlDescriptions.set(control, ids);
+      for (const id of ids) {
+        if (!descriptionControls.has(id)) descriptionControls.set(id, new Set());
+        descriptionControls.get(id).add(control);
+      }
+    }
+
+    function ensureDescriptionIndex() {
+      if (descriptionIndexReady || !adapter.collectReadOnlyUi) return;
+      descriptionIndexReady = true;
+      for (const control of document.querySelectorAll(DESCRIPTION_CONTROL)) indexDescriptionControl(control);
+    }
+
+    function updateDescriptionSubtree(node, remove = false) {
+      if (!descriptionIndexReady || node?.nodeType !== Node.ELEMENT_NODE) return;
+      const update = remove ? removeDescriptionControl : indexDescriptionControl;
+      if (node.matches("input,select,textarea")) update(node);
+      for (const control of node.querySelectorAll(DESCRIPTION_CONTROL)) update(control);
+    }
+
+    function noteMutation(mutation) {
+      if (!descriptionIndexReady || !adapter.collectReadOnlyUi) return;
+      if (mutation.type === "childList") {
+        for (const node of mutation.removedNodes) updateDescriptionSubtree(node, true);
+        for (const node of mutation.addedNodes) updateDescriptionSubtree(node);
+      } else if (mutation.type === "attributes" && mutation.attributeName === "aria-describedby") {
+        indexDescriptionControl(mutation.target);
+      }
+    }
 
     function readOnlyUiScope(element) {
       if (!adapter.collectReadOnlyUi || !element || element.closest("[role='log']")) return null;
       const label = element.closest(UI_LABEL);
       if (label && !label.querySelector(ARTICLE)) return label;
+      ensureDescriptionIndex();
       for (let description = element.closest("[id]"); description; description = description.parentElement?.closest("[id]")) {
-        // Query the reference, not all fields' values. Re-evaluate on dispatch
-        // and replay so a removed description relationship takes effect at once.
-        const id = description.id.replace(/[^\w-]/gu, character => `\\${character.codePointAt(0).toString(16)} `);
-        if (id && [...document.querySelectorAll(`input[aria-describedby~="${id}"],select[aria-describedby~="${id}"],textarea[aria-describedby~="${id}"]`)]
-          .some(control => control.closest("form") === description.closest("form"))) return description;
+        // References are indexed once and updated from DOM mutations. This keeps
+        // dispatch/replay checks current without a document-wide selector per ID.
+        const controls = descriptionControls.get(description.id);
+        if (controls && [...controls].some((control) => {
+          if (!control.isConnected) { removeDescriptionControl(control); return false; }
+          return control.closest("form") === description.closest("form");
+        })) return description;
       }
       if (adapter.staticUiOnly) {
         const heading = element.closest(STATIC_HEADING);
@@ -307,7 +358,9 @@
       return found.size;
     }
 
-    return Object.freeze({ blockFor, collectBlocks, eligibility, allowsText, excludesBlock, explain, auditBoundary });
+    return Object.freeze({
+      blockFor, collectBlocks, eligibility, allowsText, excludesBlock, explain, auditBoundary, noteMutation,
+    });
   }
 
   root.NudeNyangDomPolicy = Object.freeze({ createPublicDomPolicy, hasTranslatableText, interactionRoot, textIsVisible });

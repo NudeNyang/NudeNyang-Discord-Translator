@@ -127,6 +127,31 @@ for (const change of ["class", "style"]) {
   });
 }
 
+test("동적 페이지: 빠른 class/style 애니메이션 중에도 새 본문만 번역한다", async ({ extension }) => {
+  const p = await extension.open({ url: "https://www.youtube.com/watch?v=performance", html: `
+    <ytd-comment-thread-renderer id="row"><span id="author-text">Protected Author</span>
+      <div id="content-text">Stable dynamic comment</div>
+    </ytd-comment-thread-renderer>
+    <div contenteditable="true" id="editor">Protected draft</div>` });
+  await expect(p.page.locator("#content-text")).toHaveText("번역(Stable dynamic comment)");
+  const before = (await p.requests()).length;
+  await p.page.locator("#row").evaluate(async (row) => {
+    for (let index = 0; index < 120; index += 1) {
+      row.classList.toggle("player-animation-frame");
+      row.style.transform = `translateX(${index % 2}px)`;
+      if (index % 20 === 0) await new Promise(requestAnimationFrame);
+    }
+  });
+  await p.page.waitForTimeout(250);
+  expect((await p.requests()).length).toBe(before);
+  await p.page.locator("#row").evaluate((row) => {
+    row.insertAdjacentHTML("afterend", '<ytd-comment-thread-renderer><div id="content-text"><span id="late-content">New dynamic comment</span></div></ytd-comment-thread-renderer>');
+  });
+  await expect(p.page.locator("#late-content")).toHaveText("번역(New dynamic comment)");
+  await expect(p.page.locator("#author-text")).toHaveText("Protected Author");
+  await expect(p.page.locator("#editor")).toHaveText("Protected draft");
+});
+
 for (const { label, attribute, value } of PUBLIC_NODE_CHANGES) {
   test(`범용 DOM: 응답 대기 중 ${label} 전환 보호`, async ({ extension }) => {
     const p = await extension.open({ html: REUSED_TEXT_HTML, url: PUBLIC_DOCUMENT_URL, deferTranslations: true });

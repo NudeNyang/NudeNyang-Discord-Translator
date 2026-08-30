@@ -28,6 +28,43 @@ function collectPublicTexts(document, adapter) {
   return nodes.map((node) => node.nodeValue.trim()).sort();
 }
 
+function describedByScanMetrics(size) {
+  const rows = Array.from({ length: size }, (_, index) => (
+    `<div id="row-${index}"><p>Public synthetic row ${index}</p></div>`
+  )).join("");
+  const dom = new JSDOM(`<main>${rows}</main><form>
+    <input aria-describedby="row-${size - 1}" value="private-value">
+  </form>`, { url: "https://fixture.example.test/articles/performance" });
+  try {
+    const { document } = dom.window;
+    const original = document.querySelectorAll.bind(document);
+    let descriptionQueries = 0;
+    let documentQueries = 0;
+    document.querySelectorAll = (selector) => {
+      documentQueries += 1;
+      if (/^(?:input|select|textarea)\[aria-describedby/u.test(selector)) descriptionQueries += 1;
+      return original(selector);
+    };
+    const policy = createPublicDomPolicy(document,
+      adapterForLocation(new URL(document.URL)));
+    let blocks = 0;
+    policy.collectBlocks(document, () => { blocks += 1; });
+    return { blocks, descriptionQueries, documentQueries };
+  } finally { dom.window.close(); }
+}
+
+test("읽기 정책 성능: aria-describedby 전역 조회는 ID 후보 수와 함께 증가하지 않는다", () => {
+  const small = describedByScanMetrics(500);
+  const large = describedByScanMetrics(1000);
+
+  assert.ok(small.blocks >= 500);
+  assert.ok(large.blocks >= 1000);
+  assert.ok(small.descriptionQueries <= 1, `500개 DOM에서 전역 설명 조회 ${small.descriptionQueries}회`);
+  assert.ok(large.descriptionQueries <= 1, `1,000개 DOM에서 전역 설명 조회 ${large.descriptionQueries}회`);
+  assert.ok(large.documentQueries <= small.documentQueries + 2,
+    `문서 전역 조회가 DOM 크기와 함께 증가함: ${small.documentQueries} -> ${large.documentQueries}`);
+});
+
 test("읽기 정책: 공개 문서의 경로 단어와 일반 앵커는 계정 화면으로 오인하지 않는다", () => {
   for (const path of ["/help/settings", "/news/orders", "/guide#settings", "/reference/account"]) {
     const adapter = adapterForLocation(new URL(`https://example.test${path}`));
