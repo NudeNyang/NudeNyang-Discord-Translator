@@ -860,7 +860,7 @@
     const snapshot = snapshotBlock(block);
     if (snapshot.nodes.some((node, index) => {
       const state = nodeStates.get(node);
-      return !state || state.invalid || state.pending || state.cacheable === false
+      return !state || state.invalid || state.pending || state.replayable === false
         || state.original !== snapshot.originals[index];
     })) return;
     const values = snapshot.nodes.map(node => nodeStates.get(node)?.translated);
@@ -1103,10 +1103,15 @@
           return;
         }
       }
+      const responseItems = new Map(response.items.map(item => [item.id, item]));
       const results = new Map(response.items.map((item) => [item.id, item.text]));
-      const incompleteIds = new Set(response.items.filter(item => item.cacheable === false).map(item => item.id));
       for (const item of batch) {
-        item.cacheable = !incompleteIds.has(item.id);
+        const responseItem = responseItems.get(item.id);
+        item.cacheable = responseItem?.cacheable !== false;
+        // New companions state this explicitly. For an older companion, retain
+        // a completed, visibly changed result only for this page lifetime.
+        item.replayable = responseItem?.replayable ?? Boolean(typeof responseItem?.text === "string"
+          && responseItem.text.trim() && responseItem.text.trim() !== item.text.trim());
         const state = nodeStates.get(item.node);
         if (state && state.itemId === item.recordId) state.diagnosticStage = typeof results.get(item.id) === "string" && results.get(item.id).trim()
           ? "response_received" : "missing_result";
@@ -1220,10 +1225,11 @@
     const removed = pruneMessengerTranslations({ restoring: true }) + prunePublicTranslations({ restoring: true });
     const result = syncTrackedTranslationDisplay(trackedNodes, nodeStates, false);
     result.removed += removed;
-    // A manual OFF/ON retries only unfinished nodes from their original text.
-    // Keep partial output stable while viewing; never loop on scroll/mutations.
+    // Persistent-cache quality and current-page replay are separate. Retry only
+    // missing/source-fallback results; a visibly applied translation replays
+    // instantly even when strict quality checks reject persistent storage.
     for (const node of trackedNodes) {
-      if (nodeStates.get(node)?.cacheable === false) forgetText(node);
+      if (nodeStates.get(node)?.replayable === false) forgetText(node);
     }
     if (discard) {
       for (const node of trackedNodes) nodeStates.delete(node);

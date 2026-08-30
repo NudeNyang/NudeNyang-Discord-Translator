@@ -59,7 +59,9 @@ test("독립 진단은 요청 중·결과 누락·품질 실패를 구분하고 
   const audit = () => p.message({ type: "nudenyang-audit" });
   await expect.poll(async () => (await audit()).counts?.requesting).toBe(3);
   const items = (await p.requests()).flatMap(request => request.items);
-  await p.releaseTranslations({ omitItemIds: [items[1].id], itemOverrides: { [items[2].id]: { text: items[2].text, cacheable: false } } });
+  await p.releaseTranslations({ omitItemIds: [items[1].id], itemOverrides: {
+    [items[2].id]: { text: items[2].text, cacheable: false, replayable: false },
+  } });
   await expect(p.page.locator("#a")).toHaveText(`번역(${items[0].text})`);
   await expect.poll(async () => (await audit()).counts).toEqual({ applied: 1, missing_result: 1, quality_failed: 1 });
   const report = await audit();

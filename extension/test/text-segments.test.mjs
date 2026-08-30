@@ -24,6 +24,27 @@ test("하나라도 미완료인 조각이 있으면 표시만 허용하고 전�
   assert.equal(record.pending, false);
   assert.equal(record.translated, "first 둘째");
   assert.equal(record.cacheable, false);
+  assert.equal(record.replayable, true);
+});
+
+test("영구 캐시 가능 여부와 현재 페이지 재생 가능 여부를 독립적으로 누적한다", () => {
+  const record = createTextRecord("alpha beta", "node", 7, 6);
+  assert.equal(acceptTextSegment(record, itemFor(record, 0, {
+    cacheable: false, replayable: true,
+  }), "알파"), true);
+  assert.equal(acceptTextSegment(record, itemFor(record, 1, {
+    cacheable: true, replayable: true,
+  }), "베타"), true);
+  assert.equal(record.cacheable, false);
+  assert.equal(record.replayable, true);
+
+  const fallback = createTextRecord("alpha beta", "fallback", 7, 6);
+  assert.equal(acceptTextSegment(fallback, itemFor(fallback, 0, {
+    cacheable: false, replayable: false,
+  }), "alpha"), true);
+  assert.equal(acceptTextSegment(fallback, itemFor(fallback, 1), "베타"), true);
+  assert.equal(fallback.cacheable, false);
+  assert.equal(fallback.replayable, false);
 });
 
 test("한 글자와 한도 안의 텍스트는 원래 문자열 그대로 한 항목에 보존한다", () => {

@@ -57,6 +57,7 @@
       pending: partial.size < segments.length,
       translated: null,
       cacheable: true,
+      replayable: true,
       invalid: false,
     };
   }
@@ -89,6 +90,7 @@
     }
     const source = record.segments[item.segmentIndex];
     record.cacheable = record.cacheable && item.cacheable !== false;
+    record.replayable = record.replayable && item.replayable !== false;
     // Preserve the established display behavior for an unsplit node. At newly
     // introduced transport boundaries, restore source whitespace exactly so a
     // provider trimming a segment cannot join words or discard line breaks.

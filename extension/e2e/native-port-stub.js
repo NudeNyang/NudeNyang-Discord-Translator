@@ -50,7 +50,9 @@
           response = {
             type: "translationResult", requestId: request.requestId,
             translator: status.translator,
-            items: request.items.map(item => ({ id: item.id, text: `번역(${item.text})` })),
+            items: request.items.map(item => ({
+              id: item.id, text: `번역(${item.text})`, cacheable: true, replayable: true,
+            })),
           };
         } else if (request.type === "status") {
           response = { ...structuredClone(status), requestId: request.requestId };

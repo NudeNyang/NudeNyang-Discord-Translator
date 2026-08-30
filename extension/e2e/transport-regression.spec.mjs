@@ -34,6 +34,29 @@ test("공통 미리보기: 이모지 인접 본문의 번역·재생·원문 복
   await expect(p.page.locator("a")).toHaveAttribute("href", "https://example.invalid/product");
 });
 
+test("F4 재표시: 영구 캐시에서 거부된 표시 완료 번역도 현재 페이지에서는 즉시 재생한다", async ({ extension }) => {
+  const source = "品質検査では再確認が必要な表示済みの翻訳です。";
+  const translated = "품질 검사는 다시 필요하지만 화면 표시가 끝난 번역입니다.";
+  const p = await extension.open({
+    html: `<main><article><p id="quality-review">${source}</p></article></main>`,
+    deferTranslations: true,
+  });
+  await expect.poll(p.sent).toEqual([source]);
+  const [item] = (await p.requests()).flatMap(request => request.items);
+  await p.releaseTranslations({
+    itemOverrides: { [item.id]: { text: translated, cacheable: false, replayable: true } },
+  });
+  await expect(p.page.locator("#quality-review")).toHaveText(translated);
+  const requestCount = (await p.requests()).length;
+
+  await p.message({ type: "nudenyang-set-enabled", enabled: false });
+  await expect(p.page.locator("#quality-review")).toHaveText(source);
+  await p.message({ type: "nudenyang-set-enabled", enabled: true });
+
+  await expect(p.page.locator("#quality-review")).toHaveText(translated);
+  expect((await p.requests()).length).toBe(requestCount);
+});
+
 test("일반 BR 본문: 품질 실패 원문은 완료 캐시에서 제외하고 수동 재시도는 실패한 노드만 전송", async ({ extension }) => {
   const lines = ["新しいお知らせを皆様に紹介いたします。", "そのようなお言葉をいただき嬉しく思います。", "もちろん結果には個人差がありますが、その時々の状態を確認しております。"];
   const p = await extension.open({
@@ -43,7 +66,9 @@ test("일반 BR 본문: 품질 실패 원문은 완료 캐시에서 제외하고
   await expect.poll(p.sent).toEqual(lines);
   const items = (await p.requests()).flatMap(request => request.items);
   const incomplete = items.find(item => item.text === lines[2]);
-  await p.releaseTranslations({ itemOverrides: { [incomplete.id]: { text: lines[2], cacheable: false } } });
+  await p.releaseTranslations({
+    itemOverrides: { [incomplete.id]: { text: lines[2], cacheable: false, replayable: false } },
+  });
   await expect(p.page.locator("#caption")).toHaveText(`번역(${lines[0]})번역(${lines[1]})${lines[2]}`);
   // Failed results stay stable while viewing, without a mutation/scroll retry loop.
   await p.page.evaluate(() => document.querySelector("#caption").setAttribute("data-render", "tick"));

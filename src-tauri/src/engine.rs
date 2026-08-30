@@ -262,8 +262,11 @@ pub struct BrowserTranslationResultItem {
     pub id: String,
     pub text: String,
     // Best-effort source/partial fallback may be displayed, but is not a
-    // completed translation for the extension's replay cache.
+    // verified translation for the app's persistent cache.
     pub cacheable: bool,
+    // A visibly changed, non-empty result may be replayed within the current
+    // page even when strict quality checks reject persistent storage.
+    pub replayable: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -3095,15 +3098,21 @@ fn run_translation_worker(
                             items: items
                                 .into_iter()
                                 .zip(values)
-                                .map(|(item, text)| BrowserTranslationResultItem {
-                                    cacheable: service.web_result_is_cacheable(
+                                .map(|(item, text)| {
+                                    let cacheable = service.web_result_is_cacheable(
                                         &item.text,
                                         &text,
                                         target,
                                         allowed_sources.as_ref(),
-                                    ),
-                                    id: item.id,
-                                    text,
+                                    );
+                                    let replayable =
+                                        !text.trim().is_empty() && text.trim() != item.text.trim();
+                                    BrowserTranslationResultItem {
+                                        id: item.id,
+                                        text,
+                                        cacheable,
+                                        replayable,
+                                    }
                                 })
                                 .collect(),
                         })
