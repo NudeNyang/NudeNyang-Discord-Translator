@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use crate::cache::TranslationCache;
 use crate::language::{
     detect_explicit_language, detect_language, detection_script_family, language_script_family,
-    Language, LanguageDetector, ScriptFamily,
+    normalize_halfwidth_kana, Language, LanguageDetector, ScriptFamily,
 };
 use crate::text_split::split_for_translation;
 
@@ -19,7 +19,7 @@ use super::Translator;
 
 static JAPANESE_FRAGMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"[A-Za-z0-9]*[\u{3040}-\u{30ff}\u{31f0}-\u{31ff}\u{3400}-\u{4dbf}\u{4e00}-\u{9fff}][\u{3040}-\u{30ff}\u{31f0}-\u{31ff}\u{3400}-\u{4dbf}\u{4e00}-\u{9fff}A-Za-z0-9（）()「」『』【】・ー〜～._-]*",
+        r"[A-Za-z0-9]*[\u{3040}-\u{30ff}\u{31f0}-\u{31ff}\u{ff61}-\u{ff9f}\u{3400}-\u{4dbf}\u{4e00}-\u{9fff}][\u{3040}-\u{30ff}\u{31f0}-\u{31ff}\u{ff61}-\u{ff9f}\u{3400}-\u{4dbf}\u{4e00}-\u{9fff}A-Za-z0-9（）()「」『』【】・ー〜～._-]*",
     )
     .unwrap()
 });
@@ -152,7 +152,15 @@ pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
 
         let has_japanese_fragment = JAPANESE_FRAGMENT_RE.find_iter(segment).any(|found| {
             let fragment = found.as_str();
-            protect_text(fragment).has_translatable_text()
+            let halfwidth_kana_bases = fragment
+                .chars()
+                .filter(|character| matches!(*character as u32, 0xff66..=0xff9d))
+                .count();
+            // A single halfwidth glyph is commonly the tail of a kaomoji
+            // (`ﾉﾞ`), not a standalone Japanese word. Longer halfwidth runs
+            // are readable text and should follow the normal fragment path.
+            (halfwidth_kana_bases == 0 || halfwidth_kana_bases >= 2)
+                && protect_text(fragment).has_translatable_text()
                 && detect_language(fragment).language == Language::Japanese
         });
         let has_english_fragment = ENGLISH_FRAGMENT_RE.find_iter(segment).any(|found| {
@@ -1405,11 +1413,12 @@ impl TranslationService {
             return true;
         }
         let masked = protected.mask_preserved_tokens_in(translated);
+        let provider_source = normalize_halfwidth_kana(&protected.masked);
         self.translator
-            .translation_is_acceptable(&protected.masked, &masked, source, target)
+            .translation_is_acceptable(&provider_source, &masked, source, target)
             && self
                 .translator
-                .should_cache(&protected.masked, &masked, source, target)
+                .should_cache(&provider_source, &masked, source, target)
     }
 
     fn translate_many_unchunked(
@@ -1473,9 +1482,10 @@ impl TranslationService {
                 let cached = apply_conservative_semantic_repairs(&cached, text, source, target);
                 let cached = preserve_terminal_punctuation(text, &cached);
                 let masked_cached = protected.mask_preserved_tokens_in(&cached);
+                let provider_source = normalize_halfwidth_kana(&protected.masked);
                 if self
                     .translator
-                    .should_cache(&protected.masked, &masked_cached, source, target)
+                    .should_cache(&provider_source, &masked_cached, source, target)
                 {
                     results[index] = Some(cached);
                     cache_hits += 1;
@@ -1504,7 +1514,9 @@ impl TranslationService {
         if !pending.is_empty() {
             let items: Vec<_> = pending
                 .iter()
-                .map(|(_, _, protected, source, _)| (protected.masked.clone(), *source))
+                .map(|(_, _, protected, source, _)| {
+                    (normalize_halfwidth_kana(&protected.masked), *source)
+                })
                 .collect();
             self.check_private_request()?;
             let translated = self.translator.translate_many(&items, target)?;
@@ -1515,13 +1527,14 @@ impl TranslationService {
             for ((indices, text, protected, source, hash), translated) in
                 pending.into_iter().zip(translated)
             {
+                let provider_source = normalize_halfwidth_kana(&protected.masked);
                 let restored = protected.restore(&translated);
                 let restored =
                     apply_conservative_semantic_repairs(&restored, &text, source, target);
                 let restored = preserve_terminal_punctuation(&text, &restored);
                 if !text.contains(MESSAGE_CONTEXT_SEPARATOR.trim())
                     && !self.translator.translation_is_acceptable(
-                        &protected.masked,
+                        &provider_source,
                         &translated,
                         source,
                         target,
@@ -1544,7 +1557,7 @@ impl TranslationService {
                 }
                 if self
                     .translator
-                    .should_cache(&protected.masked, &translated, source, target)
+                    .should_cache(&provider_source, &translated, source, target)
                 {
                     self.cache.put(
                         &hash,
@@ -1689,6 +1702,7 @@ impl TranslationService {
     ) -> Result<String, String> {
         self.check_private_request()?;
         let hash = source_hash(text);
+        let provider_source = normalize_halfwidth_kana(&protected.masked);
         if let Some(cached) = self.cache.get_message(
             &hash,
             text,
@@ -1700,7 +1714,11 @@ impl TranslationService {
             let cached = sanitize_unexpected_marker_artifacts(text, &cached);
             let cached = apply_conservative_semantic_repairs(&cached, text, source, target);
             let cached = preserve_terminal_punctuation(text, &cached);
-            if self.translator.should_cache(text, &cached, source, target) {
+            let masked_cached = protected.mask_preserved_tokens_in(&cached);
+            if self
+                .translator
+                .should_cache(&provider_source, &masked_cached, source, target)
+            {
                 return Ok(cached);
             }
             crate::diagnostics::info(
@@ -1714,14 +1732,14 @@ impl TranslationService {
         self.check_private_request()?;
         let translated = self
             .translator
-            .translate(&protected.masked, source, target)?;
+            .translate(&provider_source, source, target)?;
         self.check_private_request()?;
         let restored = protected.restore(&translated);
         let restored = apply_conservative_semantic_repairs(&restored, text, source, target);
         let restored = preserve_terminal_punctuation(text, &restored);
         if self
             .translator
-            .should_cache(text, &restored, source, target)
+            .should_cache(&provider_source, &translated, source, target)
         {
             self.cache.put(
                 &hash,
@@ -2036,6 +2054,7 @@ mod tests {
             "ヾ(｡>﹏<｡)ﾉﾞ✧*。, (づ￣ ³￣)づ~♡",
             Some(Language::Korean),
         ));
+        assert!(!outgoing_can_passthrough("ﾁｮｱﾖ", Some(Language::Korean),));
         assert!(outgoing_can_passthrough("!?", None));
         assert!(!outgoing_can_passthrough(
             "안녕하세요 this is a full English phrase",
@@ -2092,6 +2111,10 @@ mod tests {
         inputs: Arc<Mutex<Vec<String>>>,
     }
 
+    struct HalfwidthKanaTranslator {
+        inputs: Arc<Mutex<Vec<String>>>,
+    }
+
     impl Translator for CountingTranslator {
         fn display_name(&self) -> &str {
             "counting"
@@ -2119,6 +2142,27 @@ mod tests {
             _target: Language,
         ) -> bool {
             source_text != translated_text
+        }
+    }
+
+    impl Translator for HalfwidthKanaTranslator {
+        fn display_name(&self) -> &str {
+            "halfwidth-kana"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "halfwidth-kana:v1"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            source: Language,
+            _target: Language,
+        ) -> Result<String, String> {
+            assert_eq!(source, Language::Japanese);
+            self.inputs.lock().unwrap().push(text.to_string());
+            Ok("좋아요".to_string())
         }
     }
 
@@ -4498,6 +4542,30 @@ mod tests {
             Language::Korean,
             None
         ));
+    }
+
+    #[test]
+    fn web_halfwidth_katakana_is_normalized_only_for_the_translation_provider() {
+        let inputs = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(HalfwidthKanaTranslator {
+                inputs: inputs.clone(),
+            }),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        let source = "ﾁｮｱﾖ".to_string();
+        let translated = service
+            .translate_many_for_web_contextual_filtered(
+                std::slice::from_ref(&source),
+                &[Some("public-post".to_string())],
+                "generic-public-page",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+
+        assert_eq!(translated, ["좋아요"]);
+        assert_eq!(*inputs.lock().unwrap(), ["チョアヨ"]);
     }
 
     #[test]

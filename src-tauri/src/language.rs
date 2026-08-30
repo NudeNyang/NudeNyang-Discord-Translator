@@ -5,6 +5,7 @@ use lingua::{
     Language as LinguaLanguage, LanguageDetector as LinguaDetector, LanguageDetectorBuilder,
 };
 use serde::{Deserialize, Serialize};
+use unicode_normalization::UnicodeNormalization;
 
 const SIMPLIFIED_HINTS: &str = "这们为时发后说对过从还实见长门问间书车马风云龙习体国会开东叶万与专业乐乡买乱争于亚产亩亲亿仅仓仪价众优伙伞伟传伤伦伪余侠侣侧侨侦俩俭债倾偿儿兑党兰关兴养兽冈册军农冲决况冻净凉减凤凭凯击划刘则刚创删别刹剂剑剧劝务动劳势华协单卖卢卫却厅历厉压厌县参双变叙叠号叹吓吕吗吨听启吴呐呕员呛呜咏咙咸响哑哗团园围图圆圣场坏块坚坛坝坞坟坠垄垒垦垫尘墙壮声壳处备复够头夸夹夺奋奖妇妈妆姗娱娄婴孙学宁宝审宪宫宽宾寝寻导寿将尔尧尽层届属岁岂岗岛岭岳峡币帅师帐帘帜带帮庄庆床庐库应庙庞废广归当录径忆怀态怜总恋恳恶恼悦悬惊惧惨惩惯愤愿戏户扑执扩扫扬扰抚抛抢护报担拟拢拣拥拦拧拨择挂挡挤挥损捡换据掳掸掺揽搁搂搅摄摆摇摊撑撵敌敛数斋斗断无旧昼显晋晒晓晕暂术朴机杀杂权条来杨杰极构枪柜树样桥梦检楼欢欧欲歼残殴毁毕毙气汇汉汤沟没沣沦沧沪泪泼泽洁洒浅浆浇测济浑浓涛涝涡润涨涩渊渐渔渗温湾湿溃溅滚满滞滤滥滦滨滩潍潜澜濒灭灯灵灾灿炉炖点炼烁烂烧烫热爱爷牵牺犹狈狞独狭狮狱猎猪猫献环现玺电画畅畴疗疟疡疮疯痒痪瘫瘾皱盖盘眯着睁睐睑瞒矿码砖砚砺砾础硕确碍礼祷祸禀离种积称秽稳穷窍窑窜窝窥竞笃笋笔笺笼签简箩箫篮篱类粮紧纠红纤约级纪纬纯纱纲纳纵纷纸纹纺纽线练组细织终绊绍经绑绒结绕绘给络绝绞统绣继绩绪续绳维绵绸综绿缀缅缆缉缎缓缔缕编缘缚缝缠缩缴网罗罚罢羡翘耸联聪肃肠肤肿胀胆胜胶脉脏脑脓脚脱脸腊腻腾舆舰舱艺节芜芦苇苍苏苹范茧荐荆荡荣荤荧药莱莲获莹萝营萧萨葱蒋蓝蓟蔷蔼蕴薮虑虚虫虽虾蚀蚁蚂蚊蚕蛊蛎蛮蜕蜗蝇蝉补衬衫袄袜袭装裤见观规觅视览觉触誉计订认讥讨让训议讯记讲讳讶许论讼设访证评诅识诈诉诊词译试诗诚话诞诡询该详诫语误诱诲说请诸诺读课谁调谈谊谋谍谎谏谜谢谨谱谴谷贝贞负贡财责贤败账货质贩贪贫贬购贮贯贰贱贴贵贷贸费贺贼贾赁赂赃资赊赋赌赎赏赐赔赖赚赛赞赠赢赵赶趋跃践踪踊车轨轩转轮软轰轴轻载较辅辆辈辉辐辑输辖辙辞辩边辽达迁过迈运还进远违连迟迩迭迹适选递逻遗邮邻郑郸酝酱酿释里鉴针钉钓钙钝钟钢钥钦钧钩钱钳钻铁铃铅铎铜铝铲银铸铺链销锁锅锈锋锐错锚锡锣锦锨锭键锯锻镀镇镊镐镜镣镰长闪闭闯闰闲闷闸闹闻闽阀阁阔队阳阴阵阶际陆陈陕陨险随隐隶难雏雾霁霉静韦韩页顶项顺须顾顿颁颂预领颇颈频颓颖颗题颜额颠风飞饥饭饮饰饱饲饴饼饿馅馆馈馋马驭驯驰驱驳驴驶驹驻驾骂骄骆验骏骑骗骚骡骤鱼鲁鲜鲤鲸鸟鸡鸣鸭鸿鹅鹤鹰麦黄齐齿龄龟";
 const TRADITIONAL_HINTS: &str = "這們為時發後說對過從還實見長門問間書車馬風雲龍習體國會開東葉萬與專業樂鄉買亂爭於亞產畝親億僅倉儀價眾優夥傘偉傳傷倫偽餘俠侶側僑偵倆儉債傾償兒兌黨蘭關興養獸岡冊軍農衝決況凍淨涼減鳳憑凱擊劃劉則剛創刪別剎劑劍劇勸務動勞勢華協單賣盧衛卻廳歷厲壓厭縣參雙變敘疊號嘆嚇呂嗎噸聽啟吳吶嘔員嗆嗚詠嚨鹹響啞嘩團園圍圖圓聖場壞塊堅壇壩塢墳墜壟壘墾墊塵牆壯聲殼處備復夠頭誇夾奪奮獎婦媽妝姍娛婁嬰孫學寧寶審憲宮寬賓寢尋導壽將爾堯盡層屆屬歲豈崗島嶺嶽峽幣帥師帳簾幟帶幫莊慶床廬庫應廟龐廢廣歸當錄徑憶懷態憐總戀懇惡惱悅懸驚懼慘懲慣憤願戲戶撲執擴掃揚擾撫拋搶護報擔擬攏揀擁攔擰撥擇掛擋擠揮損撿換據擄撣摻攬擱摟攪攝擺搖攤撐攆敵斂數齋鬥斷無舊晝顯晉曬曉暈暫術樸機殺雜權條來楊傑極構槍櫃樹樣橋夢檢樓歡歐慾殲殘毆毀畢斃氣匯漢湯溝沒灃淪滄滬淚潑澤潔灑淺漿澆測濟渾濃濤澇渦潤漲澀淵漸漁滲溫灣濕潰濺滾滿滯濾濫灤濱灘濰潛瀾瀕滅燈靈災燦爐燉點煉爍爛燒燙熱愛爺牽犧猶狽獰獨狹獅獄獵豬貓獻環現璽電畫暢疇療瘧瘍瘡瘋癢瘓癱癮皺蓋盤瞇著睜睞瞼瞞礦碼磚硯礪礫礎碩確礙禮禱禍稟離種積稱穢穩窮竅窯竄窩窺競篤筍筆箋籠簽簡籮簫籃籬類糧緊糾紅纖約級紀緯純紗綱納縱紛紙紋紡紐線練組細織終絆紹經綁絨結繞繪給絡絕絞統繡繼績緒續繩維綿綢綜綠綴緬纜緝緞緩締縷編緣縛縫纏縮繳網羅罰罷羨翹聳聯聰肅腸膚腫脹膽勝膠脈臟腦膿腳脫臉臘膩騰輿艦艙藝節蕪蘆葦蒼蘇蘋範繭薦荊蕩榮葷熒藥萊蓮獲瑩蘿營蕭薩蔥蔣藍薊薔藹蘊藪慮虛蟲雖蝦蝕蟻螞蚊蠶蠱蠣蠻蛻蝸蠅蟬補襯衫襖襪襲裝褲見觀規覓視覽覺觸譽計訂認譏討讓訓議訊記講諱訝許論訟設訪證評詛識詐訴診詞譯試詩誠話誕詭詢該詳誡語誤誘誨說請諸諾讀課誰調談誼謀諜謊諫謎謝謹譜譴穀貝貞負貢財責賢敗賬貨質販貪貧貶購貯貫貳賤貼貴貸貿費賀賊賈賃賂贓資賒賦賭贖賞賜賠賴賺賽贊贈贏趙趕趨躍踐蹤踴車軌軒轉輪軟轟軸輕載較輔輛輩輝輻輯輸轄轍辭辯邊遼達遷過邁運還進遠違連遲邇迭跡適選遞邏輯遺郵鄰鄭鄲醞醬釀釋裡鑒針釘釣鈣鈍鐘鋼鑰欽鈞鉤錢鉗鑽鐵鈴鉛鐸銅鋁鏟銀鑄鋪鏈銷鎖鍋鏽鋒銳錯錨錫鑼錦鍁錠鍵鋸鍛鍍鎮鑷鎬鏡鐐鐮長閃閉闖閏閒悶閘鬧聞閩閥閣闊隊陽陰陣階際陸陳陝隕險隨隱隸難雛霧霽黴靜韋韓頁頂項順須顧頓頒頌預領頗頸頻頹穎顆題顏額顛風飛飢飯飲飾飽飼飴餅餓餡館饋饞馬馭馴馳驅駁驢駛駒駐駕罵驕駱驗駿騎騙騷騾驟魚魯鮮鯉鯨鳥雞鳴鴨鴻鵝鶴鷹麥黃齊齒齡龜麼嗎裡";
@@ -616,8 +617,46 @@ fn from_lingua(
     })
 }
 
+pub(crate) fn normalize_halfwidth_kana(text: &str) -> String {
+    fn is_halfwidth_kana(character: char) -> bool {
+        matches!(character as u32, 0xff61..=0xff9f)
+    }
+
+    if !text.chars().any(is_halfwidth_kana) {
+        return text.to_string();
+    }
+
+    let mut normalized = String::with_capacity(text.len());
+    let mut halfwidth_run = String::new();
+    for character in text.chars() {
+        if is_halfwidth_kana(character) {
+            halfwidth_run.push(character);
+            continue;
+        }
+        if !halfwidth_run.is_empty() {
+            normalized.extend(halfwidth_run.nfkc());
+            halfwidth_run.clear();
+        }
+        normalized.push(character);
+    }
+    if !halfwidth_run.is_empty() {
+        normalized.extend(halfwidth_run.nfkc());
+    }
+    normalized
+}
+
 fn prepare_for_detection(text: &str) -> String {
-    text.split_whitespace()
+    let halfwidth_kana_bases = text
+        .chars()
+        .filter(|character| matches!(*character as u32, 0xff66..=0xff9d))
+        .count();
+    let normalized = if halfwidth_kana_bases >= 2 {
+        normalize_halfwidth_kana(text)
+    } else {
+        text.to_string()
+    };
+    normalized
+        .split_whitespace()
         .filter(|token| {
             let lower = token.to_ascii_lowercase();
             !lower.starts_with("http://")
@@ -952,8 +991,9 @@ fn is_complete_v6_candidate(
 #[cfg(test)]
 mod tests {
     use super::{
-        detect_explicit_language, detect_language, provider_language_codes, CandidateSelector,
-        Language, LanguageDetector, ProviderLanguageCodes, RecognitionCandidate,
+        detect_explicit_language, detect_language, detection_script_family,
+        normalize_halfwidth_kana, provider_language_codes, CandidateSelector, Language,
+        LanguageDetector, ProviderLanguageCodes, RecognitionCandidate, ScriptFamily,
         TranslationProvider, LANGUAGE_MENU_ORDER, SUPPORTED_LANGUAGES,
     };
     use std::collections::BTreeMap;
@@ -1190,6 +1230,19 @@ mod tests {
             assert_eq!(detect_explicit_language(text), Language::Unknown, "{text}");
         }
         assert_eq!(detect_language("nice").confidence, 0.0);
+    }
+
+    #[test]
+    fn halfwidth_katakana_is_detected_as_japanese_script() {
+        assert_eq!(normalize_halfwidth_kana("Ａｷﾞ→Ｂ"), "Ａギ→Ｂ");
+        for text in ["ﾁｮｱﾖ", "ｷﾞﾌﾞﾝﾁｮｱﾖ", "ﾁｮﾝﾁｮﾄﾞｰﾝ"] {
+            assert_eq!(detect_explicit_language(text), Language::Japanese, "{text}");
+            assert_eq!(
+                detection_script_family(text),
+                Some(ScriptFamily::EastAsian),
+                "{text}"
+            );
+        }
     }
 
     #[test]

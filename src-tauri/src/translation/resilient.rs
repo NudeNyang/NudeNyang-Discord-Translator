@@ -1,6 +1,6 @@
 use unicode_normalization::UnicodeNormalization;
 
-use crate::language::Language;
+use crate::language::{normalize_halfwidth_kana, Language};
 
 use super::protected_text::contains_unexpected_marker_artifact;
 use super::Translator;
@@ -488,11 +488,15 @@ fn count_hangul(text: &str) -> usize {
 }
 
 fn count_kana(text: &str) -> usize {
-    count_in_ranges(text, &[(0x3040, 0x30ff), (0x31f0, 0x31ff)])
+    count_in_ranges(
+        &normalize_halfwidth_kana(text),
+        &[(0x3040, 0x30ff), (0x31f0, 0x31ff)],
+    )
 }
 
 fn max_kana_run(text: &str) -> usize {
-    text.chars()
+    normalize_halfwidth_kana(text)
+        .chars()
         .fold(
             (0usize, 0usize, 0u8),
             |(current, longest, script), character| {
@@ -664,11 +668,20 @@ fn source_is_game_context_without_food(text: &str) -> bool {
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{is_likely_keyboard_smash, translation_needs_repair, ResilientTranslator};
+    use super::{
+        count_kana, is_likely_keyboard_smash, max_kana_run, translation_needs_repair,
+        ResilientTranslator,
+    };
     use crate::language::Language;
     use crate::translation::Translator;
 
     type RecordedCalls = Arc<Mutex<Vec<Vec<(String, Language)>>>>;
+
+    #[test]
+    fn halfwidth_kana_is_counted_by_translation_quality_checks() {
+        assert_eq!(count_kana("ｷﾞﾌﾞﾝ"), 3);
+        assert_eq!(max_kana_run("ｷﾞﾌﾞﾝ"), 3);
+    }
 
     struct PartialTranslator {
         calls: RecordedCalls,
