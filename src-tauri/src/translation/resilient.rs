@@ -272,6 +272,17 @@ pub fn translation_needs_repair(
         .chars()
         .filter(|character| character.is_alphanumeric())
         .count();
+    let source_lines = source_text
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count();
+    let translated_lines = translated_text
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count();
+    if target != source && source_lines >= 2 && translated_lines < source_lines {
+        return true;
+    }
     if target != source
         && (HALLUCINATION_PHRASES
             .iter()
@@ -360,6 +371,7 @@ pub fn translation_needs_repair(
             // this repairs embed fragments such as `おきゅーとぱー`, while allowing
             // short preserved names/terms such as `すてら` and `ダンス部`.
             return (remaining_kana >= 5 && max_kana_run(translated_text) >= 5)
+                || has_kana_next_to_mapping_separator(source_text, translated_text)
                 || has_kana_suffix_after_hangul(source_text, translated_text);
         }
         if source == Language::English {
@@ -468,7 +480,7 @@ fn has_kana_suffix_after_hangul(source: &str, translated: &str) -> bool {
         for ch in word.chars() {
             if hangul && matches!(ch as u32, 0x3041..=0x3096) {
                 suffix += 1;
-                if suffix >= 2 {
+                if suffix >= 1 {
                     return true;
                 }
             } else {
@@ -478,6 +490,46 @@ fn has_kana_suffix_after_hangul(source: &str, translated: &str) -> bool {
         }
         false
     })
+}
+
+fn has_kana_next_to_mapping_separator(source: &str, translated: &str) -> bool {
+    fn is_mapping_separator(character: char) -> bool {
+        matches!(character, '→' | '⇒' | '↔' | '⇔')
+    }
+
+    if !source.chars().any(is_mapping_separator) {
+        return false;
+    }
+
+    let normalized = normalize_halfwidth_kana(translated);
+    let characters = normalized.chars().collect::<Vec<_>>();
+    let mut index = 0;
+    while index < characters.len() {
+        let start = index;
+        while index < characters.len()
+            && matches!(
+                characters[index] as u32,
+                0x3040..=0x30ff | 0x31f0..=0x31ff
+            )
+        {
+            index += 1;
+        }
+        if index.saturating_sub(start) >= 2
+            && (start
+                .checked_sub(1)
+                .is_some_and(|before| is_mapping_separator(characters[before]))
+                || characters
+                    .get(index)
+                    .copied()
+                    .is_some_and(is_mapping_separator))
+        {
+            return true;
+        }
+        if index == start {
+            index += 1;
+        }
+    }
+    false
 }
 
 fn count_hangul(text: &str) -> usize {
@@ -803,6 +855,33 @@ mod tests {
             Language::Japanese,
             Language::Korean,
         ));
+    }
+
+    #[test]
+    fn rejects_a_web_translation_that_drops_visible_source_lines() {
+        let source = "トリッカルで学んだ韓国語\nﾁｮﾜﾖ→好き、良い\nﾎﾊﾞｷﾞ(ﾎﾊﾞｸ)→カボチャ";
+        assert!(translation_needs_repair(
+            source,
+            "트리칼로 배운 한국어",
+            Language::Japanese,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn rejects_short_japanese_grammar_left_in_a_translated_mapping_line() {
+        let source = "ｻｯｺ→〜ですわ(お嬢様言葉)";
+        for partial in [
+            "〜ですわ→~입니다わ(영주님 말투)",
+            "〜ですわ→~입니다(아가씨 말투)",
+        ] {
+            assert!(translation_needs_repair(
+                source,
+                partial,
+                Language::Japanese,
+                Language::Korean,
+            ));
+        }
     }
 
     #[test]
