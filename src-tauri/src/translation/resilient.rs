@@ -193,6 +193,47 @@ impl Translator for ResilientTranslator {
             }
         }
 
+        let mut mapping_items = Vec::new();
+        let mut mapping_jobs = Vec::new();
+        for &index in &failed {
+            let source = items[index].1;
+            for &line_index in &nonempty_lines[index] {
+                if !translation_needs_repair(
+                    &source_lines[index][line_index],
+                    &repaired[index][line_index],
+                    source,
+                    target,
+                ) {
+                    continue;
+                }
+                let Some((segments, separators)) =
+                    split_mapping_line(&source_lines[index][line_index])
+                else {
+                    continue;
+                };
+                let start = mapping_items.len();
+                mapping_items.extend(segments.into_iter().map(|segment| (segment, source)));
+                mapping_jobs.push((index, line_index, separators, start, mapping_items.len()));
+            }
+        }
+
+        if !mapping_items.is_empty() {
+            if let Ok(values) = self.primary.translate_many(&mapping_items, target) {
+                if values.len() == mapping_items.len() {
+                    for (index, line_index, separators, start, end) in mapping_jobs {
+                        let mut rebuilt = String::new();
+                        for (offset, translated) in values[start..end].iter().enumerate() {
+                            if offset > 0 {
+                                rebuilt.push(separators[offset - 1]);
+                            }
+                            rebuilt.push_str(translated.trim());
+                        }
+                        repaired[index][line_index] = rebuilt;
+                    }
+                }
+            }
+        }
+
         for index in failed {
             let source = items[index].1;
             for line_index in 0..repaired[index].len() {
@@ -248,6 +289,37 @@ impl Translator for ResilientTranslator {
             fallback.close();
         }
     }
+}
+
+fn split_mapping_line(text: &str) -> Option<(Vec<String>, Vec<char>)> {
+    fn is_mapping_separator(character: char) -> bool {
+        matches!(character, '→' | '⇒' | '↔' | '⇔')
+    }
+
+    let mut segments = Vec::new();
+    let mut separators = Vec::new();
+    let mut start = 0;
+    for (index, character) in text.char_indices() {
+        if !is_mapping_separator(character) {
+            continue;
+        }
+        let segment = text[start..index].trim();
+        if segment.is_empty() {
+            return None;
+        }
+        segments.push(segment.to_string());
+        separators.push(character);
+        start = index + character.len_utf8();
+    }
+    if separators.is_empty() {
+        return None;
+    }
+    let final_segment = text[start..].trim();
+    if final_segment.is_empty() {
+        return None;
+    }
+    segments.push(final_segment.to_string());
+    Some((segments, separators))
 }
 
 pub fn translation_needs_repair(
@@ -790,6 +862,65 @@ mod tests {
             "이번에는 실제로 춤추는 사람을 촬영해 봅시다!\n참가 장소는 포스터에 적힌 4KVRC 그룹 인스턴스입니다!"
         );
         assert_eq!(calls.lock().unwrap().len(), 2);
+    }
+
+    struct MappingPartialTranslator;
+
+    impl Translator for MappingPartialTranslator {
+        fn display_name(&self) -> &str {
+            "mapping-partial"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "local:mapping-partial"
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            source: Language,
+            target: Language,
+        ) -> Result<String, String> {
+            self.translate_many(&[(text.to_string(), source)], target)
+                .map(|mut values| values.remove(0))
+        }
+
+        fn translate_many(
+            &mut self,
+            items: &[(String, Language)],
+            _target: Language,
+        ) -> Result<Vec<String>, String> {
+            Ok(items
+                .iter()
+                .map(|(text, _)| {
+                    match text.as_str() {
+                        "ﾃﾞﾋﾟｮﾆﾑ→代表" => "데피오니ム→대표",
+                        "ｻﾜﾖ→〜ですわ(お嬢様言葉)" => {
+                            "사와요→〜ですわ(아가씨 말투)"
+                        }
+                        "ﾃﾞﾋﾟｮﾆﾑ" => "대표님",
+                        "代表" => "대표",
+                        "ｻﾜﾖ" => "사와요",
+                        "〜ですわ(お嬢様言葉)" => "~입니다(아가씨 말투)",
+                        _ => text,
+                    }
+                    .to_string()
+                })
+                .collect())
+        }
+    }
+
+    #[test]
+    fn repairs_mapping_lines_by_translating_each_side_separately() {
+        let mut translator = ResilientTranslator::new(Box::new(MappingPartialTranslator), None);
+        let source = "ﾃﾞﾋﾟｮﾆﾑ→代表\nｻﾜﾖ→〜ですわ(お嬢様言葉)";
+
+        assert_eq!(
+            translator
+                .translate(source, Language::Japanese, Language::Korean)
+                .unwrap(),
+            "대표님→대표\n사와요→~입니다(아가씨 말투)"
+        );
     }
 
     #[test]
