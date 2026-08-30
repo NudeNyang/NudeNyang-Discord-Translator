@@ -1,11 +1,11 @@
 # Browser store privacy declarations
 
-This document contains submission privacy answers for NudeNyang Web Translator 0.7.11 with Windows companion
+This document contains submission privacy answers for NudeNyang Web Translator 0.7.12 with Windows companion
 0.7.4-beta, including optional private reading for supported messengers and opened mail. The public policy source is `PRIVACY.md`.
 
 ## Submission readiness
 
-This is the consent-v5 policy implemented by the 0.7.11 source. Do not submit the old v2 local-only listing or infer support from an older app/extension version. The matching 0.7.4-beta companion installers, update metadata and public privacy policy were published on 2026-08-29. Runtime capability `messengerPolicyVersion: 5` and consent migration remain enforced and tested rather than inferred from version text.
+This is the consent-v5 policy implemented by the 0.7.12 source. Do not submit the old v2 local-only listing or infer support from an older app/extension version. The matching 0.7.4-beta companion installers, update metadata and public privacy policy were published on 2026-08-29. Runtime capability `messengerPolicyVersion: 5` and consent migration remain enforced and tested rather than inferred from version text.
 
 Fixture E2E is not validation of all eight logged-in services. Store approval is not guaranteed. See `MESSENGER_SHARED_POLICY.md` for the implementation and remaining review checks.
 

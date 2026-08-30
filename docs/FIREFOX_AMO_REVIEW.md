@@ -1,10 +1,10 @@
-# Firefox AMO reviewer notes — 0.7.11
+# Firefox AMO reviewer notes — 0.7.12
 
 ## Distribution and prerequisite
 
 - Channel: public listing (`On this site` / listed)
 - Add-on ID: `web-translator@nudenyang.github.io`
-- Add-on version: `0.7.11`
+- Add-on version: `0.7.12`
 - Platform: Firefox desktop 142+ on Windows 10/11
 - Companion: NudeNyang Windows 0.7.4-beta, which reports `messengerPolicyVersion: 5`
 - Companion download: `https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.4-beta`
@@ -95,7 +95,7 @@ npm run test:extension
 npx --yes web-ext@10.6.0 lint --source-dir dist/firefox-extension --warnings-as-errors
 ```
 
-Output: `release/browser-extension/NudeNyang-Web-Translator-Firefox-0.7.11.xpi`.
+Output: `release/browser-extension/0.7.12-submission/NudeNyang-Web-Translator-Firefox-0.7.12.xpi`.
 The source package includes implementation tests, packaging scripts, privacy/scope documents and the
 native bridge contract source. The complete companion source is in the linked public repository.
 
@@ -115,4 +115,4 @@ Use only pages and test conversations/mail the reviewer is authorized to access.
 
 Automated E2E uses synthetic pages and a mock Native Messaging translation response. It does not
 claim live validation of every service, Firefox/Whale integration, external-provider accounts or
-translation quality. See `WEB_READING_SCOPE.md` and `BROWSER_STORE_SUBMISSION_0.7.11.md`.
+translation quality. See `WEB_READING_SCOPE.md` and `BROWSER_STORE_SUBMISSION_0.7.12.md`.
