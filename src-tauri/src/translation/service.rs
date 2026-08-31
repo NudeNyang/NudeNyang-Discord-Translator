@@ -4581,6 +4581,12 @@ mod tests {
             Language::Korean,
             None
         ));
+        assert!(!service.web_result_is_cacheable(
+            "例えば、ドライブで女が\n「今日暑いねー」と言ってきた時。\nモテない男は、",
+            "예를 들어, 드라이브에서 여자가\n「今日暑いねー」と言ってきた時。\n인기 없는 남자는,",
+            Language::Korean,
+            None
+        ));
         assert!(service.web_result_is_cacheable(
             source,
             "그런 말씀에 저희도 기쁩니다.",

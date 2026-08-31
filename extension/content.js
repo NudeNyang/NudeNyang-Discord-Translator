@@ -40,6 +40,7 @@
     sitePolicies: {},
   });
   const APPLY_BLOCKS_PER_FRAME = 2;
+  const DYNAMIC_BURST_COLLECT_DELAY_MS = 80;
   const STRUCTURAL_STYLE_PROPERTIES = ["display", "visibility", "content-visibility", "opacity"];
   const EMBED_HOSTS = new Set(["www.youtube.com", "www.youtube-nocookie.com"]);
   const RESTORABLE_HIDDEN_SELECTORS = new Set(["[hidden]", "[inert]", '[aria-hidden="true"]']);
@@ -946,7 +947,11 @@
       }
     }
     addTranslationItems(queue, items, priority);
-    if (items.length > 0) scheduleFlush(priority ? 0 : scheduling.collectDelayMs);
+    if (items.length > 0) {
+      scheduleFlush(priority
+        ? Math.min(DYNAMIC_BURST_COLLECT_DELAY_MS, scheduling.collectDelayMs)
+        : scheduling.collectDelayMs);
+    }
   }
 
   function scheduleFlush(delay = scheduling.collectDelayMs) {

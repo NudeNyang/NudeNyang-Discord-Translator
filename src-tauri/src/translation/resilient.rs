@@ -37,7 +37,7 @@ impl ResilientTranslator {
             .as_ref()
             .map_or("local-only", |translator| translator.cache_namespace());
         let cache_namespace = format!(
-            "{}:quality-repair-v12:{fallback_namespace}",
+            "{}:quality-repair-v13:{fallback_namespace}",
             primary.cache_namespace()
         );
         Self {
@@ -438,6 +438,9 @@ pub fn translation_needs_repair(
             ) {
                 return remaining_han >= 2;
             }
+            if has_source_japanese_line_left_untranslated(source_text, translated_text) {
+                return true;
+            }
             // A mostly Korean result can still contain a full untranslated Japanese
             // name or clause. Judge the longest contiguous run instead of the total:
             // this repairs embed fragments such as `おきゅーとぱー`, while allowing
@@ -538,6 +541,18 @@ fn count_in_ranges(text: &str, ranges: &[(u32, u32)]) -> usize {
                 .any(|(start, end)| (*start..=*end).contains(&value))
         })
         .count()
+}
+
+fn has_source_japanese_line_left_untranslated(source: &str, translated: &str) -> bool {
+    translated.lines().any(|line| {
+        let normalized = normalize(line);
+        let japanese = count_kana(&normalized) + count_han(&normalized);
+        japanese >= 6
+            && count_kana(&normalized) >= 2
+            && source
+                .lines()
+                .any(|source_line| normalize(source_line) == normalized)
+    })
 }
 
 fn has_kana_suffix_after_hangul(source: &str, translated: &str) -> bool {
@@ -966,6 +981,35 @@ mod tests {
         assert!(!translation_needs_repair(
             "第4回すてらダンス部コラボ授業です！",
             "제4회 すてら댄스부 컬래버레이션 수업입니다!",
+            Language::Japanese,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn rejects_a_source_matching_japanese_sentence_left_between_korean_lines() {
+        let source = concat!(
+            "女って異常なくらい\n",
+            "「適当扱い」が大好物なんだよな\n\n",
+            "例えば、ドライブで女が\n",
+            "「今日暑いねー」と言ってきた時。\n",
+            "モテない男は、\n",
+            "気を利かせて世話を焼く。\n\n",
+            "だがモテる男は、"
+        );
+        let partial = concat!(
+            "여자는 너무 이상해서\n",
+            "\"적당히 대우하는\" 걸 정말 좋아하더라고요\n\n",
+            "예를 들어, 드라이브에서 여자가\n",
+            "「今日暑いねー」と言ってきた時。\n",
+            "인기 없는 남자는,\n",
+            "조심스럽게 신경 쓰게 한다.\n\n",
+            "하지만 인기 있는 남자는,"
+        );
+
+        assert!(translation_needs_repair(
+            source,
+            partial,
             Language::Japanese,
             Language::Korean,
         ));

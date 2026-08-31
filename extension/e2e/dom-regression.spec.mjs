@@ -97,6 +97,25 @@ test("범용 가상 목록: 재생성된 본문은 새 전송 없이 번역을 �
   expect((await p.requests()).length).toBe(count);
 });
 
+test("범용 동적 목록: 짧은 간격으로 추가된 보이는 문단을 한 요청으로 모은다", async ({ extension }) => {
+  const p = await extension.open({ html: '<main id="feed"></main>', url: PUBLIC_DOCUMENT_URL });
+  await expect.poll(p.requests).toHaveLength(0);
+  await p.page.locator("#feed").evaluate(async feed => {
+    for (let index = 0; index < 8; index += 1) {
+      const paragraph = document.createElement("p");
+      paragraph.id = `dynamic-${index}`;
+      paragraph.textContent = `Dynamic timeline item ${index}`;
+      feed.append(paragraph);
+      await new Promise(resolve => setTimeout(resolve, 8));
+    }
+  });
+
+  await expect(p.page.locator("#feed > p")).toHaveText(
+    Array.from({ length: 8 }, (_, index) => `번역(Dynamic timeline item ${index})`),
+  );
+  expect(await p.requests()).toHaveLength(1);
+});
+
 test("재표시 캐시: 내용 수정과 목표 언어 변경은 새 요청을 만든다", async ({ extension }) => {
   const p = await extension.open({ html: VIRTUAL_LIST_HTML, url: PUBLIC_DOCUMENT_URL });
   const body = p.page.locator("#changing");
