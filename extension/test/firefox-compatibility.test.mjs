@@ -22,7 +22,7 @@ const reviewerNotes = fs.readFileSync(
   "utf8",
 );
 const submissionNotes = fs.readFileSync(
-  new URL("../../docs/BROWSER_STORE_SUBMISSION_0.7.12.md", import.meta.url),
+  new URL("../../docs/BROWSER_STORE_SUBMISSION_0.7.13.md", import.meta.url),
   "utf8",
 );
 
@@ -69,7 +69,7 @@ test("브라우저 심사 고지는 전체 탭 상태·메일 범위와 주소 �
   assert.match(storePrivacyNotes, /consent v5/i);
   assert.match(storePrivacyNotes, /Gmail and Outlook/i);
   assert.doesNotMatch(storePrivacyNotes, /stores v3 only/i);
-  assert.match(reviewerNotes, /Add-on version:\s*`0\.7\.12`/);
+  assert.match(reviewerNotes, /Add-on version:\s*`0\.7\.13`/);
   assert.match(reviewerNotes, /consent v5/i);
   assert.match(reviewerNotes, /Gmail and Outlook/i);
   assert.doesNotMatch(reviewerNotes, /local-only translation path/i);
@@ -113,7 +113,7 @@ test("AMO 공개 심사 패키지는 생성 코드 원본과 검토자 안내를
   assert.match(amoScript, /'THIRD_PARTY_NOTICES\.md'/);
   assert.match(amoScript, /'BROWSER_EXTENSION\.md'/);
   assert.match(amoScript, /'BROWSER_STORE_PRIVACY\.md'/);
-  assert.match(amoScript, /'BROWSER_STORE_SUBMISSION_0\.7\.12\.md'/);
+  assert.match(amoScript, /'BROWSER_STORE_SUBMISSION_0\.7\.13\.md'/);
   assert.match(amoScript, /'WEB_READING_SCOPE\.md'/);
   assert.match(amoScript, /src-tauri[\\/]+src[\\/]+browser_bridge\.rs/);
   assert.doesNotMatch(amoScript, /Compress-Archive/);
