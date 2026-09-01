@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 49;
+  const CONTROLLER_VERSION = 50;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -158,9 +158,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   function composerHasText(editor) {
     return Boolean(composerText(editor).trim());
   }
-  function primaryComposerContainer(editor) {
-    if (!editor?.matches?.(composerSelector)) return null;
-    const container = editor.closest('[class*="channelTextArea"]');
+  function primaryComposerContainer(element) {
+    if (!element?.matches) return null;
+    const container = element.matches('[class*="channelTextArea"]')
+      ? element
+      : element.matches(composerSelector)
+        ? element.closest('[class*="channelTextArea"]')
+        : null;
     if (!container) return null;
     const chatSurface = container.closest('main, [role="main"], [class*="chatContent"]');
     return chatSurface ? container : null;
@@ -694,9 +698,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             && bounds.bottom > 0
             && bounds.top < window.innerHeight;
         });
-        const readonlyComposer = visibleAnchors('[class*="channelTextArea"]').sort(
-          (left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top
-        ).at(-1) || null;
+        const readonlyComposer = visibleAnchors('[class*="channelTextArea"]')
+          .filter(anchor => primaryComposerContainer(anchor) === anchor)
+          .sort((left, right) => left.getBoundingClientRect().top - right.getBoundingClientRect().top)
+          .at(-1) || null;
         const readonlyAnchor = readonlyComposer || visibleAnchors(
           '[class*="chatContent"], [data-list-id="chat-messages"]'
         ).sort((left, right) => {
@@ -1973,7 +1978,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 49"));
+        assert!(script.contains("const CONTROLLER_VERSION = 50"));
     }
 
     #[test]

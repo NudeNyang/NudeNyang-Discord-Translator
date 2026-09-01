@@ -50,6 +50,66 @@ function activeComposerIn(html) {
   })()`);
 }
 
+function outgoingOverlayVisibilityIn(html) {
+  const scope = outgoing.match(
+    /function composerHasText\(editor\) \{[\s\S]*?(?=\n  function hasActiveMediaViewer\(\))/,
+  );
+  const reposition = outgoing.match(
+    /reposition\(\) \{([\s\S]*?)\r?\n\s*\},\r?\n\s*updateLabel\(\)/,
+  );
+  assert.ok(scope, "Discord 작성창 판별 함수를 찾을 수 있어야 해");
+  assert.ok(reposition, "Discord 컨트롤 위치 계산 함수를 찾을 수 있어야 해");
+  const dom = new JSDOM(html, {
+    runScripts: "outside-only",
+    url: "https://discord.com/channels/1/2",
+  });
+  const { window } = dom;
+  Object.defineProperties(window, {
+    innerWidth: { configurable: true, value: 1200 },
+    innerHeight: { configurable: true, value: 900 },
+  });
+  window.Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
+    const top = Number(this.dataset.top || 700);
+    const width = Number(this.dataset.width || 560);
+    const height = Number(this.dataset.height || 48);
+    return {
+      width,
+      height,
+      top,
+      right: width,
+      bottom: top + height,
+      left: 0,
+      x: 0,
+      y: top,
+      toJSON() {},
+    };
+  };
+  return window.eval(`(() => {
+    const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
+    ${scope[0]}
+    const hasActiveMediaViewer = () => false;
+    const bottomObstacleTop = () => window.innerHeight;
+    const controls = new Map();
+    const root = {
+      hidden: false,
+      style: {},
+      querySelector(selector) {
+        if (!controls.has(selector)) controls.set(selector, { hidden: false });
+        return controls.get(selector);
+      },
+    };
+    const controller = {
+      root,
+      outgoingControlVisible: true,
+      displayControlVisible: true,
+    };
+    const reposition = function reposition() {${reposition[1]}
+    };
+    reposition.call(controller);
+    return root.style.visibility || '';
+  })()`);
+}
+
 test("통화 참가자 프로필 입력창은 메인 Discord 작성창으로 선택하지 않는다", () => {
   assert.equal(
     activeComposerIn(`
@@ -74,6 +134,30 @@ test("통화 참가자 프로필 입력창은 메인 Discord 작성창으로 선
       </main>
     `),
     "channel-message",
+  );
+});
+
+test("통화 참가자 프로필은 표시 번역 컨트롤의 읽기 전용 앵커로도 사용하지 않는다", () => {
+  assert.equal(
+    outgoingOverlayVisibilityIn(`
+      <main class="callContainer_test"><div class="videoGrid_test"></div></main>
+      <div role="dialog" class="userProfileOuter_test">
+        <form class="channelTextArea_test" data-top="760">
+          <div role="textbox" contenteditable="true"></div>
+        </form>
+      </div>
+    `),
+    "hidden",
+  );
+
+  assert.equal(
+    outgoingOverlayVisibilityIn(`
+      <main class="chatContent_test">
+        <ol data-list-id="chat-messages"></ol>
+        <form id="channel-composer" class="channelTextArea_test" data-top="760"></form>
+      </main>
+    `),
+    "",
   );
 });
 
@@ -270,10 +354,11 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 49/);
-  assert.match(outgoing, /function primaryComposerContainer\(editor\)/);
-  assert.match(outgoing, /editor\.closest\('\[class\*="channelTextArea"\]'\)/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 50/);
+  assert.match(outgoing, /function primaryComposerContainer\(element\)/);
+  assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);
+  assert.match(outgoing, /filter\(anchor => primaryComposerContainer\(anchor\) === anchor\)/);
   assert.match(outgoing, /onInput\(event\) \{[\s\S]*?!isPrimaryComposer\(editor\)/);
   assert.match(outgoing, /queueDraftCheck\(editor = activeComposer\(\)\) \{[\s\S]*?!isPrimaryComposer\(editor\)/);
   assert.match(outgoing, /keydown\(event\) \{[\s\S]*?!isPrimaryComposer\(editor\)/);
