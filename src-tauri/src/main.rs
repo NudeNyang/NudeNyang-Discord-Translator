@@ -1851,6 +1851,12 @@ fn main() {
             if window.label() == "tray-menu" || window.label() == "dictionary" {
                 match event {
                     WindowEvent::Focused(false) => {
+                        if window.label() == "dictionary" {
+                            window
+                                .app_handle()
+                                .state::<dictionary_window::DictionaryWindowStore>()
+                                .clear_retry();
+                        }
                         let _ = window.hide();
                     }
                     WindowEvent::CloseRequested { api, .. } => {
@@ -1897,6 +1903,7 @@ fn main() {
             dictionary_storage_folder_open,
             dictionary_window::dictionary_window_state_get,
             dictionary_window::dictionary_window_hide,
+            dictionary_window::dictionary_window_lookup_retry,
             dictionary_window::dictionary_external_open,
             settings_update,
             settings_reset,

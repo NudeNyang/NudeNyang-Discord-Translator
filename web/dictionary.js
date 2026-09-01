@@ -8,10 +8,10 @@ const shell = document.querySelector("#dictionary-shell");
 const SCROLL_REVEAL_DISTANCE = 24;
 
 const BASE_COPIES = Object.freeze({
-  ko: { dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.", empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현", contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.", pronounce: "발음 듣기", pausePronunciation: "발음 정지", restartPronunciation: "처음부터 다시 듣기", external: "Wiktionary에서 더 보기", personal: "개인 사전", addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)", save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처", sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문", noun: "명사", verb: "동사", adjective: "형용사", adverb: "부사", other: "기타" },
-  en: { dictionary: "Dictionary", close: "Close", loading: "Looking up the selection.", empty: "No matching expression was found in installed dictionaries.", segmentedMatches: "Expressions found in the selection", contextMeaning: "Shown first for this context", otherMeanings: "Other meanings", failed: "The dictionary could not be searched.", pronounce: "Listen to pronunciation", pausePronunciation: "Stop pronunciation", restartPronunciation: "Play again from the beginning", external: "View more on Wiktionary", personal: "Personal dictionary", addPersonal: "Add to personal dictionary", targetTerm: "Meaning or translation to display", note: "Note (optional)", save: "Save", saved: "Saved to the personal dictionary.", cancel: "Cancel", source: "Source", sourceAndLicense: "Sources and licenses", automaticTranslation: "Reference translation", originalMeaning: "Dictionary source", noun: "Noun", verb: "Verb", adjective: "Adjective", adverb: "Adverb", other: "Other" },
-  ja: { dictionary: "辞書", close: "閉じる", loading: "選択範囲の意味を調べています。", empty: "インストール済みの辞書に一致する表現はありません。", segmentedMatches: "選択範囲で見つかった表現", contextMeaning: "文脈に合わせて優先表示", otherMeanings: "別の意味", failed: "辞書を検索できませんでした。", pronounce: "発音を聞く", pausePronunciation: "発音を停止", restartPronunciation: "最初からもう一度聞く", external: "Wiktionaryで詳しく見る", personal: "個人辞書", addPersonal: "個人辞書に追加", targetTerm: "表示する意味または訳語", note: "メモ（任意）", save: "保存", saved: "個人辞書に保存しました。", cancel: "キャンセル", source: "出典", sourceAndLicense: "出典とライセンス", automaticTranslation: "参考用の自動翻訳", originalMeaning: "辞書の原文", noun: "名詞", verb: "動詞", adjective: "形容詞", adverb: "副詞", other: "その他" },
-  zh: { dictionary: "词典", close: "关闭", loading: "正在查询所选内容。", empty: "已安装的词典中没有匹配的词语。", segmentedMatches: "在所选范围内找到的词语", contextMeaning: "按当前语境优先显示", otherMeanings: "其他释义", failed: "无法查询词典。", pronounce: "听发音", pausePronunciation: "停止发音", restartPronunciation: "从头重新播放", external: "在 Wiktionary 中查看更多", personal: "个人词典", addPersonal: "添加到个人词典", targetTerm: "要显示的释义或译词", note: "备注（可选）", save: "保存", saved: "已保存到个人词典。", cancel: "取消", source: "来源", sourceAndLicense: "来源与许可", automaticTranslation: "仅供参考的自动翻译", originalMeaning: "词典原文", noun: "名词", verb: "动词", adjective: "形容词", adverb: "副词", other: "其他" },
+  ko: { dictionary: "사전", close: "닫기", loading: "선택한 범위의 뜻을 찾고 있습니다.", empty: "설치된 사전에서 일치하는 표현을 찾지 못했습니다.", segmentedMatches: "선택한 범위에서 찾은 표현", contextMeaning: "문맥상 우선 표시", otherMeanings: "다른 뜻", failed: "사전을 조회하지 못했습니다.", pronounce: "발음 듣기", pausePronunciation: "발음 정지", restartPronunciation: "처음부터 다시 듣기", external: "Wiktionary에서 더 보기", personal: "개인 사전", addPersonal: "개인 사전에 추가", targetTerm: "표시할 뜻 또는 번역어", note: "메모 (선택)", save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처", sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문", noun: "명사", verb: "동사", adjective: "형용사", adverb: "부사", other: "기타", offlineDictionary: "오프라인 사전", packHint: "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.", entries: "항목", compressedSize: "압축 용량", installPack: "설치", preparingInstall: "설치 준비 중", installingProgress: "설치 중 {progress}%", installed: "설치됨", packFailed: "사전팩 상태를 변경하지 못했습니다", retry: "다시 시도" },
+  en: { dictionary: "Dictionary", close: "Close", loading: "Looking up the selection.", empty: "No matching expression was found in installed dictionaries.", segmentedMatches: "Expressions found in the selection", contextMeaning: "Shown first for this context", otherMeanings: "Other meanings", failed: "The dictionary could not be searched.", pronounce: "Listen to pronunciation", pausePronunciation: "Stop pronunciation", restartPronunciation: "Play again from the beginning", external: "View more on Wiktionary", personal: "Personal dictionary", addPersonal: "Add to personal dictionary", targetTerm: "Meaning or translation to display", note: "Note (optional)", save: "Save", saved: "Saved to the personal dictionary.", cancel: "Cancel", source: "Source", sourceAndLicense: "Sources and licenses", automaticTranslation: "Reference translation", originalMeaning: "Dictionary source", noun: "Noun", verb: "Verb", adjective: "Adjective", adverb: "Adverb", other: "Other", offlineDictionary: "Offline dictionary", packHint: "Install an extended dictionary to find more words and expressions.", entries: "entries", compressedSize: "Compressed size", installPack: "Install", preparingInstall: "Preparing installation", installingProgress: "Installing {progress}%", installed: "Installed", packFailed: "Could not install the dictionary pack", retry: "Try again" },
+  ja: { dictionary: "辞書", close: "閉じる", loading: "選択範囲の意味を調べています。", empty: "インストール済みの辞書に一致する表現はありません。", segmentedMatches: "選択範囲で見つかった表現", contextMeaning: "文脈に合わせて優先表示", otherMeanings: "別の意味", failed: "辞書を検索できませんでした。", pronounce: "発音を聞く", pausePronunciation: "発音を停止", restartPronunciation: "最初からもう一度聞く", external: "Wiktionaryで詳しく見る", personal: "個人辞書", addPersonal: "個人辞書に追加", targetTerm: "表示する意味または訳語", note: "メモ（任意）", save: "保存", saved: "個人辞書に保存しました。", cancel: "キャンセル", source: "出典", sourceAndLicense: "出典とライセンス", automaticTranslation: "参考用の自動翻訳", originalMeaning: "辞書の原文", noun: "名詞", verb: "動詞", adjective: "形容詞", adverb: "副詞", other: "その他", offlineDictionary: "オフライン辞書", packHint: "拡張辞書をインストールすると、より多くの単語や表現を検索できます。", entries: "項目", compressedSize: "圧縮サイズ", installPack: "インストール", preparingInstall: "インストールを準備中", installingProgress: "インストール中 {progress}%", installed: "インストール済み", packFailed: "辞書パックをインストールできませんでした", retry: "再試行" },
+  zh: { dictionary: "词典", close: "关闭", loading: "正在查询所选内容。", empty: "已安装的词典中没有匹配的词语。", segmentedMatches: "在所选范围内找到的词语", contextMeaning: "按当前语境优先显示", otherMeanings: "其他释义", failed: "无法查询词典。", pronounce: "听发音", pausePronunciation: "停止发音", restartPronunciation: "从头重新播放", external: "在 Wiktionary 中查看更多", personal: "个人词典", addPersonal: "添加到个人词典", targetTerm: "要显示的释义或译词", note: "备注（可选）", save: "保存", saved: "已保存到个人词典。", cancel: "取消", source: "来源", sourceAndLicense: "来源与许可", automaticTranslation: "仅供参考的自动翻译", originalMeaning: "词典原文", noun: "名词", verb: "动词", adjective: "形容词", adverb: "副词", other: "其他", offlineDictionary: "离线词典", packHint: "安装扩展词典后，可以查找更多单词和表达。", entries: "条目", compressedSize: "压缩大小", installPack: "安装", preparingInstall: "正在准备安装", installingProgress: "正在安装 {progress}%", installed: "已安装", packFailed: "无法安装词典包", retry: "重试" },
 });
 
 const KOREAN_COPIES = Object.freeze({
@@ -24,6 +24,10 @@ const KOREAN_COPIES = Object.freeze({
   save: "저장", saved: "개인 사전에 저장했습니다.", cancel: "취소", source: "출처",
   sourceAndLicense: "출처 및 라이선스", automaticTranslation: "참고용 자동 번역", originalMeaning: "사전 원문",
   noun: "명사", verb: "동사", adjective: "형용사", adverb: "부사", other: "기타",
+  offlineDictionary: "오프라인 사전", packHint: "확장 사전을 설치하면 더 많은 단어와 표현을 찾을 수 있습니다.",
+  entries: "항목", compressedSize: "압축 용량", installPack: "설치", preparingInstall: "설치 준비 중",
+  installingProgress: "설치 중 {progress}%", installed: "설치됨",
+  packFailed: "사전팩 상태를 변경하지 못했습니다", retry: "다시 시도",
 });
 
 let payload = null;
@@ -32,6 +36,7 @@ let currentRequestId = "";
 let cleanupScroll = () => {};
 let activeSpeech = null;
 let speechGeneration = 0;
+const packInstallProgress = new Map();
 
 function copy(key) {
   const korean = KOREAN_COPIES[key];
@@ -395,6 +400,87 @@ function personalEntryPayload(result, targetTerm, note) {
   };
 }
 
+function formatPackSize(bytes) {
+  const value = Number(bytes || 0) / (1024 * 1024);
+  return `${new Intl.NumberFormat(uiLanguage, { maximumFractionDigits: value < 10 ? 1 : 0 }).format(value)} MB`;
+}
+
+function packProgressLabel(progress) {
+  if (progress?.error) return `${copy("packFailed")}: ${progress.error}`;
+  if (progress?.phase === "complete") return copy("installed");
+  if (progress?.phase === "installing") {
+    const percent = progress.total > 0
+      ? Math.min(100, Math.round(progress.processed / progress.total * 100))
+      : 0;
+    return copy("installingProgress").replace("{progress}", String(percent));
+  }
+  if (progress?.phase === "preparing") return copy("preparingInstall");
+  return "";
+}
+
+function syncPackInstallCard(card, pack) {
+  const progress = packInstallProgress.get(pack.language);
+  const button = card.querySelector(".nt-dict-pack-button");
+  const status = card.querySelector(".nt-dict-pack-status");
+  const fill = card.querySelector(".nt-dict-progress-fill");
+  const installing = progress && !progress.error && progress.phase !== "complete";
+  const complete = progress?.phase === "complete";
+  const percent = progress?.total > 0
+    ? Math.min(100, Math.round(progress.processed / progress.total * 100))
+    : complete ? 100 : 0;
+  button.disabled = Boolean(installing || complete);
+  button.textContent = progress?.error ? copy("retry") : complete ? copy("installed") : copy("installPack");
+  status.textContent = packProgressLabel(progress);
+  status.hidden = !status.textContent;
+  fill.style.width = `${percent}%`;
+  card.querySelector(".nt-dict-progress").setAttribute("aria-valuenow", String(percent));
+  card.classList.toggle("is-installing", Boolean(installing));
+  card.classList.toggle("is-complete", Boolean(complete));
+  card.classList.toggle("is-error", Boolean(progress?.error));
+}
+
+function makePackInstall(result) {
+  const pack = result.availablePack;
+  const card = make("section", "nt-dict-pack-install");
+  card.dataset.language = pack.language;
+  const heading = make("div", "nt-dict-pack-heading");
+  const copyBlock = make("div");
+  copyBlock.append(
+    make("strong", "", `${languageName(pack.language)} · ${copy("offlineDictionary")}`),
+    make("p", "", copy("packHint")),
+  );
+  const button = make("button", "nt-dict-action primary nt-dict-pack-button", copy("installPack"));
+  button.type = "button";
+  heading.append(copyBlock, button);
+  const meta = make(
+    "small",
+    "nt-dict-pack-meta",
+    `${Number(pack.entryCount || 0).toLocaleString(uiLanguage)} ${copy("entries")} · ${copy("compressedSize")} ${formatPackSize(pack.compressedBytes)}`,
+  );
+  const progress = make("div", "nt-dict-progress");
+  progress.setAttribute("role", "progressbar");
+  progress.setAttribute("aria-label", copy("preparingInstall"));
+  progress.setAttribute("aria-valuemin", "0");
+  progress.setAttribute("aria-valuemax", "100");
+  progress.append(make("span", "nt-dict-progress-fill"));
+  const status = make("p", "nt-dict-pack-status");
+  status.setAttribute("aria-live", "polite");
+  button.addEventListener("click", async () => {
+    packInstallProgress.set(pack.language, { phase: "preparing", processed: 0, total: 0 });
+    syncPackInstallCard(card, pack);
+    try {
+      await invoke("dictionary_pack_install", { language: pack.language });
+      await invoke("dictionary_window_lookup_retry");
+    } catch (error) {
+      packInstallProgress.set(pack.language, { error: String(error || copy("packFailed")) });
+      syncPackInstallCard(card, pack);
+    }
+  });
+  card.append(heading, meta, progress, status);
+  syncPackInstallCard(card, pack);
+  return card;
+}
+
 function makeFooter(result) {
   const footer = make("footer", "nt-dict-footer");
   const actions = make("div", "nt-dict-actions");
@@ -508,7 +594,10 @@ function renderResult(result, error = "") {
     body.append(item);
   }
 
-  if (!error && !(result?.entries?.length || result?.personalEntries?.length)) body.append(make("p", "nt-dict-state", copy("empty")));
+  if (!error && !(result?.entries?.length || result?.personalEntries?.length)) {
+    if (result?.availablePack) body.append(makePackInstall(result));
+    else body.append(make("p", "nt-dict-state", copy("empty")));
+  }
   if (sourceAttributions.size) {
     const attribution = make("details", "nt-dict-attribution");
     const list = make("div", "nt-dict-attribution-list");
@@ -551,6 +640,15 @@ function applyPayload(nextPayload) {
 async function initialize() {
   if (!invoke || !listen) return;
   await listen("dictionary-window-state", event => applyPayload(event.payload));
+  await listen("dictionary-pack-progress", event => {
+    const progress = event.payload || {};
+    if (!progress.language) return;
+    packInstallProgress.set(progress.language, progress);
+    const card = shell.querySelector(`.nt-dict-pack-install[data-language="${CSS.escape(progress.language)}"]`);
+    if (card && payload?.result?.availablePack?.language === progress.language) {
+      syncPackInstallCard(card, payload.result.availablePack);
+    }
+  });
   await listen("dictionary-speech-ended", event => finishNativeSpeech(String(event.payload || "")));
   const initial = await invoke("dictionary_window_state_get").catch(() => null);
   if (initial) applyPayload(initial);

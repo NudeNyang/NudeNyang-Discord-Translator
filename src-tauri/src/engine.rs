@@ -17,7 +17,7 @@ use crate::config::{browser_connection_enabled, default_config_path, AppConfig, 
 use crate::dictionary::{DictionaryLookupResult, DictionaryStore, PersonalDictionaryEntry};
 use crate::dictionary_ui::{
     apply_dictionary_error_script, apply_dictionary_result_script, apply_dictionary_saved_script,
-    dictionary_ui_script, parse_dictionary_requests, DICTIONARY_CLEANUP_SCRIPT,
+    dictionary_ui_script, parse_dictionary_requests, DictionaryRequest, DICTIONARY_CLEANUP_SCRIPT,
 };
 use crate::dictionary_window;
 use crate::discord_verification::{parse_verification_observation, VERIFICATION_DETECTION_SCRIPT};
@@ -334,6 +334,7 @@ enum Control {
         mpsc::Sender<Result<BrowserTranslationResponse, String>>,
     ),
     AttachApp(AppHandle),
+    RetryDictionary(DictionaryRequest),
     UiReady,
     Stop,
 }
@@ -777,6 +778,12 @@ impl RustEngine {
         self.controls
             .send(Control::AttachApp(app))
             .map_err(|_| "Rust 번역 엔진에 앱 설정 연결을 전달하지 못했습니다.".to_string())
+    }
+
+    pub fn retry_dictionary(&self, request: DictionaryRequest) -> Result<(), String> {
+        self.controls
+            .send(Control::RetryDictionary(request))
+            .map_err(|_| "Rust 번역 엔진이 종료되어 사전을 다시 조회하지 못했습니다.".to_string())
     }
 
     pub fn ui_ready(&self) -> Result<(), String> {
@@ -1444,6 +1451,33 @@ fn run_controller(
                     }
                 }
                 Control::AttachApp(app) => app_handle = Some(app),
+                Control::RetryDictionary(request) => {
+                    let translation_ready = status
+                        .lock()
+                        .is_ok_and(|runtime| runtime.active_translator == config.translator);
+                    if let Err(error) = run_dictionary_lookup(
+                        &request,
+                        dictionary_store.as_ref(),
+                        app_handle.as_ref(),
+                        &config,
+                        &worker_tx,
+                        translation_ready,
+                    ) {
+                        if let Some(app) = app_handle.as_ref() {
+                            if let Err(window_error) = dictionary_window::show_error(
+                                app,
+                                &request.id,
+                                &request.query,
+                                &config.ui_language,
+                                &config.target_language,
+                                config.dictionary_external_provider != "none",
+                                &error,
+                            ) {
+                                crate::diagnostics::warn("dictionary-window", &window_error);
+                            }
+                        }
+                    }
+                }
                 Control::UiReady => {
                     if !ui_ready {
                         ui_ready = true;
@@ -1858,67 +1892,8 @@ fn scan_dictionary(
     for request in parse_dictionary_requests(value)?.into_iter().take(4) {
         let outcome = match request.action.as_str() {
             "lookup" => {
-                let app =
-                    app.ok_or_else(|| "사전 도구 창을 열 준비가 되지 않았습니다.".to_string())?;
-                dictionary_window::show_loading(
-                    app,
-                    &request.id,
-                    &request.query,
-                    &config.ui_language,
-                    &config.target_language,
-                    config.dictionary_external_provider != "none",
-                )?;
-                store
-                    .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
-                    .and_then(|store| {
-                        let source_language = dictionary_source_language(
-                            &request.source_language,
-                            &request.query,
-                            &request.context,
-                        );
-                        let target_language =
-                            if is_supported_language_code(&request.target_language) {
-                                request.target_language.as_str()
-                            } else {
-                                config.target_language.as_str()
-                            };
-                        let result = store.lookup_with_context(
-                            &request.query,
-                            &request.context,
-                            source_language.as_deref(),
-                            target_language,
-                        )?;
-                        let target = Language::try_from(result.target_language.as_str())
-                            .unwrap_or(Language::English);
-                        let (immediate, pending) =
-                            stage_dictionary_lookup_result(result, translation_ready);
-                        if let Some(result) = pending {
-                            worker
-                                .send(WorkerCommand::LocalizeDictionary(
-                                    DictionaryLocalizationBatch {
-                                        request_id: request.id.clone(),
-                                        target,
-                                        context: request.context.clone(),
-                                        result,
-                                        queued_at: Instant::now(),
-                                    },
-                                ))
-                                .map_err(|_| {
-                                    "Rust 사전 번역 작업 스레드가 종료되었습니다.".to_string()
-                                })?;
-                        }
-                        Ok(immediate)
-                    })
-                    .and_then(|result| {
-                        dictionary_window::show_result(
-                            app,
-                            &request.id,
-                            result,
-                            &config.ui_language,
-                            config.dictionary_external_provider != "none",
-                        )?;
-                        Ok(String::new())
-                    })
+                run_dictionary_lookup(&request, store, app, config, worker, translation_ready)
+                    .map(|()| String::new())
             }
             "save" => store
                 .ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())
@@ -2000,6 +1975,60 @@ fn scan_dictionary(
         }
     }
     Ok(())
+}
+
+fn run_dictionary_lookup(
+    request: &DictionaryRequest,
+    store: Option<&DictionaryStore>,
+    app: Option<&AppHandle>,
+    config: &AppConfig,
+    worker: &mpsc::Sender<WorkerCommand>,
+    translation_ready: bool,
+) -> Result<(), String> {
+    let app = app.ok_or_else(|| "사전 도구 창을 열 준비가 되지 않았습니다.".to_string())?;
+    dictionary_window::show_loading(
+        app,
+        request,
+        &config.ui_language,
+        &config.target_language,
+        config.dictionary_external_provider != "none",
+    )?;
+    let store = store.ok_or_else(|| "사전 저장소를 열지 못했습니다.".to_string())?;
+    let source_language =
+        dictionary_source_language(&request.source_language, &request.query, &request.context);
+    let target_language = if is_supported_language_code(&request.target_language) {
+        request.target_language.as_str()
+    } else {
+        config.target_language.as_str()
+    };
+    let result = store.lookup_with_context(
+        &request.query,
+        &request.context,
+        source_language.as_deref(),
+        target_language,
+    )?;
+    let target = Language::try_from(result.target_language.as_str()).unwrap_or(Language::English);
+    let (immediate, pending) = stage_dictionary_lookup_result(result, translation_ready);
+    if let Some(result) = pending {
+        worker
+            .send(WorkerCommand::LocalizeDictionary(
+                DictionaryLocalizationBatch {
+                    request_id: request.id.clone(),
+                    target,
+                    context: request.context.clone(),
+                    result,
+                    queued_at: Instant::now(),
+                },
+            ))
+            .map_err(|_| "Rust 사전 번역 작업 스레드가 종료되었습니다.".to_string())?;
+    }
+    dictionary_window::show_result(
+        app,
+        &request.id,
+        immediate,
+        &config.ui_language,
+        config.dictionary_external_provider != "none",
+    )
 }
 
 fn stage_dictionary_lookup_result(
@@ -4508,6 +4537,7 @@ mod tests {
             target_language: "ko".to_string(),
             selection_translation: String::new(),
             localization_pending: false,
+            available_pack: None,
             segmented: false,
             entries: Vec::new(),
             personal_entries: Vec::new(),
@@ -4536,6 +4566,7 @@ mod tests {
             target_language: "ja".to_string(),
             selection_translation: String::new(),
             localization_pending: false,
+            available_pack: None,
             segmented: false,
             entries: vec![DictionaryEntry {
                 entry_id: 1,
@@ -4592,6 +4623,7 @@ mod tests {
             target_language: "ko".to_string(),
             selection_translation: String::new(),
             localization_pending: false,
+            available_pack: None,
             segmented: true,
             entries: vec![DictionaryEntry {
                 entry_id: 1,
@@ -4662,6 +4694,7 @@ mod tests {
             target_language: "ko".to_string(),
             selection_translation: String::new(),
             localization_pending: true,
+            available_pack: None,
             segmented: false,
             entries: vec![
                 sense(1, 0, "sale; offering for sale"),
@@ -4723,6 +4756,7 @@ mod tests {
             target_language: "ko".to_string(),
             selection_translation: String::new(),
             localization_pending: true,
+            available_pack: None,
             segmented: false,
             entries: vec![
                 sense(1, 0, "a financial institution that holds money"),
@@ -4781,6 +4815,7 @@ mod tests {
             target_language: "ko".to_string(),
             selection_translation: String::new(),
             localization_pending: true,
+            available_pack: None,
             segmented: false,
             entries: vec![
                 sense(
@@ -4841,6 +4876,7 @@ mod tests {
             target_language: "ko".to_string(),
             selection_translation: String::new(),
             localization_pending: true,
+            available_pack: None,
             segmented: false,
             entries: vec![
                 sense(
@@ -5301,6 +5337,7 @@ mod tests {
                             target_language: "ko".to_string(),
                             selection_translation: String::new(),
                             localization_pending: false,
+                            available_pack: None,
                             segmented: false,
                             entries: Vec::new(),
                             personal_entries: Vec::new(),

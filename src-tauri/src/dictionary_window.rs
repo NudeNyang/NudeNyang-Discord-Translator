@@ -5,6 +5,8 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewWindow}
 use tauri_plugin_opener::OpenerExt;
 
 use crate::dictionary::DictionaryLookupResult;
+use crate::dictionary_ui::DictionaryRequest;
+use crate::engine::RustEngine;
 
 const WINDOW_LABEL: &str = "dictionary";
 const STATE_EVENT: &str = "dictionary-window-state";
@@ -23,11 +25,14 @@ pub struct DictionaryWindowPayload {
 }
 
 #[derive(Default)]
-pub struct DictionaryWindowStore(Mutex<Option<DictionaryWindowPayload>>);
+pub struct DictionaryWindowStore {
+    payload: Mutex<Option<DictionaryWindowPayload>>,
+    retry_request: Mutex<Option<DictionaryRequest>>,
+}
 
 impl DictionaryWindowStore {
     fn accept(&self, payload: DictionaryWindowPayload) -> bool {
-        let Ok(mut current) = self.0.lock() else {
+        let Ok(mut current) = self.payload.lock() else {
             return false;
         };
         if payload.phase != "loading"
@@ -42,7 +47,30 @@ impl DictionaryWindowStore {
     }
 
     fn get(&self) -> Option<DictionaryWindowPayload> {
-        self.0.lock().ok().and_then(|current| current.clone())
+        self.payload.lock().ok().and_then(|current| current.clone())
+    }
+
+    fn remember_retry(&self, request: DictionaryRequest) -> Result<(), String> {
+        let mut current = self
+            .retry_request
+            .lock()
+            .map_err(|_| "사전 재검색 상태 잠금을 열지 못했습니다.".to_string())?;
+        *current = Some(request);
+        Ok(())
+    }
+
+    fn take_retry(&self) -> Result<DictionaryRequest, String> {
+        self.retry_request
+            .lock()
+            .map_err(|_| "사전 재검색 상태 잠금을 열지 못했습니다.".to_string())?
+            .take()
+            .ok_or_else(|| "다시 검색할 사전 요청이 없습니다.".to_string())
+    }
+
+    pub fn clear_retry(&self) {
+        if let Ok(mut current) = self.retry_request.lock() {
+            *current = None;
+        }
     }
 }
 
@@ -121,18 +149,22 @@ fn publish(app: &AppHandle, payload: DictionaryWindowPayload, reveal: bool) -> R
 
 pub fn show_loading(
     app: &AppHandle,
-    request_id: &str,
-    query: &str,
+    request: &DictionaryRequest,
     ui_language: &str,
     target_language: &str,
     external_enabled: bool,
 ) -> Result<(), String> {
+    let mut retry_request = request.clone();
+    retry_request.action = "lookup".to_string();
+    retry_request.target_language = target_language.to_string();
+    app.state::<DictionaryWindowStore>()
+        .remember_retry(retry_request)?;
     publish(
         app,
         DictionaryWindowPayload {
-            request_id: request_id.to_string(),
+            request_id: request.id.clone(),
             phase: "loading".to_string(),
-            query: query.to_string(),
+            query: request.query.clone(),
             ui_language: ui_language.to_string(),
             target_language: target_language.to_string(),
             external_enabled,
@@ -201,11 +233,24 @@ pub fn dictionary_window_state_get(
 #[tauri::command]
 pub fn dictionary_window_hide(window: WebviewWindow) -> Result<(), String> {
     window
+        .app_handle()
+        .state::<DictionaryWindowStore>()
+        .clear_retry();
+    window
         .hide()
         .map_err(|error| format!("사전 창을 닫지 못했습니다: {error}"))
 }
 
+#[tauri::command]
+pub fn dictionary_window_lookup_retry(
+    engine: State<'_, RustEngine>,
+    state: State<'_, DictionaryWindowStore>,
+) -> Result<(), String> {
+    engine.retry_dictionary(state.take_retry()?)
+}
+
 pub fn hide(app: &AppHandle) -> Result<(), String> {
+    app.state::<DictionaryWindowStore>().clear_retry();
     let window = app
         .get_webview_window(WINDOW_LABEL)
         .ok_or_else(|| "사전 도구 창을 찾지 못했습니다.".to_string())?;
@@ -230,7 +275,8 @@ pub fn dictionary_external_open(app: AppHandle, query: String) -> Result<(), Str
 
 #[cfg(test)]
 mod tests {
-    use super::DictionaryWindowPayload;
+    use super::{DictionaryWindowPayload, DictionaryWindowStore};
+    use crate::dictionary_ui::DictionaryRequest;
 
     #[test]
     fn payload_uses_a_fixed_header_body_footer_state_contract() {
@@ -250,5 +296,47 @@ mod tests {
         assert_eq!(value["phase"], "loading");
         assert_eq!(value["query"], "submission");
         assert_eq!(value["externalEnabled"], true);
+    }
+
+    #[test]
+    fn retry_state_keeps_context_out_of_the_serialized_window_payload() {
+        let payload = DictionaryWindowPayload {
+            request_id: "dictionary-1".to_string(),
+            phase: "loading".to_string(),
+            query: "submission".to_string(),
+            ui_language: "ko".to_string(),
+            target_language: "ko".to_string(),
+            external_enabled: true,
+            result: None,
+            error: String::new(),
+        };
+        let value = serde_json::to_value(payload).unwrap();
+
+        assert!(value.get("context").is_none());
+        assert!(value.get("sourceLanguage").is_none());
+    }
+
+    #[test]
+    fn retry_context_is_consumed_after_one_engine_retry() {
+        let state = DictionaryWindowStore::default();
+        state
+            .remember_retry(DictionaryRequest {
+                id: "dictionary-1".to_string(),
+                action: "lookup".to_string(),
+                query: "future".to_string(),
+                context: "the surrounding message stays in engine memory".to_string(),
+                source_language: "en".to_string(),
+                target_language: "ko".to_string(),
+                target_term: String::new(),
+                note: String::new(),
+            })
+            .unwrap();
+
+        let retry = state.take_retry().unwrap();
+        assert_eq!(
+            retry.context,
+            "the surrounding message stays in engine memory"
+        );
+        assert!(state.take_retry().is_err());
     }
 }

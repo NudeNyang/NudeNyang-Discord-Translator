@@ -138,12 +138,21 @@ pub struct DictionaryEntry {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DictionaryPackInstallOption {
+    pub language: String,
+    pub entry_count: u64,
+    pub compressed_bytes: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DictionaryLookupResult {
     pub query: String,
     pub source_language: String,
     pub target_language: String,
     pub selection_translation: String,
     pub localization_pending: bool,
+    pub available_pack: Option<DictionaryPackInstallOption>,
     pub segmented: bool,
     pub entries: Vec<DictionaryEntry>,
     pub personal_entries: Vec<PersonalDictionaryEntry>,
@@ -423,6 +432,11 @@ impl DictionaryStore {
         let source_language =
             resolve_lookup_language(&detected, context, &entries, &personal_entries);
         prioritize_lookup_language(&mut entries, &mut personal_entries, &source_language);
+        let available_pack = if entries.is_empty() && personal_entries.is_empty() {
+            installable_pack_for_missing_lookup(&connection, &source_language)?
+        } else {
+            None
+        };
 
         Ok(DictionaryLookupResult {
             query,
@@ -430,6 +444,7 @@ impl DictionaryStore {
             target_language: target_language.to_string(),
             selection_translation: String::new(),
             localization_pending: false,
+            available_pack,
             segmented,
             entries,
             personal_entries,
@@ -946,6 +961,41 @@ impl DictionaryStore {
             .commit()
             .map_err(|error| format!("사전팩 설치를 완료하지 못했습니다: {error}"))
     }
+}
+
+fn installable_pack_for_missing_lookup(
+    connection: &Connection,
+    language: &str,
+) -> Result<Option<DictionaryPackInstallOption>, String> {
+    if language.is_empty() || !is_supported_language_code(language) {
+        return Ok(None);
+    }
+    let installed_edition = connection
+        .query_row(
+            "SELECT edition FROM dictionary_packs WHERE language=?1",
+            params![language],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| format!("사전팩 설치 상태를 확인하지 못했습니다: {error}"))?;
+    if installed_edition.as_deref() == Some("practical") {
+        return Ok(None);
+    }
+    let catalog = pack_catalog()?;
+    Ok(catalog
+        .languages
+        .into_iter()
+        .find(|pack| {
+            pack.code == language
+                && pack.availability == "practical"
+                && pack.entry_count > 0
+                && pack.compressed_bytes > 0
+        })
+        .map(|pack| DictionaryPackInstallOption {
+            language: pack.code,
+            entry_count: pack.entry_count,
+            compressed_bytes: pack.compressed_bytes,
+        }))
 }
 
 #[derive(Clone, Debug)]
@@ -2667,6 +2717,7 @@ mod tests {
             target_language: "ja".to_string(),
             selection_translation: "共有".to_string(),
             localization_pending: false,
+            available_pack: None,
             segmented: false,
             entries: vec![
                 entry(1, 0, "個人が所有する資産。"),
@@ -2974,11 +3025,21 @@ mod tests {
     #[test]
     fn japanese_practical_pack_installs_and_finds_the_reported_selection() {
         let store = temporary_store("japanese-practical");
+        let before_install = store.lookup("調べ", Some("ja"), "ko").unwrap();
+        let available = before_install
+            .available_pack
+            .as_ref()
+            .expect("missing Japanese entry should offer the reviewed offline pack");
+        assert_eq!(available.language, "ja");
+        assert!(available.entry_count >= 50_000);
+        assert!(available.compressed_bytes > 0);
+
         let status = store.install_bundled_pack("ja").unwrap();
         assert_eq!(status.edition, "practical");
         assert!(status.entry_count >= 50_000);
 
         let result = store.lookup("調べ", Some("ja"), "ko").unwrap();
+        assert!(result.available_pack.is_none());
         let entry = result
             .entries
             .iter()
@@ -2986,6 +3047,13 @@ mod tests {
             .expect("調べ should be available after installing the Japanese practical pack");
         assert_eq!(entry.reading, "しらべ");
         assert!(!entry.definition.is_empty());
+
+        let missing_after_install = store
+            .lookup("\u{e000}\u{e001}\u{e002}", Some("ja"), "ko")
+            .unwrap();
+        assert!(missing_after_install.entries.is_empty());
+        assert!(missing_after_install.personal_entries.is_empty());
+        assert!(missing_after_install.available_pack.is_none());
 
         let time = store
             .lookup_with_context(
