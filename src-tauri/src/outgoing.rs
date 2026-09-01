@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 48;
+  const CONTROLLER_VERSION = 49;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -158,8 +158,19 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   function composerHasText(editor) {
     return Boolean(composerText(editor).trim());
   }
+  function primaryComposerContainer(editor) {
+    if (!editor?.matches?.(composerSelector)) return null;
+    const container = editor.closest('[class*="channelTextArea"]');
+    if (!container) return null;
+    const chatSurface = container.closest('main, [role="main"], [class*="chatContent"]');
+    return chatSurface ? container : null;
+  }
+  function isPrimaryComposer(editor) {
+    return Boolean(primaryComposerContainer(editor));
+  }
   function activeComposer() {
     return [...document.querySelectorAll(composerSelector)].filter(editor => {
+      if (!isPrimaryComposer(editor)) return false;
       const bounds = editor.getBoundingClientRect();
       return bounds.width > 120
         && bounds.height > 24
@@ -254,10 +265,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   function currentComposerForItem(item) {
     const expected = item.original_text || item.text || '';
     const current = item.editor;
-    if (current?.isConnected && sourceTextForItem(current, item) === expected) return current;
+    if (current?.isConnected && isPrimaryComposer(current) && sourceTextForItem(current, item) === expected) return current;
     const messageRowSelector = 'li[id^="chat-messages-"], [data-list-item-id^="chat-messages___"], [class*="messageListItem"]';
     const candidates = [...document.querySelectorAll(composerSelector)]
-      .filter(candidate => candidate.isConnected && !candidate.closest(messageRowSelector))
+      .filter(candidate => candidate.isConnected && isPrimaryComposer(candidate) && !candidate.closest(messageRowSelector))
       .filter(candidate => sourceTextForItem(candidate, item) === expected);
     const focused = document.activeElement;
     return candidates.find(candidate => candidate === focused || candidate.contains(focused))
@@ -672,7 +683,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           return;
         }
         const editor = activeComposer();
-        const composer = editor?.closest('form') || editor?.closest('[class*="channelTextArea"]') || editor?.parentElement || null;
+        const composerContainer = primaryComposerContainer(editor);
+        const composer = editor ? (editor.closest('form') || composerContainer) : null;
         const visibleAnchors = selector => [...document.querySelectorAll(selector)].filter(anchor => {
           const bounds = anchor.getBoundingClientRect();
           return bounds.width > 120
@@ -959,12 +971,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const inputType = String(event.inputType || '');
         if (!inputType.startsWith('insert') && !inputType.startsWith('delete')) return;
         const editor = event.target.closest?.(composerSelector);
-        if (!editor || !selectionCoversComposer(editor)) return;
+        if (!editor || !isPrimaryComposer(editor) || !selectionCoversComposer(editor)) return;
         this.cancelReview(editor);
       },
       onInput(event) {
         const editor = event.target.closest?.(composerSelector);
-        if (!editor) return;
+        if (!editor || !isPrimaryComposer(editor)) return;
         this.queueDraftCheck(editor);
         if (composerHasText(editor)) return;
         const inputType = String(event.inputType || '');
@@ -975,7 +987,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         return JSON.stringify([channelKey, language, text]);
       },
       queueDraftCheck(editor = activeComposer()) {
-        if (!this.enabled || !editor?.isConnected) return;
+        if (!this.enabled || !editor?.isConnected || !isPrimaryComposer(editor)) return;
         const channelKey = currentChannelKey();
         if (!channelKey) return;
         const selected = this.oneShotOriginal
@@ -1019,7 +1031,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const ordinaryEnter = event.key === 'Enter' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && !event.isComposing;
         if (!ordinaryEnter) return;
         const editor = event.target.closest?.(composerSelector);
-        if (!editor) return;
+        if (!editor || !isPrimaryComposer(editor)) return;
         if (hasActiveAutocomplete(editor)) return;
         const review = [...this.pending.entries()].find(([, item]) => item.editor === editor && item.review_ready);
         if (review) {
@@ -1961,7 +1973,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 48"));
+        assert!(script.contains("const CONTROLLER_VERSION = 49"));
     }
 
     #[test]

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { JSDOM } from "jsdom";
 
 const outgoing = readFileSync(new URL("../../src-tauri/src/outgoing.rs", import.meta.url), "utf8");
 const outgoingProduction = outgoing.split("#[cfg(test)]")[0];
@@ -14,6 +15,67 @@ function outgoingComparableMessageText() {
   assert.ok(match, "Discord message comparison normalizer must exist");
   return Function("value", match[1]);
 }
+
+function activeComposerIn(html) {
+  const scope = outgoing.match(
+    /function composerHasText\(editor\) \{[\s\S]*?(?=\n  function hasActiveMediaViewer\(\))/,
+  );
+  assert.ok(scope, "Discord 작성창 판별 함수를 찾을 수 있어야 해");
+  const dom = new JSDOM(html, {
+    runScripts: "outside-only",
+    url: "https://discord.com/channels/1/2",
+  });
+  const { window } = dom;
+  Object.defineProperty(window, "innerHeight", { configurable: true, value: 900 });
+  window.Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
+    const top = Number(this.dataset.top || 700);
+    const width = Number(this.dataset.width || 560);
+    const height = Number(this.dataset.height || 48);
+    return {
+      width,
+      height,
+      top,
+      right: width,
+      bottom: top + height,
+      left: 0,
+      x: 0,
+      y: top,
+      toJSON() {},
+    };
+  };
+  return window.eval(`(() => {
+    const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
+    ${scope[0]}
+    return activeComposer()?.id || null;
+  })()`);
+}
+
+test("통화 참가자 프로필 입력창은 메인 Discord 작성창으로 선택하지 않는다", () => {
+  assert.equal(
+    activeComposerIn(`
+      <main class="callContainer_test"><div class="videoGrid_test"></div></main>
+      <div class="userProfileOuter_test">
+        <form><div id="profile-message" role="textbox" contenteditable="true" data-top="760"></div></form>
+      </div>
+    `),
+    null,
+  );
+
+  assert.equal(
+    activeComposerIn(`
+      <main class="chatContent_test">
+        <ol data-list-id="chat-messages"></ol>
+        <form class="channelTextArea_test">
+          <div id="channel-message" role="textbox" contenteditable="true" data-top="700"></div>
+        </form>
+        <div class="userProfileOuter_test">
+          <form><div id="profile-message" role="textbox" contenteditable="true" data-top="780"></div></form>
+        </div>
+      </main>
+    `),
+    "channel-message",
+  );
+});
 
 test("outgoing translation reserves the second physical Enter for the user", () => {
   assert.doesNotMatch(outgoing, /__SEND_IMMEDIATELY_SHORTCUT__/);
@@ -208,7 +270,13 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 48/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 49/);
+  assert.match(outgoing, /function primaryComposerContainer\(editor\)/);
+  assert.match(outgoing, /editor\.closest\('\[class\*="channelTextArea"\]'\)/);
+  assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);
+  assert.match(outgoing, /onInput\(event\) \{[\s\S]*?!isPrimaryComposer\(editor\)/);
+  assert.match(outgoing, /queueDraftCheck\(editor = activeComposer\(\)\) \{[\s\S]*?!isPrimaryComposer\(editor\)/);
+  assert.match(outgoing, /keydown\(event\) \{[\s\S]*?!isPrimaryComposer\(editor\)/);
   assert.match(outgoing, /function hasActiveMediaViewer\(\)/);
   assert.match(outgoing, /\[role="dialog"\] img/);
   assert.match(outgoing, /if \(hasActiveMediaViewer\(\)\) \{[\s\S]*this\.root\.hidden = true;[\s\S]*return;/);
