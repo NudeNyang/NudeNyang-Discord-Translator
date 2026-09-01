@@ -112,6 +112,8 @@ NudeNyang does not send these items to external translation providers:
 
 DeepL credentials are stored in Windows Credential Manager. Subscription providers use their official local CLI authentication. Diagnostic logs redact home paths and secret values and do not include message bodies or local-model prompts.
 
+After saved settings load, provider connection probes start asynchronously regardless of which settings panel is visible. Automatic probes use background-safe structured CLI commands and never wait in the UI initialization path. Only a login flow explicitly started by the user may open an authentication terminal or browser window; unsupported legacy CLI probes report that an update is required instead of falling back to an interactive console command.
+
 Translation results are cached in memory and SQLite. Cache namespaces include the engine, target language, prompt/register version, and relevant renderer version so incompatible results are not reused. Within one uncached batch, identical source text resolved to the same source language is translated once and fanned out to every matching result slot. This reduces cold-cache work without sharing results across incompatible target languages or engine namespaces. A final shared quality gate rejects an untranslated or incomplete result before it can be cached as a success. Incoming local translation retries that item once in isolation before preserving the original, and diagnostics record only its length and hash rather than the message body.
 
 ## Image translation

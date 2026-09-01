@@ -148,16 +148,22 @@ test("normal child processes stay in the background without console flashes", ()
   assert.match(discord, /configure_background\(&mut command\)/);
   assert.match(discord, /const CREATE_NO_WINDOW: u32 = 0x0800_0000/);
   assert.match(hymt, /\.creation_flags\(CREATE_NO_WINDOW\)/);
-  assert.doesNotMatch(subscriptionCli, /\.show_window\(/);
   assert.doesNotMatch(discord, /\.show_window\(/);
   assert.doesNotMatch(hymt, /\.show_window\(/);
 });
 
-test("provider CLI probes wait until the connection section enters the viewport", () => {
-  assert.match(script, /function observeProviderConnections\(\)/);
-  assert.match(script, /new IntersectionObserver/);
-  assert.match(script, /observer\.observe\(elements\.providerConnections\)/);
-  assert.doesNotMatch(script, /\nloadProviderConnections\(\);\s*\nloadStorageStatus/);
+test("Antigravity connection probes use only the headless JSON command", () => {
+  const resolver = subscriptionCli.match(/fn resolve_antigravity_translation_model\([\s\S]*?\n\}/)?.[0] || "";
+  assert.match(resolver, /"--output-format"\.to_string\(\)[\s\S]*?"json"\.to_string\(\)[\s\S]*?"models"\.to_string\(\)/);
+  assert.doesNotMatch(resolver, /&\["models"\.to_string\(\)\]/);
+});
+
+test("provider CLI probes start asynchronously after settings load without waiting for the engine tab", () => {
+  const initializer = script.match(/async function initializeSettingsUi\(\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(initializer, /await loadSettings\(\);[\s\S]*?void loadProviderConnections\(\);/);
+  assert.doesNotMatch(initializer, /await loadProviderConnections\(\)/);
+  assert.doesNotMatch(script, /function observeProviderConnections\(\)/);
+  assert.doesNotMatch(script, /new IntersectionObserver/);
 });
 
 test("the private Discord pipe inherits only its two anonymous pipe handles", () => {

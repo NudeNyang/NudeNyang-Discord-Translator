@@ -1460,23 +1460,6 @@ function renderBrowserClients() {
   browserConnections.render();
 }
 
-function observeProviderConnections() {
-  if (!elements.providerConnections) return;
-  if (typeof IntersectionObserver !== "function") {
-    loadProviderConnections();
-    return;
-  }
-  const observer = new IntersectionObserver(entries => {
-    if (!entries.some(entry => entry.isIntersecting)) return;
-    observer.disconnect();
-    loadProviderConnections();
-  }, {
-    root: elements.settingsScroll,
-    rootMargin: "160px 0px",
-  });
-  observer.observe(elements.providerConnections);
-}
-
 async function loadBrowserClients() {
   renderBrowserClients();
   await browserConnections.refresh();
@@ -3199,6 +3182,9 @@ function waitForStableUiFrame() {
 
 async function initializeSettingsUi() {
   await loadSettings();
+  // Provider probes can take several seconds, so begin them as soon as the
+  // saved configuration is available without delaying engine activation.
+  void loadProviderConnections();
   try {
     await loadAutostartState();
   } catch (error) {
@@ -3729,7 +3715,6 @@ initializeSettingsUi().catch(error => {
   elements.engineState.dataset.state = "error";
   setLocalizedText(elements.engineStateLabel, "엔진 연결 실패");
 });
-observeProviderConnections();
 loadStorageStatus().catch(error => showError("저장 공간 정보를 확인하지 못했습니다", String(error)));
 loadSystemMemoryStatus().catch(error => {
   writeDiagnostic("warn", `system-memory-status: ${String(error)}`);

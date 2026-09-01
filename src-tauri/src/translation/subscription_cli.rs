@@ -762,7 +762,7 @@ fn resolve_antigravity_translation_model(
         "json".to_string(),
         "models".to_string(),
     ];
-    let json_output = run_process(
+    let output = run_process(
         executable,
         &json_arguments,
         None,
@@ -770,21 +770,9 @@ fn resolve_antigravity_translation_model(
         environment,
         Duration::from_secs(15),
     )?;
-    let output = if json_output.status.success() {
-        json_output
-    } else {
-        run_process(
-            executable,
-            &["models".to_string()],
-            None,
-            workspace,
-            environment,
-            Duration::from_secs(15),
-        )?
-    };
     if !output.status.success() {
         return Err(
-            "Google Antigravity 플랜 계정 연결이 필요합니다. 설정의 번역 서비스 연결에서 Gemini 연결을 진행하십시오."
+            "Google Antigravity 플랜 계정 연결이 필요합니다. CLI를 최신 버전으로 업데이트한 뒤 설정의 번역 서비스 연결에서 Gemini 연결을 진행하십시오."
                 .to_string(),
         );
     }
