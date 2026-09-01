@@ -187,6 +187,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       const dialog = img.closest('[role="dialog"]');
       if (!dialog) return false;
       const label = dialog.getAttribute('aria-label') || '';
+      const profileMediaPath = source => /\/(?:avatars|banners|avatar-decoration-presets|profile-effects|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source || '');
+      if (!/media|미디어|メディア|媒体/i.test(label) && [...dialog.querySelectorAll('img')].some(candidate =>
+        profileMediaPath(candidate.currentSrc || candidate.src || '')
+      )) return false;
       const looksLikeMediaViewer = /media|미디어|メディア|媒体/i.test(label)
         || Boolean(dialog.querySelector('[class*="carousel"], [class*="modal"]'));
       if (!looksLikeMediaViewer) return false;
@@ -201,7 +205,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         && bounds.bottom > 0
         && bounds.top < window.innerHeight
         && !/(avatar|emoji|sticker|icon|placeholder)/i.test(classes)
-        && !/\/(?:avatars|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source);
+        && !profileMediaPath(source);
     });
   }
   function selectionCoversComposer(editor) {

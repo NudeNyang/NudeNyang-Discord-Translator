@@ -93,3 +93,27 @@ test("메시지 밖의 주요 사용자 이름 표면도 닉네임 설정 경계
     assert.equal(parts[0].kind, "nickname", `${text}는 닉네임으로 분류되어야 해`);
   }
 });
+
+test("프로필 소개와 상태는 수집하되 표시 이름은 닉네임 경계를 유지한다", () => {
+  const result = snapshot(`
+    <section role="dialog" aria-label="User Profile">
+      <img src="https://cdn.discordapp.com/avatars/123/avatar.png">
+      <h2 class="nickname_test">ねう</h2>
+      <div class="username_test">101neu</div>
+      <div class="bio_test">今日はとても幸せです</div>
+      <div class="customStatus_test">ゲームを遊んでいます</div>
+      <button>메시지</button>
+    </section>
+  `);
+
+  const nicknameParts = result.parts.filter(part => ["ねう", "101neu"].includes(part.text));
+  assert.equal(nicknameParts.length, 2);
+  assert.ok(nicknameParts.every(part => part.kind === "nickname"));
+
+  for (const text of ["今日はとても幸せです", "ゲームを遊んでいます"]) {
+    const parts = result.parts.filter(part => part.text === text);
+    assert.equal(parts.length, 1, `${text}는 한 번만 수집되어야 해`);
+    assert.equal(parts[0].kind, "profile-context");
+  }
+  assert.equal(result.parts.some(part => part.text === "메시지"), false);
+});

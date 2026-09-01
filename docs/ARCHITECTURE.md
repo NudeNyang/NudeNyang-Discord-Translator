@@ -95,6 +95,8 @@ heading, event, onboarding, or channel-browser collectors run. When nickname tra
 the Rust engine removes all `nickname` parts before language detection, caching, or provider
 dispatch, so an overlapping supplemental surface cannot send or rewrite a participant name.
 
+An opened user profile is treated as a text surface, not as an image viewer. F12 can collect the visible user-authored bio and custom status from its rendered DOM, while the display name and account name keep the existing `nickname` classification. Avatar, banner, decoration, profile-effect, badge, icon, emoji, and sticker resources never become OCR image-translation targets. An explicitly opened attachment or media dialog remains eligible.
+
 This is not an officially supported Discord extension interface. Discord updates can change the renderer and temporarily break the integration.
 
 ## Translation and data

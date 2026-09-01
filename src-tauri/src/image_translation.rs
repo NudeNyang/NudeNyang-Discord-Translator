@@ -41,7 +41,7 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
     zh:{translate:'翻译图片',showOriginal:'查看原图',showTranslation:'查看译图',translating:'正在翻译…',retry:'重试',failed:'无法翻译图片。'}
   }, __GENERATED_IMAGE_COPIES__);
   const copy = key => copies[uiLanguage]?.[key] || copies.en[key] || key;
-  const version = 'rust-image-ui-v9-largest-viewer-image';
+  const version = 'rust-image-ui-v10-profile-media-boundary';
   if (window.__ntImageUiVersion !== version || window.__ntImageUiLanguage !== uiLanguage) {
     window.__ntImageUiAbort?.abort();
     document.getElementById('nt-image-translate-button')?.remove();
@@ -103,21 +103,32 @@ pub const IMAGE_UI_SCRIPT: &str = r##"
   };
   window.__ntImageSourceCandidates = sourceCandidates;
 
-  const inViewer = img => {
+  const profileMediaPath = source => /\/(?:avatars|banners|avatar-decoration-presets|profile-effects|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source || '');
+  const inProfileSurface = img => {
     const dialog = img.closest('[role="dialog"]');
     if (!dialog) return false;
+    const label = dialog.getAttribute('aria-label') || '';
+    if (/media|미디어|メディア|媒体/i.test(label)) return false;
+    return [...dialog.querySelectorAll('img')].some(candidate =>
+      profileMediaPath(candidate.currentSrc || candidate.src || '')
+    );
+  };
+  const inViewer = img => {
+    const dialog = img.closest('[role="dialog"]');
+    if (!dialog || inProfileSurface(img)) return false;
     return /media|미디어|メディア|媒体/i.test(dialog.getAttribute('aria-label') || '') ||
       Boolean(dialog.querySelector('[class*="carousel"], [class*="modal"]'));
   };
   const eligible = img => {
     if (!(img instanceof HTMLImageElement)) return false;
+    if (inProfileSurface(img)) return false;
     if (!img.closest('[id^="chat-messages-"]') && !inViewer(img)) return false;
     const rect = img.getBoundingClientRect();
     if (rect.width < 160 || rect.height < 90 || rect.right <= 0 || rect.bottom <= 0 ||
         rect.left >= innerWidth || rect.top >= innerHeight) return false;
     const source = img.dataset.ntOriginalSrc || img.currentSrc || img.src || '';
     if (!source || source.startsWith('data:') || source.startsWith('blob:') || /\.gif(?:\?|$)/i.test(source)) return false;
-    if (/\/(?:avatars|icons|emojis|stickers|clan-badges|badge-icons)\//i.test(source)) return false;
+    if (profileMediaPath(source)) return false;
     return !String(img.className).match(/avatar|emoji|sticker|icon|placeholder/i);
   };
   const activeDialog = () => [...document.querySelectorAll('[role="dialog"]')].find(dialog => {
@@ -1242,6 +1253,13 @@ mod tests {
     }
 
     #[test]
+    fn profile_media_never_becomes_an_image_translation_target() {
+        assert!(IMAGE_UI_SCRIPT.contains("const inProfileSurface = img =>"));
+        assert!(IMAGE_UI_SCRIPT.contains("if (inProfileSurface(img)) return false"));
+        assert!(IMAGE_UI_SCRIPT.contains("avatar-decoration-presets|profile-effects"));
+    }
+
+    #[test]
     fn image_fetch_prefers_the_selected_full_resolution_source() {
         let current = IMAGE_UI_SCRIPT
             .find("img.currentSrc || largestSrcsetSource(img)")
@@ -1298,7 +1316,9 @@ mod tests {
 
     #[test]
     fn expanded_image_view_hides_the_stale_thumbnail_button_before_layout_settles() {
-        assert!(IMAGE_UI_SCRIPT.contains("const version = 'rust-image-ui-v9-largest-viewer-image'"));
+        assert!(
+            IMAGE_UI_SCRIPT.contains("const version = 'rust-image-ui-v10-profile-media-boundary'")
+        );
         let observer = IMAGE_UI_SCRIPT
             .find("const viewerObserver = new MutationObserver")
             .expect("viewer observer must exist");

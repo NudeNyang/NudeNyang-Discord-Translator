@@ -407,6 +407,22 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const id = ensureRootId(root, 'data-dto-browse-channel-id', 'browse-channel');
     out.push(...parts('browse-channel', id, root));
   }
+  function userProfileSurfaces() {
+    const profileMediaPath = source => /\/(?:avatars|banners|avatar-decoration-presets|profile-effects)\//i.test(source || '');
+    return [...document.querySelectorAll('[role="dialog"]')].filter(surface =>
+      isRendered(surface) && [...surface.querySelectorAll('img')].some(image =>
+        profileMediaPath(image.currentSrc || image.src || '')
+      )
+    );
+  }
+  const profileRoots = new Set();
+  for (const surface of userProfileSurfaces()) {
+    addTextParents(surface, profileRoots);
+  }
+  for (const root of profileRoots) {
+    const id = ensureRootId(root, 'data-dto-profile-context-id', 'profile-context');
+    out.push(...parts('profile-context', id, root));
+  }
   const contextSelector = [
     '[class*="guildDropdown_"] h2',
     '[class*="topic_"][class*="expandable_"]',
@@ -415,6 +431,7 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
   ].join(',');
   for (const root of document.querySelectorAll(contextSelector)) {
     if (!isVisible(root)) continue;
+    if (root.closest('[data-dto-profile-context-id]')) continue;
     const id = ensureRootId(root, 'data-dto-context-id', 'context');
     out.push(...parts('context', id, root));
   }
@@ -471,6 +488,7 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
     else if (change.kind === 'invite-context') root = document.querySelector(`[data-dto-invite-context-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'event-context') root = document.querySelector(`[data-dto-event-context-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'browse-channel') root = document.querySelector(`[data-dto-browse-channel-id="${CSS.escape(change.id)}"]`);
+    else if (change.kind === 'profile-context') root = document.querySelector(`[data-dto-profile-context-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'nickname') root = document.querySelector(`[data-dto-nickname-id="${CSS.escape(change.id)}"]`);
     else if (change.kind === 'channel') {
@@ -548,6 +566,7 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
       else if (change.kind === 'invite-context') root = document.querySelector(`[data-dto-invite-context-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'event-context') root = document.querySelector(`[data-dto-event-context-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'browse-channel') root = document.querySelector(`[data-dto-browse-channel-id="${CSS.escape(change.id)}"]`);
+      else if (change.kind === 'profile-context') root = document.querySelector(`[data-dto-profile-context-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'context') root = document.querySelector(`[data-dto-context-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'nickname') root = document.querySelector(`[data-dto-nickname-id="${CSS.escape(change.id)}"]`);
       else if (change.kind === 'channel') {
@@ -725,6 +744,9 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     );
     else if (change.kind === 'browse-channel') root = document.querySelector(
       `[data-dto-browse-channel-id="${{CSS.escape(change.id)}}"]`
+    );
+    else if (change.kind === 'profile-context') root = document.querySelector(
+      `[data-dto-profile-context-id="${{CSS.escape(change.id)}}"]`
     );
     else if (change.kind === 'context') root = document.querySelector(
       `[data-dto-context-id="${{CSS.escape(change.id)}}"]`
@@ -961,6 +983,27 @@ mod tests {
         };
         let script = apply_script(&[DomChange::new(&part, "이 채널을 확인해 보세요")]).unwrap();
         assert!(script.contains("data-dto-browse-channel-id"));
+    }
+
+    #[test]
+    fn snapshot_supports_profile_bios_without_crossing_nickname_boundaries() {
+        assert!(SNAPSHOT_SCRIPT.contains("userProfileSurfaces"));
+        assert!(SNAPSHOT_SCRIPT.contains("profileMediaPath"));
+        assert!(SNAPSHOT_SCRIPT.contains("parts('profile-context'"));
+        assert!(SNAPSHOT_SCRIPT.contains("data-dto-profile-context-id"));
+        assert!(RESTORE_TEXT_SCRIPT.contains("data-dto-profile-context-id"));
+        assert!(INSTALL_TEXT_RESTORE_SCRIPT.contains("data-dto-profile-context-id"));
+
+        let part = DomPart {
+            kind: "profile-context".to_string(),
+            item_id: "dto-profile-context-1".to_string(),
+            context_id: None,
+            index: 0,
+            text: "今日はとても幸せです".to_string(),
+            displayed_text: None,
+        };
+        let script = apply_script(&[DomChange::new(&part, "오늘은 매우 행복해요")]).unwrap();
+        assert!(script.contains("data-dto-profile-context-id"));
     }
 
     #[test]
