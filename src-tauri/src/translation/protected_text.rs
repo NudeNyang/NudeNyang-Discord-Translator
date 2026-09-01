@@ -11,8 +11,10 @@ static MENTION_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)@(?:[A-Za-z0-9_.-]+|全員|各位|여러분)").unwrap());
 static CHANNEL_TAG_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[『「]?#[\p{L}\p{M}\p{N}_.-]{2,}[』」]?").unwrap());
-static URL_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?i)\bhttps?://[^\s<>"']+"#).unwrap());
+static URL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?i)\bhttps?://[^\s<>"'“”‘’「」『』【】〔〕〖〗〘〙〚〛〈〉《》（）［］｛｝]+"#)
+        .unwrap()
+});
 static CUSTOM_EMOJI_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r":[A-Za-z0-9_~.-]{2,32}:").unwrap());
 static ASCII_EMOTICON_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -467,6 +469,43 @@ mod tests {
             protected.restore(&format!("[ko] {}", protected.masked)),
             format!("[ko] {source}")
         );
+    }
+
+    #[test]
+    fn url_protection_stops_at_unicode_closing_quote() {
+        let source = "案内として「https://……」とペンで書いたら「ばか」と書かれた";
+        let protected = protect_text(source);
+
+        assert_eq!(protected.tokens, ["https://……"]);
+        assert_eq!(
+            protected.masked,
+            "案内として「ZXQKEEP000QXZ」とペンで書いたら「ばか」と書かれた"
+        );
+        assert!(protected.has_translatable_text());
+
+        for (opening, closing) in [
+            ('“', '”'),
+            ('‘', '’'),
+            ('『', '』'),
+            ('【', '】'),
+            ('（', '）'),
+            ('［', '］'),
+            ('《', '》'),
+        ] {
+            let source = format!("{opening}https://例え.テスト/資料{closing}の続き");
+            let protected = protect_text(&source);
+            if opening != '（' {
+                assert_eq!(protected.tokens, ["https://例え.テスト/資料"]);
+                assert!(protected.masked.ends_with(&format!("{closing}の続き")));
+            } else {
+                assert!(protected.masked.ends_with("の続き"));
+            }
+            assert!(protected
+                .tokens
+                .iter()
+                .all(|token| !token.contains("の続き")));
+            assert_eq!(protected.restore(&protected.masked), source);
+        }
     }
 
     #[test]

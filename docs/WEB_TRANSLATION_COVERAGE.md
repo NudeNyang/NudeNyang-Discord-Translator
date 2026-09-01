@@ -150,10 +150,20 @@ npm run test:public
    로마자 고유명사만 유지하는 전용 복구 계약을 사용하고, 영어 단어 복구는 영어 원문에만 적용한다.
    번역된 한글 뒤에 감정 표현용 일본어 장음 기호만 남은 결과는 동일 길이의 `~`로 정규화한다.
    댓글 DOM 선택자나 사이트 도메인은 추가하지 않았다.
+9. **인용문 속 URL이 뒤 문장까지 보호:** URL 보호 정규식이 ASCII 따옴표만 경계로 인식해
+   `https://……」とペンで書いたら`처럼 공백 없는 일본어 인용문에서는 닫는 따옴표 뒤의 문장까지
+   URL 토큰으로 숨겼다. 사이트 독립 문자열 fixture에서 토큰이 전체 꼬리를 삼키는 수정 전 실패를
+   확인했다. 이제 일본어 괄호와 Unicode 인용·괄호 문자를 URL 경계로 처리하되 Unicode 도메인과
+   경로 자체는 계속 보호한다.
+10. **짧은 일본어 표현을 반복해서 남긴 결과를 정상 처리:** 한글 결과 안에 원문의 `いいね`가
+   두 번 남았지만 각 가나 런이 3자라 기존 5자 기준을 피했다. 사이트 독립 원문·부분 번역 fixture에서
+   수정 전 품질 판정 실패를 확인했다. 이제 원문과 결과에 두 번 이상 동일하게 남은 3~4자 가나
+   종결 표현을 재번역 대상으로 판정한다. `すてら`처럼 종결 표현이 아닌 짧은 고유명사는 계속
+   허용하며, 이전 불완전 캐시를 재사용하지 않도록 품질 캐시 네임스페이스도 갱신했다.
 
 1~3번 재현은 모두 실제 Chromium에서 수정 전 실패, 수정 후 통과를 확인했다. 4번은
 도메인 없는 실제 Chromium fixture, 5번은 Rust 품질·캐시 경계, 6번은 실제 Chromium의
-동적 DOM fixture, 7~8번은 Rust 번역 서비스·로컬 엔진 fixture에서 각각 수정 전 실패와 수정 후 통과를 확인했다. 진단 기능도
+동적 DOM fixture, 7~10번은 Rust 번역 서비스·로컬 엔진 fixture에서 각각 수정 전 실패와 수정 후 통과를 확인했다. 진단 기능도
 추가 전 테스트 실패를 확인했다. 공개 표본 검사는 처음 5개 통과/1개 실패였고 float 공통
 수정 뒤 6개 모두 통과했다. 사이트 예외 대신 최소 재현을 고정하는 흐름을 실제로 수행했다.
 
@@ -168,7 +178,7 @@ npm run test:public
 | `npm test` | 768개 통과: 웹 253, landing 37, 확장 469, 사전 9 |
 | `npm run test:e2e` | 전체 156개 통과, 실패·제외·재시도 0 |
 | `npm run test:public` | 6개 공개 표본, 각 4개 스크롤 지점 검사 통과 |
-| `cargo test --manifest-path src-tauri/Cargo.toml` | 458개 통과, 실패 0, 실행 환경이 필요한 47개 제외 |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | 460개 통과, 실패 0, 실행 환경이 필요한 47개 제외 |
 | `cargo test --manifest-path src-tauri/Cargo.toml live_local_model_completes_br_separated_public_prose -- --ignored --nocapture` | 실제 Hy-MT2 문단 검사 1개 통과, 외부 공급자 없음 |
 | `cargo test --manifest-path src-tauri/Cargo.toml live_small_model_repairs_short_and_mixed_japanese_web_comments -- --ignored --nocapture` | 실제 Hy-MT2 1.8B의 짧은 일본어·로마자 혼합 댓글 2개 통과, 외부 공급자 없음 |
 | `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` | 통과 |

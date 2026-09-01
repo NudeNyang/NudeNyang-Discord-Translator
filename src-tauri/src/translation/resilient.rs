@@ -37,7 +37,7 @@ impl ResilientTranslator {
             .as_ref()
             .map_or("local-only", |translator| translator.cache_namespace());
         let cache_namespace = format!(
-            "{}:quality-repair-v13:{fallback_namespace}",
+            "{}:quality-repair-v14:{fallback_namespace}",
             primary.cache_namespace()
         );
         Self {
@@ -446,6 +446,7 @@ pub fn translation_needs_repair(
             // this repairs embed fragments such as `おきゅーとぱー`, while allowing
             // short preserved names/terms such as `すてら` and `ダンス部`.
             return (remaining_kana >= 5 && max_kana_run(translated_text) >= 5)
+                || has_repeated_short_source_kana_expression(source_text, translated_text)
                 || has_kana_in_mapping_line(source_text, translated_text)
                 || has_kana_suffix_after_hangul(source_text, translated_text);
         }
@@ -553,6 +554,25 @@ fn has_source_japanese_line_left_untranslated(source: &str, translated: &str) ->
                 .lines()
                 .any(|source_line| normalize(source_line) == normalized)
     })
+}
+
+fn has_repeated_short_source_kana_expression(source: &str, translated: &str) -> bool {
+    let source = normalize_halfwidth_kana(source);
+    let translated = normalize_halfwidth_kana(translated);
+    translated
+        .split(|character: char| !is_kana_character(character))
+        .filter(|fragment| {
+            let length = fragment.chars().count();
+            (3..=4).contains(&length)
+                && fragment
+                    .chars()
+                    .last()
+                    .is_some_and(|ending| matches!(ending, 'ね' | 'よ' | 'か' | 'ぞ' | 'ぜ' | 'わ'))
+        })
+        .any(|fragment| {
+            source.match_indices(fragment).count() >= 2
+                && translated.match_indices(fragment).count() >= 2
+        })
 }
 
 fn has_kana_suffix_after_hangul(source: &str, translated: &str) -> bool {
@@ -981,6 +1001,35 @@ mod tests {
         assert!(!translation_needs_repair(
             "第4回すてらダンス部コラボ授業です！",
             "제4회 すてら댄스부 컬래버레이션 수업입니다!",
+            Language::Japanese,
+            Language::Korean,
+        ));
+    }
+
+    #[test]
+    fn rejects_repeated_short_japanese_expression_left_inside_korean() {
+        let source = concat!(
+            "フレンドに「リンク貼ってないから、めっちゃ頑張って探したよ！」と言われたので、",
+            "VRC名鑑のリンク貼っておくね\n",
+            "ちなみに、朱玲華のいいねも不足してるので、",
+            "いいねは押しても数日くらい返ってこないかも",
+        );
+        let partial = concat!(
+            "친구가 \"링크를 붙이지 않았으니까, 열심히 찾아봤어!!\"라고 하길래, ",
+            "VRC 명부의 링크를 붙여둘게요\n",
+            "참고로, 주령화의 'いいね'도 부족해서 'いいね'를 누르고도 ",
+            "며칠 정도 되지 않을 거예요",
+        );
+
+        assert!(translation_needs_repair(
+            source,
+            partial,
+            Language::Japanese,
+            Language::Korean,
+        ));
+        assert!(!translation_needs_repair(
+            "すてらの新しい授業です。すてらをよろしくお願いします。",
+            "すてら의 새로운 수업입니다. すてら를 잘 부탁드립니다.",
             Language::Japanese,
             Language::Korean,
         ));
