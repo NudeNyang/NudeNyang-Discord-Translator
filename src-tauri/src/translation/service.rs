@@ -610,18 +610,19 @@ impl TranslationService {
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
     ) -> Option<String> {
-        let mut lines = split_visual_lines_preserving_endings(text);
-        let clause_retry = lines.len() == 1;
-        if clause_retry {
-            lines = split_failed_web_clauses(text);
-        }
+        let lines = split_visual_lines_preserving_endings(text);
         if lines
             .iter()
             .filter(|(line, _)| !line.trim().is_empty())
             .count()
             < 2
         {
-            return None;
+            return self.retry_failed_web_line_by_clauses(
+                text,
+                source_hint,
+                target,
+                allowed_sources,
+            );
         }
 
         crate::diagnostics::info(
@@ -635,7 +636,6 @@ impl TranslationService {
         );
 
         let mut output = String::new();
-        let mut previous_translated = false;
         for (index, (line, ending)) in lines.into_iter().enumerate() {
             if line.trim().is_empty() {
                 output.push_str(&line);
@@ -651,9 +651,65 @@ impl TranslationService {
                 target,
                 allowed_sources,
             );
-            let changed = succeeded && translated != line;
-            if clause_retry
-                && (previous_translated || changed)
+            let translated = if succeeded {
+                translated
+            } else {
+                yield_between_web_inferences();
+                self.retry_failed_web_line_by_clauses(&line, source_hint, target, allowed_sources)
+                    .unwrap_or(translated)
+            };
+            output.push_str(&translated);
+            output.push_str(&ending);
+        }
+        Some(output)
+    }
+
+    fn retry_failed_web_line_by_clauses(
+        &mut self,
+        text: &str,
+        source_hint: Option<Language>,
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+    ) -> Option<String> {
+        let clauses = split_failed_web_clauses(text);
+        if clauses
+            .iter()
+            .filter(|(clause, _)| !clause.trim().is_empty())
+            .count()
+            < 2
+        {
+            return None;
+        }
+
+        crate::diagnostics::info(
+            "web-translation-clause-fallback",
+            &format!(
+                "clauses={}; chars={}; hash={}",
+                clauses.len(),
+                text.chars().count(),
+                source_hash(text)
+            ),
+        );
+
+        let mut output = String::new();
+        let mut previous_translated = false;
+        for (index, (clause, ending)) in clauses.into_iter().enumerate() {
+            if clause.trim().is_empty() {
+                output.push_str(&clause);
+                output.push_str(&ending);
+                continue;
+            }
+            if index > 0 {
+                yield_between_web_inferences();
+            }
+            let (translated, succeeded) = self.translate_one_best_effort_with_hint(
+                &clause,
+                source_hint,
+                target,
+                allowed_sources,
+            );
+            let changed = succeeded && translated != clause;
+            if (previous_translated || changed)
                 && !output.is_empty()
                 && !output.ends_with(char::is_whitespace)
                 && !translated.starts_with(char::is_whitespace)
@@ -4422,6 +4478,109 @@ mod tests {
             )
             .to_string()]
         );
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn web_translation_retries_failed_clauses_inside_one_line_of_a_multiline_node() {
+        struct MultilineClauseTranslator;
+        impl Translator for MultilineClauseTranslator {
+            fn display_name(&self) -> &str {
+                "multiline-clause-retry"
+            }
+
+            fn cache_namespace(&self) -> &str {
+                "multiline-clause-retry:v1"
+            }
+
+            fn isolate_incoming_failures(&self) -> bool {
+                true
+            }
+
+            fn translate(
+                &mut self,
+                text: &str,
+                _: Language,
+                _: Language,
+            ) -> Result<String, String> {
+                Ok(match text {
+                    "ミルフィちゃん初心者日記漫画たくさんみてくれてありがとうの動画撮った！" => {
+                        "밀피 초보 일기 만화를 많이 봐줘서 고맙다는 영상을 찍었어!"
+                    }
+                    "はやめに声出したほうがなんか幻滅？" => {
+                        "일찍 목소리를 내는 편이 오히려 실망스러울까?"
+                    }
+                    _ if text.starts_with("されないかと思った") => {
+                        return Ok(format!(
+                            "그렇지 않을까 생각했어! 숨소리가 시끄러워서 미안해! 으아아아아!{}",
+                            if text.ends_with("\n\n") { "\n\n" } else { "" }
+                        ));
+                    }
+                    _ if text.starts_with("19時に漫画もあがるよ") => {
+                        return Ok(text.replacen(
+                            "19時に漫画もあがるよ",
+                            "19시에 만화도 올라올 거야",
+                            1,
+                        ));
+                    }
+                    _ => text,
+                }
+                .to_string())
+            }
+
+            fn translation_is_acceptable(
+                &self,
+                source: &str,
+                translated: &str,
+                source_language: Language,
+                target_language: Language,
+            ) -> bool {
+                !translation_needs_repair(source, translated, source_language, target_language)
+            }
+
+            fn should_cache(
+                &self,
+                source: &str,
+                translated: &str,
+                source_language: Language,
+                target_language: Language,
+            ) -> bool {
+                self.translation_is_acceptable(source, translated, source_language, target_language)
+            }
+        }
+
+        let path = cache_path("web-multiline-clause-fallback");
+        let cache = TranslationCache::open(path.clone(), 32).unwrap();
+        let mut service = TranslationService::new(Box::new(MultilineClauseTranslator), cache);
+        let source = concat!(
+            "ミルフィちゃん初心者日記漫画たくさんみてくれてありがとうの動画撮った！",
+            "はやめに声出したほうがなんか幻滅？されないかと思った！",
+            "吐息うるさくてごめんなさい！うわーーーー！\n\n",
+            "19時に漫画もあがるよ🧸📖"
+        )
+        .to_string();
+
+        let translated = service
+            .translate_many_for_web_contextual_filtered(
+                std::slice::from_ref(&source),
+                &[None],
+                "generic-public-feed",
+                Language::Korean,
+                None,
+            )
+            .unwrap();
+
+        assert_eq!(
+            translated,
+            [concat!(
+                "밀피 초보 일기 만화를 많이 봐줘서 고맙다는 영상을 찍었어! ",
+                "일찍 목소리를 내는 편이 오히려 실망스러울까? ",
+                "그렇지 않을까 생각했어! 숨소리가 시끄러워서 미안해! 으아아아아!\n\n",
+                "19시에 만화도 올라올 거야🧸📖"
+            )
+            .to_string()]
+        );
+        drop(service);
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 

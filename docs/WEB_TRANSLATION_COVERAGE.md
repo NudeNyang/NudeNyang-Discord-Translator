@@ -136,10 +136,24 @@ npm run test:public
    새 블록마다 0ms 전송을 예약해 네이티브 요청이 잘게 갈라졌다. 8ms 간격의 범용 문단 8개를
    수정 전 8회 요청하는 실패를 확인하고, 우선순위를 유지한 80ms 삽입 묶음으로 1회에 모았다.
    특정 타임라인 선택자나 도메인은 사용하지 않았다.
+7. **빈 줄로 끝나는 긴 문단의 절 재시도 누락:** 한 Text 노드가 `긴 문단 + 빈 줄 + 짧은 문장`
+   구조일 때 전송 분할기가 빈 줄까지 첫 조각에 보존했다. 첫 조각의 품질 검사가 실패하면 기존
+   복구 경로는 이를 한 줄도, 두 개 이상의 내용 줄도 아닌 것으로 판단해 절 단위 재시도를 건너뛰고
+   뒤의 짧은 문장만 번역했다. 도메인 없는 동일 문자열 fixture에서 수정 전 실제 원문·번역문 혼합
+   결과를 확인했다. 이제 내용 줄이 하나뿐인 조각은 뒤따르는 빈 줄과 관계없이 보호 토큰을 보존한
+   절 단위 재시도를 거치며, 여러 내용 줄 중 개별 줄이 실패한 경우에도 같은 bounded 복구를 적용한다.
+8. **짧은 일본어·로마자 혼합 댓글의 잘못된 복구 언어:** 수집과 언어 감지를 통과한 짧은 일본어가
+   Hy-MT2에서 두 번 원문 그대로 반환됐고, 실제 진단 해시로 DOM 누락이 아닌 품질 실패임을 확인했다.
+   기존 복구 지시문은 원문 언어와 관계없이 영어 소문자 단어의 번역·한글 음역 규칙을 사용했으며,
+   후속 영어 전용 복구도 일본어 입력에 진입할 수 있었다. 문자열 fixture에서 일본어→한국어가 영어
+   복구 지시문을 쓰는 실패를 먼저 고정했다. 이제 일본어의 가나·한자·조사를 완전히 옮기면서 실제
+   로마자 고유명사만 유지하는 전용 복구 계약을 사용하고, 영어 단어 복구는 영어 원문에만 적용한다.
+   번역된 한글 뒤에 감정 표현용 일본어 장음 기호만 남은 결과는 동일 길이의 `~`로 정규화한다.
+   댓글 DOM 선택자나 사이트 도메인은 추가하지 않았다.
 
 1~3번 재현은 모두 실제 Chromium에서 수정 전 실패, 수정 후 통과를 확인했다. 4번은
 도메인 없는 실제 Chromium fixture, 5번은 Rust 품질·캐시 경계, 6번은 실제 Chromium의
-동적 DOM fixture에서 각각 수정 전 실패와 수정 후 통과를 확인했다. 진단 기능도
+동적 DOM fixture, 7~8번은 Rust 번역 서비스·로컬 엔진 fixture에서 각각 수정 전 실패와 수정 후 통과를 확인했다. 진단 기능도
 추가 전 테스트 실패를 확인했다. 공개 표본 검사는 처음 5개 통과/1개 실패였고 float 공통
 수정 뒤 6개 모두 통과했다. 사이트 예외 대신 최소 재현을 고정하는 흐름을 실제로 수행했다.
 
@@ -151,11 +165,12 @@ npm run test:public
 
 | 명령 | 결과 |
 | --- | --- |
-| `npm test` | 766개 통과: 웹 251, landing 37, 확장 469, 사전 9 |
+| `npm test` | 768개 통과: 웹 253, landing 37, 확장 469, 사전 9 |
 | `npm run test:e2e` | 전체 156개 통과, 실패·제외·재시도 0 |
 | `npm run test:public` | 6개 공개 표본, 각 4개 스크롤 지점 검사 통과 |
-| `cargo test --manifest-path src-tauri/Cargo.toml` | 454개 통과, 실패 0, 실행 환경이 필요한 46개 제외 |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | 458개 통과, 실패 0, 실행 환경이 필요한 47개 제외 |
 | `cargo test --manifest-path src-tauri/Cargo.toml live_local_model_completes_br_separated_public_prose -- --ignored --nocapture` | 실제 Hy-MT2 문단 검사 1개 통과, 외부 공급자 없음 |
+| `cargo test --manifest-path src-tauri/Cargo.toml live_small_model_repairs_short_and_mixed_japanese_web_comments -- --ignored --nocapture` | 실제 Hy-MT2 1.8B의 짧은 일본어·로마자 혼합 댓글 2개 통과, 외부 공급자 없음 |
 | `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` | 통과 |
 | `npm run test:locales` 및 JavaScript 구문 검사 | 통과 |
 

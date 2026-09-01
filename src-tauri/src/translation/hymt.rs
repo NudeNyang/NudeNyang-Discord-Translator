@@ -1501,13 +1501,16 @@ where
             let repair_prompt = repair_translation_prompt(core, &result, source, target);
             if let Ok(rewritten) = complete(&repair_prompt, core) {
                 let rewritten = remove_unwritten_decorations(core, rewritten.trim());
+                let rewritten = clean_cross_script_language_terms(&rewritten, source, target);
                 if !rewritten.is_empty()
                     && !translation_needs_repair(core, &rewritten, source, target)
                 {
                     result = rewritten;
                 }
             }
-            if target == Language::Korean && translation_needs_repair(core, &result, source, target)
+            if source == Language::English
+                && target == Language::Korean
+                && translation_needs_repair(core, &result, source, target)
             {
                 let remaining = unchanged_lowercase_source_words(core, &result);
                 if !remaining.is_empty() {
@@ -1571,6 +1574,13 @@ fn repair_translation_prompt(
     source: Language,
     target: Language,
 ) -> String {
+    if source == Language::Japanese && target == Language::Korean {
+        return format!(
+            "Translate the Japanese source completely into natural Korean. The previous draft was rejected because it copied Japanese source text. Translate every Japanese word and grammatical particle. Do not copy Japanese kana or kanji into the output. Keep Latin-letter proper names, titles, and usernames unchanged only when they are actually names; translate ordinary Latin-letter words when context requires it. Preserve the original grammatical person, exact meaning, tone, elongation, and punctuation. Output only the complete corrected Korean translation.\n\nJapanese source:\n{}\n\nRejected draft:\n{}",
+            source_text, flawed_draft,
+        );
+    }
+
     let name_instruction = if target == Language::Korean {
         "Keep established brand names unchanged. Translate every ordinary English word. If an all-lowercase personal name or username would otherwise be mistaken for untranslated English, transliterate it naturally into Hangul. Do not leave lowercase English source words in the output."
     } else {
@@ -1835,6 +1845,9 @@ fn clean_cross_script_language_terms(text: &str, source: Language, target: Langu
     if source == Language::Tamil && target == Language::Korean {
         return repaired.replace("서비스 센터", "서버");
     }
+    if source == Language::Japanese && target == Language::Korean {
+        return normalize_korean_elongation_marks(&repaired);
+    }
     if target == Language::Korean
         && matches!(
             source,
@@ -1853,6 +1866,38 @@ fn clean_cross_script_language_terms(text: &str, source: Language, target: Langu
             .replace("中文", "중국어");
     }
     repaired
+}
+
+fn normalize_korean_elongation_marks(text: &str) -> String {
+    let characters = text.chars().collect::<Vec<_>>();
+    let mut output = String::with_capacity(text.len());
+    let mut index = 0;
+    while index < characters.len() {
+        if characters[index] != 'ー' {
+            output.push(characters[index]);
+            index += 1;
+            continue;
+        }
+
+        let start = index;
+        while index < characters.len() && characters[index] == 'ー' {
+            index += 1;
+        }
+        let previous_is_hangul = output
+            .chars()
+            .next_back()
+            .is_some_and(|character| ('\u{AC00}'..='\u{D7A3}').contains(&character));
+        let followed_by_boundary = characters
+            .get(index)
+            .is_none_or(|character| !character.is_alphanumeric());
+        let replacement = if previous_is_hangul && followed_by_boundary {
+            '~'
+        } else {
+            'ー'
+        };
+        output.extend(std::iter::repeat_n(replacement, index - start));
+    }
+    output
 }
 
 pub(super) fn apply_conservative_semantic_repairs(
@@ -2442,6 +2487,81 @@ mod tests {
             replace_ascii_word("leash가 필요해 LEASH", "leash", "목줄"),
             "목줄이 필요해 목줄"
         );
+    }
+
+    #[test]
+    fn japanese_to_korean_repair_uses_source_specific_instructions() {
+        let prompt = repair_translation_prompt(
+            "kotohaさんのmosimosiかわいすぎましたー！",
+            "kotohaさんのmosimosiかわいすぎましたー！",
+            Language::Japanese,
+            Language::Korean,
+        );
+
+        assert!(prompt.contains("Translate every Japanese word and grammatical particle"));
+        assert!(prompt.contains("Do not copy Japanese kana or kanji"));
+        assert!(prompt.contains("Latin-letter proper names, titles, and usernames"));
+        assert!(!prompt.contains("Translate every ordinary English word"));
+        assert!(!prompt.contains("transliterate it naturally into Hangul"));
+    }
+
+    #[test]
+    fn japanese_to_korean_repair_recovers_short_and_mixed_web_comments() {
+        for (source, expected) in [
+            ("かわいすぎるーー", "너무 귀여워"),
+            (
+                "kotohaさんのmosimosiかわいすぎましたー！",
+                "kotoha 님의 mosimosi가 너무 귀여웠어요!",
+            ),
+        ] {
+            let mut saw_japanese_repair = false;
+            let translated = translate_with_completion(
+                source,
+                Language::Japanese,
+                Language::Korean,
+                "auto",
+                |prompt, _text| {
+                    assert!(
+                        !prompt.contains("Rewrite the full English source as natural Korean"),
+                        "Japanese input entered the English-only repair path: {prompt}"
+                    );
+                    if prompt.contains("Translate every Japanese word and grammatical particle") {
+                        saw_japanese_repair = true;
+                        Ok(expected.to_string())
+                    } else {
+                        Ok(source.to_string())
+                    }
+                },
+            )
+            .unwrap();
+
+            assert!(saw_japanese_repair, "Japanese repair prompt was not used");
+            assert_eq!(translated, expected);
+            assert!(!translation_needs_repair(
+                source,
+                &translated,
+                Language::Japanese,
+                Language::Korean,
+            ));
+        }
+    }
+
+    #[test]
+    fn japanese_elongation_marks_are_normalized_after_korean_translation() {
+        let source = "かわいすぎるーー";
+        let cleaned = clean_cross_script_language_terms(
+            "너무 귀여워요ーー",
+            Language::Japanese,
+            Language::Korean,
+        );
+
+        assert_eq!(cleaned, "너무 귀여워요~~");
+        assert!(!translation_needs_repair(
+            source,
+            &cleaned,
+            Language::Japanese,
+            Language::Korean,
+        ));
     }
 
     #[test]
@@ -3563,6 +3683,34 @@ mod tests {
             let translated = translator
                 .translate(source, Language::Japanese, Language::Korean)
                 .expect("translate the reported Japanese chat message with Hy-MT2 1.8B");
+            eprintln!("SOURCE: {source}\nRESULT: {translated}\n");
+            assert_ne!(translated, source, "untranslated Japanese source: {source}");
+            assert!(
+                !translation_needs_repair(
+                    source,
+                    &translated,
+                    Language::Japanese,
+                    Language::Korean,
+                ),
+                "valid translation was rejected: {translated}"
+            );
+        }
+        translator.close();
+    }
+
+    #[test]
+    #[ignore = "검증된 Hy-MT2 모델과 llama-server가 필요합니다"]
+    fn live_small_model_repairs_short_and_mixed_japanese_web_comments() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto").unwrap();
+        assert!(translator.model_is_ready());
+        translator.prepare().expect("start llama-server");
+        for source in [
+            "かわいすぎるーー",
+            "kotohaさんのmosimosiかわいすぎましたー！",
+        ] {
+            let translated = translator
+                .translate(source, Language::Japanese, Language::Korean)
+                .expect("repair the reported short Japanese web comment with Hy-MT2 1.8B");
             eprintln!("SOURCE: {source}\nRESULT: {translated}\n");
             assert_ne!(translated, source, "untranslated Japanese source: {source}");
             assert!(
