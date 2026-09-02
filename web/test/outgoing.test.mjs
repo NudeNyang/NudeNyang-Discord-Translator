@@ -282,6 +282,9 @@ test("turning outgoing interpretation off clears in-flight work and its persiste
 test("Discord native message actions stack above fixed translation controls", () => {
   assert.match(outgoing, /#\$\{ROOT_ID\}\{[^}]*position:fixed[^}]*right:32px[^}]*bottom:82px[^}]*z-index:0/);
   assert.doesNotMatch(outgoing, /#\$\{ROOT_ID\}\{[^}]*z-index:2147483000/);
+  assert.match(outgoing, /\(document\.getElementById\('app-mount'\) \|\| document\.body\)\.append\(root\)/);
+  assert.doesNotMatch(outgoing, /document\.body\.append\(root\)/);
+  assert.match(outgoing, /chat-messages___[^}]*:hover:has\(\[role="group"\]\)\{z-index:1!important\}/);
 });
 
 test("long outgoing translations stay in the composer for manual handling", () => {
@@ -401,7 +404,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 51/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 52/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);

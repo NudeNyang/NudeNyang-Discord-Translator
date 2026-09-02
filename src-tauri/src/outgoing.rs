@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 51;
+  const CONTROLLER_VERSION = 52;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -504,6 +504,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
       #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:0;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #app-mount :is([data-list-item-id^="chat-messages___"],[id^="chat-messages___chat-messages-"],li[id^="chat-messages-"]):hover:has([role="group"]){z-index:1!important}
+      #app-mount :is([data-list-item-id^="chat-messages___"],[id^="chat-messages___chat-messages-"],li[id^="chat-messages-"]):hover [role="group"]{z-index:2!important}
       #${ROOT_ID},#${ROOT_ID} *{box-sizing:border-box}
       #${ROOT_ID} [hidden]{display:none!important}
       #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
@@ -554,7 +556,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       @media (prefers-reduced-transparency:reduce){#${ROOT_ID} .nt-outgoing-trigger,#${ROOT_ID} .nt-display-trigger{background:#252b34;backdrop-filter:none}#${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{background:#202630;backdrop-filter:none}}
     `;
     document.head.append(style);
-    document.body.append(root);
+    (document.getElementById('app-mount') || document.body).append(root);
     bindMenuScrollIndicator(root.querySelector('.nt-outgoing-menu'));
     bindMenuScrollIndicator(root.querySelector('.nt-display-menu'));
     root.querySelector('.nt-outgoing-trigger').addEventListener('click', () => controller.toggleMenu());
@@ -2007,7 +2009,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 51"));
+        assert!(script.contains("const CONTROLLER_VERSION = 52"));
     }
 
     #[test]
