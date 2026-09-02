@@ -279,7 +279,7 @@ test("오래된 연결 기록이나 미래 시간은 현재 연결로 표시하�
   }
 });
 
-test("없는 브라우저와 미공개 스토어는 구분하고 Firefox 기존 확장의 해제·재연결은 허용한다", async () => {
+test("없는 브라우저와 비공개 스토어 상태를 구분하고 기존 확장의 해제·재연결은 허용한다", async () => {
   const h = harness();
   h.setInstallations([
     { browser: "chrome", installed: true, storeAvailable: true },

@@ -43,9 +43,9 @@ impl Browser {
         match self {
             Self::Chrome => Some("https://chromewebstore.google.com/detail/nudenyang-web-translator/kpagdcdgomdlnnphakjakpodmgnhgaia"),
             Self::Whale => Some("https://store.whale.naver.com/detail/afnknfkmicnmdcfgmddelbpmkadcgifk"),
-            // Awaiting AMO approval. Enable only after the listing is public:
-            // https://addons.mozilla.org/firefox/addon/nudenyang-web-translator/
-            Self::Firefox => None,
+            Self::Firefox => Some(
+                "https://addons.mozilla.org/firefox/addon/nudenyang-web-translator/",
+            ),
         }
     }
 }
@@ -84,8 +84,7 @@ pub fn browser_connect(app: AppHandle, browser: Browser) -> Result<(), String> {
     let reconnecting =
         !browser_connection_enabled(&config.disabled_browser_connections, browser.as_str());
     if reconnecting {
-        // An intentionally disconnected extension needs no reinstall. This also
-        // permits reconnecting an existing Firefox extension while AMO is pending.
+        // An intentionally disconnected extension needs no reinstall.
         browser_repair_connection()?;
         set_connection_enabled(&app, browser, true)?;
     } else {
@@ -264,9 +263,9 @@ mod tests {
         assert!(whale
             .path()
             .ends_with(crate::browser_bridge::WHALE_STORE_EXTENSION_ID));
-        assert!(
-            Browser::Firefox.store_url().is_none(),
-            "AMO review is not finished"
-        );
+        let firefox = url::Url::parse(Browser::Firefox.store_url().unwrap()).unwrap();
+        assert_eq!(firefox.scheme(), "https");
+        assert_eq!(firefox.host_str(), Some("addons.mozilla.org"));
+        assert_eq!(firefox.path(), "/firefox/addon/nudenyang-web-translator/");
     }
 }

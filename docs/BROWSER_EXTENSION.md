@@ -70,7 +70,7 @@ Discord와 웹은 같은 모델 런타임과 공급자 연결을 공유하지만
 - 처음 `연결`할 때는 설치된 브라우저의 App Paths 또는 표준 설치 경로를 확인하고 **선택한 브라우저**로 고정된 공식 스토어 상세 페이지를 연다. 기본 브라우저로 대신 열거나 브라우저 프로필·방문 기록을 읽지 않는다. 확장 추가와 권한 승인은 사용자가 스토어에서 직접 수행한다. 앱에서 직접 해제한 브라우저를 다시 연결할 때는 재설치 없이 연결 허용을 복구하고 새 자동 응답을 기다린다.
 - Chrome: <https://chromewebstore.google.com/detail/nudenyang-web-translator/kpagdcdgomdlnnphakjakpodmgnhgaia>
 - Whale: <https://store.whale.naver.com/detail/afnknfkmicnmdcfgmddelbpmkadcgifk>
-- Firefox: 사용자가 2026-08-28에 AMO 심사 미통과 상태임을 확인했다. <https://addons.mozilla.org/firefox/addon/nudenyang-web-translator/>는 승인 후 사용할 주소이며, 현재는 `스토어 심사 중` 안내와 비활성 설치 버튼을 표시한다. 이미 설치한 개발 확장의 자동 연결·해제·재연결은 허용한다. 승인 뒤 `browser_setup.rs`의 Firefox 스토어 경로를 활성화해야 한다.
+- Firefox: <https://addons.mozilla.org/firefox/addon/nudenyang-web-translator/>의 공개 승인을 2026-09-03에 확인했다. 앱의 Firefox `연결` 버튼은 설치된 Firefox에서 이 공식 AMO 페이지를 열며, Chrome·Whale과 같은 자동 연결·해제·재연결 흐름을 사용한다.
 - 앱 시작과 `연결` 동작은 현재 실행 파일의 Native Messaging 등록을 구성한다. 확장을 강제로 설치·재설치하지 않으며 다른 브라우저를 종료하거나 개인정보 동의를 바꾸지 않는다. 등록을 찾지 못했던 확장은 브라우저에서 팝업을 열어 다시 연결할 수 있다.
 - `연결 해제`는 `disabled_browser_connections`에 해당 브라우저 종류를 저장하는 앱 내부 사용 중지다. 같은 종류의 모든 프로필에 적용하지만 다른 브라우저와 Discord에는 영향을 주지 않는다. 확장 삭제, 브라우저 종료, 레지스트리 권한 제거 또는 메신저 개인정보 동의 철회가 아니다. 이미 표시된 번역문은 원문으로 강제 복원하지 않는다. 다시 연결하거나 앱을 재시작해도 해제 전에 대기 중이던 번역 결과는 되살리지 않는다.
 - 해제 중에는 기존 Native Messaging 포트에서도 `connectionPing`·상태 조회·새 번역·설정 변경을 `browser_connection_disabled`로 거부한다. 설정창 열기와 취소만 복구를 위해 허용한다. 자동 확인은 브라우저 종류·확장 버전의 존재 기록만 갱신하며 저장한 해제를 취소하지 않는다. 브라우저 종류가 누락되거나 알려지지 않은 구형 요청은 하나라도 해제된 브라우저가 있으면 거부한다. 이 구분은 허용된 확장이 보내는 종류 메타데이터에 따른 앱 기능 제어이며 운영체제의 보안 격리를 대체하지 않는다.
