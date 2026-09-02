@@ -32,12 +32,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 52;
+  const CONTROLLER_VERSION = 53;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
   const MENU_SCROLL_REVEAL_DISTANCE = 18;
   const composerSelector = '[role="textbox"][contenteditable="true"], [contenteditable="true"][data-slate-editor="true"]';
+  const MESSAGE_ROW_SELECTOR = ':is([data-list-item-id^="chat-messages___"], [id^="chat-messages___chat-messages-"], li[id^="chat-messages-"])';
   const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
   const copies = Object.assign({
     ko: {
@@ -157,6 +158,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   }
   function composerHasText(editor) {
     return Boolean(composerText(editor).trim());
+  }
+  function rectanglesOverlap(left, right) {
+    return left.left < right.right
+      && left.right > right.left
+      && left.top < right.bottom
+      && left.bottom > right.top;
   }
   function primaryComposerContainer(element) {
     if (!element?.matches) return null;
@@ -504,10 +511,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
       #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:0;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
-      #app-mount :is([data-list-item-id^="chat-messages___"],[id^="chat-messages___chat-messages-"],li[id^="chat-messages-"]):hover:has([role="group"]){z-index:1!important}
-      #app-mount :is([data-list-item-id^="chat-messages___"],[id^="chat-messages___chat-messages-"],li[id^="chat-messages-"]):hover [role="group"]{z-index:2!important}
       #${ROOT_ID},#${ROOT_ID} *{box-sizing:border-box}
       #${ROOT_ID} [hidden]{display:none!important}
+      #${ROOT_ID} [data-nt-native-action-overlap="true"]{visibility:hidden!important;pointer-events:none!important}
       #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
       #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:6px;max-width:100%}
       #${ROOT_ID} .nt-control-wrap{position:relative;flex:none}
@@ -572,6 +578,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (controller.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
     if (controller.inputListener) document.removeEventListener('input', controller.inputListener, true);
     if (controller.pointerDownListener) document.removeEventListener('pointerdown', controller.pointerDownListener, true);
+    if (controller.pointerMoveListener) document.removeEventListener('pointermove', controller.pointerMoveListener, true);
+    if (controller.messageActionFrame) cancelAnimationFrame(controller.messageActionFrame);
     clearTimeout(controller.statusTimer);
     clearInterval(controller.watchdogTimer);
     document.getElementById(ROOT_ID)?.remove();
@@ -605,6 +613,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       displayLanguage: 'ko',
       channelLanguages: {},
       pointerDownListener: null,
+      pointerMoveListener: null,
+      messageActionFrame: 0,
       failsafe() {
         if (this.released) return;
         this.released = true;
@@ -616,6 +626,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         document.removeEventListener('beforeinput', this.beforeInputListener, true);
         document.removeEventListener('input', this.inputListener, true);
         document.removeEventListener('pointerdown', this.pointerDownListener, true);
+        document.removeEventListener('pointermove', this.pointerMoveListener, true);
+        if (this.messageActionFrame) cancelAnimationFrame(this.messageActionFrame);
+        this.messageActionFrame = 0;
 
         for (const [id, item] of this.pending) {
           const editor = item.editor;
@@ -684,12 +697,59 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.statusTimer = 0;
         }, 5000);
       },
+      clearNativeMessageActionOverlap() {
+        if (!this.root) return;
+        for (const surface of this.root.querySelectorAll('[data-nt-native-action-overlap]')) {
+          delete surface.dataset.ntNativeActionOverlap;
+        }
+      },
+      syncNativeMessageActionOverlap() {
+        if (!this.root) return;
+        this.clearNativeMessageActionOverlap();
+        if (this.root.hidden || this.root.dataset.openMenu) return;
+        const actionBounds = [...document.querySelectorAll(`${MESSAGE_ROW_SELECTOR}:hover [role="group"]`)]
+          .filter(group => !this.root.contains(group))
+          .filter(group => group.querySelectorAll('button, [role="button"]').length >= 2)
+          .map(group => ({bounds:group.getBoundingClientRect(), style:getComputedStyle(group)}))
+          .filter(({bounds, style}) => style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && Number.parseFloat(style.opacity || '1') > 0
+            && bounds.width >= 72
+            && bounds.height >= 24
+            && bounds.height <= 64
+            && bounds.right > 0
+            && bounds.left < window.innerWidth
+            && bounds.bottom > 0
+            && bounds.top < window.innerHeight)
+          .map(({bounds}) => bounds);
+        if (!actionBounds.length) return;
+        const surfaces = [
+          this.root.querySelector('.nt-outgoing-control'),
+          this.root.querySelector('.nt-display-control'),
+          this.root.querySelector('.nt-outgoing-status'),
+        ].filter(Boolean);
+        for (const surface of surfaces) {
+          const bounds = surface.getBoundingClientRect();
+          if (bounds.width <= 0 || bounds.height <= 0) continue;
+          if (actionBounds.some(action => rectanglesOverlap(bounds, action))) {
+            surface.dataset.ntNativeActionOverlap = 'true';
+          }
+        }
+      },
+      scheduleNativeMessageActionOverlap() {
+        if (this.messageActionFrame) return;
+        this.messageActionFrame = requestAnimationFrame(() => {
+          this.messageActionFrame = 0;
+          this.syncNativeMessageActionOverlap();
+        });
+      },
       reposition() {
         if (!this.root) return;
         if (hasActiveMediaViewer()) {
           this.closeMenus();
           this.root.hidden = true;
           this.root.style.visibility = 'hidden';
+          this.clearNativeMessageActionOverlap();
           return;
         }
         const editor = activeComposer();
@@ -721,6 +781,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         this.root.hidden = !this.displayControlVisible && (!this.outgoingControlVisible || !editor);
         if (!anchor || this.root.hidden) {
           this.root.style.visibility = 'hidden';
+          this.clearNativeMessageActionOverlap();
           return;
         }
         const anchorBounds = anchor.getBoundingClientRect();
@@ -733,6 +794,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.root.style.bottom = `${Math.max(baseBottom, window.innerHeight - obstacleTop + 12)}px`;
         }
         this.root.style.visibility = '';
+        this.scheduleNativeMessageActionOverlap();
       },
       updateLabel() {
         if (!this.root) return;
@@ -1176,10 +1238,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       if (!controller.root || event.composedPath().includes(controller.root)) return;
       controller.closeMenus();
     };
+    controller.pointerMoveListener = () => controller.scheduleNativeMessageActionOverlap();
     document.addEventListener('keydown', controller.listener, true);
     document.addEventListener('beforeinput', controller.beforeInputListener, true);
     document.addEventListener('input', controller.inputListener, true);
     document.addEventListener('pointerdown', controller.pointerDownListener, true);
+    document.addEventListener('pointermove', controller.pointerMoveListener, true);
     window[GLOBAL] = controller;
     controller.watchdogTimer = setInterval(() => {
       if (Date.now() - controller.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) controller.failsafe();
@@ -1229,6 +1293,8 @@ pub const OUTGOING_CLEANUP_SCRIPT: &str = r#"
   if (controller?.beforeInputListener) document.removeEventListener('beforeinput', controller.beforeInputListener, true);
   if (controller?.inputListener) document.removeEventListener('input', controller.inputListener, true);
   if (controller?.pointerDownListener) document.removeEventListener('pointerdown', controller.pointerDownListener, true);
+  if (controller?.pointerMoveListener) document.removeEventListener('pointermove', controller.pointerMoveListener, true);
+  if (controller?.messageActionFrame) cancelAnimationFrame(controller.messageActionFrame);
   document.getElementById('nt-outgoing-translation')?.remove();
   document.getElementById('nt-outgoing-translation-style')?.remove();
   delete window.__nudeTranslatorOutgoing;
@@ -2009,7 +2075,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 52"));
+        assert!(script.contains("const CONTROLLER_VERSION = 53"));
     }
 
     #[test]
