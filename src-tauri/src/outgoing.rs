@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 53;
+  const CONTROLLER_VERSION = 54;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -705,8 +705,15 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       syncNativeMessageActionOverlap() {
         if (!this.root) return;
-        this.clearNativeMessageActionOverlap();
-        if (this.root.hidden || this.root.dataset.openMenu) return;
+        const surfaces = [
+          this.root.querySelector('.nt-outgoing-control'),
+          this.root.querySelector('.nt-display-control'),
+          this.root.querySelector('.nt-outgoing-status'),
+        ].filter(Boolean);
+        if (this.root.hidden || this.root.dataset.openMenu) {
+          for (const surface of surfaces) delete surface.dataset.ntNativeActionOverlap;
+          return;
+        }
         const actionBounds = [...document.querySelectorAll(`${MESSAGE_ROW_SELECTOR}:hover [role="group"]`)]
           .filter(group => !this.root.contains(group))
           .filter(group => group.querySelectorAll('button, [role="button"]').length >= 2)
@@ -722,17 +729,15 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             && bounds.bottom > 0
             && bounds.top < window.innerHeight)
           .map(({bounds}) => bounds);
-        if (!actionBounds.length) return;
-        const surfaces = [
-          this.root.querySelector('.nt-outgoing-control'),
-          this.root.querySelector('.nt-display-control'),
-          this.root.querySelector('.nt-outgoing-status'),
-        ].filter(Boolean);
         for (const surface of surfaces) {
           const bounds = surface.getBoundingClientRect();
-          if (bounds.width <= 0 || bounds.height <= 0) continue;
-          if (actionBounds.some(action => rectanglesOverlap(bounds, action))) {
+          const overlapsNativeAction = bounds.width > 0
+            && bounds.height > 0
+            && actionBounds.some(action => rectanglesOverlap(bounds, action));
+          if (overlapsNativeAction) {
             surface.dataset.ntNativeActionOverlap = 'true';
+          } else {
+            delete surface.dataset.ntNativeActionOverlap;
           }
         }
       },
@@ -2075,7 +2080,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 53"));
+        assert!(script.contains("const CONTROLLER_VERSION = 54"));
     }
 
     #[test]

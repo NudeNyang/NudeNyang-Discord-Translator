@@ -22,6 +22,14 @@ function outgoingRectanglesOverlap() {
   return Function("left", "right", match[1]);
 }
 
+function outgoingNativeActionSyncBody() {
+  const match = outgoing.match(
+    /syncNativeMessageActionOverlap\(\) \{([\s\S]*?)\r?\n\s*\},\r?\n\s*scheduleNativeMessageActionOverlap\(/,
+  );
+  assert.ok(match, "Discord 작업 막대 충돌 갱신 함수를 찾을 수 있어야 해");
+  return match[1];
+}
+
 function nativeMessageActionOverlapState() {
   const methods = outgoing.match(
     /(clearNativeMessageActionOverlap\(\) \{[\s\S]*?\r?\n\s*\},\r?\n\s*syncNativeMessageActionOverlap\(\) \{[\s\S]*?\r?\n\s*\}),\r?\n\s*scheduleNativeMessageActionOverlap\(/,
@@ -339,6 +347,11 @@ test("turning outgoing interpretation off clears in-flight work and its persiste
 });
 
 test("Discord native message actions stack above fixed translation controls", () => {
+  assert.doesNotMatch(
+    outgoingNativeActionSyncBody(),
+    /clearNativeMessageActionOverlap/,
+    "충돌 재검사 전에 숨김을 풀면 포인터가 번역 UI로 튀어 클릭을 가로챈다",
+  );
   const overlaps = outgoingRectanglesOverlap();
   assert.equal(overlaps(
     { left: 700, right: 764, top: 100, bottom: 134 },
@@ -483,7 +496,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 53/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 54/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);
