@@ -16,6 +16,35 @@ function outgoingComparableMessageText() {
   return Function("value", match[1]);
 }
 
+function cancelOutgoingWorkState() {
+  const method = outgoing.match(
+    /cancelOutgoingWork\(\) \{([\s\S]*?)\r?\n\s*\},\r?\n\s*setOutgoingEnabled\(/,
+  );
+  assert.ok(method, "통역 취소 정리 함수를 찾을 수 있어야 해");
+  const cancelOutgoingWork = Function(
+    "composerHasText",
+    "composerText",
+    `return function cancelOutgoingWork() {${method[1]}\n}`,
+  )(() => false, () => "");
+  const statuses = [];
+  const controller = {
+    pending: new Map([["translate-1", { text: "전송할 원문", review_ready: false }]]),
+    draftChecks: new Map([["draft-1", { resolved: false }]]),
+    queue: [
+      { action: "translate" },
+      { action: "classify" },
+      { action: "display-language" },
+    ],
+    oneShotOriginal: true,
+    manualRequest: "translate-1",
+    setStatus(message) {
+      statuses.push(message);
+    },
+  };
+  cancelOutgoingWork.call(controller);
+  return { controller, statuses };
+}
+
 function activeComposerIn(html) {
   const scope = outgoing.match(
     /function composerHasText\(editor\) \{[\s\S]*?(?=\n  function hasActiveMediaViewer\(\))/,
@@ -237,6 +266,24 @@ test("outgoing interpretation status stays visible until the request finishes", 
   assert.match(outgoing, /detected\(id, language\)[\s\S]*?setStatus\(copy\('translating'\), false, true\)/);
 });
 
+test("turning outgoing interpretation off clears in-flight work and its persistent status", () => {
+  const { controller, statuses } = cancelOutgoingWorkState();
+  assert.equal(controller.pending.size, 0);
+  assert.equal(controller.draftChecks.size, 0);
+  assert.deepEqual(controller.queue, [{ action: "display-language" }]);
+  assert.equal(controller.oneShotOriginal, false);
+  assert.equal(controller.manualRequest, "");
+  assert.deepEqual(statuses, [""]);
+  assert.match(outgoing, /setOutgoingEnabled\(nextEnabled\) \{[\s\S]*?if \(!nextEnabled\) this\.cancelOutgoingWork\(\)/);
+  assert.match(outgoing, /const nextOutgoingEnabled =/);
+  assert.match(outgoing, /if \(!nextOutgoingEnabled\) controller\.cancelOutgoingWork\(\)/);
+});
+
+test("Discord native message actions stack above fixed translation controls", () => {
+  assert.match(outgoing, /#\$\{ROOT_ID\}\{[^}]*position:fixed[^}]*right:32px[^}]*bottom:82px[^}]*z-index:0/);
+  assert.doesNotMatch(outgoing, /#\$\{ROOT_ID\}\{[^}]*z-index:2147483000/);
+});
+
 test("long outgoing translations stay in the composer for manual handling", () => {
   assert.doesNotMatch(outgoing, /prepareAttachment/);
   assert.doesNotMatch(outgoing, /attachTextFile/);
@@ -354,7 +401,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 50/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 51/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);

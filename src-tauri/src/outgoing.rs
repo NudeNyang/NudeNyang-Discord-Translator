@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 50;
+  const CONTROLLER_VERSION = 51;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -503,7 +503,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
-      #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:2147483000;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:0;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
       #${ROOT_ID},#${ROOT_ID} *{box-sizing:border-box}
       #${ROOT_ID} [hidden]{display:none!important}
       #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
@@ -755,9 +755,32 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           recent_messages:[],
         });
       },
+      cancelOutgoingWork() {
+        for (const item of this.pending.values()) {
+          const editor = item.editor;
+          const original = item.original_text || item.text || '';
+          const translationWasInserted = item.review_ready || item.installing_review;
+          if (!translationWasInserted || !original || !editor?.isConnected || !composerHasText(editor)) continue;
+          if (composerText(editor) === original) continue;
+          editor.focus();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          const selection = getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          document.execCommand('insertText', false, original);
+        }
+        this.pending.clear();
+        this.draftChecks.clear();
+        this.queue = this.queue.filter(item => item.action !== 'translate' && item.action !== 'classify');
+        this.oneShotOriginal = false;
+        this.manualRequest = '';
+        this.setStatus('');
+      },
       setOutgoingEnabled(nextEnabled) {
         this.enabled = nextEnabled;
-        this.draftChecks.clear();
+        if (!nextEnabled) this.cancelOutgoingWork();
+        else this.draftChecks.clear();
         this.queue.push({
           id:`outgoing-enabled-${Date.now()}-${++this.sequence}`,
           channel_key:currentChannelKey(),
@@ -1175,7 +1198,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   for (const [channelKey, language] of optimisticLanguages) {
     controller.channelLanguages[channelKey] = language;
   }
-  controller.enabled = optimisticOutgoingEnabled === undefined ? enabled : optimisticOutgoingEnabled === 'true';
+  const nextOutgoingEnabled = optimisticOutgoingEnabled === undefined ? enabled : optimisticOutgoingEnabled === 'true';
+  if (!nextOutgoingEnabled) controller.cancelOutgoingWork();
+  controller.enabled = nextOutgoingEnabled;
   controller.outgoingControlVisible = outgoingControlVisible;
   controller.displayEnabled = optimisticDisplayLanguage === undefined ? displayEnabled : optimisticDisplayLanguage !== 'off';
   controller.displayControlVisible = displayControlVisible;
@@ -1982,7 +2007,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 50"));
+        assert!(script.contains("const CONTROLLER_VERSION = 51"));
     }
 
     #[test]

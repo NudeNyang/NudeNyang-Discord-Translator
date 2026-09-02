@@ -97,6 +97,8 @@ dispatch, so an overlapping supplemental surface cannot send or rewrite a partic
 
 An opened user profile is treated as a text surface, not as an image viewer. F12 can collect the visible user-authored bio and custom status from its rendered DOM, while the display name and account name keep the existing `nickname` classification. Avatar, banner, decoration, profile-effect, badge, icon, emoji, and sticker resources never become OCR image-translation targets. An explicitly opened attachment or media dialog remains eligible.
 
+The fixed outgoing and display-language controls use a base stacking context so Discord's positive-layer native controls, including the hovered message action toolbar, remain visible and clickable above them. The controls keep their composer-relative position and do not jump away on hover. Turning outgoing interpretation off also cancels queued DOM requests, clears persistent progress feedback, and restores the typed original if a translated review had already been inserted; late worker results are ignored because their DOM request is no longer pending.
+
 This is not an officially supported Discord extension interface. Discord updates can change the renderer and temporarily break the integration.
 
 ## Translation and data
