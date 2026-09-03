@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 57;
+  const CONTROLLER_VERSION = 58;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -626,6 +626,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       nativeActionPointer: null,
       nativeActionPreviousPointer: null,
       nativeActionPointerIntent: null,
+      nativeActionApproachPointer: null,
       failsafe() {
         if (this.released) return;
         this.released = true;
@@ -711,6 +712,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       clearNativeMessageActionOverlap() {
         this.nativeActionBounds = [];
         this.nativeActionPointerIntent = null;
+        this.nativeActionApproachPointer = null;
         if (!this.root) return;
         for (const surface of this.root.querySelectorAll('[data-nt-native-action-overlap]')) {
           delete surface.dataset.ntNativeActionOverlap;
@@ -755,23 +757,42 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           );
           this.nativeActionBounds = actionBounds;
         }
-        const pointerInsideAction = actionBounds.some(bounds =>
+        const measuredSurfaces = surfaces.map(surface => ({
+          surface,
+          bounds: surface.getBoundingClientRect(),
+        }));
+        const sharedBounds = measuredSurfaces.flatMap(({bounds}) => actionBounds
+          .filter(action => bounds.width > 0
+            && bounds.height > 0
+            && rectanglesOverlap(bounds, action))
+          .map(action => ({
+            left: Math.max(bounds.left, action.left),
+            right: Math.min(bounds.right, action.right),
+            top: Math.max(bounds.top, action.top),
+            bottom: Math.min(bounds.bottom, action.bottom),
+          })));
+        const pointerInsideSharedRegion = sharedBounds.some(bounds =>
           pointWithinPaddedRect(this.nativeActionPointer, bounds)
         );
-        if (!pointerInsideAction) {
+        if (!pointerInsideSharedRegion) {
           this.nativeActionPointerIntent = null;
+          if (this.nativeActionPointer) {
+            this.nativeActionApproachPointer = {...this.nativeActionPointer};
+          }
         } else if (!this.nativeActionPointerIntent) {
-          const previous = this.nativeActionPreviousPointer;
           const current = this.nativeActionPointer;
-          const deltaX = current && previous ? current.x - previous.x : 0;
-          const deltaY = current && previous ? current.y - previous.y : 0;
-          this.nativeActionPointerIntent = deltaX > 0 && Math.abs(deltaX) >= Math.abs(deltaY)
+          const origin = this.nativeActionApproachPointer || this.nativeActionPreviousPointer;
+          const enteredFromLeft = Boolean(current && origin && current.x > origin.x)
+            && sharedBounds.some(bounds => pointWithinPaddedRect(current, bounds)
+              && origin.x < bounds.left - 10
+              && origin.y >= bounds.top - 10
+              && origin.y <= bounds.bottom + 10);
+          this.nativeActionPointerIntent = enteredFromLeft
             ? 'native-action'
             : 'translator';
         }
         const yieldToNativeAction = this.nativeActionPointerIntent === 'native-action';
-        for (const surface of surfaces) {
-          const bounds = surface.getBoundingClientRect();
+        for (const {surface, bounds} of measuredSurfaces) {
           const overlapsNativeAction = bounds.width > 0
             && bounds.height > 0
             && yieldToNativeAction
@@ -2128,7 +2149,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 57"));
+        assert!(script.contains("const CONTROLLER_VERSION = 58"));
     }
 
     #[test]

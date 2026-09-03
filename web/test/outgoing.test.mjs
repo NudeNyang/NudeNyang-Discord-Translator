@@ -76,11 +76,20 @@ function nativeMessageActionOverlapState() {
     const controller = {
       root,
       nativeActionBounds: [],
-      nativeActionPointer: {x: 525, y: 115},
-      nativeActionPreviousPointer: {x: 480, y: 115},
+      nativeActionPointer: {x: 600, y: 115},
+      nativeActionPreviousPointer: {x: 580, y: 115},
       nativeActionPointerIntent: null,
+      nativeActionApproachPointer: null,
       ${methods[1]}
     };
+    controller.syncNativeMessageActionOverlap();
+    const beforeSharedRegion = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
+    controller.nativeActionPreviousPointer = controller.nativeActionPointer;
+    controller.nativeActionPointer = {x:600, y:120};
+    controller.syncNativeMessageActionOverlap();
+    const afterVerticalJitter = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
+    controller.nativeActionPreviousPointer = controller.nativeActionPointer;
+    controller.nativeActionPointer = {x:705, y:120};
     controller.syncNativeMessageActionOverlap();
     const leftToRight = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
     const separate = root.querySelector('.nt-display-control').dataset.ntNativeActionOverlap || '';
@@ -105,7 +114,7 @@ function nativeMessageActionOverlapState() {
     const topToBottom = enter({x:720, y:60}, {x:720, y:100});
     const bottomToTop = enter({x:720, y:180}, {x:720, y:130});
     const rightToLeft = enter({x:800, y:115}, {x:748, y:115});
-    return {leftToRight, separate, held, cleared, topToBottom, bottomToTop, rightToLeft};
+    return {beforeSharedRegion, afterVerticalJitter, leftToRight, separate, held, cleared, topToBottom, bottomToTop, rightToLeft};
   })()`);
 }
 
@@ -390,6 +399,8 @@ test("Discord native message actions stack above fixed translation controls", ()
     { left: 520, right: 748, top: 98, bottom: 132 },
   ), false);
   const overlapState = nativeMessageActionOverlapState();
+  assert.equal(overlapState.beforeSharedRegion, "");
+  assert.equal(overlapState.afterVerticalJitter, "");
   assert.equal(overlapState.leftToRight, "true");
   assert.equal(overlapState.separate, "");
   assert.equal(overlapState.held, "true");
@@ -533,7 +544,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 57/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 58/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);
