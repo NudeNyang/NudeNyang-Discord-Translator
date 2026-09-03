@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 55;
+  const CONTROLLER_VERSION = 56;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -517,11 +517,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     const style = document.createElement('style');
     style.id = `${ROOT_ID}-style`;
     style.textContent = `
-      #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:0;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1)}
+      #${ROOT_ID}{position:fixed;right:32px;bottom:82px;z-index:0;display:flex;max-width:calc(100vw - 46px);flex-direction:column;align-items:flex-end;gap:10px;font-family:var(--font-primary,Arial,sans-serif);font-size:12px;color:var(--text-normal,#dbdee1);pointer-events:none}
       #${ROOT_ID},#${ROOT_ID} *{box-sizing:border-box}
       #${ROOT_ID} [hidden]{display:none!important}
       #${ROOT_ID} [data-nt-native-action-overlap="true"]{visibility:hidden!important;pointer-events:none!important}
-      #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer}
+      #${ROOT_ID} button{font:inherit;color:inherit;cursor:pointer;pointer-events:auto}
       #${ROOT_ID} .nt-controls-row{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:6px;max-width:100%}
       #${ROOT_ID} .nt-control-wrap{position:relative;flex:none}
       #${ROOT_ID} .nt-outgoing-control{--nt-role-accent:#8ab7df;--nt-role-accent-deep:#5d7f9d;--nt-role-text:#f2f3f5;--nt-role-muted:#a9b7c4;--nt-icon-surface:#313842;--nt-icon-text:#8ab7df}
@@ -534,7 +534,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       #${ROOT_ID} .nt-outgoing-trigger[aria-expanded="true"],#${ROOT_ID} .nt-display-trigger[aria-expanded="true"]{border-color:color-mix(in srgb,var(--nt-role-accent) 44%,#ffffff26);background:linear-gradient(145deg,#3b4451f5,#242a32fa);box-shadow:0 10px 28px #0008,inset 0 1px #ffffff30;filter:none;transform:none}
       #${ROOT_ID} .nt-role-icon{display:inline-flex;width:22px;height:22px;flex:none;align-items:center;justify-content:center;border:0;border-radius:7px;background:var(--nt-icon-surface);box-shadow:inset 0 1px #ffffff0d;color:var(--nt-icon-text);font-size:11px;font-weight:700;line-height:1}
       #${ROOT_ID} .nt-outgoing-trigger b,#${ROOT_ID} .nt-display-trigger b{color:var(--nt-role-text);font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
-      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;z-index:3;right:0;bottom:0;width:274px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:8px 8px 48px;border:1px solid #ffffff26;border-radius:34px;background:linear-gradient(145deg,#353d49f2,#171c23f7);box-shadow:0 25px 60px #0008,inset 0 1px #ffffff2e;color:var(--text-normal,#dbdee1);backdrop-filter:blur(26px) saturate(140%);transform-origin:bottom right;animation:nt-language-menu-enter 180ms cubic-bezier(.16,1,.3,1)}
+      #${ROOT_ID} .nt-outgoing-menu,#${ROOT_ID} .nt-display-menu{position:absolute;z-index:3;right:0;bottom:0;width:274px;max-height:min(58vh,500px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:8px 8px 48px;border:1px solid #ffffff26;border-radius:34px;background:linear-gradient(145deg,#353d49f2,#171c23f7);box-shadow:0 25px 60px #0008,inset 0 1px #ffffff2e;color:var(--text-normal,#dbdee1);backdrop-filter:blur(26px) saturate(140%);transform-origin:bottom right;animation:nt-language-menu-enter 180ms cubic-bezier(.16,1,.3,1);pointer-events:auto}
       @keyframes nt-language-menu-enter{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
       #${ROOT_ID} .nt-outgoing-menu::-webkit-scrollbar,#${ROOT_ID} .nt-display-menu::-webkit-scrollbar{width:0;height:0}
       #${ROOT_ID} .nt-menu-scroll-indicator{position:absolute;z-index:5;right:2px;bottom:4px;width:10px;opacity:0;cursor:default;pointer-events:auto;transition:opacity 160ms ease}
@@ -2106,7 +2106,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 55"));
+        assert!(script.contains("const CONTROLLER_VERSION = 56"));
     }
 
     #[test]
