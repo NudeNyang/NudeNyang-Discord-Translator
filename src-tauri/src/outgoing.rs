@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 59;
+  const CONTROLLER_VERSION = 60;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -139,7 +139,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return '';
     if (node.nodeType === Node.ELEMENT_NODE) {
       if (node.matches(mentionSelector)) return mentionText(node);
-      if (node.hasAttribute('data-slate-zero-width')) return '';
+      if (node.hasAttribute('data-slate-zero-width')) {
+        const block = node.closest('[data-slate-node="element"]:not([data-slate-inline="true"])');
+        const blockHasContent = Boolean(block?.querySelector('[data-slate-string], [data-slate-inline="true"]'));
+        return node.getAttribute('data-slate-zero-width') === 'n' && node.querySelector('br') && blockHasContent ? '\n' : '';
+      }
       if (node.hasAttribute('data-slate-string')) return node.textContent || '';
       if (node.tagName === 'BR') return '\n';
     }
@@ -2150,7 +2154,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 59"));
+        assert!(script.contains("const CONTROLLER_VERSION = 60"));
     }
 
     #[test]
