@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 56;
+  const CONTROLLER_VERSION = 57;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -624,6 +624,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       messageActionFrame: 0,
       nativeActionBounds: [],
       nativeActionPointer: null,
+      nativeActionPreviousPointer: null,
+      nativeActionPointerIntent: null,
       failsafe() {
         if (this.released) return;
         this.released = true;
@@ -708,6 +710,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       },
       clearNativeMessageActionOverlap() {
         this.nativeActionBounds = [];
+        this.nativeActionPointerIntent = null;
         if (!this.root) return;
         for (const surface of this.root.querySelectorAll('[data-nt-native-action-overlap]')) {
           delete surface.dataset.ntNativeActionOverlap;
@@ -752,10 +755,26 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           );
           this.nativeActionBounds = actionBounds;
         }
+        const pointerInsideAction = actionBounds.some(bounds =>
+          pointWithinPaddedRect(this.nativeActionPointer, bounds)
+        );
+        if (!pointerInsideAction) {
+          this.nativeActionPointerIntent = null;
+        } else if (!this.nativeActionPointerIntent) {
+          const previous = this.nativeActionPreviousPointer;
+          const current = this.nativeActionPointer;
+          const deltaX = current && previous ? current.x - previous.x : 0;
+          const deltaY = current && previous ? current.y - previous.y : 0;
+          this.nativeActionPointerIntent = deltaX > 0 && Math.abs(deltaX) >= Math.abs(deltaY)
+            ? 'native-action'
+            : 'translator';
+        }
+        const yieldToNativeAction = this.nativeActionPointerIntent === 'native-action';
         for (const surface of surfaces) {
           const bounds = surface.getBoundingClientRect();
           const overlapsNativeAction = bounds.width > 0
             && bounds.height > 0
+            && yieldToNativeAction
             && actionBounds.some(action => rectanglesOverlap(bounds, action));
           if (overlapsNativeAction) {
             surface.dataset.ntNativeActionOverlap = 'true';
@@ -1267,6 +1286,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       controller.closeMenus();
     };
     controller.pointerMoveListener = event => {
+      if (!controller.messageActionFrame) {
+        controller.nativeActionPreviousPointer = controller.nativeActionPointer;
+      }
       controller.nativeActionPointer = {x:event.clientX, y:event.clientY};
       controller.scheduleNativeMessageActionOverlap();
     };
@@ -2106,7 +2128,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 56"));
+        assert!(script.contains("const CONTROLLER_VERSION = 57"));
     }
 
     #[test]

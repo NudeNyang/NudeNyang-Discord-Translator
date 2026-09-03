@@ -76,20 +76,36 @@ function nativeMessageActionOverlapState() {
     const controller = {
       root,
       nativeActionBounds: [],
-      nativeActionPointer: {x: 600, y: 115},
+      nativeActionPointer: {x: 525, y: 115},
+      nativeActionPreviousPointer: {x: 480, y: 115},
+      nativeActionPointerIntent: null,
       ${methods[1]}
     };
     controller.syncNativeMessageActionOverlap();
-    const overlapped = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
+    const leftToRight = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
     const separate = root.querySelector('.nt-display-control').dataset.ntNativeActionOverlap || '';
     visibleActions = [];
+    controller.nativeActionPreviousPointer = controller.nativeActionPointer;
     controller.nativeActionPointer = {x: 744, y: 115};
     controller.syncNativeMessageActionOverlap();
     const held = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
+    controller.nativeActionPreviousPointer = controller.nativeActionPointer;
     controller.nativeActionPointer = {x: 900, y: 300};
     controller.syncNativeMessageActionOverlap();
     const cleared = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
-    return {overlapped, separate, held, cleared};
+
+    const enter = (previous, current) => {
+      controller.clearNativeMessageActionOverlap();
+      visibleActions = [nativeActions];
+      controller.nativeActionPreviousPointer = previous;
+      controller.nativeActionPointer = current;
+      controller.syncNativeMessageActionOverlap();
+      return root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
+    };
+    const topToBottom = enter({x:720, y:60}, {x:720, y:100});
+    const bottomToTop = enter({x:720, y:180}, {x:720, y:130});
+    const rightToLeft = enter({x:800, y:115}, {x:748, y:115});
+    return {leftToRight, separate, held, cleared, topToBottom, bottomToTop, rightToLeft};
   })()`);
 }
 
@@ -374,10 +390,13 @@ test("Discord native message actions stack above fixed translation controls", ()
     { left: 520, right: 748, top: 98, bottom: 132 },
   ), false);
   const overlapState = nativeMessageActionOverlapState();
-  assert.equal(overlapState.overlapped, "true");
+  assert.equal(overlapState.leftToRight, "true");
   assert.equal(overlapState.separate, "");
   assert.equal(overlapState.held, "true");
   assert.equal(overlapState.cleared, "");
+  assert.equal(overlapState.topToBottom, "");
+  assert.equal(overlapState.bottomToTop, "");
+  assert.equal(overlapState.rightToLeft, "");
   assert.match(outgoing, /#\$\{ROOT_ID\}\{[^}]*position:fixed[^}]*right:32px[^}]*bottom:82px[^}]*z-index:0/);
   assert.match(outgoing, /#\$\{ROOT_ID\}\{[^}]*pointer-events:none/);
   assert.match(outgoing, /#\$\{ROOT_ID\} button\{[^}]*pointer-events:auto/);
@@ -392,6 +411,7 @@ test("Discord native message actions stack above fixed translation controls", ()
   assert.match(outgoing, /surface\.dataset\.ntNativeActionOverlap = 'true'/);
   assert.match(outgoing, /\[data-nt-native-action-overlap="true"\]\{visibility:hidden!important;pointer-events:none!important\}/);
   assert.match(outgoing, /document\.addEventListener\('pointermove', controller\.pointerMoveListener, true\)/);
+  assert.match(outgoing, /nativeActionPreviousPointer = controller\.nativeActionPointer/);
   assert.match(outgoing, /nativeActionPointer = \{x:event\.clientX, y:event\.clientY\}/);
   assert.match(outgoing, /document\.removeEventListener\('pointermove', controller\.pointerMoveListener, true\)/);
 });
@@ -513,7 +533,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 56/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 57/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);
