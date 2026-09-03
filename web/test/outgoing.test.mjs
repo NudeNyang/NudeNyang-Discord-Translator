@@ -35,9 +35,11 @@ function nativeMessageActionOverlapState() {
     /(clearNativeMessageActionOverlap\(\) \{[\s\S]*?\r?\n\s*\},\r?\n\s*syncNativeMessageActionOverlap\(\) \{[\s\S]*?\r?\n\s*\}),\r?\n\s*scheduleNativeMessageActionOverlap\(/,
   );
   const overlap = outgoing.match(/function rectanglesOverlap\(left, right\) \{[\s\S]*?\n  \}/);
+  const pointWithin = outgoing.match(/function pointWithinPaddedRect\(point, bounds, padding = 10\) \{[\s\S]*?\n  \}/);
   const selector = outgoing.match(/const MESSAGE_ROW_SELECTOR = ('.*?');/);
   assert.ok(methods, "Discord 작업 막대 충돌 처리 메서드를 찾을 수 있어야 해");
   assert.ok(overlap, "Discord 작업 막대 충돌 판정 함수를 찾을 수 있어야 해");
+  assert.ok(pointWithin, "Discord 작업 막대 포인터 유지 함수를 찾을 수 있어야 해");
   assert.ok(selector, "Discord 메시지 행 선택자를 찾을 수 있어야 해");
   const dom = new JSDOM(`
     <div id="root">
@@ -64,20 +66,30 @@ function nativeMessageActionOverlapState() {
   return window.eval(`(() => {
     const MESSAGE_ROW_SELECTOR = ${selector[1]};
     ${overlap[0]}
+    ${pointWithin[0]}
     const root = document.getElementById('root');
     const nativeActions = document.getElementById('native-actions');
     const nativeSelector = \`${"${MESSAGE_ROW_SELECTOR}"}:hover [role="group"]\`;
     let visibleActions = [nativeActions];
     const querySelectorAll = document.querySelectorAll.bind(document);
     document.querySelectorAll = candidate => candidate === nativeSelector ? visibleActions : querySelectorAll(candidate);
-    const controller = {root, ${methods[1]}};
+    const controller = {
+      root,
+      nativeActionBounds: [],
+      nativeActionPointer: {x: 600, y: 115},
+      ${methods[1]}
+    };
     controller.syncNativeMessageActionOverlap();
     const overlapped = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
     const separate = root.querySelector('.nt-display-control').dataset.ntNativeActionOverlap || '';
     visibleActions = [];
+    controller.nativeActionPointer = {x: 744, y: 115};
+    controller.syncNativeMessageActionOverlap();
+    const held = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
+    controller.nativeActionPointer = {x: 900, y: 300};
     controller.syncNativeMessageActionOverlap();
     const cleared = root.querySelector('.nt-outgoing-control').dataset.ntNativeActionOverlap || '';
-    return {overlapped, separate, cleared};
+    return {overlapped, separate, held, cleared};
   })()`);
 }
 
@@ -364,6 +376,7 @@ test("Discord native message actions stack above fixed translation controls", ()
   const overlapState = nativeMessageActionOverlapState();
   assert.equal(overlapState.overlapped, "true");
   assert.equal(overlapState.separate, "");
+  assert.equal(overlapState.held, "true");
   assert.equal(overlapState.cleared, "");
   assert.match(outgoing, /#\$\{ROOT_ID\}\{[^}]*position:fixed[^}]*right:32px[^}]*bottom:82px[^}]*z-index:0/);
   assert.doesNotMatch(outgoing, /#\$\{ROOT_ID\}\{[^}]*z-index:2147483000/);
@@ -376,6 +389,7 @@ test("Discord native message actions stack above fixed translation controls", ()
   assert.match(outgoing, /surface\.dataset\.ntNativeActionOverlap = 'true'/);
   assert.match(outgoing, /\[data-nt-native-action-overlap="true"\]\{visibility:hidden!important;pointer-events:none!important\}/);
   assert.match(outgoing, /document\.addEventListener\('pointermove', controller\.pointerMoveListener, true\)/);
+  assert.match(outgoing, /nativeActionPointer = \{x:event\.clientX, y:event\.clientY\}/);
   assert.match(outgoing, /document\.removeEventListener\('pointermove', controller\.pointerMoveListener, true\)/);
 });
 
@@ -496,7 +510,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 54/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 55/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);

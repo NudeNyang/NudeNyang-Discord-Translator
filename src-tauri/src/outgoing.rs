@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 54;
+  const CONTROLLER_VERSION = 55;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -164,6 +164,13 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       && left.right > right.left
       && left.top < right.bottom
       && left.bottom > right.top;
+  }
+  function pointWithinPaddedRect(point, bounds, padding = 10) {
+    return Boolean(point)
+      && point.x >= bounds.left - padding
+      && point.x <= bounds.right + padding
+      && point.y >= bounds.top - padding
+      && point.y <= bounds.bottom + padding;
   }
   function primaryComposerContainer(element) {
     if (!element?.matches) return null;
@@ -615,6 +622,8 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       pointerDownListener: null,
       pointerMoveListener: null,
       messageActionFrame: 0,
+      nativeActionBounds: [],
+      nativeActionPointer: null,
       failsafe() {
         if (this.released) return;
         this.released = true;
@@ -698,6 +707,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         }, 5000);
       },
       clearNativeMessageActionOverlap() {
+        this.nativeActionBounds = [];
         if (!this.root) return;
         for (const surface of this.root.querySelectorAll('[data-nt-native-action-overlap]')) {
           delete surface.dataset.ntNativeActionOverlap;
@@ -714,7 +724,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           for (const surface of surfaces) delete surface.dataset.ntNativeActionOverlap;
           return;
         }
-        const actionBounds = [...document.querySelectorAll(`${MESSAGE_ROW_SELECTOR}:hover [role="group"]`)]
+        let actionBounds = [...document.querySelectorAll(`${MESSAGE_ROW_SELECTOR}:hover [role="group"]`)]
           .filter(group => !this.root.contains(group))
           .filter(group => group.querySelectorAll('button, [role="button"]').length >= 2)
           .map(group => ({bounds:group.getBoundingClientRect(), style:getComputedStyle(group)}))
@@ -729,6 +739,19 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             && bounds.bottom > 0
             && bounds.top < window.innerHeight)
           .map(({bounds}) => bounds);
+        if (actionBounds.length) {
+          this.nativeActionBounds = actionBounds.map(bounds => ({
+            left: bounds.left,
+            right: bounds.right,
+            top: bounds.top,
+            bottom: bounds.bottom,
+          }));
+        } else {
+          actionBounds = this.nativeActionBounds.filter(bounds =>
+            pointWithinPaddedRect(this.nativeActionPointer, bounds)
+          );
+          this.nativeActionBounds = actionBounds;
+        }
         for (const surface of surfaces) {
           const bounds = surface.getBoundingClientRect();
           const overlapsNativeAction = bounds.width > 0
@@ -1243,7 +1266,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       if (!controller.root || event.composedPath().includes(controller.root)) return;
       controller.closeMenus();
     };
-    controller.pointerMoveListener = () => controller.scheduleNativeMessageActionOverlap();
+    controller.pointerMoveListener = event => {
+      controller.nativeActionPointer = {x:event.clientX, y:event.clientY};
+      controller.scheduleNativeMessageActionOverlap();
+    };
     document.addEventListener('keydown', controller.listener, true);
     document.addEventListener('beforeinput', controller.beforeInputListener, true);
     document.addEventListener('input', controller.inputListener, true);
@@ -2080,7 +2106,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 54"));
+        assert!(script.contains("const CONTROLLER_VERSION = 55"));
     }
 
     #[test]
