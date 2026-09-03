@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 58;
+  const CONTROLLER_VERSION = 59;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -146,8 +146,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     return [...node.childNodes].map(visibleSlateNodeText).join('');
   }
   function visibleComposerText(root) {
-    const blocks = [...root.childNodes]
-      .filter(node => node.nodeType === Node.ELEMENT_NODE && node.getAttribute('data-slate-node') === 'element');
+    const blockSelector = '[data-slate-node="element"]:not([data-slate-inline="true"])';
+    const blocks = [...root.querySelectorAll(blockSelector)]
+      .filter(block => !block.querySelector(blockSelector));
     const text = blocks.length
       ? blocks.map(visibleSlateNodeText).join('\n')
       : visibleSlateNodeText(root);
@@ -2149,7 +2150,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 58"));
+        assert!(script.contains("const CONTROLLER_VERSION = 59"));
     }
 
     #[test]

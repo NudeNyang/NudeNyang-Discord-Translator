@@ -16,6 +16,22 @@ function outgoingComparableMessageText() {
   return Function("value", match[1]);
 }
 
+function outgoingComposerText(html) {
+  const scope = outgoing.match(
+    /function mentionText\(mention\) \{[\s\S]*?function composerText\(editor\) \{[\s\S]*?\n  \}/,
+  );
+  assert.ok(scope, "Discord 작성창 텍스트 수집 함수를 찾을 수 있어야 해");
+  const dom = new JSDOM(html, {
+    runScripts: "outside-only",
+    url: "https://discord.com/channels/1/2",
+  });
+  return dom.window.eval(`(() => {
+    const mentionSelector = '[data-slate-inline="true"][data-slate-void="true"][contenteditable="false"]';
+    ${scope[0]}
+    return composerText(document.querySelector('[role="textbox"]'));
+  })()`);
+}
+
 function outgoingRectanglesOverlap() {
   const match = outgoing.match(/function rectanglesOverlap\(left, right\) \{([\s\S]*?)\n  \}/);
   assert.ok(match, "Discord 작업 막대 충돌 판정 함수를 찾을 수 있어야 해");
@@ -529,6 +545,19 @@ test("outgoing translation retains exact composer line breaks and Discord format
   assert.doesNotMatch(outgoing, /visibleComposerText\(editor\)\.trim\(\)/);
 });
 
+test("outgoing translation retains paragraphs nested below a Discord Slate wrapper", () => {
+  const text = outgoingComposerText(
+    '<div role="textbox" contenteditable="true" data-slate-editor="true">'
+      + '<div class="discord-composer-wrapper">'
+      + '<div data-slate-node="element"><span data-slate-string="true">First paragraph</span></div>'
+      + '<div data-slate-node="element"><span data-slate-zero-width="n"><br></span></div>'
+      + '<div data-slate-node="element"><span data-slate-string="true">Second paragraph</span></div>'
+      + '</div></div>',
+  );
+
+  assert.equal(text, "First paragraph\n\nSecond paragraph");
+});
+
 test("Discord chat controls stay aligned to the composer and expose display translation settings", () => {
   assert.match(outgoing, /__DISPLAY_ENABLED__/);
   assert.match(outgoing, /__DISPLAY_LANGUAGE__/);
@@ -544,7 +573,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 58/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 59/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);
