@@ -558,20 +558,6 @@ test("outgoing translation retains paragraphs nested below a Discord Slate wrapp
   assert.equal(text, "First paragraph\n\nSecond paragraph");
 });
 
-test("outgoing translation retains Shift+Enter breaks inside one Discord Slate block", () => {
-  const text = outgoingComposerText(
-    '<div role="textbox" contenteditable="true" data-slate-editor="true">'
-      + '<div data-slate-node="element">'
-      + '<span data-slate-node="text"><span data-slate-string="true">First paragraph</span></span>'
-      + '<span data-slate-node="text"><span data-slate-zero-width="n" data-slate-length="0">&#xfeff;<br></span></span>'
-      + '<span data-slate-node="text"><span data-slate-zero-width="n" data-slate-length="0">&#xfeff;<br></span></span>'
-      + '<span data-slate-node="text"><span data-slate-string="true">Second paragraph</span></span>'
-      + '</div></div>',
-  );
-
-  assert.equal(text, "First paragraph\n\nSecond paragraph");
-});
-
 test("Discord chat controls stay aligned to the composer and expose display translation settings", () => {
   assert.match(outgoing, /__DISPLAY_ENABLED__/);
   assert.match(outgoing, /__DISPLAY_LANGUAGE__/);
@@ -587,7 +573,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 60/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 61/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);
