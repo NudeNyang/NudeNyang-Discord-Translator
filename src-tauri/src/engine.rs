@@ -39,8 +39,8 @@ use crate::outgoing::{
     apply_outgoing_error_script, apply_outgoing_review_script, apply_outgoing_suggestion_script,
     finish_outgoing_review_script, outgoing_originals_ui_script,
     outgoing_ui_script_with_visibility, parse_outgoing_bindings, parse_outgoing_requests,
-    suggest_recent_language, OutgoingRequest, OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT,
-    OUTGOING_ORIGINALS_UI_VERSION,
+    paste_outgoing_review_script, suggest_recent_language, OutgoingRequest,
+    OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
 };
 use crate::translation::{
     outgoing_can_passthrough, DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator,
@@ -2622,6 +2622,15 @@ fn dispatch_outgoing_review(
 ) -> Result<(), String> {
     if translated.is_empty() {
         return Err("확인할 번역문이 없습니다.".to_string());
+    }
+    if translated.contains(['\n', '\r']) {
+        let pasted =
+            client.evaluate(&paste_outgoing_review_script(request_id, translated)?, true)?;
+        return if pasted.as_bool() == Some(true) {
+            Ok(())
+        } else {
+            Err("번역문 서식을 유지하지 못했습니다. 입력창 내용을 확인하십시오.".to_string())
+        };
     }
     let prepared = client.evaluate(&apply_outgoing_review_script(request_id)?, false)?;
     if prepared.as_bool() != Some(true) {

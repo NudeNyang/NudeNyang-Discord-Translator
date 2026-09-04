@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 61;
+  const CONTROLLER_VERSION = 62;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -48,6 +48,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       detectedLanguage:'{language}로 감지했습니다. 전송 언어 메뉴에서 변경할 수 있습니다.',
       sendOriginal:'원문 전송', translationFailed:'메시지를 번역하지 못했습니다. 번역하지 않고 원문을 유지합니다.',
       pending:'이전 메시지를 처리하고 있습니다. 잠시 후 다시 시도하십시오.', reviewReady:'번역문을 확인하거나 수정한 뒤 Enter로 전송하십시오.',
+      reviewInsertFailed:'번역문 서식을 유지하지 못했습니다. 전송하지 않았습니다. 입력창 내용을 확인하십시오.',
       reviewReadyLong:'번역문이 Discord 길이 제한을 초과했습니다. 내용을 줄이거나 직접 파일로 첨부하십시오.',
       realTimeOn:'번역 켜짐', displayLanguage:'표시', selectDisplayLanguage:'표시 언어 선택', translationOff:'번역 안 함', searchLanguages:'언어 검색', noMatchingLanguages:'검색 결과 없음'
     },
@@ -58,6 +59,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       detectedLanguage:'Detected {language}. You can change it from the outgoing language menu.',
       sendOriginal:'Send original', translationFailed:'The message could not be translated. The original message has been preserved.',
       pending:'The previous message is still being processed. Try again shortly.', reviewReady:'Review or edit the translation, then press Enter to send.',
+      reviewInsertFailed:'The translation formatting could not be preserved. Nothing was sent. Check the draft before continuing.',
       reviewReadyLong:'The translation exceeds Discord’s length limit. Shorten it or attach it as a file yourself.',
       realTimeOn:'Translation on', displayLanguage:'View', selectDisplayLanguage:'Select display language', translationOff:'Do not translate', searchLanguages:'Search languages', noMatchingLanguages:'No matching languages'
     },
@@ -68,6 +70,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       detectedLanguage:'{language}と判定しました。送信言語メニューから変更できます。',
       sendOriginal:'原文を送信', translationFailed:'メッセージを翻訳できませんでした。原文は変更されていません。',
       pending:'前のメッセージを処理しています。しばらくしてからもう一度お試しください。', reviewReady:'翻訳文を確認・修正し、Enterで送信してください。',
+      reviewInsertFailed:'翻訳文の書式を保持できませんでした。送信していません。入力内容を確認してください。',
       reviewReadyLong:'翻訳文がDiscordの文字数制限を超えています。短くするか、手動でファイルを添付してください。',
       realTimeOn:'翻訳オン', displayLanguage:'表示', selectDisplayLanguage:'表示言語を選択', translationOff:'翻訳しない', searchLanguages:'言語を検索', noMatchingLanguages:'一致する言語がありません'
     },
@@ -78,6 +81,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       detectedLanguage:'已检测为{language}。可在发送语言菜单中更改。',
       sendOriginal:'发送原文', translationFailed:'无法翻译消息。原文已保持不变。',
       pending:'上一条消息仍在处理中。请稍后重试。', reviewReady:'请检查或修改译文，然后按 Enter 发送。',
+      reviewInsertFailed:'无法保留译文格式。消息尚未发送。请检查输入框内容。',
       reviewReadyLong:'译文超过 Discord 的长度限制。请缩短内容或自行附加文件。',
       realTimeOn:'翻译开启', displayLanguage:'显示', selectDisplayLanguage:'选择显示语言', translationOff:'不翻译', searchLanguages:'搜索语言', noMatchingLanguages:'没有匹配的语言'
     }
@@ -1061,9 +1065,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         this.setStatus(copy('translating'), false, true);
       },
       fail(id, message) {
+        const insertionFailed = this.pending.get(id)?.review_insert_failed;
         this.pending.delete(id);
         if (message) console.warn('[NudeNyang Discord Translator] outgoing translation failed:', message);
-        this.setStatus(copy('translationFailed'), true);
+        this.setStatus(copy(insertionFailed ? 'reviewInsertFailed' : 'translationFailed'), true);
       },
       prunePending() {
         const now = Date.now();
@@ -1198,6 +1203,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const editor = event.target.closest?.(composerSelector);
         if (!editor || !isPrimaryComposer(editor)) return;
         if (hasActiveAutocomplete(editor)) return;
+        if ([...this.pending.values()].some(item => item.editor === editor && item.installing_review)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
         const review = [...this.pending.entries()].find(([, item]) => item.editor === editor && item.review_ready);
         if (review) {
           const [id, item] = review;
@@ -1286,9 +1296,46 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         selection.removeAllRanges();
         selection.addRange(range);
         item.installing_review = true;
-        item.review_ready = true;
-        this.setStatus(copy('reviewReady'));
+        item.review_ready = false;
         return true;
+      },
+      async pasteReview(id, text) {
+        if (typeof text !== 'string' || !text || !this.prepareReview(id)) return false;
+        const item = this.pending.get(id);
+        const editor = item.editor;
+        const original = composerText(editor);
+        const prefix = item.preserve_prefix_mentions ? original.slice(0, original.length - item.text.length) : '';
+        const expected = prefix + text.replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ').replace(/\uFEFF/g, '');
+        try {
+          // Slate throttles DOM selection synchronization at 100 ms. Let the
+          // selected replacement range settle before its plain-text paste handler.
+          await new Promise(resolve => setTimeout(resolve, 120));
+          const selection = getSelection();
+          if (this.pending.get(id) !== item || !editor.isConnected || document.activeElement !== editor
+            || composerText(editor) !== original || selection?.rangeCount !== 1) return false;
+          const range = selection.getRangeAt(0);
+          if (!(range.startContainer === editor || editor.contains(range.startContainer))
+            || !(range.endContainer === editor || editor.contains(range.endContainer))
+            || visibleComposerText(range.cloneContents()) !== item.text) return false;
+          const clipboardData = new DataTransfer();
+          clipboardData.setData('text/plain', text);
+          // Use the editor's paste input, not the app's clipboard/upload handler:
+          // large plain-text drafts must not become automatic file attachments.
+          // No system clipboard, HTML, internal editor API, or keyboard/send event.
+          editor.dispatchEvent(new InputEvent('beforeinput', {
+            bubbles:true, cancelable:true, inputType:'insertFromPaste', dataTransfer:clipboardData,
+            targetRanges:[new StaticRange({startContainer:range.startContainer, startOffset:range.startOffset,
+              endContainer:range.endContainer, endOffset:range.endOffset})],
+          }));
+          await new Promise(resolve => setTimeout(resolve, 0));
+          if (this.pending.get(id) !== item || !editor.isConnected || composerText(editor) !== expected) {
+            item.review_insert_failed = true;
+            return false;
+          }
+          return this.finishReview(id);
+        } finally {
+          item.installing_review = false;
+        }
       },
       finishReview(id) {
         const item = this.pending.get(id);
@@ -2111,6 +2158,22 @@ mod tests {
     }
 
     #[test]
+    fn multiline_review_script_encodes_text_as_data_without_send_actions() {
+        let text = "First\n\n  - \"second\"\tcolumn\n</script>";
+        let script = super::paste_outgoing_review_script("request\"id", text).unwrap();
+        assert_eq!(
+            script,
+            format!(
+                "window.__nudeTranslatorOutgoing?.pasteReview({},{})",
+                serde_json::to_string("request\"id").unwrap(),
+                serde_json::to_string(text).unwrap()
+            )
+        );
+        assert!(!script.contains("dispatchKeyEvent"));
+        assert!(!script.contains("innerHTML"));
+    }
+
+    #[test]
     fn shortcut_visibility_can_hide_translation_controls_without_selecting_off() {
         let script = outgoing_ui_script_with_visibility(
             false,
@@ -2150,7 +2213,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 61"));
+        assert!(script.contains("const CONTROLLER_VERSION = 62"));
     }
 
     #[test]
@@ -3890,4 +3953,14 @@ mod tests {
             "Discord composer does not expose a usable file input"
         );
     }
+}
+
+pub fn paste_outgoing_review_script(request_id: &str, text: &str) -> Result<String, String> {
+    let id = serde_json::to_string(request_id)
+        .map_err(|error| format!("전송 요청 식별자를 인코딩하지 못했습니다: {error}"))?;
+    let text = serde_json::to_string(text)
+        .map_err(|error| format!("전송 번역문을 인코딩하지 못했습니다: {error}"))?;
+    Ok(format!(
+        "window.__nudeTranslatorOutgoing?.pasteReview({id},{text})"
+    ))
 }

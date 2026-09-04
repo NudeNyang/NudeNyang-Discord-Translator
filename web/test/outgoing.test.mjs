@@ -32,6 +32,26 @@ function outgoingComposerText(html) {
   })()`);
 }
 
+test("번역문을 삽입하는 동안 Enter가 실제 전송으로 넘어가지 않는다", () => {
+  const body = outgoing.match(/      keydown\(event\) \{([\s\S]*?)\r?\n      \},\r?\n      prepareReview/)[1];
+  const editor = {};
+  const controller = {
+    enabled: true,
+    lastHeartbeat: Date.now(),
+    pending: new Map([["review", { editor, installing_review: true, review_ready: false }]]),
+  };
+  const keydown = Function("isPrimaryComposer", "hasActiveAutocomplete", "composerSelector", "HEARTBEAT_TIMEOUT_MS",
+    `return function(event) { ${body} };`)(() => true, () => false, '[role="textbox"]', 5000);
+  const event = {
+    key: "Enter", target: { closest: () => editor },
+    preventDefault() { this.prevented = true; },
+    stopImmediatePropagation() { this.stopped = true; },
+  };
+  keydown.call(controller, event);
+  assert.equal(event.prevented, true);
+  assert.equal(event.stopped, true);
+});
+
 function outgoingRectanglesOverlap() {
   const match = outgoing.match(/function rectanglesOverlap\(left, right\) \{([\s\S]*?)\n  \}/);
   assert.ok(match, "Discord 작업 막대 충돌 판정 함수를 찾을 수 있어야 해");
@@ -573,7 +593,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 61/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 62/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);

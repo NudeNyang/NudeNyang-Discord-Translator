@@ -101,6 +101,16 @@ The fixed outgoing and display-language controls are mounted inside Discord's `#
 
 This is not an officially supported Discord extension interface. Discord updates can change the renderer and temporarily break the integration.
 
+### Outgoing draft layout
+
+The translation service preserves explicit line breaks, blank lines, indentation and Markdown separately from translatable text. The composer collector reads leaf Slate blocks rather than `textContent`, which omits block boundaries. Visual word wrapping can still change with translated text length and window width.
+
+Live diagnosis on 2026-09-04 confirmed a different loss at insertion: the original draft and `beforeinput` payload each contained 13 line breaks, but Discord's `insertText` handler produced a one-line draft. Multiline reviews therefore use a plain-text `beforeinput` event with `inputType: insertFromPaste`, a `DataTransfer` and the selected DOM target range. This uses the editor's normal paste-input handling without reading/writing the system clipboard, accessing private editor state, dispatching a send key, or invoking the application's clipboard-to-file attachment handler for long drafts. Single-line reviews retain `Input.insertText`.
+
+After allowing Slate's throttled selection synchronization to settle, the controller rechecks the pending request, focus, draft and selected replacement text. It confirms review readiness only when the inserted text exactly matches the intended text after the collector's existing newline/space normalization. Unhandled or modified insertion fails visibly; it does not fall back to the known line-flattening input path. Enter is held while insertion is in progress.
+
+`extension/e2e/outgoing-review.spec.mjs` exercises the production review methods and collector with an isolated editor fixture modelling the observed `insertText` sanitization. The translation provider and Discord editor implementation are simulated there; live Discord/provider verification is separate. The DOM paste-input and selection synchronization behavior is described in [Slate's editable implementation](https://github.com/ianstormtaylor/slate/blob/main/packages/slate-react/src/components/editable.tsx).
+
 ## Translation and data
 
 Local Hy-MT2 and TranslateGemma requests are handled on the user's computer through a Rust-managed llama.cpp runtime. Optional external providers receive only the extracted text selected for translation.
