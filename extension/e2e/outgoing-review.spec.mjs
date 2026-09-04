@@ -10,9 +10,9 @@ const methods = outgoing.match(/      prepareReview\(id\) \{[\s\S]*?\n    \};/)[
 // Model the observed editor contract, not a website-specific selector: native
 // insertText sanitizes line breaks, while text/plain paste creates line blocks.
 // The collector and review methods under test are the actual injected code.
-async function setup(page, source, { paste = "accept", prefix = "" } = {}) {
+async function setup(page, source, { paste = "accept", prefix = "", delay = 0 } = {}) {
   await page.setContent('<div contenteditable="true" role="textbox" style="white-space:break-spaces"></div>');
-  await page.evaluate(({ collector, methods, source, paste, prefix }) => {
+  await page.evaluate(({ collector, methods, source, paste, prefix, delay }) => {
     const editor = document.querySelector('[role="textbox"]');
     const render = text => {
       editor.replaceChildren(...text.split("\n").map((line, index) => {
@@ -47,8 +47,12 @@ async function setup(page, source, { paste = "accept", prefix = "" } = {}) {
       if (paste === "ignore") return;
       event.preventDefault();
       const value = event.dataTransfer.getData("text/plain");
-      render(paste === "flatten" ? value.replace(/\n/g, " ") : value);
-      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      const apply = () => {
+        render(paste === "flatten" ? value.replace(/\n/g, " ") : value);
+        editor.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      if (delay) setTimeout(apply, delay);
+      else apply();
     });
     editor.addEventListener("keydown", event => window.events.push({ type: "keydown", key: event.key }));
     editor.addEventListener("paste", () => window.events.push({ type: "clipboard-upload-handler" }));
@@ -73,7 +77,7 @@ async function setup(page, source, { paste = "accept", prefix = "" } = {}) {
       window.readDraft = () => composerText(editor);
       return controller;
     `)(editor, source, prefix);
-  }, { collector, methods, source, paste, prefix });
+  }, { collector, methods, source, paste, prefix, delay });
 }
 
 async function deliver(page, text) {
@@ -102,6 +106,48 @@ test("한 줄 전송 번역은 기존 입력 경로를 유지한다", async ({ p
   expect(await deliver(page, "Translation")).toBe(true);
   expect(await page.evaluate(() => window.readDraft())).toBe("Translation");
   expect(await page.evaluate(() => window.events)).toEqual([]);
+});
+
+test("작성창 반영이 늦어도 정확한 번역문이 나타난 뒤 검토 완료로 처리한다", async ({ page }) => {
+  await setup(page, "제목\n원문\n\n다음 문단", { delay: 150 });
+  const translated = "Title\nTranslation\n\nNext paragraph";
+  expect(await deliver(page, translated)).toBe(true);
+  expect(await page.evaluate(() => window.readDraft())).toBe(translated);
+  expect(await page.evaluate(() => window.controller.pending.get("review").review_ready)).toBe(true);
+});
+
+for (const change of ["focus", "edit", "cancel", "detach", "channel"]) {
+  test(`작성창 반영 확인 중 ${change} 발생 시 검토 완료로 처리하지 않는다`, async ({ page }) => {
+    await page.route("https://editor.test/**", route => route.fulfill({ body: "<html></html>", contentType: "text/html" }));
+    await page.goto("https://editor.test/first");
+    await setup(page, "원문\n\n다음 문단", { paste: "ignore" });
+    await page.evaluate(() => { window.delivery = window.controller.pasteReview("review", "Translation\n\nNext paragraph"); });
+    await expect.poll(() => page.evaluate(() => window.events.length)).toBe(1);
+    if (change === "edit") await page.keyboard.insertText("직접 수정한 글");
+    else await page.evaluate(change => {
+      const editor = document.querySelector('[role="textbox"]');
+      if (change === "focus") editor.blur();
+      if (change === "cancel") window.controller.pending.delete("review");
+      if (change === "detach") editor.remove();
+      if (change === "channel") history.pushState({}, "", "/second");
+    }, change);
+    const result = await page.evaluate(() => Promise.race([
+      window.delivery,
+      new Promise(resolve => setTimeout(() => resolve("did-not-cancel"), 500)),
+    ]));
+    expect(result).toBe(false);
+    expect(await page.evaluate(() => Boolean(window.controller.pending.get("review")?.review_ready))).toBe(false);
+    expect(await page.evaluate(() => Boolean(window.controller.pending.get("review")?.installing_review))).toBe(false);
+    expect(await page.evaluate(() => window.events)).toEqual([{ type: "insertFromPaste", types: ["text/plain"] }]);
+    if (change === "edit") expect(await page.evaluate(() => window.readDraft())).toBe("직접 수정한 글");
+  });
+}
+
+test("늦게 반영된 번역문도 빈 줄이나 탭이 달라지면 실패로 처리한다", async ({ page }) => {
+  await setup(page, "원문\n\n다음 문단", { paste: "flatten", delay: 150 });
+  expect(await deliver(page, "Translation\n\n\tNext paragraph")).toBe(false);
+  expect(await page.evaluate(() => window.controller.pending.get("review").review_insert_failed)).toBe(true);
+  expect(await page.evaluate(() => Boolean(window.controller.pending.get("review").review_ready))).toBe(false);
 });
 
 test("붙여넣기를 받지 않는 편집기는 원문을 유지한다", async ({ page }) => {

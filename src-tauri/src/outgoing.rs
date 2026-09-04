@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 62;
+  const CONTROLLER_VERSION = 63;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -1306,6 +1306,10 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const original = composerText(editor);
         const prefix = item.preserve_prefix_mentions ? original.slice(0, original.length - item.text.length) : '';
         const expected = prefix + text.replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ').replace(/\uFEFF/g, '');
+        const channelPath = location.pathname;
+        let userEdited = false;
+        const onBeforeInput = event => { if (event.isTrusted) userEdited = true; };
+        editor.addEventListener('beforeinput', onBeforeInput, true);
         try {
           // Slate throttles DOM selection synchronization at 100 ms. Let the
           // selected replacement range settle before its plain-text paste handler.
@@ -1327,13 +1331,21 @@ const OUTGOING_UI_SCRIPT: &str = r####"
             targetRanges:[new StaticRange({startContainer:range.startContainer, startOffset:range.startOffset,
               endContainer:range.endContainer, endOffset:range.endOffset})],
           }));
-          await new Promise(resolve => setTimeout(resolve, 0));
-          if (this.pending.get(id) !== item || !editor.isConnected || composerText(editor) !== expected) {
-            item.review_insert_failed = true;
-            return false;
+          // The editor may commit its DOM asynchronously after beforeinput.
+          // Wait for an exact match; never retry insertion or relax whitespace.
+          const deadline = performance.now() + 1500;
+          while (true) {
+            if (userEdited || this.pending.get(id) !== item || !editor.isConnected
+              || document.activeElement !== editor || location.pathname !== channelPath) return false;
+            if (composerText(editor) === expected) return this.finishReview(id);
+            if (performance.now() >= deadline) {
+              item.review_insert_failed = true;
+              return false;
+            }
+            await new Promise(resolve => setTimeout(resolve, 25));
           }
-          return this.finishReview(id);
         } finally {
+          editor.removeEventListener('beforeinput', onBeforeInput, true);
           item.installing_review = false;
         }
       },
@@ -2213,7 +2225,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 62"));
+        assert!(script.contains("const CONTROLLER_VERSION = 63"));
     }
 
     #[test]
