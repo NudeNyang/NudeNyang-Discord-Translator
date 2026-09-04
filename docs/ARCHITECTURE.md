@@ -111,6 +111,8 @@ After allowing Slate's throttled selection synchronization to settle, the contro
 
 `extension/e2e/outgoing-review.spec.mjs` exercises the production review methods and collector with an isolated editor fixture modelling the observed `insertText` sanitization. The translation provider and Discord editor implementation are simulated there; live Discord/provider verification is separate. The DOM paste-input and selection synchronization behavior is described in [Slate's editable implementation](https://github.com/ianstormtaylor/slate/blob/main/packages/slate-react/src/components/editable.tsx).
 
+Live follow-up on 2026-09-04 verified the production `pasteReview` method against a user-prepared Discord draft: source, intended translation and inserted draft each had 9 line breaks; the inserted 304-UTF-16-unit draft matched the intended translation exactly after the existing collector normalization. After removing the temporary diagnostic hooks and restoring controller version 62, the draft still contained 9 line breaks. No message was sent. Outgoing translation was disabled in the user's settings, so this follow-up tested explicit review insertion, not the normal physical-Enter trigger. The setting was left unchanged.
+
 ## Translation and data
 
 Local Hy-MT2 and TranslateGemma requests are handled on the user's computer through a Rust-managed llama.cpp runtime. Optional external providers receive only the extracted text selected for translation.
