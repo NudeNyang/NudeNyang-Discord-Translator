@@ -51,6 +51,26 @@ use windows::Win32::System::JobObjects::{
 const NO_UNWRITTEN_DECORATIONS: &str = "Never add emojis, emoticons, kaomoji, stickers, or decorative symbols that are absent from the source. If the source contains none, output none.";
 const INFERENCE_TEMPERATURE: f64 = 0.0;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+fn configure_cpu_execution(command: &mut Command, logical_cpus: usize) {
+    // More workers can increase contention without improving small-model latency.
+    // Bound both token generation and prompt processing; sleeping workers leave
+    // CPU time available to foreground applications between computation steps.
+    let threads = (logical_cpus / 2).clamp(1, 6).to_string();
+    command.args(["--device", "none", "--gpu-layers", "0", "--no-op-offload"]);
+    command.args([
+        "--threads",
+        &threads,
+        "--threads-batch",
+        &threads,
+        "--poll",
+        "0",
+        "--poll-batch",
+        "0",
+        "--prio",
+        "-1",
+    ]);
+}
 const VRAM_LOW_WATERMARK_BYTES: u64 = 1536 * 1024 * 1024;
 const VRAM_RECOVERY_WATERMARK_BYTES: u64 = 3 * 1024 * 1024 * 1024;
 const VRAM_PRESSURE_DURATION: Duration = Duration::from_secs(5);
@@ -693,7 +713,10 @@ impl HyMtTranslator {
                 command.args(self.profile.server_compatibility_args);
             }
             if *attempt == "cpu" {
-                command.args(["--device", "none", "--gpu-layers", "0", "--no-op-offload"]);
+                configure_cpu_execution(
+                    &mut command,
+                    thread::available_parallelism().map_or(1, usize::from),
+                );
             } else {
                 command.args(["--gpu-layers", "auto"]);
             }
@@ -2445,6 +2468,39 @@ fn free_tcp_port() -> Result<u16, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn cpu_execution_limits_both_compute_pools_without_busy_waiting() {
+        for (logical, expected) in [
+            (1, "1"),
+            (2, "1"),
+            (4, "2"),
+            (8, "4"),
+            (16, "6"),
+            (32, "6"),
+            (128, "6"),
+        ] {
+            let mut command = std::process::Command::new("model-server");
+            super::configure_cpu_execution(&mut command, logical);
+            let args = command
+                .get_args()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect::<Vec<_>>();
+            for (key, value) in [
+                ("--threads", expected),
+                ("--threads-batch", expected),
+                ("--poll", "0"),
+                ("--poll-batch", "0"),
+                ("--prio", "-1"),
+                ("--device", "none"),
+                ("--gpu-layers", "0"),
+            ] {
+                assert!(
+                    args.windows(2).any(|pair| pair == [key, value]),
+                    "missing {key}={value} on {logical} CPUs: {args:?}"
+                );
+            }
+        }
+    }
     use super::{
         apply_conservative_semantic_repairs, clean_cross_script_language_terms,
         clean_korean_listener_question_person, clean_translation, complete_translation_with_retry,

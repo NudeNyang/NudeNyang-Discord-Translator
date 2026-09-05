@@ -22,6 +22,15 @@ const RESTART_LEASE_FILE: &str = "accessibility-restart.lock";
 const GUARDIAN_STATE_VERSION: u32 = 2;
 static GUARDIAN_COPY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
+fn refresh_guardian_process(
+    tracked: Option<Pid>,
+    mut lookup: impl FnMut(Option<Pid>) -> Option<Pid>,
+) -> Option<Pid> {
+    tracked
+        .and_then(|pid| lookup(Some(pid)))
+        .or_else(|| lookup(None))
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DiscordVariant {
     Auto,
@@ -1076,18 +1085,24 @@ mod windows_pipe_launcher {
 
         let mut system = System::new();
         let mut last_matching_process = Instant::now();
+        let mut tracked_process = Some(Pid::from_u32(discord_process_id));
         loop {
             if !path.is_file() {
                 break;
             }
-            system.refresh_processes_specifics(
-                ProcessesToUpdate::All,
-                true,
-                ProcessRefreshKind::nothing()
-                    .with_exe(UpdateKind::Always)
-                    .with_cmd(UpdateKind::Always),
-            );
-            if matching_pipe_discord_exists(&system, &discord_executable) {
+            tracked_process = super::refresh_guardian_process(tracked_process, |hint| {
+                let ids = hint.map(|pid| [pid]);
+                system.refresh_processes_specifics(
+                    ids.as_ref()
+                        .map_or(ProcessesToUpdate::All, |ids| ProcessesToUpdate::Some(ids)),
+                    true,
+                    ProcessRefreshKind::nothing()
+                        .with_exe(UpdateKind::Always)
+                        .with_cmd(UpdateKind::Always),
+                );
+                matching_pipe_discord_process(&system, &discord_executable, hint)
+            });
+            if tracked_process.is_some() {
                 last_matching_process = Instant::now();
             } else if last_matching_process.elapsed() >= Duration::from_secs(15) {
                 break;
@@ -1098,19 +1113,75 @@ mod windows_pipe_launcher {
         Ok(())
     }
 
-    fn matching_pipe_discord_exists(system: &System, executable: &Path) -> bool {
+    fn matching_pipe_discord_process(
+        system: &System,
+        executable: &Path,
+        hint: Option<Pid>,
+    ) -> Option<Pid> {
         let expected = normalized_path(executable);
-        system.processes().values().any(|process| {
-            is_discord_name(&process.name().to_string_lossy())
-                && is_main_discord_arguments(process.cmd())
-                && process
-                    .exe()
-                    .is_some_and(|path| normalized_path(path) == expected)
-                && process
-                    .cmd()
-                    .iter()
-                    .any(|argument| argument == "--remote-debugging-pipe")
-        })
+        system
+            .processes()
+            .values()
+            .find(|process| {
+                hint.is_none_or(|pid| process.pid() == pid)
+                    && is_discord_name(&process.name().to_string_lossy())
+                    && is_main_discord_arguments(process.cmd())
+                    && process
+                        .exe()
+                        .is_some_and(|path| normalized_path(path) == expected)
+                    && process
+                        .cmd()
+                        .iter()
+                        .any(|argument| argument == "--remote-debugging-pipe")
+            })
+            .map(|process| process.pid())
+    }
+
+    #[test]
+    #[ignore = "read-only measurement requires a running pipe-connected Discord"]
+    fn benchmark_guardian_process_queries() {
+        let process = crate::discord::current_pipe_process(crate::discord::DiscordVariant::Stable)
+            .expect("running pipe-connected Discord");
+        let pid = Pid::from_u32(process.process_id);
+        for targeted in [false, true] {
+            let mut system = System::new();
+            let started = Instant::now();
+            for _ in 0..50 {
+                let ids = [pid];
+                system.refresh_processes_specifics(
+                    if targeted {
+                        ProcessesToUpdate::Some(&ids)
+                    } else {
+                        ProcessesToUpdate::All
+                    },
+                    true,
+                    ProcessRefreshKind::nothing()
+                        .with_exe(UpdateKind::Always)
+                        .with_cmd(UpdateKind::Always),
+                );
+                assert_eq!(
+                    matching_pipe_discord_process(
+                        &system,
+                        &process.executable,
+                        targeted.then_some(pid)
+                    ),
+                    Some(pid)
+                );
+                assert_eq!(
+                    matching_pipe_discord_process(
+                        &system,
+                        Path::new("C:/not-the-discord-install/Discord.exe"),
+                        targeted.then_some(pid)
+                    ),
+                    None
+                );
+            }
+            println!(
+                "GUARDIAN_QUERY targeted={targeted} mean_ms={:.3} retained_processes={}",
+                started.elapsed().as_secs_f64() * 1000.0 / 50.0,
+                system.processes().len()
+            );
+        }
     }
 
     pub(super) fn connect_guarded_pipe(process: &DiscordProcess) -> Result<CdpClient, String> {
@@ -1317,6 +1388,37 @@ pub fn run_pipe_guardian(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn guardian_reuses_verified_pid_and_rediscovers_only_after_exit() {
+        let first = sysinfo::Pid::from_u32(10);
+        let replacement = sysinfo::Pid::from_u32(20);
+        let mut requests = Vec::new();
+        let result = super::refresh_guardian_process(Some(first), |hint| {
+            requests.push(hint);
+            Some(first)
+        });
+        assert_eq!(result, Some(first));
+        assert_eq!(
+            requests,
+            vec![Some(first)],
+            "a live verified process must not trigger a full system scan"
+        );
+        requests.clear();
+        let result = super::refresh_guardian_process(Some(first), |hint| {
+            requests.push(hint);
+            if hint.is_some() {
+                None
+            } else {
+                Some(replacement)
+            }
+        });
+        assert_eq!(result, Some(replacement));
+        assert_eq!(requests, vec![Some(first), None]);
+        assert_eq!(
+            super::refresh_guardian_process(Some(replacement), |_| None),
+            None
+        );
+    }
     use super::{
         discord_debug_arguments, guardian_executable_path, guardian_state_belongs_to_installation,
         guardian_state_matches_process, installed_executable_for, installed_executable_in,

@@ -26,6 +26,8 @@ Engine work runs outside the UI thread. Incoming and outgoing translation can us
 
 Only one local GGUF model is active at a time. If GPU startup fails in automatic mode, the engine retries with a memory-conscious CPU configuration.
 
+CPU inference bounds both generation and prompt-processing workers to half of the available logical CPUs, with a minimum of one and maximum of six. CPU worker polling is disabled and inference priority is lowered. This applies to explicit CPU selection and GPU-to-CPU fallback, without changing the model, prompt, context, cache, or translation scheduling. Short translation benchmarks on a 32-logical-CPU Windows PC running a game showed approximately 61% lower inference CPU use with comparable latency; this is not a universal FPS or latency guarantee. The reproducible harness is `scripts/benchmark-cpu-translation.ps1`; it uses synthetic text and separate local model servers, not private Discord conversations. See [CPU performance validation](CPU_PERFORMANCE.md).
+
 Browser translation requests enter the same display translation worker as Discord DOM requests, so the browser path does not create a second local model runtime or provider session. Web source detection and paragraph context are separate from Discord channel memory, however, so browser navigation and batching cannot change Discord language preferences or conversation context.
 
 ## Browser extension connection
@@ -78,6 +80,8 @@ multiple release variants are running, NudeNyang connects to and restarts only t
 selected installation. Other Discord processes remain untouched.
 
 A small local guardian retains the app-side pipe handles when NudeNyang closes. Reopening the app can reconnect to the same Discord process without interrupting a call or chat session. The guardian exits after the matching Discord process is gone.
+
+The guardian checks only its tracked Discord PID every 500 ms, retaining executable-path, main-process and pipe-argument validation. It scans all processes only when that PID no longer matches, so Discord PID handoff and the existing 15-second exit grace period remain supported. An already-running guardian is a retained executable copy: this change takes effect for that helper on the next normal Discord connection restart, not simply when the translator app is rebuilt. The live read-only `benchmark_guardian_process_queries` test measures both query paths and verifies mismatched installation paths are rejected.
 
 The integration is deliberately limited:
 
