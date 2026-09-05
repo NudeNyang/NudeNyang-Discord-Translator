@@ -426,6 +426,125 @@ struct BrowserTranslationBatch {
     allowed_sources: Option<HashSet<Language>>,
     queued_at: Instant,
     reply: mpsc::Sender<Result<BrowserTranslationResponse, String>>,
+    progress: Option<BrowserTranslationProgress>,
+}
+
+struct BrowserTranslationProgress {
+    session: crate::translation::WebTranslationSession,
+    completed: Vec<BrowserTranslationResultItem>,
+}
+
+// Yield at complete block boundaries. A large or non-contiguous block is kept
+// intact even when it exceeds the soft budget; arbitrary text splitting would
+// lose the paragraph's inline context and its item/result mapping.
+fn browser_chunk_end(items: &[BrowserTranslationItem], start: usize) -> usize {
+    let mut end = start;
+    let mut chars = 0;
+    while end < items.len() {
+        let mut block_end = end + 1;
+        let mut scan = end;
+        while scan < block_end {
+            if let Some(last) = items
+                .iter()
+                .rposition(|item| item.block_id == items[scan].block_id)
+            {
+                block_end = block_end.max(last + 1);
+            }
+            scan += 1;
+        }
+        let block_chars: usize = items[end..block_end]
+            .iter()
+            .map(|item| item.text.chars().count() + 11)
+            .sum();
+        let next_chars = chars + block_chars - if end == start { 11 } else { 0 };
+        if end > start && next_chars > 220 {
+            break;
+        }
+        chars = next_chars;
+        end = block_end;
+        if chars >= 220 {
+            break;
+        }
+    }
+    end
+}
+
+impl BrowserTranslationBatch {
+    fn advance(&mut self, service: &mut TranslationService) -> Result<bool, String> {
+        self.permit.check()?;
+        if self.progress.is_none() {
+            let texts = self
+                .request
+                .items
+                .iter()
+                .map(|item| item.text.clone())
+                .collect::<Vec<_>>();
+            let keys = self
+                .request
+                .items
+                .iter()
+                .map(|item| Some(format!("web:{}:{}", self.request.page_id, item.block_id)))
+                .collect::<Vec<_>>();
+            self.progress = Some(BrowserTranslationProgress {
+                session: service.prepare_web_translation(
+                    &texts,
+                    &keys,
+                    &self.request.page_id,
+                    self.request.private_context.is_some() || self.request.incognito,
+                    self.request.incognito,
+                )?,
+                completed: Vec::new(),
+            });
+        }
+        let progress = self.progress.as_mut().expect("prepared browser request");
+        let start = progress.completed.len();
+        // External providers retain their batch contract and request count.
+        let end = if service.translator().sends_text_externally() {
+            self.request.items.len()
+        } else {
+            browser_chunk_end(&self.request.items, start)
+        };
+        let items = &self.request.items[start..end];
+        let texts = items
+            .iter()
+            .map(|item| item.text.clone())
+            .collect::<Vec<_>>();
+        let permit = self.permit.clone();
+        let values = service.translate_prepared_web_chunk(
+            &mut progress.session,
+            &texts,
+            start,
+            self.target,
+            if self.request.private_context.is_some() {
+                None
+            } else {
+                self.allowed_sources.as_ref()
+            },
+            Box::new(move || permit.check()),
+        )?;
+        self.permit.check()?;
+        if values.len() != items.len() {
+            return Err("번역 서비스가 요청한 문장 수와 다른 결과를 반환했습니다.".into());
+        }
+        progress
+            .completed
+            .extend(items.iter().zip(values).map(|(item, text)| {
+                let cacheable = service.web_result_is_cacheable(
+                    &item.text,
+                    &text,
+                    self.target,
+                    self.allowed_sources.as_ref(),
+                );
+                let replayable = !text.trim().is_empty() && text.trim() != item.text.trim();
+                BrowserTranslationResultItem {
+                    id: item.id.clone(),
+                    text,
+                    cacheable,
+                    replayable,
+                }
+            }));
+        Ok(end == self.request.items.len())
+    }
 }
 
 enum WorkerCommand {
@@ -476,9 +595,18 @@ fn worker_command_priority(command: &WorkerCommand) -> u8 {
     }
 }
 
+#[cfg(test)]
 fn next_worker_command(
     commands: &mpsc::Receiver<WorkerCommand>,
     backlog: &mut VecDeque<WorkerCommand>,
+) -> Result<WorkerCommand, mpsc::RecvError> {
+    next_fair_worker_command(commands, backlog, &mut None)
+}
+
+fn next_fair_worker_command(
+    commands: &mpsc::Receiver<WorkerCommand>,
+    backlog: &mut VecDeque<WorkerCommand>,
+    last_lane: &mut Option<u8>,
 ) -> Result<WorkerCommand, mpsc::RecvError> {
     if backlog.is_empty() {
         backlog.push_back(commands.recv()?);
@@ -522,10 +650,23 @@ fn next_worker_command(
         .min()
         .expect("worker backlog contains at least one command");
     let index = if priority == 1 {
-        backlog
-            .iter()
-            .rposition(|command| worker_command_priority(command) == priority)
-            .expect("latest visible display command exists")
+        let lane = |command: &WorkerCommand| match command {
+            WorkerCommand::Translate(_) => Some(0),
+            WorkerCommand::TranslateBrowser(_) => Some(1),
+            WorkerCommand::LocalizeDictionary(_) => Some(2),
+            _ => None,
+        };
+        let first = last_lane.map_or(0, |last| (last + 1) % 3);
+        (0..3)
+            .find_map(|offset| {
+                let selected = (first + offset) % 3;
+                let index = backlog
+                    .iter()
+                    .position(|command| lane(command) == Some(selected))?;
+                *last_lane = Some(selected);
+                Some(index)
+            })
+            .expect("normal priority worker command exists")
     } else {
         backlog
             .iter()
@@ -1418,6 +1559,7 @@ fn run_controller(
                             allowed_sources: incoming_allowed_sources(&config),
                             queued_at: Instant::now(),
                             reply: result_tx,
+                            progress: None,
                         });
                         if let Err(error) = worker_tx.send(command) {
                             if let WorkerCommand::TranslateBrowser(batch) = error.0 {
@@ -3014,6 +3156,7 @@ fn run_translation_worker(
     let mut service = TranslationService::new(Box::new(OriginalTranslator), cache);
     let mut image_processor = ImageTranslationProcessor::new();
     let mut backlog = VecDeque::new();
+    let mut last_lane = None;
     loop {
         image_processor.release_ocr_if_idle(Instant::now());
         if backlog.is_empty() {
@@ -3026,7 +3169,7 @@ fn run_translation_worker(
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             }
         }
-        let Ok(command) = next_worker_command(&commands, &mut backlog) else {
+        let Ok(command) = next_fair_worker_command(&commands, &mut backlog, &mut last_lane) else {
             break;
         };
         match command {
@@ -3063,99 +3206,40 @@ fn run_translation_worker(
                     values,
                 });
             }
-            WorkerCommand::TranslateBrowser(batch) => {
-                let BrowserTranslationBatch {
-                    request,
-                    permit,
-                    target,
-                    allowed_sources,
-                    queued_at,
-                    reply,
-                } = batch;
-                let BrowserTranslationRequest {
-                    request_id,
-                    page_id,
-                    target_language: _,
-                    private_context,
-                    incognito,
-                    client: _,
-                    items,
-                } = request;
-                if private_context.is_none() && !incognito {
+            WorkerCommand::TranslateBrowser(mut batch) => {
+                if batch.progress.is_none()
+                    && batch.request.private_context.is_none()
+                    && !batch.request.incognito
+                {
                     log_worker_queue(
                         "browser",
-                        queued_at,
-                        items.len(),
-                        items.iter().map(|item| item.text.chars().count()).sum(),
+                        batch.queued_at,
+                        batch.request.items.len(),
+                        batch
+                            .request
+                            .items
+                            .iter()
+                            .map(|item| item.text.chars().count())
+                            .sum(),
                     );
                 }
-                let texts = items
-                    .iter()
-                    .map(|item| item.text.clone())
-                    .collect::<Vec<_>>();
-                let message_keys = items
-                    .iter()
-                    .map(|item| Some(format!("web:{page_id}:{}", item.block_id)))
-                    .collect::<Vec<_>>();
-                let translated = permit
-                    .check()
-                    .and_then(|_| {
-                        if private_context.is_some() || incognito {
-                            let private_permit = permit.clone();
-                            service.translate_many_for_private_web(
-                                &texts,
-                                &message_keys,
-                                &page_id,
-                                target,
-                                incognito,
-                                if private_context.is_none() {
-                                    allowed_sources.as_ref()
-                                } else {
-                                    None
-                                },
-                                Box::new(move || private_permit.check()),
-                            )
-                        } else {
-                            service.translate_many_for_web_contextual_filtered(
-                                &texts,
-                                &message_keys,
-                                &page_id,
-                                target,
-                                allowed_sources.as_ref(),
-                            )
-                        }
-                    })
-                    .and_then(|values| {
-                        permit.check()?;
-                        if values.len() != items.len() {
-                            return Err("번역 서비스가 요청한 문장 수와 다른 결과를 반환했습니다."
-                                .to_string());
-                        }
-                        Ok(BrowserTranslationResponse {
-                            request_id,
-                            items: items
-                                .into_iter()
-                                .zip(values)
-                                .map(|(item, text)| {
-                                    let cacheable = service.web_result_is_cacheable(
-                                        &item.text,
-                                        &text,
-                                        target,
-                                        allowed_sources.as_ref(),
-                                    );
-                                    let replayable =
-                                        !text.trim().is_empty() && text.trim() != item.text.trim();
-                                    BrowserTranslationResultItem {
-                                        id: item.id,
-                                        text,
-                                        cacheable,
-                                        replayable,
-                                    }
-                                })
-                                .collect(),
-                        })
-                    });
-                let _ = reply.send(translated);
+                match batch.advance(&mut service) {
+                    Ok(false) => backlog.push_back(WorkerCommand::TranslateBrowser(batch)),
+                    Ok(true) => {
+                        let response = BrowserTranslationResponse {
+                            request_id: batch.request.request_id,
+                            items: batch
+                                .progress
+                                .take()
+                                .expect("completed browser request")
+                                .completed,
+                        };
+                        let _ = batch.reply.send(batch.permit.check().map(|_| response));
+                    }
+                    Err(error) => {
+                        let _ = batch.reply.send(Err(error));
+                    }
+                }
             }
             WorkerCommand::TranslateImage(batch) => {
                 log_worker_queue("image", batch.queued_at, 1, batch.image_bytes.len());
@@ -3934,6 +4018,474 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    #[ignore = "opt-in local CPU model benchmark; stop desktop inference first and supply verified model/server paths"]
+    fn scheduling_live_cpu_model_latency_comparison() {
+        struct MeasuredTranslator {
+            inner: crate::translation::HyMtTranslator,
+            cooperative: bool,
+            started: Option<mpsc::Sender<()>>,
+            resume: mpsc::Receiver<()>,
+            namespace: String,
+        }
+        impl Translator for MeasuredTranslator {
+            fn display_name(&self) -> &str {
+                "scheduler-local-benchmark"
+            }
+            fn cache_namespace(&self) -> &str {
+                &self.namespace
+            }
+            // Emulate the former uninterrupted web batch using the unchanged
+            // external-provider batch path. All inference is still local.
+            fn sends_text_externally(&self) -> bool {
+                !self.cooperative
+            }
+            fn supports_ephemeral_requests(&self) -> bool {
+                true
+            }
+            fn isolate_incoming_failures(&self) -> bool {
+                self.inner.isolate_incoming_failures()
+            }
+            fn prepare(&mut self) -> Result<(), String> {
+                self.inner.prepare()?;
+                self.inner
+                    .translate("The game is ready.", Language::English, Language::Korean)?;
+                Ok(())
+            }
+            fn translate(
+                &mut self,
+                text: &str,
+                source: Language,
+                target: Language,
+            ) -> Result<String, String> {
+                if let Some(started) = self.started.take() {
+                    started.send(()).unwrap();
+                    self.resume.recv_timeout(Duration::from_secs(10)).unwrap();
+                }
+                self.inner.translate(text, source, target)
+            }
+            fn should_cache(&self, _: &str, _: &str, _: Language, _: Language) -> bool {
+                false
+            }
+            fn translation_is_acceptable(
+                &self,
+                text: &str,
+                result: &str,
+                source: Language,
+                target: Language,
+            ) -> bool {
+                self.inner
+                    .translation_is_acceptable(text, result, source, target)
+            }
+        }
+        let server = std::path::PathBuf::from(
+            std::env::var("NUDENYANG_SCHEDULER_SERVER").expect("verified local server path"),
+        );
+        let model = std::path::PathBuf::from(
+            std::env::var("NUDENYANG_SCHEDULER_MODEL").expect("verified local model path"),
+        );
+        assert!(server.is_file() && model.is_file());
+        let sources = [
+            "The game is loading, and our team will meet near the main entrance tonight. Please check your microphone before joining the group. We will explore the northern area together and return to the village before midnight.",
+            "We finished testing the new update this morning. Most features worked correctly, but voice chat became quiet after changing channels. Open the audio settings, select the correct microphone, and reconnect if necessary.",
+            "Before leaving the village, bring enough food and water for everyone. Save your progress after completing each mission. If you arrive late, send the group a message and wait near the bridge until someone comes to meet you.",
+            "The next meeting is scheduled for tomorrow evening. We will review the test results and discuss improvements to the application. Please write down any problems you notice while playing, including delays and unexpected errors.",
+        ];
+        let mut previous_web: Option<Vec<String>> = None;
+        let mut previous_discord = None;
+        for (round, cooperative) in [false, true, true, false].into_iter().enumerate() {
+            let inner = crate::translation::HyMtTranslator::new(
+                crate::translation::HyMtModelSize::Small,
+                "cpu",
+                "auto",
+            )
+            .unwrap()
+            .with_paths(model.clone(), Some(server.clone()));
+            assert!(
+                inner.model_is_ready(),
+                "do not download a model in this benchmark"
+            );
+            let (sender, receiver) = mpsc::channel();
+            let (result_sender, result_receiver) = mpsc::channel();
+            let (started_sender, started_receiver) = mpsc::channel();
+            let (resume_sender, resume_receiver) = mpsc::channel();
+            let worker =
+                thread::spawn(move || super::run_translation_worker(receiver, result_sender));
+            sender
+                .send(WorkerCommand::Activate {
+                    generation: 1,
+                    name: "scheduler-benchmark".into(),
+                    translator: Box::new(MeasuredTranslator {
+                        inner,
+                        cooperative,
+                        started: Some(started_sender),
+                        resume: resume_receiver,
+                        namespace: format!(
+                            "scheduler-benchmark-{round}-{:?}",
+                            std::time::SystemTime::now()
+                        ),
+                    }),
+                })
+                .unwrap();
+            assert!(matches!(
+                result_receiver
+                    .recv_timeout(Duration::from_secs(60))
+                    .unwrap(),
+                WorkerResult::DisplayActivated { .. }
+            ));
+            let mut request = browser_request(vec![]);
+            request.incognito = true;
+            request.items = sources
+                .iter()
+                .enumerate()
+                .map(|(index, text)| super::BrowserTranslationItem {
+                    id: index.to_string(),
+                    block_id: index.to_string(),
+                    text: text.to_string(),
+                })
+                .collect();
+            let (batch, reply) = scheduling_browser_batch(request);
+            sender.send(WorkerCommand::TranslateBrowser(batch)).unwrap();
+            started_receiver
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap();
+            let started = Instant::now();
+            let web_finished = thread::spawn(move || {
+                let response = reply
+                    .recv_timeout(Duration::from_secs(90))
+                    .unwrap()
+                    .unwrap();
+                (response, started.elapsed().as_secs_f64())
+            });
+            sender
+                .send(WorkerCommand::Translate(TranslationBatch {
+                    generation: 1,
+                    view_epoch: 1,
+                    view_scope: "synthetic-scheduler-benchmark".into(),
+                    target: Language::Korean,
+                    allowed_sources: None,
+                    parts: vec![DomPart {
+                        kind: "message".into(),
+                        item_id: "synthetic".into(),
+                        context_id: None,
+                        index: 0,
+                        text: "The game is ready. Please join our team now.".into(),
+                        displayed_text: None,
+                    }],
+                    context_scope: "synthetic-scheduler-benchmark".into(),
+                    queued_at: started,
+                }))
+                .unwrap();
+            resume_sender.send(()).unwrap();
+            let discord = result_receiver
+                .recv_timeout(Duration::from_secs(90))
+                .unwrap();
+            let discord_seconds = started.elapsed().as_secs_f64();
+            let (web, web_seconds) = web_finished.join().unwrap();
+            let all_seconds = started.elapsed().as_secs_f64();
+            sender.send(WorkerCommand::Stop).unwrap();
+            worker.join().unwrap();
+            let WorkerResult::Translated { values, .. } = discord else {
+                panic!("expected synthetic Discord result")
+            };
+            let discord = values.unwrap();
+            let web = web
+                .items
+                .into_iter()
+                .enumerate()
+                .map(|(index, item)| {
+                    assert_eq!(item.id, index.to_string());
+                    // This harness deliberately disables caching in both modes.
+                    assert!(
+                        item.replayable && item.text.chars().any(|ch| ('가'..='힣').contains(&ch)),
+                        "incomplete synthetic output: {}",
+                        item.text
+                    );
+                    item.text
+                })
+                .collect::<Vec<_>>();
+            if let Some(previous) = &previous_web {
+                assert_eq!(&web, previous, "web output changed");
+            }
+            if let Some(previous) = &previous_discord {
+                assert_eq!(&discord, previous, "Discord output changed");
+            }
+            previous_web = Some(web);
+            previous_discord = Some(discord);
+            println!("SCHEDULER_BENCH round={round} cooperative={cooperative} discord_seconds={discord_seconds:.3} web_seconds={web_seconds:.3} all_seconds={all_seconds:.3} web_items=4 outputs_equal=true");
+        }
+    }
+
+    #[test]
+    fn scheduling_chunks_preserve_whole_blocks_and_original_order() {
+        let small = (0..8)
+            .map(|index| super::BrowserTranslationItem {
+                id: index.to_string(),
+                block_id: index.to_string(),
+                text: "Short text".into(),
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            super::browser_chunk_end(&small, 0),
+            small.len(),
+            "short labels must retain efficient context batching"
+        );
+        for block_ids in [
+            vec!["a", "a", "b", "c"],
+            vec!["a", "b", "a", "c"],
+            vec!["a", "b", "b", "a"],
+            vec!["a", "b", "c", "d"],
+        ] {
+            let items = block_ids
+                .iter()
+                .enumerate()
+                .map(|(index, block)| super::BrowserTranslationItem {
+                    id: index.to_string(),
+                    block_id: block.to_string(),
+                    text: "x".repeat(150),
+                })
+                .collect::<Vec<_>>();
+            let mut start = 0;
+            let mut visited = Vec::new();
+            while start < items.len() {
+                let end = super::browser_chunk_end(&items, start);
+                assert!(end > start && end <= items.len());
+                for item in &items[start..end] {
+                    assert!(!items[end..]
+                        .iter()
+                        .any(|later| later.block_id == item.block_id));
+                    visited.push(item.id.clone());
+                }
+                start = end;
+            }
+            assert_eq!(visited, vec!["0", "1", "2", "3"]);
+        }
+    }
+
+    #[test]
+    fn scheduling_alternates_busy_lanes_without_starving_browser_requests() {
+        let (sender, receiver) = mpsc::channel();
+        for index in 0..6 {
+            let mut request = browser_request(vec![("item", "block", "Hello world")]);
+            request.request_id = index.to_string();
+            sender
+                .send(WorkerCommand::TranslateBrowser(
+                    scheduling_browser_batch(request).0,
+                ))
+                .unwrap();
+            sender
+                .send(WorkerCommand::Translate(TranslationBatch {
+                    generation: 1,
+                    view_epoch: 1,
+                    view_scope: "same-view".into(),
+                    target: Language::Korean,
+                    allowed_sources: None,
+                    parts: Vec::new(),
+                    context_scope: "same-view".into(),
+                    queued_at: Instant::now(),
+                }))
+                .unwrap();
+        }
+        let mut backlog = VecDeque::new();
+        let mut last = None;
+        for index in 0..6 {
+            assert!(matches!(
+                super::next_fair_worker_command(&receiver, &mut backlog, &mut last).unwrap(),
+                WorkerCommand::Translate(_)
+            ));
+            assert!(
+                matches!(super::next_fair_worker_command(&receiver, &mut backlog, &mut last).unwrap(), WorkerCommand::TranslateBrowser(batch) if batch.request.request_id == index.to_string())
+            );
+        }
+        assert!(backlog.is_empty());
+    }
+
+    #[test]
+    fn scheduling_revocation_discards_partial_reply_before_next_inference() {
+        let mut request = browser_request(vec![
+            (
+                "first",
+                "first",
+                "This is the first complete English paragraph.",
+            ),
+            (
+                "second",
+                "second",
+                "This is the second complete English paragraph.",
+            ),
+        ]);
+        for item in &mut request.items {
+            item.text = item.text.repeat(6);
+        }
+        request.incognito = true;
+        let (mut batch, _) = scheduling_browser_batch(request);
+        let mut service = TranslationService::new(
+            Box::new(crate::translation::MockTranslator),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        assert!(!batch.advance(&mut service).unwrap());
+        assert_eq!(batch.progress.as_ref().unwrap().completed.len(), 1);
+        batch.permit.policy.lock().unwrap().update(&AppConfig {
+            web_translation_enabled: false,
+            ..Default::default()
+        });
+        assert!(batch.advance(&mut service).is_err());
+        assert_eq!(batch.progress.as_ref().unwrap().completed.len(), 1);
+    }
+
+    fn scheduling_browser_batch(
+        request: super::BrowserTranslationRequest,
+    ) -> (
+        super::BrowserTranslationBatch,
+        mpsc::Receiver<Result<super::BrowserTranslationResponse, String>>,
+    ) {
+        let policy = std::sync::Arc::new(std::sync::Mutex::new(
+            super::BrowserTranslationPolicy::new(&AppConfig {
+                web_translation_enabled: true,
+                ..Default::default()
+            }),
+        ));
+        let permit = super::BrowserTranslationPermit::issue(
+            &policy,
+            request.incognito || request.private_context.is_some(),
+            "",
+        )
+        .unwrap();
+        let (reply, receiver) = mpsc::channel();
+        (
+            super::BrowserTranslationBatch {
+                request,
+                permit,
+                target: Language::Korean,
+                allowed_sources: None,
+                queued_at: Instant::now(),
+                reply,
+                progress: None,
+            },
+            receiver,
+        )
+    }
+
+    #[test]
+    fn scheduling_browser_requests_do_not_jump_ahead_of_older_work() {
+        let (sender, receiver) = mpsc::channel();
+        for id in ["older", "newer"] {
+            let mut request = browser_request(vec![(id, id, "Hello world")]);
+            request.request_id = id.into();
+            sender
+                .send(WorkerCommand::TranslateBrowser(
+                    scheduling_browser_batch(request).0,
+                ))
+                .unwrap();
+        }
+        let command = next_worker_command(&receiver, &mut VecDeque::new()).unwrap();
+        assert!(
+            matches!(command, WorkerCommand::TranslateBrowser(batch) if batch.request.request_id == "older")
+        );
+    }
+
+    #[test]
+    fn scheduling_browser_yields_to_discord_between_paragraphs() {
+        struct GatedTranslator {
+            started: Option<mpsc::Sender<()>>,
+            resume: mpsc::Receiver<()>,
+            calls: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+        }
+        impl crate::translation::Translator for GatedTranslator {
+            fn display_name(&self) -> &str {
+                "scheduling-fixture"
+            }
+            fn cache_namespace(&self) -> &str {
+                "scheduling-fixture"
+            }
+            fn translate(
+                &mut self,
+                text: &str,
+                _: Language,
+                _: Language,
+            ) -> Result<String, String> {
+                self.calls.lock().unwrap().push(text.into());
+                if let Some(started) = self.started.take() {
+                    started.send(()).unwrap();
+                    self.resume.recv_timeout(Duration::from_secs(10)).unwrap();
+                }
+                Ok(format!("[ko] {text}"))
+            }
+            fn should_cache(&self, _: &str, _: &str, _: Language, _: Language) -> bool {
+                false
+            }
+        }
+        let (sender, receiver) = mpsc::channel();
+        let (result_sender, result_receiver) = mpsc::channel();
+        let (started_sender, started_receiver) = mpsc::channel();
+        let (resume_sender, resume_receiver) = mpsc::channel();
+        let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let worker = thread::spawn(move || super::run_translation_worker(receiver, result_sender));
+        sender
+            .send(WorkerCommand::Activate {
+                generation: 1,
+                name: "scheduling-fixture".into(),
+                translator: Box::new(GatedTranslator {
+                    started: Some(started_sender),
+                    resume: resume_receiver,
+                    calls: calls.clone(),
+                }),
+            })
+            .unwrap();
+        result_receiver
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap();
+        let mut request = browser_request(vec![]);
+        request.incognito = true;
+        request.items = (0..4).map(|index| super::BrowserTranslationItem { id: format!("item-{index}"), block_id: format!("paragraph-{index}"), text: format!("Paragraph {index}. {}", "This is a complete English paragraph about testing the application while playing a game. ".repeat(3)) }).collect();
+        let (batch, reply) = scheduling_browser_batch(request);
+        sender.send(WorkerCommand::TranslateBrowser(batch)).unwrap();
+        started_receiver
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap();
+        sender
+            .send(WorkerCommand::Translate(TranslationBatch {
+                generation: 1,
+                view_epoch: 1,
+                view_scope: "scheduling".into(),
+                target: Language::Korean,
+                allowed_sources: None,
+                parts: vec![DomPart {
+                    kind: "message".into(),
+                    item_id: "discord".into(),
+                    context_id: None,
+                    index: 0,
+                    text: "Discord message should get a turn before the next web paragraph.".into(),
+                    displayed_text: None,
+                }],
+                context_scope: "scheduling".into(),
+                queued_at: Instant::now(),
+            }))
+            .unwrap();
+        resume_sender.send(()).unwrap();
+        let result = result_receiver
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap();
+        let web = reply
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap()
+            .unwrap();
+        sender.send(WorkerCommand::Stop).unwrap();
+        worker.join().unwrap();
+        assert!(matches!(result, WorkerResult::Translated { .. }));
+        assert_eq!(web.items.len(), 4);
+        assert!(web
+            .items
+            .iter()
+            .enumerate()
+            .all(|(index, item)| item.id == format!("item-{index}")));
+        let calls = calls.lock().unwrap();
+        assert!(
+            calls[1].contains("Discord message"),
+            "actual inference order: {calls:?}"
+        );
+    }
+
     use super::{
         cdp_attach_text_scripts, dictionary_source_language, dictionary_translation_is_acceptable,
         display_batch_item_limit, display_preparation_is_required, display_translation_is_ready,
@@ -5438,7 +5990,7 @@ mod tests {
     }
 
     #[test]
-    fn control_commands_still_preempt_the_latest_visible_display_batch() {
+    fn control_commands_preempt_display_without_reordering_valid_same_view_work() {
         let (sender, receiver) = mpsc::channel();
         for item_id in ["previous-viewport", "current-viewport"] {
             sender
@@ -5474,7 +6026,7 @@ mod tests {
         let WorkerCommand::Translate(batch) = command else {
             panic!("display translation batch expected");
         };
-        assert_eq!(batch.parts[0].item_id, "current-viewport");
+        assert_eq!(batch.parts[0].item_id, "previous-viewport");
     }
 
     #[test]

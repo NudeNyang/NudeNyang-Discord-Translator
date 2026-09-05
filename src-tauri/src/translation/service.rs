@@ -39,6 +39,15 @@ const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
 const QUALITY_REJECTED_ERROR: &str = "번역 품질 검사 실패";
 const MAX_INCOMING_QUALITY_ATTEMPTS: usize = 2;
 
+/// Request-owned state survives scheduler yields without sharing private language
+/// evidence or incognito cache entries with the intervening translation job.
+pub struct WebTranslationSession {
+    source_hints: Vec<Option<Language>>,
+    private: bool,
+    ephemeral: bool,
+    ephemeral_cache: Option<TranslationCache>,
+}
+
 #[derive(Clone, Copy)]
 enum BestEffortChunkPolicy {
     WholeText,
@@ -246,24 +255,77 @@ impl TranslationService {
         guard: Box<dyn Fn() -> Result<(), String> + Send>,
     ) -> Result<Vec<String>, String> {
         guard()?;
+        let mut session =
+            self.prepare_web_translation(texts, block_keys, page_scope, true, ephemeral)?;
+        self.translate_prepared_web_chunk(&mut session, texts, 0, target, allowed_sources, guard)
+    }
+
+    pub fn prepare_web_translation(
+        &mut self,
+        texts: &[String],
+        block_keys: &[Option<String>],
+        page_scope: &str,
+        private: bool,
+        ephemeral: bool,
+    ) -> Result<WebTranslationSession, String> {
+        let private = private || ephemeral;
         if ephemeral && !self.translator.supports_ephemeral_requests() {
             return Err("[private_browsing_provider_unsupported] 시크릿 창에서는 로컬 모델 또는 DeepL을 선택해 주십시오. 구독 CLI의 로컬 기록을 제어할 수 없습니다.".into());
         }
+        let previous = private.then(|| {
+            (
+                std::mem::take(&mut self.web_detector),
+                std::mem::take(&mut self.web_context_scope),
+            )
+        });
+        let source_hints = self.web_source_hints(texts, block_keys, page_scope);
+        if let Some((detector, scope)) = previous {
+            self.web_detector = detector;
+            self.web_context_scope = scope;
+        }
+        Ok(WebTranslationSession {
+            source_hints: source_hints?,
+            private,
+            ephemeral,
+            ephemeral_cache: if ephemeral {
+                Some(TranslationCache::in_memory(256)?)
+            } else {
+                None
+            },
+        })
+    }
+
+    pub fn translate_prepared_web_chunk(
+        &mut self,
+        session: &mut WebTranslationSession,
+        texts: &[String],
+        offset: usize,
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+        guard: Box<dyn Fn() -> Result<(), String> + Send>,
+    ) -> Result<Vec<String>, String> {
+        guard()?;
+        let hints = session
+            .source_hints
+            .get(offset..offset + texts.len())
+            .ok_or_else(|| "웹 번역 문맥 범위가 요청과 다릅니다.".to_string())?;
+        if !session.private {
+            let result =
+                self.translate_web_with_source_hints(texts, hints, target, allowed_sources);
+            guard()?;
+            return result;
+        }
         // Translator::translate/translate_many and their model retry diagnostics
         // run synchronously on this same worker; no request/body/hash is logged.
-        let _private_diagnostics = if ephemeral {
+        let _private_diagnostics = if session.ephemeral {
             crate::diagnostics::ephemeral_request_scope()
         } else {
             crate::diagnostics::sensitive_request_scope()
         };
-        let public_cache = if ephemeral {
-            Some(std::mem::replace(
-                &mut self.cache,
-                TranslationCache::in_memory(256)?,
-            ))
-        } else {
-            None
-        };
+        let public_cache = session
+            .ephemeral_cache
+            .take()
+            .map(|cache| std::mem::replace(&mut self.cache, cache));
         let detector = std::mem::take(&mut self.detector);
         let incoming_detector = std::mem::take(&mut self.incoming_detector);
         let incoming_context_scope = std::mem::take(&mut self.incoming_context_scope);
@@ -273,19 +335,13 @@ impl TranslationService {
         let navigation_languages = std::mem::take(&mut self.navigation_languages);
         self.private_request_guard = Some(guard);
 
-        let result = self.translate_many_for_web_contextual_filtered(
-            texts,
-            block_keys,
-            page_scope,
-            target,
-            allowed_sources,
-        );
+        let result = self.translate_web_with_source_hints(texts, hints, target, allowed_sources);
         // Best-effort paragraph retries can preserve a failed paragraph as its
         // original. A revoked permission must instead discard the entire reply.
         let result = self.check_private_request().and(result);
 
         if let Some(cache) = public_cache {
-            self.cache = cache;
+            session.ephemeral_cache = Some(std::mem::replace(&mut self.cache, cache));
         }
         self.detector = detector;
         self.incoming_detector = incoming_detector;
@@ -832,15 +888,23 @@ impl TranslationService {
         allowed_sources: Option<&HashSet<Language>>,
     ) -> Result<Vec<String>, String> {
         let source_hints = self.web_source_hints(texts, block_keys, page_scope)?;
+        self.translate_web_with_source_hints(texts, &source_hints, target, allowed_sources)
+    }
+
+    fn translate_web_with_source_hints(
+        &mut self,
+        texts: &[String],
+        source_hints: &[Option<Language>],
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+    ) -> Result<Vec<String>, String> {
         let mut results = vec![None; texts.len()];
         let mut pending_indices = Vec::new();
         let mut pending_texts = Vec::new();
         let mut pending_hints = Vec::new();
         let mut pending_keys = Vec::new();
 
-        for (index, ((text, _block_key), source_hint)) in
-            texts.iter().zip(block_keys).zip(&source_hints).enumerate()
-        {
+        for (index, (text, source_hint)) in texts.iter().zip(source_hints).enumerate() {
             let detected = detect_explicit_language(text);
             let source = if detected == Language::Unknown {
                 source_hint.unwrap_or(Language::Unknown)
@@ -2039,6 +2103,108 @@ fn is_terminal_closer(character: char) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn scheduling_private_chunks_keep_request_cache_isolated_across_yields() {
+        let calls = Arc::new(Mutex::new(0));
+        let mut service = TranslationService::new(
+            Box::new(CountingTranslator {
+                calls: calls.clone(),
+            }),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        let text = "This private English sentence must not enter the public cache.".to_string();
+        let texts = vec![text.clone(), text.clone()];
+        let keys = vec![
+            Some("web:private:one".into()),
+            Some("web:private:two".into()),
+        ];
+        let mut session = service
+            .prepare_web_translation(&texts, &keys, "private-fixture", true, true)
+            .unwrap();
+        let first = service
+            .translate_prepared_web_chunk(
+                &mut session,
+                &texts[..1],
+                0,
+                Language::Korean,
+                None,
+                Box::new(|| Ok(())),
+            )
+            .unwrap();
+        assert_eq!(*calls.lock().unwrap(), 1);
+        // Intervening public work must not reuse the incognito request's entry.
+        service.translate(&text, Language::Korean).unwrap();
+        assert_eq!(*calls.lock().unwrap(), 2);
+        let second = service
+            .translate_prepared_web_chunk(
+                &mut session,
+                &texts[1..],
+                1,
+                Language::Korean,
+                None,
+                Box::new(|| Ok(())),
+            )
+            .unwrap();
+        assert_eq!(first, second);
+        assert_eq!(
+            *calls.lock().unwrap(),
+            2,
+            "the request cache survives yielding"
+        );
+        assert!(service
+            .translate_prepared_web_chunk(
+                &mut session,
+                &texts[1..],
+                1,
+                Language::Korean,
+                None,
+                Box::new(|| Err("revoked".into()))
+            )
+            .is_err());
+        assert_eq!(*calls.lock().unwrap(), 2);
+        assert!(service.private_request_guard.is_none());
+    }
+
+    #[test]
+    fn scheduling_heading_retains_evidence_from_later_chunks() {
+        let texts = vec![
+            "A neutral mail subject".to_string(),
+            "This is the first complete English sentence in the document.".into(),
+            "Please read the instructions carefully before starting the game.".into(),
+        ];
+        let keys = vec![
+            Some("web:heading".into()),
+            Some("web:body".into()),
+            Some("web:body".into()),
+        ];
+        let calls = Arc::new(Mutex::new(0));
+        let mut service = TranslationService::new(
+            Box::new(CountingTranslator {
+                calls: calls.clone(),
+            }),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        let mut session = service
+            .prepare_web_translation(&texts, &keys, "heading-fixture", true, true)
+            .unwrap();
+        assert_eq!(session.source_hints[0], Some(Language::English));
+        service
+            .translate_prepared_web_chunk(
+                &mut session,
+                &texts[..1],
+                0,
+                Language::Korean,
+                None,
+                Box::new(|| Ok(())),
+            )
+            .unwrap();
+        assert_eq!(*calls.lock().unwrap(), 1);
+        assert!(
+            service.web_context_scope.is_empty(),
+            "private document evidence must not remain in the public detector"
+        );
+    }
+
     use std::collections::HashSet;
     use std::fmt::Write as _;
     use std::time::Instant;

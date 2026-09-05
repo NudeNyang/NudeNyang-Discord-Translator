@@ -58,3 +58,42 @@ Executed checks:
 - The separate, normally ignored Windows guardian query benchmark passed against live Discord. Isolated short/long and installed-server benchmarks passed against the packaged local model.
 
 No common web DOM collection/application code changed, so the public website sample suite was not rerun for this optimization. GPU performance, other model sizes, other CPUs, long sessions, and subjective in-game responsiveness remain outside this measurement.
+
+## Cooperative web/Discord scheduling (2026-09-05 follow-up)
+
+After Discord restarted, the new guardian executable hash matched the optimized application, and its observed CPU was 0.19–0.24%. CPU inference remained around 18.5% during synthetic requests. However, live queue metadata showed Discord display requests waiting up to 10.687 seconds behind browser batches. In the worker, a whole browser request ran synchronously; equal-priority work also selected the newest request first. This was a responsiveness issue separate from the CPU worker budget.
+
+Two new reproduction tests failed before the scheduler change: `scheduling_browser_requests_do_not_jump_ahead_of_older_work` selected the newer browser request, and `scheduling_browser_yields_to_discord_between_paragraphs` processed all four web paragraphs before the queued Discord message. Both pass with FIFO lanes and resumable browser block groups. Additional tests cover lane rotation, whole/non-contiguous block preservation, efficient short-label grouping, original result order, permission revocation after a partial result, full-request heading language evidence, and private cache isolation across yields.
+
+The `scheduling_live_cpu_model_latency_comparison` ignored test uses the production worker and translation service with the actual packaged Hy-MT2 1.8B CPU runtime. Four synthetic English web paragraphs and one synthetic Discord message are identical across runs. The Discord request is deterministically queued when the first web inference starts. A wrapper uses the whole-batch provider path to emulate the former uninterrupted behavior, and the normal local path for the cooperative comparison; neither path contacts an external service. Request caches are disabled for timing, warmup is excluded, and output equality/item identities are checked. The desktop application was stopped to avoid overlapping inference, Crimson Desert remained running, and there were no concurrent builds or test suites during sampling. This is a real-model/worker comparison, not a Discord DOM/FPS benchmark or a comparison of two complete historical executables.
+
+| Run order | Policy | Discord request completion | Web batch completion | All work completion |
+| --- | --- | ---: | ---: | ---: |
+| 1 | Uninterrupted | 12.342 s | 11.706 s | 12.342 s |
+| 2 | Cooperative | 3.449 s | 12.610 s | 12.610 s |
+| 3 | Cooperative | 3.511 s | 12.943 s | 12.943 s |
+| 4 | Uninterrupted | 13.312 s | 12.644 s | 13.312 s |
+
+Mean Discord completion decreased from 12.827 to 3.480 seconds (approximately 73%). Mean completion of all work was 12.827 versus 12.777 seconds. Mean web completion increased from 12.175 to 12.777 seconds (approximately 0.602 seconds, 4.9%) because Discord work was served before the web batch finished. Every corresponding web and Discord output was identical in this small corpus. This tradeoff is intentional and must not be described as making both completion times faster. A long single block, many competing requests, image/OCR work, or a different model can still cause latency; no universal queue-time bound is claimed. CPU worker counts/polling were not increased.
+
+Reproduce only with desktop inference stopped and already-verified files (the test refuses a missing model):
+
+```powershell
+$env:NUDENYANG_SCHEDULER_SERVER = '<absolute packaged llama-server.exe path>'
+$env:NUDENYANG_SCHEDULER_MODEL = '<absolute verified Hy-MT2 1.8B model path>'
+cargo test --manifest-path src-tauri/Cargo.toml scheduling_live_cpu_model_latency_comparison -- --ignored --nocapture
+```
+
+Private reading and incognito use the same resumable scheduling with request-owned language evidence and an incognito memory cache. External CLI/API providers retain whole-batch calls to avoid increasing request counts; outgoing translation still has its existing separate worker. No web DOM selector, collection policy, outgoing editor, permission setting, or model prompt was changed.
+
+### Final installed-app check
+
+The rebuilt `0.7.5-beta` executable (SHA-256 `A5D13C05879866CCB4607184681D6393BAE73ADAB8FD2DEB49528678A62F8F25`) was started via the synchronized existing shortcut. The running path/version and child model CPU arguments were verified. The first build could not replace an executable held by respawned browser native hosts; only exact-path translator hosts were stopped, the old executable was retained as `nude-translator-tauri.before-fair-scheduler-b241ba3.exe` in the ignored release directory, and the repeated release build succeeded. Neither Discord nor the game was restarted.
+
+`node scripts/verify-live-scheduling.mjs --run` sent four synthetic paragraphs through the actual Native Messaging host, running application, worker, and local model twice. Completion times were 12.168 and 12.284 seconds, all four IDs/results were complete, and both passes returned identical outputs. The report is generated under ignored `artifacts/scheduling-live-app.json`. This is an actual application/engine test, not an actual website DOM test.
+
+During a concurrent 40.70-second observation, three ordinary Discord display requests had mean queue wait 1.303 seconds and maximum 1.550 seconds. Model CPU averaged 11.01% across active and idle time, with a busiest five-second interval of 18.46%; the main application averaged 0.74% and guardian 0.19%. These live conditions are not matched to the earlier 10.687-second observation, so they do not establish an exact live percentage improvement or a guaranteed delay ceiling. No matching application/model Windows Application Error event was observed after this launch.
+
+`node scripts/verify-live-reading-bridge.mjs --run` also passed before and after installation: both synthetic three-item reading requests retained identical Korean outputs, and all three rejection cases passed. Actual emails/pages/drafts were not accessed and no Discord message was sent.
+
+Final checks: `npm test` passed; `cargo test --manifest-path src-tauri/Cargo.toml` passed with 474 tests and 49 ignored; `npm run test:e2e` passed all 172 tests on the final implementation; `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, `git diff --check`, and `node --check scripts/verify-live-scheduling.mjs` passed. The explicitly invoked real-model scheduler benchmark passed separately. Release build passed with the existing `LNK4098` warning. E2E uses synthetic browser fixtures/mock translation providers; public website samples were not rerun because DOM collection/application code was unchanged. Long-session stability, game FPS, other local model sizes/hardware, and external-provider latency remain unmeasured.
