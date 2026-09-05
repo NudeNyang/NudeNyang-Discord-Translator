@@ -90,7 +90,7 @@ From the source ZIP root:
 ```powershell
 npm ci
 npm run extension:locales
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_firefox_extension.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_firefox_extension.ps1 -OutputDirectory release/browser-extension/0.7.13-submission
 npm run test:extension
 npx --yes web-ext@10.6.0 lint --source-dir dist/firefox-extension --warnings-as-errors
 ```

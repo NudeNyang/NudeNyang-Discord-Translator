@@ -4,6 +4,28 @@
 정리한다. 공개 선행 조건은 2026-08-29에 충족했으며, 아래 파일을 다시 패키징하고 검증한 뒤
 각 스토어에 제출한다.
 
+## 2026-09-06 재제출 패키징
+
+이전 제출물을 덮어쓰지 않고 `release/browser-extension/0.7.13-submission/2026-09-06`에
+새 제출물을 생성한다. 확장 버전은 Chromium·Firefox 모두 기존 `0.7.13`을 유지한다.
+확장 런타임과 앱 내부 개인정보 안내는 이번 패키징에서 변경하지 않는다.
+
+Chrome 거절 안내에서 지적한 메신저 이름의 나열은 **스토어 상세 설명**의 문제다.
+아래 상세 설명을 사용하고, 개발자 대시보드에 남아 있는 이전 설명도 언어별로 직접 교체한다.
+ZIP 업로드만으로 스토어 상세 설명이 바뀌지는 않는다. 개인정보 안내·권한 사유·검토자 노트의
+구체적인 지원 범위와 외부 전송 설명은 그대로 유지한다. 심사 승인을 보장하지 않는다.
+
+```powershell
+npm run extension:locales
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_chromium_extension.ps1 -OutputDirectory release/browser-extension/0.7.13-submission/2026-09-06
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_firefox_amo.ps1 -OutputDirectory release/browser-extension/0.7.13-submission/2026-09-06
+```
+
+이 문서의 공개 선행 조건은 2026-08-29 확인 기록이며 이번 로컬 재빌드에서 원격 배포 상태를
+다시 검증했다는 뜻이 아니다. 아래 2026-09-01 검사 결과도 당시 기록으로 구분한다.
+Windows 본체의 후속 CPU·작업 순서 최적화는 본체 변경이며, 확장 ZIP만 업데이트한다고
+기존 사용자의 Windows 본체까지 업데이트되는 것은 아니다.
+
 ## 공개 선행 조건 확인
 
 - **공개 본체 0.7.4-beta**: `messengerPolicyVersion: 5`를 포함한 x64·ARM64 설치형과 업데이트
@@ -62,6 +84,23 @@ After explicit private-reading consent, the add-on can translate the current sup
 Private reading in regular windows follows the translator and retention settings selected in the companion. Locally cached source and translation bodies are protected with Windows user-scoped encryption. Private windows do not use the disk cache.
 ```
 
+## 상세 설명 — 한국어
+
+```text
+NudeNyang Web Translator는 기존 페이지 구조를 유지하면서 번역 가능한 화면의 텍스트를 번역합니다. 별도로 설치하는 NudeNyang Windows 앱을 Native Messaging으로 연결해 번역 엔진으로 사용하며, 확장 프로그램 자체에는 번역 모델이 포함되지 않습니다.
+
+팝업이나 F4로 현재 브라우저의 모든 탭에서 번역을 켜고 끌 수 있습니다. 사이트별 동작과 번역 언어를 설정할 수 있습니다. 보이는 제목, 문단, 목록, 인용문, 이미지 설명과 구분 가능한 읽기 전용 안내 문구를 번역합니다. 입력값, 편집 가능한 내용, 코드, 금액과 표시된 식별 정보는 제외합니다.
+
+별도의 사적 읽기 동의 후에는 지원되는 메신저의 현재 대화와 현재 열린 메일의 제목·보이는 본문도 번역할 수 있습니다. 다른 대화나 메일을 열지 않으며, 목록, 연락처, 작성자, 발신자·수신자 UI, 초안, 작성창, 첨부 파일, 연결된 페이지와 전송 버튼은 제외합니다.
+
+Windows 앱에서 로컬 AI 모델 또는 사용자가 명시적으로 선택한 외부 번역 공급자를 사용합니다. 외부 공급자를 선택하면 번역에 필요한 허용된 텍스트가 해당 공급자에게 전송됩니다. 개발자는 번역 중계 서버, 분석 서버 또는 웹페이지 본문 저장 서버를 운영하지 않습니다.
+
+일반 창의 캐시 본문은 Windows 사용자 계정 범위로 암호화되며 앱의 보관 기간과 삭제 설정을 따릅니다. 시크릿 창에서는 메모리만 사용합니다. Windows 10 또는 Windows 11과 호환되는 Windows 앱이 필요합니다.
+
+Windows 앱: https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases
+개인정보 처리방침: https://github.com/NudeNyang/NudeNyang-Discord-Translator/blob/main/PRIVACY.md
+```
+
 ## 상세 설명 — English
 
 ```text
@@ -113,7 +152,29 @@ Permissions: nativeMessaging connects to the companion; storage keeps preference
 Build from source: npm ci; npm run extension:locales; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package_firefox_extension.ps1. Validate with npm run test:extension and web-ext 10.6.0 lint. Full scope, reproducibility and limitations are in docs/FIREFOX_AMO_REVIEW.md. Automated E2E uses synthetic pages and does not claim live coverage of every service.
 ```
 
-## 최종 체크
+## 2026-09-06 로컬 재빌드 검증
+
+- `npm run extension:locales`: 28개 언어 생성, 추적 중인 확장 파일 변경 없음.
+- `npm run test:extension`: 469개 통과, 실패·건너뜀 0.
+- `npm run test:e2e`: Chromium MV3·합성 문서·모사 Native Messaging 및 전송 검토 fixture
+  전체 172개 통과. 실제 로그인 사이트와 Firefox·Whale 실브라우저 검증은 포함하지 않는다.
+- `npx --yes web-ext@10.6.0 lint --source-dir dist/firefox-extension --warnings-as-errors`:
+  오류·알림·경고 0.
+- 제출용 소스 ZIP을 별도 폴더에 풀어 `npm ci`, `npm run extension:locales`, 두 브라우저
+  패키징과 `npm run test:extension`을 실행했다. 소스에서도 테스트 469개가 통과했고,
+  Chromium 67개·Firefox 68개 런타임 항목의 이름과 바이트가 제출 파일과 모두 일치했다.
+  ZIP 메타데이터 시각은 비교에서 제외한다.
+- 두 런타임 매니페스트 버전은 `0.7.13`, 개발 `key`는 없으며 Firefox 고정 ID를 유지했다.
+  소스 ZIP은 137개 파일이며 절대 경로·상위 경로·역슬래시·중복 항목·의존성 설치 폴더·
+  실행 파일·로그·DB·환경변수 파일을 포함하지 않는다.
+- 공통 DOM 코드를 변경하지 않았으므로 이번 재빌드에서는 `npm run test:public`을 재실행하지 않았다.
+- Windows 본체 `cargo build --release --manifest-path src-tauri/Cargo.toml` 성공.
+  기존 MNN 사전 빌드 안내, C++ 경고 수준 재정의와 `LNK4098` 경고는 남아 있다.
+
+산출물 폴더의 안내 문서와 `SHA256SUMS.txt`를 함께 확인한다. 스토어 업로드·심사 요청·
+공개 배포는 수행하지 않았다. Firefox XPI는 AMO 제출용 미서명 파일이다.
+
+## 최종 체크 (2026-09-01 기록)
 
 - [x] 공개 본체 0.7.4-beta와 x64·ARM64 파일·서명·체크섬 확인
 - [x] 공개 `PRIVACY.md`가 로컬 정책과 일치
