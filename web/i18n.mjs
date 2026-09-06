@@ -1,6 +1,9 @@
 import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 
 export const COPY = Object.freeze({
+  "자동 · 사용 중인 창": ["Automatic · active window", "自動・使用中のウィンドウ", "自动 · 当前窗口"],
+  "Discord 창 대기 중": ["Waiting for a Discord window", "Discordウィンドウ待機中", "等待 Discord 窗口"],
+  "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": ["Automatic mode translates only the active Discord window. Turning translation on or off applies to all Discord apps.", "自動モードでは使用中のDiscordウィンドウのみを翻訳します。翻訳のオン・オフはすべてのDiscordアプリに適用されます。", "自动模式仅翻译当前使用的 Discord 窗口。翻译开关适用于所有 Discord 应用。"],
   "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": ["In private browsing, use a local model or DeepL. Local records created by subscription CLIs cannot be controlled.","プライベートブラウジングではローカルモデルまたはDeepLを使用してください。サブスクリプションCLIが作成するローカル履歴は制御できません。","隐私浏览中请使用本地模型或 DeepL。无法控制订阅 CLI 创建的本地记录。"],
   "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": ["Update both the companion app and the extension to use web messengers.","ウェブメッセンジャーを使用するには、本体アプリと拡張機能の両方を更新してください。","请同时更新主应用和扩展程序，以使用网页聊天翻译。"],
   "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": ["Source text and translations are stored in the app's encrypted cache, following its retention period (30 days by default) and history deletion settings. Switching conversations or withdrawing consent does not delete existing cache entries. Private browsing content is not stored.","原文と翻訳文はアプリの暗号化キャッシュに保存され、保管期間（初期設定は30日）と履歴削除設定に従います。会話の切り替えや同意の撤回だけでは既存のキャッシュは削除されません。プライベートブラウジングの内容は保存しません。","原文和译文存储在应用的加密缓存中，遵循其保留期限（默认 30 天）和记录删除设置。切换对话或撤回同意不会删除已有缓存。隐私浏览内容不会保存。"],

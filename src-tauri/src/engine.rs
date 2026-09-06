@@ -73,6 +73,10 @@ pub struct RuntimeStatus {
     pub cdp_connected: bool,
     pub connection_issue: String,
     pub discord_process_id: Option<u32>,
+    pub discord_target: String,
+    pub discord_target_name: String,
+    pub discord_focus_active: bool,
+    pub discord_waiting: bool,
     pub verification_required: bool,
     pub verification_kind: String,
     pub engine: String,
@@ -288,6 +292,10 @@ impl RuntimeStatus {
             cdp_connected: false,
             connection_issue: String::new(),
             discord_process_id: None,
+            discord_target: String::new(),
+            discord_target_name: String::new(),
+            discord_focus_active: false,
+            discord_waiting: true,
             verification_required: config.discord_verification_mode,
             verification_kind: String::new(),
             engine: "rust-native".to_string(),
@@ -325,8 +333,17 @@ enum Control {
     SetOutgoingControlVisible(bool),
     PrepareBrowserSession,
     CancelModelPreparation,
-    ReplaceCdp(CdpClient, mpsc::Sender<Result<(), String>>),
-    PauseForVerification(String, mpsc::Sender<Result<(), String>>),
+    ReplaceCdp(
+        crate::discord::DiscordProcess,
+        CdpClient,
+        mpsc::Sender<Result<(), String>>,
+    ),
+    PauseForVerification(
+        crate::discord::DiscordVariant,
+        Option<u32>,
+        String,
+        mpsc::Sender<Result<(), String>>,
+    ),
     ClearCache(mpsc::Sender<Result<CacheCleanupResult, String>>),
     TranslateBrowser(
         BrowserTranslationRequest,
@@ -342,6 +359,126 @@ enum Control {
 struct PartState {
     original: String,
     translated: String,
+}
+
+struct DiscordSession {
+    variant: Option<crate::discord::DiscordVariant>,
+    process: Option<crate::discord::DiscordProcess>,
+    client: Option<CdpClient>,
+    states: HashMap<Locator, PartState>,
+    pending: HashSet<PendingKey>,
+    display_view: DisplayViewState,
+    image_pending: HashSet<ImagePendingKey>,
+    outgoing_pending: HashSet<OutgoingPendingKey>,
+    generation: u64,
+    consecutive_connection_failures: u8,
+    connection_issue_reported: bool,
+    image_ui_needs_cleanup: bool,
+    dictionary_ui_needs_cleanup: bool,
+    verification_paused: bool,
+    verification_kind: String,
+    connection_issue: String,
+    results: VecDeque<WorkerResult>,
+    retry_at: Instant,
+}
+
+impl DiscordSession {
+    fn new(variant: Option<crate::discord::DiscordVariant>) -> Self {
+        use crate::discord::DiscordVariant::*;
+        let namespace = match variant {
+            Some(Stable) => 1,
+            Some(Ptb) => 2,
+            Some(Canary) => 3,
+            _ => 0,
+        };
+        Self {
+            variant,
+            process: None,
+            client: None,
+            states: HashMap::new(),
+            pending: HashSet::new(),
+            display_view: DisplayViewState::default(),
+            image_pending: HashSet::new(),
+            outgoing_pending: HashSet::new(),
+            generation: namespace << 48,
+            consecutive_connection_failures: 0,
+            connection_issue_reported: false,
+            image_ui_needs_cleanup: true,
+            dictionary_ui_needs_cleanup: true,
+            verification_paused: false,
+            verification_kind: String::new(),
+            connection_issue: String::new(),
+            results: VecDeque::new(),
+            retry_at: Instant::now(),
+        }
+    }
+
+    fn reset(&mut self) {
+        reset_translation_state(
+            &mut self.client,
+            &mut self.states,
+            &mut self.pending,
+            &mut self.image_pending,
+            &mut self.outgoing_pending,
+            &mut self.generation,
+        );
+        self.results.clear();
+    }
+
+    fn cleanup(&mut self) {
+        self.reset();
+        if let Some(client) = self.client.as_mut() {
+            let _ = client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+            let _ = client.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
+        }
+    }
+
+    // Keeps the existing crash watchdog alive without reading messages,
+    // collecting drafts, or draining the renderer's request queue.
+    fn sync_controls(&mut self, config: &AppConfig, display_visible: bool, outgoing_visible: bool) {
+        let Some(client) = self.client.as_mut() else {
+            return;
+        };
+        let script = format!(
+            r#"(() => {{
+            const c = window.__nudeTranslatorOutgoing;
+            if (!c) return;
+            c.lastHeartbeat = Date.now();
+            if (!{outgoing}) c.cancelOutgoingWork();
+            c.enabled = {outgoing}; c.displayEnabled = {display};
+            c.displayControlVisible = {display_visible}; c.outgoingControlVisible = {outgoing_visible};
+            c.updateLabel();
+        }})()"#,
+            outgoing = config.outgoing_translation_enabled,
+            display = config.enabled
+        );
+        if let Err(error) = client.evaluate(&script, false) {
+            self.connection_issue = error;
+            self.client.take();
+            self.generation += 1;
+            self.pending.clear();
+            self.outgoing_pending.clear();
+            self.image_pending.clear();
+            self.results.clear();
+        }
+    }
+}
+
+fn select_discord_session(
+    session: &mut DiscordSession,
+    parked: &mut HashMap<crate::discord::DiscordVariant, DiscordSession>,
+    variant: crate::discord::DiscordVariant,
+) {
+    if session.variant == Some(variant) {
+        return;
+    }
+    let next = parked
+        .remove(&variant)
+        .unwrap_or_else(|| DiscordSession::new(Some(variant)));
+    let previous = std::mem::replace(session, next);
+    if let Some(variant) = previous.variant {
+        parked.insert(variant, previous);
+    }
 }
 
 #[derive(Default)]
@@ -614,27 +751,34 @@ fn next_fair_worker_command(
     while let Ok(command) = commands.try_recv() {
         backlog.push_back(command);
     }
-    if let Some(latest_view) = backlog
-        .iter()
-        .filter_map(|command| match command {
+    let mut latest_views = HashMap::new();
+    for command in backlog.iter() {
+        let view = match command {
             WorkerCommand::Translate(batch) => Some((batch.generation, batch.view_epoch)),
             WorkerCommand::DiscardDisplayBefore {
                 generation,
                 view_epoch,
             } => Some((*generation, *view_epoch)),
             _ => None,
-        })
-        .max()
-    {
-        backlog.retain(|command| match command {
-            WorkerCommand::Translate(batch) => (batch.generation, batch.view_epoch) == latest_view,
+        };
+        if let Some(view) = view {
+            latest_views
+                .entry(view.0 >> 48)
+                .and_modify(|latest: &mut (u64, u64)| *latest = (*latest).max(view))
+                .or_insert(view);
+        }
+    }
+    backlog.retain(|command| {
+        let view = match command {
+            WorkerCommand::Translate(batch) => Some((batch.generation, batch.view_epoch)),
             WorkerCommand::DiscardDisplayBefore {
                 generation,
                 view_epoch,
-            } => (*generation, *view_epoch) == latest_view,
-            _ => true,
-        });
-    }
+            } => Some((*generation, *view_epoch)),
+            _ => None,
+        };
+        view.is_none_or(|view| latest_views.get(&(view.0 >> 48)) == Some(&view))
+    });
     if let Some(latest_request_id) = backlog.iter().rev().find_map(|command| match command {
         WorkerCommand::LocalizeDictionary(batch) => Some(batch.request_id.clone()),
         _ => None,
@@ -805,13 +949,17 @@ fn initial_model_preparation_progress(name: &str) -> Option<ModelPreparationProg
 
 impl RustEngine {
     pub fn start(config: AppConfig) -> Self {
+        Self::start_with_environment(config, Box::new(DesktopDiscordEnvironment))
+    }
+
+    fn start_with_environment(config: AppConfig, environment: Box<dyn DiscordEnvironment>) -> Self {
         let (control_tx, control_rx) = mpsc::channel();
         let status = Arc::new(Mutex::new(RuntimeStatus::new(&config)));
         let browser_policy = Arc::new(Mutex::new(BrowserTranslationPolicy::new(&config)));
         let thread_status = status.clone();
         let handle = thread::Builder::new()
             .name("rust-dom-controller".to_string())
-            .spawn(move || run_controller(config, control_rx, thread_status))
+            .spawn(move || run_controller(config, control_rx, thread_status, environment))
             .expect("Rust DOM 번역 스레드를 시작하지 못했습니다");
         Self {
             controls: control_tx,
@@ -895,20 +1043,34 @@ impl RustEngine {
             })
     }
 
-    pub fn replace_cdp(&self, client: CdpClient) -> Result<(), String> {
+    pub fn replace_cdp(
+        &self,
+        process: crate::discord::DiscordProcess,
+        client: CdpClient,
+    ) -> Result<(), String> {
         let (result_tx, result_rx) = mpsc::channel();
         self.controls
-            .send(Control::ReplaceCdp(client, result_tx))
+            .send(Control::ReplaceCdp(process, client, result_tx))
             .map_err(|_| "Rust 번역 엔진에 보안 CDP 연결을 전달하지 못했습니다.".to_string())?;
         result_rx
             .recv_timeout(Duration::from_secs(30))
             .map_err(|_| "Discord 보안 연결 검증 결과를 기다리지 못했습니다.".to_string())?
     }
 
-    pub fn pause_for_verification(&self, kind: &str) -> Result<(), String> {
+    pub fn pause_for_verification(
+        &self,
+        variant: crate::discord::DiscordVariant,
+        expected_pid: Option<u32>,
+        kind: &str,
+    ) -> Result<(), String> {
         let (result_tx, result_rx) = mpsc::channel();
         self.controls
-            .send(Control::PauseForVerification(kind.to_string(), result_tx))
+            .send(Control::PauseForVerification(
+                variant,
+                expected_pid,
+                kind.to_string(),
+                result_tx,
+            ))
             .map_err(|_| "Discord 인증을 위해 번역 연결을 중지하지 못했습니다.".to_string())?;
         result_rx
             .recv_timeout(Duration::from_secs(10))
@@ -1071,10 +1233,76 @@ fn validate_browser_private_context(request: &BrowserTranslationRequest) -> Resu
     Ok(())
 }
 
+trait DiscordEnvironment: Send {
+    fn foreground_process_id(&self) -> Option<u32>;
+    fn observe(
+        &self,
+    ) -> (
+        Vec<crate::discord::DiscordProcess>,
+        Option<crate::discord::DiscordVariant>,
+    );
+    fn connect(&self, process: &crate::discord::DiscordProcess) -> Result<CdpClient, String>;
+    fn disconnect(&self, variant: crate::discord::DiscordVariant) -> Result<(), String>;
+}
+
+struct DesktopDiscordEnvironment;
+impl DiscordEnvironment for DesktopDiscordEnvironment {
+    fn foreground_process_id(&self) -> Option<u32> {
+        crate::discord_focus::foreground_process_id()
+    }
+    fn observe(
+        &self,
+    ) -> (
+        Vec<crate::discord::DiscordProcess>,
+        Option<crate::discord::DiscordVariant>,
+    ) {
+        crate::discord::running_with_foreground()
+    }
+    fn connect(&self, process: &crate::discord::DiscordProcess) -> Result<CdpClient, String> {
+        crate::discord::connect_guarded_pipe(process)
+    }
+    fn disconnect(&self, variant: crate::discord::DiscordVariant) -> Result<(), String> {
+        crate::discord::disconnect_current_guardian(variant)
+    }
+}
+
+fn save_verification_pause(
+    config: &mut AppConfig,
+    app: Option<&AppHandle>,
+    variant: Option<crate::discord::DiscordVariant>,
+    paused: bool,
+) {
+    let Some(variant) = variant else {
+        return;
+    };
+    let mut variants = config.discord_verification_variants.clone();
+    variants.retain(|value| value != variant.config_name());
+    if paused {
+        variants.push(variant.config_name().to_string());
+    }
+    let patch =
+        json!({"discord_verification_mode": false, "discord_verification_variants": variants});
+    let result = if let Some(app) = app {
+        app.state::<ConfigStore>().update(patch)
+    } else {
+        config.patched(patch)
+    };
+    match result {
+        Ok(updated) => {
+            *config = updated.clone();
+            if let Some(app) = app {
+                let _ = app.emit("settings-changed", updated);
+            }
+        }
+        Err(error) => crate::diagnostics::error("verification-guard", &error),
+    }
+}
+
 fn run_controller(
     mut config: AppConfig,
     controls: mpsc::Receiver<Control>,
     status: Arc<Mutex<RuntimeStatus>>,
+    environment: Box<dyn DiscordEnvironment>,
 ) {
     let (worker_tx, worker_rx) = mpsc::channel();
     let (outgoing_worker_tx, outgoing_worker_rx) = mpsc::channel();
@@ -1096,23 +1324,18 @@ fn run_controller(
         .as_ref()
         .and_then(|store| store.outgoing_channel_languages().ok())
         .unwrap_or_default();
-    let mut client: Option<CdpClient> = None;
-    let mut states: HashMap<Locator, PartState> = HashMap::new();
-    let mut pending: HashSet<PendingKey> = HashSet::new();
-    let mut display_view = DisplayViewState::default();
-    let mut image_pending: HashSet<ImagePendingKey> = HashSet::new();
-    let mut outgoing_pending: HashSet<OutgoingPendingKey> = HashSet::new();
+    let mut session = DiscordSession::new(None);
+    let mut parked = HashMap::new();
+    let mut foreground_active = false;
+    let mut last_focus_pid = None;
+    let mut last_discovery = Instant::now() - Duration::from_secs(5);
+    let mut last_heartbeat = Instant::now();
+    let mut controls_dirty = true;
     let mut display_control_visible = true;
     let mut outgoing_control_visible = true;
-    let mut generation = 0_u64;
     let mut preparation_generation = 0_u64;
     let mut preparation_cancellation: Option<ModelPreparationCancellation> = None;
-    let mut consecutive_connection_failures = 0_u8;
-    let mut connection_issue_reported = false;
-    let mut image_ui_needs_cleanup = true;
-    let mut dictionary_ui_needs_cleanup = true;
     let mut app_handle: Option<AppHandle> = None;
-    let mut verification_paused = config.discord_verification_mode;
     let mut ui_ready = false;
     let mut stopped = false;
     let mut pending_control = None;
@@ -1121,6 +1344,64 @@ fn run_controller(
 
     while !stopped {
         let started = Instant::now();
+        let focus_pid = environment.foreground_process_id();
+        if focus_pid != last_focus_pid || last_discovery.elapsed() >= Duration::from_secs(2) {
+            last_focus_pid = focus_pid;
+            last_discovery = Instant::now();
+            let (processes, foreground) = environment.observe();
+            let configured = crate::discord::DiscordVariant::from_config(&config.discord_variant)
+                .unwrap_or(crate::discord::DiscordVariant::Auto);
+            let focus =
+                crate::discord_focus::select_target(configured, foreground, session.variant);
+            if session.variant != focus.selected || (foreground_active && !focus.active) {
+                session.display_view.epoch += 1;
+                let _ = discard_stale_display_work(
+                    &mut session.pending,
+                    &session.display_view,
+                    session.generation,
+                    &worker_tx,
+                );
+            }
+            foreground_active = focus.active;
+            if let Some(variant) = focus.selected {
+                select_discord_session(&mut session, &mut parked, variant);
+            }
+            // Migrate the former single-target verification flag only when
+            // its target is known; never resume that renderer implicitly.
+            if config.discord_verification_mode && session.variant.is_some() {
+                save_verification_pause(&mut config, app_handle.as_ref(), session.variant, true);
+            }
+            for current in std::iter::once(&mut session).chain(parked.values_mut()) {
+                current.verification_paused = current.variant.is_some_and(|variant| {
+                    config
+                        .discord_verification_variants
+                        .iter()
+                        .any(|value| value == variant.config_name())
+                });
+                let process = processes
+                    .iter()
+                    .find(|process| {
+                        crate::discord::DiscordVariant::from_executable(&process.executable)
+                            == current.variant
+                    })
+                    .cloned();
+                if current.process != process {
+                    if let Some(mut client) = current.client.take() {
+                        client.close();
+                    }
+                    current.states.clear();
+                    current.pending.clear();
+                    current.image_pending.clear();
+                    current.outgoing_pending.clear();
+                    current.results.clear();
+                    current.generation += 1;
+                    current.display_view = DisplayViewState::default();
+                    current.process = process;
+                    current.retry_at = Instant::now();
+                    current.connection_issue.clear();
+                }
+            }
+        }
         loop {
             let control = pending_control.take().or_else(|| controls.try_recv().ok());
             let Some(control) = control else {
@@ -1129,6 +1410,25 @@ fn run_controller(
             match control {
                 Control::ApplyConfig(updated) => {
                     let updated = *updated;
+                    controls_dirty = true;
+                    if updated.discord_variant != config.discord_variant {
+                        foreground_active = false;
+                        last_discovery = Instant::now() - Duration::from_secs(5);
+                    }
+                    if updated.enabled != config.enabled
+                        || updated.target_language != config.target_language
+                        || updated.translator != config.translator
+                        || updated.outgoing_translation_enabled
+                            != config.outgoing_translation_enabled
+                        || updated.translate_nicknames != config.translate_nicknames
+                        || updated.incoming_source_languages != config.incoming_source_languages
+                        || updated.incoming_language_mode != config.incoming_language_mode
+                        || updated.image_ocr_quality != config.image_ocr_quality
+                    {
+                        for other in parked.values_mut() {
+                            other.reset();
+                        }
+                    }
                     let history_retention_changed = updated.translation_history_retention_days
                         != config.translation_history_retention_days;
                     let target_changed = updated.target_language != config.target_language;
@@ -1161,14 +1461,14 @@ fn run_controller(
                         || image_ocr_quality_changed
                     {
                         reset_translation_state(
-                            &mut client,
-                            &mut states,
-                            &mut pending,
-                            &mut image_pending,
-                            &mut outgoing_pending,
-                            &mut generation,
+                            &mut session.client,
+                            &mut session.states,
+                            &mut session.pending,
+                            &mut session.image_pending,
+                            &mut session.outgoing_pending,
+                            &mut session.generation,
                         );
-                        image_ui_needs_cleanup = client.is_none();
+                        session.image_ui_needs_cleanup = session.client.is_none();
                     }
                     config = updated;
                     if enabled_changed && config.enabled {
@@ -1225,11 +1525,11 @@ fn run_controller(
                         }
                     }
                     if enabled_changed && !config.enabled {
-                        restore(&mut client, &states, false);
-                        image_ui_needs_cleanup = client.is_none();
-                        pending.clear();
-                        image_pending.clear();
-                        generation += 1;
+                        restore(&mut session.client, &session.states, false);
+                        session.image_ui_needs_cleanup = session.client.is_none();
+                        session.pending.clear();
+                        session.image_pending.clear();
+                        session.generation += 1;
                         if !config.keep_local_model_warm && !config.dictionary_enabled {
                             let _ = worker_tx.send(WorkerCommand::Release);
                         }
@@ -1256,8 +1556,8 @@ fn run_controller(
                         }
                     }
                     if outgoing_changed {
-                        outgoing_pending.clear();
-                        generation += 1;
+                        session.outgoing_pending.clear();
+                        session.generation += 1;
                         if config.outgoing_translation_enabled {
                             let needs_preparation = status.lock().is_ok_and(|runtime| {
                                 runtime.active_outgoing_translator != config.outgoing_translator
@@ -1283,7 +1583,7 @@ fn run_controller(
                         }
                     }
                     if dictionary_changed {
-                        dictionary_ui_needs_cleanup = true;
+                        session.dictionary_ui_needs_cleanup = true;
                         if config.dictionary_enabled {
                             let needs_preparation = status.lock().is_ok_and(|runtime| {
                                 display_preparation_is_required(&runtime, &config)
@@ -1313,6 +1613,12 @@ fn run_controller(
                     enabled,
                     from_shortcut,
                 } => {
+                    controls_dirty = true;
+                    if !enabled {
+                        for other in parked.values_mut() {
+                            other.reset();
+                        }
+                    }
                     if from_shortcut {
                         display_control_visible = enabled;
                     } else if enabled {
@@ -1333,13 +1639,13 @@ fn run_controller(
                             }
                         });
                         if !enabled {
-                            restore(&mut client, &states, false);
-                            image_ui_needs_cleanup = client.is_none();
-                            pending.clear();
-                            image_pending.clear();
-                            generation += 1;
-                            consecutive_connection_failures = 0;
-                            connection_issue_reported = false;
+                            restore(&mut session.client, &session.states, false);
+                            session.image_ui_needs_cleanup = session.client.is_none();
+                            session.pending.clear();
+                            session.image_pending.clear();
+                            session.generation += 1;
+                            session.consecutive_connection_failures = 0;
+                            session.connection_issue_reported = false;
                             if !config.keep_local_model_warm {
                                 let _ = worker_tx.send(WorkerCommand::Release);
                             }
@@ -1367,6 +1673,7 @@ fn run_controller(
                     }
                 }
                 Control::SetOutgoingControlVisible(visible) => {
+                    controls_dirty = true;
                     outgoing_control_visible = visible;
                     update_status(&status, |runtime| {
                         runtime.outgoing_control_visible = visible;
@@ -1404,17 +1711,21 @@ fn run_controller(
                     }
                 }
                 Control::CancelModelPreparation => {
+                    controls_dirty = true;
+                    for other in parked.values_mut() {
+                        other.reset();
+                    }
                     if let Some(cancellation) = preparation_cancellation.take() {
                         cancellation.cancel();
                     }
                     preparation_generation += 1;
                     config.enabled = false;
                     config.outgoing_translation_enabled = false;
-                    restore(&mut client, &states, false);
-                    pending.clear();
-                    image_pending.clear();
-                    outgoing_pending.clear();
-                    generation += 1;
+                    restore(&mut session.client, &session.states, false);
+                    session.pending.clear();
+                    session.image_pending.clear();
+                    session.outgoing_pending.clear();
+                    session.generation += 1;
                     let _ = worker_tx.send(WorkerCommand::Release);
                     let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Release);
                     update_status(&status, |runtime| {
@@ -1426,9 +1737,20 @@ fn run_controller(
                         runtime.notice.clear();
                     });
                 }
-                Control::ReplaceCdp(mut replacement, result_tx) => {
-                    restore(&mut client, &states, false);
-                    if let Some(mut previous) = client.take() {
+                Control::ReplaceCdp(process, mut replacement, result_tx) => {
+                    let Some(variant) =
+                        crate::discord::DiscordVariant::from_executable(&process.executable)
+                    else {
+                        let _ = result_tx
+                            .send(Err("지원하지 않는 Discord 실행 파일입니다.".to_string()));
+                        continue;
+                    };
+                    select_discord_session(&mut session, &mut parked, variant);
+                    session.process = Some(process);
+                    foreground_active = false;
+                    last_discovery = Instant::now() - Duration::from_secs(5);
+                    restore(&mut session.client, &session.states, false);
+                    if let Some(mut previous) = session.client.take() {
                         previous.close();
                     }
                     let prepare_result = replacement.connect().and_then(|_| {
@@ -1444,30 +1766,27 @@ fn run_controller(
                             runtime.cdp_connected = false;
                             runtime.connection_issue = error.clone();
                         });
-                        connection_issue_reported = true;
+                        session.connection_issue_reported = true;
                     } else {
-                        verification_paused = false;
+                        session.verification_paused = false;
                         config.discord_verification_mode = false;
-                        if let Some(app) = app_handle.as_ref() {
-                            if let Ok(updated) = app
-                                .state::<ConfigStore>()
-                                .update(json!({"discord_verification_mode": false}))
-                            {
-                                config = updated.clone();
-                                let _ = app.emit("settings-changed", updated);
-                            }
-                        }
-                        client = Some(replacement);
-                        states.clear();
-                        pending.clear();
-                        display_view = DisplayViewState::default();
-                        image_pending.clear();
-                        outgoing_pending.clear();
-                        generation += 1;
-                        image_ui_needs_cleanup = true;
-                        dictionary_ui_needs_cleanup = true;
-                        consecutive_connection_failures = 0;
-                        connection_issue_reported = false;
+                        save_verification_pause(
+                            &mut config,
+                            app_handle.as_ref(),
+                            session.variant,
+                            false,
+                        );
+                        session.client = Some(replacement);
+                        session.states.clear();
+                        session.pending.clear();
+                        session.display_view = DisplayViewState::default();
+                        session.image_pending.clear();
+                        session.outgoing_pending.clear();
+                        session.generation += 1;
+                        session.image_ui_needs_cleanup = true;
+                        session.dictionary_ui_needs_cleanup = true;
+                        session.consecutive_connection_failures = 0;
+                        session.connection_issue_reported = false;
                         update_status(&status, |runtime| {
                             runtime.verification_required = false;
                             runtime.verification_kind.clear();
@@ -1475,44 +1794,60 @@ fn run_controller(
                     }
                     let _ = result_tx.send(prepare_result);
                 }
-                Control::PauseForVerification(kind, result_tx) => {
-                    config.discord_verification_mode = true;
-                    restore(&mut client, &states, false);
-                    if let Some(active) = client.as_mut() {
+                Control::PauseForVerification(variant, expected_pid, kind, result_tx) => {
+                    let is_selected = session.variant == Some(variant);
+                    let target = if is_selected {
+                        Some(&mut session)
+                    } else {
+                        parked.get_mut(&variant)
+                    };
+                    let Some(target) = target.filter(|target| {
+                        expected_pid.is_none_or(|pid| {
+                            target
+                                .process
+                                .as_ref()
+                                .is_some_and(|process| process.process_id == pid)
+                        })
+                    }) else {
+                        let _ = result_tx.send(Err(
+                            "Discord 대상이 변경되었습니다. 현재 창을 확인한 뒤 다시 시도하십시오."
+                                .to_string(),
+                        ));
+                        continue;
+                    };
+                    target.verification_kind = kind.to_string();
+                    restore(&mut target.client, &target.states, false);
+                    if let Some(active) = target.client.as_mut() {
                         let _ = active.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
                         let _ = active.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
                     }
-                    if let Some(mut active) = client.take() {
+                    if let Some(mut active) = target.client.take() {
                         active.close();
                     }
-                    let discord_variant =
-                        crate::discord::DiscordVariant::from_config(&config.discord_variant)
-                            .unwrap_or(crate::discord::DiscordVariant::Auto);
-                    let guardian_result =
-                        crate::discord::disconnect_current_guardian(discord_variant);
-                    verification_paused = true;
-                    states.clear();
-                    pending.clear();
-                    image_pending.clear();
-                    outgoing_pending.clear();
-                    generation += 1;
-                    update_status(&status, |runtime| {
-                        runtime.cdp_connected = false;
-                        runtime.connection_issue.clear();
-                        runtime.verification_required = true;
-                        runtime.verification_kind = kind.clone();
-                        runtime.notice =
-                            "Discord 추가 인증을 위해 번역 연결을 일시 중지했습니다.".to_string();
-                    });
-                    if let Some(app) = app_handle.as_ref() {
-                        if let Ok(updated) = app
-                            .state::<ConfigStore>()
-                            .update(json!({"discord_verification_mode": true}))
-                        {
-                            config = updated.clone();
-                            let _ = app.emit("settings-changed", updated);
-                        }
+                    let discord_variant = target
+                        .variant
+                        .unwrap_or(crate::discord::DiscordVariant::Auto);
+                    let guardian_result = environment.disconnect(discord_variant);
+                    target.verification_paused = true;
+                    target.connection_issue.clear();
+                    target.states.clear();
+                    target.pending.clear();
+                    target.image_pending.clear();
+                    target.outgoing_pending.clear();
+                    target.generation += 1;
+                    if is_selected {
+                        update_status(&status, |runtime| {
+                            runtime.cdp_connected = false;
+                            runtime.connection_issue.clear();
+                            runtime.verification_required = true;
+                            runtime.verification_kind = kind.clone();
+                            runtime.notice =
+                                "Discord 추가 인증을 위해 번역 연결을 일시 중지했습니다."
+                                    .to_string();
+                        });
                     }
+                    target.results.clear();
+                    save_verification_pause(&mut config, app_handle.as_ref(), target.variant, true);
                     let _ = result_tx.send(guardian_result);
                 }
                 Control::ClearCache(result_tx) => {
@@ -1722,20 +2057,113 @@ fn run_controller(
             }
         }
 
+        if foreground_active
+            && !session.verification_paused
+            && session.client.is_none()
+            && Instant::now() >= session.retry_at
+        {
+            session.retry_at = Instant::now() + Duration::from_secs(3);
+            if let Some(process) = session.process.as_ref() {
+                let attached = environment.connect(process).and_then(|mut client| {
+                    client.connect()?;
+                    for script in cdp_attach_text_scripts() {
+                        client.evaluate(script, false)?;
+                    }
+                    Ok(client)
+                });
+                match attached {
+                    Ok(client) => {
+                        session.client = Some(client);
+                        session.connection_issue.clear();
+                        session.connection_issue_reported = false;
+                        controls_dirty = true;
+                    }
+                    Err(error) => {
+                        session.connection_issue = error;
+                        session.connection_issue_reported = true;
+                    }
+                }
+            }
+        }
+        if controls_dirty || last_heartbeat.elapsed() >= Duration::from_secs(1) {
+            for current in std::iter::once(&mut session).chain(parked.values_mut()) {
+                current.sync_controls(&config, display_control_visible, outgoing_control_visible);
+            }
+            controls_dirty = false;
+            last_heartbeat = Instant::now();
+        }
+        // Focus may have changed while a CDP connection was being prepared.
+        // A popout owned by the same process must not activate the hidden chat.
+        let may_scan = foreground_active
+            && environment.foreground_process_id() == last_focus_pid
+            && session.client.as_mut().is_none_or(|client| {
+                client.evaluate("document.hasFocus()", false).ok() == Some(Value::Bool(true))
+            });
+        update_status(&status, |runtime| {
+            runtime.discord_process_id = session.process.as_ref().map(|process| process.process_id);
+            runtime.discord_target = session
+                .variant
+                .map(|variant| variant.config_name().to_string())
+                .unwrap_or_default();
+            runtime.discord_target_name = session
+                .variant
+                .map(|variant| variant.display_name().to_string())
+                .unwrap_or_default();
+            runtime.discord_focus_active = may_scan;
+            runtime.discord_waiting = !may_scan;
+            runtime.cdp_connected = session.client.is_some();
+            runtime.connection_issue = session.connection_issue.clone();
+            runtime.verification_required = session.verification_paused;
+            runtime.verification_kind = session.verification_kind.clone();
+        });
         let target =
             Language::try_from(config.target_language.as_str()).unwrap_or(Language::Korean);
         let browser_active = browser_active_until.is_some_and(|until| Instant::now() < until);
+        let mut ready_results = Vec::new();
+        while let Ok(result) = worker_result_rx.try_recv() {
+            let generation = match &result {
+                WorkerResult::Translated { generation, .. }
+                | WorkerResult::ImageTranslated { generation, .. }
+                | WorkerResult::OutgoingTranslated { generation, .. } => Some(*generation),
+                _ => None,
+            };
+            if let Some(generation) = generation {
+                let owner = if generation >> 48 == session.generation >> 48 {
+                    Some(&mut session)
+                } else {
+                    parked
+                        .values_mut()
+                        .find(|other| other.generation >> 48 == generation >> 48)
+                };
+                if let Some(owner) = owner {
+                    if generation == owner.generation {
+                        owner.results.push_back(result);
+                    }
+                }
+            } else {
+                if matches!(&result, WorkerResult::DisplayActivated { generation, name } if *generation == preparation_generation && name == &config.translator)
+                {
+                    for other in parked.values_mut() {
+                        other.reset();
+                    }
+                }
+                ready_results.push(result);
+            }
+        }
+        if may_scan {
+            ready_results.extend(session.results.drain(..));
+        }
         drain_worker_results(
-            &worker_result_rx,
+            ready_results,
             &worker_tx,
             &outgoing_worker_tx,
-            &mut client,
-            &mut states,
-            &mut pending,
-            &display_view,
-            &mut image_pending,
-            &mut outgoing_pending,
-            &mut generation,
+            &mut session.client,
+            &mut session.states,
+            &mut session.pending,
+            &session.display_view,
+            &mut session.image_pending,
+            &mut session.outgoing_pending,
+            &mut session.generation,
             preparation_generation,
             target,
             &config,
@@ -1745,25 +2173,31 @@ fn run_controller(
             browser_active,
         );
 
-        let had_client = client.is_some();
+        let had_client = session.client.is_some();
         let result = (|| -> Result<(), String> {
-            if verification_paused {
+            if !may_scan || session.verification_paused {
                 return Ok(());
             }
-            if client.is_none() {
+            if session.client.is_none() {
                 return Err(
-                    "Discord가 보안 연결로 열리지 않았어. Discord 재시작을 진행해줘.".to_string(),
+                    "Discord 보안 연결이 필요합니다. 해당 Discord 앱을 다시 시작하십시오."
+                        .to_string(),
                 );
             }
-            client.as_mut().expect("connected CDP client").connect()?;
-            consecutive_connection_failures = 0;
-            connection_issue_reported = false;
+            session
+                .client
+                .as_mut()
+                .expect("connected CDP client")
+                .connect()?;
+            session.consecutive_connection_failures = 0;
+            session.connection_issue_reported = false;
             update_status(&status, |runtime| {
                 runtime.cdp_connected = true;
                 runtime.connection_issue.clear();
             });
             let verification = parse_verification_observation(
-                client
+                session
+                    .client
                     .as_mut()
                     .expect("connected CDP client")
                     .evaluate(VERIFICATION_DETECTION_SCRIPT, false)?,
@@ -1772,16 +2206,16 @@ fn run_controller(
                 return Err(format!("{VERIFICATION_SIGNAL_PREFIX}{}", verification.kind));
             }
             if !prepare_display_view_for_dom(
-                client.as_mut().expect("connected CDP client"),
-                &mut pending,
-                &mut display_view,
-                generation,
+                session.client.as_mut().expect("connected CDP client"),
+                &mut session.pending,
+                &mut session.display_view,
+                session.generation,
                 &worker_tx,
             )? {
                 return Ok(());
             }
             handle_invite_assist(
-                client.as_mut().expect("connected CDP client"),
+                session.client.as_mut().expect("connected CDP client"),
                 app_handle.as_ref(),
                 &config.ui_language,
             )?;
@@ -1790,34 +2224,35 @@ fn run_controller(
                     .lock()
                     .is_ok_and(|runtime| runtime.active_translator == config.translator);
                 scan_dictionary(
-                    client.as_mut().expect("connected CDP client"),
+                    session.client.as_mut().expect("connected CDP client"),
                     dictionary_store.as_ref(),
                     app_handle.as_ref(),
                     &config,
                     &worker_tx,
                     dictionary_translation_ready,
                 )?;
-                dictionary_ui_needs_cleanup = true;
-            } else if dictionary_ui_needs_cleanup {
-                client
+                session.dictionary_ui_needs_cleanup = true;
+            } else if session.dictionary_ui_needs_cleanup {
+                session
+                    .client
                     .as_mut()
                     .expect("connected CDP client")
                     .evaluate(DICTIONARY_CLEANUP_SCRIPT, false)?;
                 if let Some(app) = app_handle.as_ref() {
                     let _ = dictionary_window::hide(app);
                 }
-                dictionary_ui_needs_cleanup = false;
+                session.dictionary_ui_needs_cleanup = false;
             }
             ensure_outgoing_originals(
-                client.as_mut().expect("connected CDP client"),
+                session.client.as_mut().expect("connected CDP client"),
                 outgoing_original_store.as_ref(),
                 &config.ui_language,
                 config.enabled,
             )?;
             let requested_changes = scan_outgoing(
-                client.as_mut().expect("connected CDP client"),
-                &mut outgoing_pending,
-                generation,
+                session.client.as_mut().expect("connected CDP client"),
+                &mut session.outgoing_pending,
+                session.generation,
                 &outgoing_worker_tx,
                 &config,
                 outgoing_original_store.as_ref(),
@@ -1865,11 +2300,11 @@ fn run_controller(
             });
             if display_ready {
                 let display_view_ready = scan_dom(
-                    client.as_mut().expect("connected CDP client"),
-                    &states,
-                    &mut pending,
-                    &mut display_view,
-                    generation,
+                    session.client.as_mut().expect("connected CDP client"),
+                    &session.states,
+                    &mut session.pending,
+                    &mut session.display_view,
+                    session.generation,
                     target,
                     incoming_allowed_sources(&config),
                     config.translate_nicknames,
@@ -1878,57 +2313,59 @@ fn run_controller(
                 )?;
                 if display_view_ready {
                     scan_images(
-                        client.as_mut().expect("connected CDP client"),
-                        &mut image_pending,
-                        generation,
+                        session.client.as_mut().expect("connected CDP client"),
+                        &mut session.image_pending,
+                        session.generation,
                         target,
                         &worker_tx,
                         &status,
                         &config.ui_language,
                         OcrQualityMode::from_config(&config.image_ocr_quality),
                     )?;
-                    image_ui_needs_cleanup = true;
+                    session.image_ui_needs_cleanup = true;
                 }
             } else if !config.enabled {
-                client
+                session
+                    .client
                     .as_mut()
                     .expect("connected CDP client")
                     .evaluate(RESTORE_TEXT_SCRIPT, false)?;
-                if image_ui_needs_cleanup {
-                    client
+                if session.image_ui_needs_cleanup {
+                    session
+                        .client
                         .as_mut()
                         .expect("connected CDP client")
                         .evaluate(&restore_images_script(false), false)?;
-                    image_ui_needs_cleanup = false;
+                    session.image_ui_needs_cleanup = false;
                 }
             }
             Ok(())
         })();
         if let Err(error) = result {
+            session.connection_issue = error.clone();
             if let Some(kind) = error.strip_prefix(VERIFICATION_SIGNAL_PREFIX) {
-                config.discord_verification_mode = true;
-                restore(&mut client, &states, false);
-                if let Some(active) = client.as_mut() {
+                session.verification_kind = kind.to_string();
+                restore(&mut session.client, &session.states, false);
+                if let Some(active) = session.client.as_mut() {
                     let _ = active.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
                     let _ = active.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
                 }
-                if let Some(mut disconnected) = client.take() {
+                if let Some(mut disconnected) = session.client.take() {
                     disconnected.close();
                 }
-                let discord_variant =
-                    crate::discord::DiscordVariant::from_config(&config.discord_variant)
-                        .unwrap_or(crate::discord::DiscordVariant::Auto);
-                if let Err(guardian_error) =
-                    crate::discord::disconnect_current_guardian(discord_variant)
-                {
+                let discord_variant = session
+                    .variant
+                    .unwrap_or(crate::discord::DiscordVariant::Auto);
+                if let Err(guardian_error) = environment.disconnect(discord_variant) {
                     crate::diagnostics::warn("verification-guard", &guardian_error);
                 }
-                verification_paused = true;
-                states.clear();
-                pending.clear();
-                image_pending.clear();
-                outgoing_pending.clear();
-                generation += 1;
+                session.verification_paused = true;
+                session.connection_issue.clear();
+                session.states.clear();
+                session.pending.clear();
+                session.image_pending.clear();
+                session.outgoing_pending.clear();
+                session.generation += 1;
                 update_status(&status, |runtime| {
                     runtime.cdp_connected = false;
                     runtime.connection_issue.clear();
@@ -1937,14 +2374,8 @@ fn run_controller(
                     runtime.notice =
                         "Discord 추가 인증을 위해 번역 연결을 일시 중지했습니다.".to_string();
                 });
+                save_verification_pause(&mut config, app_handle.as_ref(), session.variant, true);
                 if let Some(app) = app_handle.as_ref() {
-                    if let Ok(updated) = app
-                        .state::<ConfigStore>()
-                        .update(json!({"discord_verification_mode": true}))
-                    {
-                        config = updated.clone();
-                        let _ = app.emit("settings-changed", updated);
-                    }
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.show();
                         let _ = window.unminimize();
@@ -1961,30 +2392,35 @@ fn run_controller(
                     && (config.enabled
                         || config.outgoing_translation_enabled
                         || config.dictionary_enabled)
-                    && !connection_issue_reported
+                    && !session.connection_issue_reported
                 {
-                    consecutive_connection_failures += 1;
-                    if consecutive_connection_failures >= 2 {
-                        connection_issue_reported = true;
+                    session.consecutive_connection_failures += 1;
+                    if session.consecutive_connection_failures >= 2 {
+                        session.connection_issue_reported = true;
                         crate::diagnostics::error("discord-connection", &error);
                         update_status(&status, |runtime| {
                             runtime.connection_issue = error.clone();
                         });
                     }
                 }
-                if let Some(mut disconnected) = client.take() {
+                if let Some(mut disconnected) = session.client.take() {
                     disconnected.close();
+                    session.generation += 1;
+                    session.pending.clear();
+                    session.image_pending.clear();
+                    session.outgoing_pending.clear();
+                    session.results.clear();
                 }
                 update_status(&status, |runtime| runtime.cdp_connected = false);
             }
-            image_ui_needs_cleanup = true;
-            dictionary_ui_needs_cleanup = true;
+            session.image_ui_needs_cleanup = true;
+            session.dictionary_ui_needs_cleanup = true;
         }
 
-        let interval = if client.is_some() {
+        let interval = if foreground_active && session.client.is_some() {
             poll_interval(config.capture_fps)
         } else {
-            Duration::from_secs(1)
+            Duration::from_millis(200)
         };
         let remaining = interval.saturating_sub(started.elapsed());
         if pending_control.is_none() && remaining > Duration::ZERO {
@@ -1996,10 +2432,13 @@ fn run_controller(
         }
     }
 
-    restore(&mut client, &states, false);
-    if let Some(client) = client.as_mut() {
-        let _ = client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
-        let _ = client.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
+    for other in parked.values_mut() {
+        other.cleanup();
+    }
+    restore(&mut session.client, &session.states, false);
+    if let Some(active_client) = session.client.as_mut() {
+        let _ = active_client.evaluate(OUTGOING_CLEANUP_SCRIPT, false);
+        let _ = active_client.evaluate(DICTIONARY_CLEANUP_SCRIPT, false);
     }
     let _ = worker_tx.send(WorkerCommand::Stop);
     let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::Stop);
@@ -2009,8 +2448,8 @@ fn run_controller(
     if let Some(worker) = outgoing_worker {
         let _ = worker.join();
     }
-    if let Some(mut client) = client {
-        client.close();
+    if let Some(mut active_client) = session.client {
+        active_client.close();
     }
 }
 
@@ -2788,7 +3227,7 @@ fn dispatch_outgoing_review(
 
 #[allow(clippy::too_many_arguments)]
 fn drain_worker_results(
-    results: &mpsc::Receiver<WorkerResult>,
+    results: impl IntoIterator<Item = WorkerResult>,
     worker: &mpsc::Sender<WorkerCommand>,
     outgoing_worker: &mpsc::Sender<OutgoingWorkerCommand>,
     client: &mut Option<CdpClient>,
@@ -2807,7 +3246,7 @@ fn drain_worker_results(
     browser_active: bool,
 ) {
     let mut changes = Vec::new();
-    while let Ok(result) = results.try_recv() {
+    for result in results {
         match result {
             WorkerResult::Translated {
                 generation: result_generation,
@@ -4017,7 +4456,32 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
 }
 
 #[cfg(test)]
+#[path = "engine/discord_e2e.rs"]
+mod discord_e2e;
+
+#[cfg(test)]
 mod tests {
+    #[test]
+    fn discord_sessions_keep_each_others_pending_views() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        for generation in [1_u64 << 48, 2_u64 << 48, 3_u64 << 48] {
+            tx.send(super::WorkerCommand::DiscardDisplayBefore {
+                generation,
+                view_epoch: 1,
+            })
+            .unwrap();
+        }
+        drop(tx);
+        let mut backlog = std::collections::VecDeque::new();
+        let mut count = 0;
+        while super::next_worker_command(&rx, &mut backlog).is_ok() {
+            count += 1;
+        }
+        assert_eq!(
+            count, 3,
+            "one Discord window must not discard another window's work"
+        );
+    }
     #[test]
     #[ignore = "opt-in local CPU model benchmark; stop desktop inference first and supply verified model/server paths"]
     fn scheduling_live_cpu_model_latency_comparison() {

@@ -78,7 +78,7 @@ const WEB_SITE_POLICY_SEARCH_THRESHOLD = 6;
 
 const OPTIONS = {
   discord_variant: [
-    ["auto", "자동 (권장)"],
+    ["auto", "자동 · 사용 중인 창"],
     ["stable", "Discord"],
     ["ptb", "Discord PTB"],
     ["canary", "Discord Canary"],
@@ -135,6 +135,8 @@ const state = {
   promptActive: false,
   repairActive: false,
   restartAttempted: false,
+  discordRecoveryTarget: "",
+  discordRecoveryStates: new Map(),
   manualRestartRequired: false,
   verificationPromptActive: false,
   verificationPromptShown: false,
@@ -2853,16 +2855,6 @@ async function toggleOutgoingTranslation() {
   }
 }
 
-async function disableTranslationFeaturesForConnectionFailure() {
-  if (state.config.enabled) await setTranslationEnabled(false, false);
-  if (state.config.outgoing_translation_enabled) {
-    const updated = await invoke("settings_update", {
-      patch: { outgoing_translation_enabled: false },
-    });
-    renderConfig(updated);
-  }
-}
-
 function updateEngineState(status) {
   if (!status) return;
   renderModelPreparation(status.modelProgress);
@@ -2878,7 +2870,7 @@ function updateEngineState(status) {
     state.manualRestartRequired = true;
   }
   elements.engineState.dataset.state = ready && !hasError ? "ready" : hasError ? "error" : "loading";
-  const connectionLabel = translateCopy(language, discordConnectionLabel(status));
+  const connectionLabel = [translateCopy(language, discordConnectionLabel(status)), status.discordTargetName].filter(Boolean).join(" · ");
   elements.engineStateLabel.textContent = ready && modelLabel
     ? `${connectionLabel} · ${modelLabel}`
     : connectionLabel;
@@ -2898,7 +2890,7 @@ function renderManualDiscordRestart(status = state.runtime) {
 }
 
 function renderVerificationMode(status = state.runtime) {
-  const active = Boolean(status?.verificationRequired || state.config.discord_verification_mode);
+  const active = Boolean(status?.verificationRequired || (!status?.discordTarget && state.config.discord_verification_mode));
   if (!active) state.verificationBannerDismissed = false;
   elements.verificationBanner.hidden = !active || state.verificationBannerDismissed;
   const disabled = Boolean(state.repairActive || state.verificationPromptActive);
@@ -3003,6 +2995,18 @@ async function pollRuntime() {
   state.polling = true;
   try {
     const status = await invoke("runtime_status");
+    const recoveryTarget = `${status.discordTarget || ""}:${status.discordProcessId || ""}`;
+    if (recoveryTarget !== state.discordRecoveryTarget) {
+      state.discordRecoveryStates.set(state.discordRecoveryTarget, {
+        restartAttempted: state.restartAttempted,
+        manualRestartRequired: state.manualRestartRequired,
+      });
+      Object.assign(state, state.discordRecoveryStates.get(recoveryTarget) || {
+        restartAttempted: false, manualRestartRequired: false,
+      });
+      state.discordRecoveryTarget = recoveryTarget;
+      state.verificationPromptShown = false;
+    }
     state.runtime = status;
     updateEngineState(status);
     if (status.verificationRequired && !state.verificationPromptShown) {
@@ -3027,7 +3031,6 @@ async function handleRestartRequired(status) {
     if (!(await ensureRestartConsent())) {
       state.restartAttempted = true;
       state.manualRestartRequired = true;
-      await disableTranslationFeaturesForConnectionFailure();
       return;
     }
     const confirmed = await showModal({
@@ -3040,7 +3043,6 @@ async function handleRestartRequired(status) {
     if (!confirmed) {
       state.restartAttempted = true;
       state.manualRestartRequired = true;
-      await disableTranslationFeaturesForConnectionFailure();
       return;
     }
     if (state.runtime?.cdpConnected) return;
@@ -3054,11 +3056,6 @@ async function handleRestartRequired(status) {
     setSwitch(elements.enabled, state.config.enabled, "켜짐", "꺼짐");
   } catch (error) {
     state.manualRestartRequired = true;
-    try {
-      await disableTranslationFeaturesForConnectionFailure();
-    } catch {
-      state.config.enabled = false;
-    }
     await showError("Discord 자동 재시작 실패", String(error));
   } finally {
     state.repairActive = false;

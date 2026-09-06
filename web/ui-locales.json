@@ -652,7 +652,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "使用應用程式中選取的翻譯引擎。本機模型在您的電腦上處理文字。選取外部服務（ChatGPT、Claude、Gemini 或 DeepL）後，對話將傳送至該服務，並適用其政策。",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "原文和譯文儲存在應用程式的加密快取中，遵循其保留期限（預設 30 天）及記錄刪除設定。切換對話或撤回同意不會刪除既有快取。私密瀏覽內容不會儲存。",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "請同時更新主應用程式與擴充功能，以使用網頁聊天翻譯。",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "私密瀏覽中請使用本機模型或 DeepL。無法控制訂閱 CLI 建立的本機記錄。"
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "私密瀏覽中請使用本機模型或 DeepL。無法控制訂閱 CLI 建立的本機記錄。",
+    "자동 · 사용 중인 창": "自動 · 使用中的視窗",
+    "Discord 창 대기 중": "等待 Discord 視窗",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "自動模式僅翻譯使用中的 Discord 視窗。翻譯開關適用於所有 Discord 應用程式。"
   },
   "pt-BR": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
@@ -1307,7 +1310,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "É usado o tradutor selecionado no aplicativo. Modelos locais processam o texto no seu PC. Ao selecionar um serviço externo (ChatGPT, Claude, Gemini ou DeepL), as conversas são enviadas a esse serviço e ficam sujeitas às políticas dele.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "O texto original e as traduções são salvos no cache criptografado do aplicativo, conforme o prazo de retenção (30 dias por padrão) e as configurações de exclusão do histórico. Trocar de conversa ou retirar o consentimento não exclui o cache existente. O conteúdo da navegação privativa não é salvo.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Atualize o aplicativo principal e a extensão para usar os mensageiros na web.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Na navegação privativa, use um modelo local ou o DeepL. Não é possível controlar os registros locais criados pelas CLIs de assinatura."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Na navegação privativa, use um modelo local ou o DeepL. Não é possível controlar os registros locais criados pelas CLIs de assinatura.",
+    "자동 · 사용 중인 창": "Automático · janela ativa",
+    "Discord 창 대기 중": "Aguardando uma janela do Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "O modo automático traduz apenas a janela ativa do Discord. Ativar ou desativar a tradução se aplica a todos os aplicativos Discord."
   },
   "hi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
@@ -1962,7 +1968,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "ऐप में चुने गए अनुवादक का उपयोग होता है। स्थानीय मॉडल आपके PC पर पाठ संसाधित करते हैं। बाहरी सेवा (ChatGPT, Claude, Gemini या DeepL) चुनने पर बातचीत उस सेवा को भेजी जाती है और उसकी नीतियाँ लागू होती हैं।",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "मूल पाठ और अनुवाद ऐप के एन्क्रिप्टेड कैश में उसकी संरक्षण अवधि (डिफ़ॉल्ट 30 दिन) और इतिहास हटाने की सेटिंग के अनुसार सहेजे जाते हैं। बातचीत बदलने या सहमति वापस लेने से मौजूदा कैश नहीं मिटता। निजी ब्राउज़िंग का पाठ सहेजा नहीं जाता।",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "वेब मैसेंजर इस्तेमाल करने के लिए मुख्य ऐप और एक्सटेंशन दोनों अपडेट करें।",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "निजी ब्राउज़िंग में स्थानीय मॉडल या DeepL इस्तेमाल करें। सदस्यता वाले CLI द्वारा बनाए गए स्थानीय रिकॉर्ड नियंत्रित नहीं किए जा सकते।"
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "निजी ब्राउज़िंग में स्थानीय मॉडल या DeepL इस्तेमाल करें। सदस्यता वाले CLI द्वारा बनाए गए स्थानीय रिकॉर्ड नियंत्रित नहीं किए जा सकते।",
+    "자동 · 사용 중인 창": "स्वचालित · सक्रिय विंडो",
+    "Discord 창 대기 중": "Discord विंडो की प्रतीक्षा",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "स्वचालित मोड केवल सक्रिय Discord विंडो का अनुवाद करता है। अनुवाद चालू या बंद करना सभी Discord ऐप पर लागू होता है।"
   },
   "es-419": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
@@ -2617,7 +2626,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Se utiliza el traductor seleccionado en la aplicación. Los modelos locales procesan el texto en tu PC. Al seleccionar un servicio externo (ChatGPT, Claude, Gemini o DeepL), las conversaciones se envían a ese servicio y se aplican sus políticas.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "El texto original y las traducciones se guardan en la caché cifrada de la aplicación, según su plazo de conservación (30 días de forma predeterminada) y los ajustes de eliminación del historial. Cambiar de conversación o retirar el consentimiento no elimina la caché existente. No se guarda el contenido de la navegación privada.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Actualiza tanto la aplicación principal como la extensión para usar los servicios de mensajería web.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "En la navegación privada, usa un modelo local o DeepL. No se pueden controlar los registros locales creados por las CLI de suscripción."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "En la navegación privada, usa un modelo local o DeepL. No se pueden controlar los registros locales creados por las CLI de suscripción.",
+    "자동 · 사용 중인 창": "Automático · ventana activa",
+    "Discord 창 대기 중": "Esperando una ventana de Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "El modo automático traduce solo la ventana activa de Discord. Activar o desactivar la traducción se aplica a todas las aplicaciones de Discord."
   },
   "de": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
@@ -3272,7 +3284,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Es wird der in der App ausgewählte Übersetzer verwendet. Lokale Modelle verarbeiten Texte auf Ihrem PC. Bei Auswahl eines externen Dienstes (ChatGPT, Claude, Gemini oder DeepL) werden Unterhaltungen an diesen Dienst gesendet; es gelten dessen Richtlinien.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Originaltexte und Übersetzungen werden im verschlüsselten App-Cache gespeichert. Es gelten die Aufbewahrungsdauer (standardmäßig 30 Tage) und die Einstellungen zum Löschen des Verlaufs. Ein Gesprächswechsel oder Widerruf der Zustimmung löscht bestehende Cache-Einträge nicht. Inhalte aus privaten Fenstern werden nicht gespeichert.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Aktualisieren Sie sowohl die Hauptanwendung als auch die Erweiterung, um Web-Messenger zu verwenden.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Verwenden Sie in privaten Fenstern ein lokales Modell oder DeepL. Lokale Aufzeichnungen von Abonnement-CLIs können nicht kontrolliert werden."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Verwenden Sie in privaten Fenstern ein lokales Modell oder DeepL. Lokale Aufzeichnungen von Abonnement-CLIs können nicht kontrolliert werden.",
+    "자동 · 사용 중인 창": "Automatisch · aktives Fenster",
+    "Discord 창 대기 중": "Warten auf ein Discord-Fenster",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Im automatischen Modus wird nur das aktive Discord-Fenster übersetzt. Das Ein- und Ausschalten der Übersetzung gilt für alle Discord-Apps."
   },
   "ru": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
@@ -3927,7 +3942,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Используется переводчик, выбранный в приложении. Локальные модели обрабатывают текст на вашем ПК. При выборе внешнего сервиса (ChatGPT, Claude, Gemini или DeepL) переписка передаётся ему и подпадает под его правила.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Оригиналы и переводы сохраняются в зашифрованном кэше приложения согласно сроку хранения (по умолчанию 30 дней) и настройкам удаления истории. Смена разговора или отзыв согласия не удаляет существующий кэш. Содержимое приватных окон не сохраняется.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Для использования веб-мессенджеров обновите основное приложение и расширение.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "В приватных окнах используйте локальную модель или DeepL. Невозможно контролировать локальные записи, создаваемые CLI по подписке."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "В приватных окнах используйте локальную модель или DeepL. Невозможно контролировать локальные записи, создаваемые CLI по подписке.",
+    "자동 · 사용 중인 창": "Автоматически · активное окно",
+    "Discord 창 대기 중": "Ожидание окна Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "В автоматическом режиме переводится только активное окно Discord. Включение и отключение перевода применяется ко всем приложениям Discord."
   },
   "id": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
@@ -4582,7 +4600,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Penerjemah yang dipilih di aplikasi akan digunakan. Model lokal memproses teks di PC Anda. Jika memilih layanan eksternal (ChatGPT, Claude, Gemini, atau DeepL), percakapan dikirim ke layanan tersebut dan tunduk pada kebijakannya.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Teks sumber dan terjemahan disimpan dalam cache terenkripsi aplikasi, mengikuti masa penyimpanan (30 hari secara bawaan) dan pengaturan penghapusan riwayat. Berpindah percakapan atau menarik persetujuan tidak menghapus cache yang ada. Konten penjelajahan pribadi tidak disimpan.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Perbarui aplikasi utama dan ekstensi untuk menggunakan layanan pesan web.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Dalam penjelajahan pribadi, gunakan model lokal atau DeepL. Catatan lokal yang dibuat oleh CLI berlangganan tidak dapat dikendalikan."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Dalam penjelajahan pribadi, gunakan model lokal atau DeepL. Catatan lokal yang dibuat oleh CLI berlangganan tidak dapat dikendalikan.",
+    "자동 · 사용 중인 창": "Otomatis · jendela aktif",
+    "Discord 창 대기 중": "Menunggu jendela Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Mode otomatis hanya menerjemahkan jendela Discord yang aktif. Mengaktifkan atau menonaktifkan terjemahan berlaku untuk semua aplikasi Discord."
   },
   "fr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
@@ -5237,7 +5258,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Le moteur de traduction sélectionné dans l’application est utilisé. Les modèles locaux traitent le texte sur votre PC. Si vous choisissez un service externe (ChatGPT, Claude, Gemini ou DeepL), les conversations lui sont envoyées et ses politiques s’appliquent.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Le texte source et les traductions sont enregistrés dans le cache chiffré de l’application, selon sa durée de conservation (30 jours par défaut) et ses paramètres de suppression de l’historique. Changer de conversation ou retirer votre consentement ne supprime pas le cache existant. Le contenu de la navigation privée n’est pas enregistré.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Mettez à jour l’application principale et l’extension pour utiliser les messageries web.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "En navigation privée, utilisez un modèle local ou DeepL. Les enregistrements locaux créés par les CLI d’abonnement ne peuvent pas être contrôlés."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "En navigation privée, utilisez un modèle local ou DeepL. Les enregistrements locaux créés par les CLI d’abonnement ne peuvent pas être contrôlés.",
+    "자동 · 사용 중인 창": "Automatique · fenêtre active",
+    "Discord 창 대기 중": "En attente d’une fenêtre Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Le mode automatique traduit uniquement la fenêtre Discord active. L’activation ou la désactivation de la traduction s’applique à toutes les applications Discord."
   },
   "tr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
@@ -5892,7 +5916,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Uygulamada seçilen çevirmen kullanılır. Yerel modeller metni bilgisayarınızda işler. Harici bir hizmet (ChatGPT, Claude, Gemini veya DeepL) seçildiğinde sohbetler o hizmete gönderilir ve hizmetin politikaları geçerli olur.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Kaynak metin ve çeviriler, saklama süresine (varsayılan 30 gün) ve geçmiş silme ayarlarına göre uygulamanın şifreli önbelleğinde saklanır. Sohbeti değiştirmek veya onayı geri çekmek mevcut önbelleği silmez. Gizli gezinme içeriği saklanmaz.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Web mesajlaşma hizmetlerini kullanmak için ana uygulamayı ve uzantıyı güncelleyin.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Gizli gezinmede yerel bir model veya DeepL kullanın. Abonelik CLI araçlarının oluşturduğu yerel kayıtlar denetlenemez."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Gizli gezinmede yerel bir model veya DeepL kullanın. Abonelik CLI araçlarının oluşturduğu yerel kayıtlar denetlenemez.",
+    "자동 · 사용 중인 창": "Otomatik · etkin pencere",
+    "Discord 창 대기 중": "Discord penceresi bekleniyor",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Otomatik mod yalnızca etkin Discord penceresini çevirir. Çeviriyi açmak veya kapatmak tüm Discord uygulamalarına uygulanır."
   },
   "ar": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
@@ -6547,7 +6574,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "يُستخدم المترجم المحدد في التطبيق. تعالج النماذج المحلية النص على جهازك. عند اختيار خدمة خارجية (ChatGPT أو Claude أو Gemini أو DeepL)، تُرسل المحادثات إليها وتخضع لسياساتها.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "يُحفظ النص الأصلي والترجمات في ذاكرة التخزين المؤقت المشفرة للتطبيق وفق مدة الاحتفاظ (30 يومًا افتراضيًا) وإعدادات حذف السجل. لا يؤدي تبديل المحادثة أو سحب الموافقة إلى حذف البيانات المخزنة سابقًا. لا يُحفظ محتوى التصفح الخاص.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "يرجى تحديث التطبيق الرئيسي والإضافة معًا لاستخدام خدمات المراسلة على الويب.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "في التصفح الخاص، استخدم نموذجًا محليًا أو DeepL. لا يمكن التحكم في السجلات المحلية التي تنشئها أدوات CLI للاشتراكات."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "في التصفح الخاص، استخدم نموذجًا محليًا أو DeepL. لا يمكن التحكم في السجلات المحلية التي تنشئها أدوات CLI للاشتراكات.",
+    "자동 · 사용 중인 창": "تلقائي · النافذة النشطة",
+    "Discord 창 대기 중": "بانتظار نافذة Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "يترجم الوضع التلقائي نافذة Discord النشطة فقط. يسري تشغيل الترجمة أو إيقافها على جميع تطبيقات Discord."
   },
   "vi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
@@ -7202,7 +7232,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Sử dụng công cụ dịch đã chọn trong ứng dụng. Mô hình cục bộ xử lý văn bản trên PC của bạn. Nếu chọn dịch vụ bên ngoài (ChatGPT, Claude, Gemini hoặc DeepL), hội thoại sẽ được gửi tới dịch vụ đó và chịu sự điều chỉnh của chính sách của dịch vụ.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Văn bản gốc và bản dịch được lưu trong bộ nhớ đệm mã hóa của ứng dụng, theo thời hạn lưu giữ (mặc định 30 ngày) và cài đặt xóa lịch sử. Chuyển hội thoại hoặc rút lại sự đồng ý không xóa bộ nhớ đệm hiện có. Nội dung duyệt web riêng tư không được lưu.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Hãy cập nhật cả ứng dụng chính và tiện ích mở rộng để dùng các dịch vụ nhắn tin web.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Khi duyệt web riêng tư, hãy dùng mô hình cục bộ hoặc DeepL. Không thể kiểm soát các bản ghi cục bộ do CLI thuê bao tạo ra."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Khi duyệt web riêng tư, hãy dùng mô hình cục bộ hoặc DeepL. Không thể kiểm soát các bản ghi cục bộ do CLI thuê bao tạo ra.",
+    "자동 · 사용 중인 창": "Tự động · cửa sổ đang dùng",
+    "Discord 창 대기 중": "Đang chờ cửa sổ Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Chế độ tự động chỉ dịch cửa sổ Discord đang dùng. Bật hoặc tắt bản dịch áp dụng cho tất cả ứng dụng Discord."
   },
   "it": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
@@ -7857,7 +7890,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Viene usato il traduttore selezionato nell’app. I modelli locali elaborano il testo sul PC. Se si seleziona un servizio esterno (ChatGPT, Claude, Gemini o DeepL), le conversazioni vengono inviate a quel servizio e si applicano le sue politiche.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Testo originale e traduzioni vengono salvati nella cache crittografata dell’app, secondo il periodo di conservazione (30 giorni per impostazione predefinita) e le impostazioni di eliminazione della cronologia. Cambiare conversazione o revocare il consenso non elimina la cache esistente. I contenuti della navigazione privata non vengono salvati.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Aggiorni sia l’app principale sia l’estensione per usare i servizi di messaggistica web.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Nella navigazione privata, usi un modello locale o DeepL. I dati locali creati dalle CLI in abbonamento non possono essere controllati."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Nella navigazione privata, usi un modello locale o DeepL. I dati locali creati dalle CLI in abbonamento non possono essere controllati.",
+    "자동 · 사용 중인 창": "Automatico · finestra attiva",
+    "Discord 창 대기 중": "In attesa di una finestra Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "La modalità automatica traduce solo la finestra Discord attiva. Attivare o disattivare la traduzione si applica a tutte le app Discord."
   },
   "pl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
@@ -8512,7 +8548,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Używany jest tłumacz wybrany w aplikacji. Modele lokalne przetwarzają tekst na komputerze. Wybór usługi zewnętrznej (ChatGPT, Claude, Gemini lub DeepL) powoduje wysyłanie rozmów do tej usługi zgodnie z jej zasadami.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Oryginały i tłumaczenia są zapisywane w zaszyfrowanej pamięci podręcznej aplikacji zgodnie z okresem przechowywania (domyślnie 30 dni) i ustawieniami usuwania historii. Zmiana rozmowy lub wycofanie zgody nie usuwa istniejącej pamięci podręcznej. Treści z trybu prywatnego nie są zapisywane.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Aby korzystać z komunikatorów internetowych, zaktualizuj aplikację główną i rozszerzenie.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "W trybie prywatnym używaj modelu lokalnego lub DeepL. Nie można kontrolować lokalnych zapisów tworzonych przez CLI w ramach subskrypcji."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "W trybie prywatnym używaj modelu lokalnego lub DeepL. Nie można kontrolować lokalnych zapisów tworzonych przez CLI w ramach subskrypcji.",
+    "자동 · 사용 중인 창": "Automatycznie · aktywne okno",
+    "Discord 창 대기 중": "Oczekiwanie na okno Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Tryb automatyczny tłumaczy tylko aktywne okno Discord. Włączenie lub wyłączenie tłumaczenia dotyczy wszystkich aplikacji Discord."
   },
   "uk": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
@@ -9167,7 +9206,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Використовується перекладач, вибраний у застосунку. Локальні моделі обробляють текст на вашому ПК. Якщо вибрати зовнішній сервіс (ChatGPT, Claude, Gemini або DeepL), листування передається йому та підпадає під його правила.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Оригінали й переклади зберігаються в зашифрованому кеші застосунку відповідно до строку зберігання (типово 30 днів) і налаштувань видалення історії. Зміна розмови або відкликання згоди не видаляє наявний кеш. Вміст приватних вікон не зберігається.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Для використання вебмесенджерів оновіть основний застосунок і розширення.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "У приватних вікнах використовуйте локальну модель або DeepL. Локальні записи, створені CLI за підпискою, неможливо контролювати."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "У приватних вікнах використовуйте локальну модель або DeepL. Локальні записи, створені CLI за підпискою, неможливо контролювати.",
+    "자동 · 사용 중인 창": "Автоматично · активне вікно",
+    "Discord 창 대기 중": "Очікування вікна Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "В автоматичному режимі перекладається лише активне вікно Discord. Увімкнення та вимкнення перекладу застосовується до всіх застосунків Discord."
   },
   "ms": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
@@ -9822,7 +9864,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Penterjemah yang dipilih dalam aplikasi digunakan. Model setempat memproses teks pada PC anda. Jika perkhidmatan luaran (ChatGPT, Claude, Gemini atau DeepL) dipilih, perbualan dihantar kepadanya dan tertakluk pada dasarnya.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Teks sumber dan terjemahan disimpan dalam cache tersulit aplikasi mengikut tempoh simpanan (30 hari secara lalai) dan tetapan pemadaman sejarah. Menukar perbualan atau menarik balik persetujuan tidak memadamkan cache sedia ada. Kandungan pelayaran peribadi tidak disimpan.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Kemas kini aplikasi utama dan sambungan untuk menggunakan perkhidmatan pemesejan web.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Dalam pelayaran peribadi, gunakan model setempat atau DeepL. Rekod setempat yang dicipta oleh CLI langganan tidak dapat dikawal."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Dalam pelayaran peribadi, gunakan model setempat atau DeepL. Rekod setempat yang dicipta oleh CLI langganan tidak dapat dikawal.",
+    "자동 · 사용 중인 창": "Automatik · tetingkap aktif",
+    "Discord 창 대기 중": "Menunggu tetingkap Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Mod automatik hanya menterjemah tetingkap Discord yang aktif. Menghidupkan atau mematikan terjemahan terpakai kepada semua aplikasi Discord."
   },
   "nl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
@@ -10477,7 +10522,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "De in de app gekozen vertaler wordt gebruikt. Lokale modellen verwerken tekst op uw pc. Bij een externe dienst (ChatGPT, Claude, Gemini of DeepL) worden gesprekken naar die dienst verstuurd en gelden de voorwaarden van die dienst.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Brontekst en vertalingen worden opgeslagen in de versleutelde appcache, volgens de bewaartermijn (standaard 30 dagen) en de instellingen voor het wissen van de geschiedenis. Een ander gesprek openen of toestemming intrekken wist de bestaande cache niet. Inhoud van privénavigatie wordt niet opgeslagen.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Werk zowel de hoofdapp als de extensie bij om webmessengers te gebruiken.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Gebruik bij privénavigatie een lokaal model of DeepL. Lokale bestanden van abonnements-CLI’s kunnen niet worden beheerd."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Gebruik bij privénavigatie een lokaal model of DeepL. Lokale bestanden van abonnements-CLI’s kunnen niet worden beheerd.",
+    "자동 · 사용 중인 창": "Automatisch · actief venster",
+    "Discord 창 대기 중": "Wachten op een Discord-venster",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "De automatische modus vertaalt alleen het actieve Discord-venster. Vertaling in- of uitschakelen geldt voor alle Discord-apps."
   },
   "th": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
@@ -11132,7 +11180,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "ใช้ตัวแปลที่เลือกไว้ในแอป โมเดลภายในเครื่องจะประมวลผลข้อความบน PC ของคุณ หากเลือกบริการภายนอก (ChatGPT, Claude, Gemini หรือ DeepL) บทสนทนาจะถูกส่งไปยังบริการนั้นและอยู่ภายใต้นโยบายของบริการ",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "ต้นฉบับและคำแปลจะถูกเก็บในแคชที่เข้ารหัสของแอป ตามระยะเวลาเก็บข้อมูล (ค่าเริ่มต้น 30 วัน) และการตั้งค่าลบประวัติ การเปลี่ยนบทสนทนาหรือถอนความยินยอมไม่ลบแคชเดิม เนื้อหาในการเรียกดูแบบส่วนตัวจะไม่ถูกบันทึก",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "โปรดอัปเดตทั้งแอปหลักและส่วนขยายเพื่อใช้บริการแชตบนเว็บ",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "ในการเรียกดูแบบส่วนตัว โปรดใช้โมเดลภายในเครื่องหรือ DeepL ไม่สามารถควบคุมบันทึกในเครื่องที่สร้างโดย CLI แบบสมัครสมาชิกได้"
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "ในการเรียกดูแบบส่วนตัว โปรดใช้โมเดลภายในเครื่องหรือ DeepL ไม่สามารถควบคุมบันทึกในเครื่องที่สร้างโดย CLI แบบสมัครสมาชิกได้",
+    "자동 · 사용 중인 창": "อัตโนมัติ · หน้าต่างที่ใช้งาน",
+    "Discord 창 대기 중": "กำลังรอหน้าต่าง Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "โหมดอัตโนมัติจะแปลเฉพาะหน้าต่าง Discord ที่ใช้งานอยู่ การเปิดหรือปิดการแปลจะมีผลกับแอป Discord ทั้งหมด"
   },
   "fil": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
@@ -11787,7 +11838,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Ginagamit ang tagasaling pinili sa app. Pinoproseso ng mga lokal na modelo ang teksto sa iyong PC. Kapag pumili ng panlabas na serbisyo (ChatGPT, Claude, Gemini o DeepL), ipinapadala rito ang mga usapan at nalalapat ang mga patakaran nito.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Iniimbak ang orihinal na teksto at mga salin sa naka-encrypt na cache ng app, ayon sa panahon ng pagpapanatili (30 araw bilang default) at mga setting ng pagtanggal ng kasaysayan. Hindi nabubura ang kasalukuyang cache sa paglipat ng usapan o pagbawi ng pahintulot. Hindi iniimbak ang nilalaman mula sa pribadong pagba-browse.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "I-update ang pangunahing app at ang extension upang magamit ang mga web messenger.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Sa pribadong pagba-browse, gumamit ng lokal na modelo o DeepL. Hindi makokontrol ang mga lokal na rekord na nililikha ng mga subscription CLI."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Sa pribadong pagba-browse, gumamit ng lokal na modelo o DeepL. Hindi makokontrol ang mga lokal na rekord na nililikha ng mga subscription CLI.",
+    "자동 · 사용 중인 창": "Awtomatiko · aktibong window",
+    "Discord 창 대기 중": "Naghihintay ng Discord window",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Isinasalin lamang ng awtomatikong mode ang aktibong Discord window. Ang pag-on o pag-off ng pagsasalin ay para sa lahat ng Discord app."
   },
   "bn": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
@@ -12442,7 +12496,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "অ্যাপে নির্বাচিত অনুবাদক ব্যবহার করা হয়। স্থানীয় মডেল আপনার PC-তে লেখা প্রক্রিয়াকরণ করে। বাইরের পরিষেবা (ChatGPT, Claude, Gemini বা DeepL) বেছে নিলে কথোপকথন সেই পরিষেবায় পাঠানো হয় এবং তার নীতি প্রযোজ্য হয়।",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "মূল লেখা ও অনুবাদ অ্যাপের এনক্রিপ্ট করা ক্যাশে সংরক্ষিত হয় এবং এর সংরক্ষণকাল (ডিফল্ট ৩০ দিন) ও ইতিহাস মুছে ফেলার সেটিংস অনুসরণ করে। কথোপকথন বদলানো বা সম্মতি প্রত্যাহার করলে আগের ক্যাশে মুছে যায় না। ব্যক্তিগত ব্রাউজিংয়ের লেখা সংরক্ষণ করা হয় না।",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "ওয়েব মেসেঞ্জার ব্যবহার করতে মূল অ্যাপ ও এক্সটেনশন দুটিই আপডেট করুন।",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "ব্যক্তিগত ব্রাউজিংয়ে স্থানীয় মডেল বা DeepL ব্যবহার করুন। সাবস্ক্রিপশন CLI তৈরি করা স্থানীয় রেকর্ড নিয়ন্ত্রণ করা যায় না।"
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "ব্যক্তিগত ব্রাউজিংয়ে স্থানীয় মডেল বা DeepL ব্যবহার করুন। সাবস্ক্রিপশন CLI তৈরি করা স্থানীয় রেকর্ড নিয়ন্ত্রণ করা যায় না।",
+    "자동 · 사용 중인 창": "স্বয়ংক্রিয় · সক্রিয় উইন্ডো",
+    "Discord 창 대기 중": "Discord উইন্ডোর জন্য অপেক্ষা",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "স্বয়ংক্রিয় মোড শুধু সক্রিয় Discord উইন্ডো অনুবাদ করে। অনুবাদ চালু বা বন্ধ করা সব Discord অ্যাপে প্রযোজ্য।"
   },
   "ur": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
@@ -13097,7 +13154,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "ایپ میں منتخب کردہ مترجم استعمال ہوتا ہے۔ مقامی ماڈل آپ کے PC پر متن پر کارروائی کرتے ہیں۔ بیرونی سروس (ChatGPT، Claude، Gemini یا DeepL) منتخب کرنے پر گفتگو اس سروس کو بھیجی جاتی ہے اور اس کی پالیسیاں لاگو ہوتی ہیں۔",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "اصل متن اور تراجم ایپ کے خفیہ کردہ کیشے میں اس کی مدتِ ذخیرہ (پہلے سے طے شدہ 30 دن) اور سابقہ ریکارڈ مٹانے کی ترتیبات کے مطابق محفوظ ہوتے ہیں۔ گفتگو بدلنے یا رضامندی واپس لینے سے پرانا کیشے حذف نہیں ہوتا۔ نجی براؤزنگ کا مواد محفوظ نہیں کیا جاتا۔",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "ویب میسنجر استعمال کرنے کے لیے مرکزی ایپ اور ایکسٹینشن دونوں اپ ڈیٹ کریں۔",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "نجی براؤزنگ میں مقامی ماڈل یا DeepL استعمال کریں۔ سبسکرپشن CLI کے بنائے ہوئے مقامی ریکارڈ کو کنٹرول نہیں کیا جا سکتا۔"
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "نجی براؤزنگ میں مقامی ماڈل یا DeepL استعمال کریں۔ سبسکرپشن CLI کے بنائے ہوئے مقامی ریکارڈ کو کنٹرول نہیں کیا جا سکتا۔",
+    "자동 · 사용 중인 창": "خودکار · فعال ونڈو",
+    "Discord 창 대기 중": "Discord ونڈو کا انتظار",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "خودکار موڈ صرف فعال Discord ونڈو کا ترجمہ کرتا ہے۔ ترجمہ آن یا آف کرنا تمام Discord ایپس پر لاگو ہوتا ہے۔"
   },
   "ta": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
@@ -13752,7 +13812,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "செயலியில் தேர்ந்தெடுத்த மொழிபெயர்ப்பி பயன்படுத்தப்படும். உள்ளூர் மாதிரிகள் உங்கள் PC-யில் உரையைச் செயலாக்கும். வெளிப்புறச் சேவையை (ChatGPT, Claude, Gemini அல்லது DeepL) தேர்ந்தெடுத்தால் உரையாடல்கள் அதற்கு அனுப்பப்பட்டு அதன் கொள்கைகள் பொருந்தும்.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "மூல உரையும் மொழிபெயர்ப்புகளும் செயலியின் மறையாக்கப்பட்ட தற்காலிகச் சேமிப்பில் வைக்கப்படும்; அதன் வைத்திருக்கும் காலம் (இயல்பாக 30 நாட்கள்) மற்றும் வரலாற்றை நீக்கும் அமைப்புகள் பொருந்தும். உரையாடலை மாற்றுவதோ ஒப்புதலைத் திரும்பப் பெறுவதோ ஏற்கனவே உள்ள சேமிப்பை நீக்காது. தனிப்பட்ட உலாவல் உள்ளடக்கம் சேமிக்கப்படாது.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "இணைய மெசஞ்சர்களைப் பயன்படுத்த முதன்மைச் செயலியையும் நீட்டிப்பையும் புதுப்பிக்கவும்.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "தனிப்பட்ட உலாவலில் உள்ளூர் மாதிரி அல்லது DeepL-ஐப் பயன்படுத்தவும். சந்தா CLI உருவாக்கும் உள்ளூர் பதிவுகளைக் கட்டுப்படுத்த முடியாது."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "தனிப்பட்ட உலாவலில் உள்ளூர் மாதிரி அல்லது DeepL-ஐப் பயன்படுத்தவும். சந்தா CLI உருவாக்கும் உள்ளூர் பதிவுகளைக் கட்டுப்படுத்த முடியாது.",
+    "자동 · 사용 중인 창": "தானியங்கு · செயலில் உள்ள சாளரம்",
+    "Discord 창 대기 중": "Discord சாளரத்திற்காகக் காத்திருக்கிறது",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "தானியங்கு பயன்முறை செயலில் உள்ள Discord சாளரத்தை மட்டும் மொழிபெயர்க்கும். மொழிபெயர்ப்பை இயக்குவது அல்லது முடக்குவது அனைத்து Discord பயன்பாடுகளுக்கும் பொருந்தும்."
   },
   "fa": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
@@ -14407,7 +14470,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "از مترجم انتخاب‌شده در برنامه استفاده می‌شود. مدل‌های محلی متن را روی رایانهٔ شما پردازش می‌کنند. با انتخاب سرویس خارجی (ChatGPT، Claude، Gemini یا DeepL)، گفتگوها به آن سرویس فرستاده می‌شوند و سیاست‌های آن اعمال می‌شود.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "متن اصلی و ترجمه‌ها در حافظهٔ نهان رمزگذاری‌شدهٔ برنامه و مطابق با دورهٔ نگهداری آن (پیش‌فرض ۳۰ روز) و تنظیمات حذف سابقه ذخیره می‌شوند. تغییر گفتگو یا پس‌گرفتن رضایت، حافظهٔ نهان قبلی را حذف نمی‌کند. محتوای مرور خصوصی ذخیره نمی‌شود.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "برای استفاده از پیام‌رسان‌های وب، برنامهٔ اصلی و افزونه را هر دو به‌روز کنید.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "در مرور خصوصی از مدل محلی یا DeepL استفاده کنید. سوابق محلی ایجادشده توسط CLIهای اشتراکی قابل‌کنترل نیستند."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "در مرور خصوصی از مدل محلی یا DeepL استفاده کنید. سوابق محلی ایجادشده توسط CLIهای اشتراکی قابل‌کنترل نیستند.",
+    "자동 · 사용 중인 창": "خودکار · پنجرهٔ فعال",
+    "Discord 창 대기 중": "در انتظار پنجرهٔ Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "حالت خودکار فقط پنجرهٔ فعال Discord را ترجمه می‌کند. روشن یا خاموش کردن ترجمه برای همهٔ برنامه‌های Discord اعمال می‌شود."
   },
   "he": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
@@ -15062,7 +15128,10 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "נעשה שימוש במתרגם שנבחר ביישום. מודלים מקומיים מעבדים טקסט במחשב שלך. בחירת שירות חיצוני (ChatGPT, Claude, Gemini או DeepL) שולחת אליו שיחות, והמדיניות שלו חלה עליהן.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "טקסט המקור והתרגומים נשמרים במטמון המוצפן של היישום, בהתאם לתקופת השמירה (30 יום כברירת מחדל) ולהגדרות מחיקת ההיסטוריה. החלפת שיחה או ביטול הסכמה אינם מוחקים את המטמון הקיים. תוכן מגלישה פרטית אינו נשמר.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "יש לעדכן גם את היישום הראשי וגם את התוסף כדי להשתמש בשירותי מסרים בדפדפן.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "בגלישה פרטית יש להשתמש במודל מקומי או ב-DeepL. לא ניתן לשלוט ברשומות מקומיות שיוצרים כלי CLI של שירותי מנוי."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "בגלישה פרטית יש להשתמש במודל מקומי או ב-DeepL. לא ניתן לשלוט ברשומות מקומיות שיוצרים כלי CLI של שירותי מנוי.",
+    "자동 · 사용 중인 창": "אוטומטי · החלון הפעיל",
+    "Discord 창 대기 중": "ממתין לחלון Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "המצב האוטומטי מתרגם רק את חלון Discord הפעיל. הפעלה או כיבוי של התרגום חלים על כל יישומי Discord."
   },
   "cs": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
@@ -15717,6 +15786,9 @@
     "앱에서 선택한 번역기를 사용합니다. 로컬 모델은 PC에서 처리합니다. 외부 서비스(ChatGPT·Claude·Gemini·DeepL)를 선택하면 대화가 해당 서비스로 전송되고 그 정책이 적용됩니다.": "Používá se překladač vybraný v aplikaci. Místní modely zpracovávají text na vašem počítači. Při výběru externí služby (ChatGPT, Claude, Gemini nebo DeepL) se jí konverzace odesílají a platí její zásady.",
     "본문과 번역문은 앱의 암호화 캐시에 저장되며 앱의 보관 기간(기본 30일)과 기록 삭제 설정을 따릅니다. 대화 전환이나 동의 철회만으로 기존 캐시가 삭제되지는 않습니다. 시크릿 창은 저장하지 않습니다.": "Původní text a překlady se ukládají do šifrované mezipaměti aplikace podle doby uchování (výchozí hodnota je 30 dní) a nastavení mazání historie. Změna konverzace ani odvolání souhlasu nesmaže stávající mezipaměť. Obsah anonymního prohlížení se neukládá.",
     "웹 메신저를 사용하려면 본체와 확장 프로그램을 모두 업데이트해 주십시오.": "Chcete-li používat webové komunikátory, aktualizujte hlavní aplikaci i rozšíření.",
-    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Při anonymním prohlížení použijte místní model nebo DeepL. Místní záznamy vytvářené předplacenými CLI nelze řídit."
+    "시크릿 창에서는 로컬 모델 또는 DeepL을 사용해 주십시오. 구독 CLI의 로컬 기록은 제어할 수 없습니다.": "Při anonymním prohlížení použijte místní model nebo DeepL. Místní záznamy vytvářené předplacenými CLI nelze řídit.",
+    "자동 · 사용 중인 창": "Automaticky · aktivní okno",
+    "Discord 창 대기 중": "Čekání na okno Discord",
+    "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": "Automatický režim překládá pouze aktivní okno Discord. Zapnutí nebo vypnutí překladu platí pro všechny aplikace Discord."
   }
 }

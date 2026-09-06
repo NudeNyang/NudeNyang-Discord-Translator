@@ -5,6 +5,7 @@ import {
 } from "./i18n.mjs";
 import { LANGUAGE_LABELS, LANGUAGE_OPTIONS } from "./languages.mjs";
 import { filterLanguageOptions } from "./language-search.mjs";
+import { discordConnectionLabel } from "./state.mjs";
 
 const invoke = window.__TAURI__?.core?.invoke;
 const listen = window.__TAURI__?.event?.listen;
@@ -236,14 +237,11 @@ function renderStatus(status, config) {
   status ||= currentStatus;
   const enabled = Boolean(status?.enabled ?? config?.enabled);
   const outgoingEnabled = Boolean(config?.outgoing_translation_enabled);
-  const connected = Boolean(status?.cdpConnected);
   elements.translationIndicator.classList.toggle("enabled", enabled);
   setTrayText(elements.translationState, enabled ? "켜짐" : "꺼짐");
   elements.outgoingTranslationIndicator.classList.toggle("enabled", outgoingEnabled);
   setTrayText(elements.outgoingTranslationState, outgoingEnabled ? "켜짐" : "꺼짐");
-  setTrayText(elements.engineSummary, connected
-    ? "Discord 연결됨"
-    : enabled ? "Discord 연결 중" : "번역 대기 중");
+  elements.engineSummary.textContent = [translateCopy(currentUiLanguage(), discordConnectionLabel(status)), status?.discordTargetName].filter(Boolean).join(" · ");
   const targetLanguage = config?.target_language || status?.targetLanguage || "ko";
   elements.targetLanguage.textContent = LANGUAGE_LABELS[targetLanguage] || "한국어";
   elements.targetLanguage.closest("button").dataset.tooltip = elements.targetLanguage.textContent;

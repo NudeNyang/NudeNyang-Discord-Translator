@@ -19,6 +19,13 @@ import {
   translatorRuntimeLabel,
 } from "../state.mjs";
 
+test("waiting for a Discord window is idle and does not restart the last used release", () => {
+  const status = { enabled: true, discordWaiting: true, cdpConnected: true, discordTarget: "canary" };
+  assert.equal(discordConnectionLabel(status), "Discord 창 대기 중");
+  assert.equal(shouldPromptRestart({ ...status, cdpConnected: false, connectionIssue: "needs pipe" }, {}), false);
+  assert.equal(shouldPromptRestart({ ...status, discordWaiting: false, cdpConnected: false, connectionIssue: "needs pipe" }, {}), true);
+});
+
 test("manual Discord restart appears only after automatic recovery is cancelled or fails", () => {
   assert.deepEqual(
     manualDiscordRestartAvailability(

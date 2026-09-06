@@ -79,9 +79,14 @@ The legacy origins remain supported because Discord desktop clients can use them
 domain migration completes. NudeNyang does not change Discord settings or migration state
 files. Arbitrary subdomains and CDN hosts are not accepted as chat renderers.
 
-The saved connection target can be automatic, Discord, Discord PTB, or Discord Canary. When
-multiple release variants are running, NudeNyang connects to and restarts only the explicitly
-selected installation. Other Discord processes remain untouched.
+The saved connection target can be automatic, Discord, Discord PTB, or Discord Canary.
+Automatic mode follows the foreground Discord installation, keeping independent CDP sessions
+for Stable, PTB and Canary. Switching to another application pauses new collection and result
+application while retaining existing translated DOM. The incoming/outgoing settings remain
+global; disabling incoming translation restores every connected installation. Explicit release
+selection filters foreground tracking to that installation. Restarts resolve the requested PID
+to its exact installation, including verification restarts after focus has changed. See
+[active-window behavior and validation](DISCORD_ACTIVE_WINDOW.md).
 
 A small local guardian retains the app-side pipe handles when NudeNyang closes. Reopening the app can reconnect to the same Discord process without interrupting a call or chat session. The guardian exits after the matching Discord process is gone.
 

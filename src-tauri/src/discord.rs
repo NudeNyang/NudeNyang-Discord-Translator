@@ -31,7 +31,7 @@ fn refresh_guardian_process(
         .or_else(|| lookup(None))
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DiscordVariant {
     Auto,
     Stable,
@@ -40,6 +40,21 @@ pub enum DiscordVariant {
 }
 
 impl DiscordVariant {
+    pub fn from_executable(path: &Path) -> Option<Self> {
+        let name = path.file_name()?.to_str()?;
+        [Self::Stable, Self::Ptb, Self::Canary]
+            .into_iter()
+            .find(|variant| variant.matches_name(name))
+    }
+
+    pub fn config_name(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Stable => "stable",
+            Self::Ptb => "ptb",
+            Self::Canary => "canary",
+        }
+    }
     pub fn from_config(value: &str) -> Result<Self, String> {
         match value {
             "auto" => Ok(Self::Auto),
@@ -64,7 +79,7 @@ impl DiscordVariant {
             .is_none_or(|(_, executable)| executable.eq_ignore_ascii_case(name))
     }
 
-    fn display_name(self) -> &'static str {
+    pub fn display_name(self) -> &'static str {
         match self {
             Self::Auto => "Discord",
             Self::Stable => "Discord",
@@ -91,6 +106,64 @@ fn configure_background(_command: &mut std::process::Command) {}
 pub struct DiscordProcess {
     pub process_id: u32,
     pub executable: PathBuf,
+}
+
+/// One process inventory for all release channels. Foreground renderer PIDs
+/// are matched to the same verified executable as their main process.
+pub fn running_with_foreground() -> (Vec<DiscordProcess>, Option<DiscordVariant>) {
+    let mut system = sysinfo::System::new();
+    system.refresh_processes_specifics(
+        sysinfo::ProcessesToUpdate::All,
+        true,
+        sysinfo::ProcessRefreshKind::nothing()
+            .with_exe(sysinfo::UpdateKind::Always)
+            .with_cmd(sysinfo::UpdateKind::Always),
+    );
+    let processes: Vec<_> = [
+        DiscordVariant::Stable,
+        DiscordVariant::Ptb,
+        DiscordVariant::Canary,
+    ]
+    .into_iter()
+    .filter_map(|variant| current_process_from_system(&system, variant))
+    .collect();
+    let foreground = crate::discord_focus::foreground_process_id()
+        .and_then(|pid| system.process(sysinfo::Pid::from_u32(pid)))
+        .and_then(|process| process.exe())
+        .filter(|path| {
+            processes
+                .iter()
+                .any(|process| normalized_path(&process.executable) == normalized_path(path))
+        })
+        .and_then(|path| DiscordVariant::from_executable(path));
+    (processes, foreground)
+}
+
+pub fn restart_variant(
+    configured: DiscordVariant,
+    expected: Option<u32>,
+) -> Result<DiscordVariant, String> {
+    if let Some(expected) = expected {
+        for variant in [
+            DiscordVariant::Stable,
+            DiscordVariant::Ptb,
+            DiscordVariant::Canary,
+        ] {
+            if configured != DiscordVariant::Auto && configured != variant {
+                continue;
+            }
+            if current_process(variant).is_some_and(|process| process.process_id == expected) {
+                return Ok(variant);
+            }
+        }
+        return Err(
+            "선택한 Discord 프로세스가 변경되었습니다. 연결 상태를 다시 확인하십시오.".to_string(),
+        );
+    }
+    if configured == DiscordVariant::Auto {
+        return Err("연결할 Discord 창을 먼저 선택하십시오.".to_string());
+    }
+    Ok(configured)
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -40,6 +40,14 @@ impl Translator for MockTranslator {
         source: Language,
         target: Language,
     ) -> Result<String, String> {
+        #[cfg(test)]
+        if std::env::var("NUDENYANG_DISCORD_E2E").as_deref() == Ok("1") {
+            if let Ok(delay) = std::env::var("NUDENYANG_MOCK_DELAY_MS") {
+                std::thread::sleep(std::time::Duration::from_millis(
+                    delay.parse::<u64>().unwrap_or(0).min(2000),
+                ));
+            }
+        }
         if source == target {
             Ok(text.to_string())
         } else {

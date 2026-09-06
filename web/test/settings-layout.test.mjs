@@ -43,12 +43,11 @@ test("cancelled or failed automatic recovery exposes a quiet manual Discord rest
   assert.match(styles, /\.button\.secondary\.engine-restart-button\[hidden\]\s*\{[^}]*display:\s*none;/s);
   assert.match(styles, /\.engine-restart-icon\s*\{[^}]*width:\s*16px;[^}]*stroke-width:\s*2;/s);
   assert.match(styles, /\.engine-restart-button\[data-state="working"\] \.engine-restart-icon\s*\{[^}]*animation:\s*engine-restart-spin/s);
-  assert.match(rustMain, /let display_was_enabled = client\.status\(\)\?\.enabled;/);
-  assert.match(rustMain, /client\.set_enabled\(display_was_enabled\)/);
   const restartCommand = rustMain.match(/async fn discord_restart\([\s\S]*?\n\}/)?.[0] || "";
   assert.match(restartCommand, /discord::restart_pipe\(expected_process_id, discord_variant\)/);
-  assert.doesNotMatch(restartCommand, /connect_or_restart_pipe/);
-  assert.match(rustEngine, /ReplaceCdp\(CdpClient, mpsc::Sender<Result<\(\), String>>\)/);
+  assert.doesNotMatch(restartCommand, /connect_or_restart_pipe|set_enabled/);
+  assert.match(restartCommand, /discord::restart_variant\(discord_variant, expected_process_id\)/);
+  assert.match(rustEngine, /ReplaceCdp\([\s\S]*?DiscordProcess,[\s\S]*?CdpClient,[\s\S]*?mpsc::Sender<Result<\(\), String>>/);
   assert.match(rustEngine, /recv_timeout\(Duration::from_secs\(30\)\)/);
 });
 
@@ -359,7 +358,7 @@ test("convenience panel exposes the Discord target and global translation toggle
   assert.ok(uiLanguageIndex < settingsThemeIndex);
   assert.ok(settingsThemeIndex < discordSelectionIndex);
   assert.match(markup, /<h3>Discord 선택<\/h3>/);
-  assert.match(markup, /번역을 적용할 Discord 앱을 선택합니다\./);
+  assert.match(markup, /사용 중인 Discord 창만 번역합니다\./);
   assert.match(markup, /data-field="discord_variant"/);
   assert.match(script, /\["stable", "Discord"\]/);
   assert.match(script, /\["ptb", "Discord PTB"\]/);
