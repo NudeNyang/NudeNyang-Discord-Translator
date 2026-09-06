@@ -12,6 +12,7 @@ use crate::translation::HyMtModelSize;
 
 const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Discord-Translator";
 const WEB_EXTENSION_SETUP_VERSION: u32 = 1;
+const DISCORD_ACTIVE_WINDOW_SETUP_VERSION: u32 = 1;
 const LEGACY_UPDATE_REPOSITORIES: &[&str] = &[
     "NudeNyang/NudeNyang-Translator",
     "NudeNyang/DiscordTranslateOverlay",
@@ -102,6 +103,7 @@ pub struct AppConfig {
     pub auto_update: bool,
     pub update_repository: String,
     pub discord_variant: String,
+    pub discord_active_window_setup_version: u32,
     pub discord_auto_restart_consent_granted: bool,
     pub discord_verification_mode: bool,
     pub discord_verification_variants: Vec<String>,
@@ -151,6 +153,7 @@ impl Default for AppConfig {
             auto_update: true,
             update_repository: DEFAULT_UPDATE_REPOSITORY.to_string(),
             discord_variant: "auto".to_string(),
+            discord_active_window_setup_version: DISCORD_ACTIVE_WINDOW_SETUP_VERSION,
             discord_auto_restart_consent_granted: false,
             discord_verification_mode: false,
             discord_verification_variants: Vec::new(),
@@ -680,12 +683,25 @@ fn load_config(path: &Path) -> Result<AppConfig, String> {
         .get("web_extension_setup_version")
         .and_then(Value::as_u64)
         .unwrap_or(0);
+    let discord_setup_version = value
+        .get("discord_active_window_setup_version")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
     let mut config = AppConfig::from_value(value)?;
+    let mut migrated = false;
     if setup_version < u64::from(WEB_EXTENSION_SETUP_VERSION) {
         // Persist before the engine starts. Later explicit opt-ins survive
         // restarts, even if the user changes no other settings this session.
         config.web_translation_enabled = false;
         config.web_extension_setup_version = WEB_EXTENSION_SETUP_VERSION;
+        migrated = true;
+    }
+    if discord_setup_version < u64::from(DISCORD_ACTIVE_WINDOW_SETUP_VERSION) {
+        config.discord_variant = "auto".to_string();
+        config.discord_active_window_setup_version = DISCORD_ACTIVE_WINDOW_SETUP_VERSION;
+        migrated = true;
+    }
+    if migrated {
         save_config(path, &config)?;
     }
     Ok(config)
@@ -803,6 +819,75 @@ mod tests {
         assert!(store.set_browser_connection("chrome", false).is_err());
         assert!(store.get().unwrap().disabled_browser_connections.is_empty());
         fs::remove_dir(path).unwrap();
+    }
+
+    #[test]
+    fn discord_active_window_setup_changes_only_target_once() {
+        for variant in ["stable", "ptb", "canary", "auto"] {
+            let path = temporary_settings_path("discord-active-window-setup");
+            let mut expected = AppConfig::from_value(json!({
+                "discord_variant": variant,
+                "enabled": false,
+                "outgoing_translation_enabled": true,
+                "web_translation_enabled": true,
+                "target_language": "en",
+                "outgoing_target_language": "ja",
+                "translator": "deepl",
+                "outgoing_translator": "chatgpt",
+                "ui_theme": "light",
+                "translate_nicknames": false,
+                "discord_auto_restart_consent_granted": true,
+                "discord_verification_variants": ["canary"],
+                "hotkeys": {"toggle_translation": "F10"}
+            }))
+            .unwrap();
+            let mut legacy = serde_json::to_value(&expected).unwrap();
+            legacy
+                .as_object_mut()
+                .unwrap()
+                .remove("discord_active_window_setup_version");
+            fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+            expected.discord_variant = "auto".to_string();
+            let store = ConfigStore::load(path.clone()).unwrap();
+            assert_eq!(
+                store.get().unwrap(),
+                expected,
+                "only Discord selection and its migration marker may change"
+            );
+            let saved: serde_json::Value =
+                serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            assert_eq!(
+                saved,
+                serde_json::to_value(&expected).unwrap(),
+                "migration must persist before any settings edit"
+            );
+            assert_eq!(
+                ConfigStore::load(path.clone()).unwrap().get().unwrap(),
+                expected
+            );
+            for choice in ["ptb", "stable", "canary"] {
+                let updated = store.update(json!({"discord_variant": choice})).unwrap();
+                assert_eq!(
+                    ConfigStore::load(path.clone()).unwrap().get().unwrap(),
+                    updated
+                );
+                assert_eq!(updated.discord_variant, choice);
+            }
+            fs::remove_file(path).unwrap();
+        }
+    }
+
+    #[test]
+    fn new_users_keep_their_first_explicit_discord_selection() {
+        let path = temporary_settings_path("new-discord-active-window-setup");
+        let store = ConfigStore::load(path.clone()).unwrap();
+        assert_eq!(store.get().unwrap().discord_variant, "auto");
+        let chosen = store.update(json!({"discord_variant": "ptb"})).unwrap();
+        assert_eq!(
+            ConfigStore::load(path.clone()).unwrap().get().unwrap(),
+            chosen
+        );
+        fs::remove_file(path).unwrap();
     }
 
     #[test]

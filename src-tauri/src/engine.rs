@@ -448,6 +448,9 @@ impl DiscordSession {
             c.enabled = {outgoing}; c.displayEnabled = {display};
             c.displayControlVisible = {display_visible}; c.outgoingControlVisible = {outgoing_visible};
             c.updateLabel();
+            // Apply the same composer/media visibility rules as the active
+            // collector before painting. Label updates alone unhide controls.
+            c.reposition();
         }})()"#,
             outgoing = config.outgoing_translation_enabled,
             display = config.enabled

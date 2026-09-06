@@ -191,3 +191,48 @@ test("verification restart stays on its requested release after focus changes", 
     await expect.poll(async () => (await app.call("status")).verificationRequired).toBe(true);
   } finally { await app.close(); }
 });
+
+test("background heartbeats never reveal the outgoing button in a read-only channel", async () => {
+  const app = await fixture();
+  try {
+    await app.pages.stable.evaluate(() => {
+      document.querySelector('[role="textbox"]').remove();
+      document.querySelector('.channelTextArea_fixture').style.height = '80px';
+    });
+    await app.focus("stable");
+    const outgoing = app.pages.stable.locator('.nt-outgoing-control');
+    await expect(app.pages.stable.locator('.nt-display-control')).toBeVisible();
+    await expect(outgoing).toBeHidden();
+    await app.focus("canary");
+    await app.pages.stable.evaluate(() => {
+      window.buttonVisibilitySamples = [];
+      window.buttonVisibilityTimer = setInterval(() => {
+        const root = document.querySelector('#nt-outgoing-translation');
+        const button = root?.querySelector('.nt-outgoing-control');
+        if (button && !button.hidden && !root.hidden && getComputedStyle(root).visibility !== 'hidden') {
+          window.buttonVisibilitySamples.push(window.__nudeTranslatorOutgoing.lastHeartbeat);
+        }
+      }, 20);
+    });
+    const heartbeat = await app.pages.stable.evaluate(() => window.__nudeTranslatorOutgoing.lastHeartbeat);
+    await expect.poll(() => app.pages.stable.evaluate(() => window.__nudeTranslatorOutgoing.lastHeartbeat)).toBeGreaterThan(heartbeat + 2200);
+    expect(await app.pages.stable.evaluate(() => {
+      clearInterval(window.buttonVisibilityTimer);
+      return window.buttonVisibilitySamples;
+    })).toEqual([]);
+    await expect(outgoing).toBeHidden();
+    await expect(app.pages.canary.locator('.nt-outgoing-control')).toBeVisible();
+    // Layout changes in the parked window still update control visibility,
+    // without collecting its messages or submitting a draft.
+    await app.pages.stable.evaluate(() => {
+      const editor = document.createElement('div');
+      editor.setAttribute('role', 'textbox');
+      editor.contentEditable = 'true';
+      editor.style.minHeight = '80px';
+      document.querySelector('.channelTextArea_fixture').append(editor);
+    });
+    await expect(outgoing).toBeVisible();
+    await app.pages.stable.evaluate(() => document.querySelector('[role="textbox"]').remove());
+    await expect(outgoing).toBeHidden();
+  } finally { await app.close(); }
+});
