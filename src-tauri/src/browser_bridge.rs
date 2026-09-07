@@ -169,24 +169,35 @@ fn handle_bridge_connection(
     expected_token: &str,
     app: &AppHandle,
 ) -> Result<(), String> {
-    stream
-        .set_read_timeout(Some(Duration::from_secs(190)))
-        .map_err(|error| format!("브리지 읽기 제한 시간을 설정하지 못했습니다: {error}"))?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(10)))
-        .map_err(|error| format!("브리지 쓰기 제한 시간을 설정하지 못했습니다: {error}"))?;
-    let request_bytes = read_line_limited(&mut stream)?;
-    let envelope = parse_bridge_envelope(&request_bytes)?;
-    if !tokens_equal(&envelope.token, expected_token) {
-        return Err("브라우저 번역 브리지 인증에 실패했습니다.".to_string());
-    }
-    let response = dispatch_request(app, envelope.request);
+    let request = read_bridge_request(&mut stream, expected_token)?;
+    let response = dispatch_request(app, request);
     let mut encoded = serde_json::to_vec(&response)
         .map_err(|error| format!("브라우저 번역 응답을 만들지 못했습니다: {error}"))?;
     encoded.push(b'\n');
     stream
         .write_all(&encoded)
         .map_err(|error| format!("브라우저 번역 응답을 전송하지 못했습니다: {error}"))
+}
+
+fn read_bridge_request(stream: &mut TcpStream, expected_token: &str) -> Result<Value, String> {
+    // Winsock accepted sockets inherit the listener's nonblocking mode. The
+    // listener polls for shutdown, but a request must wait for all TCP fragments
+    // within the existing timeout instead of failing immediately with 10035.
+    stream
+        .set_nonblocking(false)
+        .map_err(|error| format!("브리지 요청 대기 방식을 설정하지 못했습니다: {error}"))?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(190)))
+        .map_err(|error| format!("브리지 읽기 제한 시간을 설정하지 못했습니다: {error}"))?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(10)))
+        .map_err(|error| format!("브리지 쓰기 제한 시간을 설정하지 못했습니다: {error}"))?;
+    let request_bytes = read_line_limited(stream)?;
+    let envelope = parse_bridge_envelope(&request_bytes)?;
+    if !tokens_equal(&envelope.token, expected_token) {
+        return Err("브라우저 번역 브리지 인증에 실패했습니다.".to_string());
+    }
+    Ok(envelope.request)
 }
 
 fn parse_bridge_envelope(bytes: &[u8]) -> Result<BridgeEnvelope, String> {
@@ -909,6 +920,51 @@ mod tests {
     use serde_json::json;
     use std::ffi::OsString;
     use std::io::Cursor;
+
+    fn delayed_bridge_request(
+        first_chunk: &[u8],
+        delayed_chunk: &[u8],
+    ) -> Result<serde_json::Value, String> {
+        use std::io::Write;
+        use std::net::{TcpListener, TcpStream};
+        use std::thread;
+        use std::time::Duration;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let mut client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let (mut accepted, _) = listener.accept().unwrap();
+        // Windows inherits this from the listener. Set it explicitly so the
+        // regression also exercises the Windows precondition on other hosts.
+        accepted.set_nonblocking(true).unwrap();
+        client.write_all(first_chunk).unwrap();
+        let delayed_chunk = delayed_chunk.to_vec();
+        let sender = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(100));
+            client.write_all(&delayed_chunk)
+        });
+        let result = super::read_bridge_request(&mut accepted, "test-token");
+        sender.join().unwrap().unwrap();
+        result
+    }
+
+    #[test]
+    fn bridge_waits_for_request_after_accepting_connection() {
+        let request = delayed_bridge_request(
+            b"",
+            b"{\"token\":\"test-token\",\"request\":{\"type\":\"status\"}}\n",
+        );
+        assert_eq!(request.unwrap(), json!({"type": "status"}));
+    }
+
+    #[test]
+    fn bridge_waits_for_remaining_request_fragments() {
+        let request = delayed_bridge_request(
+            b"{\"token\":\"test-token\",\"request\":",
+            b"{\"type\":\"status\"}}\n",
+        );
+        assert_eq!(request.unwrap(), json!({"type": "status"}));
+    }
 
     #[test]
     fn private_malformed_bridge_requests_never_echo_supplied_values() {

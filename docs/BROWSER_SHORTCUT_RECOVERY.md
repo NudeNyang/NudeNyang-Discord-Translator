@@ -2,6 +2,52 @@
 
 현재 미공개 개발본의 전체 ON/OFF와 새 탭 동작은 [전체 웹 번역 정책](WEB_TRANSLATION_GLOBAL_SWITCH.md)을 따른다. 아래 탭별 수동 시작 설명은 이전 구현 기록이다.
 
+## 2026-09-07: 연결 표시 중 간헐적인 본체 요청 실패
+
+실행 중인 Windows 본체에서 같은 `status` 요청을 연결 직후 보내면 성공했지만,
+100ms 뒤 보내면 연결이 끊기는 현상을 두 차례씩 교차 재현했다. 본체 로그에는
+`browser-bridge`의 소켓 오류 `10035`가 남았다. 페이지 콘솔의 `batch-failed`와
+팝업의 `연결됨`·`오류` 동시 표시도 관찰했다. 팝업의 이전 연결 확인 성공은 이후
+페이지 상태 조회나 번역 요청의 성공을 보증하지 않는다.
+
+브리지 수신 대기는 종료 확인을 위해 nonblocking 모드지만 Windows에서는 수락한
+연결에도 이 모드가 상속된다. 기존 코드는 수신 제한 시간만 설정하고 바로 읽어서
+요청이 아직 도착하지 않았거나 일부만 도착한 경우 즉시 실패했다.
+[Microsoft Winsock accept 문서](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept)의 연결 속성 상속 규칙과 일치한다.
+
+수락한 연결만 blocking 모드로 바꾸고 기존 읽기·쓰기 제한 시간을 유지한다.
+요청 파싱·인증을 공통 함수로 분리하여 실제 TCP 연결로 첫 전송 지연과 분할 전송을
+검증한다. 두 회귀 테스트는 수정 전 `10035`로 실패하고 수정 후 통과했다.
+인증 키, 요청 크기 제한, 웹 동의·브라우저 사용 중지와 Discord 인증 보호는 유지한다.
+Discord의 `인증 호환 모드` 자체가 웹 번역을 금지하는 정책은 아니다.
+
+이 수정은 본체 통신 경로에 적용된다. 확장 소스·권한·버전은 변경하지 않는다.
+주소창 포커스, 사이트의 키 이벤트 선점, 확장 재로드 후 기존 탭 등의 별도 F4 원인이
+모두 해결됐다는 의미는 아니다. 아래 과거 검증 및 격리 Chromium E2E는 실제 본체
+통신·Whale에서의 검증과 구분한다.
+
+### 이번 수정의 검증 결과
+
+- `cargo test --manifest-path src-tauri/Cargo.toml browser_bridge::tests::bridge_waits -- --nocapture`:
+  수정 전 2개 실패(`10035`), 수정 후 2개 통과.
+- `cargo test --manifest-path src-tauri/Cargo.toml`: 486개 통과, 기존 제외 50개.
+- `npm test`: 780개 통과.
+- `npm run test:e2e`: 전체 180개 통과(3.1분). 격리 Chromium·HTML fixture와 모사
+  Native Messaging을 사용하며 실제 본체 통신 검증은 아래와 별개다.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`, `git diff --check`: 통과.
+- `scripts/package_windows_variants.ps1`: x64·ARM64 설치형 생성 성공.
+- 최신 x64 실행본의 실제 인증 브리지: 즉시·100ms 지연·분할·100ms 지연 상태 요청
+  4개 모두 성공. `incognito: true` 합성 문장을 분할 전송하여 실제 로컬 Hy-MT2
+  모델의 한국어 `translationResult` 응답도 확인했다. 사용자 페이지 본문을
+  진단 요청으로 복사하거나 저장하지 않았다.
+- 자동 브라우저 도구의 F4 입력에서는 화면 전환을 확정하지 못했지만, 최신 본체로
+  다시 실행한 뒤 사용자가 Whale에서 직접 F4를 눌러 정상 전환을 확인했다.
+  Chrome·Firefox의 실제 사용자 프로필 및 ARM64 기기 실행은 검사하지 않았다.
+
+본체는 `dist/NudeNyangDiscordTranslator/NudeNyangDiscordTranslator.exe`의
+`0.7.5-beta` 실행본으로 적용했으며 루트 Tauri 바로가기의 대상·작업 폴더·아이콘과
+실행 중 프로세스 경로·제품 버전을 확인했다. 공개 배포·확장 업데이트는 수행하지 않았다.
+
 ## 원인과 수정
 
 확장 0.7.8의 로컬 수정이다. 버전과 개인정보 동의 버전은 변경하지 않는다.
