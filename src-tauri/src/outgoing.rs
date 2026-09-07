@@ -1599,6 +1599,15 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       translationEnabled: displayTranslationEnabled,
       records: new Map(),
       applyScheduled: false,
+      isManagedMessage(root) {
+        const channel = location.pathname.startsWith('/channels/') ? location.pathname : '';
+        const record = this.records.get(`${channel}|${messageId(root)}`);
+        if (!record) return false;
+        // Keep the editor protected, but a saved ID alone must not suppress
+        // translation after the user changes the sent message.
+        return isEditingMessage(root)
+          || comparableMessageText(sentTextForMatching(root)) === comparableMessageText(record.sent_text);
+      },
       register(record) {
         if (!record?.message_id || !record?.channel_key) return;
         this.records.set(recordKey(record), record);
@@ -1658,8 +1667,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
             detachView(root);
             continue;
           }
-          const currentText = comparableMessageText(sentTextForMatching(root));
-          if (currentText !== comparableMessageText(record.sent_text)) {
+          if (!this.isManagedMessage(root)) {
             detachView(root);
             continue;
           }
@@ -1972,7 +1980,7 @@ pub fn outgoing_originals_ui_script(
         ))
 }
 
-pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 20;
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 21;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();
@@ -2408,8 +2416,10 @@ mod tests {
             "comparableMessageText(originalText(candidate)) === comparableMessageText(item.sent_text)"
         ));
         assert!(originals.contains("function comparableMessageText(value)"));
-        assert!(originals
-            .contains("const currentText = comparableMessageText(sentTextForMatching(root))"));
+        assert!(originals.contains("isManagedMessage(root)"));
+        assert!(originals.contains(
+            "comparableMessageText(sentTextForMatching(root)) === comparableMessageText(record.sent_text)"
+        ));
         assert!(!originals.contains("node.nodeValue = originals.get(node)"));
         assert!(originals.contains("comparableMessageText(record.sent_text)"));
     }
@@ -2450,7 +2460,7 @@ mod tests {
         assert!(script.contains("function detachView(root)"));
         assert!(script.contains("if (isEditingMessage(root))"));
         assert!(script.contains("cleanupDetachedViews()"));
-        assert!(script.contains("if (currentText !== comparableMessageText(record.sent_text))"));
+        assert!(script.contains("if (!this.isManagedMessage(root))"));
         let destructive_replacement = ["root.textContent", " = record.sent_text"].concat();
         assert!(!script.contains(&destructive_replacement));
     }

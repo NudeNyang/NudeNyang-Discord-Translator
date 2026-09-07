@@ -89,6 +89,8 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     return [...roots];
   }
   function isOutgoingMessage(root) {
+    const currentManager = window.__nudeTranslatorOutgoingOriginalDisplay;
+    if (typeof currentManager?.isManagedMessage === 'function') return currentManager.isManagedMessage(root);
     if (root.getAttribute('data-nt-outgoing-original') === 'true') return true;
     const manager = window.__nudeTranslatorOutgoingOriginalDisplay;
     if (!(manager?.records instanceof Map)) return false;
@@ -706,6 +708,8 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     return nodes;
   }}
   function isOutgoingMessage(root) {{
+    const currentManager = window.__nudeTranslatorOutgoingOriginalDisplay;
+    if (typeof currentManager?.isManagedMessage === 'function') return currentManager.isManagedMessage(root);
     if (root?.getAttribute('data-nt-outgoing-original') === 'true') return true;
     const manager = window.__nudeTranslatorOutgoingOriginalDisplay;
     if (!(manager?.records instanceof Map)) return false;

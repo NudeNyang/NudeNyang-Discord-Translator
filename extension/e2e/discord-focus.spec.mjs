@@ -82,6 +82,63 @@ async function fixture({ delay = 0 } = {}) {
   return { pages, clients, context, text, call, focus, message, close, directory };
 }
 
+test("edited outgoing messages return to translation while editing, cancel and remount preserve saved originals", async () => {
+  test.setTimeout(60_000);
+  const app = await fixture();
+  try {
+    await app.focus("stable");
+    const originalScript = await app.call("outgoingOriginal", { record: { message_id: "2", channel_key: "/channels/1/2",
+      original_text: "처음 작성한 원문입니다.", sent_text: app.text, part_number: 1, total_parts: 1, created_at: Date.now() / 1000 } });
+    const page = app.pages.stable;
+    await page.evaluate(originalScript);
+    const view = page.locator('.nt-outgoing-original-view');
+    await expect(view).toHaveCount(1);
+    await expect(app.message("stable")).toBeHidden();
+    // Discord remounts a message during scrolling without changing its ID.
+    await page.evaluate(text => { const old = document.querySelector('#message-content-2'); const node = old.cloneNode(false); node.textContent = text; old.replaceWith(node); }, app.text);
+    await expect(view).toHaveCount(1);
+    await expect(app.message("stable")).toHaveText(app.text);
+    await page.evaluate(() => {
+      const editor = document.createElement('div'); editor.role = 'textbox'; editor.contentEditable = 'true';
+      editor.textContent = 'An unfinished edit must remain untouched.';
+      document.querySelector('#chat-messages-1-2').append(editor);
+    });
+    await expect(view).toHaveCount(0);
+    await expect(page.locator('#chat-messages-1-2 [role=textbox]')).toHaveText('An unfinished edit must remain untouched.');
+    await page.locator('#chat-messages-1-2 [role=textbox]').evaluate(node => node.remove());
+    await expect(view).toHaveCount(1);
+    const edited = 'The updated message asks about reference pictures.';
+    await app.message('stable').evaluate((node, text) => { node.textContent = text; }, edited);
+    await expect(view).toHaveCount(0);
+    await expect(app.message('stable')).toHaveText(`[ko] ${edited}`);
+    await app.call('enabled', {enabled:false});
+    await expect(app.message('stable')).toHaveText(edited);
+    await app.call('enabled', {enabled:true});
+    await expect(app.message('stable')).toHaveText(`[ko] ${edited}`);
+    const editedAgain = 'The second edit also asks about the number of guests.';
+    await app.message('stable').evaluate((node, text) => { node.firstChild.nodeValue = text; }, editedAgain);
+    await expect(app.message('stable')).toHaveText(`[ko] ${editedAgain}`);
+    await app.call('enabled', {enabled:false});
+    await expect(app.message('stable')).toHaveText(editedAgain);
+  } finally { await app.close(); }
+});
+
+test("a newer Discord edit survives a translation already in flight", async () => {
+  test.setTimeout(45_000);
+  const app = await fixture({delay:1000});
+  try {
+    await app.focus('stable');
+    await expect(app.message('stable')).toHaveText(`[ko] ${app.text}`);
+    await app.message('stable').evaluate(node => { node.textContent = 'The first edited sentence is waiting for translation.'; });
+    await new Promise(resolveWait => setTimeout(resolveWait, 500));
+    const latest = 'The latest edit must be kept instead of the previous request.';
+    await app.message('stable').evaluate((node, text) => { node.textContent = text; }, latest);
+    await expect(app.message('stable')).toHaveText(`[ko] ${latest}`);
+    await app.call('enabled', {enabled:false});
+    await expect(app.message('stable')).toHaveText(latest);
+  } finally { await app.close(); }
+});
+
 test("three releases follow focus; inactive windows retain text; the global switch restores every window", async () => {
   test.setTimeout(60_000);
   const app = await fixture();

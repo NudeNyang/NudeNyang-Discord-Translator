@@ -102,6 +102,17 @@ fn discord_focus_e2e_driver() {
                 engine.apply_config(config.clone()).unwrap();
                 json!({"ok":true})
             }
+            "outgoingOriginal" => {
+                let record: crate::cache::OutgoingOriginalRecord =
+                    serde_json::from_value(command["record"].clone()).unwrap();
+                json!(outgoing_originals_ui_script(
+                    &record.channel_key.clone(),
+                    &[record],
+                    "ko",
+                    config.enabled
+                )
+                .unwrap())
+            }
             "enabled" => {
                 config.enabled = command["enabled"].as_bool().unwrap();
                 engine.set_enabled(config.enabled).unwrap();
