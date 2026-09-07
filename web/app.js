@@ -3028,6 +3028,7 @@ async function pollRuntime() {
 async function handleRestartRequired(status) {
   state.promptActive = true;
   try {
+    await invoke("main_window_show");
     if (!(await ensureRestartConsent())) {
       state.restartAttempted = true;
       state.manualRestartRequired = true;

@@ -454,7 +454,7 @@ test("system autostart initialization and registry work stay off the setup threa
   assert.doesNotMatch(setup, /synchronize_discord_startup\(/);
 });
 
-test("Windows autostart owns one private Discord pipe and safely migrates old registrations", () => {
+test("Windows autostart owns private Discord pipes per release and safely migrates old registrations", () => {
   const startupRuntime = discordStartup.split("#[cfg(test)]")[0];
   assert.doesNotMatch(startupRuntime, /--remote-debugging-port=9222/);
   assert.match(discord, /"--force-renderer-accessibility"/);
@@ -464,7 +464,7 @@ test("Windows autostart owns one private Discord pipe and safely migrates old re
   assert.match(discordStartup, /fn suppress_registration/);
   assert.match(discordStartup, /managed:\s*None/);
   assert.match(rustMain, /start_pipe_discord_for_autostart/);
-  assert.match(rustMain, /discord_startup::suppress\(\)/);
+  assert.match(rustMain, /discord_startup::suppress\(selected\)/);
   assert.match(rustMain, /discord_startup::restore\(\)/);
   assert.match(rustMain, /--restore-discord-startup/);
   assert.match(installerHooks, /NSIS_HOOK_PREUNINSTALL/);

@@ -4,8 +4,10 @@ import { mkdtemp, readFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { shouldPromptRestart } from "../../web/state.mjs";
 
 test.describe.configure({ mode: "serial" });
+test.use({ channel: "chromium" });
 test.skip(process.platform !== "win32", "Windows Discord controller integration");
 let binary;
 
@@ -235,4 +237,36 @@ test("background heartbeats never reveal the outgoing button in a read-only chan
     await app.pages.stable.evaluate(() => document.querySelector('[role="textbox"]').remove());
     await expect(outgoing).toBeHidden();
   } finally { await app.close(); }
+});
+
+test("a normal PTB or Canary still requests recovery while Stable remains connected", async () => {
+  const app = await fixture();
+  try {
+    await app.call("clients", { clients: app.clients.map(client => client.variant === "stable" ? client : { ...client, endpoint: "ws://127.0.0.1:1/unavailable" }) });
+    await app.focus("stable");
+    await expect(app.message("stable")).toContainText("[ko]");
+    for (const variant of ["ptb", "canary"]) {
+      await app.focus(variant);
+      await expect.poll(async () => shouldPromptRestart(await app.call("status"), {})).toBe(true);
+      const status = await app.call("status");
+      expect(status.discordProcessId).toBe(app.clients.find(client => client.variant === variant).pid);
+      await expect(app.message("stable")).toContainText("[ko]");
+    }
+  } finally { await app.close(); }
+});
+
+test("automatic recovery reveals the native settings window before asking for consent", async ({ page }) => {
+  const source = await readFile(new URL("../../web/app.js", import.meta.url), "utf8");
+  const handler = source.slice(source.indexOf("async function handleRestartRequired("), source.indexOf("async function restartDiscordManually("));
+  const events = await page.evaluate(async handler => {
+    const events = [];
+    const state = {};
+    const invoke = async command => { events.push(command); };
+    const ensureRestartConsent = async () => { events.push("consent"); return false; };
+    const renderManualDiscordRestart = () => {};
+    const showError = async () => { events.push("error"); };
+    await eval(`(${handler})`)({ discordProcessId: 11 });
+    return events;
+  }, handler);
+  expect(events).toEqual(["main_window_show", "consent"]);
 });

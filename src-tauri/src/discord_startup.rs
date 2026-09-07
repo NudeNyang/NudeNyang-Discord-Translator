@@ -1,3 +1,11 @@
+use crate::discord::DiscordVariant;
+
+const RELEASES: [DiscordVariant; 3] = [
+    DiscordVariant::Stable,
+    DiscordVariant::Ptb,
+    DiscordVariant::Canary,
+];
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RegistryStringKind {
     String,
@@ -24,6 +32,9 @@ trait DiscordStartupRegistry {
     fn write_backup(&mut self, backup: &DiscordStartupBackup) -> Result<(), String>;
     fn delete_backup(&mut self) -> Result<(), String>;
     fn safe_default_command(&self) -> Option<DiscordStartupCommand>;
+    fn startup_enabled(&self) -> Result<bool, String> {
+        Ok(true)
+    }
 }
 
 fn restore_registration<R: DiscordStartupRegistry>(registry: &mut R) -> Result<(), String> {
@@ -100,16 +111,79 @@ mod windows_registry {
     use winreg::{RegKey, RegValue};
 
     const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-    const DISCORD_VALUE: &str = "Discord";
     const BACKUP_KEY: &str = r"Software\NudeNyang Discord Translator\DiscordStartupBackup";
     const LEGACY_BACKUP_KEY: &str = r"Software\NudeNyang Translator\DiscordStartupBackup";
 
-    pub(super) struct WindowsDiscordStartupRegistry;
+    pub(super) struct WindowsDiscordStartupRegistry {
+        variant: crate::discord::DiscordVariant,
+        run_key: String,
+        backup_key: String,
+        legacy_backup_key: String,
+        approved_key: String,
+    }
+
+    impl WindowsDiscordStartupRegistry {
+        pub(super) fn new(variant: crate::discord::DiscordVariant) -> Self {
+            let suffix = if variant == crate::discord::DiscordVariant::Stable {
+                String::new()
+            } else {
+                format!("-{}", variant.config_name())
+            };
+            Self {
+                variant,
+                run_key: RUN_KEY.to_string(),
+                backup_key: format!("{BACKUP_KEY}{suffix}"),
+                legacy_backup_key: format!("{LEGACY_BACKUP_KEY}{suffix}"),
+                approved_key:
+                    r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
+                        .to_string(),
+            }
+        }
+
+        fn value_name(&self) -> &'static str {
+            match self.variant {
+                crate::discord::DiscordVariant::Stable => "Discord",
+                crate::discord::DiscordVariant::Ptb => "DiscordPTB",
+                crate::discord::DiscordVariant::Canary => "DiscordCanary",
+                crate::discord::DiscordVariant::Auto => unreachable!("concrete release required"),
+            }
+        }
+
+        #[cfg(test)]
+        pub(super) fn isolated(variant: crate::discord::DiscordVariant, root: &str) -> Self {
+            let mut registry = Self::new(variant);
+            registry.run_key = format!(r"{root}\Run");
+            registry.backup_key = format!(r"{root}\{}", registry.backup_key);
+            registry.legacy_backup_key = format!(r"{root}\{}", registry.legacy_backup_key);
+            registry.approved_key = format!(r"{root}\StartupApproved");
+            registry
+        }
+    }
 
     impl DiscordStartupRegistry for WindowsDiscordStartupRegistry {
+        fn startup_enabled(&self) -> Result<bool, String> {
+            let user = RegKey::predef(HKEY_CURRENT_USER);
+            let key = match user.open_subkey(&self.approved_key) {
+                Ok(key) => key,
+                Err(error) if error.kind() == ErrorKind::NotFound => return Ok(true),
+                Err(error) => {
+                    return Err(format!(
+                        "Discord 자동 시작 허용 상태를 읽지 못했습니다: {error}"
+                    ))
+                }
+            };
+            match key.get_raw_value(self.value_name()) {
+                Ok(value) => Ok(!matches!(value.bytes.first(), Some(3 | 7))),
+                Err(error) if error.kind() == ErrorKind::NotFound => Ok(true),
+                Err(error) => Err(format!(
+                    "Discord 자동 시작 허용 상태를 읽지 못했습니다: {error}"
+                )),
+            }
+        }
+
         fn read_run_command(&self) -> Result<Option<DiscordStartupCommand>, String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
-            let key = match current_user.open_subkey(RUN_KEY) {
+            let key = match current_user.open_subkey(&self.run_key) {
                 Ok(key) => key,
                 Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
                 Err(error) => {
@@ -118,7 +192,7 @@ mod windows_registry {
                     ))
                 }
             };
-            let raw = match key.get_raw_value(DISCORD_VALUE) {
+            let raw = match key.get_raw_value(self.value_name()) {
                 Ok(value) => value,
                 Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
                 Err(error) => return Err(format!("Discord 시작 명령을 읽지 못했습니다: {error}")),
@@ -136,18 +210,18 @@ mod windows_registry {
         fn write_run_command(&mut self, command: &DiscordStartupCommand) -> Result<(), String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
             let (key, _) = current_user
-                .create_subkey(RUN_KEY)
+                .create_subkey(&self.run_key)
                 .map_err(|error| format!("Discord 시작 레지스트리를 만들지 못했습니다: {error}"))?;
-            key.set_raw_value(DISCORD_VALUE, &raw_string(command))
+            key.set_raw_value(self.value_name(), &raw_string(command))
                 .map_err(|error| format!("Discord 시작 명령을 복원하지 못했습니다: {error}"))
         }
 
         fn delete_run_command(&mut self) -> Result<(), String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
             let (key, _) = current_user
-                .create_subkey(RUN_KEY)
+                .create_subkey(&self.run_key)
                 .map_err(|error| format!("Discord 시작 레지스트리를 열지 못했습니다: {error}"))?;
-            match key.delete_value(DISCORD_VALUE) {
+            match key.delete_value(self.value_name()) {
                 Ok(()) => Ok(()),
                 Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
                 Err(error) => Err(format!("Discord 시작 명령을 삭제하지 못했습니다: {error}")),
@@ -156,9 +230,9 @@ mod windows_registry {
 
         fn read_backup(&self) -> Result<Option<DiscordStartupBackup>, String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
-            let key = match open_backup_key(&current_user, BACKUP_KEY)? {
+            let key = match open_backup_key(&current_user, &self.backup_key)? {
                 Some(key) => Some(key),
-                None => open_backup_key(&current_user, LEGACY_BACKUP_KEY)?,
+                None => open_backup_key(&current_user, &self.legacy_backup_key)?,
             };
             let Some(key) = key else { return Ok(None) };
             let managed_marker: u32 = key.get_value("Managed").unwrap_or(0);
@@ -190,7 +264,7 @@ mod windows_registry {
         fn write_backup(&mut self, backup: &DiscordStartupBackup) -> Result<(), String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
             let (key, _) = current_user
-                .create_subkey(BACKUP_KEY)
+                .create_subkey(&self.backup_key)
                 .map_err(|error| format!("Discord 시작 명령 백업을 만들지 못했습니다: {error}"))?;
             key.set_value("Managed", &1_u32)
                 .map_err(|error| format!("Discord 시작 명령 백업을 쓰지 못했습니다: {error}"))?;
@@ -218,7 +292,7 @@ mod windows_registry {
 
         fn delete_backup(&mut self) -> Result<(), String> {
             let current_user = RegKey::predef(HKEY_CURRENT_USER);
-            for path in [BACKUP_KEY, LEGACY_BACKUP_KEY] {
+            for path in [&self.backup_key, &self.legacy_backup_key] {
                 match current_user.delete_subkey_all(path) {
                     Ok(()) => {}
                     Err(error) if error.kind() == ErrorKind::NotFound => {}
@@ -234,12 +308,13 @@ mod windows_registry {
 
         fn safe_default_command(&self) -> Option<DiscordStartupCommand> {
             let update = PathBuf::from(std::env::var_os("LOCALAPPDATA")?)
-                .join("Discord")
+                .join(self.value_name())
                 .join("Update.exe");
             update.is_file().then(|| DiscordStartupCommand {
                 value: format!(
-                    "\"{}\" --processStart Discord.exe",
-                    update.to_string_lossy()
+                    "\"{}\" --processStart {}.exe",
+                    update.to_string_lossy(),
+                    self.value_name()
                 ),
                 kind: RegistryStringKind::String,
             })
@@ -301,11 +376,22 @@ mod windows_registry {
     }
 }
 
-pub fn suppress() -> Result<(), String> {
+pub fn suppress(selected: DiscordVariant) -> Result<(), String> {
     #[cfg(windows)]
     {
-        let mut registry = windows_registry::WindowsDiscordStartupRegistry;
-        suppress_registration(&mut registry)
+        for variant in RELEASES {
+            let mut registry = windows_registry::WindowsDiscordStartupRegistry::new(variant);
+            if (selected == DiscordVariant::Auto || selected == variant)
+                && registry.startup_enabled()?
+            {
+                if registry.read_run_command()?.is_some() || registry.read_backup()?.is_some() {
+                    suppress_registration(&mut registry)?;
+                }
+            } else {
+                restore_registration(&mut registry)?;
+            }
+        }
+        Ok(())
     }
     #[cfg(not(windows))]
     {
@@ -316,8 +402,12 @@ pub fn suppress() -> Result<(), String> {
 pub fn restore() -> Result<(), String> {
     #[cfg(windows)]
     {
-        let mut registry = windows_registry::WindowsDiscordStartupRegistry;
-        restore_registration(&mut registry)
+        for variant in RELEASES {
+            restore_registration(&mut windows_registry::WindowsDiscordStartupRegistry::new(
+                variant,
+            ))?;
+        }
+        Ok(())
     }
     #[cfg(not(windows))]
     {
@@ -325,8 +415,213 @@ pub fn restore() -> Result<(), String> {
     }
 }
 
+pub fn launch_variants(selected: DiscordVariant) -> Result<Vec<DiscordVariant>, String> {
+    let mut registered = Vec::new();
+    #[cfg(windows)]
+    for variant in RELEASES {
+        let registry = windows_registry::WindowsDiscordStartupRegistry::new(variant);
+        if registry.startup_enabled()?
+            && registry
+                .read_backup()?
+                .is_some_and(|backup| backup.original.is_some())
+        {
+            registered.push(variant);
+        }
+    }
+    Ok(select_launch_variants(selected, &registered))
+}
+
+fn select_launch_variants(
+    selected: DiscordVariant,
+    registered: &[DiscordVariant],
+) -> Vec<DiscordVariant> {
+    if selected == DiscordVariant::Auto {
+        registered.to_vec()
+    } else {
+        vec![selected]
+    }
+}
+
+// Refresh an existing opt-in without changing Windows' StartupApproved setting.
+// The plugin's is_enabled() checks only presence, so it accepts a stale EXE path.
+pub fn refresh_app_command(name: &str, executable: &std::path::Path) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use winreg::{
+            enums::{HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE},
+            RegKey,
+        };
+        let user = RegKey::predef(HKEY_CURRENT_USER);
+        let key = user
+            .open_subkey_with_flags(
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                KEY_READ | KEY_SET_VALUE,
+            )
+            .map_err(|e| format!("앱 자동 시작 경로를 열지 못했습니다: {e}"))?;
+        refresh_registered_command(&key, name, executable)?;
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn refresh_registered_command(
+    key: &winreg::RegKey,
+    name: &str,
+    executable: &std::path::Path,
+) -> Result<(), String> {
+    use std::io::ErrorKind;
+    let current: String = match key.get_value(name) {
+        Ok(value) => value,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(format!("앱 자동 시작 경로를 읽지 못했습니다: {error}")),
+    };
+    let expected = format!("\"{}\"", executable.display());
+    if current != expected {
+        key.set_value(name, &expected)
+            .map_err(|e| format!("앱 자동 시작 경로를 갱신하지 못했습니다: {e}"))?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn automatic_startup_uses_only_previously_registered_releases() {
+        use crate::discord::DiscordVariant::{Auto, Canary, Ptb, Stable};
+        assert!(super::select_launch_variants(Auto, &[]).is_empty());
+        assert_eq!(
+            super::select_launch_variants(Auto, &[Stable, Ptb, Canary]),
+            vec![Stable, Ptb, Canary]
+        );
+        assert_eq!(super::select_launch_variants(Auto, &[Ptb]), vec![Ptb]);
+        assert_eq!(
+            super::select_launch_variants(Canary, &[Stable, Ptb]),
+            vec![Canary]
+        );
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn startup_refresh_repairs_stale_paths_without_creating_an_opt_in() {
+        use std::path::Path;
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        let root = format!(r"Software\NudeNyangTests\refresh-{}", std::process::id());
+        let user = RegKey::predef(HKEY_CURRENT_USER);
+        let (key, _) = user.create_subkey(&root).unwrap();
+        let path = Path::new(r"C:\Apps\New Build\Translator.exe");
+        super::refresh_registered_command(&key, "absent", path).unwrap();
+        assert!(key.get_value::<String, _>("absent").is_err());
+        key.set_value("enabled", &r"C:\Old Build\Translator.exe ")
+            .unwrap();
+        super::refresh_registered_command(&key, "enabled", path).unwrap();
+        let actual: String = key.get_value("enabled").unwrap();
+        super::refresh_registered_command(&key, "enabled", path).unwrap();
+        let repeated: String = key.get_value("enabled").unwrap();
+        drop(key);
+        user.delete_subkey_all(&root).unwrap();
+        assert_eq!(actual, r#""C:\Apps\New Build\Translator.exe""#);
+        assert_eq!(repeated, actual);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn startup_approval_is_checked_independently_for_each_release() {
+        use super::windows_registry::WindowsDiscordStartupRegistry;
+        use crate::discord::DiscordVariant::{Canary, Ptb, Stable};
+        use winreg::{
+            enums::{HKEY_CURRENT_USER, REG_BINARY},
+            RegKey, RegValue,
+        };
+        let root = format!(r"Software\NudeNyangTests\approval-{}", std::process::id());
+        let user = RegKey::predef(HKEY_CURRENT_USER);
+        let (key, _) = user
+            .create_subkey(format!(r"{root}\StartupApproved"))
+            .unwrap();
+        let mut states = Vec::new();
+        for byte in [2, 3, 6, 7] {
+            let mut bytes = vec![0; 12];
+            bytes[0] = byte;
+            key.set_raw_value(
+                "DiscordPTB",
+                &RegValue {
+                    bytes,
+                    vtype: REG_BINARY,
+                },
+            )
+            .unwrap();
+            states.push((
+                byte,
+                WindowsDiscordStartupRegistry::isolated(Ptb, &root)
+                    .startup_enabled()
+                    .unwrap(),
+            ));
+        }
+        let others = [Stable, Canary].map(|variant| {
+            WindowsDiscordStartupRegistry::isolated(variant, &root)
+                .startup_enabled()
+                .unwrap()
+        });
+        drop(key);
+        user.delete_subkey_all(&root).unwrap();
+        assert_eq!(states, vec![(2, true), (3, false), (6, true), (7, false)]);
+        assert_eq!(others, [true, true]);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn each_release_preserves_its_own_startup_registration_across_logins() {
+        use super::windows_registry::WindowsDiscordStartupRegistry;
+        use crate::discord::DiscordVariant::{Canary, Ptb, Stable};
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        let root = format!(
+            r"Software\NudeNyangTests\startup-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        let user = RegKey::predef(HKEY_CURRENT_USER);
+        let (run, _) = user.create_subkey(format!(r"{root}\Run")).unwrap();
+        let originals = [
+            (Stable, "Discord", "stable Update.exe"),
+            (Ptb, "DiscordPTB", "ptb Update.exe"),
+            (Canary, "DiscordCanary", "canary Update.exe"),
+        ];
+        for (_, name, original) in originals {
+            run.set_value(name, &original).unwrap();
+        }
+        // Gather the result before deleting only this uniquely named test key.
+        let result = (|| -> Result<(), String> {
+            for (variant, name, original) in originals {
+                let mut registry = WindowsDiscordStartupRegistry::isolated(variant, &root);
+                suppress_registration(&mut registry)?;
+                if run.get_value::<String, _>(name).is_ok() {
+                    return Err(format!("{name} still starts without a pipe"));
+                }
+                suppress_registration(&mut registry)?;
+                if registry
+                    .read_backup()?
+                    .and_then(|b| b.original)
+                    .map(|c| c.value)
+                    != Some(original.to_string())
+                {
+                    return Err(format!("{name} lost its original startup setting"));
+                }
+            }
+            for (variant, name, original) in originals {
+                restore_registration(&mut WindowsDiscordStartupRegistry::isolated(variant, &root))?;
+                if run.get_value::<String, _>(name).ok().as_deref() != Some(original) {
+                    return Err(format!("{name} restored another release's command"));
+                }
+            }
+            Ok(())
+        })();
+        drop(run);
+        user.delete_subkey_all(&root).unwrap();
+        assert_eq!(result, Ok(()));
+    }
+
     use super::{
         restore_registration, suppress_registration, DiscordStartupBackup, DiscordStartupCommand,
         DiscordStartupRegistry, RegistryStringKind,

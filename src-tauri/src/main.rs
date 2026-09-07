@@ -903,7 +903,15 @@ fn autostart_get_blocking(app: AppHandle) -> Result<bool, String> {
         .autolaunch()
         .is_enabled()
         .map_err(|error| format!("자동 시작 상태를 확인하지 못했습니다: {error}"))?;
-    synchronize_discord_startup(enabled)?;
+    if enabled {
+        discord_startup::refresh_app_command(
+            &app.package_info().name,
+            &std::env::current_exe().map_err(|error| error.to_string())?,
+        )?;
+    }
+    let selected =
+        discord::DiscordVariant::from_config(&app.state::<ConfigStore>().get()?.discord_variant)?;
+    synchronize_discord_startup(enabled, selected)?;
     Ok(enabled)
 }
 
@@ -920,7 +928,14 @@ fn autostart_set_blocking(app: AppHandle, enabled: bool) -> Result<bool, String>
         autolaunch
             .enable()
             .map_err(|error| format!("자동 시작을 켜지 못했습니다: {error}"))?;
-        if let Err(error) = discord_startup::suppress() {
+        let selected = discord::DiscordVariant::from_config(
+            &app.state::<ConfigStore>().get()?.discord_variant,
+        )?;
+        discord_startup::refresh_app_command(
+            &app.package_info().name,
+            &std::env::current_exe().map_err(|error| error.to_string())?,
+        )?;
+        if let Err(error) = discord_startup::suppress(selected) {
             let _ = autolaunch.disable();
             return Err(error);
         }
@@ -942,77 +957,91 @@ async fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
         .map_err(|error| format!("자동 시작 변경 작업을 기다리지 못했습니다: {error}"))?
 }
 
-fn synchronize_discord_startup(enabled: bool) -> Result<(), String> {
+fn synchronize_discord_startup(
+    enabled: bool,
+    selected: discord::DiscordVariant,
+) -> Result<(), String> {
     if enabled {
-        discord_startup::suppress()
+        discord_startup::suppress(selected)
     } else {
         discord_startup::restore()
     }
 }
 
-fn start_pipe_discord_for_autostart(app: AppHandle) {
+fn start_pipe_discord_for_autostart(app: AppHandle, enabled: bool) {
     let Ok(config) = app.state::<ConfigStore>().get() else {
         diagnostics::warn("discord-startup", "Discord 종류 설정을 읽지 못했습니다.");
         return;
     };
     if config.discord_verification_mode {
-        diagnostics::info(
-            "discord-startup",
-            "인증 호환 모드가 활성화되어 Discord 번역 연결을 자동 시작하지 않습니다.",
-        );
         return;
     }
-    let Ok(discord_variant) = discord::DiscordVariant::from_config(&config.discord_variant) else {
-        diagnostics::warn("discord-startup", "Discord 종류 설정이 올바르지 않습니다.");
+    let Ok(selected) = discord::DiscordVariant::from_config(&config.discord_variant) else {
         return;
     };
-    if discord_variant == discord::DiscordVariant::Auto {
-        return;
-    }
+    let variants = if enabled {
+        match discord_startup::launch_variants(selected) {
+            Ok(variants) => variants,
+            Err(error) => {
+                diagnostics::warn("discord-startup", &error);
+                return;
+            }
+        }
+    } else {
+        // Reattach surviving guardians even when automatic startup is off.
+        [
+            discord::DiscordVariant::Stable,
+            discord::DiscordVariant::Ptb,
+            discord::DiscordVariant::Canary,
+        ]
+        .into_iter()
+        .filter(|variant| {
+            (selected == discord::DiscordVariant::Auto || selected == *variant)
+                && discord::current_pipe_process(*variant).is_some()
+        })
+        .collect()
+    };
     let engine = app.state::<RustEngine>().inner().clone();
-    tauri::async_runtime::spawn(async move {
-        let result = tauri::async_runtime::spawn_blocking(move || {
-            if let Some(process) = discord::current_pipe_process(discord_variant) {
+    for variant in variants {
+        if config
+            .discord_verification_variants
+            .iter()
+            .any(|value| value == variant.config_name())
+        {
+            continue;
+        }
+        // This function runs on the background initialization thread. Keep
+        // launch/registration work off the webview and isolate release failures.
+        let result = (|| {
+            if let Some(process) = discord::current_pipe_process(variant) {
                 return discord::connect_guarded_pipe(&process).map(|cdp| (process, cdp));
             }
-            if discord::current_process(discord_variant).is_some() {
+            if discord::current_process(variant).is_some() {
                 return Err(
-                    "Discord가 일반 모드로 실행 중이어서 사용자 재시작 동의를 기다립니다."
-                        .to_string(),
+                    "일반 모드로 실행 중이어서 사용자 재시작 동의를 기다립니다.".to_string()
                 );
             }
-            discord::restart_pipe(None, discord_variant)
-        })
-        .await;
+            discord::restart_pipe(None, variant)
+        })();
         match result {
-            Ok(Ok((process, cdp))) => {
+            Ok((process, cdp)) => {
                 if let Err(error) = engine.replace_cdp(process, cdp) {
                     diagnostics::error("discord-startup", &error);
                 }
             }
-            Ok(Err(error)) => diagnostics::warn("discord-startup", &error),
             Err(error) => diagnostics::warn(
                 "discord-startup",
-                &format!("Discord 자동 실행 작업을 기다리지 못했습니다: {error}"),
+                &format!("{}: {error}", variant.display_name()),
             ),
         }
-    });
+    }
 }
 
 fn initialize_autostart(app: AppHandle) {
-    let discord_variant = app
-        .state::<ConfigStore>()
-        .get()
-        .ok()
-        .and_then(|config| discord::DiscordVariant::from_config(&config.discord_variant).ok())
-        .unwrap_or(discord::DiscordVariant::Auto);
-    if discord::current_pipe_process(discord_variant).is_some() {
-        start_pipe_discord_for_autostart(app);
-        return;
-    }
+    // Always synchronize the registered executable, including when a Discord
+    // guardian is already alive. Presence alone does not prove path freshness.
     match autostart_get_blocking(app.clone()) {
-        Ok(true) => start_pipe_discord_for_autostart(app),
-        Ok(false) => {}
+        Ok(enabled) => start_pipe_discord_for_autostart(app, enabled),
         Err(error) => diagnostics::warn("discord-startup", &error),
     }
 }
