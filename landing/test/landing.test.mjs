@@ -363,9 +363,9 @@ test("FAQ는 앱 자체와 외부 번역 서비스의 비용을 구분한다", (
   }
 });
 
-test("히어로에는 다운로드와 웹 번역 소개 링크를 제공한다", () => {
+test("히어로에는 다운로드 CTA만 제공한다", () => {
   assert.match(html, /class="button primary"[^>]*>Windows Beta 다운로드<\/a>/);
-  assert.match(html, /class="button secondary" href="#web-translation" data-i18n>웹 번역 살펴보기<\/a>/);
+  assert.doesNotMatch(html, /href="#web-translation"/);
   assert.equal(
     (html.match(/href="https:\/\/github\.com\/NudeNyang\/NudeNyang-Discord-Translator\/releases"/g) ?? []).length,
     2,
