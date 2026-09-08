@@ -26,7 +26,7 @@ HTML에서 `data-media-slot`을 검색하면 교체할 위치를 확인할 수 �
 
 - `hero`: `assets/hero-discord-translation-masked.mp4`를 사용하며, 포스터는 `assets/hero-discord-translation-masked-poster.jpg`입니다.
 - `workflow`: `assets/workflow-discord-translation-masked.mp4`를 사용하는 수신 번역부터 답장 전송까지의 영상, 1920 × 1080
-- `web-translation`: 사용자가 제공한 문단 보존 비교 이미지 `assets/web-translation-paragraph-comparison.png`, 1800 × 1000. Discord 기능·설정·이용 안내가 끝난 뒤 FAQ 앞에 표시하며 원본 크기로 열 수 있습니다.
+- `web-translation`: 사용자가 제공한 문단 보존 비교 이미지 `assets/web-translation-paragraph-comparison.png`, 1800 × 1000. Discord 주요 기능 다음, 개인정보 보호 소개 바로 앞에 표시하며 원본 크기로 열 수 있습니다.
 - `image-translation`: 이미지 번역 전후 사진, 1200 × 900
 - `settings`: 라이트 모드 설정 화면, 1600 × 1000
 

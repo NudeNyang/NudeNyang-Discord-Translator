@@ -21,9 +21,9 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
   }
 
   const slots = [...html.matchAll(/data-media-slot="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings", "web-translation"]);
-  assert.ok(html.indexOf('id="discord-notice"') < html.indexOf('id="web-translation"'));
-  assert.ok(html.indexOf('id="web-translation"') < html.indexOf('id="faq"'));
+  assert.deepEqual(slots, ["hero", "workflow", "image-translation", "web-translation", "settings"]);
+  assert.ok(html.indexOf('id="features"') < html.indexOf('id="web-translation"'));
+  assert.match(html, /id="web-translation"[\s\S]*?<\/section>\s*<section class="section privacy-section"/);
   assert.match(html, /<a href="#how-it-works" data-i18n>기능<\/a>/);
   assert.doesNotMatch(html, /<a href="#features" data-i18n>기능<\/a>/);
 });
