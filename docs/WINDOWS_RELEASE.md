@@ -2,8 +2,9 @@
 
 ## 유지할 조건
 
-- 본체 버전은 `src-tauri/tauri.conf.json`을 따른다. `-beta` 버전은 GitHub 프리릴리스이며 정식 최신 릴리스로 승격하지 않는다.
-- 정식 배포는 `1.0.0`처럼 접미사가 없는 버전으로 빌드하고 `--prerelease=false --latest=true`로 게시한다. 1.0.0는 사용자의 정식 배포 요청에 따라 베타 개발본을 정식 버전으로 전환했다.
+- 본체 버전은 `src-tauri/tauri.conf.json`을 따른다. 기본적으로 `-beta` 버전은 GitHub 프리릴리스로 게시한다.
+- 0.7.5-beta는 사용자의 명시적인 요청에 따라 버전명을 유지하면서 정식 최신 릴리스로 게시한다. 이 경우에만 `deploy_github_release.ps1 -StableRelease`를 지정하며, `--prerelease=false --latest=true`로 공개한다. 접미사 없는 버전은 기본으로 정식 게시한다.
+- 1.0.0은 macOS 버전을 출시할 때 사용한다. Windows 정식 릴리스 게시만으로 버전을 1.0.0으로 올리지 않는다.
 - 프리릴리스 여부는 GitHub의 표시·분류이고, 앱은 기존 정적 업데이트 목록을 조회한다. ARM64 지원에 정식 전환은 필요하지 않다.
 - 업데이트 주소는 `https://raw.githubusercontent.com/NudeNyang/NudeNyang-Discord-Translator/main/updates/beta/latest.json`을 유지한다.
 - 기존 `plugins.updater.pubkey`와 저장소 밖의 `updater.key`를 유지한다. 패키징 중 새 키를 생성하지 않는다. 키 비밀번호는 프로세스 환경으로만 전달하고 종료 시 복구하며 로그·명령 인수·저장소에 기록하지 않는다.
@@ -16,7 +17,7 @@
 2. `scripts/package_github_release.ps1`을 실행한다. 내부에서 `package_windows_variants.ps1`로 두 아키텍처를 함께 빌드하고 각 설치 파일을 서명한다.
 3. `node scripts/release-updates.mjs validate`로 두 서명과 SHA-256, 플랫폼별 URL, 버전, 빌드 소스 커밋을 다시 검증한다. 파일이나 항목이 하나라도 빠지면 중단한다.
 4. 빌드한 소스 커밋을 원격 `main`에 푸시한다. 이 단계에서는 기존 업데이트 목록을 유지한다.
-5. `scripts/deploy_github_release.ps1`을 실행한다. 새 초안에 검증한 여섯 파일을 올린 뒤 GitHub가 보고한 크기·SHA-256을 대조한다. 확인한 초안만 공개하며, `-beta`는 `--prerelease --latest=false`, 정식판은 `--prerelease=false --latest=true`로 게시한다. 정식판은 GitHub 최신 릴리스 ID까지 확인한다. 기존 같은 버전의 릴리스나 파일을 덮어쓰지 않는다.
+5. `scripts/deploy_github_release.ps1`을 실행한다. 0.7.5-beta 정식 게시는 `-StableRelease`를 추가한다. 새 초안에 검증한 여섯 파일을 올린 뒤 GitHub가 보고한 크기·SHA-256을 대조한다. 확인한 초안만 공개하며 기본 베타 배포는 `--prerelease --latest=false`, 정식 게시는 `--prerelease=false --latest=true`를 사용한다. 정식 게시는 GitHub 최신 릴리스 ID까지 확인한다. 기존 같은 버전의 릴리스나 파일을 덮어쓰지 않는다.
 6. 공개 확인 뒤 스크립트가 복사한 `updates/beta/latest.json`을 검토·커밋·푸시한다. 원격 JSON과 두 다운로드 주소가 실제로 열리는지 확인한다.
 
 로컬 생성이나 초안 업로드만으로 기존 사용자의 업데이트가 활성화되지는 않는다. 중간 실패 시 이미 만들어진 초안을 임의로 삭제하거나 서명 검사를 생략하지 않는다. `-SkipBuild`는 이미 검증한 동일 소스 빌드의 재패키징용이며 다른 커밋의 설치 파일을 재사용해서는 안 된다.

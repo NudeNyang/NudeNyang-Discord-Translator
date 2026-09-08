@@ -22,7 +22,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="1.0.0" src="https://img.shields.io/badge/release-1.0.0-4C1">
+  <img alt="0.7.5-beta" src="https://img.shields.io/badge/release-0.7.5--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -33,9 +33,11 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 ## Download and update
 
-Download the Windows installer from the [latest release](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/latest). See the [1.0.0 release notes](docs/releases/1.0.0.md) for multi-client Discord support and fixes.
+Download the Windows installer from the [latest release](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/latest). See the [0.7.5-beta release notes](docs/releases/0.7.5-beta.md) for multi-client Discord support and fixes.
 
-Existing installed versions can follow the app's update prompt. Version 1.0.0 keeps the beta releases' update URL and signing key; you do not need to uninstall or reset the app. Only the Discord selection moves to Automatic once; later choices are kept. Older portable builds require a manual installer download.
+The version remains 0.7.5-beta, published as a regular GitHub release. Version 1.0.0 is reserved for the macOS release.
+
+Existing installed versions can follow the app's update prompt. Version 0.7.5-beta keeps the beta releases' update URL and signing key; you do not need to uninstall or reset the app. Only the Discord selection moves to Automatic once; later choices are kept. Older portable builds require a manual installer download.
 
 Stable, PTB and Canary share one set of translation settings. The app translates the Discord window you are viewing and processes other windows when you switch to them. You can still select a specific Discord release in settings.
 
@@ -201,8 +203,10 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 Commit source/version/release notes before packaging, and push that source commit before deployment.
 The public packaging script builds **both x64 and ARM64**, signs both installers with the existing
 Tauri updater key, and verifies signatures, SHA-256 checksums, URLs and both update platform entries.
-Missing or mismatched artifacts stop deployment. `-beta` versions remain GitHub prereleases with
-`--latest=false`; stable versions are published as the latest release. Both use the same app update URL.
+Missing or mismatched artifacts stop deployment. By default, `-beta` versions use GitHub prereleases.
+The maintainer has explicitly chosen a regular release for 0.7.5-beta: pass `-StableRelease` to the
+deployment script. This publishes it with `--prerelease=false --latest=true`. Both publication modes
+use the same app update URL.
 
 Packaging writes only `release/<version>/latest.json`. Deployment uploads a draft, checks every
 asset's server-side SHA-256 and size, publishes it, then copies the validated manifest to

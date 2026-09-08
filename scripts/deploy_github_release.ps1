@@ -2,7 +2,8 @@ param(
     [string]$Version,
     [string]$Repository = 'NudeNyang/NudeNyang-Discord-Translator',
     [string]$ReleaseNotesPath,
-    [string]$SourceCommit
+    [string]$SourceCommit,
+    [switch]$StableRelease
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,7 +12,7 @@ $TauriConfigPath = Join-Path $ProjectRoot 'src-tauri\tauri.conf.json'
 $Config = [IO.File]::ReadAllText($TauriConfigPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
 if (-not $Version) { $Version = [string]$Config.version }
 if ($Version -ne $Config.version) { throw '현재 소스 버전과 배포 버전이 다릅니다.' }
-$IsPrerelease = $Version.Contains('-')
+$IsPrerelease = $Version.Contains('-') -and -not $StableRelease
 if ($Repository -ne 'NudeNyang/NudeNyang-Discord-Translator') { throw '기존 공개 업데이트 저장소를 유지해야 합니다.' }
 if (-not $ReleaseNotesPath) { $ReleaseNotesPath = Join-Path $ProjectRoot "docs\releases\$Version.md" }
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"

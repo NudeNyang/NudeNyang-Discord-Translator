@@ -18,7 +18,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="1.0.0" src="https://img.shields.io/badge/release-1.0.0-4C1">
+  <img alt="0.7.5-beta" src="https://img.shields.io/badge/release-0.7.5--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -29,13 +29,15 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ## 다운로드와 업데이트
 
-[최신 릴리스](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/latest)에서 Windows 10/11용 설치 파일을 받을 수 있습니다. [1.0.0 변경 내역](docs/releases/1.0.0.md)에는 Discord 다중 실행 지원과 이번에 고친 문제를 정리했습니다.
+[최신 릴리스](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/latest)에서 Windows 10/11용 설치 파일을 받을 수 있습니다. [0.7.5-beta 변경 내역](docs/releases/0.7.5-beta.md)에는 Discord 다중 실행 지원과 이번에 고친 문제를 정리했습니다.
+
+버전명은 0.7.5-beta를 유지하며 GitHub에는 정식 릴리스로 게시합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
 - 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
 - 두 설치형 모두 자동 업데이트용 `.sig`를 제공합니다. 파일 무결성은 `SHA256SUMS.txt`로 확인할 수 있습니다.
 
-기존 설치형은 앱의 업데이트 안내에 따라 설치하면 됩니다. 1.0.0는 기존 베타판의 업데이트 주소와 서명 키를 그대로 사용하며, 설정을 초기화하거나 앱을 지울 필요가 없습니다. 이번 업데이트에서는 Discord 선택 항목만 한 번 `자동`으로 전환합니다. 이후 직접 선택한 값은 유지합니다. 예전 포터블판 사용자는 설치형을 직접 받아야 합니다.
+기존 설치형은 앱의 업데이트 안내에 따라 설치하면 됩니다. 0.7.5-beta는 기존 베타판의 업데이트 주소와 서명 키를 그대로 사용하며, 설정을 초기화하거나 앱을 지울 필요가 없습니다. 이번 업데이트에서는 Discord 선택 항목만 한 번 `자동`으로 전환합니다. 이후 직접 선택한 값은 유지합니다. 예전 포터블판 사용자는 설치형을 직접 받아야 합니다.
 
 Discord Stable·PTB·Canary를 함께 실행해도 번역 설정은 하나로 사용합니다. 지금 보고 있는 Discord 창을 번역하고, 다른 창은 열어 볼 때 이어서 처리합니다. 특정 버전만 사용하려면 설정에서 직접 선택할 수 있습니다.
 
@@ -182,13 +184,15 @@ powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
+0.7.5-beta의 정식 게시에는 마지막 명령에 `-StableRelease`를 추가합니다. 설치 파일을 공개한 뒤 업데이트 목록을 반영하는 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
+
 </details>
 
 ## 문서
 
 | 문서 | 내용 |
 |---|---|
-| [1.0.0 변경 내역](docs/releases/1.0.0.md) | 정식 릴리스의 변경 사항과 기존 사용자 업데이트 안내 |
+| [0.7.5-beta 변경 내역](docs/releases/0.7.5-beta.md) | 정식 릴리스의 변경 사항과 기존 사용자 업데이트 안내 |
 | [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md) | 두 설치형의 빌드·서명·공개와 업데이트 목록 반영 순서 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 런타임 구성, Discord 연결, 데이터 경계, OCR, 플랫폼 분리 |
 | [docs/LANGUAGES.md](docs/LANGUAGES.md) | 28개 언어, 감지 방식, 공급자 지원 범위, OCR 범위 |

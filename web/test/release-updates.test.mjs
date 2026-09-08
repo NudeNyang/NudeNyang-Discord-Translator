@@ -79,10 +79,10 @@ test('서명 파일 안의 신뢰 주석도 변조하면 검증에 실패한다'
   assert.throws(() => f.helper.verifyUpdaterSignature(readFileSync(join(f.directory, name)), changed, f.options.pubkey));
 });
 
-for (const scenario of ['stable-success', 'stable-wrong-classification', 'success', 'eventual-consistency', 'existing-draft-resume', 'missing-arm', 'upload-digest-mismatch', 'publish-failed', 'draft-source-mismatch', 'draft-already-public', 'draft-missing']) {
+for (const scenario of ['stable-beta-success', 'stable-success', 'stable-wrong-classification', 'success', 'eventual-consistency', 'existing-draft-resume', 'missing-arm', 'upload-digest-mismatch', 'publish-failed', 'draft-source-mismatch', 'draft-already-public', 'draft-missing']) {
   test(`실제 PowerShell 배포 흐름: ${scenario}`, { skip: process.platform !== 'win32' }, async (t) => {
     const stable = scenario.startsWith('stable-');
-    const f = await fixture(t, stable ? '1.0.0' : '0.7.3-beta');
+    const f = await fixture(t, scenario === 'stable-beta-success' ? '0.7.5-beta' : stable ? '1.0.0' : '0.7.3-beta');
     const root = join(f.directory, 'project');
     for (const folder of ['scripts', 'src-tauri', 'updates/beta', `release/${f.options.version}`, 'docs/releases']) {
       mkdirSync(join(root, folder), { recursive: true });
@@ -157,13 +157,13 @@ function gh {
   }
   throw 'Unexpected gh invocation'
 }
-& ${quote(join(root, 'scripts/deploy_github_release.ps1'))} ${scenario === 'existing-draft-resume' ? `-SourceCommit '${commit}'` : ''}
+& ${quote(join(root, 'scripts/deploy_github_release.ps1'))} ${scenario === 'existing-draft-resume' ? `-SourceCommit '${commit}'` : ''} ${scenario === 'stable-beta-success' ? '-StableRelease' : ''}
 `;
     const run = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(harness, 'utf16le').toString('base64')], { encoding: 'utf8', timeout: 30_000 });
     const calls = existsSync(logPath) ? readFileSync(logPath, 'utf8').trim().split(/\r?\n/).map(JSON.parse) : [];
     const create = calls.find(args => args[0] === 'release' && args[1] === 'create');
     const publish = calls.find(args => args[0] === 'release' && args[1] === 'edit');
-    if (['stable-success', 'success', 'eventual-consistency', 'existing-draft-resume'].includes(scenario)) {
+    if (['stable-beta-success', 'stable-success', 'success', 'eventual-consistency', 'existing-draft-resume'].includes(scenario)) {
       assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
       if (scenario === 'existing-draft-resume') {
         assert.equal(create, undefined, 'existing verified draft must not be recreated or overwritten');

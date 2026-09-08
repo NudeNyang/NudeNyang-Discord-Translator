@@ -1,6 +1,6 @@
 [package]
 name = "nude-translator-tauri"
-version = "1.0.0"
+version = "0.7.5-beta"
 description = "NudeNyang Discord Translator Tauri desktop shell"
 edition = "2021"
 license = "GPL-3.0-only"
