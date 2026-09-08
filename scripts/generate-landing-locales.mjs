@@ -123,11 +123,40 @@ const additionalFeaturesLabels = {
   fil: "Mga karagdagang feature", bn: "অতিরিক্ত সুবিধা", ur: "اضافی خصوصیات",
   ta: "கூடுதல் அம்சங்கள்", fa: "قابلیت‌های بیشتر", he: "תכונות נוספות", cs: "Další funkce",
 };
+const webTranslationTitle = "웹페이지도 읽던 흐름 그대로 번역합니다.";
+const webTranslationTitleOverrides = {
+  en: "Translate web pages while preserving their reading flow.",
+  ja: "ウェブページも、読みやすい流れを保ったまま翻訳します。",
+  zh: "翻译网页时，也能保留原有的阅读脉络。",
+  "zh-Hant": "翻譯網頁時，也能保留原有的閱讀脈絡。",
+  "pt-BR": "Traduza páginas da web preservando o fluxo de leitura.",
+  hi: "वेब पेजों का अनुवाद उनके पढ़ने के प्रवाह को बनाए रखते हुए करें।",
+  "es-419": "Traduce páginas web conservando su flujo de lectura.",
+  de: "Übersetzen Sie Webseiten, ohne den Lesefluss zu verändern.",
+  ru: "Переводите веб-страницы, сохраняя привычный порядок чтения.",
+  id: "Terjemahkan halaman web tanpa mengubah alur bacanya.",
+  fr: "Traduisez les pages web en préservant leur structure de lecture.",
+  tr: "Web sayfalarını okuma akışını koruyarak çevirin.",
+  ar: "ترجم صفحات الويب مع الحفاظ على تسلسل القراءة.",
+  vi: "Dịch trang web mà vẫn giữ nguyên mạch đọc.",
+  it: "Traduci le pagine web preservandone il flusso di lettura.",
+  pl: "Tłumacz strony internetowe z zachowaniem ich toku czytania.",
+  uk: "Перекладайте веб-сторінки, зберігаючи звичний порядок читання.",
+  ms: "Terjemahkan halaman web sambil mengekalkan aliran bacaannya.",
+  nl: "Vertaal webpagina's met behoud van de leesstructuur.",
+  th: "แปลหน้าเว็บโดยยังคงลำดับการอ่านเดิมไว้",
+  fil: "Isalin ang mga web page habang pinananatili ang daloy ng pagbasa.",
+  bn: "ওয়েবপেজের পড়ার প্রবাহ ঠিক রেখেই অনুবাদ করুন।",
+  ur: "ویب صفحات کا ترجمہ کرتے ہوئے پڑھنے کی روانی برقرار رکھیں۔",
+  ta: "இணையப் பக்கங்களின் வாசிப்பு ஓட்டத்தைத் தக்கவைத்து மொழிபெயர்க்கவும்.",
+  fa: "صفحات وب را با حفظ روند خواندن ترجمه کنید.",
+  he: "תרגמו דפי אינטרנט תוך שמירה על רצף הקריאה.",
+  cs: "Překládejte webové stránky se zachováním jejich čtenářského toku.",
+};
 
 const overrides = {
   en: {
-    "문단은 그대로,": "Keep the paragraphs,",
-    "언어는 원하는 대로.": "read in your language.",
+    "웹페이지도 읽던 흐름 그대로 번역합니다.": "Translate web pages while preserving their reading flow.",
     "Discord에서 쓰던 번역을 웹페이지에서도 이용하세요. Chrome·Whale·Firefox 확장 프로그램으로 연결합니다.": "Bring your Discord translation setup to the web with the Chrome, Whale, or Firefox extension.",
     "읽던 흐름을 유지합니다.": "Keep the text easy to follow.",
     "글이 한 덩어리로 뭉치지 않도록 문단과 줄바꿈을 보존합니다. 긴 상품 설명이나 해외 게시글도 원래의 흐름대로 읽을 수 있습니다.": "Paragraphs and line breaks stay in place, so text does not run together. Read long product descriptions and posts in other languages with their original structure intact.",
@@ -182,8 +211,7 @@ const overrides = {
     "NudeNyang Translator는 무료 오픈소스 프로그램입니다. 단, 선택한 외부 번역 서비스에 따라 별도의 구독이나 API 비용이 발생할 수 있습니다.": "NudeNyang Translator is free and open source. However, the external translation service you choose may require a separate subscription or charge API usage fees.",
   },
   ja: {
-    "문단은 그대로,": "段落はそのまま、",
-    "언어는 원하는 대로.": "読みたい言語で。",
+    "웹페이지도 읽던 흐름 그대로 번역합니다.": "ウェブページも、読みやすい流れを保ったまま翻訳します。",
     "Discord에서 쓰던 번역을 웹페이지에서도 이용하세요. Chrome·Whale·Firefox 확장 프로그램으로 연결합니다.": "Discordで使っている翻訳をウェブページでも。Chrome・Whale・Firefoxの拡張機能から利用できます。",
     "읽던 흐름을 유지합니다.": "文章の読みやすさを保ちます。",
     "글이 한 덩어리로 뭉치지 않도록 문단과 줄바꿈을 보존합니다. 긴 상품 설명이나 해외 게시글도 원래의 흐름대로 읽을 수 있습니다.": "段落や改行を保ち、文章がひと続きになるのを防ぎます。長い商品説明や海外の投稿も、元の構成のまま読めます。",
@@ -339,7 +367,9 @@ for (const [locale] of LANGUAGE_OPTIONS) {
 
   for (const source of sourceList) {
     const existing = UI_LOCALE_COPY[locale]?.[source] || LANDING_LOCALES[locale]?.[source];
-    const override = source === "추가 기능"
+    const override = source === webTranslationTitle
+      ? webTranslationTitleOverrides[locale]
+      : source === "추가 기능"
       ? additionalFeaturesLabels[locale]
       : source === workflowTitle
       ? workflowTitleOverrides[locale]

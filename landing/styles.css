@@ -681,10 +681,6 @@ summary:focus-visible {
   overflow-wrap: break-word;
 }
 
-.web-translation-accent {
-  color: var(--accent);
-}
-
 .web-translation-benefits {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -710,10 +706,18 @@ summary:focus-visible {
 
 .web-translation-photos {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: clamp(12px, 2vw, 28px);
   padding-bottom: 32px;
   direction: ltr;
+}
+
+.web-translation-arrow {
+  color: var(--accent);
+  font-size: clamp(28px, 4vw, 52px);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .web-translation-photo {

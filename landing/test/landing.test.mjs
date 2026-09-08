@@ -184,6 +184,14 @@ test("핵심 사용 흐름과 번역 방식의 장점을 명확히 설명한다"
   assert.doesNotMatch(html, /Hy-MT2/);
 });
 
+test("웹 번역은 별도 위계의 단색 제목과 전환 화살표로 비교한다", () => {
+  assert.match(html, /<p class="eyebrow" data-i18n>추가 기능<\/p>/);
+  assert.match(html, /<h2 id="web-translation-title" data-i18n>웹페이지도 읽던 흐름 그대로 번역합니다\.<\/h2>/);
+  assert.doesNotMatch(html, /web-translation-accent|문단은 그대로,|언어는 원하는 대로\./);
+  assert.match(html, /<span class="web-translation-arrow" aria-hidden="true">→<\/span>/);
+  assert.match(css, /\.web-translation-photos\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto minmax\(0, 1fr\)/s);
+});
+
 test("설정 소개 제목은 28개 언어로 제공한다", () => {
   const title = "번역 방식부터 언어까지 원하는 대로 설정하세요.";
   assert.ok(html.includes(title));

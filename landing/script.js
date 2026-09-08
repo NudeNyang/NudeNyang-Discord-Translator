@@ -1,4 +1,4 @@
-import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "./locales.generated.mjs?v=web-card-2";
+import { LANDING_LOCALES, LANGUAGE_OPTIONS, RTL_LOCALES } from "./locales.generated.mjs?v=web-card-3";
 import { buildGreetingCycle } from "./greetings.mjs";
 import { detectPreferredLocale, normalizeLocale } from "./locale-utils.mjs";
 import { pageScrollThumbMetrics, pageScrollTopFromPointer } from "./scrollbar-utils.mjs";
