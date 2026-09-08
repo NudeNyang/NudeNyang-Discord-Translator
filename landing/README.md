@@ -18,7 +18,7 @@ npm run landing:serve
 npm run landing:locales
 ```
 
-이 명령은 앱에 이미 있는 번역을 우선 재사용하고, 나머지 랜딩 전용 문구를 번역합니다. 제품명과 `Discord`, `Windows`, 번역 제공자 이름은 번역되지 않도록 보호됩니다. 배포 전에는 주요 유입 언어를 원어민에게 한 번 검수받는 것을 권장합니다.
+이 명령은 앱과 랜딩 페이지에 이미 있는 번역을 재사용하고, 새 문구만 번역합니다. 직접 다듬은 문구는 생성 스크립트의 `overrides`에 저장합니다. 제품명과 `Discord`, `Windows`, 브라우저·번역 제공자 이름은 번역되지 않도록 보호됩니다. 배포 전에는 주요 유입 언어를 원어민에게 한 번 검수받는 것을 권장합니다.
 
 ## 미디어 교체 위치
 
@@ -26,6 +26,7 @@ HTML에서 `data-media-slot`을 검색하면 교체할 위치를 확인할 수 �
 
 - `hero`: `assets/hero-discord-translation-masked.mp4`를 사용하며, 포스터는 `assets/hero-discord-translation-masked-poster.jpg`입니다.
 - `workflow`: `assets/workflow-discord-translation-masked.mp4`를 사용하는 수신 번역부터 답장 전송까지의 영상, 1920 × 1080
+- `web-translation`: 사용자가 제공한 문단 보존 비교 이미지 `assets/web-translation-paragraph-comparison.png`, 1800 × 1000. Discord 기능·설정·이용 안내가 끝난 뒤 FAQ 앞에 표시하며 원본 크기로 열 수 있습니다.
 - `image-translation`: 이미지 번역 전후 사진, 1200 × 900
 - `settings`: 라이트 모드 설정 화면, 1600 × 1000
 

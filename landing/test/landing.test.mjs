@@ -21,7 +21,9 @@ test("랜딩 페이지의 핵심 구간과 미디어 슬롯이 존재한다", ()
   }
 
   const slots = [...html.matchAll(/data-media-slot="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings"]);
+  assert.deepEqual(slots, ["hero", "workflow", "image-translation", "settings", "web-translation"]);
+  assert.ok(html.indexOf('id="discord-notice"') < html.indexOf('id="web-translation"'));
+  assert.ok(html.indexOf('id="web-translation"') < html.indexOf('id="faq"'));
   assert.match(html, /<a href="#how-it-works" data-i18n>기능<\/a>/);
   assert.doesNotMatch(html, /<a href="#features" data-i18n>기능<\/a>/);
 });
@@ -361,8 +363,9 @@ test("FAQ는 앱 자체와 외부 번역 서비스의 비용을 구분한다", (
   }
 });
 
-test("히어로에는 다운로드 CTA만 노출한다", () => {
+test("히어로에는 다운로드와 웹 번역 소개 링크를 제공한다", () => {
   assert.match(html, /class="button primary"[^>]*>Windows Beta 다운로드<\/a>/);
+  assert.match(html, /class="button secondary" href="#web-translation" data-i18n>웹 번역 살펴보기<\/a>/);
   assert.equal(
     (html.match(/href="https:\/\/github\.com\/NudeNyang\/NudeNyang-Discord-Translator\/releases"/g) ?? []).length,
     2,

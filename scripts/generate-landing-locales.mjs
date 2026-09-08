@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { UI_LOCALE_COPY } from "../web/ui-locales.mjs";
 import { LANGUAGE_OPTIONS } from "../web/languages.mjs";
+import { LANDING_LOCALES } from "../landing/locales.generated.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const html = await readFile(resolve(root, "landing/index.html"), "utf8");
@@ -48,7 +49,7 @@ const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolve
 const protectedTerms = [
   "Discord Inc.", "NudeNyang Discord Translator", "NudeNyang Translator", "Discord", "Windows", "Hy-MT2", "ChatGPT",
   "Claude", "Gemini", "DeepL", "self-bot", "macOS", "WebM", "MP4", "PNG", "API", "CLI",
-  "OCR", "x64", "PC", "Beta",
+  "OCR", "x64", "PC", "Beta", "Chrome", "Whale", "Firefox", "NudeNyang",
 ];
 const keepTogether = (value) => [...value].join("\u2060");
 const workflowTitle = "번역하려고 별도의 번역기를 켤 필요가 없습니다.";
@@ -114,6 +115,14 @@ const showcaseTitleOverrides = {
 
 const overrides = {
   en: {
+    "문단은 그대로,": "Keep the paragraphs,",
+    "언어는 원하는 대로.": "read in your language.",
+    "Discord에서 쓰던 번역을 웹페이지에서도 이용하세요. Chrome·Whale·Firefox 확장 프로그램으로 연결합니다.": "Bring your Discord translation setup to the web with the Chrome, Whale, or Firefox extension.",
+    "읽던 흐름을 유지합니다.": "Keep the text easy to follow.",
+    "글이 한 덩어리로 뭉치지 않도록 문단과 줄바꿈을 보존합니다. 긴 상품 설명이나 해외 게시글도 원래의 흐름대로 읽을 수 있습니다.": "Paragraphs and line breaks stay in place, so text does not run together. Read long product descriptions and posts in other languages with their original structure intact.",
+    "언어 선택은 한 번만.": "Choose your language once.",
+    "읽고 싶은 언어를 정해 두면 원문 언어는 자동으로 감지합니다. 여러 언어의 페이지를 옮겨 다녀도 같은 설정으로 번역합니다.": "Set the language you want to read in. NudeNyang detects the source language automatically and keeps your preference as you move between pages.",
+    "NudeNyang 본체와 브라우저 확장 프로그램이 함께 필요합니다.": "Requires the NudeNyang desktop app and browser extension.",
     "기능": "Features",
     "개인정보": "Privacy",
     "Beta 다운로드": "Beta download",
@@ -162,6 +171,14 @@ const overrides = {
     "NudeNyang Translator는 무료 오픈소스 프로그램입니다. 단, 선택한 외부 번역 서비스에 따라 별도의 구독이나 API 비용이 발생할 수 있습니다.": "NudeNyang Translator is free and open source. However, the external translation service you choose may require a separate subscription or charge API usage fees.",
   },
   ja: {
+    "문단은 그대로,": "段落はそのまま、",
+    "언어는 원하는 대로.": "読みたい言語で。",
+    "Discord에서 쓰던 번역을 웹페이지에서도 이용하세요. Chrome·Whale·Firefox 확장 프로그램으로 연결합니다.": "Discordで使っている翻訳をウェブページでも。Chrome・Whale・Firefoxの拡張機能から利用できます。",
+    "읽던 흐름을 유지합니다.": "文章の読みやすさを保ちます。",
+    "글이 한 덩어리로 뭉치지 않도록 문단과 줄바꿈을 보존합니다. 긴 상품 설명이나 해외 게시글도 원래의 흐름대로 읽을 수 있습니다.": "段落や改行を保ち、文章がひと続きになるのを防ぎます。長い商品説明や海外の投稿も、元の構成のまま読めます。",
+    "언어 선택은 한 번만.": "言語の選択は一度だけ。",
+    "읽고 싶은 언어를 정해 두면 원문 언어는 자동으로 감지합니다. 여러 언어의 페이지를 옮겨 다녀도 같은 설정으로 번역합니다.": "読みたい言語を設定すれば、原文の言語は自動で判別します。さまざまな言語のページを移動しても、同じ設定で翻訳できます。",
+    "NudeNyang 본체와 브라우저 확장 프로그램이 함께 필요합니다.": "NudeNyangのデスクトップアプリとブラウザ拡張機能が必要です。",
     "모르는 표현은 선택해서 바로 확인할 수 있습니다.": "わからない表現は、選択してすぐに確認できます。",
     "대화에서 표현을 선택하고 Aa 버튼을 누르면 뜻과 발음, 예문을 확인할 수 있습니다. 필요한 용어는 개인 사전에 저장해 언제든 다시 볼 수 있습니다.": "会話内の表現を選択してAaボタンを押すと、意味・発音・用例を確認できます。必要な用語は個人辞書に保存して、いつでも見返せます。",
     "이미지 속 글자까지 번역합니다.": "画像内の文字まで翻訳します。",
@@ -310,7 +327,7 @@ for (const [locale] of LANGUAGE_OPTIONS) {
   const missing = [];
 
   for (const source of sourceList) {
-    const existing = UI_LOCALE_COPY[locale]?.[source];
+    const existing = UI_LOCALE_COPY[locale]?.[source] || LANDING_LOCALES[locale]?.[source];
     const override = source === workflowTitle
       ? workflowTitleOverrides[locale]
       : source === showcaseTitle

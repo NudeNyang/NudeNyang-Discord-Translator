@@ -665,6 +665,101 @@ summary:focus-visible {
   margin-bottom: 48px;
 }
 
+.web-translation-heading {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+  margin-bottom: 36px;
+}
+
+.web-translation-heading .section-heading {
+  margin: 0;
+}
+
+.web-translation-accent {
+  color: var(--accent);
+}
+
+.web-translation-benefits {
+  display: grid;
+  gap: 28px;
+  margin: 0;
+}
+
+.web-translation-benefits dt {
+  margin-bottom: 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.web-translation-benefits dd {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.web-translation-comparison {
+  margin: 0;
+}
+
+.web-translation-image-link {
+  display: block;
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+
+.web-translation-image-link img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.web-translation-image-link span {
+  display: block;
+  margin-top: 14px;
+  text-align: end;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.web-translation-comparison figcaption {
+  max-width: 70ch;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.web-translation-setup {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 28px;
+}
+
+.web-translation-setup p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.web-translation-setup a {
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 720px) {
+  .web-translation-heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    margin-bottom: 28px;
+  }
+}
+
 .section-heading.compact {
   max-width: 680px;
 }
