@@ -1887,14 +1887,14 @@ async function checkForUpdates(silent = false) {
   }
   state.updateCheckActive = true;
   elements.checkUpdate.disabled = true;
-  if (!silent) setLocalizedText(elements.updateStatus, "오픈 베타 업데이트를 확인하고 있습니다...");
+  if (!silent) setLocalizedText(elements.updateStatus, "업데이트를 확인하고 있습니다...");
   try {
     const result = await invoke("update_check");
     if (result.available) {
       await showAvailableUpdate(result.version, { prompt: silent });
     } else {
       renderAvailableUpdate("");
-      setLocalizedText(elements.updateStatus, "현재 베타 버전이 최신입니다.");
+      setLocalizedText(elements.updateStatus, "현재 버전이 최신입니다.");
       setLocalizedText(elements.checkUpdate, "지금 확인");
     }
   } catch (error) {

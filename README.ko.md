@@ -18,22 +18,26 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="Beta" src="https://img.shields.io/badge/status-beta-E6A23C">
+  <img alt="1.0.0" src="https://img.shields.io/badge/release-1.0.0-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
 NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 앱입니다. Discord 사용자 토큰이나 비공식 API, self-bot은 쓰지 않습니다. 전용 CDP 파이프로 현재 렌더러를 읽고, 화면에 그려진 DOM만 바꿉니다. 번역을 끄면 보관해 둔 원문으로 돌아갑니다.
 
 > [!IMPORTANT]
-> 이 프로그램은 비공식 베타입니다. Discord 업데이트로 화면 구조가 바뀌면 번역 기능이 일시적으로 동작하지 않을 수 있습니다. 추가 인증 화면이 나타나면 인증 호환 모드가 번역 연결을 잠시 멈추며, 인증을 마친 뒤 사용자가 직접 다시 연결할 수 있습니다.
+> Discord에서 공식 제공하는 프로그램은 아닙니다. Discord 업데이트로 화면 구조가 바뀌면 번역이 일시적으로 동작하지 않을 수 있습니다. 추가 인증 화면에서는 번역 연결을 잠시 멈추며, 인증을 마친 뒤 직접 다시 연결할 수 있습니다.
 
-## 오픈 베타 다운로드
+## 다운로드와 업데이트
 
-[GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases)에서 Windows 10/11용 x64와 ARM64 설치 파일을 받을 수 있습니다. 오픈 베타는 완성된 정식판이 아니므로 중요한 대화에서는 번역 결과를 원문과 함께 확인해 주세요.
+[최신 릴리스](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/latest)에서 Windows 10/11용 설치 파일을 받을 수 있습니다. [1.0.0 변경 내역](docs/releases/1.0.0.md)에는 Discord 다중 실행 지원과 이번에 고친 문제를 정리했습니다.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
 - 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
-- 자동 업데이트가 사용하는 x64 설치형에는 `.sig`가 함께 제공됩니다. Windows 설치 파일의 무결성은 `SHA256SUMS.txt`에서 확인할 수 있습니다.
+- 두 설치형 모두 자동 업데이트용 `.sig`를 제공합니다. 파일 무결성은 `SHA256SUMS.txt`로 확인할 수 있습니다.
+
+기존 설치형은 앱의 업데이트 안내에 따라 설치하면 됩니다. 1.0.0는 기존 베타판의 업데이트 주소와 서명 키를 그대로 사용하며, 설정을 초기화하거나 앱을 지울 필요가 없습니다. 이번 업데이트에서는 Discord 선택 항목만 한 번 `자동`으로 전환합니다. 이후 직접 선택한 값은 유지합니다. 예전 포터블판 사용자는 설치형을 직접 받아야 합니다.
+
+Discord Stable·PTB·Canary를 함께 실행해도 번역 설정은 하나로 사용합니다. 지금 보고 있는 Discord 창을 번역하고, 다른 창은 열어 볼 때 이어서 처리합니다. 특정 버전만 사용하려면 설정에서 직접 선택할 수 있습니다.
 
 ## 동작 화면
 
@@ -134,7 +138,7 @@ Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemin
 - 엔진·언어·프롬프트·말투·렌더러 버전별 메모리 및 SQLite 캐시
 - GPU 가속을 쓸 수 없을 때 메모리 점유를 줄인 CPU 모드로 자동 전환
 - 전역 단축키, 트레이 상태 동기화, 설정창 단일 인스턴스
-- GitHub Releases를 통한 서명된 오픈 베타 업데이트
+- GitHub Releases에서 제공하는 서명된 설치형 업데이트
 
 전체 언어 목록과 공급자별 안내는 [docs/LANGUAGES.md](docs/LANGUAGES.md)에서 볼 수 있습니다.
 
@@ -169,12 +173,11 @@ cargo build --release
 ```
 
 <details>
-<summary>Windows 패키징과 오픈 베타 배포</summary>
+<summary>Windows 패키징과 릴리스 배포</summary>
 
-오픈 베타는 Tauri 업데이트 서명을 적용한 NSIS 설치 파일과 GitHub Releases를 사용합니다. Windows 릴리스는 x64와 ARM64 설치형을 함께 빌드하고 검증한 뒤 게시하며, 자동 업데이트를 지원하지 않는 포터블판은 공개 릴리스에서 제외합니다. 업데이트 서명 키는 저장소가 아닌 `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`에 보관합니다.
+Tauri 업데이트 서명을 적용한 NSIS 설치 파일을 GitHub Releases에 게시합니다. x64와 ARM64 설치형을 함께 빌드하고 검증하며, 자동 업데이트를 지원하지 않는 포터블판은 공개하지 않습니다. 업데이트 서명 키는 저장소 밖의 `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`에 보관합니다.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/package_windows_variants.ps1
 powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
@@ -185,6 +188,8 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 
 | 문서 | 내용 |
 |---|---|
+| [1.0.0 변경 내역](docs/releases/1.0.0.md) | 정식 릴리스의 변경 사항과 기존 사용자 업데이트 안내 |
+| [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md) | 두 설치형의 빌드·서명·공개와 업데이트 목록 반영 순서 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 런타임 구성, Discord 연결, 데이터 경계, OCR, 플랫폼 분리 |
 | [docs/LANGUAGES.md](docs/LANGUAGES.md) | 28개 언어, 감지 방식, 공급자 지원 범위, OCR 범위 |
 | [DICTIONARY.md](DICTIONARY.md) | 선택형 조회, 오프라인팩, 개인 용어, 28개 언어 확장과 데이터 라이선스 경계 |

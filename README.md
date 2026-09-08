@@ -22,22 +22,26 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="Beta" src="https://img.shields.io/badge/status-beta-E6A23C">
+  <img alt="1.0.0" src="https://img.shields.io/badge/release-1.0.0-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
 NudeNyang works with the Discord window that is already on screen. It does not use a Discord user token, an unofficial Discord API, or a self-bot. A Tauri/Rust app reads the current renderer through a private CDP pipe and replaces only the rendered DOM. Turning translation off restores the saved original content. Optional Chrome, Naver Whale, and Firefox extensions use the same Windows translation engine for supported web pages while preserving their text-node layout.
 
 > [!IMPORTANT]
-> This is an unofficial beta. A Discord update can change the renderer and temporarily break translation. When Discord shows additional verification, verification compatibility mode pauses the translation connection until the user completes verification and explicitly reconnects NudeNyang.
+> This app is not affiliated with Discord. Discord updates can change the renderer and temporarily break translation. When Discord requests additional verification, the app pauses translation until you complete verification and reconnect.
 
-## Download the Open Beta
+## Download and update
 
-Download the current Windows installer from [GitHub Releases](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases). This is an open beta rather than a finished stable release, so verify important translations against the original text.
+Download the Windows installer from the [latest release](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/latest). See the [1.0.0 release notes](docs/releases/1.0.0.md) for multi-client Discord support and fixes.
+
+Existing installed versions can follow the app's update prompt. Version 1.0.0 keeps the beta releases' update URL and signing key; you do not need to uninstall or reset the app. Only the Discord selection moves to Automatic once; later choices are kept. Older portable builds require a manual installer download.
+
+Stable, PTB and Canary share one set of translation settings. The app translates the Discord window you are viewing and processes other windows when you switch to them. You can still select a specific Discord release in settings.
 
 - `x64` is for most Intel and AMD Windows PCs; `ARM64` is for Windows on ARM.
 - Public releases provide x64 and ARM64 installers only. Portable packages are no longer distributed because they do not support automatic updates.
-- The updater `.sig` accompanies the x64 Setup used by automatic updates. Windows installer checksums are listed in `SHA256SUMS.txt`.
+- Both installers include an updater `.sig`. Windows installer checksums are listed in `SHA256SUMS.txt`.
 
 ## See it in action
 
@@ -141,7 +145,7 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 - Memory and SQLite caching separated by engine, language, prompt, register, and renderer version
 - Automatic GPU fallback to a RAM-conscious CPU mode when acceleration is unavailable
 - Configurable global shortcuts, synchronized tray state, and a single settings window
-- Signed Open Beta updates distributed through GitHub Releases
+- Signed installer updates distributed through GitHub Releases
 
 The complete language catalog and provider notes are in [docs/LANGUAGES.md](docs/LANGUAGES.md).
 
@@ -185,9 +189,9 @@ cargo build --release
 ```
 
 <details>
-<summary>Windows packaging and Open Beta deployment</summary>
+<summary>Windows packaging and release deployment</summary>
 
-Open Beta builds use updater-signed NSIS installers and GitHub Releases. Windows releases build and verify x64 and ARM64 installers together. Portable packages remain excluded because they do not support automatic updates. The updater signing key stays outside the repository under `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`.
+Releases use updater-signed NSIS installers on GitHub Releases. Build and verify x64 and ARM64 installers together. Portable packages are excluded because they do not support automatic updates. The signing key stays outside the repository under `%LOCALAPPDATA%\NudeNyang Discord Translator\secrets`.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
@@ -198,7 +202,7 @@ Commit source/version/release notes before packaging, and push that source commi
 The public packaging script builds **both x64 and ARM64**, signs both installers with the existing
 Tauri updater key, and verifies signatures, SHA-256 checksums, URLs and both update platform entries.
 Missing or mismatched artifacts stop deployment. `-beta` versions remain GitHub prereleases with
-`--latest=false`; prerelease status does not disable app updates.
+`--latest=false`; stable versions are published as the latest release. Both use the same app update URL.
 
 Packaging writes only `release/<version>/latest.json`. Deployment uploads a draft, checks every
 asset's server-side SHA-256 and size, publishes it, then copies the validated manifest to

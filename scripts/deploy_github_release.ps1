@@ -11,6 +11,7 @@ $TauriConfigPath = Join-Path $ProjectRoot 'src-tauri\tauri.conf.json'
 $Config = [IO.File]::ReadAllText($TauriConfigPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
 if (-not $Version) { $Version = [string]$Config.version }
 if ($Version -ne $Config.version) { throw '현재 소스 버전과 배포 버전이 다릅니다.' }
+$IsPrerelease = $Version.Contains('-')
 if ($Repository -ne 'NudeNyang/NudeNyang-Discord-Translator') { throw '기존 공개 업데이트 저장소를 유지해야 합니다.' }
 if (-not $ReleaseNotesPath) { $ReleaseNotesPath = Join-Path $ProjectRoot "docs\releases\$Version.md" }
 $ReleaseDirectory = Join-Path $ProjectRoot "release\$Version"
@@ -50,7 +51,7 @@ try {
     $Drafts = @()
     if ($ExistingTags.Count -eq 0) {
         $ReleaseFlags = @('--draft', '--latest=false')
-        if ($Version.Contains('-')) { $ReleaseFlags += '--prerelease' }
+        if ($IsPrerelease) { $ReleaseFlags += '--prerelease' }
         gh release create "v$Version" @Artifacts --repo $Repository --title ($Version -replace '-beta$', ' Beta') --notes-file $ReleaseNotesPath --target $SourceCommit @ReleaseFlags
         if ($LASTEXITCODE -ne 0) { throw '릴리스 초안 업로드에 실패했습니다. 생성된 초안은 확인 전 공개하지 마십시오.' }
 
@@ -72,7 +73,7 @@ try {
         $DraftList = $DraftListJson | ConvertFrom-Json
         $Drafts = @($DraftList | Where-Object { $_.tag_name -eq "v$Version" })
     }
-    if ($Drafts.Count -ne 1 -or -not $Drafts[0].draft -or $Drafts[0].target_commitish -ne $SourceCommit -or ($Version.Contains('-') -and -not $Drafts[0].prerelease)) {
+    if ($Drafts.Count -ne 1 -or -not $Drafts[0].draft -or $Drafts[0].target_commitish -ne $SourceCommit -or [bool]$Drafts[0].prerelease -ne $IsPrerelease) {
         throw '생성된 초안의 버전·소스 커밋·공개 상태가 예상과 다릅니다.'
     }
     $ReleaseId = [long]$Drafts[0].id
@@ -87,14 +88,17 @@ try {
             throw "업로드 파일의 크기·SHA-256이 일치하지 않습니다. 초안을 유지합니다: $($artifact.name)"
         }
     }
-    $PublishFlags = @('--draft=false', '--latest=false')
-    if ($Version.Contains('-')) { $PublishFlags += '--prerelease' }
+    $PublishFlags = if ($IsPrerelease) { @('--draft=false', '--latest=false', '--prerelease') } else { @('--draft=false', '--latest=true', '--prerelease=false') }
     gh release edit "v$Version" --repo $Repository @PublishFlags
     if ($LASTEXITCODE -ne 0) { throw '검증된 릴리스 공개에 실패했습니다.' }
     $PublishedJson = gh api "repos/$Repository/releases/$ReleaseId"
     if ($LASTEXITCODE -ne 0) { throw '공개 여부를 확인하지 못해 업데이트 목록을 변경하지 않습니다.' }
     $Published = $PublishedJson | ConvertFrom-Json
-    if ($Published.draft -or $Published.tag_name -ne "v$Version" -or $Published.target_commitish -ne $SourceCommit -or ($Version.Contains('-') -and -not $Published.prerelease)) { throw '프리릴리스 공개 상태가 예상과 다릅니다.' }
+    if ($Published.draft -or $Published.tag_name -ne "v$Version" -or $Published.target_commitish -ne $SourceCommit -or [bool]$Published.prerelease -ne $IsPrerelease) { throw '릴리스 공개 상태가 예상과 다릅니다.' }
+    if (-not $IsPrerelease) {
+        $LatestId = gh api "repos/$Repository/releases/latest" --jq '.id'
+        if ($LASTEXITCODE -ne 0 -or [long]$LatestId -ne $ReleaseId) { throw '정식 최신 릴리스 지정이 확인되지 않아 업데이트 목록을 변경하지 않습니다.' }
+    }
 
     # Only advertise downloads after both verified installers are public.
     Copy-Item -LiteralPath $ManifestPath -Destination (Join-Path $ProjectRoot 'updates\beta\latest.json') -Force

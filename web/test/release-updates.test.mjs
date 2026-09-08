@@ -17,7 +17,7 @@ test('공개 패키징은 x64·ARM64 빌드와 검증을 함께 수행하고 게
   assert.match(script('deploy_github_release.ps1'), /--latest=false/);
 });
 
-async function fixture(t) {
+async function fixture(t, version = '0.7.3-beta') {
   const helper = await import('../../scripts/release-updates.mjs');
   const directory = mkdtempSync(join(tmpdir(), 'nudenyang-release-test-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
@@ -25,7 +25,7 @@ async function fixture(t) {
   const keyId = randomBytes(8);
   const rawPublic = publicKey.export({ type: 'spki', format: 'der' }).subarray(-32);
   const pubkey = Buffer.from(`untrusted comment: test key\n${Buffer.concat([Buffer.from('Ed'), keyId, rawPublic]).toString('base64')}\n`).toString('base64');
-  const options = { directory, version: '0.7.3-beta', repository: 'NudeNyang/NudeNyang-Discord-Translator', pubkey, commit: 'a'.repeat(40) };
+  const options = { directory, version, repository: 'NudeNyang/NudeNyang-Discord-Translator', pubkey, commit: 'a'.repeat(40) };
   const names = helper.installerNames(options.version);
   for (const [platform, name] of Object.entries(names)) {
     const data = Buffer.from(`synthetic installer for ${platform}`);
@@ -79,9 +79,10 @@ test('서명 파일 안의 신뢰 주석도 변조하면 검증에 실패한다'
   assert.throws(() => f.helper.verifyUpdaterSignature(readFileSync(join(f.directory, name)), changed, f.options.pubkey));
 });
 
-for (const scenario of ['success', 'eventual-consistency', 'existing-draft-resume', 'missing-arm', 'upload-digest-mismatch', 'publish-failed', 'draft-source-mismatch', 'draft-already-public', 'draft-missing']) {
+for (const scenario of ['stable-success', 'stable-wrong-classification', 'success', 'eventual-consistency', 'existing-draft-resume', 'missing-arm', 'upload-digest-mismatch', 'publish-failed', 'draft-source-mismatch', 'draft-already-public', 'draft-missing']) {
   test(`실제 PowerShell 배포 흐름: ${scenario}`, { skip: process.platform !== 'win32' }, async (t) => {
-    const f = await fixture(t);
+    const stable = scenario.startsWith('stable-');
+    const f = await fixture(t, stable ? '1.0.0' : '0.7.3-beta');
     const root = join(f.directory, 'project');
     for (const folder of ['scripts', 'src-tauri', 'updates/beta', `release/${f.options.version}`, 'docs/releases']) {
       mkdirSync(join(root, folder), { recursive: true });
@@ -104,7 +105,7 @@ for (const scenario of ['success', 'eventual-consistency', 'existing-draft-resum
     const directory = join(root, 'release', f.options.version);
     for (const name of Object.values(f.names).flatMap(name => [name, `${name}.sig`])) copyFileSync(join(f.directory, name), join(directory, name));
     const result = f.helper.generateRelease({ ...f.options, directory, commit, notes: '한글 릴리스 안내' });
-    const remote = { id: 12345, tag_name: `v${f.options.version}`, target_commitish: commit, draft: true, prerelease: true, body: '한글 릴리스 안내', assets: result.artifacts.map(a => ({ ...a, state: 'uploaded', digest: `sha256:${a.sha256}` })) };
+    const remote = { id: 12345, tag_name: `v${f.options.version}`, target_commitish: commit, draft: true, prerelease: !stable || scenario === 'stable-wrong-classification', body: '한글 릴리스 안내', assets: result.artifacts.map(a => ({ ...a, state: 'uploaded', digest: `sha256:${a.sha256}` })) };
     if (scenario === 'draft-source-mismatch') remote.target_commitish = 'b'.repeat(40);
     if (scenario === 'draft-already-public') remote.draft = false;
     if (scenario === 'missing-arm') unlinkSync(join(directory, f.names['windows-aarch64']));
@@ -131,6 +132,7 @@ function gh {
   [IO.File]::AppendAllText(${quote(logPath)}, (ConvertTo-Json -InputObject @($args) -Compress) + [Environment]::NewLine)
   $global:LASTEXITCODE = 0
   if ($args[0] -eq 'api' -and $args[1] -like '*/commits/main') { return '${mainCommit}' }
+  if ($args[0] -eq 'api' -and $args[1] -like '*/releases/latest') { return '12345' }
   if ($args[0] -eq 'release' -and $args[1] -eq 'list') {
     ${scenario === 'existing-draft-resume' ? `return '[{"tagName":"v${f.options.version}"}]'` : "return '[]'"}
   }
@@ -161,15 +163,18 @@ function gh {
     const calls = existsSync(logPath) ? readFileSync(logPath, 'utf8').trim().split(/\r?\n/).map(JSON.parse) : [];
     const create = calls.find(args => args[0] === 'release' && args[1] === 'create');
     const publish = calls.find(args => args[0] === 'release' && args[1] === 'edit');
-    if (['success', 'eventual-consistency', 'existing-draft-resume'].includes(scenario)) {
+    if (['stable-success', 'success', 'eventual-consistency', 'existing-draft-resume'].includes(scenario)) {
       assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
       if (scenario === 'existing-draft-resume') {
         assert.equal(create, undefined, 'existing verified draft must not be recreated or overwritten');
       } else {
-        for (const flag of ['--draft', '--prerelease', '--latest=false']) assert.ok(create.includes(flag));
+        for (const flag of ['--draft', '--latest=false']) assert.ok(create.includes(flag));
+        assert.equal(create.includes('--prerelease'), !stable);
         assert.equal(create.filter(arg => arg.startsWith(directory)).length, 6);
       }
-      assert.ok(publish.includes('--draft=false') && publish.includes('--prerelease') && publish.includes('--latest=false'));
+      assert.ok(publish.includes('--draft=false'));
+      assert.ok(publish.includes(stable ? '--latest=true' : '--latest=false'));
+      assert.ok(publish.includes(stable ? '--prerelease=false' : '--prerelease'));
       assert.equal(readFileSync(trackedManifest, 'utf8'), readFileSync(join(directory, 'latest.json'), 'utf8'));
     } else {
       assert.notEqual(run.status, 0, 'deployment must fail');

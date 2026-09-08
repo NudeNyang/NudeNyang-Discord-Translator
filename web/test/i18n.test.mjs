@@ -113,8 +113,8 @@ test("app information copy is translated completely", () => {
     "GNU GPL v3に基づいて利用でき、保証はありません。",
   );
   assert.equal(
-    translateDynamicCopy("ja", "현재 베타 버전이 최신입니다."),
-    "現在のベータ版は最新です。",
+    translateDynamicCopy("ja", "현재 버전이 최신입니다."),
+    "現在のバージョンは最新です。",
   );
 });
 
