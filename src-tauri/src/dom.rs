@@ -20,6 +20,8 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const parent = node.parentElement;
       if (!parent) continue;
+      // A timestamp is Discord metadata, not part of the message to translate.
+      if (parent.closest('time[datetime]') && root.closest('[id^="message-content-"],[id^="message-content_"],[data-dto-message-id],[data-dto-reply-id]')) continue;
       const protectedSelector = allowLinkText
         ? 'code,pre,[contenteditable="true"],textarea,input'
         : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
@@ -464,6 +466,8 @@ pub const RESTORE_TEXT_SCRIPT: &str = r#"
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const parent = node.parentElement;
       if (!parent) continue;
+      // A timestamp is Discord metadata, not part of the message to translate.
+      if (parent.closest('time[datetime]') && root.closest('[id^="message-content-"],[id^="message-content_"],[data-dto-message-id],[data-dto-reply-id]')) continue;
       const protectedSelector = allowLinkText
         ? 'code,pre,[contenteditable="true"],textarea,input'
         : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
@@ -542,6 +546,8 @@ pub const INSTALL_TEXT_RESTORE_SCRIPT: &str = r#"
         if (!node.nodeValue || !node.nodeValue.trim()) continue;
         const parent = node.parentElement;
         if (!parent) continue;
+        // A timestamp is Discord metadata, not part of the message to translate.
+        if (parent.closest('time[datetime]') && root.closest('[id^="message-content-"],[id^="message-content_"],[data-dto-message-id],[data-dto-reply-id]')) continue;
         const protectedSelector = allowLinkText
           ? 'code,pre,[contenteditable="true"],textarea,input'
           : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';
@@ -692,6 +698,8 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
       if (!node.nodeValue || !node.nodeValue.trim()) continue;
       const parent = node.parentElement;
       if (!parent) continue;
+      // A timestamp is Discord metadata, not part of the message to translate.
+      if (parent.closest('time[datetime]') && root.closest('[id^="message-content-"],[id^="message-content_"],[data-dto-message-id],[data-dto-reply-id]')) continue;
       const protectedSelector = allowLinkText
         ? 'code,pre,[contenteditable="true"],textarea,input'
         : 'a,button,[role="button"],code,pre,[contenteditable="true"],textarea,input';

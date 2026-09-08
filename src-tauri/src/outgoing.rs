@@ -1514,6 +1514,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       .nt-outgoing-original-copy{display:inline;min-width:0;overflow-wrap:anywhere}
       .nt-outgoing-original-copy::before{content:attr(data-text);white-space:pre-wrap}
       .nt-outgoing-original-copy[hidden]{display:none}
+      .nt-outgoing-original-metadata{margin-inline-start:4px;font-size:.75em;color:var(--text-muted,#949ba4)}
       .nt-outgoing-original-copy[hidden]+.nt-outgoing-original-toggle{margin-inline-start:8px}
       .nt-outgoing-original-toggle{align-self:baseline;flex:none;margin:0;padding:1px 0;border:0;border-radius:4px;background:transparent;color:var(--text-link,#00a8fc);font:inherit;font-size:11px;line-height:1.25;cursor:pointer;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease,background-color .12s ease}
       .nt-outgoing-original-toggle::before{content:attr(data-label)}
@@ -1529,16 +1530,33 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
   }
   function sentTextForMatching(root) {
     const originals = window.__nudeTranslatorOriginals;
-    if (originals instanceof Map) {
-      const values = [];
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        values.push(originals.has(node) ? originals.get(node) : node.nodeValue || '');
-      }
-      return values.join('').replace(/\u00a0/g, ' ').trim();
+    if (!(originals instanceof Map) && !root.querySelector('time[datetime]')) {
+      return (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
     }
-    return (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim();
+    const values = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node.parentElement?.closest('time[datetime]')) continue;
+      values.push(originals instanceof Map && originals.has(node) ? originals.get(node) : node.nodeValue || '');
+    }
+    return values.join('').replace(/\u00a0/g, ' ').trim();
+  }
+  function syncOriginalMetadata(root, originalText) {
+    // Keep Discord's nodes untouched. Only mirror their label while the native
+    // body is hidden; the sent view continues to use the native timestamp.
+    const timestamps = [...root.querySelectorAll('time[datetime]')];
+    const signature = JSON.stringify(timestamps.map(node => [node.getAttribute('datetime'), node.textContent]));
+    if (originalText.dataset.metadata === signature) return;
+    originalText.dataset.metadata = signature;
+    originalText.querySelectorAll('.nt-outgoing-original-metadata').forEach(node => node.remove());
+    for (const timestamp of timestamps) {
+      const mirror = document.createElement('time');
+      mirror.className = 'nt-outgoing-original-metadata';
+      mirror.dateTime = timestamp.getAttribute('datetime');
+      mirror.textContent = timestamp.textContent;
+      originalText.append(mirror);
+    }
   }
   function comparableMessageText(value) {
     const text = String(value || '')
@@ -1569,6 +1587,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
     const button = view.querySelector('.nt-outgoing-original-toggle');
     const originalText = view.querySelector('.nt-outgoing-original-copy');
     if (originalText.dataset.text !== record.original_text) originalText.dataset.text = record.original_text;
+    syncOriginalMetadata(root, originalText);
     const showSent = view.dataset.mode !== 'original';
     root.style.display = showSent ? '' : 'none';
     originalText.hidden = showSent;
@@ -1677,7 +1696,7 @@ const OUTGOING_ORIGINALS_UI_SCRIPT: &str = r####"
       },
     };
     manager.observer = new MutationObserver(() => manager.scheduleApply());
-    manager.observer.observe(document.body, {childList:true, subtree:true});
+    manager.observer.observe(document.body, {childList:true, characterData:true, attributes:true, attributeFilter:['datetime'], subtree:true});
     window[GLOBAL] = manager;
   }
   if (manager.translationEnabled !== displayTranslationEnabled) {
@@ -1980,7 +1999,7 @@ pub fn outgoing_originals_ui_script(
         ))
 }
 
-pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 21;
+pub const OUTGOING_ORIGINALS_UI_VERSION: u64 = 22;
 
 pub fn suggest_recent_language(messages: &[String]) -> Option<Language> {
     let mut counts = HashMap::<Language, usize>::new();

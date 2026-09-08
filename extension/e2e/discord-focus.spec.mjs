@@ -123,6 +123,51 @@ test("edited outgoing messages return to translation while editing, cancel and r
   } finally { await app.close(); }
 });
 
+test("edited timestamp stays visible and unchanged through translation, saved originals and remount", async () => {
+  test.setTimeout(60_000);
+  const app = await fixture();
+  try {
+    const page = app.pages.stable;
+    const body = app.message('stable');
+    await body.evaluate(node => node.insertAdjacentHTML('beforeend', '<time datetime="2026-09-08T00:00:00Z"><span>(edited)</span></time>'));
+    await app.focus('stable');
+    await expect(body).toContainText(`[ko] ${app.text}`);
+    await expect(body.locator('time')).toHaveText('(edited)');
+    await app.call('enabled', {enabled:false});
+    await expect(body).toHaveText(`${app.text}(edited)`);
+    await app.call('enabled', {enabled:true});
+    const script = await app.call('outgoingOriginal', {record: {message_id:'2', channel_key:'/channels/1/2',
+      original_text:'저장된 원문입니다.', sent_text:app.text, part_number:1, total_parts:1, created_at:Date.now()/1000}});
+    await page.evaluate(script);
+    const view = page.locator('.nt-outgoing-original-view');
+    await expect(view).toHaveCount(1);
+    await expect(view.locator('time')).toBeVisible();
+    await expect(view.locator('time')).toHaveText('(edited)');
+    await page.locator('#chat-messages-1-2').hover();
+    await view.locator('button').click();
+    await expect(body.locator('time')).toBeVisible();
+    await expect(view.locator('time')).toBeHidden();
+    await view.locator('button').click();
+    await body.locator('time span').evaluate(node => {node.firstChild.nodeValue = '(수정됨)';});
+    await expect(view.locator('time')).toHaveText('(수정됨)');
+    await body.locator('time').evaluate(node => node.setAttribute('datetime', '2026-09-08T01:00:00Z'));
+    await expect(view.locator('time')).toHaveAttribute('datetime', '2026-09-08T01:00:00Z');
+    await body.evaluate((node, text) => {
+      const replacement = node.cloneNode(true); replacement.firstChild.nodeValue = text; node.replaceWith(replacement);
+    }, app.text);
+    await expect(view.locator('time')).toHaveCount(1);
+    await expect(view.locator('time')).toBeVisible();
+    await body.locator('time').evaluate(node => node.remove());
+    await expect(view.locator('time')).toHaveCount(0);
+    await body.evaluate(node => {node.innerHTML = 'The edited body has changed.<time datetime="2026-09-08T01:00:00Z">(edited)</time>';});
+    await expect(view).toHaveCount(0);
+    await expect(body).toHaveText('[ko] The edited body has changed.(edited)');
+    await expect(body.locator('time')).toBeVisible();
+    await app.call('enabled', {enabled:false});
+    await expect(body).toHaveText('The edited body has changed.(edited)');
+  } finally {await app.close();}
+});
+
 test("a newer Discord edit survives a translation already in flight", async () => {
   test.setTimeout(45_000);
   const app = await fixture({delay:1000});

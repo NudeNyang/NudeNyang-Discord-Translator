@@ -11,6 +11,14 @@ const snapshotMatch = domSource.match(
 assert.ok(snapshotMatch, "Rust 소스에서 Discord DOM 스냅샷 스크립트를 찾을 수 있어야 해");
 const snapshotScript = snapshotMatch[1];
 
+test("메시지와 답장의 수정 시각 표시는 번역 본문에 포함하지 않는다", () => {
+  const result = snapshot(`<main><ol><li id="chat-messages-1-2">
+    <div id="message-content-2">An edited message.<time datetime="2026-09-08T00:00:00Z"><span>(edited)</span></time></div>
+    <div id="message-reply-context-3"><span class="repliedTextPreview_fixture"><span id="message-content-3">A quoted message.<time datetime="2026-09-08T00:00:00Z"><span>(수정됨)</span></time></span></span></div>
+  </li></ol></main>`);
+  assert.deepEqual(Array.from(result.parts, part => part.text).sort(), ["A quoted message.", "An edited message."]);
+});
+
 function snapshot(html) {
   const dom = new JSDOM(html, {
     runScripts: "outside-only",
