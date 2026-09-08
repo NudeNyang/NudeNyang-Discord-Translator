@@ -113,6 +113,17 @@ const showcaseTitleOverrides = {
   cs: "Nastavte si podle potřeby vše od způsobu překladu až po jazyk.",
 };
 
+const additionalFeaturesLabels = {
+  en: "Additional features", ja: "追加機能", zh: "附加功能", "zh-Hant": "附加功能",
+  "pt-BR": "Recursos adicionais", hi: "अतिरिक्त सुविधाएँ", "es-419": "Funciones adicionales",
+  de: "Weitere Funktionen", ru: "Дополнительные функции", id: "Fitur tambahan",
+  fr: "Fonctionnalités supplémentaires", tr: "Ek özellikler", ar: "ميزات إضافية",
+  vi: "Tính năng bổ sung", it: "Funzionalità aggiuntive", pl: "Dodatkowe funkcje",
+  uk: "Додаткові функції", ms: "Ciri tambahan", nl: "Extra functies", th: "ฟีเจอร์เพิ่มเติม",
+  fil: "Mga karagdagang feature", bn: "অতিরিক্ত সুবিধা", ur: "اضافی خصوصیات",
+  ta: "கூடுதல் அம்சங்கள்", fa: "قابلیت‌های بیشتر", he: "תכונות נוספות", cs: "Další funkce",
+};
+
 const overrides = {
   en: {
     "문단은 그대로,": "Keep the paragraphs,",
@@ -328,7 +339,9 @@ for (const [locale] of LANGUAGE_OPTIONS) {
 
   for (const source of sourceList) {
     const existing = UI_LOCALE_COPY[locale]?.[source] || LANDING_LOCALES[locale]?.[source];
-    const override = source === workflowTitle
+    const override = source === "추가 기능"
+      ? additionalFeaturesLabels[locale]
+      : source === workflowTitle
       ? workflowTitleOverrides[locale]
       : source === showcaseTitle
         ? showcaseTitleOverrides[locale]
