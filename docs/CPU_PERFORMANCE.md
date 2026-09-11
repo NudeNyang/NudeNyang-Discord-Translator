@@ -1,5 +1,10 @@
 # CPU translation performance validation
 
+The 2026-09-11 follow-up explicitly compares 6, 16, and 32 threads on the user's
+Ryzen 9 9950X3D with the current `0.7.6-beta` runtime. The six-thread policy remains
+in place after that comparison. See [CPU thread comparison](CPU_THREAD_COMPARISON_20260911.md)
+for results, original decision history, and limits.
+
 ## Scope and observations (2026-09-05)
 
 The user reported game slowdown with local CPU translation. On their 32-logical-CPU Windows PC, with Crimson Desert running, an approximately 34-second observation of active Discord display translation measured the model at 33.3% average total CPU and 50.0% in the busiest five-second interval. Display requests were queued for as long as 28.6 seconds. A later quieter 25-second interval measured 1.82% model CPU with occasional display requests. These are different workloads, not an optimization A/B comparison. An earlier run of the old application exited with Windows exception `0xc0000409`; its cause was not established and this change does not claim to repair that crash.
