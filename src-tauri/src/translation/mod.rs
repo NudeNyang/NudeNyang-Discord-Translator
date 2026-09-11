@@ -16,6 +16,8 @@ pub use hymt::{
     HyMtTranslator, LocalModelDeleteResult, LocalModelStorageStatus, ModelPreparationCancellation,
     ModelPreparationProgress, ModelProgressObserver,
 };
+#[cfg(test)]
+pub use mock::progress as mock_progress;
 pub use mock::{MockTranslator, OriginalTranslator};
 pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::{outgoing_can_passthrough, TranslationService, WebTranslationSession};

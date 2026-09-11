@@ -440,6 +440,31 @@ impl TranslationCache {
         self.cleanup_user_data_before(None)
     }
 
+    /// Final, message-scoped Discord results. Bodies use the same encryption and
+    /// retention policy as translations, without appearing as duplicate history.
+    pub fn display_replay(&self, key: &str) -> Result<Option<String>, String> {
+        self.connection
+            .lock()
+            .map_err(|_| "화면 캐시 잠금을 열지 못했습니다.")?
+            .query_row(
+                "SELECT body FROM display_replay WHERE cache_key=?1",
+                [key],
+                |row| read_body(row, 0),
+            )
+            .optional()
+            .map_err(|error| format!("화면 캐시를 읽지 못했습니다: {error}"))
+    }
+
+    pub fn put_display_replay(&self, key: &str, body: &str) -> Result<(), String> {
+        let payload = self.body_payload(body)?;
+        self.connection.lock().map_err(|_| "화면 캐시 잠금을 열지 못했습니다.")?
+            .execute("INSERT INTO display_replay(cache_key, body, updated_at) VALUES (?1, ?2, ?3) \
+                ON CONFLICT(cache_key) DO UPDATE SET body=excluded.body, updated_at=excluded.updated_at",
+                params![key, payload, now_seconds()])
+            .map_err(|error| format!("화면 캐시를 저장하지 못했습니다: {error}"))?;
+        Ok(())
+    }
+
     pub fn cleanup_expired_records(
         &self,
         retention_days: u32,
@@ -485,7 +510,14 @@ impl TranslationCache {
                 transaction.execute("DELETE FROM outgoing_originals", [])
             }
             .map_err(|error| format!("보낸 메시지 원문을 정리하지 못했습니다: {error}"))?;
-            removed_records = (removed_translations + removed_outgoing_originals) as u64;
+            let removed_replays = if let Some(cutoff) = cutoff {
+                transaction.execute("DELETE FROM display_replay WHERE updated_at < ?1", [cutoff])
+            } else {
+                transaction.execute("DELETE FROM display_replay", [])
+            }
+            .map_err(|error| format!("화면 캐시를 정리하지 못했습니다: {error}"))?;
+            removed_records =
+                (removed_translations + removed_outgoing_originals + removed_replays) as u64;
             transaction
                 .commit()
                 .map_err(|error| format!("번역 기록 정리를 완료하지 못했습니다: {error}"))?;
@@ -754,6 +786,10 @@ fn initialize_schema(connection: &mut Connection) -> Result<(), String> {
                updated_at REAL NOT NULL,\
                PRIMARY KEY (source_hash, target_language, translator)\
              );\
+             CREATE TABLE IF NOT EXISTS display_replay (\
+               cache_key TEXT PRIMARY KEY, body BLOB NOT NULL, updated_at REAL NOT NULL\
+             );\
+             CREATE INDEX IF NOT EXISTS display_replay_updated ON display_replay(updated_at);\
              CREATE TABLE IF NOT EXISTS outgoing_originals (\
                message_id TEXT NOT NULL,\
                channel_key TEXT NOT NULL,\
@@ -926,6 +962,47 @@ mod tests {
         std::env::temp_dir()
             .join(format!("nude-translator-cache-{name}-{nonce}"))
             .join("cache.db")
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn display_replay_is_encrypted_persistent_and_obeys_history_cleanup() {
+        let path = temporary_cache_path("display-replay");
+        let body = "[\"Synthetic restored message @everyone\"]";
+        {
+            let cache = TranslationCache::open(path.clone(), 8).unwrap();
+            cache.put_display_replay("opaque-key", body).unwrap();
+            let connection = cache.connection.lock().unwrap();
+            let kind: String = connection
+                .query_row("SELECT typeof(body) FROM display_replay", [], |row| {
+                    row.get(0)
+                })
+                .unwrap();
+            assert_eq!(kind, "blob");
+        }
+        assert!(!fs::read(&path)
+            .unwrap()
+            .windows(body.len())
+            .any(|bytes| bytes == body.as_bytes()));
+        let cache = TranslationCache::open(path.clone(), 8).unwrap();
+        assert_eq!(
+            cache.display_replay("opaque-key").unwrap().as_deref(),
+            Some(body)
+        );
+        assert_eq!(cache.storage_status().unwrap().translation_records, 0);
+        cache
+            .connection
+            .lock()
+            .unwrap()
+            .execute("UPDATE display_replay SET updated_at=1", [])
+            .unwrap();
+        assert_eq!(cache.cleanup_expired_records(1).unwrap().removed_records, 1);
+        assert!(cache.display_replay("opaque-key").unwrap().is_none());
+        cache.put_display_replay("opaque-key", body).unwrap();
+        assert_eq!(cache.clear_user_data().unwrap().removed_records, 1);
+        assert!(cache.display_replay("opaque-key").unwrap().is_none());
+        drop(cache);
+        fs::remove_dir_all(path.parent().unwrap()).unwrap();
     }
 
     #[test]

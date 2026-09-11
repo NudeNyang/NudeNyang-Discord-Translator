@@ -129,6 +129,10 @@ fn discord_focus_e2e_driver() {
                 json!({"ok":true})
             }
             "status" => serde_json::to_value(engine.status().unwrap()).unwrap(),
+            "model" => {
+                let (started, completed) = crate::translation::mock_progress();
+                json!({"started":started,"completed":completed})
+            }
             "stop" => {
                 engine.stop();
                 json!({"ok":true})

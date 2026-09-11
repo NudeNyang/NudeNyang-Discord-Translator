@@ -25,13 +25,12 @@ test.beforeAll(async () => {
   });
 });
 
-async function fixture({ delay = 0 } = {}) {
+async function fixture({ delay = 0, text = "This is an English message for the translation test." } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "nudenyang-discord-e2e-"));
   const userData = join(directory, "browser");
   const context = await chromium.launchPersistentContext(userData, { channel: "chromium", headless: true,
     args: ["--remote-debugging-port=0"], viewport: { width: 1000, height: 760 } });
-  const text = "This is an English message for the translation test.";
-  await context.route("**/*", route => route.fulfill({ contentType: "text/html", body: `<!doctype html><html><body>
+  await context.route("**/*", route => route.fulfill({ contentType: "text/html; charset=utf-8", body: `<!doctype html><html><head><meta charset="utf-8"></head><body>
     <div id="app-mount"><main><ol><li id="chat-messages-1-2"><div id="message-content-2">${text}</div></li></ol>
     <div class="channelTextArea_fixture" style="position:fixed;left:30px;right:30px;bottom:30px"><div role="textbox" contenteditable="true" data-slate-editor="true" style="white-space:pre-wrap; min-height:80px"></div></div>
     </main></div></body></html>` }));
@@ -81,6 +80,70 @@ async function fixture({ delay = 0 } = {}) {
   };
   return { pages, clients, context, text, call, focus, message, close, directory };
 }
+
+test("scroll replay restores a remounted message while another inference is busy", async () => {
+  test.setTimeout(45_000);
+  const app = await fixture({delay: 1800, text: 'Please keep @everyone and https://example.test/help unchanged 👋.'});
+  try {
+    await app.focus('stable');
+    await expect(app.message('stable')).toHaveText(`[ko] ${app.text}`);
+    const baseline = (await app.call('model')).started;
+    await app.pages.stable.evaluate(() => {
+      const node = document.createElement('div'); node.id = 'message-content-99';
+      node.textContent = 'This separate message keeps the translation model busy.';
+      document.querySelector('ol').append(node);
+    });
+    await expect.poll(async () => (await app.call('model')).started).toBe(baseline + 1);
+    await app.message('stable').evaluate((node, text) => {
+      const replacement = document.createElement('div'); replacement.id = node.id;
+      replacement.textContent = text; node.replaceWith(replacement);
+    }, app.text);
+    await expect(app.message('stable')).toHaveText(`[ko] ${app.text}`, {timeout: 900});
+    expect((await app.call('model')).completed).toBe(baseline);
+    await app.call('enabled', {enabled:false});
+    await expect(app.message('stable')).toHaveText(app.text);
+  } finally {await app.close();}
+});
+
+test("scroll work publishes the first complete message before the rest of its batch", async () => {
+  test.setTimeout(45_000);
+  const app = await fixture({delay: 1200});
+  try {
+    await app.pages.stable.evaluate(() => {
+      for (let id = 10; id < 14; id++) {
+        const node = document.createElement('div'); node.id = `message-content-${id}`;
+        node.textContent = `Another complete English message number ${id}.`;
+        document.querySelector('ol').append(node);
+      }
+    });
+    await app.focus('stable');
+    await expect.poll(async () => (await app.call('model')).started).toBeGreaterThan(0);
+    await expect(app.message('stable')).toHaveText(`[ko] ${app.text}`, {timeout: 2200});
+    expect((await app.call('model')).completed).toBeLessThan(5);
+  } finally {await app.close();}
+});
+
+test("scroll work discards unstarted messages after they leave the same channel viewport", async () => {
+  test.setTimeout(45_000);
+  const app = await fixture({delay: 1200});
+  try {
+    await app.pages.stable.evaluate(() => {
+      for (let id = 10; id < 16; id++) {
+        const node = document.createElement('div'); node.id = `message-content-${id}`;
+        node.textContent = `An old viewport message number ${id}.`;
+        document.querySelector('ol').append(node);
+      }
+    });
+    await app.focus('stable');
+    await expect.poll(async () => (await app.call('model')).started).toBe(1);
+    await app.pages.stable.evaluate(() => {
+      document.querySelector('ol').innerHTML = '<div id="message-content-77">The newly visible message should be translated next.</div>';
+    });
+    await expect(app.pages.stable.locator('#message-content-77')).toHaveText(
+      '[ko] The newly visible message should be translated next.', {timeout: 3300});
+    expect((await app.call('model')).started).toBe(2);
+  } finally {await app.close();}
+});
 
 test("edited outgoing messages return to translation while editing, cancel and remount preserve saved originals", async () => {
   test.setTimeout(60_000);

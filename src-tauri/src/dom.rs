@@ -54,6 +54,9 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
   }
   function canonicalOriginal(kind, id, index, node) {
     const displayed = node.nodeType === Node.TEXT_NODE ? node.nodeValue : node.textContent;
+    const saved = window.__nudeTranslatorOriginalsByLocator;
+    const previous = saved instanceof Map ? saved.get(JSON.stringify([kind, id, index])) : null;
+    if (typeof previous?.translated === 'string' && displayed !== previous.translated && displayed !== previous.text) return displayed;
     const originals = window.__nudeTranslatorOriginals;
     if (originals instanceof Map && originals.has(node)) {
       const original = originals.get(node);
@@ -358,6 +361,10 @@ pub const SNAPSHOT_SCRIPT: &str = r#"
     const row = root.closest(
       '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]'
     );
+    // Persistent message identity is only used for context/replay. DOM locators
+    // remain per-element so replacements and edits cannot reuse stale nodes.
+    const identity = row?.id || row?.getAttribute('data-list-item-id') || root.id;
+    if (identity) return `dto-message-context-native-${identity}`;
     return row
       ? ensureRootId(row, 'data-dto-message-context-id', 'message-context')
       : ensureRootId(root, 'data-dto-message-context-id', 'message-context');
@@ -648,6 +655,8 @@ pub struct DomSnapshot {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct DomChange {
+    pub original: String,
+    pub expected: Option<String>,
     pub kind: String,
     pub id: String,
     pub index: usize,
@@ -657,6 +666,8 @@ pub struct DomChange {
 impl DomChange {
     pub fn new(part: &DomPart, text: impl Into<String>) -> Self {
         Self {
+            original: part.text.clone(),
+            expected: Some(part.rendered_text().to_string()),
             kind: part.kind.clone(),
             id: part.item_id.clone(),
             index: part.index,
@@ -686,9 +697,10 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     : new Map();
   window.__nudeTranslatorOriginalsByLocator = originalLocators;
   function remember(node, text, change) {{
-    if (node && !originals.has(node)) originals.set(node, text);
+    const original = change.original ?? text;
+    if (node) originals.set(node, original);
     const key = JSON.stringify([change.kind, change.id, change.index]);
-    if (!originalLocators.has(key)) originalLocators.set(key, {{...change, text}});
+    originalLocators.set(key, {{...change, text: original, translated: change.text}});
   }}
   function eligibleTextNodes(root, allowLinkText = false, excludeNicknameDecorations = false) {{
     const nodes = [];
@@ -801,6 +813,7 @@ pub fn apply_script(changes: &[DomChange]) -> Result<String, String> {
     );
     const node = nodes[change.index];
     if (!node) continue;
+    if (change.expected != null && node.nodeValue !== change.expected && node.nodeValue !== change.text) continue;
     remember(node, node.nodeValue, change);
     node.nodeValue = change.text;
     applied++;
@@ -873,6 +886,8 @@ mod tests {
         assert!(SNAPSHOT_SCRIPT.contains("parts('nickname'"));
 
         let script = apply_script(&[DomChange {
+            original: "Neko".to_string(),
+            expected: None,
             kind: "nickname".to_string(),
             id: "dto-nickname-1".to_string(),
             index: 0,

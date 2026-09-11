@@ -822,17 +822,34 @@ impl TranslationService {
         allowed_sources: Option<&HashSet<Language>>,
     ) -> Result<Vec<String>, String> {
         let source_hints = self.incoming_source_hints(texts, message_keys, context_scope)?;
+        self.translate_incoming_with_hints(
+            texts,
+            message_keys,
+            &source_hints,
+            target,
+            allowed_sources,
+        )
+    }
+
+    pub(crate) fn translate_incoming_with_hints(
+        &mut self,
+        texts: &[String],
+        message_keys: &[Option<String>],
+        source_hints: &[Option<Language>],
+        target: Language,
+        allowed_sources: Option<&HashSet<Language>>,
+    ) -> Result<Vec<String>, String> {
+        if texts.len() != message_keys.len() || texts.len() != source_hints.len() {
+            return Err("메시지 문맥 정보의 개수가 원문 개수와 다릅니다.".to_string());
+        }
         let mut results = vec![None; texts.len()];
         let mut pending_indices = Vec::new();
         let mut pending_texts = Vec::new();
         let mut pending_hints = Vec::new();
         let mut pending_keys = Vec::new();
 
-        for (index, ((text, message_key), source_hint)) in texts
-            .iter()
-            .zip(message_keys)
-            .zip(&source_hints)
-            .enumerate()
+        for (index, ((text, message_key), source_hint)) in
+            texts.iter().zip(message_keys).zip(source_hints).enumerate()
         {
             let detected = detect_explicit_language(text);
             let source = if detected == Language::Unknown {
@@ -1314,7 +1331,7 @@ impl TranslationService {
         Ok(translated_parts)
     }
 
-    fn incoming_source_hints(
+    pub(crate) fn incoming_source_hints(
         &mut self,
         texts: &[String],
         message_keys: &[Option<String>],

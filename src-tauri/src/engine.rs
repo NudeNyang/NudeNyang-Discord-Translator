@@ -63,6 +63,10 @@ type PendingKey = (u64, u64, String, String, usize, String);
 type ImagePendingKey = (u64, String);
 type OutgoingPendingKey = (u64, String);
 
+#[path = "engine/display_replay.rs"]
+mod display_replay;
+use display_replay::{coalesce_message_contexts, message_ranges, pending_key, DisplayReplay};
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeStatus {
@@ -523,6 +527,7 @@ impl DisplayViewState {
 }
 
 struct TranslationBatch {
+    source_hints: Option<Vec<Option<Language>>>,
     generation: u64,
     view_epoch: u64,
     view_scope: String,
@@ -1312,9 +1317,13 @@ fn run_controller(
     let (worker_result_tx, worker_result_rx) = mpsc::channel();
     let outgoing_result_tx = worker_result_tx.clone();
     let progress_result_tx = worker_result_tx.clone();
+    let display_replay = Arc::new(DisplayReplay::new());
+    let worker_replay = display_replay.clone();
     let worker = thread::Builder::new()
         .name("rust-translation-worker".to_string())
-        .spawn(move || run_translation_worker(worker_rx, worker_result_tx))
+        .spawn(move || {
+            run_translation_worker_with_replay(worker_rx, worker_result_tx, worker_replay)
+        })
         .ok();
     let outgoing_worker = thread::Builder::new()
         .name("rust-outgoing-translation-worker".to_string())
@@ -1854,10 +1863,14 @@ fn run_controller(
                     let _ = result_tx.send(guardian_result);
                 }
                 Control::ClearCache(result_tx) => {
-                    let result = outgoing_original_store
-                        .as_ref()
-                        .ok_or_else(|| "SQLite 번역 저장소를 열지 못했습니다.".to_string())
-                        .and_then(TranslationCache::clear_user_data);
+                    // Invalidate before deleting: an inference already in flight
+                    // must not repopulate the completed-message replay store.
+                    let result = display_replay.invalidate(|| {
+                        outgoing_original_store
+                            .as_ref()
+                            .ok_or_else(|| "SQLite 번역 저장소를 열지 못했습니다.".to_string())
+                            .and_then(TranslationCache::clear_user_data)
+                    });
                     if result.is_ok() {
                         let _ = worker_tx.send(WorkerCommand::ClearCacheMemory);
                         let _ = outgoing_worker_tx.send(OutgoingWorkerCommand::ClearCacheMemory);
@@ -2000,6 +2013,7 @@ fn run_controller(
             &worker_tx,
             &outgoing_worker_tx,
             &mut last_history_cleanup_at,
+            &display_replay,
         );
 
         while let Ok(prepared) = preparation_rx.try_recv() {
@@ -2304,7 +2318,7 @@ fn run_controller(
             if display_ready {
                 let display_view_ready = scan_dom(
                     session.client.as_mut().expect("connected CDP client"),
-                    &session.states,
+                    &mut session.states,
                     &mut session.pending,
                     &mut session.display_view,
                     session.generation,
@@ -2313,6 +2327,7 @@ fn run_controller(
                     config.translate_nicknames,
                     display_batch_item_limit(&config),
                     &worker_tx,
+                    &display_replay,
                 )?;
                 if display_view_ready {
                     scan_images(
@@ -2682,6 +2697,7 @@ fn maybe_cleanup_translation_history(
     worker_tx: &mpsc::Sender<WorkerCommand>,
     outgoing_worker_tx: &mpsc::Sender<OutgoingWorkerCommand>,
     last_cleanup_at: &mut Option<Instant>,
+    replay: &DisplayReplay,
 ) {
     let retention_days = config.translation_history_retention_days;
     if retention_days == 0 {
@@ -2695,9 +2711,11 @@ fn maybe_cleanup_translation_history(
         return;
     }
     *last_cleanup_at = Some(Instant::now());
-    let result = store
-        .ok_or_else(|| "SQLite translation history store is unavailable".to_string())
-        .and_then(|store| store.cleanup_expired_records(retention_days));
+    let result = replay.invalidate(|| {
+        store
+            .ok_or_else(|| "SQLite translation history store is unavailable".to_string())
+            .and_then(|store| store.cleanup_expired_records(retention_days))
+    });
     match result {
         Ok(result) if result.removed_records > 0 => {
             let _ = worker_tx.send(WorkerCommand::ClearCacheMemory);
@@ -2857,7 +2875,7 @@ fn fetch_image_bytes(client: &mut CdpClient, image_id: &str) -> Result<Vec<u8>, 
 #[allow(clippy::too_many_arguments)]
 fn scan_dom(
     client: &mut CdpClient,
-    states: &HashMap<Locator, PartState>,
+    states: &mut HashMap<Locator, PartState>,
     pending: &mut HashSet<PendingKey>,
     display_view: &mut DisplayViewState,
     generation: u64,
@@ -2866,13 +2884,74 @@ fn scan_dom(
     translate_nicknames: bool,
     max_batch_items: usize,
     worker: &mpsc::Sender<WorkerCommand>,
+    replay: &DisplayReplay,
 ) -> Result<bool, String> {
     let mut snapshot = parse_snapshot(client.evaluate(SNAPSHOT_SCRIPT, false)?)?;
     retain_enabled_dom_parts(&mut snapshot.parts, translate_nicknames);
+    snapshot.parts = coalesce_message_contexts(snapshot.parts);
     let context_scope = snapshot.url.clone();
     if display_view.observe(&snapshot.url, Instant::now()) == DisplayViewObservation::Changed {
         discard_stale_display_work(pending, display_view, generation, worker)?;
         return Ok(false);
+    }
+    // Normalize genuine edits before looking up either state or completed cache.
+    for part in &mut snapshot.parts {
+        if let Some(state) = states.get(&part.locator()) {
+            if part.rendered_text() != state.original && part.rendered_text() != state.translated {
+                part.text = part.rendered_text().to_string();
+                part.displayed_text = None;
+            }
+        }
+    }
+    replay.observe(generation, display_view.epoch, &snapshot.parts);
+    let visible = snapshot
+        .parts
+        .iter()
+        .map(|part| pending_key(generation, display_view.epoch, part))
+        .collect::<HashSet<_>>();
+    pending.retain(|key| visible.contains(key));
+    let locators = snapshot
+        .parts
+        .iter()
+        .map(DomPart::locator)
+        .collect::<HashSet<_>>();
+    states.retain(|locator, _| locators.contains(locator));
+    for range in message_ranges(&snapshot.parts) {
+        let group = &snapshot.parts[range];
+        if group.iter().all(|part| {
+            states.get(&part.locator()).is_some_and(|state| {
+                part.rendered_text() == state.original || part.rendered_text() == state.translated
+            })
+        }) {
+            continue;
+        }
+        // A changed fragment invalidates the whole message's fast state, keeping
+        // links/formatting fragments in one translation context.
+        for part in group {
+            states.remove(&part.locator());
+        }
+        let batch = TranslationBatch {
+            source_hints: None,
+            generation,
+            view_epoch: display_view.epoch,
+            view_scope: display_view.scope.clone(),
+            target,
+            allowed_sources: allowed_sources.clone(),
+            parts: group.to_vec(),
+            context_scope: context_scope.clone(),
+            queued_at: Instant::now(),
+        };
+        if let Some(values) = replay.lookup(&batch) {
+            for (part, translated) in group.iter().zip(values) {
+                states.insert(
+                    part.locator(),
+                    PartState {
+                        original: part.text.clone(),
+                        translated,
+                    },
+                );
+            }
+        }
     }
     let (changes, parts) = plan_dom_updates(
         snapshot.parts,
@@ -2888,6 +2967,7 @@ fn scan_dom(
     if !parts.is_empty() {
         worker
             .send(WorkerCommand::Translate(TranslationBatch {
+                source_hints: None,
                 generation,
                 view_epoch: display_view.epoch,
                 view_scope: display_view.scope.clone(),
@@ -3584,9 +3664,18 @@ fn finish_activation_status(
     }
 }
 
+#[cfg(test)]
 fn run_translation_worker(
     commands: mpsc::Receiver<WorkerCommand>,
     results: mpsc::Sender<WorkerResult>,
+) {
+    run_translation_worker_with_replay(commands, results, Arc::new(DisplayReplay::new()));
+}
+
+fn run_translation_worker_with_replay(
+    commands: mpsc::Receiver<WorkerCommand>,
+    results: mpsc::Sender<WorkerResult>,
+    replay: Arc<DisplayReplay>,
 ) {
     let cache = match TranslationCache::open_default() {
         Ok(cache) => cache,
@@ -3615,7 +3704,50 @@ fn run_translation_worker(
             break;
         };
         match command {
-            WorkerCommand::Translate(batch) => {
+            WorkerCommand::Translate(mut batch) => {
+                if batch.source_hints.is_none() {
+                    batch.parts = coalesce_message_contexts(batch.parts);
+                }
+                replay.retain_visible(&mut batch);
+                if batch.parts.is_empty() {
+                    continue;
+                }
+                if batch.source_hints.is_none() {
+                    let texts = batch
+                        .parts
+                        .iter()
+                        .map(|part| part.text.clone())
+                        .collect::<Vec<_>>();
+                    let keys = batch
+                        .parts
+                        .iter()
+                        .map(incoming_context_key)
+                        .collect::<Vec<_>>();
+                    batch.source_hints = service
+                        .incoming_source_hints(&texts, &keys, &batch.context_scope)
+                        .ok();
+                }
+                // Yield only between complete message contexts. Preserve the
+                // original batch's language evidence across these yields.
+                let end = message_ranges(&batch.parts)[0].end;
+                if end < batch.parts.len() {
+                    let remaining = batch.parts.split_off(end);
+                    let hints = batch
+                        .source_hints
+                        .as_mut()
+                        .map(|hints| hints.split_off(end));
+                    backlog.push_front(WorkerCommand::Translate(TranslationBatch {
+                        source_hints: hints,
+                        generation: batch.generation,
+                        view_epoch: batch.view_epoch,
+                        view_scope: batch.view_scope.clone(),
+                        target: batch.target,
+                        allowed_sources: batch.allowed_sources.clone(),
+                        parts: remaining,
+                        context_scope: batch.context_scope.clone(),
+                        queued_at: batch.queued_at,
+                    }));
+                }
                 log_worker_queue(
                     "display",
                     batch.queued_at,
@@ -3632,13 +3764,29 @@ fn run_translation_worker(
                     .iter()
                     .map(incoming_context_key)
                     .collect::<Vec<_>>();
-                let values = service.translate_many_for_incoming_contextual_filtered(
-                    &texts,
-                    &message_keys,
-                    &batch.context_scope,
-                    batch.target,
-                    batch.allowed_sources.as_ref(),
-                );
+                let revision = replay.revision();
+                let values = if let Some(values) = replay.lookup(&batch) {
+                    Ok(values)
+                } else if let Some(hints) = &batch.source_hints {
+                    service.translate_incoming_with_hints(
+                        &texts,
+                        &message_keys,
+                        hints,
+                        batch.target,
+                        batch.allowed_sources.as_ref(),
+                    )
+                } else {
+                    service.translate_many_for_incoming_contextual_filtered(
+                        &texts,
+                        &message_keys,
+                        &batch.context_scope,
+                        batch.target,
+                        batch.allowed_sources.as_ref(),
+                    )
+                };
+                if let Ok(values) = &values {
+                    replay.store(&batch, values, revision);
+                }
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,
                     view_epoch: batch.view_epoch,
@@ -3733,6 +3881,7 @@ fn run_translation_worker(
                 translator,
             } => {
                 service.replace_translator(translator);
+                replay.activate(service.namespace());
                 let activation = service.translator_mut().prepare();
                 match activation {
                     Ok(()) => {
@@ -3759,6 +3908,7 @@ fn run_translation_worker(
             }
             WorkerCommand::ClearCacheMemory => {
                 let _ = service.clear_cache_memory();
+                replay.clear_memory();
             }
             WorkerCommand::Stop => break,
         }
@@ -4360,6 +4510,8 @@ fn restore(
     let changes: Vec<DomChange> = states
         .iter()
         .map(|((kind, item_id, index), state)| DomChange {
+            expected: None,
+            original: state.original.clone(),
             kind: kind.clone(),
             id: item_id.clone(),
             index: *index,
@@ -4626,6 +4778,7 @@ mod tests {
             });
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
+                    source_hints: None,
                     generation: 1,
                     view_epoch: 1,
                     view_scope: "synthetic-scheduler-benchmark".into(),
@@ -4742,6 +4895,7 @@ mod tests {
                 .unwrap();
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
+                    source_hints: None,
                     generation: 1,
                     view_epoch: 1,
                     view_scope: "same-view".into(),
@@ -4912,6 +5066,7 @@ mod tests {
             .unwrap();
         sender
             .send(WorkerCommand::Translate(TranslationBatch {
+                source_hints: None,
                 generation: 1,
                 view_epoch: 1,
                 view_scope: "scheduling".into(),
@@ -6314,6 +6469,7 @@ mod tests {
         ] {
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
+                    source_hints: None,
                     generation: 1,
                     view_epoch,
                     view_scope: context_scope.to_string(),
@@ -6418,6 +6574,7 @@ mod tests {
         let (sender, receiver) = mpsc::channel();
         sender
             .send(WorkerCommand::Translate(TranslationBatch {
+                source_hints: None,
                 generation: 1,
                 view_epoch: 1,
                 view_scope: "/channels/server-a/channel-a".to_string(),
@@ -6462,6 +6619,7 @@ mod tests {
         for item_id in ["previous-viewport", "current-viewport"] {
             sender
                 .send(WorkerCommand::Translate(TranslationBatch {
+                    source_hints: None,
                     generation: 1,
                     view_epoch: 1,
                     view_scope: "/channels/test/current".to_string(),

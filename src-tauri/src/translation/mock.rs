@@ -25,6 +25,20 @@ impl Translator for OriginalTranslator {
 
 pub struct MockTranslator;
 
+#[cfg(test)]
+static STARTED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+#[cfg(test)]
+static COMPLETED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+#[cfg(test)]
+pub fn progress() -> (usize, usize) {
+    use std::sync::atomic::Ordering;
+    (
+        STARTED.load(Ordering::SeqCst),
+        COMPLETED.load(Ordering::SeqCst),
+    )
+}
+
 impl Translator for MockTranslator {
     fn display_name(&self) -> &str {
         "Mock (테스트)"
@@ -42,11 +56,13 @@ impl Translator for MockTranslator {
     ) -> Result<String, String> {
         #[cfg(test)]
         if std::env::var("NUDENYANG_DISCORD_E2E").as_deref() == Ok("1") {
+            STARTED.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             if let Ok(delay) = std::env::var("NUDENYANG_MOCK_DELAY_MS") {
                 std::thread::sleep(std::time::Duration::from_millis(
                     delay.parse::<u64>().unwrap_or(0).min(2000),
                 ));
             }
+            COMPLETED.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }
         if source == target {
             Ok(text.to_string())
