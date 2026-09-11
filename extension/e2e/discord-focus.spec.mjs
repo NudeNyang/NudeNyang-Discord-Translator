@@ -81,6 +81,104 @@ async function fixture({ delay = 0, text = "This is an English message for the t
   return { pages, clients, context, text, call, focus, message, close, directory };
 }
 
+test("outgoing punctuation bypasses Enter interception before draft classification returns", async () => {
+  const app = await fixture();
+  try {
+    await app.call('configure', {patch: {enabled:false, outgoing_translation_enabled:true, outgoing_target_language:'auto'}});
+    await app.focus('stable');
+    const page = app.pages.stable;
+    await expect.poll(() => page.evaluate(() => window.__nudeTranslatorOutgoing?.enabled)).toBe(true);
+    const results = await page.evaluate(() => {
+      const controller = window.__nudeTranslatorOutgoing;
+      const editor = document.querySelector('[role="textbox"]');
+      document.querySelector('ol').replaceChildren(); // No language evidence needed for symbols.
+      const sources = ['!?', '?!…', '！？', '…', '→ ± ×', '👋🏽 👨‍👩‍👧‍👦', '! 👋 ?', ' \n!?\n '];
+      return sources.map(source => {
+        controller.queue.length = 0;
+        controller.pending.clear();
+        controller.draftChecks.clear();
+        controller.setStatus('');
+        editor.textContent = source;
+        editor.focus();
+        editor.dispatchEvent(new InputEvent('input', {bubbles:true, inputType:'insertText', data:source}));
+        // Input and Enter share one JS task: the Rust classification cannot return yet.
+        const event = new KeyboardEvent('keydown', {key:'Enter', bubbles:true, cancelable:true});
+        editor.dispatchEvent(event);
+        return {source, prevented:event.defaultPrevented, text:editor.textContent,
+          queued:controller.queue.map(item => item.action), pending:controller.pending.size};
+      });
+    });
+    for (const result of results) {
+      expect(result, result.source).toEqual({source:result.source, prevented:false, text:result.source, queued:[], pending:0});
+    }
+  } finally {await app.close();}
+});
+
+test("outgoing punctuation mixed with words still requests translation before classification returns", async () => {
+  const app = await fixture();
+  try {
+    await app.call('configure', {patch: {enabled:false, outgoing_translation_enabled:true, outgoing_target_language:'auto'}});
+    await app.focus('stable');
+    const page = app.pages.stable;
+    await expect.poll(() => page.evaluate(() => window.__nudeTranslatorOutgoing?.enabled)).toBe(true);
+    const results = await page.evaluate(() => {
+      const controller = window.__nudeTranslatorOutgoing;
+      const editor = document.querySelector('[role="textbox"]');
+      return ['왜!?', 'Really!?', '何！？', 'a!', '1?'].map(source => {
+        controller.queue.length = 0;
+        controller.pending.clear();
+        controller.draftChecks.clear();
+        editor.textContent = source;
+        editor.focus();
+        editor.dispatchEvent(new InputEvent('input', {bubbles:true, inputType:'insertText', data:source}));
+        const event = new KeyboardEvent('keydown', {key:'Enter', bubbles:true, cancelable:true});
+        editor.dispatchEvent(event);
+        return {source, prevented:event.defaultPrevented,
+          translated:controller.queue.filter(item => item.action === 'translate').map(item => item.text)};
+      });
+    });
+    for (const result of results) {
+      expect(result).toEqual({source:result.source, prevented:true, translated:[result.source]});
+    }
+  } finally {await app.close();}
+});
+
+test("outgoing punctuation preserves a native mention and cancels superseded review work", async () => {
+  const app = await fixture();
+  try {
+    await app.call('configure', {patch: {enabled:false, outgoing_translation_enabled:true, outgoing_target_language:'ko'}});
+    await app.focus('stable');
+    const page = app.pages.stable;
+    await expect.poll(() => page.evaluate(() => window.__nudeTranslatorOutgoing?.enabled)).toBe(true);
+    const result = await page.evaluate(() => {
+      const controller = window.__nudeTranslatorOutgoing;
+      const editor = document.querySelector('[role="textbox"]');
+      editor.innerHTML = '<span data-slate-inline="true" data-slate-void="true" contenteditable="false"><span role="button">@Fixture</span></span> !?';
+      editor.focus();
+      const before = editor.innerHTML;
+      const old = {id:'old-request', editor, text:'Old text', original_text:'Old text', created_at:Date.now()};
+      controller.pending.set(old.id, old);
+      controller.queue.push({id:old.id, text:old.text, action:'translate'});
+      editor.dispatchEvent(new InputEvent('input', {bubbles:true, inputType:'insertText', data:'!?'}));
+      let receivedEnter = 0;
+      editor.addEventListener('keydown', () => receivedEnter++, {once:true});
+      const event = new KeyboardEvent('keydown', {key:'Enter', bubbles:true, cancelable:true});
+      editor.dispatchEvent(event);
+      const lateReviewAccepted = controller.prepareReview(old.id);
+      controller.fail(old.id, 'Delayed failure for the cancelled synthetic request');
+      const lateErrorVisible = !controller.root.querySelector('.nt-outgoing-status').hidden;
+      controller.pending.set('active-failure', {editor});
+      controller.fail('active-failure', 'Current synthetic request failed');
+      const activeErrorVisible = !controller.root.querySelector('.nt-outgoing-status').hidden;
+      return {prevented:event.defaultPrevented, receivedEnter, unchanged:before === editor.innerHTML,
+        pending:controller.pending.size, queued:controller.queue.length,
+        lateReviewAccepted, lateErrorVisible, activeErrorVisible};
+    });
+    expect(result).toEqual({prevented:false, receivedEnter:1, unchanged:true, pending:0, queued:0,
+      lateReviewAccepted:false, lateErrorVisible:false, activeErrorVisible:true});
+  } finally {await app.close();}
+});
+
 test("scroll replay restores a remounted message while another inference is busy", async () => {
   test.setTimeout(45_000);
   const app = await fixture({delay: 1800, text: 'Please keep @everyone and https://example.test/help unchanged 👋.'});

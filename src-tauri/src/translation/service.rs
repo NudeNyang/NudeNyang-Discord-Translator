@@ -4451,6 +4451,10 @@ mod tests {
             ";;".to_string(),
             "-".to_string(),
             "?!…".to_string(),
+            "!?".to_string(),
+            "！？".to_string(),
+            "→ ± ×".to_string(),
+            "👋🏽 👨‍👩‍👧‍👦".to_string(),
         ];
 
         assert_eq!(
@@ -4459,6 +4463,11 @@ mod tests {
                 .unwrap(),
             source
         );
+        for target in [Language::Korean, Language::English, Language::Japanese] {
+            for text in &source {
+                assert_eq!(service.translate_for_discord(text, target).unwrap(), *text);
+            }
+        }
         assert!(inputs.lock().unwrap().is_empty());
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }

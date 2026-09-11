@@ -118,6 +118,13 @@ This is not an officially supported Discord extension interface. Discord updates
 
 ### Outgoing draft layout
 
+Outgoing controller version 64 bypasses punctuation/symbol-only drafts synchronously
+before Enter interception, so it does not depend on the asynchronous Rust draft
+classification arriving before the key event. Existing native mentions and user
+Enter events are preserved; superseded pending reviews are cancelled. See
+[outgoing symbol passthrough](OUTGOING_SYMBOL_PASSTHROUGH.md) for the race history
+and reproduction coverage.
+
 The translation service preserves explicit line breaks, blank lines, indentation and Markdown separately from translatable text. The composer collector reads leaf Slate blocks rather than `textContent`, which omits block boundaries. Visual word wrapping can still change with translated text length and window width.
 
 Live diagnosis on 2026-09-04 confirmed a different loss at insertion: the original draft and `beforeinput` payload each contained 13 line breaks, but Discord's `insertText` handler produced a one-line draft. Multiline reviews therefore use a plain-text `beforeinput` event with `inputType: insertFromPaste`, a `DataTransfer` and the selected DOM target range. This uses the editor's normal paste-input handling without reading/writing the system clipboard, accessing private editor state, dispatching a send key, or invoking the application's clipboard-to-file attachment handler for long drafts. Single-line reviews retain `Input.insertText`.

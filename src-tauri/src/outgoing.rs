@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 63;
+  const CONTROLLER_VERSION = 64;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -1065,6 +1065,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         this.setStatus(copy('translating'), false, true);
       },
       fail(id, message) {
+        if (!this.pending.has(id)) return;
         const insertionFailed = this.pending.get(id)?.review_insert_failed;
         this.pending.delete(id);
         if (message) console.warn('[NudeNyang Discord Translator] outgoing translation failed:', message);
@@ -1168,6 +1169,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (mentionPlan && !mentionPlan.supported) return;
         const text = mentionPlan ? mentionPlan.text : composerText(editor);
         if (!text.trim() || text.startsWith('/')) return;
+        // Symbols need no asynchronous language classification. Keep this in
+        // sync with the synchronous Enter check below.
+        if (!/[\p{L}\p{N}]/u.test(text)) return;
         const key = this.draftKey(channelKey, selected, text);
         const existing = this.draftChecks.get(key);
         if (existing && Date.now() - existing.created_at < 60000) return;
@@ -1245,6 +1249,18 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           : selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
         this.oneShotOriginal = false;
         if (selected === 'original') return;
+        // Enter can arrive before the Rust draft classifier has replied.
+        // Punctuation/emoji-only drafts must keep the user's native Enter,
+        // including auto language with no recent conversation to classify.
+        if (!/[\p{L}\p{N}]/u.test(text)) {
+          for (const [id, item] of this.pending) {
+            if (item.editor !== editor) continue;
+            this.pending.delete(id);
+            this.queue = this.queue.filter(request => request.id !== id);
+          }
+          this.setStatus('');
+          return;
+        }
         const draftDecision = this.draftChecks.get(this.draftKey(key, selected, text));
         if (draftDecision?.resolved && draftDecision.pass) {
           this.setStatus('');
@@ -2252,7 +2268,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 63"));
+        assert!(script.contains("const CONTROLLER_VERSION = 64"));
     }
 
     #[test]
