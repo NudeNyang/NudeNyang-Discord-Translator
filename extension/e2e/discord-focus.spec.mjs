@@ -81,6 +81,34 @@ async function fixture({ delay = 0, text = "This is an English message for the t
   return { pages, clients, context, text, call, focus, message, close, directory };
 }
 
+test("invite assist polling distinguishes an emoji picker from the activated invite dialog", async () => {
+  const app = await fixture();
+  try {
+    await app.focus("stable");
+    const page = app.pages.stable;
+    await expect.poll(() => page.evaluate(() => Boolean(window.__ntInviteAssistState))).toBe(true);
+    await page.evaluate(() => {
+      const link = document.createElement("a");
+      link.href = "https://discord.gg/fixture-code";
+      link.textContent = "Server invite";
+      link.onclick = event => event.preventDefault();
+      document.querySelector("ol").append(link);
+      link.click();
+      const surface = document.createElement("section");
+      surface.id = "invite-fixture";
+      surface.setAttribute("role", "dialog");
+      surface.innerHTML = '<h2>You have been invited</h2><button>Accept Invite</button>';
+      document.body.append(surface);
+    });
+    await expect(page.locator("#nt-invite-browser-assist")).toBeVisible();
+    await page.locator("#invite-fixture").evaluate(node => {
+      node.innerHTML = '<h2>Emoji</h2><input type="search"><div role="grid"><button>:invite:</button></div>';
+    });
+    await expect(page.locator("#nt-invite-browser-assist")).toHaveCount(0);
+    expect((await app.call("status")).verificationRequired).toBe(false);
+  } finally { await app.close(); }
+});
+
 test("outgoing punctuation bypasses Enter interception before draft classification returns", async () => {
   const app = await fixture();
   try {

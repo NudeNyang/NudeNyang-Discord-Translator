@@ -103,6 +103,11 @@ The integration is deliberately limited:
 - live translation remains off until the user accepts the integration notice;
 - additional verification switches the app to verification compatibility mode, detaches the translation pipe, and waits for the user to reconnect after verification.
 
+Invite browser assistance tracks an explicit invite activation and the visible invite dialog's
+identity, rather than searching arbitrary dialog body text. Closing the dialog, changing the
+channel, or leaving an activation unused for two minutes clears its context. Emoji names cannot
+identify an invite dialog. See [the false-positive investigation and reproduction](DISCORD_INVITE_ASSIST_FALSE_POSITIVE.md).
+
 The nickname translation setting covers every Discord identity surface collected by the app,
 including message authors, member and voice lists, direct-message rows, the account panel, and
 call or broadcast participant labels and composed broadcast titles. These nodes are classified as `nickname` before broader

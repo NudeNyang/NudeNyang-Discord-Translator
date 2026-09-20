@@ -126,11 +126,18 @@ pub fn invite_assist_script(ui_language: &str) -> String {
       return '';
     }}
   }}
+  const inviteActions = /^(accept (?:invite|invitation)|join(?: server)?|초대 수락(?:하기)?|수락하기|서버(?:에)? (?:참가|가입)(?:하기)?|참가하기|가입하기|招待を承諾|参加する|接受邀请|接受邀請|加入(?:服务器|伺服器)?|einladung annehmen|beitreten|aceptar invitaci[oó]n|unirse|aceitar convite|entrar|accetta invito|rejoindre|accepter l.invitation)$/i;
+  function actionLabel(element) {{
+    return (element.getAttribute('aria-label') || element.innerText || '').trim();
+  }}
   function inviteCodeNear(element) {{
     if (!(element instanceof Element)) return '';
     const direct = element.closest('a[href]');
     const directCode = direct ? inviteCodeFromUrl(direct.href) : '';
     if (directCode) return directCode;
+    // A reaction, message menu or body click is not an invite activation.
+    const action = element.closest('button,[role="button"]');
+    if (!action || !inviteActions.test(actionLabel(action))) return '';
     const row = element.closest(
       '[id^="chat-messages-"],[data-list-item-id^="chat-messages___"]'
     );
@@ -141,19 +148,25 @@ pub fn invite_assist_script(ui_language: &str) -> String {
     }}
     return '';
   }}
-  if (!window.__ntInviteAssistClickCaptureInstalled) {{
-    window.__ntInviteAssistClickCaptureInstalled = true;
+  if (!window.__ntInviteAssistState) {{
+    const state = {{pending:null}};
+    window.__ntInviteAssistState = state;
+    // Ignore persistent attributes left by the older anonymous click listener.
+    document.documentElement.removeAttribute(activeCodeAttribute);
     document.addEventListener('click', event => {{
       const code = inviteCodeNear(event.target);
       if (!code) return;
-      document.documentElement.setAttribute(activeCodeAttribute, code);
-      window.__ntActiveInvite = {{code, observedAt: Date.now()}};
+      state.pending = {{code, observedAt:Date.now(), path:location.pathname, dialog:null}};
     }}, true);
   }}
   function isVisible(node) {{
+    if (!(node instanceof Element) || !node.isConnected) return false;
+    const style = getComputedStyle(node);
     const rect = node?.getBoundingClientRect?.();
-    return Boolean(rect && rect.width > 0 && rect.height > 0
-      && rect.bottom > 0 && rect.top < innerHeight);
+    return Boolean(style.visibility !== 'hidden' && style.visibility !== 'collapse'
+      && rect && rect.width > 0 && rect.height > 0
+      && rect.bottom > 0 && rect.top < innerHeight
+      && rect.right > 0 && rect.left < innerWidth);
   }}
   const knownCodes = new Set();
   const routeMatch = location.pathname.match(/^\/invite\/([A-Za-z0-9_-]{{1,128}})\/?$/);
@@ -163,20 +176,36 @@ pub fn invite_assist_script(ui_language: &str) -> String {
     const code = inviteCodeFromUrl(anchor.href);
     if (code) knownCodes.add(code);
   }}
-  const storedCode = document.documentElement.getAttribute(activeCodeAttribute) || '';
-  const activeCode = validCode(storedCode) ? storedCode : '';
-  if (activeCode) knownCodes.add(activeCode);
-
   const inviteWords = /(초대 받음|초대를 받|invite|invitation|招待|邀请|邀請|einladung|invitaci[oó]n|convite|invito)/i;
-  const inviteDialog = activeCode
-    ? [...document.querySelectorAll('[role="dialog"]')].find(dialog => {{
-        if (!isVisible(dialog)) return false;
-        const structural = dialog.querySelector(
-          '[class*="inviteSplash_"],[class*="inviteContent_"],[class*="inviteModal_"]'
-        );
-        return Boolean(structural) || inviteWords.test(dialog.innerText || '');
-      }})
+  function isInviteDialog(dialog) {{
+    if (!isVisible(dialog)) return false;
+    const belongsToDialog = node => node.closest('[role="dialog"]') === dialog && isVisible(node);
+    const structural = [...dialog.querySelectorAll(
+      '[class*="inviteSplash_"],[class*="inviteContent_"],[class*="inviteModal_"]'
+    )].some(belongsToDialog);
+    if (structural) return true;
+    // Picker items and arbitrary body text cannot identify a dialog's purpose.
+    const headings = [...dialog.querySelectorAll('h1,h2,h3,[role="heading"]')]
+      .filter(belongsToDialog).map(node => node.innerText || '');
+    const labelledBy = (dialog.getAttribute('aria-labelledby') || '').split(/\s+/)
+      .map(id => document.getElementById(id)).filter(node => node && isVisible(node))
+      .map(node => node.innerText || '');
+    const title = [dialog.getAttribute('aria-label') || '', ...headings, ...labelledBy].join(' ');
+    return inviteWords.test(title) && [...dialog.querySelectorAll('button,[role="button"]')]
+      .some(node => belongsToDialog(node) && inviteActions.test(actionLabel(node)));
+  }}
+  const state = window.__ntInviteAssistState;
+  let pending = state.pending;
+  if (pending && (pending.path !== location.pathname
+      || (pending.dialog ? !isInviteDialog(pending.dialog) : Date.now() - pending.observedAt > 120000))) {{
+    pending = state.pending = null;
+  }}
+  const inviteDialog = pending
+    ? pending.dialog || [...document.querySelectorAll('[role="dialog"]')].find(isInviteDialog)
     : null;
+  if (inviteDialog) pending.dialog = inviteDialog;
+  const activeCode = inviteDialog && validCode(pending.code) ? pending.code : '';
+  if (activeCode) knownCodes.add(activeCode);
   const globalCode = routeCode || (inviteDialog ? activeCode : '');
   let root = document.getElementById(rootId);
   if (!globalCode) {{
