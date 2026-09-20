@@ -13,6 +13,10 @@ use crate::translation::HyMtModelSize;
 const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Discord-Translator";
 const WEB_EXTENSION_SETUP_VERSION: u32 = 1;
 const DISCORD_ACTIVE_WINDOW_SETUP_VERSION: u32 = 1;
+/// CodeBuddy CLI model used until the user picks another one.
+pub const CODEBUDDY_DEFAULT_MODEL: &str = "hy3";
+/// Upper bound for a CodeBuddy model id, which is also used in cache namespaces.
+const CODEBUDDY_MODEL_MAX_CHARS: usize = 120;
 const LEGACY_UPDATE_REPOSITORIES: &[&str] = &[
     "NudeNyang/NudeNyang-Translator",
     "NudeNyang/DiscordTranslateOverlay",
@@ -99,6 +103,7 @@ pub struct AppConfig {
     pub image_ocr_quality: String,
     pub translator: String,
     pub outgoing_translator: String,
+    pub codebuddy_model: String,
     pub disabled_providers: Vec<String>,
     pub openai_compat_base_url: String,
     pub openai_compat_model: String,
@@ -161,6 +166,7 @@ impl Default for AppConfig {
             image_ocr_quality: "adaptive".to_string(),
             translator: "hymt_1_8b".to_string(),
             outgoing_translator: "hymt_1_8b".to_string(),
+            codebuddy_model: CODEBUDDY_DEFAULT_MODEL.to_string(),
             disabled_providers: Vec::new(),
             hymt_device: "auto".to_string(),
             keep_local_model_warm: true,
@@ -232,6 +238,23 @@ impl AppConfig {
         object.remove("kanana_device");
         object.remove("kanana_precision");
 
+        // The CodeBuddy model is a full provider model id, so only the shape is validated. A
+        // missing value falls back to the default, but an explicitly provided id must be valid:
+        // the selected CLI model must never be silently replaced with another model.
+        let codebuddy_model = match object.get("codebuddy_model") {
+            None => CODEBUDDY_DEFAULT_MODEL.to_string(),
+            Some(value) => value
+                .as_str()
+                .map(str::trim)
+                .filter(|value| valid_codebuddy_model(value))
+                .ok_or_else(|| format!("CodeBuddy 모델 ID가 올바르지 않습니다: {value}"))?
+                .to_string(),
+        };
+        object.insert(
+            "codebuddy_model".to_string(),
+            Value::String(codebuddy_model),
+        );
+
         let mut disabled_browsers = object
             .get("disabled_browser_connections")
             .and_then(Value::as_array)
@@ -254,7 +277,7 @@ impl AppConfig {
             .into_iter()
             .flatten()
             .filter_map(Value::as_str)
-            .filter(|provider| matches!(*provider, "chatgpt" | "claude" | "gemini"))
+            .filter(|provider| matches!(*provider, "chatgpt" | "claude" | "gemini" | "codebuddy"))
             .map(str::to_string)
             .collect::<Vec<_>>();
         disabled_providers.sort();
@@ -511,6 +534,16 @@ impl AppConfig {
 
 fn is_local_translator(value: &str) -> bool {
     HyMtModelSize::from_config_id(value).is_some()
+}
+
+/// A CodeBuddy model id is passed to the CLI unchanged, so only its shape is validated.
+/// Provider-qualified ids such as `custom-local:CodeBuddy-CN/deepseek-v4.1-flash` stay valid.
+fn valid_codebuddy_model(value: &str) -> bool {
+    !value.is_empty()
+        && value.chars().count() <= CODEBUDDY_MODEL_MAX_CHARS
+        && value.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, ':' | '/' | '.' | '-' | '_')
+        })
 }
 
 fn valid_web_hostname(value: &str) -> bool {
@@ -1252,14 +1285,50 @@ mod tests {
     #[test]
     fn disabled_subscription_providers_are_filtered_and_deduplicated() {
         let config = AppConfig::from_value(json!({
-            "disabled_providers": ["gemini", "invalid", "chatgpt", "gemini", 42]
+            "disabled_providers": ["gemini", "invalid", "chatgpt", "gemini", "codebuddy", 42]
         }))
         .expect("normalize disabled providers");
 
         assert_eq!(
             config.disabled_providers,
-            vec!["chatgpt".to_string(), "gemini".to_string()]
+            vec![
+                "chatgpt".to_string(),
+                "codebuddy".to_string(),
+                "gemini".to_string()
+            ]
         );
+    }
+
+    #[test]
+    fn codebuddy_model_keeps_full_provider_ids_and_preserves_existing_selections() {
+        let config = AppConfig::from_value(json!({
+            "translator": "chatgpt",
+            "outgoing_translator": "claude",
+            "codebuddy_model": "custom-local:CodeBuddy-CN/deepseek-v4.1-flash"
+        }))
+        .expect("normalize codebuddy model");
+
+        assert_eq!(
+            config.codebuddy_model,
+            "custom-local:CodeBuddy-CN/deepseek-v4.1-flash"
+        );
+        // Adding the CodeBuddy model must not disturb an existing provider selection.
+        assert_eq!(config.translator, "chatgpt");
+        assert_eq!(config.outgoing_translator, "claude");
+
+        assert_eq!(
+            AppConfig::from_value(json!({}))
+                .expect("defaults")
+                .codebuddy_model,
+            super::CODEBUDDY_DEFAULT_MODEL
+        );
+        // An explicitly provided model must never be replaced with another model.
+        for invalid in [json!(""), json!("   "), json!("bad model!"), json!(7)] {
+            assert!(
+                AppConfig::from_value(json!({ "codebuddy_model": invalid })).is_err(),
+                "an explicitly provided invalid model must be rejected: {invalid}"
+            );
+        }
     }
 
     #[test]

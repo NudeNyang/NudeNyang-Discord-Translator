@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img">
+  <defs><linearGradient id="codebuddy-bg" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#1d4ed8"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>
+  <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#codebuddy-bg)"/>
+  <path fill="#ffffff" d="M13.9 6.4a1.15 1.15 0 0 1 2.2.67l-3.3 10.5a1.15 1.15 0 0 1-2.2-.67Z"/>
+  <path fill="#ffffff" d="M8.6 9.1a1.15 1.15 0 0 1 0 1.63L6.35 13l2.25 2.27a1.15 1.15 0 1 1-1.63 1.63l-3.06-3.08a1.15 1.15 0 0 1 0-1.64L6.97 9.1a1.15 1.15 0 0 1 1.63 0Z"/>
+  <path fill="#ffffff" d="M15.4 9.1a1.15 1.15 0 0 1 1.63 0l3.06 3.08a1.15 1.15 0 0 1 0 1.64l-3.06 3.08a1.15 1.15 0 1 1-1.63-1.63L17.65 13l-2.25-2.27a1.15 1.15 0 0 1 0-1.63Z"/>
+</svg>

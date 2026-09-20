@@ -2,14 +2,20 @@ use std::time::Duration;
 
 use serde::Serialize;
 
-use crate::config::AppConfig;
+use crate::config::{default_config_path, AppConfig, ConfigStore};
 use crate::credentials;
 use crate::translation::{
+    codebuddy_cli_is_installed, codebuddy_login_is_verified,
     connect_subscription_interactively_with_observer, install_subscription_cli,
-    probe_subscription_connection, CliConnectionProbe, DeepLTranslator, LoginBrowserGate,
-    LoginProcessObserver, OpenAiCompatSettings, OpenAiCompatTranslator,
+    probe_subscription_connection, verify_codebuddy_login, CliConnectionProbe, DeepLTranslator,
+    LoginBrowserGate, LoginProcessObserver, OpenAiCompatSettings, OpenAiCompatTranslator,
     OPENAI_COMPAT_CREDENTIAL_ID,
 };
+
+/// CodeBuddy has no in-app installer: it uses the CLI the user already installed and logged in.
+const CODEBUDDY_INSTALL_HINT: &str =
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.";
+const CODEBUDDY_AUTH_MODE: &str = "기존 CodeBuddy CLI 로그인 · 모델별 사용량";
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,6 +52,7 @@ pub fn list(config: &AppConfig) -> Vec<ProviderConnection> {
             "Google 구독 · Antigravity CLI",
             disabled_providers,
         ),
+        codebuddy_status(disabled_providers),
         deepl_status(),
         openai_compat_status(config),
     ]
@@ -108,6 +115,20 @@ pub fn connect_with_observer(
             let (name, auth_mode) = cli_provider_identity(provider);
             Ok(cli_connection(provider, name, auth_mode, probe, false))
         }
+        "codebuddy" => {
+            // Connecting is the only place that may spend a request: it verifies the login the
+            // user already created through the CodeBuddy CLI with one tiny fixed translation.
+            if !codebuddy_cli_is_installed() {
+                return Err(CODEBUDDY_INSTALL_HINT.to_string());
+            }
+            // The selected model decides which stored verification is still valid. A failed
+            // settings read must fail the explicit connect instead of silently using a default.
+            let model = selected_codebuddy_model()?;
+            if !codebuddy_login_is_verified(&model) {
+                verify_codebuddy_login(&model)?;
+            }
+            Ok(codebuddy_status(&[]))
+        }
         _ => Err(format!("지원하지 않는 번역 서비스입니다: {provider}")),
     }
 }
@@ -119,6 +140,7 @@ pub fn install(provider: &str) -> Result<ProviderConnection, String> {
             let (name, auth_mode) = cli_provider_identity(provider);
             Ok(cli_connection(provider, name, auth_mode, probe, false))
         }
+        "codebuddy" => Err(CODEBUDDY_INSTALL_HINT.to_string()),
         _ => Err(format!(
             "자동 설치를 지원하지 않는 번역 서비스입니다: {provider}"
         )),
@@ -135,7 +157,9 @@ pub fn disconnect(provider: &str) -> Result<ProviderConnection, String> {
             credentials::delete(OPENAI_COMPAT_CREDENTIAL_ID)?;
             Ok(openai_compat_status(&AppConfig::default()))
         }
-        "chatgpt" | "claude" | "gemini" => {
+        "chatgpt" | "claude" | "gemini" | "codebuddy" => {
+            // Disconnecting only stops using the provider inside this app. It never logs the
+            // user out of the CLI they installed and configured themselves.
             let (name, auth_mode) = cli_provider_identity(provider);
             Ok(cli_connection(
                 provider,
@@ -157,6 +181,7 @@ fn cli_provider_identity(provider: &str) -> (&'static str, &'static str) {
     match provider {
         "chatgpt" => ("ChatGPT", "ChatGPT 무료 플랜 이상 · Codex CLI"),
         "claude" => ("Claude", "Claude 유료 플랜 · Claude Code"),
+        "codebuddy" => ("CodeBuddy", CODEBUDDY_AUTH_MODE),
         _ => ("Gemini", "Google 구독 · Antigravity CLI"),
     }
 }
@@ -182,6 +207,58 @@ fn cli_status(
             .iter()
             .any(|disabled| disabled == provider),
     )
+}
+
+/// CodeBuddy connection state.
+///
+/// Listing providers only checks that the CLI is installed and whether an earlier explicit
+/// connect verified its existing login. It never runs the CLI, never infers a login from
+/// `--version`, and never spends a request while the settings list refreshes.
+fn codebuddy_status(disabled_providers: &[String]) -> ProviderConnection {
+    // Listing compares the selected model with the stored previous-verification marker only.
+    // It never runs the CLI and never spends a request; an unreadable settings file simply
+    // reports login-required instead of guessing a model.
+    let verified = selected_codebuddy_model()
+        .map(|model| codebuddy_login_is_verified(&model))
+        .unwrap_or(false);
+    codebuddy_connection(
+        codebuddy_cli_is_installed(),
+        verified,
+        disabled_providers
+            .iter()
+            .any(|disabled| disabled == "codebuddy"),
+    )
+}
+
+fn codebuddy_connection(installed: bool, verified: bool, disabled: bool) -> ProviderConnection {
+    // A verified login can never outrank a missing executable.
+    let verified = installed && verified;
+    cli_connection(
+        "codebuddy",
+        "CodeBuddy",
+        CODEBUDDY_AUTH_MODE,
+        CliConnectionProbe {
+            installed,
+            connected: verified,
+            detail: if !installed {
+                CODEBUDDY_INSTALL_HINT.to_string()
+            } else if verified {
+                "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다."
+                    .to_string()
+            } else {
+                "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다."
+                    .to_string()
+            },
+        },
+        disabled,
+    )
+}
+
+fn selected_codebuddy_model() -> Result<String, String> {
+    ConfigStore::load(default_config_path())
+        .and_then(|store| store.get())
+        .map(|config: AppConfig| config.codebuddy_model)
+        .map_err(|error| format!("CodeBuddy 설정을 읽지 못했습니다: {error}"))
 }
 
 fn cli_connection(
@@ -300,7 +377,7 @@ fn openai_compat_status_with_store(
 
 #[cfg(test)]
 mod tests {
-    use super::{cli_connection, disconnect, openai_compat_status};
+    use super::{cli_connection, codebuddy_connection, disconnect, openai_compat_status};
     use crate::config::AppConfig;
 
     #[test]
@@ -396,6 +473,53 @@ mod tests {
         assert_eq!(disconnected.state, "disabled");
         assert!(!disconnected.connected);
         assert!(disconnected.installed);
+        assert!(disconnected
+            .detail
+            .contains("NudeNyang Discord Translator에서만"));
+    }
+
+    #[test]
+    fn codebuddy_card_separates_installation_from_a_verified_login() {
+        let missing = codebuddy_connection(false, false, false);
+        assert_eq!(missing.state, "not-installed");
+        assert!(!missing.installed);
+        assert!(missing.detail.contains("CodeBuddy CLI를 찾지 못했습니다"));
+
+        // An installed CodeBuddy CLI is not a verified login, so the app must not report it
+        // as connected or offer to disconnect it.
+        let installed_only = codebuddy_connection(true, false, false);
+        assert_eq!(installed_only.state, "login-required");
+        assert!(installed_only.installed);
+        assert!(!installed_only.connected);
+        assert!(!installed_only.can_disconnect);
+        assert!(installed_only.detail.contains("설치되어 있습니다"));
+
+        let verified = codebuddy_connection(true, true, false);
+        assert_eq!(verified.state, "connected");
+        assert!(verified.connected);
+        assert!(verified.can_disconnect);
+
+        let disabled = codebuddy_connection(true, true, true);
+        assert_eq!(disabled.state, "disabled");
+        assert!(!disabled.connected);
+        assert!(disabled
+            .detail
+            .contains("NudeNyang Discord Translator에서만"));
+
+        // A stored login flag must never outrank a missing executable.
+        assert_eq!(
+            codebuddy_connection(false, true, false).state,
+            "not-installed"
+        );
+    }
+
+    #[test]
+    fn disconnecting_codebuddy_only_disables_app_usage() {
+        let disconnected = disconnect("codebuddy").expect("disable CodeBuddy inside the app");
+        assert_eq!(disconnected.state, "disabled");
+        assert!(!disconnected.connected);
+        assert!(disconnected.installed);
+        assert!(disconnected.auth_mode.contains("CodeBuddy CLI 로그인"));
         assert!(disconnected
             .detail
             .contains("NudeNyang Discord Translator에서만"));

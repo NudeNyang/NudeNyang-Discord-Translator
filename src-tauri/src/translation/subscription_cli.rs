@@ -2629,7 +2629,7 @@ pub(super) fn translation_style(speech_style: &str) -> Result<&'static str, Stri
     }
 }
 
-fn translation_prompt(
+pub(super) fn translation_prompt(
     items: &[Value],
     target: Language,
     speech_style: &str,
@@ -2805,7 +2805,7 @@ fn raise_for_failure(output: &Output, provider: SubscriptionProvider) -> Result<
     ))
 }
 
-fn run_process(
+pub(super) fn run_process(
     executable: &Path,
     arguments: &[String],
     input: Option<&str>,
@@ -2909,7 +2909,7 @@ fn run_process_with_observer(
     })
 }
 
-fn subscription_environment() -> HashMap<String, String> {
+pub(super) fn subscription_environment() -> HashMap<String, String> {
     let mut environment: HashMap<String, String> = env::vars().collect();
     for name in API_ENVIRONMENT_VARIABLES {
         environment.remove(name);
@@ -3061,7 +3061,7 @@ fn find_winget_package_executable(
         .find(|candidate| candidate.is_file())
 }
 
-fn find_executable(name: &str) -> Option<PathBuf> {
+pub(super) fn find_executable(name: &str) -> Option<PathBuf> {
     let path = env::var_os("PATH")?;
     find_executable_on_path(name, &path)
 }
@@ -3137,7 +3137,7 @@ fn node_wrapper_target(executable: &Path) -> Option<(PathBuf, PathBuf)> {
     Some((node, script))
 }
 
-fn decode_process_output(bytes: &[u8]) -> String {
+pub(super) fn decode_process_output(bytes: &[u8]) -> String {
     if bytes.is_empty() {
         return String::new();
     }

@@ -1219,7 +1219,10 @@ fn provider_disconnect(
 ) -> Result<providers::ProviderConnection, String> {
     let connection = providers::disconnect(&provider)?;
     let current = config.get()?;
-    let is_subscription_cli = matches!(provider.as_str(), "chatgpt" | "claude" | "gemini");
+    let is_subscription_cli = matches!(
+        provider.as_str(),
+        "chatgpt" | "claude" | "gemini" | "codebuddy"
+    );
     let mut patch = json!({});
     if is_subscription_cli {
         let mut disabled_providers = current.disabled_providers.clone();

@@ -43,10 +43,10 @@ use crate::outgoing::{
     OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
 };
 use crate::translation::{
-    outgoing_can_passthrough, DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator,
-    ModelPreparationCancellation, ModelPreparationProgress, ModelProgressObserver,
-    OpenAiCompatSettings, OpenAiCompatTranslator, OriginalTranslator, ResilientTranslator,
-    SubscriptionCliTranslator, TranslationService, Translator,
+    outgoing_can_passthrough, CodeBuddyCliTranslator, DeepLTranslator, HyMtModelSize,
+    HyMtTranslator, MockTranslator, ModelPreparationCancellation, ModelPreparationProgress,
+    ModelProgressObserver, OpenAiCompatSettings, OpenAiCompatTranslator, OriginalTranslator,
+    ResilientTranslator, SubscriptionCliTranslator, TranslationService, Translator,
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
@@ -920,16 +920,34 @@ fn translator_preparation_plan(
         || updated.translation_omission_check != current.translation_omission_check;
     let openai_compat_changed =
         OpenAiCompatSettings::from_config(updated) != OpenAiCompatSettings::from_config(current);
+    // The CodeBuddy model is part of the translator identity, so a model change rebuilds every
+    // lane that currently or previously used CodeBuddy.
+    let codebuddy_model_changed = updated.codebuddy_model != current.codebuddy_model;
     let lane_changed = |current_name: &str, updated_name: &str| {
         updated_name != current_name
             || shared_settings_changed
             || (openai_compat_changed && updated_name == "openai_compat")
+            || (codebuddy_model_changed
+                && (current_name == "codebuddy" || updated_name == "codebuddy"))
             || refreshed_provider == Some(updated_name)
     };
     TranslatorPreparationPlan {
         display: lane_changed(&current.translator, &updated.translator),
         outgoing: lane_changed(&current.outgoing_translator, &updated.outgoing_translator),
     }
+}
+
+/// Whether a CodeBuddy model change affects a lane that currently or previously uses CodeBuddy.
+///
+/// The CodeBuddy model is part of the translator identity, so a model change must also reset
+/// parked Discord windows: otherwise another window keeps results produced with the previous
+/// model even after the worker lane was rebuilt.
+fn codebuddy_model_changes_lane(current: &AppConfig, updated: &AppConfig) -> bool {
+    updated.codebuddy_model != current.codebuddy_model
+        && (current.translator == "codebuddy"
+            || updated.translator == "codebuddy"
+            || current.outgoing_translator == "codebuddy"
+            || updated.outgoing_translator == "codebuddy")
 }
 
 fn preparation_plan_for_active_lanes(
@@ -1456,6 +1474,7 @@ fn run_controller(
                         || updated.incoming_source_languages != config.incoming_source_languages
                         || updated.incoming_language_mode != config.incoming_language_mode
                         || updated.image_ocr_quality != config.image_ocr_quality
+                        || codebuddy_model_changes_lane(&config, &updated)
                     {
                         for other in parked.values_mut() {
                             other.reset();
@@ -4496,6 +4515,12 @@ fn make_translator(
             120,
             cache_root(),
         )?))),
+        "codebuddy" => Ok(checked(Box::new(CodeBuddyCliTranslator::new(
+            &config.codebuddy_model,
+            "auto",
+            120,
+            cache_root(),
+        )?))),
         "deepl" => Ok(checked(Box::new(DeepLTranslator::new(
             None,
             Duration::from_secs(30),
@@ -4611,6 +4636,7 @@ fn translator_label(name: &str) -> &str {
         "chatgpt" => "ChatGPT 품질 우선 (Codex CLI)",
         "claude" => "Claude 품질 우선 (Claude Code)",
         "gemini" => "Gemini 품질 우선 (Antigravity CLI)",
+        "codebuddy" => "CodeBuddy (CodeBuddy CLI)",
         "deepl" => "DeepL 품질 우선 (API)",
         "openai_compat" => "OpenAI 호환 API",
         "mock" => "Mock 테스트",
@@ -5165,19 +5191,20 @@ mod tests {
     }
 
     use super::{
-        cdp_attach_text_scripts, dictionary_source_language, dictionary_translation_is_acceptable,
-        display_batch_item_limit, display_preparation_is_required, display_translation_is_ready,
-        display_view_scope, incoming_context_key, initial_model_preparation_progress,
-        localize_dictionary_result, next_worker_command, plan_dom_updates, poll_interval,
-        preparation_plan_for_active_lanes, record_outgoing_ui_change, retain_enabled_dom_parts,
-        run_outgoing_translation_worker, stage_dictionary_lookup_result,
-        translator_activation_notice, translator_label, translator_preparation_plan,
-        validate_browser_translation_request, BrowserPrivateContext, BrowserTranslationItem,
-        BrowserTranslationPermit, BrowserTranslationPolicy, BrowserTranslationRequest,
-        DictionaryLocalizationBatch, DisplayViewObservation, DisplayViewState,
-        OutgoingTranslationBatch, OutgoingUiChanges, OutgoingWorkerCommand, PartState,
-        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
-        WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
+        cdp_attach_text_scripts, codebuddy_model_changes_lane, dictionary_source_language,
+        dictionary_translation_is_acceptable, display_batch_item_limit,
+        display_preparation_is_required, display_translation_is_ready, display_view_scope,
+        incoming_context_key, initial_model_preparation_progress, localize_dictionary_result,
+        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
+        record_outgoing_ui_change, retain_enabled_dom_parts, run_outgoing_translation_worker,
+        stage_dictionary_lookup_result, translator_activation_notice, translator_label,
+        translator_preparation_plan, validate_browser_translation_request, BrowserPrivateContext,
+        BrowserTranslationItem, BrowserTranslationPermit, BrowserTranslationPolicy,
+        BrowserTranslationRequest, DictionaryLocalizationBatch, DisplayViewObservation,
+        DisplayViewState, OutgoingTranslationBatch, OutgoingUiChanges, OutgoingWorkerCommand,
+        PartState, RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan,
+        WorkerCommand, WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY,
+        MAX_BATCH_ITEMS,
     };
     use crate::cache::TranslationCache;
     use crate::cdp::{discord_target, CdpClient};
@@ -6297,8 +6324,9 @@ mod tests {
         );
         assert_eq!(translator_label("deepl"), "DeepL 품질 우선 (API)");
         assert_eq!(translator_label("openai_compat"), "OpenAI 호환 API");
+        assert_eq!(translator_label("codebuddy"), "CodeBuddy (CodeBuddy CLI)");
         assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
-        for provider in ["chatgpt", "claude", "gemini", "deepl"] {
+        for provider in ["chatgpt", "claude", "gemini", "codebuddy", "deepl"] {
             assert!(!translator_label(provider).contains("Luna/Terra"));
             assert!(!translator_label(provider).contains("GPT-5.6"));
         }
@@ -6313,6 +6341,111 @@ mod tests {
         assert!(!prepared.contains("지금부터"));
         assert!(deferred.contains("번역을 켜면 모델을 준비합니다"));
         assert!(!deferred.contains("준비가 완료되었습니다"));
+    }
+
+    #[test]
+    fn changing_the_codebuddy_model_rebuilds_only_the_codebuddy_lanes() {
+        let current = AppConfig {
+            translator: "codebuddy".to_string(),
+            outgoing_translator: "chatgpt".to_string(),
+            ..Default::default()
+        };
+        let updated = AppConfig {
+            codebuddy_model: "deepseek-v4.1-flash".to_string(),
+            ..current.clone()
+        };
+
+        assert_eq!(
+            translator_preparation_plan(&current, &updated),
+            TranslatorPreparationPlan {
+                display: true,
+                outgoing: false,
+            }
+        );
+
+        let outgoing_codebuddy = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "codebuddy".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            translator_preparation_plan(
+                &outgoing_codebuddy,
+                &AppConfig {
+                    codebuddy_model: "deepseek-v4.1-flash".to_string(),
+                    ..outgoing_codebuddy.clone()
+                },
+            ),
+            TranslatorPreparationPlan {
+                display: false,
+                outgoing: true,
+            }
+        );
+
+        // A CodeBuddy model change must not rebuild lanes that never use CodeBuddy.
+        let chatgpt_only = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "claude".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            translator_preparation_plan(
+                &chatgpt_only,
+                &AppConfig {
+                    codebuddy_model: "deepseek-v4.1-flash".to_string(),
+                    ..chatgpt_only.clone()
+                },
+            ),
+            TranslatorPreparationPlan {
+                display: false,
+                outgoing: false,
+            }
+        );
+    }
+
+    #[test]
+    fn changing_the_codebuddy_model_resets_parked_windows_for_codebuddy_lanes() {
+        let display_codebuddy = AppConfig {
+            translator: "codebuddy".to_string(),
+            outgoing_translator: "chatgpt".to_string(),
+            ..Default::default()
+        };
+        let updated_model = |base: &AppConfig| AppConfig {
+            codebuddy_model: "deepseek-v4.1-flash".to_string(),
+            ..base.clone()
+        };
+
+        assert!(
+            codebuddy_model_changes_lane(&display_codebuddy, &updated_model(&display_codebuddy)),
+            "a display CodeBuddy lane must reset parked windows when its model changes"
+        );
+
+        let outgoing_codebuddy = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "codebuddy".to_string(),
+            ..Default::default()
+        };
+        assert!(
+            codebuddy_model_changes_lane(&outgoing_codebuddy, &updated_model(&outgoing_codebuddy)),
+            "an outgoing CodeBuddy lane must reset parked windows when its model changes"
+        );
+
+        // A model change must not reset windows when no lane uses CodeBuddy.
+        let chatgpt_only = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "claude".to_string(),
+            ..Default::default()
+        };
+        assert!(!codebuddy_model_changes_lane(
+            &chatgpt_only,
+            &updated_model(&chatgpt_only)
+        ));
+
+        // An unchanged model never triggers a reset, even on a CodeBuddy lane.
+        assert!(!codebuddy_model_changes_lane(
+            &display_codebuddy,
+            &display_codebuddy
+        ));
     }
 
     #[test]

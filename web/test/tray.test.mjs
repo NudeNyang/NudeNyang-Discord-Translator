@@ -126,6 +126,7 @@ test("translation model can be changed inside the tray menu", () => {
     "translategemma_4b",
     "chatgpt",
     "gemini",
+    "codebuddy",
     "deepl",
     "openai_compat",
     "mock",

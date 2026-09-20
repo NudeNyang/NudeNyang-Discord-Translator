@@ -42,6 +42,14 @@ const APP_LINKS = Object.freeze({
   repository: "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
 });
 
+// Only the displayed label is human-readable. The value stays the full provider model id,
+// which is what `--model` receives, so the channel a label names never changes the request.
+const CODEBUDDY_MODEL_OPTIONS = [
+  ["hy3", "Hy3 (CodeBuddy)"],
+  ["deepseek-v4.1-flash", "DeepSeek V4.1 (CodeBuddy)"],
+  ["custom-local:CodeBuddy-CN/deepseek-v4.1-flash", "DeepSeek V4.1 (viito)"],
+];
+
 const DISPLAY_TRANSLATOR_OPTIONS = [
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)", "local"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)", "local"],
@@ -49,6 +57,7 @@ const DISPLAY_TRANSLATOR_OPTIONS = [
   ["chatgpt", "ChatGPT CLI (외부·품질 우선)", "external"],
   ["claude", "Claude CLI (외부·품질 우선)", "external"],
   ["gemini", "Gemini CLI (외부·품질 우선)", "external"],
+  ["codebuddy", "CodeBuddy CLI (기존 로그인·외부 전송)", "external"],
   ["deepl", "DeepL (API 키·외부 전송)", "external"],
   ["openai_compat", "OpenAI 호환 API (사용자 지정 서버)", "external"],
   ["mock", "Mock 테스트", "testing"],
@@ -58,6 +67,7 @@ const OUTGOING_TRANSLATOR_OPTIONS = [
   ["chatgpt", "ChatGPT CLI (권장·품질 우선)", "recommended"],
   ["claude", "Claude CLI (권장·품질 우선)", "recommended"],
   ["gemini", "Gemini CLI (권장·품질 우선)", "recommended"],
+  ["codebuddy", "CodeBuddy CLI (기존 로그인·외부 전송)", "recommended"],
   ["deepl", "DeepL (API 키·외부 전송)", "recommended"],
   ["openai_compat", "OpenAI 호환 API (사용자 지정 서버)", "recommended"],
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·속도 우선)", "local-limited"],
@@ -89,6 +99,7 @@ const OPTIONS = {
   target_language: LANGUAGE_OPTIONS,
   translator: DISPLAY_TRANSLATOR_OPTIONS,
   outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
+  codebuddy_model: CODEBUDDY_MODEL_OPTIONS,
   outgoing_target_language: [["auto", "최근 대화에서 자동 감지"], ...LANGUAGE_OPTIONS],
   hymt_device: [
     ["auto", "자동 보호 (권장)"],
@@ -336,13 +347,13 @@ const providerAccordion = createProviderAccordion(document.querySelector("#provi
   window.requestAnimationFrame(updateScrollIndicator);
 });
 
-const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl", "openai_compat"]);
+const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "codebuddy", "deepl", "openai_compat"]);
 const LOCAL_TRANSLATORS = new Set(
   DISPLAY_TRANSLATOR_OPTIONS
     .filter(([, , group]) => group === "local")
     .map(([value]) => value),
 );
-const RECOMMENDED_PROVIDER_ORDER = ["chatgpt", "claude", "gemini"];
+const RECOMMENDED_PROVIDER_ORDER = ["chatgpt", "claude", "gemini", "codebuddy"];
 const PROVIDER_LOGIN_COPY = Object.freeze({
   chatgpt: { name: "ChatGPT", account: "ChatGPT 계정" },
   claude: { name: "Claude", account: "Claude 계정" },
@@ -1699,7 +1710,7 @@ async function connectProvider(row) {
   action.disabled = true;
   try {
     let current = providerConnection(provider);
-    if (current && !current.installed) {
+    if (current && !current.installed && provider !== "codebuddy") {
       setProviderActionLabel(action, "설치 중");
       status.dataset.state = "loading";
       setLocalizedText(status.querySelector("strong"), "설치 중");
@@ -1713,17 +1724,20 @@ async function connectProvider(row) {
     }
 
     action.disabled = true;
-    setProviderActionLabel(action, provider === "deepl" ? "확인 중" : "로그인 중");
+    const confirmsExistingAccess = provider === "deepl" || provider === "codebuddy";
+    setProviderActionLabel(action, confirmsExistingAccess ? "확인 중" : "로그인 중");
     status.dataset.state = "loading";
     setLocalizedText(
       status.querySelector("strong"),
-      provider === "deepl" ? "확인 중" : "로그인 중",
+      confirmsExistingAccess ? "확인 중" : "로그인 중",
     );
     setLocalizedText(
       status.querySelector("span"),
       provider === "deepl"
         ? "DeepL API 키의 유효성을 확인하고 있습니다."
-        : "계정 로그인 절차를 시작하고 있습니다.",
+        : provider === "codebuddy"
+          ? "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다."
+          : "계정 로그인 절차를 시작하고 있습니다.",
     );
     const loginProgress = provider !== "deepl" ? await showProviderLoginProgress(provider) : null;
     let connection;
@@ -1753,7 +1767,8 @@ async function connectProvider(row) {
 
 async function showProviderLoginProgress(provider) {
   const copy = PROVIDER_LOGIN_COPY[provider];
-  if (!copy) throw new Error("지원하지 않는 계정 로그인 방식입니다.");
+  // Providers without a browser sign-in flow (DeepL, CodeBuddy) run inline instead.
+  if (!copy) return null;
   let cancelled = false;
   let closed = false;
   let unlistenReady = null;
@@ -2772,6 +2787,11 @@ async function applySettingsPatch(patch, { status = true } = {}) {
       renderConfig(updated);
       if (status) setLocalizedText(elements.saveStatus, "적용되었습니다.");
     }
+    if (Object.prototype.hasOwnProperty.call(patch, "codebuddy_model")) {
+      // A stored verification marker belongs to one model, so the CodeBuddy card has to be
+      // re-read after the new model is saved instead of showing the previous model's state.
+      await loadProviderConnections();
+    }
     return updated;
   } catch (error) {
     if (revision === state.settingsApplyRevision) {
@@ -3068,7 +3088,7 @@ function localizeRuntimeLabel(label, language) {
     if (label.endsWith(suffix)) {
       const runtimeName = label.slice(0, -suffix.length).trim();
       const externalService = runtimeName.match(
-        /^(ChatGPT|Claude|Gemini|DeepL) 품질 우선 \((Codex CLI|Claude Code|Antigravity CLI|API)\)$/,
+        /^(ChatGPT|Claude|Gemini|DeepL|CodeBuddy) 품질 우선 \((Codex CLI|Claude Code|Antigravity CLI|API|CodeBuddy CLI)\)$/,
       );
       const localizedRuntimeName = externalService
         ? `${externalService[1]} ${translateCopy(language, "품질 최우선")} (${externalService[2]})`

@@ -1,3 +1,7 @@
+// CodeBuddy provider: the response contract lives in `codebuddy`, the process lifecycle in
+// `codebuddy_cli`.
+mod codebuddy;
+mod codebuddy_cli;
 mod deepl;
 mod discord_format;
 pub mod hymt;
@@ -11,6 +15,11 @@ mod subscription_cli;
 
 use crate::language::Language;
 
+pub use codebuddy_cli::{
+    cli_is_installed as codebuddy_cli_is_installed,
+    login_is_verified as codebuddy_login_is_verified, verify_login as verify_codebuddy_login,
+    CodeBuddyCliTranslator,
+};
 pub use deepl::DeepLTranslator;
 pub use hymt::{
     delete_cached_local_model, local_model_storage_root, local_model_storage_status, HyMtModelSize,
