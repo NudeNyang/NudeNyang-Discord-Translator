@@ -3,7 +3,7 @@
 ## 유지할 조건
 
 - 본체 버전은 `src-tauri/tauri.conf.json`을 따른다. 기본적으로 `-beta` 버전은 GitHub 프리릴리스로 게시한다.
-- 0.7.5-beta는 사용자의 명시적인 요청에 따라 정식 최신 릴리스로 게시했던 예외다. 0.7.6-beta는 `-StableRelease` 없이 `--prerelease --latest=false`로 공개한다. 접미사 없는 버전은 기본으로 정식 게시한다.
+- 0.7.5-beta와 0.7.6-beta는 사용자의 명시적인 요청에 따라 정식 최신 릴리스로 게시한다. 새 정식 릴리스에는 `-StableRelease`를 지정하며 `--prerelease=false --latest=true`로 공개한다. 접미사 없는 버전은 기본으로 정식 게시한다.
 - 1.0.0은 macOS 버전을 출시할 때 사용한다. Windows 정식 릴리스 게시만으로 버전을 1.0.0으로 올리지 않는다.
 - 프리릴리스 여부는 GitHub의 표시·분류이고, 앱은 기존 정적 업데이트 목록을 조회한다. ARM64 지원에 정식 전환은 필요하지 않다.
 - 업데이트 주소는 `https://raw.githubusercontent.com/NudeNyang/NudeNyang-Discord-Translator/main/updates/beta/latest.json`을 유지한다.
@@ -27,6 +27,8 @@
 업데이트 목록을 커밋한 뒤에는 HEAD가 빌드 커밋보다 앞서므로, 재검증 시 `node scripts/release-updates.mjs validate --commit <latest.json의 source_commit>`으로 실제 빌드 커밋을 지정한다. 패키징 기록 `release/<버전>/windows-build.json`은 두 설치 파일의 해시와 빌드 커밋을 묶으며 저장소나 공개 첨부 파일에는 포함하지 않는다.
 
 ## 누락 방지
+
+이미 공개한 프리릴리스를 정식으로 전환해 달라는 요청은 GitHub 분류와 최신 릴리스 지정을 변경하는 작업이다. 먼저 기존 설치형·서명·체크섬을 검증한 뒤 `gh release edit <tag> --prerelease=false --latest=true --notes-file <문서>`로 분류와 안내를 갱신한다. 변경 후 최신 릴리스 ID와 첨부 파일의 크기·해시가 그대로인지 확인한다. 같은 버전의 설치 파일을 다시 올리거나 태그를 이동하지 않는다. 이 경우 공개된 `latest.json`과 체크섬은 최초 빌드 기록으로 보존하며, 이후 분류 안내는 GitHub 릴리스 본문과 저장소 문서에서 갱신한다.
 
 `latest.json`은 `windows-x86_64`와 `windows-aarch64` 각각에 해당 설치형의 URL·서명·SHA-256을 가진다. 서명 검사는 Tauri의 base64 인코딩된 Minisign 형식과 기존 공개 키를 사용해 실제 설치 파일 및 신뢰 주석을 검증한다. 파일 이름만 맞거나 서명 파일이 존재하는 것만으로 통과하지 않는다. 공개 키와 업데이트 주소를 바꾸지 않는다.
 

@@ -31,7 +31,7 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 [0.7.6 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.6-beta)에서 Windows 10/11용 설치 파일을 받으세요. 스크롤 후 번역이 늦게 복원되던 문제와 기호 전송, 이모지 창의 초대 안내를 고쳤습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.6-beta.md)에 정리했습니다.
 
-0.7.6-beta는 GitHub 프리릴리스이며 앱의 업데이트 안내에서도 받을 수 있습니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
+0.7.6-beta는 GitHub 정식 최신 릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
 - 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
@@ -184,7 +184,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
-0.7.6-beta는 `-StableRelease` 없이 프리릴리스로 게시합니다. 설치 파일을 공개한 뒤 업데이트 목록을 반영하는 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
+0.7.6-beta는 관리자의 요청에 따라 정식 릴리스로 게시합니다. 새 정식 릴리스를 만들 때는 `-StableRelease`를 지정합니다. 이미 공개된 릴리스의 분류 변경과 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
 
 </details>
 

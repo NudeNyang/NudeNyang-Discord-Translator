@@ -35,7 +35,7 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 Download the Windows installer from [0.7.6 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.6-beta). This version restores saved translations sooner after scrolling and fixes punctuation-only outgoing messages and an invite notice appearing in the emoji picker. See the [release notes](docs/releases/0.7.6-beta.md) for details.
 
-0.7.6-beta is a GitHub prerelease and remains available through the app's update prompt. Version 1.0.0 is reserved for the macOS release.
+0.7.6-beta is published as the latest regular GitHub release. The version name and app update channel remain unchanged. Version 1.0.0 is reserved for the macOS release.
 
 Existing installed versions can follow the app's update prompt. The update URL and signing key are unchanged; you do not need to uninstall or reset the app. Older portable builds require a manual installer download.
 
@@ -204,9 +204,9 @@ Commit source/version/release notes before packaging, and push that source commi
 The public packaging script builds **both x64 and ARM64**, signs both installers with the existing
 Tauri updater key, and verifies signatures, SHA-256 checksums, URLs and both update platform entries.
 Missing or mismatched artifacts stop deployment. By default, `-beta` versions use GitHub prereleases.
-Publish 0.7.6-beta with `--prerelease --latest=false`, without `-StableRelease`.
-The earlier 0.7.5-beta regular release was a version-specific exception. Both publication modes
-use the same app update URL.
+The maintainer has requested regular releases for 0.7.5-beta and 0.7.6-beta.
+For a new regular release, pass `-StableRelease` to the deployment script; it publishes with
+`--prerelease=false --latest=true`. Both publication modes use the same app update URL.
 
 Packaging writes only `release/<version>/latest.json`. Deployment uploads a draft, checks every
 asset's server-side SHA-256 and size, publishes it, then copies the validated manifest to
