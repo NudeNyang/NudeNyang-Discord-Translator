@@ -45,9 +45,7 @@ const APP_LINKS = Object.freeze({
 // Only the displayed label is human-readable. The value stays the full provider model id,
 // which is what `--model` receives, so the channel a label names never changes the request.
 const CODEBUDDY_MODEL_OPTIONS = [
-  ["hy3", "Hy3 (CodeBuddy)"],
-  ["deepseek-v4.1-flash", "DeepSeek V4.1 (CodeBuddy)"],
-  ["custom-local:CodeBuddy-CN/deepseek-v4.1-flash", "DeepSeek V4.1 (viito)"],
+  [normalizeConfig({}).codebuddy_model, normalizeConfig({}).codebuddy_model],
 ];
 
 const DISPLAY_TRANSLATOR_OPTIONS = [
@@ -614,6 +612,50 @@ async function loadProviderConnections() {
   } finally {
     state.providerLoading = false;
     renderOutgoingModelGuidance();
+  }
+}
+
+let codeBuddyModelsLoading = false;
+let codeBuddyModelsLoaded = false;
+
+function renderCodeBuddyModels(models, selected) {
+  const ids = [];
+  for (const model of Array.isArray(models) ? models : []) {
+    if (typeof model !== "string") continue;
+    const id = model.trim();
+    if (!id || ids.includes(id)) continue;
+    ids.push(id);
+  }
+  const chosen = typeof selected === "string" ? selected.trim() : "";
+  if (chosen && !ids.includes(chosen)) ids.unshift(chosen);
+  OPTIONS.codebuddy_model = ids.map(id => [id, id]);
+  const element = document.querySelector('.custom-select[data-field="codebuddy_model"]');
+  if (!element) return;
+  closeSelect(element);
+  element.replaceChildren();
+  renderSelect(element);
+  setSelectValue("codebuddy_model", selected);
+}
+
+async function loadCodeBuddyModels() {
+  if (codeBuddyModelsLoading) return;
+  codeBuddyModelsLoading = true;
+  const button = document.getElementById("codebuddy-models-refresh");
+  if (button) button.disabled = true;
+  try {
+    const models = await invoke("codebuddy_models_get");
+    if (!Array.isArray(models) || models.length === 0 || !models.every(model => typeof model === "string")) {
+      throw new Error("CodeBuddy 모델 목록을 불러오지 못했습니다");
+    }
+    const selected = state.selectValues.codebuddy_model || state.config.codebuddy_model;
+    renderCodeBuddyModels(models, selected);
+    codeBuddyModelsLoaded = true;
+  } catch (error) {
+    setLocalizedError(elements.saveStatus, error);
+    writeDiagnostic("warn", `codebuddy-models: ${String(error)}`);
+  } finally {
+    codeBuddyModelsLoading = false;
+    if (button) button.disabled = false;
   }
 }
 
@@ -2739,6 +2781,10 @@ function closeAllSelects() {
 
 function renderConfig(config) {
   state.config = normalizeConfig(config);
+  renderCodeBuddyModels(
+    codeBuddyModelsLoaded ? OPTIONS.codebuddy_model.map(([id]) => id) : [],
+    state.config.codebuddy_model,
+  );
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
   renderSourceLanguagePicker();
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
@@ -3292,6 +3338,7 @@ async function initializeSettingsUi() {
   // Provider probes can take several seconds, so begin them as soon as the
   // saved configuration is available without delaying engine activation.
   void loadProviderConnections();
+  void loadCodeBuddyModels();
   try {
     await loadAutostartState();
   } catch (error) {
@@ -3307,6 +3354,10 @@ document.querySelectorAll(".custom-select[data-field]").forEach(renderSelect);
 initializeSourceLanguagePicker();
 populateDictionaryLanguageSelects();
 initializeDictionaryCustomSelects();
+const codeBuddyModelsRefresh = document.getElementById("codebuddy-models-refresh");
+if (codeBuddyModelsRefresh) {
+  codeBuddyModelsRefresh.addEventListener("click", () => void loadCodeBuddyModels());
+}
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });

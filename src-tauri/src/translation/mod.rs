@@ -16,7 +16,7 @@ mod subscription_cli;
 use crate::language::Language;
 
 pub use codebuddy_cli::{
-    cli_is_installed as codebuddy_cli_is_installed,
+    available_models as codebuddy_available_models, cli_is_installed as codebuddy_cli_is_installed,
     login_is_verified as codebuddy_login_is_verified, verify_login as verify_codebuddy_login,
     CodeBuddyCliTranslator,
 };
@@ -55,6 +55,12 @@ pub trait Translator: Send {
     }
     fn isolate_incoming_failures(&self) -> bool {
         false
+    }
+    /// How many complete incoming message contexts may share one display batch
+    /// before the worker yields. The engine also caps the combined size, so a
+    /// larger value never splits or overflows a single message context.
+    fn preferred_incoming_batch_contexts(&self) -> usize {
+        1
     }
     fn translate(
         &mut self,

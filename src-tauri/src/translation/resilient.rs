@@ -82,6 +82,10 @@ impl Translator for ResilientTranslator {
         self.primary.isolate_incoming_failures()
     }
 
+    fn preferred_incoming_batch_contexts(&self) -> usize {
+        self.primary.preferred_incoming_batch_contexts()
+    }
+
     fn supports_ephemeral_requests(&self) -> bool {
         self.primary.supports_ephemeral_requests()
             && self
@@ -848,6 +852,33 @@ mod tests {
     fn halfwidth_kana_is_counted_by_translation_quality_checks() {
         assert_eq!(count_kana("ｷﾞﾌﾞﾝ"), 3);
         assert_eq!(max_kana_run("ｷﾞﾌﾞﾝ"), 3);
+    }
+
+    #[test]
+    fn resilient_translator_delegates_the_provider_batch_context_limit() {
+        struct BatchContextTranslator;
+        impl Translator for BatchContextTranslator {
+            fn display_name(&self) -> &str {
+                "batch-context"
+            }
+            fn cache_namespace(&self) -> &str {
+                "local:batch-context"
+            }
+            fn preferred_incoming_batch_contexts(&self) -> usize {
+                8
+            }
+            fn translate(
+                &mut self,
+                text: &str,
+                _source: Language,
+                _target: Language,
+            ) -> Result<String, String> {
+                Ok(text.to_string())
+            }
+        }
+        // Mirrors CodeBuddy: the wrapper must expose the primary's preference.
+        let translator = ResilientTranslator::new(Box::new(BatchContextTranslator), None);
+        assert_eq!(translator.preferred_incoming_batch_contexts(), 8);
     }
 
     struct PartialTranslator {

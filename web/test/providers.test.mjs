@@ -314,7 +314,7 @@ test("provider status details wrap instead of being clipped", () => {
 test("CodeBuddy uses the existing CLI sign-in without installing or logging in again", () => {
   assert.match(markup, /data-provider="codebuddy"/);
   assert.match(markup, /data-field="codebuddy_model"/);
-  assert.match(script, /const CODEBUDDY_MODEL_OPTIONS = \[\s*\["hy3", "Hy3 \(CodeBuddy\)"\],\s*\["deepseek-v4\.1-flash", "DeepSeek V4\.1 \(CodeBuddy\)"\],\s*\["custom-local:CodeBuddy-CN\/deepseek-v4\.1-flash", "DeepSeek V4\.1 \(viito\)"\],\s*\];/);
+  assert.match(script, /invoke\("codebuddy_models_get"\)/);
   assert.match(script, /codebuddy_model: CODEBUDDY_MODEL_OPTIONS,/);
   assert.match(script, /\["codebuddy",\s*"CodeBuddy CLI \(기존 로그인·외부 전송\)"/);
   assert.match(script, /provider !== "codebuddy"/);

@@ -144,6 +144,10 @@ impl Translator for CodeBuddyCliTranslator {
         true
     }
 
+    fn preferred_incoming_batch_contexts(&self) -> usize {
+        8
+    }
+
     fn prepare(&mut self) -> Result<(), String> {
         // Preparing verifies the CLI is installed. It must never start an implicit billed
         // translation, so no warmup request is sent here.
@@ -272,6 +276,104 @@ pub fn cli_is_installed() -> bool {
     installed_codebuddy_executable().is_some()
 }
 
+/// Lists the model ids the installed CodeBuddy CLI reports for `--model`.
+///
+/// The list is read from the CLI `--help` output so the settings screen can offer exactly the
+/// ids the installed CLI accepts. It never reads config, credentials or account detail, and it
+/// never starts a translation.
+pub fn available_models() -> Result<Vec<String>, String> {
+    let executable = installed_codebuddy_executable().ok_or_else(|| {
+        "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 시도하십시오.".to_string()
+    })?;
+    let workspace = executable.parent().unwrap();
+    let output = run_process(
+        &executable,
+        &["--help".to_string()],
+        None,
+        workspace,
+        &subscription_environment(),
+        Duration::from_secs(15),
+    )?;
+    if !output.status.success() {
+        return Err(format!(
+            "CodeBuddy CLI 모델 목록을 확인하지 못했습니다. (종료 상태: {})",
+            output.status
+        ));
+    }
+    parse_available_models(&decode_process_output(&output.stdout))
+}
+
+/// Parses the model list out of CodeBuddy CLI `--help` output.
+///
+/// The help prints one `--model` option line whose text ends with the ids the CLI accepts:
+///
+/// ```text
+///   --model <model>   Choose the model. Currently supported: (hy3, deepseek-v4.1-flash)
+/// ```
+///
+/// Only the indented `--model` section is read. Its continuation lines are appended until the
+/// next option starts, then the ids between `(` and `)` after `Currently supported:` are split on
+/// commas, validated and de-duplicated in first-seen order.
+fn parse_available_models(help: &str) -> Result<Vec<String>, String> {
+    let mut section = Vec::new();
+    let mut in_section = false;
+    for line in help.lines() {
+        if line.trim_start().starts_with("--model ") {
+            in_section = true;
+            section.push(line);
+            continue;
+        }
+        if !in_section {
+            continue;
+        }
+        if line.trim_start().starts_with("--") {
+            break;
+        }
+        section.push(line);
+    }
+    if section.is_empty() {
+        return Err("CodeBuddy CLI 도움말에서 --model 항목을 찾지 못했습니다.".to_string());
+    }
+    let section = section.join("\n");
+    let after_label = section
+        .split("Currently supported:")
+        .nth(1)
+        .ok_or_else(|| "CodeBuddy CLI 도움말에 지원 모델 목록이 없습니다.".to_string())?;
+    let open = after_label
+        .find('(')
+        .ok_or_else(|| "CodeBuddy CLI 도움말의 모델 목록 형식이 올바르지 않습니다.".to_string())?;
+    let close = after_label[open + 1..]
+        .find(')')
+        .map(|offset| open + 1 + offset)
+        .ok_or_else(|| "CodeBuddy CLI 도움말의 모델 목록 형식이 올바르지 않습니다.".to_string())?;
+    let mut models = Vec::new();
+    let mut seen = HashSet::new();
+    for candidate in after_label[open + 1..close].split(',') {
+        let model = candidate.trim();
+        if !is_valid_model_id(model) {
+            return Err(format!(
+                "CodeBuddy CLI 도움말에 올바르지 않은 모델 식별자가 있습니다: {model:?}"
+            ));
+        }
+        if seen.insert(model.to_string()) {
+            models.push(model.to_string());
+        }
+    }
+    if models.is_empty() {
+        return Err("CodeBuddy CLI 도움말에 지원하는 모델이 없습니다.".to_string());
+    }
+    Ok(models)
+}
+
+/// Whether a model id only uses the characters the CodeBuddy CLI accepts.
+fn is_valid_model_id(model: &str) -> bool {
+    let length = model.chars().count();
+    (1..=120).contains(&length)
+        && model.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, ':' | '/' | '.' | '-' | '_')
+        })
+}
+
 /// Whether an explicit connect already verified the existing CodeBuddy CLI login for exactly
 /// the currently selected model.
 ///
@@ -375,7 +477,7 @@ mod tests {
 
     use super::{
         codebuddy_arguments, decode_completed_result, installed_codebuddy_executable,
-        login_marker_matches, CodeBuddyCliTranslator,
+        login_marker_matches, parse_available_models, CodeBuddyCliTranslator,
     };
     use crate::language::Language;
     use crate::translation::Translator;
@@ -494,6 +596,71 @@ mod tests {
         assert!(CodeBuddyCliTranslator::new("   ", "auto", 120, &root).is_err());
         assert!(CodeBuddyCliTranslator::new("hy3", "shouting", 120, &root).is_err());
         assert!(CodeBuddyCliTranslator::new("hy3", "auto", 120, &root).is_ok());
+    }
+
+    #[test]
+    fn available_models_parses_native_and_custom_ids_and_dedupes_in_first_seen_order() {
+        let help = concat!(
+            "Options:\n",
+            "  --model <model>   Choose the model. Currently supported: (hy3, ",
+            "custom-local:CodeBuddy-CN/deepseek-v4.1-flash)\n",
+            "  --output-format <format>   Output format\n",
+        );
+        assert_eq!(
+            parse_available_models(help).expect("the native and custom ids must parse"),
+            vec![
+                "hy3".to_string(),
+                "custom-local:CodeBuddy-CN/deepseek-v4.1-flash".to_string(),
+            ],
+        );
+
+        let duplicated =
+            "  --model <model>   Currently supported: (hy3, hy4, hy3, hy4)\n  --tools <tools>\n";
+        assert_eq!(
+            parse_available_models(duplicated).expect("duplicates must collapse"),
+            vec!["hy3".to_string(), "hy4".to_string()],
+        );
+    }
+
+    #[test]
+    fn available_models_reads_only_the_model_section_and_ignores_other_options() {
+        let help = concat!(
+            "  --effort <level>   Choose the effort. Currently supported: (low, high)\n",
+            "  --model <model>   Choose the model. Currently supported:\n",
+            "                    (hy3, deepseek-v4.1-flash)\n",
+            "  --output-format <format>   Output format\n",
+            "  --model-extra <value>   Not the model option\n",
+        );
+        assert_eq!(
+            parse_available_models(help).expect("the wrapped model section must parse"),
+            vec!["hy3".to_string(), "deepseek-v4.1-flash".to_string()],
+        );
+    }
+
+    #[test]
+    fn available_models_rejects_missing_or_malformed_model_sections() {
+        assert!(parse_available_models("").is_err(), "empty help must fail");
+        assert!(
+            parse_available_models("  --output-format <format>   Output format\n").is_err(),
+            "help without a --model option must fail"
+        );
+        assert!(
+            parse_available_models("  --model <model>   Choose the model\n").is_err(),
+            "a --model option without a supported list must fail"
+        );
+        assert!(
+            parse_available_models("  --model <model>   Currently supported: hy3\n").is_err(),
+            "a supported list without parentheses must fail"
+        );
+        assert!(
+            parse_available_models("  --model <model>   Currently supported: ()\n").is_err(),
+            "an empty supported list must fail"
+        );
+        assert!(
+            parse_available_models("  --model <model>   Currently supported: (hy3, bad id!)\n")
+                .is_err(),
+            "an invalid model id must fail"
+        );
     }
 
     #[test]

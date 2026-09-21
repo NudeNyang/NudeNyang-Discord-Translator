@@ -566,6 +566,7 @@ export const COPY = Object.freeze({
   "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": ["The selected model was previously verified with this CodeBuddy CLI sign-in. Translation reuses the same sign-in.", "選択したモデルは以前にこのCodeBuddy CLIログインで確認済みです。翻訳時も同じログインを使用します。", "所选模型此前已使用该 CodeBuddy CLI 登录验证。翻译时将复用同一登录。"],
   "CodeBuddy CLI (기존 로그인·외부 전송)": ["CodeBuddy CLI (existing sign-in · external transfer)", "CodeBuddy CLI（既存ログイン・外部送信）", "CodeBuddy CLI（现有登录・外部传输）"],
   "CodeBuddy 모델": ["CodeBuddy model", "CodeBuddyモデル", "CodeBuddy 模型"],
+  "모델 목록 새로 고침": ["Refresh model list", "モデル一覧を更新", "刷新模型列表"],
   "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": ["Model ID passed to CodeBuddy CLI. One selection is shared by reading translation and outgoing message translation. Usage differs: native CodeBuddy models use your CodeBuddy quota, while the viito route uses its own usage.", "CodeBuddy CLIに渡すモデルIDです。この選択は閲覧翻訳と送信メッセージの通訳で共有されます。使用量は異なり、ネイティブのCodeBuddyモデルはCodeBuddyの利用枠を、viitoルートはそのルートの使用量を使用します。", "传递给 CodeBuddy CLI 的模型 ID。该选择由阅读翻译和发送消息翻译共用。用量不同：原生 CodeBuddy 模型使用 CodeBuddy 配额，viito 线路使用其自身用量。"],
   "API 사용량 과금": ["Usage-based API billing", "API使用量に応じた課金", "按 API 使用量计费"],
   "저장된 API 키를 확인하고 있습니다.": ["Checking the saved API key.", "保存済みのAPIキーを確認しています。", "正在检查已保存的 API 密钥。"],

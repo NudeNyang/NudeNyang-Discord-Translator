@@ -52,6 +52,7 @@ use crate::translation::{
 const MAX_BATCH_ITEMS: usize = 32;
 const CPU_MAX_BATCH_ITEMS: usize = 6;
 const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
+const MAX_INCOMING_BATCH_CHARS: usize = 4000;
 const DISPLAY_VIEW_SETTLE_DELAY: Duration = Duration::from_millis(250);
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
@@ -3783,7 +3784,10 @@ fn run_translation_worker_with_replay(
                 }
                 // Yield only between complete message contexts. Preserve the
                 // original batch's language evidence across these yields.
-                let end = message_ranges(&batch.parts)[0].end;
+                let end = incoming_batch_end(
+                    &batch.parts,
+                    service.translator().preferred_incoming_batch_contexts(),
+                );
                 if end < batch.parts.len() {
                     let remaining = batch.parts.split_off(end);
                     let hints = batch
@@ -4692,6 +4696,33 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
     }
 }
 
+/// End offset of the next display batch. Complete message contexts are added
+/// while they fit within `max_contexts` and the combined character budget, so a
+/// yield never splits one message. The first context always ships whole so an
+/// oversized message still makes progress.
+fn incoming_batch_end(parts: &[DomPart], max_contexts: usize) -> usize {
+    let limit = max_contexts.max(1);
+    let mut end = 0;
+    let mut contexts = 0;
+    let mut characters = 0usize;
+    for range in message_ranges(parts) {
+        let range_characters = parts[range.clone()]
+            .iter()
+            .map(|part| part.text.chars().count())
+            .sum::<usize>();
+        if contexts > 0 && characters + range_characters > MAX_INCOMING_BATCH_CHARS {
+            break;
+        }
+        end = range.end;
+        contexts += 1;
+        characters += range_characters;
+        if contexts >= limit {
+            break;
+        }
+    }
+    end
+}
+
 #[cfg(test)]
 #[path = "engine/discord_e2e.rs"]
 mod discord_e2e;
@@ -5194,17 +5225,17 @@ mod tests {
         cdp_attach_text_scripts, codebuddy_model_changes_lane, dictionary_source_language,
         dictionary_translation_is_acceptable, display_batch_item_limit,
         display_preparation_is_required, display_translation_is_ready, display_view_scope,
-        incoming_context_key, initial_model_preparation_progress, localize_dictionary_result,
-        next_worker_command, plan_dom_updates, poll_interval, preparation_plan_for_active_lanes,
-        record_outgoing_ui_change, retain_enabled_dom_parts, run_outgoing_translation_worker,
-        stage_dictionary_lookup_result, translator_activation_notice, translator_label,
-        translator_preparation_plan, validate_browser_translation_request, BrowserPrivateContext,
-        BrowserTranslationItem, BrowserTranslationPermit, BrowserTranslationPolicy,
-        BrowserTranslationRequest, DictionaryLocalizationBatch, DisplayViewObservation,
-        DisplayViewState, OutgoingTranslationBatch, OutgoingUiChanges, OutgoingWorkerCommand,
-        PartState, RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan,
-        WorkerCommand, WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY,
-        MAX_BATCH_ITEMS,
+        incoming_batch_end, incoming_context_key, initial_model_preparation_progress,
+        localize_dictionary_result, next_worker_command, plan_dom_updates, poll_interval,
+        preparation_plan_for_active_lanes, record_outgoing_ui_change, retain_enabled_dom_parts,
+        run_outgoing_translation_worker, stage_dictionary_lookup_result,
+        translator_activation_notice, translator_label, translator_preparation_plan,
+        validate_browser_translation_request, BrowserPrivateContext, BrowserTranslationItem,
+        BrowserTranslationPermit, BrowserTranslationPolicy, BrowserTranslationRequest,
+        DictionaryLocalizationBatch, DisplayViewObservation, DisplayViewState,
+        OutgoingTranslationBatch, OutgoingUiChanges, OutgoingWorkerCommand, PartState,
+        RuntimeStatus, RustEngine, TranslationBatch, TranslatorPreparationPlan, WorkerCommand,
+        WorkerResult, CPU_MAX_BATCH_ITEMS, DISPLAY_VIEW_SETTLE_DELAY, MAX_BATCH_ITEMS,
     };
     use crate::cache::TranslationCache;
     use crate::cdp::{discord_target, CdpClient};
@@ -6356,7 +6387,7 @@ mod tests {
         };
 
         assert_eq!(
-            translator_preparation_plan(&current, &updated),
+            translator_preparation_plan(&current, &updated, None),
             TranslatorPreparationPlan {
                 display: true,
                 outgoing: false,
@@ -6375,6 +6406,7 @@ mod tests {
                     codebuddy_model: "deepseek-v4.1-flash".to_string(),
                     ..outgoing_codebuddy.clone()
                 },
+                None,
             ),
             TranslatorPreparationPlan {
                 display: false,
@@ -6395,6 +6427,7 @@ mod tests {
                     codebuddy_model: "deepseek-v4.1-flash".to_string(),
                     ..chatgpt_only.clone()
                 },
+                None,
             ),
             TranslatorPreparationPlan {
                 display: false,
@@ -7059,6 +7092,64 @@ mod tests {
         );
 
         assert_eq!(queued.len(), CPU_MAX_BATCH_ITEMS);
+    }
+
+    fn incoming_contexts(widths: &[usize]) -> Vec<DomPart> {
+        widths
+            .iter()
+            .enumerate()
+            .map(|(context, width)| DomPart {
+                kind: "message".to_string(),
+                item_id: format!("dto-message-{context}"),
+                context_id: Some(format!("dto-context-{context}")),
+                index: 0,
+                text: "x".repeat(*width),
+                displayed_text: None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn incoming_batch_keeps_whole_contexts_up_to_the_provider_limit() {
+        let parts = incoming_contexts(&[10, 10, 10, 10, 10, 10, 10, 10]);
+        assert_eq!(incoming_batch_end(&parts, 8), 8);
+        assert_eq!(incoming_batch_end(&parts, 3), 3);
+    }
+
+    #[test]
+    fn incoming_batch_defaults_to_a_single_context() {
+        let parts = incoming_contexts(&[10, 10, 10, 10, 10, 10, 10, 10]);
+        assert_eq!(incoming_batch_end(&parts, 0), 1);
+        assert_eq!(incoming_batch_end(&parts, 1), 1);
+    }
+
+    #[test]
+    fn incoming_batch_stops_before_a_context_over_the_character_budget() {
+        // 3000 + 1500 exceeds the 4000 character budget, so only the first
+        // complete context ships even though the context limit allows more.
+        let parts = incoming_contexts(&[3000, 1500, 10]);
+        assert_eq!(incoming_batch_end(&parts, 8), 1);
+        let inside = incoming_contexts(&[3000, 900, 10]);
+        assert_eq!(incoming_batch_end(&inside, 8), 3);
+        let charboundary = incoming_contexts(&[3000, 1000, 1]);
+        assert_eq!(incoming_batch_end(&charboundary, 8), 2);
+    }
+
+    #[test]
+    fn incoming_batch_always_ships_an_oversized_first_context() {
+        let parts = incoming_contexts(&[5000, 10]);
+        assert_eq!(incoming_batch_end(&parts, 8), 1);
+    }
+
+    #[test]
+    fn incoming_batch_never_splits_a_multi_fragment_context() {
+        let mut parts = incoming_contexts(&[10, 10, 10]);
+        parts[1].context_id = parts[0].context_id.clone();
+        parts[1].item_id = "dto-message-0".to_string();
+        parts[1].index = 1;
+        // A multi-fragment context stays intact at both provider limits.
+        assert_eq!(incoming_batch_end(&parts, 8), 3);
+        assert_eq!(incoming_batch_end(&parts, 1), 2);
     }
 
     #[test]

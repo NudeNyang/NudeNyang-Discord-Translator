@@ -3383,3 +3383,9 @@ select:focus-visible,
     animation: none;
   }
 }
+
+/* NudeNyang model picker: keep long provider:model ids inside the control. */
+.codebuddy-model-controls { display: grid; gap: 8px; min-width: 0; }
+.codebuddy-model-controls .select-trigger-label,
+.codebuddy-model-controls .select-option { overflow-wrap: anywhere; text-align: start; }
+#codebuddy-models-refresh { justify-self: end; }
