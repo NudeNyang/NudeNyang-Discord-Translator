@@ -78,6 +78,10 @@ impl Translator for ResilientTranslator {
                 .is_some_and(|translator| translator.sends_text_externally())
     }
 
+    fn allows_quality_retries(&self) -> bool {
+        self.primary.allows_quality_retries()
+    }
+
     fn isolate_incoming_failures(&self) -> bool {
         self.primary.isolate_incoming_failures()
     }
@@ -129,6 +133,10 @@ impl Translator for ResilientTranslator {
             return Err("번역 엔진이 빈 번역문을 반환했습니다.".to_string());
         }
         if !self.omission_check {
+            return Ok(results);
+        }
+
+        if !self.primary.allows_quality_retries() {
             return Ok(results);
         }
 

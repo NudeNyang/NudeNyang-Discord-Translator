@@ -53,6 +53,11 @@ pub trait Translator: Send {
     fn supports_ephemeral_requests(&self) -> bool {
         !self.sends_text_externally()
     }
+    /// Whether the engine may retry a rejected incoming translation against the
+    /// same provider. Providers that opt out keep a single provider pass.
+    fn allows_quality_retries(&self) -> bool {
+        true
+    }
     fn isolate_incoming_failures(&self) -> bool {
         false
     }

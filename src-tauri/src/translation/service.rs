@@ -136,6 +136,9 @@ fn split_failed_web_clauses(text: &str) -> Vec<(String, String)> {
 }
 
 pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
+    if !protect_text(text).has_translatable_text() {
+        return true;
+    }
     let segments = DiscordFormatTemplate::parse(text).translatable_texts();
     let meaningful = segments
         .iter()
@@ -151,7 +154,13 @@ pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
     meaningful.into_iter().all(|segment| {
         let detection = detect_language(segment);
         if detection.language == Language::Unknown {
-            return true;
+            // Unknown Han text still requires translation; other unknown text keeps its existing passthrough behavior.
+            // Unknown 한자(CJK)는 '이미 목표 언어'라는 증거가 아니다.
+            // 이름·이모티콘 장식 등 한자 없는 텍스트의 기존 통과 동작은 그대로 보존한다.
+            return !segment.chars().any(|c| {
+                let cp = c as u32;
+                matches!(cp, 0x3400..=0x4dbf | 0x4e00..=0x9fff | 0xf900..=0xfaff | 0x20000..=0x323af)
+            });
         }
         if detection.language != target {
             return false;
@@ -391,7 +400,31 @@ impl TranslationService {
         if segments.is_empty() {
             return Ok(text.to_string());
         }
-        let translated = self.translate_many(&segments, target)?;
+        let source_hints = vec![None; segments.len()];
+        // Outgoing messages are translated strictly and must not leave an
+        // untranslated draft behind: unknown scripts are sent to the provider
+        // and an unchanged result in a different script is rejected before rendering.
+        let translated = self.translate_many_with_source_hints_policy(
+            &segments,
+            &source_hints,
+            target,
+            None,
+            false,
+            true,
+        )?;
+        for (original, translated_segment) in segments.iter().zip(&translated) {
+            if original == translated_segment
+                && detect_language(original).language == Language::Unknown
+                && detection_script_family(original)
+                    .zip(language_script_family(target))
+                    .is_some_and(|(source_family, target_family)| source_family != target_family)
+                && !outgoing_can_passthrough(original, Some(target))
+            {
+                return Err(format!(
+                    "{QUALITY_REJECTED_ERROR}: 원문이 번역되지 않았습니다."
+                ));
+            }
+        }
         template.render(&translated)
     }
 
@@ -497,6 +530,7 @@ impl TranslationService {
             target,
             allowed_sources,
             false,
+            false,
         )
     }
 
@@ -507,6 +541,7 @@ impl TranslationService {
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
         keep_rejected_parts: bool,
+        translate_unknown: bool,
     ) -> Result<Vec<String>, String> {
         if texts.is_empty() {
             return Ok(Vec::new());
@@ -531,6 +566,7 @@ impl TranslationService {
             target,
             allowed_sources,
             keep_rejected_parts,
+            translate_unknown,
         )?;
         let mut translated = translated.into_iter();
         groups
@@ -1172,6 +1208,7 @@ impl TranslationService {
                 target,
                 allowed_sources,
                 keep_rejected_parts,
+                false,
             )?
         };
 
@@ -1242,6 +1279,20 @@ impl TranslationService {
                 continue;
             }
 
+            if !self.translator.allows_quality_retries() {
+                if !keep_rejected_parts {
+                    return Err(format!(
+                        "{QUALITY_REJECTED_ERROR}: 문맥 조각을 다시 번역할 수 없습니다."
+                    ));
+                }
+                // A single-pass provider cannot repair the malformed boundary, so
+                // keep each member's original text and make no further request.
+                for index in unit.members.iter().copied() {
+                    output[index] = Some(texts[index].clone());
+                }
+                continue;
+            }
+
             crate::diagnostics::info(
                 "translation-context-fallback",
                 &format!(
@@ -1279,6 +1330,7 @@ impl TranslationService {
                     target,
                     allowed_sources,
                     keep_rejected_parts,
+                    false,
                 )?
             };
             for (index, translated) in unit.members.into_iter().zip(fallback) {
@@ -1325,6 +1377,19 @@ impl TranslationService {
         if incomplete.is_empty() {
             return Ok(translated_parts);
         }
+        if !self.translator.allows_quality_retries() {
+            if !policy.keep_rejected_parts {
+                return Err(format!(
+                    "{QUALITY_REJECTED_ERROR}: 문맥 조각을 다시 번역할 수 없습니다."
+                ));
+            }
+            // A provider that keeps a single pass cannot repair the fragment, so
+            // show the original text for exactly those parts and make no request.
+            for (part_index, text_index) in &incomplete {
+                translated_parts[*part_index] = texts[*text_index].clone();
+            }
+            return Ok(translated_parts);
+        }
 
         crate::diagnostics::info(
             "translation-context-part-retry",
@@ -1356,6 +1421,7 @@ impl TranslationService {
                 policy.target,
                 policy.allowed_sources,
                 policy.keep_rejected_parts,
+                false,
             )?
         };
         for ((part_index, _), translated) in incomplete.into_iter().zip(retried) {
@@ -1598,6 +1664,7 @@ impl TranslationService {
         target: Language,
         allowed_sources: Option<&HashSet<Language>>,
         keep_rejected_parts: bool,
+        translate_unknown: bool,
     ) -> Result<Vec<String>, String> {
         self.check_private_request()?;
         if texts.is_empty() {
@@ -1617,13 +1684,21 @@ impl TranslationService {
                 passthrough += 1;
                 continue;
             }
-            let detected = self.detector.detect(text, true);
+            // Outgoing messages must not borrow a previous message's language:
+            // with `translate_unknown` the stateless detection is used so a warm
+            // detector cannot mask a script it saw earlier. Incoming and web keep
+            // the shared, context-aware detector.
+            let detected = if translate_unknown {
+                detect_language(text).language
+            } else {
+                self.detector.detect(text, true)
+            };
             let source = if detected == Language::Unknown {
                 source_hints[index].unwrap_or(Language::Unknown)
             } else {
                 detected
             };
-            if detected == Language::Unknown {
+            if !translate_unknown && detected == Language::Unknown {
                 self.detector.remember(source);
             }
             if allowed_sources.is_some_and(|allowed| !allowed.contains(&source)) {
@@ -1635,7 +1710,9 @@ impl TranslationService {
                 results[index] = Some(self.translate_foreign_fragments(text, target)?);
                 continue;
             }
-            if source == Language::Unknown {
+            if source == Language::Unknown
+                && (!translate_unknown || !text.chars().any(char::is_alphabetic))
+            {
                 results[index] = Some(text.clone());
                 passthrough += 1;
                 continue;
@@ -1735,6 +1812,13 @@ impl TranslationService {
                 if self
                     .translator
                     .should_cache(&provider_source, &translated, source, target)
+                    && !(translate_unknown
+                        && restored == text
+                        && detect_language(&text).language == Language::Unknown
+                        && detection_script_family(&text)
+                            .zip(language_script_family(target))
+                            .is_some_and(|(a, b)| a != b)
+                        && !outgoing_can_passthrough(&text, Some(target)))
                 {
                     self.cache.put(
                         &hash,
@@ -2320,6 +2404,209 @@ mod tests {
             }
             Ok("개인 대화의 번역 결과입니다.".to_string())
         }
+    }
+
+    struct LatencySendProbe {
+        calls: Arc<Mutex<Vec<(String, Language)>>>,
+        echo: bool,
+    }
+
+    impl Translator for LatencySendProbe {
+        fn display_name(&self) -> &str {
+            "latency-send-probe"
+        }
+
+        fn cache_namespace(&self) -> &str {
+            "latency-send-probe:v1"
+        }
+
+        fn allows_quality_retries(&self) -> bool {
+            false
+        }
+
+        fn translate(
+            &mut self,
+            text: &str,
+            source: Language,
+            target: Language,
+        ) -> Result<String, String> {
+            self.calls.lock().unwrap().push((text.to_string(), source));
+            if self.echo {
+                return Ok(text.to_string());
+            }
+            if target == Language::English {
+                return Ok("I have always used balenaEtcher".to_string());
+            }
+            Ok(text
+                .split(MESSAGE_CONTEXT_SEPARATOR)
+                .map(|part| match part {
+                    "Please read the rules" => "请阅读规则".to_string(),
+                    part => part.to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(MESSAGE_CONTEXT_SEPARATOR))
+        }
+    }
+
+    #[test]
+    fn latency_send_unknown_chinese_cannot_bypass() {
+        assert_eq!(
+            detect_language("我一直使用的balenaEtcher").language,
+            Language::Unknown
+        );
+        assert!(!outgoing_can_passthrough(
+            "我一直使用的balenaEtcher",
+            Some(Language::English)
+        ));
+        assert!(!outgoing_can_passthrough("你好", Some(Language::English)));
+        assert!(outgoing_can_passthrough("12345", Some(Language::English)));
+        assert!(outgoing_can_passthrough("😀", Some(Language::English)));
+    }
+
+    #[test]
+    fn latency_send_unknown_chinese_reaches_provider() {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(
+                Box::new(LatencySendProbe {
+                    calls: calls.clone(),
+                    echo: false,
+                }),
+                None,
+            )),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        let translated = service
+            .translate_for_discord("我一直使用的balenaEtcher", Language::English)
+            .unwrap();
+        assert_eq!(translated, "I have always used balenaEtcher");
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].1, Language::Unknown);
+    }
+
+    #[test]
+    fn latency_send_rejected_outgoing_stays_error() {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(
+                Box::new(LatencySendProbe {
+                    calls: calls.clone(),
+                    echo: true,
+                }),
+                None,
+            )),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        assert!(service
+            .translate_for_discord("我一直使用的balenaEtcher", Language::English)
+            .is_err());
+        assert_eq!(calls.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn latency_send_incoming_context_has_one_provider_pass() {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(
+                Box::new(LatencySendProbe {
+                    calls: calls.clone(),
+                    echo: false,
+                }),
+                None,
+            )),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        let texts = vec![
+            "Please read the rules".to_string(),
+            "Keep this untranslated".to_string(),
+        ];
+        let keys = vec![
+            Some("message:quality".to_string()),
+            Some("message:quality".to_string()),
+        ];
+        let hints = vec![Some(Language::English), Some(Language::English)];
+        let translated = service
+            .translate_incoming_with_hints(&texts, &keys, &hints, Language::ChineseSimplified, None)
+            .unwrap();
+        assert_eq!(
+            translated,
+            vec![
+                "请阅读规则".to_string(),
+                "Keep this untranslated".to_string()
+            ]
+        );
+        assert_eq!(calls.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn latency_send_short_chinese_echo_is_error() {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(
+                Box::new(LatencySendProbe {
+                    calls: calls.clone(),
+                    echo: true,
+                }),
+                None,
+            )),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+
+        assert!(service
+            .translate_for_discord("你好", Language::English)
+            .is_err());
+        assert!(service
+            .translate_for_discord("你好", Language::English)
+            .is_err());
+        assert_eq!(calls.lock().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn latency_send_english_word_may_remain_unchanged() {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(
+                Box::new(LatencySendProbe {
+                    calls: calls.clone(),
+                    echo: true,
+                }),
+                None,
+            )),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+
+        let translated = service
+            .translate_for_discord("nice", Language::English)
+            .unwrap();
+        assert_eq!(translated, "nice");
+        assert_eq!(calls.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn latency_send_unknown_ignores_previous_language() {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(ResilientTranslator::new(
+                Box::new(LatencySendProbe {
+                    calls: calls.clone(),
+                    echo: false,
+                }),
+                None,
+            )),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+        service.detector.remember(Language::English);
+        service.detector.remember(Language::English);
+
+        let translated = service
+            .translate_for_discord("我一直使用的balenaEtcher", Language::English)
+            .unwrap();
+        assert_eq!(translated, "I have always used balenaEtcher");
+
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].1, Language::Unknown);
     }
 
     #[test]

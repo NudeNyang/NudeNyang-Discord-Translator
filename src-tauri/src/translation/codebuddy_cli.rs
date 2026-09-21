@@ -144,6 +144,10 @@ impl Translator for CodeBuddyCliTranslator {
         true
     }
 
+    fn allows_quality_retries(&self) -> bool {
+        false
+    }
+
     fn preferred_incoming_batch_contexts(&self) -> usize {
         8
     }
