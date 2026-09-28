@@ -9,6 +9,11 @@ for (const mail of [
 test(`메일 읽기 ${mail.id}: 열린 제목·본문만 번역하고 OFF·재표시와 보호 영역을 보존한다`, async ({ extension }) => {
   const p = await extension.open({ html: mail.html, url: mail.url, consent: true });
   await expect.poll(async () => (await p.sent()).sort()).toEqual([...MAIL_COPY].sort());
+  // A sent request may still be in flight. This case checks replay of completed
+  // translations; cancellation while waiting is covered separately below.
+  for (const [index, selector] of ["#mail-subject", "#mail-prose", "#mail-link"].entries()) {
+    await expect(p.page.locator(selector)).toHaveText(`번역(${MAIL_COPY[index]})`);
+  }
   const requests = await p.requests();
   expect(requests.every(request => request.privateContext?.service === mail.id)).toBe(true);
   expect(JSON.stringify(requests)).not.toMatch(/private-|mail\.google|outlook\.live|test-thread|synthetic-message/);
