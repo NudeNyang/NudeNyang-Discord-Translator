@@ -21,10 +21,8 @@ export function createProviderAccordion(root, onToggle = () => {}) {
       setOpen(button.getAttribute("aria-expanded") === "true" ? null : row.dataset.provider);
     });
     // Native form validation must be able to focus a collapsed invalid input.
-    panel.addEventListener("invalid", event => {
+    panel.addEventListener("invalid", () => {
       setOpen(row.dataset.provider);
-      const advanced = event.target.closest("details");
-      if (advanced) advanced.open = true;
     }, true);
   }
   return { open: setOpen };

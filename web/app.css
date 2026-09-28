@@ -2518,8 +2518,7 @@ select:focus-visible,
   transform-origin: center;
 }
 
-.provider-summary[aria-expanded="true"] > .provider-chevron,
-.provider-advanced[open] > summary .provider-chevron {
+.provider-summary[aria-expanded="true"] > .provider-chevron {
   transform: rotate(-90deg);
 }
 
@@ -2529,24 +2528,11 @@ select:focus-visible,
   border-top: 1px solid var(--border);
 }
 
-.provider-advanced > summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 32px;
+.provider-advanced > h3 {
+  margin: 0;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 650;
-  list-style: none;
-  cursor: pointer;
-}
-
-.provider-advanced > summary:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
-  outline-offset: 2px;
-}
-
-.provider-advanced > summary::-webkit-details-marker {
-  display: none;
 }
 
 .provider-advanced-fields {

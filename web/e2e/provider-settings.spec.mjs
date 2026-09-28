@@ -58,8 +58,7 @@ test("keyboard accordion preserves drafts and advanced options across status ref
   await page.keyboard.press("Enter");
   await page.locator("#openai-compat-model").fill("draft-model");
   await page.locator("#openai-compat-key").fill("test-draft-only");
-  await page.locator(".provider-advanced summary").focus();
-  await page.keyboard.press("Space");
+  await expect(page.locator("#openai-compat-batch-size")).toBeVisible();
   await page.locator("#openai-compat-concurrency").fill("7");
   await page.locator("#provider-openai_compat-summary").click();
   await expect(page.locator(".provider-panel:visible")).toHaveCount(0);
@@ -110,9 +109,7 @@ test("native validation reveals an invalid field even after its settings have be
   await expect(page.locator("#openai-compat-base-url")).toBeVisible();
   await expect(page.locator("#openai-compat-base-url")).toBeFocused();
   await page.locator("#openai-compat-base-url").fill("");
-  await page.locator(".provider-advanced summary").click();
   await page.locator("#openai-compat-concurrency").fill("0");
-  await page.locator(".provider-advanced summary").click();
   await page.locator("#provider-openai_compat-summary").click();
   await page.locator("#confirm").click();
   await expect(page.locator("#openai-compat-concurrency")).toBeVisible();
@@ -148,7 +145,6 @@ for (const theme of ["dark", "light"]) {
     page.on("pageerror", error => errors.push(error.message));
     await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
     await page.locator("#provider-openai_compat-summary").click();
-    await page.locator(".provider-advanced summary").click();
     for (const width of [1100, 760, 420, 320]) {
       await page.setViewportSize({ width, height: 1100 });
       const overflow = await page.locator("#provider-connections").evaluate(root => {
@@ -161,13 +157,12 @@ for (const theme of ["dark", "light"]) {
       expect(overflow).toEqual([]);
     }
     await page.setViewportSize({ width: 1100, height: 1300 });
-    await page.locator(".provider-advanced summary").click();
     await page.locator("#provider-connections").screenshot({ path: testInfo.outputPath(`${theme}-providers.png`) });
     await page.evaluate(() => {
       window.testConfig.ui_language = "de";
       window.testEvents["settings-changed"]({ payload: window.testConfig });
     });
-    await expect(page.locator(".provider-advanced summary")).toContainText("Erweiterte Einstellungen");
+    await expect(page.locator("#openai-compat-advanced-heading")).toContainText("Erweiterte Einstellungen");
     await page.setViewportSize({ width: 420, height: 1100 });
     for (const language of ["de", "ar"]) {
       await page.evaluate(language => {

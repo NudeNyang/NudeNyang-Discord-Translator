@@ -230,14 +230,14 @@
                         <label class="provider-form-field provider-form-wide"><span>서버 주소</span><input class="text-field" id="openai-compat-base-url" type="url" autocomplete="off" spellcheck="false" placeholder="https://api.example.com/v1" aria-label="서버 주소" /></label>
                         <label class="provider-form-field"><span>모델 ID</span><input class="text-field" id="openai-compat-model" type="text" autocomplete="off" spellcheck="false" aria-label="모델 ID" /></label>
                         <label class="provider-form-field"><span>API 키 (선택)</span><input class="text-field provider-compat-secret" id="openai-compat-key" type="password" autocomplete="off" spellcheck="false" placeholder="필요한 서버만 입력" aria-label="API 키 (선택)" /></label>
-                        <details class="provider-advanced provider-form-wide">
-                          <summary><svg class="provider-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6l-6 6"/></svg><span>고급 설정</span></summary>
+                        <section class="provider-advanced provider-form-wide" aria-labelledby="openai-compat-advanced-heading">
+                          <h3 id="openai-compat-advanced-heading">고급 설정</h3>
                           <div class="provider-advanced-fields">
                         <label class="provider-form-field"><span>요청당 문장 수</span><span class="number-field"><input id="openai-compat-batch-size" type="number" min="1" max="32" inputmode="numeric" aria-label="요청당 문장 수" /></span></label>
                         <label class="provider-form-field"><span>동시 요청 수</span><span class="number-field"><input id="openai-compat-concurrency" type="number" min="1" max="64" inputmode="numeric" aria-label="동시 요청 수" /></span></label>
                         <div class="provider-form-toggle provider-form-wide"><div class="setting-copy"><h3>문맥 공유</h3><p>모든 요청에 같은 화면의 다른 메시지를 참고 문맥으로 함께 보냅니다. 말투가 더 일관되지만 요청마다 입력 토큰이 늘어납니다.</p></div><button class="switch" id="openai-compat-shared-context" type="button" role="switch" aria-checked="false"><span></span><b>꺼짐</b></button></div>
                           </div>
-                        </details>
+                        </section>
                         <p class="provider-form-note provider-form-wide">서버 설정에 따라 동시 요청을 늘려도 속도가 빨라지지 않을 수 있습니다. 선택한 서버로 번역할 텍스트가 전송됩니다.</p>
                         <div class="provider-form-actions provider-form-wide"><button class="button primary" id="openai-compat-connect" type="button">연결 확인 및 저장</button></div>
                       </div>

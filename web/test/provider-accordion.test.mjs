@@ -37,14 +37,14 @@ test("closing and reopening preserves API drafts and advanced choices without re
   const secret = document.querySelector("#openai-compat-key");
   secret.value = "test-draft-only";
   document.querySelector("#openai-compat-model").value = "draft-model";
-  document.querySelector(".provider-advanced").open = true;
+  document.querySelector("#openai-compat-concurrency").value = "7";
   button.click();
   assert.ok(document.querySelector("#openai-compat-form").hidden);
   button.click();
   assert.equal(document.querySelector("#openai-compat-key"), secret);
   assert.equal(secret.value, "test-draft-only");
   assert.equal(document.querySelector("#openai-compat-model").value, "draft-model");
-  assert.ok(document.querySelector(".provider-advanced").open);
+  assert.equal(document.querySelector("#openai-compat-concurrency").value, "7");
 });
 
 test("programmatic setup navigation opens details and returns focus before hiding inputs", () => {
@@ -58,10 +58,13 @@ test("programmatic setup navigation opens details and returns focus before hidin
   assert.equal(document.querySelector("#openai-compat-form").hidden, true);
 });
 
-test("advanced tuning collapses independently of the connection action and privacy notice", () => {
+test("advanced tuning is a static labeled section without a second disclosure", () => {
   const { document, row } = setup();
   const advanced = document.querySelector(".provider-advanced");
-  assert.equal(advanced.open, false);
+  assert.equal(advanced.tagName, "SECTION");
+  assert.equal(advanced.hidden, false);
+  assert.equal(advanced.querySelector("summary,details,.provider-chevron"), null);
+  assert.equal(document.getElementById(advanced.getAttribute("aria-labelledby")).textContent, "고급 설정");
   for (const id of ["batch-size", "concurrency", "shared-context"]) {
     assert.ok(advanced.querySelector(`#openai-compat-${id}`));
   }
