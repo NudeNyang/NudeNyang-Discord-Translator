@@ -45,6 +45,12 @@ if ($Restart) {
     $knownPaths = @($developerExe, $builtExe, $legacyExe)
     $running = @(Get-CimInstance Win32_Process -Filter "Name = 'NudeNyangDiscordTranslator.exe' OR Name = 'nude-translator-tauri.exe'" |
         Where-Object { $_.ExecutablePath -in $knownPaths -and $_.CommandLine -notmatch '--discord-cdp-pipe-guardian' })
+    if ($running | Where-Object { $_.ExecutablePath -ne $developerExe -and $_.CommandLine -match 'chrome-extension://|whale-extension://|--parent-window|--browser-native-host' }) {
+        # Update an already-used browser bridge before closing it, otherwise the
+        # browser immediately starts another copy of the old executable.
+        $registration = Start-Process -FilePath $developerExe -ArgumentList '--register-browser-native-host' -WindowStyle Hidden -Wait -PassThru
+        if ($registration.ExitCode -ne 0) { throw 'Could not update the existing browser bridge registration.' }
+    }
     foreach ($app in $running) {
         $current = Get-Process -Id $app.ProcessId -ErrorAction SilentlyContinue
         if ($current -and $current.Path -in $knownPaths) { $current | Stop-Process -Force }
