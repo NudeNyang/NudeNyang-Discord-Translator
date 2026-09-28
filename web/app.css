@@ -1388,7 +1388,8 @@ select:focus-visible,
   width: 180px;
 }
 
-.provider-row {
+.provider-row,
+.provider-row-header {
   display: grid;
   grid-template-columns: minmax(190px, 0.72fr) minmax(360px, 1.28fr);
   align-items: center;
@@ -1399,6 +1400,24 @@ select:focus-visible,
 
 .provider-row + .provider-row {
   border-top: 1px solid var(--border);
+}
+
+.provider-row-form {
+  display: block;
+  min-height: 0;
+  padding: 0;
+}
+
+.provider-row + .provider-row-form {
+  border-top: 0;
+}
+
+.provider-row + .provider-row-form > .provider-row-header {
+  border-top: 1px solid var(--border);
+}
+
+.provider-row-form > .provider-panel {
+  padding: 9px 18px 13px;
 }
 
 /* Round row backgrounds without clipping the action tooltips above the card. */
@@ -3112,12 +3131,18 @@ select:focus-visible,
   }
 
   .provider-row,
+  .provider-row-header,
   .provider-credential-connection {
     grid-template-columns: 1fr;
   }
 
-  .provider-row {
+  .provider-row,
+  .provider-row-header {
     gap: 12px;
+  }
+
+  .provider-row-form > .provider-panel {
+    padding-top: 0;
   }
 
   .outgoing-model-guidance {

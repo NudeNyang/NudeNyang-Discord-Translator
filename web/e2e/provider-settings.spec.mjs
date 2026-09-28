@@ -116,6 +116,34 @@ test("native validation reveals an invalid field even after its settings have be
   await expect(page.locator("#openai-compat-concurrency")).toBeFocused();
 });
 
+test("expanding settings keeps the provider header in its original position", async ({ page }) => {
+  const row = page.locator('.provider-row[data-provider="openai_compat"]');
+  const button = page.locator("#provider-openai_compat-summary");
+  const measure = () => row.evaluate(row => {
+    const origin = row.getBoundingClientRect();
+    return [...row.querySelectorAll(".provider-mark,.provider-title-line,.provider-status,.provider-summary")].map(element => {
+      const box = element.getBoundingClientRect();
+      return { x: box.x - origin.x, y: box.y - origin.y, width: box.width, height: box.height };
+    });
+  });
+  for (const width of [1100, 760, 520, 420, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const zoom of [1, 1.25, 1.5, 2]) {
+      await page.evaluate(zoom => { document.documentElement.style.zoom = zoom; }, zoom);
+      const closed = await measure();
+      await button.press("Enter");
+      const opened = await measure();
+      for (let i = 0; i < closed.length; i++) {
+        for (const axis of ["x", "y", "width", "height"]) {
+          expect(Math.abs(opened[i][axis] - closed[i][axis]), `${width}px / ${zoom}x / header ${i} / ${axis}`).toBeLessThan(0.1);
+        }
+      }
+      await button.press("Enter");
+      expect(await measure()).toEqual(closed);
+    }
+  }
+});
+
 test("disclosure arrow remains geometrically centered when opened, closed and scaled", async ({ page }) => {
   const button = page.locator("#provider-openai_compat-summary");
   for (const zoom of [1, 1.25, 1.5, 2]) {
