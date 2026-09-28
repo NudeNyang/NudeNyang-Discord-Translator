@@ -690,7 +690,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。請檢查 API 金鑰。",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。請檢查伺服器位址與模型 ID。",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。已超過請求上限。請減少同時請求數。"
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。已超過請求上限。請減少同時請求數。",
+    "고급 설정": "進階設定"
   },
   "pt-BR": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
@@ -1383,7 +1384,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "A API compatível com OpenAI recusou a solicitação (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). Verifique a chave de API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). Verifique o endereço do servidor e o ID do modelo.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). O limite de solicitações foi excedido. Reduza o número de solicitações simultâneas."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). O limite de solicitações foi excedido. Reduza o número de solicitações simultâneas.",
+    "고급 설정": "Configurações avançadas"
   },
   "hi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
@@ -2076,7 +2078,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। API कुंजी जाँचें।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। सर्वर पता और मॉडल ID जाँचें।",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। अनुरोध सीमा पार हो गई। एक साथ अनुरोधों की संख्या कम करें।"
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। अनुरोध सीमा पार हो गई। एक साथ अनुरोधों की संख्या कम करें।",
+    "고급 설정": "उन्नत सेटिंग"
   },
   "es-419": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
@@ -2769,7 +2772,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Revisa la clave API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Revisa la dirección del servidor y el ID del modelo.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Se superó el límite de solicitudes. Reduce la cantidad de solicitudes simultáneas."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Se superó el límite de solicitudes. Reduce la cantidad de solicitudes simultáneas.",
+    "고급 설정": "Configuración avanzada"
   },
   "de": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
@@ -3462,7 +3466,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Prüfe den API-Schlüssel.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Prüfe Serveradresse und Modell-ID.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Das Anfragelimit wurde überschritten. Verringere die Anzahl gleichzeitiger Anfragen."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Das Anfragelimit wurde überschritten. Verringere die Anzahl gleichzeitiger Anfragen.",
+    "고급 설정": "Erweiterte Einstellungen"
   },
   "ru": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
@@ -4155,7 +4160,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Проверьте ключ API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Проверьте адрес сервера и ID модели.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Превышен лимит запросов. Уменьшите число одновременных запросов."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Превышен лимит запросов. Уменьшите число одновременных запросов.",
+    "고급 설정": "Расширенные настройки"
   },
   "id": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
@@ -4848,7 +4854,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API kompatibel OpenAI menolak permintaan (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Periksa kunci API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Periksa alamat server dan ID model.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Batas permintaan terlampaui. Kurangi jumlah permintaan bersamaan."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Batas permintaan terlampaui. Kurangi jumlah permintaan bersamaan.",
+    "고급 설정": "Pengaturan lanjutan"
   },
   "fr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
@@ -5541,7 +5548,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "L’API compatible OpenAI a refusé la requête (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). Vérifiez la clé API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). Vérifiez l’adresse du serveur et l’ID du modèle.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). La limite de requêtes a été dépassée. Réduisez le nombre de requêtes simultanées."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). La limite de requêtes a été dépassée. Réduisez le nombre de requêtes simultanées.",
+    "고급 설정": "Paramètres avancés"
   },
   "tr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
@@ -6234,7 +6242,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "OpenAI uyumlu API isteği reddetti (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). API anahtarını kontrol edin.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). Sunucu adresini ve model kimliğini kontrol edin.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). İstek sınırı aşıldı. Eşzamanlı istek sayısını azaltın."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). İstek sınırı aşıldı. Eşzamanlı istek sayısını azaltın.",
+    "고급 설정": "Gelişmiş ayarlar"
   },
   "ar": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
@@ -6927,7 +6936,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تحقّق من مفتاح API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تحقّق من عنوان الخادم ومعرّف النموذج.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تم تجاوز حد الطلبات. قلّل عدد الطلبات المتزامنة."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تم تجاوز حد الطلبات. قلّل عدد الطلبات المتزامنة.",
+    "고급 설정": "الإعدادات المتقدمة"
   },
   "vi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
@@ -7620,7 +7630,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Hãy kiểm tra khóa API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Hãy kiểm tra địa chỉ máy chủ và ID mô hình.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Đã vượt quá giới hạn yêu cầu. Hãy giảm số yêu cầu đồng thời."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Đã vượt quá giới hạn yêu cầu. Hãy giảm số yêu cầu đồng thời.",
+    "고급 설정": "Cài đặt nâng cao"
   },
   "it": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
@@ -8313,7 +8324,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). Controlla la chiave API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). Controlla l'indirizzo del server e l'ID del modello.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). È stato superato il limite di richieste. Riduci il numero di richieste simultanee."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). È stato superato il limite di richieste. Riduci il numero di richieste simultanee.",
+    "고급 설정": "Impostazioni avanzate"
   },
   "pl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
@@ -9006,7 +9018,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Sprawdź klucz API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Sprawdź adres serwera i ID modelu.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Przekroczono limit żądań. Zmniejsz liczbę równoczesnych żądań."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Przekroczono limit żądań. Zmniejsz liczbę równoczesnych żądań.",
+    "고급 설정": "Ustawienia zaawansowane"
   },
   "uk": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
@@ -9699,7 +9712,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API, сумісний з OpenAI, відхилив запит (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевірте ключ API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевірте адресу сервера та ID моделі.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевищено ліміт запитів. Зменште кількість одночасних запитів."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевищено ліміт запитів. Зменште кількість одночасних запитів.",
+    "고급 설정": "Розширені налаштування"
   },
   "ms": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
@@ -10392,7 +10406,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API serasi OpenAI menolak permintaan (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Semak kunci API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Semak alamat pelayan dan ID model.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Had permintaan telah dilampaui. Kurangkan bilangan permintaan serentak."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Had permintaan telah dilampaui. Kurangkan bilangan permintaan serentak.",
+    "고급 설정": "Tetapan lanjutan"
   },
   "nl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
@@ -11085,7 +11100,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). Controleer de API-sleutel.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). Controleer het serveradres en de model-ID.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). De verzoeklimiet is overschreden. Verlaag het aantal gelijktijdige verzoeken."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). De verzoeklimiet is overschreden. Verlaag het aantal gelijktijdige verzoeken.",
+    "고급 설정": "Geavanceerde instellingen"
   },
   "th": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
@@ -11778,7 +11794,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status})",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) ตรวจสอบคีย์ API",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) ตรวจสอบที่อยู่เซิร์ฟเวอร์และ ID โมเดล",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) เกินขีดจำกัดคำขอ ลดจำนวนคำขอพร้อมกัน"
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) เกินขีดจำกัดคำขอ ลดจำนวนคำขอพร้อมกัน",
+    "고급 설정": "การตั้งค่าขั้นสูง"
   },
   "fil": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
@@ -12471,7 +12488,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Suriin ang API key.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Suriin ang address ng server at ID ng modelo.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Nalampasan ang limit ng request. Bawasan ang bilang ng sabay-sabay na request."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Nalampasan ang limit ng request. Bawasan ang bilang ng sabay-sabay na request.",
+    "고급 설정": "Mga advanced na setting"
   },
   "bn": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
@@ -13164,7 +13182,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। API কী যাচাই করুন।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। সার্ভারের ঠিকানা ও মডেল ID যাচাই করুন।",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। অনুরোধের সীমা অতিক্রম হয়েছে। একসাথে অনুরোধের সংখ্যা কমান।"
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। অনুরোধের সীমা অতিক্রম হয়েছে। একসাথে অনুরোধের সংখ্যা কমান।",
+    "고급 설정": "উন্নত সেটিংস"
   },
   "ur": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
@@ -13857,7 +13876,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ API کلید چیک کریں۔",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ سرور کا پتہ اور ماڈل ID چیک کریں۔",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ درخواستوں کی حد سے تجاوز ہو گیا۔ بیک وقت درخواستوں کی تعداد کم کریں۔"
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ درخواستوں کی حد سے تجاوز ہو گیا۔ بیک وقت درخواستوں کی تعداد کم کریں۔",
+    "고급 설정": "اعلیٰ ترتیبات"
   },
   "ta": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
@@ -14550,7 +14570,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). API விசையைச் சரிபார்க்கவும்.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). சர்வர் முகவரியையும் மாடல் ID-யையும் சரிபார்க்கவும்.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). கோரிக்கை வரம்பு மீறப்பட்டது. ஒரே நேர கோரிக்கைகளின் எண்ணிக்கையைக் குறைக்கவும்."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). கோரிக்கை வரம்பு மீறப்பட்டது. ஒரே நேர கோரிக்கைகளின் எண்ணிக்கையைக் குறைக்கவும்.",
+    "고급 설정": "மேம்பட்ட அமைப்புகள்"
   },
   "fa": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
@@ -15243,7 +15264,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). کلید API را بررسی کنید.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). نشانی سرور و شناسه مدل را بررسی کنید.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). از سقف درخواست‌ها فراتر رفته است. تعداد درخواست‌های هم‌زمان را کاهش دهید."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). از سقف درخواست‌ها فراتر رفته است. تعداد درخواست‌های هم‌زمان را کاهش دهید.",
+    "고급 설정": "تنظیمات پیشرفته"
   },
   "he": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
@@ -15936,7 +15958,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). בדוק את מפתח ה-API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). בדוק את כתובת השרת ואת מזהה המודל.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). חריגה ממגבלת הבקשות. הפחת את מספר הבקשות הבו-זמניות."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). חריגה ממגבלת הבקשות. הפחת את מספר הבקשות הבו-זמניות.",
+    "고급 설정": "הגדרות מתקדמות"
   },
   "cs": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
@@ -16629,6 +16652,7 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}).",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Zkontrolujte klíč API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Zkontrolujte adresu serveru a ID modelu.",
-    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Byl překročen limit požadavků. Snižte počet souběžných požadavků."
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Byl překročen limit požadavků. Snižte počet souběžných požadavků.",
+    "고급 설정": "Pokročilá nastavení"
   }
 }

@@ -17,6 +17,7 @@ import {
 import { DICTIONARY_NOTICES_TEXT, LICENSE_DOCUMENTS_TEXT } from "./license.mjs";
 import { LANGUAGE_OPTIONS } from "./languages.mjs";
 import { filterLanguageOptions } from "./language-search.mjs";
+import { createProviderAccordion } from "./provider-accordion.mjs";
 import { createBrowserConnections } from "./browser-connections.mjs";
 import {
   createLatestDictionaryRequestGate,
@@ -330,6 +331,10 @@ const elements = {
   openaiCompatConnect: document.querySelector("#openai-compat-connect"),
 };
 
+const providerAccordion = createProviderAccordion(document.querySelector("#provider-connections"), () => {
+  window.requestAnimationFrame(updateScrollIndicator);
+});
+
 const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl", "openai_compat"]);
 const LOCAL_TRANSLATORS = new Set(
   DISPLAY_TRANSLATOR_OPTIONS
@@ -604,6 +609,7 @@ function revealProviderConnection(provider) {
   activateSettingsPanel("engine");
   const row = document.querySelector(`.provider-row[data-provider="${provider}"]`);
   if (!row) return;
+  providerAccordion.open(provider, { focus: true });
   row.dataset.highlight = "true";
   row.scrollIntoView({ behavior: "smooth", block: "center" });
   window.setTimeout(() => delete row.dataset.highlight, 1800);
@@ -3661,7 +3667,10 @@ for (const input of [elements.openaiCompatBatchSize, elements.openaiCompatConcur
   input.addEventListener("wheel", event => event.preventDefault(), { passive: false });
 }
 elements.openaiCompatConnect.addEventListener("click", () => {
-  connectOpenAiCompat().catch(error => showError("번역 서비스를 연결하지 못했습니다", String(error)));
+  connectOpenAiCompat().catch(error => {
+    providerAccordion.open("openai_compat");
+    return showError("번역 서비스를 연결하지 못했습니다", String(error));
+  });
 });
 for (const secret of document.querySelectorAll(".provider-secret")) {
   secret.addEventListener("change", () => {

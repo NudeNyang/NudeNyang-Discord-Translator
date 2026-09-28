@@ -2488,8 +2488,79 @@ select:focus-visible,
 .provider-form {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 14px;
+}
+
+.provider-form[hidden] {
+  display: none;
+}
+
+.provider-connection-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 7px;
+}
+
+.provider-chevron {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--muted);
+  transform: rotate(90deg);
+  transform-origin: center;
+}
+
+.provider-summary[aria-expanded="true"] > .provider-chevron,
+.provider-advanced[open] > summary .provider-chevron {
+  transform: rotate(-90deg);
+}
+
+.provider-advanced {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.provider-advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+
+.provider-advanced > summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.provider-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.provider-advanced-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 14px;
+}
+
+@media (max-width: 600px) {
+  .provider-panel.provider-form,
+  .provider-advanced-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .provider-form-wide {

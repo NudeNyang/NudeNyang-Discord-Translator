@@ -1,6 +1,7 @@
 import { UI_LOCALE_COPY } from "./ui-locales.mjs";
 
 export const COPY = Object.freeze({
+  "고급 설정": ["Advanced settings", "詳細設定", "高级设置"],
   "자동 · 사용 중인 창": ["Automatic · active window", "自動・使用中のウィンドウ", "自动 · 当前窗口"],
   "Discord 창 대기 중": ["Waiting for a Discord window", "Discordウィンドウ待機中", "等待 Discord 窗口"],
   "자동 모드에서는 사용 중인 Discord 창만 번역합니다. 번역 켜기와 끄기는 모든 Discord 앱에 적용됩니다.": ["Automatic mode translates only the active Discord window. Turning translation on or off applies to all Discord apps.", "自動モードでは使用中のDiscordウィンドウのみを翻訳します。翻訳のオン・オフはすべてのDiscordアプリに適用されます。", "自动模式仅翻译当前使用的 Discord 窗口。翻译开关适用于所有 Discord 应用。"],
