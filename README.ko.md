@@ -18,7 +18,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="0.7.6-beta" src="https://img.shields.io/badge/release-0.7.6--beta-4C1">
+  <img alt="0.7.8-beta" src="https://img.shields.io/badge/release-0.7.8--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -29,9 +29,9 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ## 다운로드와 업데이트
 
-[0.7.6 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.6-beta)에서 Windows 10/11용 설치 파일을 받으세요. 스크롤 후 번역이 늦게 복원되던 문제와 기호 전송, 이모지 창의 초대 안내를 고쳤습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.6-beta.md)에 정리했습니다.
+[0.7.8 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.8-beta)에서 Windows 10/11용 설치 파일을 받으세요. 번역에 실패한 Discord 메시지를 계속 다시 요청하던 문제를 고치고 서버 오류의 재시도 횟수를 제한했습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.8-beta.md)에 정리했습니다.
 
-0.7.6-beta는 GitHub 정식 최신 릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
+0.7.8-beta는 GitHub 정식 최신 릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
 - 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
@@ -184,7 +184,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
-0.7.6-beta는 관리자의 요청에 따라 정식 릴리스로 게시합니다. 새 정식 릴리스를 만들 때는 `-StableRelease`를 지정합니다. 이미 공개된 릴리스의 분류 변경과 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
+0.7.8-beta는 관리자의 요청에 따라 정식 릴리스로 게시합니다. 새 정식 릴리스를 만들 때는 `-StableRelease`를 지정합니다. 이미 공개된 릴리스의 분류 변경과 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
 
 </details>
 
@@ -192,7 +192,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 
 | 문서 | 내용 |
 |---|---|
-| [0.7.6-beta 변경 내역](docs/releases/0.7.6-beta.md) | 스크롤 번역 복원, 기호 전송과 초대 안내 수정 |
+| [0.7.8-beta 변경 내역](docs/releases/0.7.8-beta.md) | Discord 번역 실패 메시지의 반복 요청 방지 |
 | [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md) | 두 설치형의 빌드·서명·공개와 업데이트 목록 반영 순서 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 런타임 구성, Discord 연결, 데이터 경계, OCR, 플랫폼 분리 |
 | [docs/LANGUAGES.md](docs/LANGUAGES.md) | 28개 언어, 감지 방식, 공급자 지원 범위, OCR 범위 |
