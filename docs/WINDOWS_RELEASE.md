@@ -34,6 +34,21 @@
 
 ARM64 바이너리 형식·번들 구성·서명·업데이트 경로 검증은 실제 ARM64 장치에서의 설치·업데이트 실행 검증을 대체하지 않는다. 실제 장치 검증을 하지 않았다면 릴리스 노트에 그 한계를 명시한다.
 
+## 개발자 실행본과 바로가기
+
+개발자 실행본은 `dist/NudeNyangDiscordTranslator/NudeNyangDiscordTranslator.exe`를 사용한다.
+`src-tauri/target/release`에는 이전 빌드가 남을 수 있으므로 프로젝트 폴더뿐 아니라 Windows의
+실제 바탕화면 폴더에 있는 `NudeNyang Discord Translator (Tauri).lnk`도 확인한다.
+바탕화면이 다른 드라이브로 옮겨져 있어도 같은 기준을 적용한다.
+
+`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync_developer_shortcuts.ps1 -Restart`는
+개발자 실행 파일의 버전과 x64 빌드 해시를 검사한 뒤 프로젝트 바로가기와 기존 바탕화면
+바로가기의 대상·작업 폴더·아이콘을 맞춘다. 다른 설치본을 가리키면 변경하지 않고 중단한다.
+`-Restart`는 해당 프로젝트의 앱만 다시 실행하고 실행 경로·제품 버전·응답 상태를 확인한다.
+구버전 브라우저 연결 프로세스가 실행 중이면 먼저 새 실행 파일로 연결 등록을 갱신한다.
+브라우저가 종료된 구버전 연결 프로세스를 곧바로 다시 실행하는 것을 방지한다.
+공개 설치 파일이나 업데이트 목록은 바꾸지 않는다.
+
 ## 기준 문서
 
 - [Tauri 업데이트 플러그인](https://v2.tauri.app/plugin/updater/)
