@@ -37,7 +37,7 @@ test("provider setup is available without exposing credentials in settings", () 
 test("Claude connects through the official local Claude Code CLI", () => {
   assert.match(markup, /data-provider="claude"/);
   assert.match(script, /\["claude",\s*"Claude CLI \(권장·품질 우선\)"/);
-  assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "deepl"\]\)/);
+  assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "deepl", "openai_compat"\]\)/);
   assert.doesNotMatch(config, /"kanana" \| "original" \| "claude"/);
   assert.match(providers, /cli_status\(\s*"claude",\s*"Claude"/);
   assert.match(subscriptionCli, /Anthropic\.ClaudeCode/);
@@ -203,6 +203,34 @@ test("DeepL API keys are applied when editing finishes and before confirmation",
     styles,
     /\.provider-credential\s*\{[\s\S]*?width:\s*min\(100%, 230px\)/,
   );
+});
+
+test("OpenAI-compatible servers are configured with an address, model and optional key", () => {
+  const row = markup.match(/<article class="provider-row provider-row-form" data-provider="openai_compat">[\s\S]*?<\/article>/)?.[0] || "";
+  for (const id of [
+    "openai-compat-base-url",
+    "openai-compat-model",
+    "openai-compat-key",
+    "openai-compat-batch-size",
+    "openai-compat-concurrency",
+    "openai-compat-shared-context",
+    "openai-compat-connect",
+  ]) {
+    assert.match(row, new RegExp(`id="${id}"`));
+  }
+  assert.match(row, /id="openai-compat-key" type="password"/);
+  assert.match(row, /id="openai-compat-shared-context"[^>]*aria-checked="false"/);
+  assert.match(row, /max="32"/);
+  assert.match(row, /max="64"/);
+  assert.doesNotMatch(row, /\stitle=/);
+  assert.match(script, /invoke\("provider_openai_compat_connect"/);
+  assert.match(script, /\["openai_compat", "OpenAI 호환 API \(사용자 지정 서버\)", "external"\]/);
+  assert.match(rustMain, /provider_openai_compat_connect/);
+  assert.match(rustMain, /patch\["openai_compat_base_url"\] = json!\(""\)/);
+  assert.match(providers, /OPENAI_COMPAT_CREDENTIAL_ID/);
+  assert.doesNotMatch(config, /openai_compat_api_key/);
+  assert.match(trayMarkup, /data-translator="openai_compat"/);
+  assert.match(trayScript, /"deepl", "openai_compat"\]\.includes\(translator\)/);
 });
 
 test("subscription CLI disconnect only disables the provider inside NudeNyang Discord Translator", () => {

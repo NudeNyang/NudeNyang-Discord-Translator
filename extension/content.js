@@ -29,7 +29,7 @@
   const { createPublicDomPolicy, hasTranslatableText, interactionRoot, textIsVisible } = globalThis.NudeNyangDomPolicy;
   const { createTextRecord, recordMatchesItem, acceptTextSegment, cancelTextRecord } = globalThis.NudeNyangTextSegments;
   const MAX_ITEM_CHARS = 4000;
-  const EXTERNAL_TRANSLATORS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
+  const EXTERNAL_TRANSLATORS = new Set(["chatgpt", "claude", "gemini", "deepl", "openai_compat"]);
   const DEFAULT_WEB_SETTINGS = Object.freeze({
     enabled: true,
     messengerPolicyVersion: 0,

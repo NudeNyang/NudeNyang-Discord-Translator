@@ -17,6 +17,8 @@ const LEGACY_UPDATE_REPOSITORIES: &[&str] = &[
     "NudeNyang/NudeNyang-Translator",
     "NudeNyang/DiscordTranslateOverlay",
 ];
+pub const OPENAI_COMPAT_MAX_BATCH_SIZE: u32 = 32;
+pub const OPENAI_COMPAT_MAX_CONCURRENCY: u32 = 64;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
@@ -98,6 +100,11 @@ pub struct AppConfig {
     pub translator: String,
     pub outgoing_translator: String,
     pub disabled_providers: Vec<String>,
+    pub openai_compat_base_url: String,
+    pub openai_compat_model: String,
+    pub openai_compat_batch_size: u32,
+    pub openai_compat_concurrency: u32,
+    pub openai_compat_shared_context: bool,
     pub hymt_device: String,
     pub keep_local_model_warm: bool,
     pub auto_update: bool,
@@ -143,6 +150,11 @@ impl Default for AppConfig {
             capture_fps: 8,
             stable_frames: 2,
             change_threshold: 0.015,
+            openai_compat_base_url: String::new(),
+            openai_compat_model: String::new(),
+            openai_compat_batch_size: 8,
+            openai_compat_concurrency: 4,
+            openai_compat_shared_context: false,
             ocr_device: "auto".to_string(),
             image_ocr_quality: "adaptive".to_string(),
             translator: "hymt_1_8b".to_string(),
@@ -244,6 +256,28 @@ impl AppConfig {
             .map(str::to_string)
             .collect::<Vec<_>>();
         disabled_providers.sort();
+
+        for field in ["openai_compat_base_url", "openai_compat_model"] {
+            if let Some(value) = object.get(field).and_then(Value::as_str) {
+                let trimmed = value.trim().to_string();
+                object.insert(field.to_string(), Value::String(trimmed));
+            }
+        }
+        for (field, default, maximum) in [
+            ("openai_compat_batch_size", 8, OPENAI_COMPAT_MAX_BATCH_SIZE),
+            (
+                "openai_compat_concurrency",
+                4,
+                OPENAI_COMPAT_MAX_CONCURRENCY,
+            ),
+        ] {
+            if let Some(value) = object.get(field) {
+                let normalized = value
+                    .as_u64()
+                    .map_or(default, |number| number.clamp(1, u64::from(maximum)) as u32);
+                object.insert(field.to_string(), Value::from(normalized));
+            }
+        }
         disabled_providers.dedup();
         object.insert(
             "disabled_providers".to_string(),
@@ -1183,6 +1217,34 @@ mod tests {
         }))
         .expect("invalid retention period should reset");
         assert_eq!(invalid.translation_history_retention_days, 30);
+    }
+
+    #[test]
+    fn openai_compatible_settings_default_and_clamp_to_supported_ranges() {
+        let defaults = AppConfig::default();
+        assert_eq!(defaults.openai_compat_batch_size, 8);
+        assert_eq!(defaults.openai_compat_concurrency, 4);
+        assert!(!defaults.openai_compat_shared_context);
+
+        let config = AppConfig::from_value(json!({
+            "openai_compat_base_url": "  http://192.0.2.10:8000/v1  ",
+            "openai_compat_model": " gemma4 ",
+            "openai_compat_batch_size": 0,
+            "openai_compat_concurrency": 999,
+        }))
+        .expect("normalize OpenAI-compatible settings");
+        assert_eq!(config.openai_compat_base_url, "http://192.0.2.10:8000/v1");
+        assert_eq!(config.openai_compat_model, "gemma4");
+        assert_eq!(config.openai_compat_batch_size, 1);
+        assert_eq!(config.openai_compat_concurrency, 64);
+
+        let invalid = AppConfig::from_value(json!({
+            "openai_compat_batch_size": "large",
+            "openai_compat_concurrency": -3,
+        }))
+        .expect("reset invalid OpenAI-compatible limits");
+        assert_eq!(invalid.openai_compat_batch_size, 8);
+        assert_eq!(invalid.openai_compat_concurrency, 4);
     }
 
     #[test]

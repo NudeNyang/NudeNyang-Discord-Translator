@@ -364,6 +364,10 @@ test("every dynamic runtime message has a non-English generated-locale rendering
     "업데이트 확인 실패: 내부 오류",
     "업데이트 설치 실패: 내부 오류",
     "설치 중 52%",
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP 500).",
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP 401). API 키를 확인하십시오.",
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP 404). 서버 주소와 모델 ID를 확인하십시오.",
+    "OpenAI 호환 API가 요청을 거부했습니다 (HTTP 429). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.",
   ];
   for (const entry of DYNAMIC_COPY) {
     assert.ok(samples.some(sample => entry.pattern.test(sample)), `missing sample for ${entry.pattern}`);

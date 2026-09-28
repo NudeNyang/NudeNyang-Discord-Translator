@@ -45,8 +45,8 @@ use crate::outgoing::{
 use crate::translation::{
     outgoing_can_passthrough, DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator,
     ModelPreparationCancellation, ModelPreparationProgress, ModelProgressObserver,
-    OriginalTranslator, ResilientTranslator, SubscriptionCliTranslator, TranslationService,
-    Translator,
+    OpenAiCompatSettings, OpenAiCompatTranslator, OriginalTranslator, ResilientTranslator,
+    SubscriptionCliTranslator, TranslationService, Translator,
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
@@ -916,10 +916,16 @@ fn translator_preparation_plan(
     updated: &AppConfig,
 ) -> TranslatorPreparationPlan {
     let shared_settings_changed = updated.hymt_device != current.hymt_device;
+    let openai_compat_changed =
+        OpenAiCompatSettings::from_config(updated) != OpenAiCompatSettings::from_config(current);
+    let lane_changed = |current_name: &str, updated_name: &str| {
+        updated_name != current_name
+            || shared_settings_changed
+            || (openai_compat_changed && updated_name == "openai_compat")
+    };
     TranslatorPreparationPlan {
-        display: updated.translator != current.translator || shared_settings_changed,
-        outgoing: updated.outgoing_translator != current.outgoing_translator
-            || shared_settings_changed,
+        display: lane_changed(&current.translator, &updated.translator),
+        outgoing: lane_changed(&current.outgoing_translator, &updated.outgoing_translator),
     }
 }
 
@@ -4450,6 +4456,12 @@ fn make_translator(
             Box::new(DeepLTranslator::new(None, Duration::from_secs(30))?),
             None,
         ))),
+        "openai_compat" => Ok(Box::new(ResilientTranslator::new(
+            Box::new(OpenAiCompatTranslator::with_stored_credential(
+                OpenAiCompatSettings::from_config(config),
+            )?),
+            None,
+        ))),
         "mock" => Ok(Box::new(MockTranslator)),
         "original" => Ok(Box::new(OriginalTranslator)),
         other => Err(format!("지원하지 않는 번역 모델입니다: {other}")),
@@ -4557,6 +4569,7 @@ fn translator_label(name: &str) -> &str {
         "claude" => "Claude 품질 우선 (Claude Code)",
         "gemini" => "Gemini 품질 우선 (Antigravity CLI)",
         "deepl" => "DeepL 품질 우선 (API)",
+        "openai_compat" => "OpenAI 호환 API",
         "mock" => "Mock 테스트",
         _ => "원문 표시",
     }
@@ -6240,6 +6253,7 @@ mod tests {
             "Gemini 품질 우선 (Antigravity CLI)"
         );
         assert_eq!(translator_label("deepl"), "DeepL 품질 우선 (API)");
+        assert_eq!(translator_label("openai_compat"), "OpenAI 호환 API");
         assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
         for provider in ["chatgpt", "claude", "gemini", "deepl"] {
             assert!(!translator_label(provider).contains("Luna/Terra"));
@@ -6277,6 +6291,48 @@ mod tests {
                 outgoing: true,
             }
         );
+    }
+
+    #[test]
+    fn openai_compatible_settings_rebuild_only_the_lanes_that_use_them() {
+        let current = AppConfig {
+            translator: "hymt_1_8b".to_string(),
+            outgoing_translator: "openai_compat".to_string(),
+            openai_compat_base_url: "http://127.0.0.1:8000/v1".to_string(),
+            openai_compat_model: "first".to_string(),
+            ..Default::default()
+        };
+        for updated in [
+            AppConfig {
+                openai_compat_model: "second".to_string(),
+                ..current.clone()
+            },
+            AppConfig {
+                openai_compat_concurrency: 32,
+                ..current.clone()
+            },
+            AppConfig {
+                openai_compat_shared_context: true,
+                ..current.clone()
+            },
+        ] {
+            assert_eq!(
+                translator_preparation_plan(&current, &updated),
+                TranslatorPreparationPlan {
+                    display: false,
+                    outgoing: true,
+                }
+            );
+        }
+        let unrelated = AppConfig {
+            outgoing_translator: "chatgpt".to_string(),
+            ..current.clone()
+        };
+        let unrelated_updated = AppConfig {
+            openai_compat_model: "second".to_string(),
+            ..unrelated.clone()
+        };
+        assert!(!translator_preparation_plan(&unrelated, &unrelated_updated).any());
     }
 
     #[test]

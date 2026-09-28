@@ -127,6 +127,7 @@ test("translation model can be changed inside the tray menu", () => {
     "chatgpt",
     "gemini",
     "deepl",
+    "openai_compat",
     "mock",
   ]) {
     assert.match(trayMarkup, new RegExp(`data-translator="${translator}"`));
@@ -155,7 +156,7 @@ test("tray window size hugs each menu view without clipping option lists", () =>
   assert.match(trayScript, /main: 390/);
   assert.match(trayScript, /language: 520/);
   assert.match(trayStyles, /\.language-view \{[^}]*overflow-y: auto;/s);
-  assert.match(trayScript, /model: 427/);
+  assert.match(trayScript, /model: 464/);
   assert.match(trayScript, /function preferredMainTrayHeight\(\)/);
   assert.match(trayScript, /elements\.brandRow\.getBoundingClientRect\(\)\.height/);
   assert.match(trayScript, /elements\.mainMenu\.scrollHeight/);

@@ -49,6 +49,7 @@ const DISPLAY_TRANSLATOR_OPTIONS = [
   ["claude", "Claude CLI (외부·품질 우선)", "external"],
   ["gemini", "Gemini CLI (외부·품질 우선)", "external"],
   ["deepl", "DeepL (API 키·외부 전송)", "external"],
+  ["openai_compat", "OpenAI 호환 API (사용자 지정 서버)", "external"],
   ["mock", "Mock 테스트", "testing"],
 ];
 
@@ -57,6 +58,7 @@ const OUTGOING_TRANSLATOR_OPTIONS = [
   ["claude", "Claude CLI (권장·품질 우선)", "recommended"],
   ["gemini", "Gemini CLI (권장·품질 우선)", "recommended"],
   ["deepl", "DeepL (API 키·외부 전송)", "recommended"],
+  ["openai_compat", "OpenAI 호환 API (사용자 지정 서버)", "recommended"],
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·속도 우선)", "local-limited"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·속도 우선)", "local-limited"],
   ["translategemma_4b", "TranslateGemma 4B Q4 (실험·속도 우선)", "local-limited"],
@@ -319,9 +321,16 @@ const elements = {
   vramProtectionNote: document.querySelector("#vram-protection-note"),
   providerConnections: document.querySelector("#provider-connections"),
   providerRows: [...document.querySelectorAll(".provider-row")],
+  openaiCompatBaseUrl: document.querySelector("#openai-compat-base-url"),
+  openaiCompatModel: document.querySelector("#openai-compat-model"),
+  openaiCompatKey: document.querySelector("#openai-compat-key"),
+  openaiCompatBatchSize: document.querySelector("#openai-compat-batch-size"),
+  openaiCompatConcurrency: document.querySelector("#openai-compat-concurrency"),
+  openaiCompatSharedContext: document.querySelector("#openai-compat-shared-context"),
+  openaiCompatConnect: document.querySelector("#openai-compat-connect"),
 };
 
-const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl"]);
+const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl", "openai_compat"]);
 const LOCAL_TRANSLATORS = new Set(
   DISPLAY_TRANSLATOR_OPTIONS
     .filter(([, , group]) => group === "local")
@@ -463,6 +472,7 @@ function providerStateLabel(connection) {
   if (connection.state === "disabled") return "사용 중지됨";
   if (connection.state === "not-installed") return "설치 필요";
   if (connection.state === "credential-required") return "API 키 필요";
+  if (connection.state === "setup-required") return "설정 필요";
   if (connection.state === "login-required") return "로그인 필요";
   return "확인 필요";
 }
@@ -1860,11 +1870,14 @@ async function disconnectProvider(row) {
   }
   const currentConnection = providerConnection(provider);
   const isDeepL = provider === "deepl";
+  const isOpenAiCompat = provider === "openai_compat";
   const confirmed = await showModal({
     title: `${currentConnection?.name || "번역 서비스"} 연결을 해제하시겠습니까?`,
     message: isDeepL
       ? "운영체제 보안 저장소에서 DeepL API 키를 삭제합니다. DeepL이 선택되어 있으면 로컬 기본 모델로 전환합니다."
-      : "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Discord Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.",
+      : isOpenAiCompat
+        ? "서버 주소와 모델 ID를 지우고 운영체제 보안 저장소에서 API 키를 삭제합니다. 이 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다."
+        : "CLI 로그인 정보와 설치 상태는 유지되며 NudeNyang Discord Translator에서만 사용을 중지합니다. 해당 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.",
     acceptText: "연결 해제",
   });
   if (!confirmed) return;
@@ -1875,6 +1888,68 @@ async function disconnectProvider(row) {
     state.providerConnections.set(provider, connection);
   } finally {
     state.providerOperation = "";
+    renderProviderConnections([...state.providerConnections.values()]);
+  }
+}
+
+function renderOpenAiCompatForm(config) {
+  if (!elements.openaiCompatBaseUrl) return;
+  elements.openaiCompatBaseUrl.value = config.openai_compat_base_url || "";
+  elements.openaiCompatModel.value = config.openai_compat_model || "";
+  elements.openaiCompatBatchSize.value = String(config.openai_compat_batch_size);
+  elements.openaiCompatConcurrency.value = String(config.openai_compat_concurrency);
+  setSwitch(elements.openaiCompatSharedContext, config.openai_compat_shared_context, "켜짐", "꺼짐");
+}
+
+function boundedFormNumber(input, min, max, fallback) {
+  const value = Math.round(Number(input.value));
+  const bounded = Number.isFinite(value) && input.value !== "" ? Math.max(min, Math.min(max, value)) : fallback;
+  input.value = String(bounded);
+  return bounded;
+}
+
+async function connectOpenAiCompat() {
+  if (providerOperationAvailability(state.providerOperation, "openai_compat").blocked) {
+    throw new Error("다른 번역 서비스 연결이 진행 중입니다. 현재 연결이 끝난 후 다시 시도하십시오.");
+  }
+  const baseUrl = elements.openaiCompatBaseUrl.value.trim();
+  const model = elements.openaiCompatModel.value.trim();
+  if (!baseUrl) {
+    elements.openaiCompatBaseUrl.focus();
+    throw new Error("OpenAI 호환 API 서버 주소를 입력하십시오.");
+  }
+  if (!model) {
+    elements.openaiCompatModel.focus();
+    throw new Error("OpenAI 호환 API 모델 ID를 입력하십시오.");
+  }
+  const row = document.querySelector('.provider-row[data-provider="openai_compat"]');
+  const status = row.querySelector(".provider-status");
+  state.providerOperation = "openai_compat";
+  renderProviderConnections([...state.providerConnections.values()]);
+  elements.openaiCompatConnect.disabled = true;
+  status.dataset.state = "loading";
+  setLocalizedText(status.querySelector("strong"), "확인 중");
+  setLocalizedText(status.querySelector("span"), "테스트 번역으로 서버 연결을 확인하고 있습니다.");
+  try {
+    const connection = await invoke("provider_openai_compat_connect", {
+      baseUrl,
+      model,
+      batchSize: boundedFormNumber(elements.openaiCompatBatchSize, 1, 32, 8),
+      concurrency: boundedFormNumber(elements.openaiCompatConcurrency, 1, 64, 4),
+      sharedContext: elements.openaiCompatSharedContext.getAttribute("aria-checked") === "true",
+      credential: elements.openaiCompatKey.value.trim() || null,
+    });
+    state.providerConnections.set("openai_compat", connection);
+    elements.openaiCompatKey.value = "";
+    state.config = normalizeConfig(await invoke("settings_get"));
+    renderOpenAiCompatForm(state.config);
+    setLocalizedText(elements.saveStatus, "적용되었습니다.");
+  } catch (error) {
+    await loadProviderConnections();
+    throw error;
+  } finally {
+    state.providerOperation = "";
+    elements.openaiCompatConnect.disabled = false;
     renderProviderConnections([...state.providerConnections.values()]);
   }
 }
@@ -2212,7 +2287,7 @@ async function resetSettings() {
     const reset = await invoke("settings_reset");
     if (state.autostartEnabled) await setAutostartEnabled(false);
     renderConfig(reset);
-    document.querySelectorAll(".provider-secret").forEach(secret => { secret.value = ""; });
+    document.querySelectorAll(".provider-secret, .provider-compat-secret").forEach(secret => { secret.value = ""; });
     setLocalizedText(elements.saveStatus, "설정을 초기화했습니다.");
   } finally {
     elements.resetSettings.disabled = false;
@@ -2663,6 +2738,7 @@ function renderConfig(config) {
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
   elements.webQuickToggleShortcut.value = state.config.web_quick_toggle_shortcut;
+  renderOpenAiCompatForm(state.config);
   elements.translationShortcutHint.textContent = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcutHint.textContent = state.config.hotkeys.toggle_outgoing_translation;
   renderWebSitePolicies();
@@ -3576,6 +3652,16 @@ elements.outgoingModelGuidanceAction.addEventListener("click", async () => {
   } finally {
     renderOutgoingModelGuidance();
   }
+});
+elements.openaiCompatSharedContext.addEventListener("click", () => {
+  const enabled = elements.openaiCompatSharedContext.getAttribute("aria-checked") !== "true";
+  setSwitch(elements.openaiCompatSharedContext, enabled, "켜짐", "꺼짐");
+});
+for (const input of [elements.openaiCompatBatchSize, elements.openaiCompatConcurrency]) {
+  input.addEventListener("wheel", event => event.preventDefault(), { passive: false });
+}
+elements.openaiCompatConnect.addEventListener("click", () => {
+  connectOpenAiCompat().catch(error => showError("번역 서비스를 연결하지 못했습니다", String(error)));
 });
 for (const secret of document.querySelectorAll(".provider-secret")) {
   secret.addEventListener("change", () => {

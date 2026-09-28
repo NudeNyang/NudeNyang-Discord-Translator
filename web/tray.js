@@ -18,13 +18,14 @@ const TRANSLATOR_LABELS = Object.freeze({
   claude: "Claude",
   gemini: "Gemini",
   deepl: "DeepL",
+  openai_compat: "OpenAI 호환 API",
   mock: "Mock 테스트",
 });
 
 const VIEW_HEIGHTS = Object.freeze({
   main: 390,
   language: 520,
-  model: 427,
+  model: 464,
 });
 const COMPACT_TRAY_LANGUAGES = new Set(["ko", "ja", "zh", "zh-Hant"]);
 
@@ -316,7 +317,7 @@ async function selectLanguage(language) {
 async function selectTranslator(translator) {
   if (!invoke || !TRANSLATOR_LABELS[translator]) return;
   try {
-    if (["chatgpt", "claude", "gemini", "deepl"].includes(translator)) {
+    if (["chatgpt", "claude", "gemini", "deepl", "openai_compat"].includes(translator)) {
       if (!providerConnections.has(translator)) await refreshProviderConnections();
       if (!providerConnections.get(translator)?.connected) {
         await invoke("tray_open_provider_settings", { provider: translator });

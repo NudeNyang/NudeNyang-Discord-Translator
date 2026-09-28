@@ -125,6 +125,7 @@ FunctionEnd
     nsExec::ExecToLog '"$SYSDIR\cmdkey.exe" /delete:"deepl.NudeNyang Discord Translator"'
     nsExec::ExecToLog '"$SYSDIR\cmdkey.exe" /delete:"deepl.NudeNyang Translator"'
     nsExec::ExecToLog '"$SYSDIR\cmdkey.exe" /delete:"deepl.Nude Translator"'
+    nsExec::ExecToLog '"$SYSDIR\cmdkey.exe" /delete:"openai_compat.NudeNyang Discord Translator"'
   ${EndIf}
 
   ${If} $DeleteLocalModelsCheckboxState = 1
