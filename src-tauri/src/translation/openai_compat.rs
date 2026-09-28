@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -39,7 +40,43 @@ pub struct OpenAiCompatSettings {
     pub shared_context: bool,
 }
 
+// Keep the endpoint binding inside the same OS credential entry as the secret.
+// A single active connection also keeps disconnect/uninstall deletion complete.
+#[derive(Deserialize, Serialize)]
+pub(crate) struct ServerCredential {
+    version: u8,
+    base_url: String,
+    pub(crate) api_key: Option<String>,
+}
+
 impl OpenAiCompatSettings {
+    pub(crate) fn read_credential(
+        &self,
+        store: &dyn credentials::CredentialStore,
+    ) -> Result<Option<ServerCredential>, String> {
+        let base_url = normalize_base_url(&self.base_url)?;
+        let stored = store.read(CREDENTIAL_ID)?;
+        // Unbound legacy keys cannot be assigned to a server safely. Require
+        // explicit re-entry rather than guessing from mutable app settings.
+        Ok(stored
+            .and_then(|raw| serde_json::from_str::<ServerCredential>(&raw).ok())
+            .filter(|record| record.version == 1 && record.base_url == base_url))
+    }
+
+    pub(crate) fn save_credential(
+        &self,
+        api_key: Option<&str>,
+        store: &dyn credentials::CredentialStore,
+    ) -> Result<(), String> {
+        let record = ServerCredential {
+            version: 1,
+            base_url: normalize_base_url(&self.base_url)?,
+            api_key: api_key.map(str::to_string),
+        };
+        let encoded = serde_json::to_string(&record).map_err(json_error)?;
+        store.write(CREDENTIAL_ID, &encoded)
+    }
+
     pub fn from_config(config: &AppConfig) -> Self {
         Self {
             base_url: config.openai_compat_base_url.clone(),
@@ -127,7 +164,17 @@ impl OpenAiCompatTranslator {
     }
 
     pub fn with_stored_credential(settings: OpenAiCompatSettings) -> Result<Self, String> {
-        Self::new(settings, credentials::read(CREDENTIAL_ID)?)
+        Self::with_credential_store(settings, &credentials::SystemCredentialStore)
+    }
+
+    pub(crate) fn with_credential_store(
+        settings: OpenAiCompatSettings,
+        store: &dyn credentials::CredentialStore,
+    ) -> Result<Self, String> {
+        let api_key = settings
+            .read_credential(store)?
+            .and_then(|record| record.api_key);
+        Self::new(settings, api_key)
     }
 
     pub fn validate(&self) -> Result<(), String> {
@@ -846,5 +893,136 @@ mod tests {
         assert_ne!(base, other_model.cache_namespace());
         assert_ne!(base, shared);
         assert!(!base.contains("test-model"));
+    }
+
+    #[test]
+    fn server_credential_is_not_forwarded_when_connecting_to_another_server() {
+        use crate::credentials::MemoryCredentialStore;
+        use crate::providers::connect_openai_compat_with_store;
+        let store = MemoryCredentialStore::default();
+        let first = serve(Arc::new(|r| completion(&requested_ids(r))), Duration::ZERO);
+        let second = serve(Arc::new(|r| completion(&requested_ids(r))), Duration::ZERO);
+        let original = translator(&first.url, 8, 4, false).settings;
+        connect_openai_compat_with_store(original.clone(), Some("server-a-test-key"), &store)
+            .unwrap();
+        let changed = OpenAiCompatSettings {
+            base_url: second.url.clone(),
+            ..original
+        };
+        let verified = connect_openai_compat_with_store(changed, None, &store).unwrap();
+        let mut active = OpenAiCompatTranslator::with_credential_store(verified, &store).unwrap();
+        active
+            .translate_many(&english_items(1), Language::Korean)
+            .unwrap();
+        let requests = second.requests.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(
+            requests.iter().all(|(_, auth)| auth.is_none()),
+            "another server must never receive the old key"
+        );
+    }
+
+    #[test]
+    fn server_credential_reuses_same_normalized_endpoint_and_refresh_reads_new_key() {
+        use crate::credentials::MemoryCredentialStore;
+        use crate::providers::connect_openai_compat_with_store;
+        let store = MemoryCredentialStore::default();
+        let server = serve(Arc::new(|r| completion(&requested_ids(r))), Duration::ZERO);
+        let settings = translator(&server.url, 8, 4, false).settings;
+        let verified =
+            connect_openai_compat_with_store(settings.clone(), Some("old-test-key"), &store)
+                .unwrap();
+        let equivalent = OpenAiCompatSettings {
+            base_url: format!("{}/chat/completions/", verified.base_url),
+            ..verified.clone()
+        };
+        connect_openai_compat_with_store(equivalent, None, &store).unwrap();
+        connect_openai_compat_with_store(verified.clone(), Some("new-test-key"), &store).unwrap();
+        let mut refreshed =
+            OpenAiCompatTranslator::with_credential_store(verified, &store).unwrap();
+        refreshed
+            .translate_many(&english_items(1), Language::Korean)
+            .unwrap();
+        let auth = server
+            .requests
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(_, auth)| auth.clone().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            auth,
+            [
+                "Bearer old-test-key",
+                "Bearer old-test-key",
+                "Bearer new-test-key",
+                "Bearer new-test-key"
+            ]
+        );
+    }
+
+    #[test]
+    fn server_credential_rejects_different_scheme_port_path_and_unbound_legacy_key() {
+        use crate::credentials::{CredentialStore, MemoryCredentialStore};
+        use crate::providers::connect_openai_compat_with_store;
+        let store = MemoryCredentialStore::default();
+        let server = serve(Arc::new(|r| completion(&requested_ids(r))), Duration::ZERO);
+        let settings = translator(&server.url, 8, 4, false).settings;
+        let verified =
+            connect_openai_compat_with_store(settings, Some("scoped-test-key"), &store).unwrap();
+        for base_url in [
+            verified.base_url.replacen("http:", "https:", 1),
+            "http://127.0.0.1:9/v1".to_string(),
+            format!("{}/other-tenant", verified.base_url),
+        ] {
+            let changed = OpenAiCompatSettings {
+                base_url,
+                ..verified.clone()
+            };
+            assert!(
+                OpenAiCompatTranslator::with_credential_store(changed, &store)
+                    .unwrap()
+                    .api_key
+                    .is_none()
+            );
+        }
+        store
+            .write(super::CREDENTIAL_ID, "unbound-legacy-test-key")
+            .unwrap();
+        assert!(
+            OpenAiCompatTranslator::with_credential_store(verified, &store)
+                .unwrap()
+                .api_key
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn server_credential_failed_validation_preserves_previous_connection() {
+        use crate::credentials::{CredentialStore, MemoryCredentialStore};
+        use crate::providers::connect_openai_compat_with_store;
+        let store = MemoryCredentialStore::default();
+        let first = serve(Arc::new(|r| completion(&requested_ids(r))), Duration::ZERO);
+        let rejected = serve(Arc::new(|_| (401, "{}".to_string())), Duration::ZERO);
+        let settings = translator(&first.url, 8, 4, false).settings;
+        let verified =
+            connect_openai_compat_with_store(settings, Some("first-test-key"), &store).unwrap();
+        let before = store.read(super::CREDENTIAL_ID).unwrap();
+        let changed = OpenAiCompatSettings {
+            base_url: rejected.url.clone(),
+            ..verified.clone()
+        };
+        assert!(
+            connect_openai_compat_with_store(changed, Some("invalid-test-key"), &store).is_err()
+        );
+        assert_eq!(store.read(super::CREDENTIAL_ID).unwrap(), before);
+        let mut active = OpenAiCompatTranslator::with_credential_store(verified, &store).unwrap();
+        active
+            .translate_many(&english_items(1), Language::Korean)
+            .unwrap();
+        assert_eq!(
+            first.requests.lock().unwrap().last().unwrap().1.as_deref(),
+            Some("Bearer first-test-key")
+        );
     }
 }

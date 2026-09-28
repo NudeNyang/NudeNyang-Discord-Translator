@@ -1194,7 +1194,7 @@ async fn provider_openai_compat_connect(
         "openai_compat_concurrency": verified.concurrency,
         "openai_compat_shared_context": verified.shared_context,
     }))?;
-    engine.apply_config(updated.clone())?;
+    engine.apply_config_with_provider_refresh(updated.clone(), Some("openai_compat"))?;
     let _ = app.emit("settings-changed", updated.clone());
     let _ = app.emit("provider-connections-changed", ());
     Ok(providers::openai_compat_status(&updated))

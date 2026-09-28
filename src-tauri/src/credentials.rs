@@ -1,6 +1,44 @@
 const SERVICE_NAME: &str = "NudeNyang Discord Translator";
 const LEGACY_SERVICE_NAMES: &[&str] = &["NudeNyang Translator", "Nude Translator"];
 
+pub(crate) trait CredentialStore {
+    fn read(&self, provider: &str) -> Result<Option<String>, String>;
+    fn write(&self, provider: &str, secret: &str) -> Result<(), String>;
+}
+
+pub(crate) struct SystemCredentialStore;
+
+impl CredentialStore for SystemCredentialStore {
+    fn read(&self, provider: &str) -> Result<Option<String>, String> {
+        read(provider)
+    }
+
+    fn write(&self, provider: &str, secret: &str) -> Result<(), String> {
+        write(provider, secret)
+    }
+}
+
+#[cfg(test)]
+#[derive(Default)]
+pub(crate) struct MemoryCredentialStore(
+    std::sync::Mutex<std::collections::HashMap<String, String>>,
+);
+
+#[cfg(test)]
+impl CredentialStore for MemoryCredentialStore {
+    fn read(&self, provider: &str) -> Result<Option<String>, String> {
+        Ok(self.0.lock().unwrap().get(provider).cloned())
+    }
+
+    fn write(&self, provider: &str, secret: &str) -> Result<(), String> {
+        self.0
+            .lock()
+            .unwrap()
+            .insert(provider.to_string(), secret.to_string());
+        Ok(())
+    }
+}
+
 fn entry(service: &str, provider: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(service, provider)
         .map_err(|error| format!("운영체제 보안 저장소를 열지 못했습니다: {error}"))

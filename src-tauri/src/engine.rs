@@ -329,7 +329,7 @@ pub struct RustEngine {
 // when a live Discord connection is replaced.
 #[allow(clippy::large_enum_variant)]
 enum Control {
-    ApplyConfig(Box<AppConfig>),
+    ApplyConfig(Box<AppConfig>, Option<String>),
     SetEnabled {
         enabled: bool,
         from_shortcut: bool,
@@ -914,6 +914,7 @@ impl TranslatorPreparationPlan {
 fn translator_preparation_plan(
     current: &AppConfig,
     updated: &AppConfig,
+    refreshed_provider: Option<&str>,
 ) -> TranslatorPreparationPlan {
     let shared_settings_changed = updated.hymt_device != current.hymt_device;
     let openai_compat_changed =
@@ -922,6 +923,7 @@ fn translator_preparation_plan(
         updated_name != current_name
             || shared_settings_changed
             || (openai_compat_changed && updated_name == "openai_compat")
+            || refreshed_provider == Some(updated_name)
     };
     TranslatorPreparationPlan {
         display: lane_changed(&current.translator, &updated.translator),
@@ -984,13 +986,24 @@ impl RustEngine {
     }
 
     pub fn apply_config(&self, config: AppConfig) -> Result<(), String> {
+        self.apply_config_with_provider_refresh(config, None)
+    }
+
+    pub fn apply_config_with_provider_refresh(
+        &self,
+        config: AppConfig,
+        refreshed_provider: Option<&str>,
+    ) -> Result<(), String> {
         let mut policy = self
             .browser_policy
             .lock()
             .map_err(|_| browser_permission_cancelled())?;
         policy.update(&config);
         self.controls
-            .send(Control::ApplyConfig(Box::new(config)))
+            .send(Control::ApplyConfig(
+                Box::new(config),
+                refreshed_provider.map(str::to_string),
+            ))
             .map_err(|_| "Rust 번역 엔진이 종료되어 설정을 적용하지 못했습니다.".to_string())
     }
 
@@ -1426,7 +1439,7 @@ fn run_controller(
                 break;
             };
             match control {
-                Control::ApplyConfig(updated) => {
+                Control::ApplyConfig(updated, refreshed_provider) => {
                     let updated = *updated;
                     controls_dirty = true;
                     if updated.discord_variant != config.discord_variant {
@@ -1456,7 +1469,11 @@ fn run_controller(
                         || updated.translate_nicknames != config.translate_nicknames;
                     let image_ocr_quality_changed =
                         updated.image_ocr_quality != config.image_ocr_quality;
-                    let mut requested_preparation = translator_preparation_plan(&config, &updated);
+                    let mut requested_preparation = translator_preparation_plan(
+                        &config,
+                        &updated,
+                        refreshed_provider.as_deref(),
+                    );
                     if ui_ready && requested_preparation.any() {
                         if let Ok(runtime) = status.lock() {
                             requested_preparation.display |=
@@ -2313,7 +2330,7 @@ fn run_controller(
                 } else {
                     config.patched(Value::Object(patch))?
                 };
-                pending_control = Some(Control::ApplyConfig(Box::new(updated)));
+                pending_control = Some(Control::ApplyConfig(Box::new(updated), None));
                 return Ok(());
             }
             let target =
@@ -6285,12 +6302,28 @@ mod tests {
         };
 
         assert_eq!(
-            translator_preparation_plan(&current, &updated),
+            translator_preparation_plan(&current, &updated, None),
             TranslatorPreparationPlan {
                 display: false,
                 outgoing: true,
             }
         );
+    }
+
+    #[test]
+    fn openai_credential_refresh_rebuilds_selected_lanes_without_config_changes() {
+        for (display, outgoing) in [(true, true), (true, false), (false, true), (false, false)] {
+            let config = AppConfig {
+                translator: if display { "openai_compat" } else { "mock" }.into(),
+                outgoing_translator: if outgoing { "openai_compat" } else { "mock" }.into(),
+                ..Default::default()
+            };
+            assert!(!translator_preparation_plan(&config, &config, None).any());
+            assert_eq!(
+                translator_preparation_plan(&config, &config, Some("openai_compat")),
+                TranslatorPreparationPlan { display, outgoing },
+            );
+        }
     }
 
     #[test]
@@ -6317,7 +6350,7 @@ mod tests {
             },
         ] {
             assert_eq!(
-                translator_preparation_plan(&current, &updated),
+                translator_preparation_plan(&current, &updated, None),
                 TranslatorPreparationPlan {
                     display: false,
                     outgoing: true,
@@ -6332,7 +6365,7 @@ mod tests {
             openai_compat_model: "second".to_string(),
             ..unrelated.clone()
         };
-        assert!(!translator_preparation_plan(&unrelated, &unrelated_updated).any());
+        assert!(!translator_preparation_plan(&unrelated, &unrelated_updated, None).any());
     }
 
     #[test]

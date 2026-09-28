@@ -56,16 +56,24 @@ pub fn connect_openai_compat(
     settings: OpenAiCompatSettings,
     credential: Option<&str>,
 ) -> Result<OpenAiCompatSettings, String> {
+    connect_openai_compat_with_store(settings, credential, &credentials::SystemCredentialStore)
+}
+
+pub(crate) fn connect_openai_compat_with_store(
+    settings: OpenAiCompatSettings,
+    credential: Option<&str>,
+    store: &dyn credentials::CredentialStore,
+) -> Result<OpenAiCompatSettings, String> {
     let credential = credential.map(str::trim).filter(|value| !value.is_empty());
     let api_key = match credential {
         Some(key) => Some(key.to_string()),
-        None => credentials::read(OPENAI_COMPAT_CREDENTIAL_ID)?,
+        None => settings
+            .read_credential(store)?
+            .and_then(|record| record.api_key),
     };
-    let translator = OpenAiCompatTranslator::new(settings.clone(), api_key)?;
+    let translator = OpenAiCompatTranslator::new(settings.clone(), api_key.clone())?;
     translator.validate()?;
-    if let Some(key) = credential {
-        credentials::write(OPENAI_COMPAT_CREDENTIAL_ID, key)?;
-    }
+    settings.save_credential(api_key.as_deref(), store)?;
     Ok(OpenAiCompatSettings {
         base_url: crate::translation::normalize_openai_compat_base_url(&settings.base_url)?,
         model: settings.model.trim().to_string(),
@@ -246,19 +254,31 @@ fn deepl_status() -> ProviderConnection {
 }
 
 pub fn openai_compat_status(config: &AppConfig) -> ProviderConnection {
+    openai_compat_status_with_store(config, &credentials::SystemCredentialStore)
+}
+
+fn openai_compat_status_with_store(
+    config: &AppConfig,
+    store: &dyn credentials::CredentialStore,
+) -> ProviderConnection {
     let configured =
         !config.openai_compat_base_url.is_empty() && !config.openai_compat_model.is_empty();
-    let (connected, detail) = match (configured, credentials::read(OPENAI_COMPAT_CREDENTIAL_ID)) {
-        (_, Err(error)) => (false, error),
-        (false, _) => (
+    let credential = if configured {
+        OpenAiCompatSettings::from_config(config).read_credential(store)
+    } else {
+        Ok(None)
+    };
+    let (connected, detail) = match credential {
+        Err(error) => (false, error),
+        Ok(None) => (
             false,
             "서버 주소와 모델 ID를 입력하여 연결하십시오.".to_string(),
         ),
-        (true, Ok(Some(_))) => (
+        Ok(Some(record)) if record.api_key.is_some() => (
             true,
             "서버에 연결되었으며 API 키가 운영체제 보안 저장소에 저장되어 있습니다.".to_string(),
         ),
-        (true, Ok(None)) => (true, "API 키 없이 서버에 연결되었습니다.".to_string()),
+        Ok(Some(_)) => (true, "API 키 없이 서버에 연결되었습니다.".to_string()),
     };
     ProviderConnection {
         id: "openai_compat".to_string(),
@@ -282,6 +302,37 @@ pub fn openai_compat_status(config: &AppConfig) -> ProviderConnection {
 mod tests {
     use super::{cli_connection, disconnect, openai_compat_status};
     use crate::config::AppConfig;
+
+    #[test]
+    fn openai_credential_status_requires_a_matching_verified_server() {
+        use crate::credentials::{CredentialStore, MemoryCredentialStore};
+        use crate::translation::OpenAiCompatSettings;
+        let store = MemoryCredentialStore::default();
+        let mut config = AppConfig {
+            openai_compat_base_url: "https://api.example.com/v1".into(),
+            openai_compat_model: "test-model".into(),
+            ..Default::default()
+        };
+        assert!(!super::openai_compat_status_with_store(&config, &store).connected);
+        store
+            .write(super::OPENAI_COMPAT_CREDENTIAL_ID, "legacy-test-key")
+            .unwrap();
+        assert!(!super::openai_compat_status_with_store(&config, &store).connected);
+        OpenAiCompatSettings::from_config(&config)
+            .save_credential(Some("bound-test-key"), &store)
+            .unwrap();
+        let keyed = super::openai_compat_status_with_store(&config, &store);
+        assert!(keyed.connected && keyed.can_disconnect);
+        assert!(keyed.detail.contains("보안 저장소"));
+        config.openai_compat_base_url = "https://other.example.com/v1".into();
+        assert!(!super::openai_compat_status_with_store(&config, &store).connected);
+        OpenAiCompatSettings::from_config(&config)
+            .save_credential(None, &store)
+            .unwrap();
+        let keyless = super::openai_compat_status_with_store(&config, &store);
+        assert!(keyless.connected && keyless.can_disconnect);
+        assert!(keyless.detail.contains("API 키 없이"));
+    }
 
     #[test]
     fn openai_compatible_status_requires_an_address_and_model() {
