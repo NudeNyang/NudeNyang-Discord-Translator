@@ -608,6 +608,37 @@ export const COPY = Object.freeze({
   "Hy-MT2 1.8B Q4 (경량·기본)": ["Hy-MT2 1.8B Q4 (lightweight · default)", "Hy-MT2 1.8B Q4（軽量・標準）", "Hy-MT2 1.8B Q4（轻量・默认）"],
   "Hy-MT2 7B Q4 (품질·약 4.6GB)": ["Hy-MT2 7B Q4 (quality · approx. 4.6GB)", "Hy-MT2 7B Q4（品質・約4.6GB）", "Hy-MT2 7B Q4（质量・约4.6GB）"],
   "DeepL (API 키·외부 전송)": ["DeepL (API key · external transfer)", "DeepL（APIキー・外部送信）", "DeepL（API 密钥・外部传输）"],
+  "OpenAI 호환 API": ["OpenAI-compatible API", "OpenAI互換API", "OpenAI 兼容 API"],
+  "OpenAI 호환 API (사용자 지정 서버)": ["OpenAI-compatible API (custom server)", "OpenAI互換API（カスタムサーバー）", "OpenAI 兼容 API（自定义服务器）"],
+  "저장된 연결 정보를 확인하고 있습니다.": ["Checking the saved connection details.", "保存された接続情報を確認しています。", "正在检查已保存的连接信息。"],
+  "서버 주소": ["Server address", "サーバーアドレス", "服务器地址"],
+  "모델 ID": ["Model ID", "モデルID", "模型 ID"],
+  "API 키 (선택)": ["API key (optional)", "APIキー（任意）", "API 密钥（可选）"],
+  "필요한 서버만 입력": ["Only if the server requires one", "必要なサーバーのみ入力", "仅在服务器需要时输入"],
+  "요청당 문장 수": ["Items per request", "リクエストあたりの項目数", "每个请求的条目数"],
+  "동시 요청 수": ["Concurrent requests", "同時リクエスト数", "并发请求数"],
+  "문맥 공유": ["Shared context", "文脈の共有", "共享上下文"],
+  "모든 요청에 같은 화면의 다른 메시지를 참고 문맥으로 함께 보냅니다. 말투가 더 일관되지만 요청마다 입력 토큰이 늘어납니다.": ["Sends the other messages on the same screen with every request as reference context. Tone becomes more consistent, but each request uses more input tokens.", "同じ画面のほかのメッセージを参考用の文脈としてすべてのリクエストに含めます。口調の一貫性が高まりますが、リクエストごとの入力トークンが増えます。", "每个请求都会附带同一画面中的其他消息作为参考上下文。语气会更一致，但每个请求的输入令牌会增加。"],
+  "서버 설정에 따라 동시 요청을 늘려도 속도가 빨라지지 않을 수 있습니다. 선택한 서버로 번역할 텍스트가 전송됩니다.": ["Depending on server settings, more concurrent requests may not improve speed. Text to be translated is sent to the selected server.", "サーバー設定によっては、同時リクエストを増やしても速くならない場合があります。翻訳するテキストは選択したサーバーに送信されます。", "根据服务器设置，增加并发请求不一定能提高速度。待翻译的文本会发送到所选服务器。"],
+  "연결 확인 및 저장": ["Verify and save", "接続を確認して保存", "验证并保存"],
+  "테스트 번역으로 서버 연결을 확인하고 있습니다.": ["Checking the server connection with a test translation.", "テスト翻訳でサーバー接続を確認しています。", "正在通过测试翻译检查服务器连接。"],
+  "서버 주소와 모델 ID를 지우고 운영체제 보안 저장소에서 API 키를 삭제합니다. 이 서비스가 선택되어 있으면 로컬 기본 모델로 전환합니다.": ["Clears the server address and model ID and deletes the API key from the operating system secure storage. If this service is selected, switch to the default local model.", "サーバーアドレスとモデルIDを消去し、OSのセキュアストレージからAPIキーを削除します。このサービスが選択されている場合は、標準のローカルモデルへ切り替えます。", "清除服务器地址和模型 ID，并从操作系统安全存储中删除 API 密钥。如果当前选择了此服务，将切换到默认本地模型。"],
+  "OpenAI 호환 API 서버 주소를 입력하십시오.": ["Enter the OpenAI-compatible API server address.", "OpenAI互換APIのサーバーアドレスを入力してください。", "请输入 OpenAI 兼容 API 的服务器地址。"],
+  "OpenAI 호환 API 모델 ID를 입력하십시오.": ["Enter the OpenAI-compatible API model ID.", "OpenAI互換APIのモデルIDを入力してください。", "请输入 OpenAI 兼容 API 的模型 ID。"],
+  "서버 주소와 모델 ID를 입력하여 연결하십시오.": ["Enter a server address and model ID to connect.", "サーバーアドレスとモデルIDを入力して接続してください。", "请输入服务器地址和模型 ID 以连接。"],
+  "서버에 연결되었으며 API 키가 운영체제 보안 저장소에 저장되어 있습니다.": ["Connected to the server. The API key is stored in the operating system secure storage.", "サーバーに接続済みです。APIキーはOSのセキュアストレージに保存されています。", "已连接到服务器。API 密钥已存储在操作系统安全存储中。"],
+  "API 키 없이 서버에 연결되었습니다.": ["Connected to the server without an API key.", "APIキーなしでサーバーに接続しました。", "已在无 API 密钥的情况下连接到服务器。"],
+  "설정 필요": ["Setup required", "設定が必要", "需要设置"],
+  "OpenAI 호환 API 서버 주소가 올바르지 않습니다. http:// 또는 https://로 시작하는 주소를 입력하십시오.": ["The OpenAI-compatible API server address is invalid. Enter an address that starts with http:// or https://.", "OpenAI互換APIのサーバーアドレスが正しくありません。http:// または https:// で始まるアドレスを入力してください。", "OpenAI 兼容 API 的服务器地址无效。请输入以 http:// 或 https:// 开头的地址。"],
+  "서버 주소에 계정 정보를 넣지 말고 API 키 입력란을 사용하십시오.": ["Do not put account credentials in the server address. Use the API key field instead.", "サーバーアドレスにアカウント情報を含めず、APIキーの入力欄を使用してください。", "请勿在服务器地址中包含账户凭据，请改用 API 密钥输入框。"],
+  "OpenAI 호환 API가 빈 번역문을 반환했습니다.": ["The OpenAI-compatible API returned an empty translation.", "OpenAI互換APIが空の翻訳文を返しました。", "OpenAI 兼容 API 返回了空的译文。"],
+  "OpenAI 호환 API 응답을 읽지 못했습니다.": ["Could not read the OpenAI-compatible API response.", "OpenAI互換APIの応答を読み取れませんでした。", "无法读取 OpenAI 兼容 API 的响应。"],
+  "OpenAI 호환 API 응답에 번역문이 없습니다.": ["The OpenAI-compatible API response contains no translation.", "OpenAI互換APIの応答に翻訳文がありません。", "OpenAI 兼容 API 的响应中没有译文。"],
+  "OpenAI 호환 API 응답을 JSON으로 읽지 못했습니다.": ["Could not read the OpenAI-compatible API response as JSON.", "OpenAI互換APIの応答をJSONとして読み取れませんでした。", "无法将 OpenAI 兼容 API 的响应解析为 JSON。"],
+  "OpenAI 호환 API가 요청한 문장 수와 다른 결과를 반환했습니다.": ["The OpenAI-compatible API returned a different number of results than requested.", "OpenAI互換APIがリクエストした件数と異なる結果を返しました。", "OpenAI 兼容 API 返回的结果数量与请求不一致。"],
+  "OpenAI 호환 API가 번역문을 반환하지 않았습니다.": ["The OpenAI-compatible API did not return a translation.", "OpenAI互換APIが翻訳文を返しませんでした。", "OpenAI 兼容 API 未返回译文。"],
+  "OpenAI 호환 API가 일부 문장의 결과를 반환하지 않았습니다.": ["The OpenAI-compatible API did not return results for some items.", "OpenAI互換APIが一部の項目の結果を返しませんでした。", "OpenAI 兼容 API 未返回部分条目的结果。"],
+  "OpenAI 호환 API에 연결하지 못했습니다": ["Could not connect to the OpenAI-compatible API", "OpenAI互換APIに接続できませんでした", "无法连接到 OpenAI 兼容 API"],
   "Mock 테스트": ["Mock test", "モックテスト", "模拟测试"],
   "회/초": ["/sec", "回/秒", "次/秒"],
 });
@@ -676,6 +707,26 @@ export const DYNAMIC_TEMPLATE_COPY = Object.freeze({
     "Another account sign-in is already in progress.",
     "別のアカウントへのログインがすでに進行中です。",
     "已有其他账户正在登录。",
+  ],
+  "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).": [
+    "The OpenAI-compatible API rejected the request (HTTP {status}).",
+    "OpenAI互換APIがリクエストを拒否しました（HTTP {status}）。",
+    "OpenAI 兼容 API 拒绝了请求（HTTP {status}）。",
+  ],
+  "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": [
+    "The OpenAI-compatible API rejected the request (HTTP {status}). Check the API key.",
+    "OpenAI互換APIがリクエストを拒否しました（HTTP {status}）。APIキーを確認してください。",
+    "OpenAI 兼容 API 拒绝了请求（HTTP {status}）。请检查 API 密钥。",
+  ],
+  "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": [
+    "The OpenAI-compatible API rejected the request (HTTP {status}). Check the server address and model ID.",
+    "OpenAI互換APIがリクエストを拒否しました（HTTP {status}）。サーバーアドレスとモデルIDを確認してください。",
+    "OpenAI 兼容 API 拒绝了请求（HTTP {status}）。请检查服务器地址和模型 ID。",
+  ],
+  "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": [
+    "The OpenAI-compatible API rejected the request (HTTP {status}). The rate limit was exceeded. Reduce the number of concurrent requests.",
+    "OpenAI互換APIがリクエストを拒否しました（HTTP {status}）。リクエスト上限を超えました。同時リクエスト数を減らしてください。",
+    "OpenAI 兼容 API 拒绝了请求（HTTP {status}）。已超出请求限制。请减少并发请求数。",
   ],
   "Windows 앱 설치 관리자가 CLI 설치를 완료하지 못했습니다. 진단 로그에서 설치 관리자 메시지를 확인한 후 다시 시도하십시오.": [
     "Windows App Installer could not complete the CLI installation. Check the installer message in the diagnostic log, then try again.",
@@ -1044,7 +1095,19 @@ export const DYNAMIC_COPY = Object.freeze([
       zh: seconds => `Discord 尚未以辅助功能兼容模式运行。\n正在输入的消息可能会丢失，通话也可能会结束。\n\nDiscord 将在 ${seconds} 秒后为首次切换重启一次。`,
     },
   },
+  {
+    pattern: /^OpenAI 호환 API가 요청을 거부했습니다 \(HTTP (\d{3})\)\.((?: .+)?)$/,
+    render: Object.fromEntries(["en", "ja", "zh"].map(language => [
+      language,
+      (status, hint) => openAiCompatStatusMessage(language, status, hint),
+    ])),
+  },
 ]);
+
+function openAiCompatStatusMessage(language, status, hint) {
+  const key = `OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).${hint}`;
+  return interpolateDynamicTemplate(translateCopy(language, key), { status });
+}
 
 const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
   ([seconds]) => ["{seconds}초 후 Discord를 자동으로 다시 시작합니다.", { seconds }],
@@ -1112,6 +1175,7 @@ const DYNAMIC_TEMPLATE_RESOLVERS = Object.freeze([
     "Discord가 아직 접근성 호환 모드로 실행되지 않았습니다.\n작성 중인 메시지가 사라지거나 통화가 종료될 수 있습니다.\n\n{seconds}초 후 최초 전환을 위해 Discord를 한 번 다시 시작합니다.",
     { seconds },
   ],
+  ([status, hint]) => [`OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}).${hint}`, { status }],
 ]);
 
 function interpolateDynamicTemplate(template, values) {
@@ -1173,6 +1237,13 @@ export function translateUserFacingError(language, error) {
   const safeDetail = detail && !/[가-힣]/.test(detail) && !/HotKey\s*\{/i.test(detail)
     ? detail
     : "";
+  if (separator >= 0) {
+    const prefix = value.slice(0, separator);
+    const localizedPrefix = translateCopy(language, prefix);
+    if (localizedPrefix !== prefix && !/[가-힣]/.test(localizedPrefix)) {
+      return safeDetail ? `${localizedPrefix}: ${safeDetail}` : localizedPrefix;
+    }
+  }
   const fallback = translateCopy(
     language,
     "예기치 않은 오류가 발생했습니다. 자세한 내용은 진단 로그를 확인하십시오.",

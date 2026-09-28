@@ -1092,8 +1092,8 @@ async fn translation_cache_clear(
 async fn provider_connections_get(
     config: State<'_, ConfigStore>,
 ) -> Result<Vec<providers::ProviderConnection>, String> {
-    let disabled_providers = config.get()?.disabled_providers;
-    tauri::async_runtime::spawn_blocking(move || providers::list(&disabled_providers))
+    let current = config.get()?;
+    tauri::async_runtime::spawn_blocking(move || providers::list(&current))
         .await
         .map_err(|error| format!("번역 서비스 상태 확인을 기다리지 못했습니다: {error}"))
 }
@@ -1163,6 +1163,44 @@ async fn provider_connect(
 }
 
 #[tauri::command]
+async fn provider_openai_compat_connect(
+    app: AppHandle,
+    engine: State<'_, RustEngine>,
+    config: State<'_, ConfigStore>,
+    base_url: String,
+    model: String,
+    batch_size: u32,
+    concurrency: u32,
+    shared_context: bool,
+    credential: Option<String>,
+) -> Result<providers::ProviderConnection, String> {
+    let requested = config.get()?.patched(json!({
+        "openai_compat_base_url": base_url,
+        "openai_compat_model": model,
+        "openai_compat_batch_size": batch_size,
+        "openai_compat_concurrency": concurrency,
+        "openai_compat_shared_context": shared_context,
+    }))?;
+    let settings = translation::OpenAiCompatSettings::from_config(&requested);
+    let verified = tauri::async_runtime::spawn_blocking(move || {
+        providers::connect_openai_compat(settings, credential.as_deref())
+    })
+    .await
+    .map_err(|error| format!("번역 서비스 연결 작업을 기다리지 못했습니다: {error}"))??;
+    let updated = config.update(json!({
+        "openai_compat_base_url": verified.base_url,
+        "openai_compat_model": verified.model,
+        "openai_compat_batch_size": verified.batch_size,
+        "openai_compat_concurrency": verified.concurrency,
+        "openai_compat_shared_context": verified.shared_context,
+    }))?;
+    engine.apply_config(updated.clone())?;
+    let _ = app.emit("settings-changed", updated.clone());
+    let _ = app.emit("provider-connections-changed", ());
+    Ok(providers::openai_compat_status(&updated))
+}
+
+#[tauri::command]
 fn provider_login_cancel(login_state: State<'_, ProviderLoginState>) -> Result<bool, String> {
     login_state.cancel()
 }
@@ -1193,6 +1231,10 @@ fn provider_disconnect(
             disabled_providers.sort();
         }
         patch["disabled_providers"] = json!(disabled_providers);
+    }
+    if provider == "openai_compat" {
+        patch["openai_compat_base_url"] = json!("");
+        patch["openai_compat_model"] = json!("");
     }
     if current.translator == provider {
         patch["translator"] = json!("hymt_1_8b");
@@ -1963,6 +2005,7 @@ fn main() {
             provider_connections_get,
             provider_install,
             provider_connect,
+            provider_openai_compat_connect,
             provider_login_cancel,
             provider_login_open,
             provider_disconnect,

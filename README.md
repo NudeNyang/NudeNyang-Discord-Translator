@@ -125,11 +125,11 @@ The boundary is intentionally narrow:
 | Sending | Places translated text with `Input.insertText` only. It does not synthesize Enter, mouse actions, file attachments, or split-message sends. |
 | Verification compatibility | Detects visible additional verification, detaches the translation pipe, and offers a standard Discord restart. Reconnection requires an explicit user action. |
 | External translation | Sends extracted text only when an external provider is selected. Image pixels, authentication tokens, and the cache database stay local. |
-| Credentials | Stores the DeepL key in Windows Credential Manager, not in settings JSON, logs, or the translation cache. Subscription connections use each provider's official local CLI authentication. |
+| Credentials | Stores DeepL and OpenAI-compatible API keys in Windows Credential Manager, not in settings JSON, logs, or the translation cache. Subscription connections use each provider's official local CLI authentication. |
 | Diagnostics | Redacts home paths and secrets. Message bodies and local-model prompts are not written to the log. |
 | Downloaded models | Uses pinned revisions and verifies expected file size and SHA-256 before loading. |
 
-Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, Gemini, and DeepL are optional; choosing one sends the text that needs translation to that provider under its own terms.
+Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, Gemini, DeepL, and OpenAI-compatible APIs are optional; choosing one sends the text that needs translation to that provider under its own terms.
 
 ## Features
 
@@ -137,7 +137,7 @@ Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, G
 - Outgoing translation based on a per-channel choice or recent conversation language, with the final send left to the user
 - 28 chat and interface languages, including Korean, English, Japanese, Simplified and Traditional Chinese
 - Hy-MT2 1.8B and 7B local models, plus experimental TranslateGemma 4B
-- Optional ChatGPT, Claude, Gemini, DeepL, and a mock provider for testing
+- Optional ChatGPT, Claude, Gemini, DeepL, a user-specified OpenAI-compatible API, and a mock provider for testing
 - Local image translation with adaptive PP-OCR recognition and original/translated toggling
 - Selection dictionary with a separate result window, speech, contextual sense ordering, personal terms, and install-on-demand practical packs
 - Verification compatibility mode that pauses translation during additional Discord verification and reconnects only on request

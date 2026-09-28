@@ -75,6 +75,7 @@ test("the Windows uninstaller separates application data from downloaded local A
   assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.NudeNyang Discord Translator/);
   assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.NudeNyang Translator/);
   assert.match(installerHooks, /cmdkey\.exe[^\r\n]+deepl\.Nude Translator/);
+  assert.match(installerHooks, /cmdkey\.exe[^\r\n]+openai_compat\.NudeNyang Discord Translator/);
 });
 
 test("the Windows uninstaller uses the NudeNyang Discord Translator icon", () => {

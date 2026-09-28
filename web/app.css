@@ -2485,6 +2485,56 @@ select:focus-visible,
   min-width: 110px;
 }
 
+.provider-form {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px 14px;
+}
+
+.provider-form-wide {
+  grid-column: 1 / -1;
+}
+
+.provider-form-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.provider-form-field > span:first-child,
+.provider-form-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.provider-form-toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.provider-form-toggle h3,
+.provider-form-toggle p {
+  margin: 0;
+}
+
+.provider-form-toggle h3 {
+  font-size: 13px;
+}
+
+.provider-form-toggle p {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.provider-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .button.danger {
   border-color: color-mix(in srgb, var(--danger) 62%, var(--border));
   color: var(--danger);

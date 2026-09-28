@@ -2,11 +2,13 @@ use std::time::Duration;
 
 use serde::Serialize;
 
+use crate::config::AppConfig;
 use crate::credentials;
 use crate::translation::{
     connect_subscription_interactively_with_observer, install_subscription_cli,
     probe_subscription_connection, CliConnectionProbe, DeepLTranslator, LoginBrowserGate,
-    LoginProcessObserver,
+    LoginProcessObserver, OpenAiCompatSettings, OpenAiCompatTranslator,
+    OPENAI_COMPAT_CREDENTIAL_ID,
 };
 
 #[derive(Clone, Debug, Serialize)]
@@ -23,7 +25,8 @@ pub struct ProviderConnection {
     pub can_disconnect: bool,
 }
 
-pub fn list(disabled_providers: &[String]) -> Vec<ProviderConnection> {
+pub fn list(config: &AppConfig) -> Vec<ProviderConnection> {
+    let disabled_providers = &config.disabled_providers;
     vec![
         cli_status(
             "chatgpt",
@@ -44,7 +47,30 @@ pub fn list(disabled_providers: &[String]) -> Vec<ProviderConnection> {
             disabled_providers,
         ),
         deepl_status(),
+        openai_compat_status(config),
     ]
+}
+
+/// Validates with one real translation, then stores the key only after the server accepted it.
+pub fn connect_openai_compat(
+    settings: OpenAiCompatSettings,
+    credential: Option<&str>,
+) -> Result<OpenAiCompatSettings, String> {
+    let credential = credential.map(str::trim).filter(|value| !value.is_empty());
+    let api_key = match credential {
+        Some(key) => Some(key.to_string()),
+        None => credentials::read(OPENAI_COMPAT_CREDENTIAL_ID)?,
+    };
+    let translator = OpenAiCompatTranslator::new(settings.clone(), api_key)?;
+    translator.validate()?;
+    if let Some(key) = credential {
+        credentials::write(OPENAI_COMPAT_CREDENTIAL_ID, key)?;
+    }
+    Ok(OpenAiCompatSettings {
+        base_url: crate::translation::normalize_openai_compat_base_url(&settings.base_url)?,
+        model: settings.model.trim().to_string(),
+        ..settings
+    })
 }
 
 pub fn connect_with_observer(
@@ -96,6 +122,10 @@ pub fn disconnect(provider: &str) -> Result<ProviderConnection, String> {
         "deepl" => {
             credentials::delete("deepl")?;
             Ok(deepl_status())
+        }
+        "openai_compat" => {
+            credentials::delete(OPENAI_COMPAT_CREDENTIAL_ID)?;
+            Ok(openai_compat_status(&AppConfig::default()))
         }
         "chatgpt" | "claude" | "gemini" => {
             let (name, auth_mode) = cli_provider_identity(provider);
@@ -215,9 +245,52 @@ fn deepl_status() -> ProviderConnection {
     }
 }
 
+pub fn openai_compat_status(config: &AppConfig) -> ProviderConnection {
+    let configured =
+        !config.openai_compat_base_url.is_empty() && !config.openai_compat_model.is_empty();
+    let (connected, detail) = match (configured, credentials::read(OPENAI_COMPAT_CREDENTIAL_ID)) {
+        (_, Err(error)) => (false, error),
+        (false, _) => (
+            false,
+            "서버 주소와 모델 ID를 입력하여 연결하십시오.".to_string(),
+        ),
+        (true, Ok(Some(_))) => (
+            true,
+            "서버에 연결되었으며 API 키가 운영체제 보안 저장소에 저장되어 있습니다.".to_string(),
+        ),
+        (true, Ok(None)) => (true, "API 키 없이 서버에 연결되었습니다.".to_string()),
+    };
+    ProviderConnection {
+        id: "openai_compat".to_string(),
+        name: "OpenAI 호환 API".to_string(),
+        auth_mode: "사용자 지정 서버".to_string(),
+        installed: true,
+        connected,
+        state: if connected {
+            "connected"
+        } else {
+            "setup-required"
+        }
+        .to_string(),
+        detail,
+        credential_required: false,
+        can_disconnect: connected,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{cli_connection, disconnect};
+    use super::{cli_connection, disconnect, openai_compat_status};
+    use crate::config::AppConfig;
+
+    #[test]
+    fn openai_compatible_status_requires_an_address_and_model() {
+        let status = openai_compat_status(&AppConfig::default());
+        assert_eq!(status.id, "openai_compat");
+        assert_eq!(status.state, "setup-required");
+        assert!(!status.connected);
+        assert!(!status.can_disconnect);
+    }
     use crate::translation::CliConnectionProbe;
 
     #[test]

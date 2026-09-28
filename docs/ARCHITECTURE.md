@@ -157,7 +157,9 @@ NudeNyang does not send these items to external translation providers:
 - the local cache database;
 - diagnostic logs.
 
-DeepL credentials are stored in Windows Credential Manager. Subscription providers use their official local CLI authentication. Diagnostic logs redact home paths and secret values and do not include message bodies or local-model prompts.
+DeepL and OpenAI-compatible API keys are stored in Windows Credential Manager. Subscription providers use their official local CLI authentication.
+
+The OpenAI-compatible provider (`translation/openai_compat.rs`) sends `POST {base_url}/chat/completions` requests to a user-specified server and is always treated as an external provider, including for local-network addresses. Each engine batch is split into requests of `openai_compat_batch_size` items, and up to `openai_compat_concurrency` requests run at once on scoped threads sharing one blocking HTTP client. With shared context enabled, every request carries the whole batch as reference context with a byte-identical prefix so servers with prefix caching reuse it; the response schema restricts ids to the items that request owns. Structured output falls back from `json_schema` to `json_object` to plain text only when the server rejects the format. A mismatched response is split in half and retried, and HTTP 429 honours `Retry-After` without a fixed rate cap. Redirects are not followed. The cache namespace hashes the address, model and shared-context flag, and changing any of these settings rebuilds only the lanes that use this provider. Diagnostic logs redact home paths and secret values and do not include message bodies or local-model prompts.
 
 After saved settings load, provider connection probes start asynchronously regardless of which settings panel is visible. Automatic probes use background-safe structured CLI commands and never wait in the UI initialization path. Only a login flow explicitly started by the user may open an authentication terminal or browser window; unsupported legacy CLI probes report that an update is required instead of falling back to an interactive console command.
 

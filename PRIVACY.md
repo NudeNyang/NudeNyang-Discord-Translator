@@ -47,15 +47,15 @@ NudeNyang Discord Translator는 별도의 운영 서버를 두지 않으며, 개
 
 앱의 기록 보관 기간(기본 30일, 7/30/90/180일 또는 기간 제한 없음)과 기록 삭제 기능을 그대로 사용합니다. 기간 제한 없음은 저장하지 않음이 아닙니다. 대화 전환, 웹 번역 끄기 또는 동의 철회만으로 이미 저장한 캐시를 삭제하지 않으므로, 삭제하려면 앱의 기록 삭제를 사용해야 합니다. 외부 공급자와 구독 CLI의 자체 기록·보관 정책은 본체의 캐시 삭제로 제어하지 못합니다.
 
-시크릿/사생활 보호 창은 본체의 디스크 캐시를 읽거나 쓰지 않고 요청 단위 메모리만 사용합니다. 구독 CLI의 로컬 기록 경로를 통제할 수 없어 이 창에서는 로컬 모델 또는 DeepL만 허용합니다. 이 제한은 일반 창에 적용하지 않습니다.
+시크릿/사생활 보호 창은 본체의 디스크 캐시를 읽거나 쓰지 않고 요청 단위 메모리만 사용합니다. 구독 CLI의 로컬 기록 경로를 통제할 수 없어 이 창에서는 로컬 모델, DeepL 또는 OpenAI 호환 API만 허용합니다. OpenAI 호환 API 서버의 기록·보관은 사용자가 지정한 서버의 정책을 따릅니다. 이 제한은 일반 창에 적용하지 않습니다.
 
 확장 자체는 대화 본문을 브라우저 저장소에 저장하지 않습니다. 현재 DOM을 위한 메모리 사본은 대화 이동·종료·동의 철회 때 폐기하며, 새 수집과 요청을 차단하고 이전 대화나 철회된 동의에 대한 늦은 응답은 표시하지 않습니다. 이미 전달한 외부 요청은 취소하거나 회수하지 못할 수 있습니다. 사이트의 원문·서버 기록 삭제, RAM·VRAM·운영체제 사본의 즉시 물리 소거는 보장하지 않습니다. 앱 진단 로그에 대화 본문을 기록하지 않습니다.
 
 ## 선택형 외부 서비스
 
-일반 웹·Discord 번역에서는 사용자가 ChatGPT, Claude, Gemini 또는 DeepL을 번역 서비스로 직접 선택한 경우에만 번역에 필요한 텍스트가 해당 서비스로 전송됩니다. 이미지 번역에서는 PC 안에서 인식한 텍스트만 선택한 서비스로 전달되며 이미지 파일이나 픽셀은 전달하지 않습니다. 사적 읽기 동의 v5 이후 일반 창의 웹 메신저와 열린 메일도 이 외부 서비스 경로를 사용합니다.
+일반 웹·Discord 번역에서는 사용자가 ChatGPT, Claude, Gemini, DeepL 또는 OpenAI 호환 API를 번역 서비스로 직접 선택한 경우에만 번역에 필요한 텍스트가 해당 서비스로 전송됩니다. 이미지 번역에서는 PC 안에서 인식한 텍스트만 선택한 서비스로 전달되며 이미지 파일이나 픽셀은 전달하지 않습니다. 사적 읽기 동의 v5 이후 일반 창의 웹 메신저와 열린 메일도 이 외부 서비스 경로를 사용합니다.
 
-외부 서비스의 데이터 처리는 각 공급자의 약관과 개인정보 처리방침을 따릅니다. 구독형 서비스 연결은 각 공급자의 공식 로컬 CLI 인증을 사용하며, DeepL API 키는 Windows 자격 증명 관리자에 저장합니다.
+외부 서비스의 데이터 처리는 각 공급자의 약관과 개인정보 처리방침을 따릅니다. 구독형 서비스 연결은 각 공급자의 공식 로컬 CLI 인증을 사용하며, DeepL과 OpenAI 호환 API의 API 키는 Windows 자격 증명 관리자에 저장합니다. OpenAI 호환 API는 사용자가 입력한 서버 주소로만 요청하며, 주소가 로컬 네트워크인지 인터넷인지는 구분하지 않고 외부 서비스로 취급합니다.
 
 ## 네트워크 사용
 
@@ -79,7 +79,7 @@ NudeNyang Discord Translator does not operate a developer-controlled backend. Th
 
 This document includes the unpublished web-consent-v2 and private-reading-consent-v5 development policy. Version numbers alone do not establish support. The public policy, installers and store disclosures must be updated together before a future release.
 
-Local models process translation on the user's PC. Image pixels remain local for OCR and compositing. For ordinary webpage and Discord translation, if the user explicitly selects ChatGPT, Claude, Gemini, or DeepL, only the text required for translation is sent to that provider under its own terms and privacy policy. Ordinary settings, caches, and history remain in the Windows user data directory. After consent v5, regular-window messenger translation uses the same translator and cache policy. DeepL credentials are stored in Windows Credential Manager, and subscription providers use their official local CLI authentication. Diagnostic logs do not record message bodies, local-model prompts, or authentication secrets.
+Local models process translation on the user's PC. Image pixels remain local for OCR and compositing. For ordinary webpage and Discord translation, if the user explicitly selects ChatGPT, Claude, Gemini, DeepL, or an OpenAI-compatible API, only the text required for translation is sent to that provider under its own terms and privacy policy. An OpenAI-compatible API receives requests only at the server address the user entered and is treated as an external service whether that address is on a local network or the internet. Ordinary settings, caches, and history remain in the Windows user data directory. After consent v5, regular-window messenger translation uses the same translator and cache policy. DeepL and OpenAI-compatible API keys are stored in Windows Credential Manager, and subscription providers use their official local CLI authentication. Diagnostic logs do not record message bodies, local-model prompts, or authentication secrets.
 
 The Chrome, Naver Whale, and Firefox extensions can run on ordinary HTTP/HTTPS websites, which may produce a browser warning that they can read and change data on all websites. Firefox declares eligible ordinary page text passed to the Windows app as `websiteContent` and the address category of the page being translated as `browsingActivity`. Web-messenger reading uses the separate optional category `personalCommunications`.
 
@@ -105,13 +105,13 @@ Private-reading consent v5 adds the subject and body of an opened Gmail/Outlook 
 
 Supported messenger surfaces are X DM, web Discord, WhatsApp Web, Telegram Web, Messenger, Slack, Microsoft Teams and Google Messages. Only an identified open conversation is read: visible message bodies and link-preview text, plus visible channel names in the current Discord server. Gmail and Outlook reading is limited to the subject and visible body in the currently opened reading pane. Mail lists, sender/recipient UI, drafts and attachment contents are excluded. Outlook integration has only synthetic automated verification; live testing was not performed. Other unconnected mail services remain blocked from public fallback. The extension does not open other conversations, retrieve hidden history, attachments or linked pages, or translate authors, handles, contact lists, profiles, composers, drafts, send controls or code. Sensitive information in permitted message bodies is not automatically redacted.
 
-The app's selected translator is shared with desktop Discord. Local models process text on the PC. Selecting ChatGPT, Claude, Gemini or DeepL permits the necessary conversation text to be sent to that provider, including its configured fallback path, under the provider's policies. Requests to the local companion use a random conversation identifier, not a real conversation URL, ID or participant list. Private-browsing state comes from browser-owned tab metadata.
+The app's selected translator is shared with desktop Discord. Local models process text on the PC. Selecting ChatGPT, Claude, Gemini, DeepL or an OpenAI-compatible API permits the necessary conversation text to be sent to that provider, including its configured fallback path, under the provider's policies. Requests to the local companion use a random conversation identifier, not a real conversation URL, ID or participant list. Private-browsing state comes from browser-owned tab metadata.
 
 In regular windows the app reuses its shared translation cache. Source text, translations and saved outgoing message bodies are encrypted using Windows user-scoped DPAPI before SQLite storage. Existing plaintext bodies are migrated without discarding their retention timestamps. Metadata such as settings, languages and cache indexes is not whole-database encrypted. This protection does not prevent access by software running as the same Windows user or access to live process memory.
 
 App retention is 30 days by default, with 7/30/90/180-day or unlimited options. Unlimited does not mean storage is disabled. The existing history-deletion action clears this cache. Changing conversations, disabling translation or withdrawing consent does not delete previously stored cache entries. Provider and subscription-CLI records are governed separately and cannot be deleted through the app cache controls.
 
-Private-browsing requests never read or write the app's disk cache and use request-scoped memory. Only local models and DeepL are allowed there because subscription CLI local-content records cannot be controlled. Regular-window messenger translation has no such provider restriction.
+Private-browsing requests never read or write the app's disk cache and use request-scoped memory. Only local models, DeepL and OpenAI-compatible APIs are allowed there because subscription CLI local-content records cannot be controlled. Records kept by an OpenAI-compatible server follow the policy of the server the user specified. Regular-window messenger translation has no such provider restriction.
 
 The extension persists settings and consent, not message bodies. It discards its current-conversation memory copies on navigation, closure or revocation, blocks new collection and requests, and ignores late responses for an old conversation or revoked consent. Requests already sent externally may not be retractable. This does not delete the messenger service's original messages or server records, or guarantee physical erasure of RAM, VRAM or OS-managed copies. App diagnostics do not record conversation bodies.
 

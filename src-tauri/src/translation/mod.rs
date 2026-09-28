@@ -3,6 +3,7 @@ mod discord_format;
 pub mod hymt;
 mod local_model;
 mod mock;
+mod openai_compat;
 pub mod protected_text;
 mod resilient;
 mod service;
@@ -19,6 +20,10 @@ pub use hymt::{
 #[cfg(test)]
 pub use mock::progress as mock_progress;
 pub use mock::{MockTranslator, OriginalTranslator};
+pub use openai_compat::{
+    normalize_base_url as normalize_openai_compat_base_url, OpenAiCompatSettings,
+    OpenAiCompatTranslator, CREDENTIAL_ID as OPENAI_COMPAT_CREDENTIAL_ID,
+};
 pub use resilient::{translation_needs_repair, ResilientTranslator};
 pub use service::{outgoing_can_passthrough, TranslationService, WebTranslationSession};
 pub use subscription_cli::{
