@@ -1,4 +1,4 @@
-// Opt-in investigation harness. Records retry counts; passing does not mean the retry bug is fixed.
+// Regression coverage for the display polling loop and its provider request budget.
 // Uses synthetic Discord pages, separate app/browser profiles and a loopback echo API only.
 import { createServer } from "node:http";
 import { test, expect, chromium } from "@playwright/test";
@@ -84,7 +84,7 @@ async function fixture({ delay = 0, text = "This is an English message for the t
 }
 
 
-test("investigate unchanged output retries using only loopback API and synthetic Discord", async () => {
+test("unchanged output stops after quality repair across nine synthetic Discord samples", async () => {
   test.setTimeout(90_000);
   const reports = [];
   for (const sample of [
@@ -126,10 +126,88 @@ test("investigate unchanged output retries using only loopback API and synthetic
       await new Promise(resolve => setTimeout(resolve, 1800));
       reports.push({sample:sample.name, firstWindow:first, secondWindow: calls-first, total:calls, notice:(await app.call("status")).notice});
       expect(authenticated).toBe(false);
+      expect(calls, `${sample.name}: bounded quality repair`).toBeLessThanOrEqual(2);
+      expect(calls - first, `${sample.name}: polling must not restart failed translations`).toBe(0);
+      if (["while", "natural-language"].includes(sample.name)) expect(calls).toBe(2);
     } finally {
       await app.close();
       await new Promise(resolve => server.close(resolve));
     }
   }
   console.log("UNCHANGED_RETRY_PROBE="+JSON.stringify(reports));
+});
+
+async function withApi(respond, run) {
+  const requests = [];
+  const server = createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString());
+    const payload = JSON.parse(body.messages.find(message => message.role === "user").content);
+    const items = payload.items || payload.context.filter(item => payload.translate_ids.includes(item.id));
+    requests.push({ time: Date.now(), items, authenticated: Boolean(req.headers.authorization) });
+    res.setHeader("Content-Type", "application/json");
+    const response = respond(items, requests.length);
+    res.statusCode = response.status || 200;
+    res.end(JSON.stringify(response.error || {choices:[{message:{content:JSON.stringify({translations:response.items})}}]}));
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const app = await fixture({ text: "while(true)" });
+  try {
+    await app.call("configure", {patch:{translator:"openai_compat", openai_compat_base_url:`http://127.0.0.1:${server.address().port}/retry-regression/v1`,openai_compat_model:"echo-probe",openai_compat_batch_size:8,openai_compat_concurrency:1}});
+    await app.focus("stable");
+    await run(app, requests);
+    expect(requests.every(request => !request.authenticated)).toBe(true);
+  } finally {
+    await app.close();
+    await new Promise(resolve => server.close(resolve));
+  }
+}
+
+const settle = () => new Promise(resolve => setTimeout(resolve, 1800));
+
+test("failed message survives remount, edits and explicit retry work, other messages still translate", async () => {
+  test.setTimeout(40_000);
+  await withApi(items => ({items:items.map(item => ({id:item.id,text:item.text.startsWith("This neighbor") ? "옆 메시지의 번역입니다." : item.text}))}), async (app, requests) => {
+    await expect.poll(() => requests.length).toBe(2);
+    await settle();
+    await app.message("stable").evaluate(element => { element.parentElement.innerHTML = '<div id="message-content-2">while(true)</div>'; });
+    await settle();
+    expect(requests.length).toBe(2);
+    await app.pages.stable.locator("ol").evaluate(element => { element.insertAdjacentHTML("beforeend", '<li id="chat-messages-1-3"><div id="message-content-3">This neighbor should still be translated.</div></li>'); });
+    await expect(app.pages.stable.locator("#message-content-3")).toHaveText("옆 메시지의 번역입니다.");
+    expect(requests.filter(request => request.items.some(item => item.text === "while(true)")).length).toBe(2);
+    await app.message("stable").evaluate(element => { element.textContent = "while(false)"; });
+    await expect.poll(() => requests.filter(request => request.items.some(item => item.text === "while(false)")).length).toBe(2);
+    await settle();
+    const beforeRetry = requests.length;
+    await app.call("enabled", { enabled:false });
+    await expect.poll(async () => (await app.call("status")).enabled).toBe(false);
+    await app.call("enabled", { enabled:true });
+    await expect.poll(() => requests.length).toBe(beforeRetry + 2);
+    await settle();
+    expect(requests.length).toBe(beforeRetry + 2);
+    await expect(app.message("stable")).toHaveText("while(false)");
+  });
+});
+
+test("server errors back off and stop after three pipeline attempts", async () => {
+  test.setTimeout(30_000);
+  await withApi(() => ({status:500,error:{error:{message:"temporary test failure"}}}), async (app, requests) => {
+    await expect.poll(() => requests.length, { timeout:15_000 }).toBe(3);
+    await new Promise(resolve => setTimeout(resolve, 4500));
+    expect(requests.length).toBe(3);
+    expect(requests[1].time - requests[0].time).toBeGreaterThanOrEqual(1900);
+    expect(requests[2].time - requests[1].time).toBeGreaterThanOrEqual(3900);
+    await expect(app.message("stable")).toHaveText("while(true)");
+  });
+});
+
+test("a transient server error can recover before exhausting the budget", async () => {
+  await withApi((items, count) => count === 1 ? {status:500,error:{error:{message:"temporary"}}} : {items:items.map(item => ({id:item.id,text:"반복 조건입니다."}))}, async (app, requests) => {
+    // Existing punctuation restoration follows the source, which has no final period.
+    await expect(app.message("stable")).toHaveText("반복 조건입니다", { timeout:10_000 });
+    await settle();
+    expect(requests.length).toBe(2);
+  });
 });

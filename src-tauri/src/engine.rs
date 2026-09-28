@@ -2939,6 +2939,7 @@ fn scan_dom(
         .map(DomPart::locator)
         .collect::<HashSet<_>>();
     states.retain(|locator, _| locators.contains(locator));
+    let mut deferred = HashSet::new();
     for range in message_ranges(&snapshot.parts) {
         let group = &snapshot.parts[range];
         if group.iter().all(|part| {
@@ -2964,7 +2965,9 @@ fn scan_dom(
             context_scope: context_scope.clone(),
             queued_at: Instant::now(),
         };
-        if let Some(values) = replay.lookup(&batch) {
+        if replay.deferred_error(&batch, Instant::now()).is_some() {
+            deferred.extend(group.iter().map(DomPart::locator));
+        } else if let Some(values) = replay.lookup(&batch) {
             for (part, translated) in group.iter().zip(values) {
                 states.insert(
                     part.locator(),
@@ -2976,6 +2979,9 @@ fn scan_dom(
             }
         }
     }
+    snapshot
+        .parts
+        .retain(|part| !deferred.contains(&part.locator()));
     let (changes, parts) = plan_dom_updates(
         snapshot.parts,
         states,
@@ -3788,8 +3794,12 @@ fn run_translation_worker_with_replay(
                     .map(incoming_context_key)
                     .collect::<Vec<_>>();
                 let revision = replay.revision();
+                let deferred_error = replay.deferred_error(&batch, Instant::now());
+                let deferred = deferred_error.is_some();
                 let values = if let Some(values) = replay.lookup(&batch) {
                     Ok(values)
+                } else if let Some(error) = deferred_error {
+                    Err(error)
                 } else if let Some(hints) = &batch.source_hints {
                     service.translate_incoming_with_hints(
                         &texts,
@@ -3808,7 +3818,15 @@ fn run_translation_worker_with_replay(
                     )
                 };
                 if let Ok(values) = &values {
+                    replay.clear_failure(&batch, revision);
                     replay.store(&batch, values, revision);
+                } else if !deferred {
+                    replay.record_failure(
+                        &batch,
+                        values.as_ref().unwrap_err(),
+                        revision,
+                        Instant::now(),
+                    );
                 }
                 let _ = results.send(WorkerResult::Translated {
                     generation: batch.generation,

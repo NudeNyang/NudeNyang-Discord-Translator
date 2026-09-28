@@ -1,8 +1,8 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: ".",
-  testMatch: "unchanged-result-probe.spec.mjs",
+  testDir: "../../extension/e2e",
+  testMatch: "discord-retry.spec.mjs",
   outputDir: "../../test-results/unchanged-retry-probe",
   workers: 1,
   retries: 0,

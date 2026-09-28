@@ -36,7 +36,7 @@ const WEB_INFERENCE_YIELD_MS: u64 = 48;
 const MESSAGE_CONTEXT_SEPARATOR: &str = " <NTSPLIT> ";
 const WEB_VISIBLE_BATCH_CONTEXT_KEY: &str = "web:visible-batch";
 const CONTEXT_COLLAPSED_PLACEHOLDER: &str = "\u{200b}";
-const QUALITY_REJECTED_ERROR: &str = "번역 품질 검사 실패";
+pub(crate) const QUALITY_REJECTED_ERROR: &str = "번역 품질 검사 실패";
 const MAX_INCOMING_QUALITY_ATTEMPTS: usize = 2;
 
 /// Request-owned state survives scheduler yields without sharing private language

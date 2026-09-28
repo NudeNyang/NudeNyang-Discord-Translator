@@ -6,6 +6,12 @@ use sha2::{Digest, Sha256};
 const MAX_REPLAY_MESSAGES: usize = 1024;
 const MAX_REPLAY_BYTES: usize = 8 * 1024 * 1024;
 
+struct DisplayFailure {
+    attempts: u8,
+    retry_at: Option<Instant>,
+    error: String,
+}
+
 #[derive(Default)]
 struct ReplayState {
     namespace: String,
@@ -14,6 +20,8 @@ struct ReplayState {
     order: VecDeque<String>,
     misses: HashSet<String>,
     bytes: usize,
+    failures: HashMap<String, DisplayFailure>,
+    failure_order: VecDeque<String>,
 }
 
 pub(super) struct DisplayReplay {
@@ -35,6 +43,8 @@ impl DisplayReplay {
         let mut state = self.state.lock().unwrap();
         state.namespace = namespace.to_string();
         state.revision += 1;
+        state.failures.clear();
+        state.failure_order.clear();
     }
 
     pub fn clear_memory(&self) {
@@ -43,6 +53,8 @@ impl DisplayReplay {
         state.entries.clear();
         state.order.clear();
         state.misses.clear();
+        state.failures.clear();
+        state.failure_order.clear();
         state.bytes = 0;
     }
 
@@ -55,12 +67,80 @@ impl DisplayReplay {
         state.entries.clear();
         state.order.clear();
         state.misses.clear();
+        state.failures.clear();
+        state.failure_order.clear();
         state.bytes = 0;
         operation()
     }
 
     pub fn revision(&self) -> u64 {
         self.state.lock().unwrap().revision
+    }
+
+    fn failure_key(namespace: &str, batch: &TranslationBatch) -> Option<String> {
+        // A remount is not a new attempt. Explicit translation/config changes are.
+        Self::key(namespace, batch).map(|key| format!("{}:{key}", batch.generation))
+    }
+
+    pub fn deferred_error(&self, batch: &TranslationBatch, now: Instant) -> Option<String> {
+        let state = self.state.lock().unwrap();
+        let key = Self::failure_key(&state.namespace, batch)?;
+        let failure = state.failures.get(&key)?;
+        if failure.retry_at.is_some_and(|retry_at| now >= retry_at) {
+            return None;
+        }
+        Some(failure.error.clone())
+    }
+
+    pub fn record_failure(
+        &self,
+        batch: &TranslationBatch,
+        error: &str,
+        revision: u64,
+        now: Instant,
+    ) {
+        let mut state = self.state.lock().unwrap();
+        if state.revision != revision {
+            return;
+        }
+        let Some(key) = Self::failure_key(&state.namespace, batch) else {
+            return;
+        };
+        let attempts = state
+            .failures
+            .get(&key)
+            .map_or(1, |failure| failure.attempts.saturating_add(1));
+        // Quality repair already ran inside the provider. Repeating the entire
+        // pipeline cannot distinguish code from an unchanged natural sentence.
+        let terminal =
+            error.starts_with(crate::translation::QUALITY_REJECTED_ERROR) || attempts >= 3;
+        if !state.failures.contains_key(&key) {
+            state.failure_order.push_back(key.clone());
+        }
+        state.failures.insert(
+            key,
+            DisplayFailure {
+                attempts,
+                retry_at: (!terminal).then(|| now + Duration::from_secs(1 << attempts)),
+                // Bound diagnostics in memory; never persist failed message bodies.
+                error: error.chars().take(1024).collect(),
+            },
+        );
+        while state.failures.len() > MAX_REPLAY_MESSAGES {
+            let oldest = state.failure_order.pop_front().unwrap();
+            state.failures.remove(&oldest);
+        }
+    }
+
+    pub fn clear_failure(&self, batch: &TranslationBatch, revision: u64) {
+        let mut state = self.state.lock().unwrap();
+        if state.revision != revision {
+            return;
+        }
+        if let Some(key) = Self::failure_key(&state.namespace, batch) {
+            state.failures.remove(&key);
+            state.failure_order.retain(|candidate| candidate != &key);
+        }
     }
 
     pub fn observe(&self, generation: u64, epoch: u64, parts: &[DomPart]) {
@@ -295,6 +375,117 @@ mod tests {
                 displayed_text: None,
             }],
         }
+    }
+
+    #[test]
+    fn quality_failure_survives_remount_but_not_edits_or_explicit_retry() {
+        let replay = DisplayReplay {
+            store: None,
+            state: Mutex::new(ReplayState::default()),
+            visible: Mutex::new(HashMap::new()),
+        };
+        replay.activate("retry-test");
+        let original = batch();
+        let now = Instant::now();
+        replay.record_failure(
+            &original,
+            crate::translation::QUALITY_REJECTED_ERROR,
+            replay.revision(),
+            now,
+        );
+        let mut remount = batch();
+        remount.view_epoch += 1;
+        remount.parts[0].item_id = "remounted".into();
+        assert!(replay
+            .deferred_error(&remount, now + Duration::from_secs(3600))
+            .is_some());
+        assert!(
+            replay.lookup(&original).is_none(),
+            "failure must not enter translation cache"
+        );
+        let mut edit = batch();
+        edit.parts[0].text.push_str(" changed");
+        assert!(replay.deferred_error(&edit, now).is_none());
+        let mut retry = batch();
+        retry.generation += 1;
+        assert!(replay.deferred_error(&retry, now).is_none());
+        let mut other = batch();
+        other.view_scope.push_str("other-channel");
+        assert!(replay.deferred_error(&other, now).is_none());
+        other = batch();
+        other.target = Language::Japanese;
+        assert!(replay.deferred_error(&other, now).is_none());
+        replay.activate("other-provider");
+        assert!(replay.deferred_error(&original, now).is_none());
+    }
+
+    #[test]
+    fn transient_failure_backs_off_and_stops_after_three_attempts() {
+        let replay = DisplayReplay::new();
+        replay.activate("retry-test");
+        let batch = batch();
+        let now = Instant::now();
+        let revision = replay.revision();
+        replay.record_failure(&batch, "server unavailable", revision, now);
+        assert!(replay
+            .deferred_error(&batch, now + Duration::from_secs(1))
+            .is_some());
+        assert!(replay
+            .deferred_error(&batch, now + Duration::from_secs(2))
+            .is_none());
+        replay.record_failure(
+            &batch,
+            "server unavailable",
+            revision,
+            now + Duration::from_secs(2),
+        );
+        assert!(replay
+            .deferred_error(&batch, now + Duration::from_secs(5))
+            .is_some());
+        assert!(replay
+            .deferred_error(&batch, now + Duration::from_secs(6))
+            .is_none());
+        replay.record_failure(
+            &batch,
+            "server unavailable",
+            revision,
+            now + Duration::from_secs(6),
+        );
+        assert!(replay
+            .deferred_error(&batch, now + Duration::from_secs(3600))
+            .is_some());
+        replay.clear_failure(&batch, revision);
+        assert!(replay.deferred_error(&batch, now).is_none());
+        replay.clear_memory();
+        replay.record_failure(&batch, "late failure", revision, now);
+        assert!(replay.deferred_error(&batch, now).is_none());
+    }
+
+    #[test]
+    fn failure_memory_is_bounded_and_cleared_with_cache() {
+        let replay = DisplayReplay::new();
+        replay.activate("retry-test");
+        let mut batch = batch();
+        for index in 0..MAX_REPLAY_MESSAGES + 20 {
+            batch.parts[0].context_id = Some(format!("message-{index}"));
+            replay.record_failure(
+                &batch,
+                "x".repeat(2000).as_str(),
+                replay.revision(),
+                Instant::now(),
+            );
+        }
+        {
+            let state = replay.state.lock().unwrap();
+            assert_eq!(state.failures.len(), MAX_REPLAY_MESSAGES);
+            assert_eq!(state.failure_order.len(), MAX_REPLAY_MESSAGES);
+            assert!(state
+                .failures
+                .values()
+                .all(|failure| failure.error.len() == 1024));
+        }
+        replay.invalidate(|| Ok(())).unwrap();
+        assert!(replay.deferred_error(&batch, Instant::now()).is_none());
     }
 
     #[test]
