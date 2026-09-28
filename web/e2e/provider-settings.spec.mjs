@@ -102,6 +102,23 @@ test("service guidance reveals setup and failed connections reopen the intact dr
   await expect(page.locator('[data-provider="openai_compat"] .provider-disconnect')).toBeVisible();
 });
 
+test("native validation reveals an invalid field even after its settings have been collapsed", async ({ page }) => {
+  await page.locator("#provider-openai_compat-summary").click();
+  await page.locator("#openai-compat-base-url").fill("invalid-address");
+  await page.locator("#provider-openai_compat-summary").click();
+  await page.locator("#confirm").click();
+  await expect(page.locator("#openai-compat-base-url")).toBeVisible();
+  await expect(page.locator("#openai-compat-base-url")).toBeFocused();
+  await page.locator("#openai-compat-base-url").fill("");
+  await page.locator(".provider-advanced summary").click();
+  await page.locator("#openai-compat-concurrency").fill("0");
+  await page.locator(".provider-advanced summary").click();
+  await page.locator("#provider-openai_compat-summary").click();
+  await page.locator("#confirm").click();
+  await expect(page.locator("#openai-compat-concurrency")).toBeVisible();
+  await expect(page.locator("#openai-compat-concurrency")).toBeFocused();
+});
+
 test("disclosure arrow remains geometrically centered when opened, closed and scaled", async ({ page }) => {
   const button = page.locator("#provider-openai_compat-summary");
   for (const zoom of [1, 1.25, 1.5, 2]) {
