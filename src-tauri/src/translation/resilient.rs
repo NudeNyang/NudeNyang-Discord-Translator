@@ -19,6 +19,7 @@ pub struct ResilientTranslator {
     fallback: Option<Box<dyn Translator>>,
     display_name: String,
     cache_namespace: String,
+    omission_check: bool,
 }
 
 impl ResilientTranslator {
@@ -45,7 +46,18 @@ impl ResilientTranslator {
             fallback,
             display_name,
             cache_namespace,
+            omission_check: true,
         }
+    }
+
+    pub fn with_omission_check(mut self, enabled: bool) -> Self {
+        if !enabled {
+            // Unchecked results must not be served when the check is turned back on.
+            self.cache_namespace.push_str(":unchecked");
+        }
+        self.omission_check = enabled;
+        self.primary.set_omission_check(enabled);
+        self
     }
 }
 
@@ -103,6 +115,9 @@ impl Translator for ResilientTranslator {
         let mut results = self.primary.translate_many(items, target)?;
         if results.len() != items.len() {
             return Err("주 번역 엔진이 요청 수와 다른 결과를 반환했습니다.".to_string());
+        }
+        if !self.omission_check {
+            return Ok(results);
         }
 
         let failed: Vec<usize> = items
@@ -268,7 +283,8 @@ impl Translator for ResilientTranslator {
         source: Language,
         target: Language,
     ) -> bool {
-        !translation_needs_repair(source_text, translated_text, source, target)
+        !self.omission_check
+            || !translation_needs_repair(source_text, translated_text, source, target)
     }
 
     fn prepare(&mut self) -> Result<(), String> {
@@ -943,6 +959,77 @@ mod tests {
                 })
                 .collect())
         }
+    }
+
+    struct EchoTranslator {
+        calls: RecordedCalls,
+    }
+
+    impl Translator for EchoTranslator {
+        fn display_name(&self) -> &str {
+            "echo"
+        }
+        fn cache_namespace(&self) -> &str {
+            "echo:test"
+        }
+        fn translate(
+            &mut self,
+            text: &str,
+            source: Language,
+            target: Language,
+        ) -> Result<String, String> {
+            self.translate_many(&[(text.to_string(), source)], target)
+                .map(|mut values| values.remove(0))
+        }
+        fn translate_many(
+            &mut self,
+            items: &[(String, Language)],
+            _target: Language,
+        ) -> Result<Vec<String>, String> {
+            self.calls.lock().unwrap().push(items.to_vec());
+            Ok(items.iter().map(|(text, _)| text.clone()).collect())
+        }
+    }
+
+    #[test]
+    fn disabled_omission_check_accepts_the_first_result_without_repair_requests() {
+        let source = "System.out.println(testData)";
+        let calls = RecordedCalls::default();
+        let mut checked = ResilientTranslator::new(
+            Box::new(EchoTranslator {
+                calls: calls.clone(),
+            }),
+            None,
+        );
+        checked
+            .translate(source, Language::English, Language::Korean)
+            .unwrap();
+        assert!(calls.lock().unwrap().len() > 1);
+        assert!(!checked.should_cache(source, source, Language::English, Language::Korean));
+
+        let calls = RecordedCalls::default();
+        let mut unchecked = ResilientTranslator::new(
+            Box::new(EchoTranslator {
+                calls: calls.clone(),
+            }),
+            None,
+        )
+        .with_omission_check(false);
+        assert_eq!(
+            unchecked
+                .translate(source, Language::English, Language::Korean)
+                .unwrap(),
+            source
+        );
+        assert_eq!(calls.lock().unwrap().len(), 1);
+        assert!(unchecked.translation_is_acceptable(
+            source,
+            source,
+            Language::English,
+            Language::Korean
+        ));
+        assert!(unchecked.should_cache(source, source, Language::English, Language::Korean));
+        assert_ne!(checked.cache_namespace(), unchecked.cache_namespace());
     }
 
     #[test]

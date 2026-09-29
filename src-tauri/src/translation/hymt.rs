@@ -522,6 +522,7 @@ pub struct HyMtTranslator {
     runtime_generation: u64,
     progress_observer: Option<ModelProgressObserver>,
     preparation_cancellation: ModelPreparationCancellation,
+    omission_check: bool,
     port: u16,
     client: Client,
 }
@@ -565,6 +566,7 @@ impl HyMtTranslator {
             runtime_generation: 0,
             progress_observer: None,
             preparation_cancellation: ModelPreparationCancellation::default(),
+            omission_check: true,
             port: 0,
             client,
         })
@@ -1279,14 +1281,20 @@ impl Translator for HyMtTranslator {
             );
         }
         let style = self.speech_style.clone();
+        let omission_check = self.omission_check;
         translate_with_completion_for_profile(
             self.profile,
             text,
             source,
             target,
             &style,
+            omission_check,
             |prompt, fragment| self.complete(prompt, fragment),
         )
+    }
+
+    fn set_omission_check(&mut self, enabled: bool) {
+        self.omission_check = enabled;
     }
 
     fn close(&mut self) {
@@ -1363,6 +1371,7 @@ where
         target,
         speech_style,
         HyMtModelSize::Large.profile(),
+        true,
         &mut complete,
     )
 }
@@ -1385,6 +1394,7 @@ where
         source,
         target,
         speech_style,
+        true,
         &mut complete,
     )
 }
@@ -1395,6 +1405,7 @@ fn translate_with_completion_for_profile<F>(
     source: Language,
     target: Language,
     speech_style: &str,
+    omission_check: bool,
     mut complete: F,
 ) -> Result<String, String>
 where
@@ -1406,6 +1417,7 @@ where
         target,
         speech_style,
         profile,
+        omission_check,
         &mut complete,
     )
 }
@@ -1463,6 +1475,7 @@ fn translate_with_completion_using_prompt<F>(
     target: Language,
     speech_style: &str,
     profile: LocalModelProfile,
+    omission_check: bool,
     complete: &mut F,
 ) -> Result<String, String>
 where
@@ -1520,7 +1533,7 @@ where
         result = clean_cross_script_language_terms(&result, source, target);
         result = clean_korean_listener_question_person(&result, core, source, target);
         result = remove_unwritten_decorations(core, &result);
-        if translation_needs_repair(core, &result, source, target) {
+        if omission_check && translation_needs_repair(core, &result, source, target) {
             let repair_prompt = repair_translation_prompt(core, &result, source, target);
             if let Ok(rewritten) = complete(&repair_prompt, core) {
                 let rewritten = remove_unwritten_decorations(core, rewritten.trim());
@@ -2508,10 +2521,11 @@ mod tests {
         evaluate_vram_protection, find_llama_server, max_output_tokens, remove_cached_model_files,
         repair_translation_prompt, replace_ascii_word, rewrite_style_prompt,
         startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
-        translate_with_completion_for_model, translate_with_translate_gemma,
-        translation_prompt_for_model, unchanged_lowercase_source_words,
-        valid_korean_word_replacement, HyMtModel, HyMtModelSize, HyMtTranslator,
-        ModelPreparationCancellation, RuntimeDevice, VramProtectionAction, VramProtectionState,
+        translate_with_completion_for_model, translate_with_completion_for_profile,
+        translate_with_translate_gemma, translation_prompt_for_model,
+        unchanged_lowercase_source_words, valid_korean_word_replacement, HyMtModel, HyMtModelSize,
+        HyMtTranslator, ModelPreparationCancellation, RuntimeDevice, VramProtectionAction,
+        VramProtectionState,
     };
     use crate::language::{detect_explicit_language, Language};
     use crate::translation::{translation_needs_repair, Translator};
@@ -2543,6 +2557,33 @@ mod tests {
             replace_ascii_word("leash가 필요해 LEASH", "leash", "목줄"),
             "목줄이 필요해 목줄"
         );
+    }
+
+    #[test]
+    fn disabled_omission_check_skips_local_repair_inference() {
+        let source = "System.out.println(testData)";
+        for (omission_check, expect_repair) in [(true, true), (false, false)] {
+            let mut completions = 0;
+            let translated = translate_with_completion_for_profile(
+                HyMtModelSize::Large.profile(),
+                source,
+                Language::English,
+                Language::Korean,
+                "auto",
+                omission_check,
+                |_prompt, _text| {
+                    completions += 1;
+                    Ok(source.to_string())
+                },
+            )
+            .unwrap();
+            assert_eq!(translated, source);
+            assert_eq!(
+                completions > 1,
+                expect_repair,
+                "omission_check={omission_check}"
+            );
+        }
     }
 
     #[test]
