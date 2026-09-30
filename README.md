@@ -35,7 +35,7 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 Download the Windows installer from [0.7.9 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.9-beta). Advanced engine settings now include an option to skip translation result checks for code and proper names. Empty responses are still rejected. See the [release notes](docs/releases/0.7.9-beta.md) for details.
 
-0.7.9-beta is published as a GitHub prerelease. Existing installers use the same app update channel. Version 1.0.0 is reserved for the macOS release.
+0.7.9-beta is published as the latest regular GitHub release. Existing installers use the same app update channel. Version 1.0.0 is reserved for the macOS release.
 
 Existing installed versions can follow the app's update prompt. The update URL and signing key are unchanged; you do not need to uninstall or reset the app. Older portable builds require a manual installer download.
 
@@ -204,7 +204,7 @@ Commit source/version/release notes before packaging, and push that source commi
 The public packaging script builds **both x64 and ARM64**, signs both installers with the existing
 Tauri updater key, and verifies signatures, SHA-256 checksums, URLs and both update platform entries.
 Missing or mismatched artifacts stop deployment. By default, `-beta` versions use GitHub prereleases.
-0.7.8-beta was published as a regular release; 0.7.9-beta follows the default prerelease policy.
+The maintainer has requested a regular release for 0.7.9-beta.
 For a new regular release, pass `-StableRelease` to the deployment script; it publishes with
 `--prerelease=false --latest=true`. Both publication modes use the same app update URL.
 
