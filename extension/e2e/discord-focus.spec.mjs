@@ -4,7 +4,7 @@ import { mkdtemp, readFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { shouldPromptRestart } from "../../web/state.mjs";
+import { discordConnectionLabel, shouldPromptRestart } from "../../web/state.mjs";
 
 test.describe.configure({ mode: "serial" });
 test.use({ channel: "chromium" });
@@ -80,6 +80,50 @@ async function fixture({ delay = 0, text = "This is an English message for the t
   };
   return { pages, clients, context, text, call, focus, message, close, directory };
 }
+
+test("recovered connections clear previous errors before Discord becomes active", async () => {
+  const app = await fixture();
+  try {
+    await app.call("clients", { clients: app.clients.map(client => client.variant === "stable"
+      ? { ...client, endpoint: "ws://127.0.0.1:1/unavailable" } : client) });
+    await app.focus("stable");
+    await expect.poll(async () => (await app.call("status")).connectionIssue).not.toBe("");
+    await app.focus(null);
+    await app.call("clients", { clients: app.clients });
+    expect(await app.call("replace", { variant: "stable" })).toEqual({ ok: true });
+    await expect.poll(async () => (await app.call("status")).cdpConnected).toBe(true);
+    const recovered = await app.call("status");
+    expect(recovered.discordWaiting).toBe(true);
+    expect(recovered.connectionIssue).toBe("");
+    expect(discordConnectionLabel(recovered)).toBe("Discord 창 대기 중");
+    await app.focus("stable");
+    await expect(app.message("stable")).toContainText("[ko]");
+    await app.focus(null);
+    // Include a heartbeat and the normal process discovery interval.
+    await new Promise(resolve => setTimeout(resolve, 2200));
+    const waiting = await app.call("status");
+    expect(waiting.cdpConnected).toBe(true);
+    expect(waiting.connectionIssue).toBe("");
+    expect(discordConnectionLabel(waiting)).toBe("Discord 창 대기 중");
+  } finally { await app.close(); }
+});
+
+test("failed replacement connections remain visible while Discord is inactive", async () => {
+  const app = await fixture();
+  try {
+    await app.focus("stable");
+    await expect.poll(async () => (await app.call("status")).cdpConnected).toBe(true);
+    await app.focus(null);
+    const result = await app.call("replace", { variant: "stable", endpoint: "ws://127.0.0.1:1/unavailable" });
+    expect(result.ok).toBe(false);
+    await new Promise(resolve => setTimeout(resolve, 2200));
+    const failed = await app.call("status");
+    expect(failed.cdpConnected).toBe(false);
+    expect(failed.discordWaiting).toBe(true);
+    expect(failed.connectionIssue).toBe(result.error);
+    expect(discordConnectionLabel(failed)).toBe("연결 확인 필요");
+  } finally { await app.close(); }
+});
 
 test("invite assist polling distinguishes an emoji picker from the activated invite dialog", async () => {
   const app = await fixture();

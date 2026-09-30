@@ -37,6 +37,8 @@ Download the Windows installer from [0.7.9 Beta](https://github.com/NudeNyang/Nu
 
 0.7.9-beta is published as the latest regular GitHub release. Existing installers use the same app update channel. Version 1.0.0 is reserved for the macOS release.
 
+The local development build is 0.7.10-beta. It fixes a stale connection warning after Discord reconnects and moves into the background. See the [development notes](docs/releases/0.7.10-beta.md).
+
 Existing installed versions can follow the app's update prompt. The update URL and signing key are unchanged; you do not need to uninstall or reset the app. Older portable builds require a manual installer download.
 
 Stable, PTB and Canary share one set of translation settings. The app translates the Discord window you are viewing and processes other windows when you switch to them. You can still select a specific Discord release in settings.

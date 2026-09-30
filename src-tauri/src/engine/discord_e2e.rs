@@ -128,6 +128,30 @@ fn discord_focus_e2e_driver() {
                     .unwrap();
                 json!({"ok":true})
             }
+            "replace" => {
+                let variant =
+                    DiscordVariant::from_config(command["variant"].as_str().unwrap()).unwrap();
+                let (process, endpoint) = {
+                    let desktop = desktop.lock().unwrap();
+                    let process = desktop
+                        .processes
+                        .iter()
+                        .find(|process| {
+                            DiscordVariant::from_executable(&process.executable) == Some(variant)
+                        })
+                        .unwrap()
+                        .clone();
+                    let endpoint = command["endpoint"]
+                        .as_str()
+                        .map(str::to_string)
+                        .unwrap_or_else(|| desktop.endpoints[&process.process_id].clone());
+                    (process, endpoint)
+                };
+                match engine.replace_cdp(process, CdpClient::new(endpoint)) {
+                    Ok(()) => json!({"ok":true}),
+                    Err(error) => json!({"ok":false,"error":error}),
+                }
+            }
             "status" => serde_json::to_value(engine.status().unwrap()).unwrap(),
             "model" => {
                 let (started, completed) = crate::translation::mock_progress();

@@ -26,6 +26,14 @@ test("waiting for a Discord window is idle and does not restart the last used re
   assert.equal(shouldPromptRestart({ ...status, discordWaiting: false, cdpConnected: false, connectionIssue: "needs pipe" }, {}), true);
 });
 
+test("a connected Discord ignores stale connection errors while waiting or active", () => {
+  const status = { enabled: true, cdpConnected: true, connectionIssue: "previous connection failed" };
+  assert.equal(discordConnectionLabel({ ...status, discordWaiting: true }), "Discord 창 대기 중");
+  assert.equal(discordConnectionLabel({ ...status, discordWaiting: false }), "Discord 연결됨");
+  assert.equal(discordConnectionLabel({ ...status, cdpConnected: false, discordWaiting: true }), "연결 확인 필요");
+  assert.equal(discordConnectionLabel({ ...status, verificationRequired: true }), "인증 호환 모드");
+});
+
 test("manual Discord restart appears only after automatic recovery is cancelled or fails", () => {
   assert.deepEqual(
     manualDiscordRestartAvailability(

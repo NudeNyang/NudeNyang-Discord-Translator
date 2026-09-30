@@ -261,7 +261,7 @@ export function resolveEnabledState(reportedEnabled, pendingEnabled) {
 
 export function discordConnectionLabel(status = {}) {
   if (status.verificationRequired) return "인증 호환 모드";
-  if (status.connectionIssue) return "연결 확인 필요";
+  if (!status.cdpConnected && status.connectionIssue) return "연결 확인 필요";
   if (status.discordWaiting) return "Discord 창 대기 중";
   if (status.cdpConnected) return "Discord 연결됨";
   return (status.controllerEnabled ?? status.enabled) ? "Discord 연결 중" : "번역 대기 중";

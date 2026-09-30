@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
+test.use({ channel: "chromium" });
+
 // Exercise the production HTML, CSS and app.js, with only the Tauri boundary mocked.
 // No live credentials, provider authentication or external network requests are used.
 test.beforeEach(async ({ page }) => {
@@ -18,6 +20,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.testCalls = [];
     window.testEvents = {};
+    window.testRuntime = { cdpConnected: false };
     window.testConfig = { ui_language: "ko", ui_theme: "dark", outgoing_translator: "openai_compat" };
     const storedCheck = sessionStorage.getItem("test-omission-check");
     if (storedCheck !== null) window.testConfig.translation_omission_check = storedCheck === "true";
@@ -40,7 +43,7 @@ test.beforeEach(async ({ page }) => {
         if (command === "provider_connections_get") return providers;
         if (command === "autostart_get") return false;
         if (command === "storage_status_get") return { models: [], cache: {} };
-        if (command === "runtime_status") return { discordConnected: false };
+        if (command === "runtime_status") return window.testRuntime;
         if (command === "provider_openai_compat_connect") {
           if (window.testDelayConnection) await new Promise(resolve => { window.testFinishConnection = resolve; });
           if (window.testFailConnection) throw new Error("테스트 연결 실패");
@@ -52,12 +55,35 @@ test.beforeEach(async ({ page }) => {
         return null;
       } },
       event: { listen: async (name, callback) => { window.testEvents[name] = callback; return () => {}; } },
-      app: { getVersion: async () => "0.7.9-beta" },
+      app: { getVersion: async () => "0.7.10-beta" },
     };
   });
   await page.goto("http://settings.test/");
   await expect(page.locator('[data-provider="deepl"] .provider-status')).toHaveAttribute("data-state", "connected");
   await page.locator('[data-settings-panel="engine"]').click();
+});
+
+test("Discord status label and indicator ignore stale errors only while connected", async ({ page }) => {
+  const publish = async patch => page.evaluate(patch => {
+    window.testRuntime = { enabled: false, controllerEnabled: false, discordWaiting: true,
+      discordTargetName: "Discord", ...patch };
+    window.testEvents["translation-state-changed"]({ payload: window.testRuntime });
+  }, patch);
+  const indicator = page.locator("#engine-state");
+  const label = page.locator("#engine-state-label");
+  await publish({ cdpConnected: true, connectionIssue: "previous connection failed" });
+  await expect(indicator).toHaveAttribute("data-state", "ready");
+  await expect(label).toContainText("Discord 창 대기 중 · Discord");
+  await publish({ cdpConnected: true, discordWaiting: false, connectionIssue: "previous connection failed" });
+  await expect(label).toContainText("Discord 연결됨 · Discord");
+  await expect(indicator).toHaveAttribute("data-state", "ready");
+  await publish({ cdpConnected: false, connectionIssue: "current connection failed" });
+  await expect(label).toHaveText("연결 확인 필요 · Discord");
+  await expect(indicator).toHaveAttribute("data-state", "error");
+  await publish({ cdpConnected: true, translatorError: "model failed" });
+  await expect(indicator).toHaveAttribute("data-state", "error");
+  await publish({ cdpConnected: false, verificationRequired: true });
+  await expect(label).toHaveText("인증 호환 모드 · Discord");
 });
 
 test("keyboard accordion preserves drafts and advanced options across status refreshes", async ({ page }) => {

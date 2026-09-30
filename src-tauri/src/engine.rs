@@ -1798,6 +1798,7 @@ fn run_controller(
                     if let Err(error) = &prepare_result {
                         crate::diagnostics::error("cdp-replacement", error);
                         replacement.close();
+                        session.connection_issue = error.clone();
                         update_status(&status, |runtime| {
                             runtime.cdp_connected = false;
                             runtime.connection_issue = error.clone();
@@ -1813,6 +1814,7 @@ fn run_controller(
                             false,
                         );
                         session.client = Some(replacement);
+                        session.connection_issue.clear();
                         session.states.clear();
                         session.pending.clear();
                         session.display_view = DisplayViewState::default();
@@ -1824,6 +1826,8 @@ fn run_controller(
                         session.consecutive_connection_failures = 0;
                         session.connection_issue_reported = false;
                         update_status(&status, |runtime| {
+                            runtime.cdp_connected = true;
+                            runtime.connection_issue.clear();
                             runtime.verification_required = false;
                             runtime.verification_kind.clear();
                         });
@@ -2230,6 +2234,7 @@ fn run_controller(
                 .as_mut()
                 .expect("connected CDP client")
                 .connect()?;
+            session.connection_issue.clear();
             session.consecutive_connection_failures = 0;
             session.connection_issue_reported = false;
             update_status(&status, |runtime| {

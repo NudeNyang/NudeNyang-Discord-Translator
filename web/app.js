@@ -2953,7 +2953,7 @@ function updateEngineState(status) {
   state.pendingEnabled = enabledState.pending;
   const language = state.selectValues.ui_language || state.config.ui_language;
   const modelLabel = localizeRuntimeLabel(translatorRuntimeLabel(status), language);
-  const hasError = Boolean(status.connectionIssue || status.translatorError);
+  const hasError = Boolean((!ready && status.connectionIssue) || status.translatorError);
   if (status.cdpConnected) state.manualRestartRequired = false;
   else if (state.restartAttempted && status.connectionIssue && !state.repairActive) {
     state.manualRestartRequired = true;
