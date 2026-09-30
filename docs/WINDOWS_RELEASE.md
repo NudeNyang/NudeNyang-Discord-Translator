@@ -3,7 +3,7 @@
 ## 유지할 조건
 
 - 본체 버전은 `src-tauri/tauri.conf.json`을 따른다. 기본적으로 `-beta` 버전은 GitHub 프리릴리스로 게시한다.
-- 0.7.5-beta, 0.7.6-beta, 0.7.7-beta, 0.7.8-beta, 0.7.9-beta는 사용자의 명시적인 요청에 따라 정식 최신 릴리스로 게시한다. 새 정식 릴리스에는 `-StableRelease`를 지정하며 `--prerelease=false --latest=true`로 공개한다. 접미사 없는 버전은 기본으로 정식 게시한다.
+- 0.7.5-beta, 0.7.6-beta, 0.7.7-beta, 0.7.8-beta, 0.7.9-beta, 0.7.10-beta는 사용자의 명시적인 요청에 따라 정식 최신 릴리스로 게시한다. 새 정식 릴리스에는 `-StableRelease`를 지정하며 `--prerelease=false --latest=true`로 공개한다. 접미사 없는 버전은 기본으로 정식 게시한다.
 - 1.0.0은 macOS 버전을 출시할 때 사용한다. Windows 정식 릴리스 게시만으로 버전을 1.0.0으로 올리지 않는다.
 - 프리릴리스 여부는 GitHub의 표시·분류이고, 앱은 기존 정적 업데이트 목록을 조회한다. ARM64 지원에 정식 전환은 필요하지 않다.
 - 업데이트 주소는 `https://raw.githubusercontent.com/NudeNyang/NudeNyang-Discord-Translator/main/updates/beta/latest.json`을 유지한다.
