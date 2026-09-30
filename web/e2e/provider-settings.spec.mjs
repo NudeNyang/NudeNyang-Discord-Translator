@@ -19,6 +19,8 @@ test.beforeEach(async ({ page }) => {
     window.testCalls = [];
     window.testEvents = {};
     window.testConfig = { ui_language: "ko", ui_theme: "dark", outgoing_translator: "openai_compat" };
+    const storedCheck = sessionStorage.getItem("test-omission-check");
+    if (storedCheck !== null) window.testConfig.translation_omission_check = storedCheck === "true";
     const providers = ["chatgpt", "claude", "gemini", "deepl", "openai_compat"].map(id => ({
       id, name: id, installed: true, connected: id === "deepl", canDisconnect: id === "deepl",
       state: id === "deepl" ? "connected" : "not-connected",
@@ -30,6 +32,9 @@ test.beforeEach(async ({ page }) => {
         if (command === "settings_get") return window.testConfig;
         if (command === "settings_update") {
           Object.assign(window.testConfig, payload.patch);
+          if (Object.hasOwn(payload.patch, "translation_omission_check")) {
+            sessionStorage.setItem("test-omission-check", String(payload.patch.translation_omission_check));
+          }
           return { ...window.testConfig };
         }
         if (command === "provider_connections_get") return providers;
@@ -215,20 +220,35 @@ for (const theme of ["dark", "light"]) {
 }
 
 
-test("translation result check defaults on and keeps its accessible description when toggled", async ({ page }) => {
-  const control = page.getByRole("switch", { name: "번역 결과 검사", exact: true });
-  const description = "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.";
+test("skip translation result check defaults off and keeps its accessible description when toggled", async ({ page }) => {
+  const control = page.getByRole("switch", { name: "번역 결과 검사 건너뛰기", exact: true });
+  const description = "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.";
   await expect(page.locator("#translation-advanced-settings").getByRole("heading", { name: "고급 설정" })).toBeVisible();
-  await expect(control).toHaveAttribute("aria-checked", "true");
+  await expect(control).toHaveAttribute("aria-checked", "false");
   await expect(control).toHaveAccessibleDescription(description);
   await control.focus();
   await page.keyboard.press("Space");
-  await expect(control).toHaveAttribute("aria-checked", "false");
+  await expect(control).toHaveAttribute("aria-checked", "true");
   await expect(control).toHaveAccessibleDescription(description);
   await expect.poll(() => page.evaluate(() => window.testConfig.translation_omission_check)).toBe(false);
   await page.keyboard.press("Space");
-  await expect(control).toHaveAttribute("aria-checked", "true");
+  await expect(control).toHaveAttribute("aria-checked", "false");
   await expect(control).toHaveAccessibleDescription(description);
   await expect.poll(() => page.evaluate(() => window.testConfig.translation_omission_check)).toBe(true);
   expect(await page.evaluate(() => window.testCalls.filter(call => call.command === "settings_update").map(call => call.payload.patch.translation_omission_check))).toEqual([false, true]);
+});
+
+
+test("saved disabled checking remains enabled skipping after reopening settings", async ({ page }) => {
+  await page.evaluate(() => sessionStorage.setItem("test-omission-check", "false"));
+  await page.reload();
+  await page.locator('[data-settings-panel="engine"]').click();
+  const control = page.getByRole("switch", { name: "번역 결과 검사 건너뛰기", exact: true });
+  await expect(control).toHaveAttribute("aria-checked", "true");
+  await control.click();
+  await expect(control).toHaveAttribute("aria-checked", "false");
+  await expect.poll(() => page.evaluate(() => window.testConfig.translation_omission_check)).toBe(true);
+  await page.reload();
+  await page.locator('[data-settings-panel="engine"]').click();
+  await expect(control).toHaveAttribute("aria-checked", "false");
 });

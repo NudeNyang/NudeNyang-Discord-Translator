@@ -2754,8 +2754,9 @@ function renderConfig(config) {
   applyUiLanguage(state.config.ui_language);
 }
 
-function renderTranslationOmissionCheck(enabled) {
-  setSwitch(elements.translationOmissionCheck, enabled, "켜짐", "꺼짐");
+function renderTranslationOmissionCheck(checkEnabled) {
+  // Keep the stored check setting unchanged; the advanced switch enables skipping it.
+  setSwitch(elements.translationOmissionCheck, !checkEnabled, "켜짐", "꺼짐");
 }
 
 async function applySettingsPatch(patch, { status = true } = {}) {
@@ -3513,10 +3514,10 @@ elements.keepWarm.addEventListener("click", () => {
   });
 });
 elements.translationOmissionCheck.addEventListener("click", () => {
-  const enabled = elements.translationOmissionCheck.getAttribute("aria-checked") !== "true";
-  renderTranslationOmissionCheck(enabled);
-  applySettingsPatch({ translation_omission_check: enabled }).catch(async error => {
-    renderTranslationOmissionCheck(!enabled);
+  const checkEnabled = elements.translationOmissionCheck.getAttribute("aria-checked") === "true";
+  renderTranslationOmissionCheck(checkEnabled);
+  applySettingsPatch({ translation_omission_check: checkEnabled }).catch(async error => {
+    renderTranslationOmissionCheck(state.config.translation_omission_check);
     await showError("번역 누락 검사 설정을 적용하지 못했습니다", String(error));
   });
 });

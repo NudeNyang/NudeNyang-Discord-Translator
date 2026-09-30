@@ -693,8 +693,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。已超過請求上限。請減少同時請求數。",
     "고급 설정": "進階設定",
     "번역 누락 검사 설정을 적용하지 못했습니다": "無法套用翻譯遺漏檢查設定",
-    "번역 결과 검사": "翻譯結果檢查",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "如果保留了原文或翻譯似乎不完整，將重新翻譯。如果程式碼或專有名詞被不必要地重新翻譯，可以關閉此設定。"
+    "번역 결과 검사 건너뛰기": "略過翻譯結果檢查",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "即使翻譯看起來不完整，也會使用該結果，不會因檢查而重新翻譯。如果程式碼或專有名詞被不必要地重新翻譯，可以開啟此設定。"
   },
   "pt-BR": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
@@ -1390,8 +1390,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). O limite de solicitações foi excedido. Reduza o número de solicitações simultâneas.",
     "고급 설정": "Configurações avançadas",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Não foi possível aplicar a configuração de verificação de omissões",
-    "번역 결과 검사": "Verificação do resultado da tradução",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Repete a tradução se o texto original permanecer inalterado ou a tradução parecer incompleta. Você pode desativar esta opção se códigos ou nomes próprios forem retraduzidos sem necessidade."
+    "번역 결과 검사 건너뛰기": "Ignorar verificações do resultado da tradução",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa o resultado mesmo que a tradução pareça incompleta, sem repetir a tradução com base nessas verificações. Ative se códigos ou nomes próprios forem retraduzidos sem necessidade."
   },
   "hi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
@@ -2087,8 +2087,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। अनुरोध सीमा पार हो गई। एक साथ अनुरोधों की संख्या कम करें।",
     "고급 설정": "उन्नत सेटिंग",
     "번역 누락 검사 설정을 적용하지 못했습니다": "अनुवाद चूक जाँच सेटिंग लागू नहीं की जा सकी",
-    "번역 결과 검사": "अनुवाद के परिणाम की जाँच",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "मूल पाठ जस का तस रहने या अनुवाद अधूरा लगने पर दोबारा अनुवाद करता है। यदि कोड या व्यक्तिवाचक नामों का अनावश्यक रूप से दोबारा अनुवाद हो रहा हो, तो इसे बंद कर सकते हैं।"
+    "번역 결과 검사 건너뛰기": "अनुवाद के परिणाम की जाँच छोड़ें",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "अनुवाद अधूरा लगने पर भी परिणाम का उपयोग करता है और इन जाँचों के आधार पर दोबारा अनुवाद नहीं करता। यदि कोड या व्यक्तिवाचक नामों का अनावश्यक रूप से दोबारा अनुवाद हो रहा हो, तो इसे चालू करें।"
   },
   "es-419": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
@@ -2784,8 +2784,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Se superó el límite de solicitudes. Reduce la cantidad de solicitudes simultáneas.",
     "고급 설정": "Configuración avanzada",
     "번역 누락 검사 설정을 적용하지 못했습니다": "No se pudo aplicar la configuración de verificación de omisiones",
-    "번역 결과 검사": "Revisión del resultado de la traducción",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Vuelve a traducir si el texto original permanece sin cambios o la traducción parece incompleta. Puedes desactivar esta opción si el código o los nombres propios se vuelven a traducir innecesariamente."
+    "번역 결과 검사 건너뛰기": "Omitir la revisión del resultado de la traducción",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa el resultado aunque la traducción parezca incompleta, sin volver a traducir por estas revisiones. Activa esta opción si el código o los nombres propios se vuelven a traducir innecesariamente."
   },
   "de": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
@@ -3481,8 +3481,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Das Anfragelimit wurde überschritten. Verringere die Anzahl gleichzeitiger Anfragen.",
     "고급 설정": "Erweiterte Einstellungen",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Die Einstellung für die Prüfung auf Übersetzungslücken konnte nicht angewendet werden",
-    "번역 결과 검사": "Prüfung des Übersetzungsergebnisses",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Übersetzt erneut, wenn der Originaltext unverändert bleibt oder die Übersetzung unvollständig erscheint. Sie können dies ausschalten, wenn Code oder Eigennamen unnötig erneut übersetzt werden."
+    "번역 결과 검사 건너뛰기": "Prüfung des Übersetzungsergebnisses überspringen",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Verwendet das Ergebnis auch bei scheinbar unvollständiger Übersetzung, ohne aufgrund dieser Prüfung erneut zu übersetzen. Aktivieren Sie dies, wenn Code oder Eigennamen unnötig erneut übersetzt werden."
   },
   "ru": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
@@ -4178,8 +4178,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Превышен лимит запросов. Уменьшите число одновременных запросов.",
     "고급 설정": "Расширенные настройки",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Не удалось применить настройку проверки пропусков перевода",
-    "번역 결과 검사": "Проверка результата перевода",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Повторяет перевод, если исходный текст остался без изменений или перевод выглядит неполным. Можно отключить, если код или имена собственные переводятся повторно без необходимости."
+    "번역 결과 검사 건너뛰기": "Пропускать проверку результата перевода",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Использует результат, даже если перевод выглядит неполным, без повторного перевода по итогам проверки. Включите, если код или имена собственные переводятся повторно без необходимости."
   },
   "id": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
@@ -4875,8 +4875,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Batas permintaan terlampaui. Kurangi jumlah permintaan bersamaan.",
     "고급 설정": "Pengaturan lanjutan",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Tidak dapat menerapkan setelan pemeriksaan terjemahan terlewat",
-    "번역 결과 검사": "Pemeriksaan hasil terjemahan",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Mengulang terjemahan jika teks asli tidak berubah atau terjemahan tampak belum lengkap. Nonaktifkan jika kode atau nama diri diterjemahkan ulang tanpa perlu."
+    "번역 결과 검사 건너뛰기": "Lewati pemeriksaan hasil terjemahan",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Menggunakan hasil meskipun terjemahan tampak belum lengkap, tanpa mengulang terjemahan berdasarkan pemeriksaan ini. Aktifkan jika kode atau nama diri diterjemahkan ulang tanpa perlu."
   },
   "fr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
@@ -5572,8 +5572,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). La limite de requêtes a été dépassée. Réduisez le nombre de requêtes simultanées.",
     "고급 설정": "Paramètres avancés",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Impossible d’appliquer le paramètre de vérification des omissions",
-    "번역 결과 검사": "Vérification du résultat de traduction",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Relance la traduction si le texte original reste inchangé ou si la traduction semble incomplète. Vous pouvez désactiver cette option si du code ou des noms propres sont retraduits inutilement."
+    "번역 결과 검사 건너뛰기": "Ignorer la vérification du résultat de traduction",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Utilise le résultat même si la traduction semble incomplète, sans relancer la traduction à la suite de ces vérifications. Activez cette option si du code ou des noms propres sont retraduits inutilement."
   },
   "tr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
@@ -6269,8 +6269,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). İstek sınırı aşıldı. Eşzamanlı istek sayısını azaltın.",
     "고급 설정": "Gelişmiş ayarlar",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Çeviri eksikliği denetimi ayarı uygulanamadı",
-    "번역 결과 검사": "Çeviri sonucu denetimi",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Kaynak metin değişmeden kalırsa veya çeviri eksik görünürse yeniden çevirir. Kod veya özel adlar gereksiz yere tekrar çevriliyorsa bu ayarı kapatabilirsiniz."
+    "번역 결과 검사 건너뛰기": "Çeviri sonucu denetimini atla",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Çeviri eksik görünse bile sonucu kullanır ve bu denetimlere göre yeniden çeviri yapmaz. Kod veya özel adlar gereksiz yere tekrar çevriliyorsa bu ayarı açın."
   },
   "ar": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
@@ -6966,8 +6966,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تم تجاوز حد الطلبات. قلّل عدد الطلبات المتزامنة.",
     "고급 설정": "الإعدادات المتقدمة",
     "번역 누락 검사 설정을 적용하지 못했습니다": "تعذّر تطبيق إعداد فحص نقص الترجمة",
-    "번역 결과 검사": "فحص نتيجة الترجمة",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "يعيد الترجمة إذا بقي النص الأصلي دون تغيير أو بدت الترجمة غير مكتملة. يمكنك إيقافه إذا أُعيدت ترجمة التعليمات البرمجية أو أسماء الأعلام دون داعٍ."
+    "번역 결과 검사 건너뛰기": "تخطي فحص نتيجة الترجمة",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "يستخدم النتيجة حتى إذا بدت الترجمة غير مكتملة، دون إعادة الترجمة بناءً على هذا الفحص. فعّله إذا أُعيدت ترجمة التعليمات البرمجية أو أسماء الأعلام دون داعٍ."
   },
   "vi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
@@ -7663,8 +7663,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Đã vượt quá giới hạn yêu cầu. Hãy giảm số yêu cầu đồng thời.",
     "고급 설정": "Cài đặt nâng cao",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Không thể áp dụng cài đặt kiểm tra bản dịch bị sót",
-    "번역 결과 검사": "Kiểm tra kết quả dịch",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Dịch lại nếu văn bản gốc vẫn giữ nguyên hoặc bản dịch có vẻ chưa đầy đủ. Bạn có thể tắt nếu mã hoặc tên riêng bị dịch lại không cần thiết."
+    "번역 결과 검사 건너뛰기": "Bỏ qua kiểm tra kết quả dịch",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Sử dụng kết quả ngay cả khi bản dịch có vẻ chưa đầy đủ và không dịch lại dựa trên kiểm tra này. Bật nếu mã hoặc tên riêng bị dịch lại không cần thiết."
   },
   "it": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
@@ -8360,8 +8360,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). È stato superato il limite di richieste. Riduci il numero di richieste simultanee.",
     "고급 설정": "Impostazioni avanzate",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Impossibile applicare l’impostazione del controllo delle omissioni",
-    "번역 결과 검사": "Controllo del risultato della traduzione",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Ripete la traduzione se il testo originale resta invariato o la traduzione sembra incompleta. Puoi disattivarlo se codice o nomi propri vengono ritradotti inutilmente."
+    "번역 결과 검사 건너뛰기": "Salta il controllo del risultato della traduzione",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa il risultato anche se la traduzione sembra incompleta, senza ripeterla in base a questi controlli. Attiva questa opzione se codice o nomi propri vengono ritradotti inutilmente."
   },
   "pl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
@@ -9057,8 +9057,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Przekroczono limit żądań. Zmniejsz liczbę równoczesnych żądań.",
     "고급 설정": "Ustawienia zaawansowane",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Nie można zastosować ustawienia sprawdzania pominięć",
-    "번역 결과 검사": "Sprawdzanie wyniku tłumaczenia",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Ponawia tłumaczenie, jeśli tekst źródłowy pozostał bez zmian lub tłumaczenie wydaje się niepełne. Możesz wyłączyć tę opcję, jeśli kod lub nazwy własne są niepotrzebnie tłumaczone ponownie."
+    "번역 결과 검사 건너뛰기": "Pomijaj sprawdzanie wyniku tłumaczenia",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Używa wyniku nawet wtedy, gdy tłumaczenie wydaje się niepełne, bez ponawiania go na podstawie tej kontroli. Włącz, jeśli kod lub nazwy własne są niepotrzebnie tłumaczone ponownie."
   },
   "uk": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
@@ -9754,8 +9754,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевищено ліміт запитів. Зменште кількість одночасних запитів.",
     "고급 설정": "Розширені налаштування",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Не вдалося застосувати налаштування перевірки пропусків перекладу",
-    "번역 결과 검사": "Перевірка результату перекладу",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Повторює переклад, якщо вихідний текст залишився без змін або переклад здається неповним. Можна вимкнути, якщо код або власні назви перекладаються повторно без потреби."
+    "번역 결과 검사 건너뛰기": "Пропускати перевірку результату перекладу",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Використовує результат, навіть якщо переклад здається неповним, без повторного перекладу за результатами перевірки. Увімкніть, якщо код або власні назви перекладаються повторно без потреби."
   },
   "ms": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
@@ -10451,8 +10451,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Had permintaan telah dilampaui. Kurangkan bilangan permintaan serentak.",
     "고급 설정": "Tetapan lanjutan",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Tidak dapat menggunakan tetapan semakan terjemahan tertinggal",
-    "번역 결과 검사": "Semakan hasil terjemahan",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Menterjemah semula jika teks asal kekal tidak berubah atau terjemahan kelihatan tidak lengkap. Anda boleh mematikannya jika kod atau nama khas diterjemah semula tanpa keperluan."
+    "번역 결과 검사 건너뛰기": "Langkau semakan hasil terjemahan",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Menggunakan hasil walaupun terjemahan kelihatan tidak lengkap, tanpa menterjemah semula berdasarkan semakan ini. Hidupkan jika kod atau nama khas diterjemah semula tanpa keperluan."
   },
   "nl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
@@ -11148,8 +11148,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). De verzoeklimiet is overschreden. Verlaag het aantal gelijktijdige verzoeken.",
     "고급 설정": "Geavanceerde instellingen",
     "번역 누락 검사 설정을 적용하지 못했습니다": "De instelling voor de controle op ontbrekende vertaling kan niet worden toegepast",
-    "번역 결과 검사": "Vertaalresultaat controleren",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Vertaalt opnieuw als de oorspronkelijke tekst ongewijzigd blijft of de vertaling onvolledig lijkt. U kunt dit uitschakelen als code of eigennamen onnodig opnieuw worden vertaald."
+    "번역 결과 검사 건너뛰기": "Controle van vertaalresultaten overslaan",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Gebruikt het resultaat ook als de vertaling onvolledig lijkt, zonder opnieuw te vertalen op basis van deze controle. Schakel dit in als code of eigennamen onnodig opnieuw worden vertaald."
   },
   "th": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
@@ -11845,8 +11845,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) เกินขีดจำกัดคำขอ ลดจำนวนคำขอพร้อมกัน",
     "고급 설정": "การตั้งค่าขั้นสูง",
     "번역 누락 검사 설정을 적용하지 못했습니다": "ไม่สามารถใช้การตั้งค่าตรวจการแปลที่ตกหล่นได้",
-    "번역 결과 검사": "ตรวจสอบผลการแปล",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "แปลใหม่หากข้อความต้นฉบับยังคงเดิมหรือคำแปลดูไม่สมบูรณ์ คุณสามารถปิดได้หากโค้ดหรือชื่อเฉพาะถูกแปลซ้ำโดยไม่จำเป็น"
+    "번역 결과 검사 건너뛰기": "ข้ามการตรวจสอบผลการแปล",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "ใช้ผลลัพธ์แม้คำแปลดูไม่สมบูรณ์ และไม่แปลซ้ำตามผลการตรวจสอบนี้ เปิดใช้หากโค้ดหรือชื่อเฉพาะถูกแปลซ้ำโดยไม่จำเป็น"
   },
   "fil": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
@@ -12542,8 +12542,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Nalampasan ang limit ng request. Bawasan ang bilang ng sabay-sabay na request.",
     "고급 설정": "Mga advanced na setting",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Hindi mailapat ang setting ng pagsuri sa kulang na salin",
-    "번역 결과 검사": "Pagsusuri ng resulta ng pagsasalin",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Isinasalin muli kung nananatiling hindi nagbabago ang orihinal na teksto o mukhang hindi kumpleto ang salin. Maaari itong i-off kung hindi kinakailangang isinasalin muli ang code o mga pangalang pantangi."
+    "번역 결과 검사 건너뛰기": "Laktawan ang pagsusuri ng resulta ng pagsasalin",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Ginagamit ang resulta kahit mukhang hindi kumpleto ang salin, nang hindi nagsasalin muli batay sa pagsusuring ito. I-on kung hindi kinakailangang isinasalin muli ang code o mga pangalang pantangi."
   },
   "bn": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
@@ -13239,8 +13239,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। অনুরোধের সীমা অতিক্রম হয়েছে। একসাথে অনুরোধের সংখ্যা কমান।",
     "고급 설정": "উন্নত সেটিংস",
     "번역 누락 검사 설정을 적용하지 못했습니다": "অনুবাদ বাদ পড়া যাচাইয়ের সেটিং প্রয়োগ করা যায়নি",
-    "번역 결과 검사": "অনুবাদের ফলাফল পরীক্ষা",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "মূল লেখা অপরিবর্তিত থাকলে বা অনুবাদ অসম্পূর্ণ মনে হলে আবার অনুবাদ করে। কোড বা বিশেষ নাম অপ্রয়োজনে আবার অনুবাদ হলে এটি বন্ধ করতে পারেন।"
+    "번역 결과 검사 건너뛰기": "অনুবাদের ফলাফল পরীক্ষা এড়িয়ে যান",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "অনুবাদ অসম্পূর্ণ মনে হলেও ফলাফল ব্যবহার করে এবং এই পরীক্ষার ভিত্তিতে আবার অনুবাদ করে না। কোড বা বিশেষ নাম অপ্রয়োজনে আবার অনুবাদ হলে এটি চালু করুন।"
   },
   "ur": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
@@ -13936,8 +13936,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ درخواستوں کی حد سے تجاوز ہو گیا۔ بیک وقت درخواستوں کی تعداد کم کریں۔",
     "고급 설정": "اعلیٰ ترتیبات",
     "번역 누락 검사 설정을 적용하지 못했습니다": "ترجمے میں کمی کی جانچ کی ترتیب لاگو نہیں ہو سکی",
-    "번역 결과 검사": "ترجمے کے نتیجے کی جانچ",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "اگر اصل متن جوں کا توں رہے یا ترجمہ نامکمل لگے تو دوبارہ ترجمہ کرتا ہے۔ اگر کوڈ یا خاص ناموں کا بلا ضرورت دوبارہ ترجمہ ہو رہا ہو تو اسے بند کیا جا سکتا ہے۔"
+    "번역 결과 검사 건너뛰기": "ترجمے کے نتیجے کی جانچ چھوڑیں",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "ترجمہ نامکمل لگنے پر بھی نتیجہ استعمال کرتا ہے اور اس جانچ کی بنیاد پر دوبارہ ترجمہ نہیں کرتا۔ اگر کوڈ یا خاص ناموں کا بلا ضرورت دوبارہ ترجمہ ہو رہا ہو تو اسے آن کریں۔"
   },
   "ta": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
@@ -14633,8 +14633,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). கோரிக்கை வரம்பு மீறப்பட்டது. ஒரே நேர கோரிக்கைகளின் எண்ணிக்கையைக் குறைக்கவும்.",
     "고급 설정": "மேம்பட்ட அமைப்புகள்",
     "번역 누락 검사 설정을 적용하지 못했습니다": "மொழிபெயர்ப்பு விடுபாடு சரிபார்ப்பு அமைப்பைப் பயன்படுத்த முடியவில்லை",
-    "번역 결과 검사": "மொழிபெயர்ப்பு முடிவைச் சரிபார்த்தல்",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "மூல உரை மாறாமல் இருந்தாலோ மொழிபெயர்ப்பு முழுமையற்றதாகத் தோன்றினாலோ மீண்டும் மொழிபெயர்க்கும். நிரல் குறியீடு அல்லது சிறப்புப் பெயர்கள் தேவையின்றி மீண்டும் மொழிபெயர்க்கப்பட்டால் இதை முடக்கலாம்."
+    "번역 결과 검사 건너뛰기": "மொழிபெயர்ப்பு முடிவைச் சரிபார்ப்பதைத் தவிர்த்தல்",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "மொழிபெயர்ப்பு முழுமையற்றதாகத் தோன்றினாலும் முடிவைப் பயன்படுத்தும்; இந்தச் சரிபார்ப்பின் அடிப்படையில் மீண்டும் மொழிபெயர்க்காது. நிரல் குறியீடு அல்லது சிறப்புப் பெயர்கள் தேவையின்றி மீண்டும் மொழிபெயர்க்கப்பட்டால் இதை இயக்கவும்."
   },
   "fa": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
@@ -15330,8 +15330,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). از سقف درخواست‌ها فراتر رفته است. تعداد درخواست‌های هم‌زمان را کاهش دهید.",
     "고급 설정": "تنظیمات پیشرفته",
     "번역 누락 검사 설정을 적용하지 못했습니다": "اعمال تنظیم بررسی جاافتادگی ترجمه ممکن نشد",
-    "번역 결과 검사": "بررسی نتیجهٔ ترجمه",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "اگر متن اصلی بدون تغییر باقی بماند یا ترجمه ناقص به نظر برسد، دوباره ترجمه می‌کند. اگر کد یا نام‌های خاص بی‌دلیل دوباره ترجمه می‌شوند، می‌توانید این گزینه را خاموش کنید."
+    "번역 결과 검사 건너뛰기": "رد کردن بررسی نتیجهٔ ترجمه",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "حتی اگر ترجمه ناقص به نظر برسد، از نتیجه استفاده می‌کند و بر اساس این بررسی دوباره ترجمه نمی‌کند. اگر کد یا نام‌های خاص بی‌دلیل دوباره ترجمه می‌شوند، این گزینه را روشن کنید."
   },
   "he": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
@@ -16027,8 +16027,8 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). חריגה ממגבלת הבקשות. הפחת את מספר הבקשות הבו-זמניות.",
     "고급 설정": "הגדרות מתקדמות",
     "번역 누락 검사 설정을 적용하지 못했습니다": "לא ניתן להחיל את הגדרת בדיקת ההשמטות בתרגום",
-    "번역 결과 검사": "בדיקת תוצאת התרגום",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "מתרגם שוב אם הטקסט המקורי נשאר ללא שינוי או שהתרגום נראה חלקי. אפשר לכבות אם קוד או שמות פרטיים מתורגמים שוב ללא צורך."
+    "번역 결과 검사 건너뛰기": "דילוג על בדיקת תוצאת התרגום",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "משתמש בתוצאה גם אם התרגום נראה חלקי, בלי לתרגם שוב בעקבות הבדיקה. יש להפעיל אם קוד או שמות פרטיים מתורגמים שוב ללא צורך."
   },
   "cs": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
@@ -16724,7 +16724,7 @@
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Byl překročen limit požadavků. Snižte počet souběžných požadavků.",
     "고급 설정": "Pokročilá nastavení",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Nastavení kontroly vynechání v překladu nelze použít",
-    "번역 결과 검사": "Kontrola výsledku překladu",
-    "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.": "Přeloží znovu, pokud původní text zůstane beze změny nebo překlad vypadá neúplně. Pokud se kód nebo vlastní jména zbytečně překládají opakovaně, můžete tuto volbu vypnout."
+    "번역 결과 검사 건너뛰기": "Přeskočit kontrolu výsledku překladu",
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Použije výsledek, i když překlad vypadá neúplně, a na základě této kontroly jej znovu nepřekládá. Zapněte, pokud se kód nebo vlastní jména zbytečně překládají opakovaně."
   }
 }
