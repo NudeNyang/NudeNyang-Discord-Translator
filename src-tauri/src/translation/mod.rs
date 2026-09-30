@@ -87,5 +87,7 @@ pub trait Translator: Send {
     fn model_is_ready(&self) -> bool {
         true
     }
+    /// Providers with their own omission repair inference follow the global switch.
+    fn set_omission_check(&mut self, _enabled: bool) {}
     fn close(&mut self) {}
 }

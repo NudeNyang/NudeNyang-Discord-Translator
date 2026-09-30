@@ -269,6 +269,8 @@ const elements = {
   translationShortcutHint: document.querySelector("#translation-shortcut-hint"),
   outgoingShortcutHint: document.querySelector("#outgoing-shortcut-hint"),
   keepWarm: document.querySelector("#keep-warm"),
+  translationOmissionCheck: document.querySelector("#translation-omission-check"),
+  translationOmissionCheckHelp: document.querySelector("#translation-omission-check-help"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
   outgoingShortcut: document.querySelector("#toggle-outgoing-shortcut"),
@@ -2740,6 +2742,7 @@ function renderConfig(config) {
     elements.dictionaryTargetLanguage.value = state.config.target_language;
   }
   setSwitch(elements.keepWarm, state.config.keep_local_model_warm, "켜짐", "꺼짐");
+  renderTranslationOmissionCheck(state.config.translation_omission_check);
   elements.captureFps.value = state.config.capture_fps;
   elements.shortcut.value = state.config.hotkeys.toggle_translation;
   elements.outgoingShortcut.value = state.config.hotkeys.toggle_outgoing_translation;
@@ -2750,6 +2753,16 @@ function renderConfig(config) {
   renderWebSitePolicies();
   applyTheme(state.config.ui_theme);
   applyUiLanguage(state.config.ui_language);
+}
+
+function renderTranslationOmissionCheck(enabled) {
+  setSwitch(elements.translationOmissionCheck, enabled, "켜짐", "꺼짐");
+  setLocalizedText(
+    elements.translationOmissionCheckHelp,
+    enabled
+      ? "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다."
+      : "모델이 돌려준 결과를 그대로 사용합니다.",
+  );
 }
 
 async function applySettingsPatch(patch, { status = true } = {}) {
@@ -3504,6 +3517,14 @@ elements.keepWarm.addEventListener("click", () => {
   applySettingsPatch({ keep_local_model_warm: enabled }).catch(async error => {
     setSwitch(elements.keepWarm, !enabled, "켜짐", "꺼짐");
     await showError("로컬 모델 예열 설정을 적용하지 못했습니다", String(error));
+  });
+});
+elements.translationOmissionCheck.addEventListener("click", () => {
+  const enabled = elements.translationOmissionCheck.getAttribute("aria-checked") !== "true";
+  renderTranslationOmissionCheck(enabled);
+  applySettingsPatch({ translation_omission_check: enabled }).catch(async error => {
+    renderTranslationOmissionCheck(!enabled);
+    await showError("번역 누락 검사 설정을 적용하지 못했습니다", String(error));
   });
 });
 elements.captureFps.addEventListener("wheel", event => event.preventDefault(), { passive: false });

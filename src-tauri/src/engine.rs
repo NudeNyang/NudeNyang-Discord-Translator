@@ -916,7 +916,8 @@ fn translator_preparation_plan(
     updated: &AppConfig,
     refreshed_provider: Option<&str>,
 ) -> TranslatorPreparationPlan {
-    let shared_settings_changed = updated.hymt_device != current.hymt_device;
+    let shared_settings_changed = updated.hymt_device != current.hymt_device
+        || updated.translation_omission_check != current.translation_omission_check;
     let openai_compat_changed =
         OpenAiCompatSettings::from_config(updated) != OpenAiCompatSettings::from_config(current);
     let lane_changed = |current_name: &str, updated_name: &str| {
@@ -4477,25 +4478,27 @@ fn make_translator(
             preparation_cancellation,
         );
     }
+    let checked = |primary: Box<dyn Translator>| -> Box<dyn Translator> {
+        Box::new(
+            ResilientTranslator::new(primary, None)
+                .with_omission_check(config.translation_omission_check),
+        )
+    };
     match name {
-        "chatgpt" | "claude" | "gemini" => Ok(Box::new(ResilientTranslator::new(
-            Box::new(SubscriptionCliTranslator::new(
-                name,
-                "auto",
-                120,
-                cache_root(),
-            )?),
+        "chatgpt" | "claude" | "gemini" => Ok(checked(Box::new(SubscriptionCliTranslator::new(
+            name,
+            "auto",
+            120,
+            cache_root(),
+        )?))),
+        "deepl" => Ok(checked(Box::new(DeepLTranslator::new(
             None,
-        ))),
-        "deepl" => Ok(Box::new(ResilientTranslator::new(
-            Box::new(DeepLTranslator::new(None, Duration::from_secs(30))?),
-            None,
-        ))),
-        "openai_compat" => Ok(Box::new(ResilientTranslator::new(
-            Box::new(OpenAiCompatTranslator::with_stored_credential(
-                OpenAiCompatSettings::from_config(config),
-            )?),
-            None,
+            Duration::from_secs(30),
+        )?))),
+        "openai_compat" => Ok(checked(Box::new(
+            OpenAiCompatTranslator::with_stored_credential(OpenAiCompatSettings::from_config(
+                config,
+            ))?,
         ))),
         "mock" => Ok(Box::new(MockTranslator)),
         "original" => Ok(Box::new(OriginalTranslator)),
@@ -4520,10 +4523,10 @@ fn make_local_translator(
     } else {
         translator
     };
-    Ok(Box::new(ResilientTranslator::new(
-        Box::new(translator),
-        None,
-    )))
+    Ok(Box::new(
+        ResilientTranslator::new(Box::new(translator), None)
+            .with_omission_check(config.translation_omission_check),
+    ))
 }
 
 fn cache_root() -> PathBuf {
@@ -6342,6 +6345,23 @@ mod tests {
                 TranslatorPreparationPlan { display, outgoing },
             );
         }
+    }
+
+    #[test]
+    fn toggling_the_omission_check_rebuilds_every_translation_lane() {
+        let current = AppConfig {
+            translator: "hymt_1_8b".to_string(),
+            outgoing_translator: "chatgpt".to_string(),
+            ..Default::default()
+        };
+        let updated = AppConfig {
+            translation_omission_check: false,
+            ..current.clone()
+        };
+        assert_eq!(
+            translator_preparation_plan(&current, &updated, None),
+            TranslatorPreparationPlan::all()
+        );
     }
 
     #[test]

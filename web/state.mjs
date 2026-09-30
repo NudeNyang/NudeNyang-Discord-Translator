@@ -27,6 +27,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   openai_compat_shared_context: false,
   hymt_device: "auto",
   keep_local_model_warm: true,
+  translation_omission_check: true,
   capture_fps: 8,
   image_ocr_quality: "adaptive",
   ui_theme: "system",

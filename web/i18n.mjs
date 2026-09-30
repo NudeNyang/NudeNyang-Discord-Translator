@@ -640,6 +640,10 @@ export const COPY = Object.freeze({
   "OpenAI 호환 API가 번역문을 반환하지 않았습니다.": ["The OpenAI-compatible API did not return a translation.", "OpenAI互換APIが翻訳文を返しませんでした。", "OpenAI 兼容 API 未返回译文。"],
   "OpenAI 호환 API가 일부 문장의 결과를 반환하지 않았습니다.": ["The OpenAI-compatible API did not return results for some items.", "OpenAI互換APIが一部の項目の結果を返しませんでした。", "OpenAI 兼容 API 未返回部分条目的结果。"],
   "OpenAI 호환 API에 연결하지 못했습니다": ["Could not connect to the OpenAI-compatible API", "OpenAI互換APIに接続できませんでした", "无法连接到 OpenAI 兼容 API"],
+  "번역 누락 검사": ["Translation omission check", "翻訳漏れチェック", "翻译遗漏检查"],
+  "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": ["Treats results that keep the source text or leave parts out as failed translations.", "原文が残っている結果や一部が抜けている結果を翻訳失敗として扱います。", "将保留原文或遗漏部分内容的结果视为翻译失败。"],
+  "모델이 돌려준 결과를 그대로 사용합니다.": ["Uses the result returned by the model as is.", "モデルが返した結果をそのまま使用します。", "直接使用模型返回的结果。"],
+  "번역 누락 검사 설정을 적용하지 못했습니다": ["Could not apply the translation omission check setting", "翻訳漏れチェックの設定を適用できませんでした", "无法应用翻译遗漏检查设置"],
   "Mock 테스트": ["Mock test", "モックテスト", "模拟测试"],
   "회/초": ["/sec", "回/秒", "次/秒"],
 });

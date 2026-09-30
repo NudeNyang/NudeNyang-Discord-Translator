@@ -692,7 +692,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。請檢查 API 金鑰。",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。請檢查伺服器位址與模型 ID。",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI 相容 API 拒絕了請求（HTTP {status}）。已超過請求上限。請減少同時請求數。",
-    "고급 설정": "進階設定"
+    "고급 설정": "進階設定",
+    "번역 누락 검사": "翻譯遺漏檢查",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "將保留原文或遺漏部分內容的結果視為翻譯失敗。",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "直接使用模型傳回的結果。",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "無法套用翻譯遺漏檢查設定"
   },
   "pt-BR": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
@@ -1386,7 +1390,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). Verifique a chave de API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). Verifique o endereço do servidor e o ID do modelo.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "A API compatível com OpenAI recusou a solicitação (HTTP {status}). O limite de solicitações foi excedido. Reduza o número de solicitações simultâneas.",
-    "고급 설정": "Configurações avançadas"
+    "고급 설정": "Configurações avançadas",
+    "번역 누락 검사": "Verificação de omissões na tradução",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Trata como falha resultados que mantêm o texto original ou omitem partes.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Usa o resultado retornado pelo modelo sem alterações.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Não foi possível aplicar a configuração de verificação de omissões"
   },
   "hi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
@@ -2080,7 +2088,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। API कुंजी जाँचें।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। सर्वर पता और मॉडल ID जाँचें।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-संगत API ने अनुरोध अस्वीकार कर दिया (HTTP {status})। अनुरोध सीमा पार हो गई। एक साथ अनुरोधों की संख्या कम करें।",
-    "고급 설정": "उन्नत सेटिंग"
+    "고급 설정": "उन्नत सेटिंग",
+    "번역 누락 검사": "अनुवाद चूक जाँच",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "जिन परिणामों में मूल पाठ बचा रहे या कुछ हिस्सा छूट जाए, उन्हें विफल अनुवाद मानता है।",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "मॉडल द्वारा लौटाए गए परिणाम को जैसा है वैसा ही उपयोग करता है।",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "अनुवाद चूक जाँच सेटिंग लागू नहीं की जा सकी"
   },
   "es-419": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
@@ -2774,7 +2786,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Revisa la clave API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Revisa la dirección del servidor y el ID del modelo.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "La API compatible con OpenAI rechazó la solicitud (HTTP {status}). Se superó el límite de solicitudes. Reduce la cantidad de solicitudes simultáneas.",
-    "고급 설정": "Configuración avanzada"
+    "고급 설정": "Configuración avanzada",
+    "번역 누락 검사": "Verificación de omisiones en la traducción",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Trata como fallidos los resultados que conservan el texto original u omiten partes.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Usa tal cual el resultado que devuelve el modelo.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "No se pudo aplicar la configuración de verificación de omisiones"
   },
   "de": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
@@ -3468,7 +3484,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Prüfe den API-Schlüssel.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Prüfe Serveradresse und Modell-ID.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Die OpenAI-kompatible API hat die Anfrage abgelehnt (HTTP {status}). Das Anfragelimit wurde überschritten. Verringere die Anzahl gleichzeitiger Anfragen.",
-    "고급 설정": "Erweiterte Einstellungen"
+    "고급 설정": "Erweiterte Einstellungen",
+    "번역 누락 검사": "Prüfung auf Übersetzungslücken",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Behandelt Ergebnisse, die den Originaltext beibehalten oder Teile auslassen, als fehlgeschlagene Übersetzungen.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Verwendet das vom Modell zurückgegebene Ergebnis unverändert.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Die Einstellung für die Prüfung auf Übersetzungslücken konnte nicht angewendet werden"
   },
   "ru": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
@@ -4162,7 +4182,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Проверьте ключ API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Проверьте адрес сервера и ID модели.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, совместимый с OpenAI, отклонил запрос (HTTP {status}). Превышен лимит запросов. Уменьшите число одновременных запросов.",
-    "고급 설정": "Расширенные настройки"
+    "고급 설정": "Расширенные настройки",
+    "번역 누락 검사": "Проверка пропусков перевода",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Считает неудачными результаты, в которых остался исходный текст или пропущены части.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Использует результат модели без изменений.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Не удалось применить настройку проверки пропусков перевода"
   },
   "id": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
@@ -4856,7 +4880,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Periksa kunci API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Periksa alamat server dan ID model.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibel OpenAI menolak permintaan (HTTP {status}). Batas permintaan terlampaui. Kurangi jumlah permintaan bersamaan.",
-    "고급 설정": "Pengaturan lanjutan"
+    "고급 설정": "Pengaturan lanjutan",
+    "번역 누락 검사": "Pemeriksaan terjemahan terlewat",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Menganggap hasil yang masih memuat teks asli atau melewatkan sebagian sebagai terjemahan gagal.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Menggunakan hasil dari model apa adanya.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Tidak dapat menerapkan setelan pemeriksaan terjemahan terlewat"
   },
   "fr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
@@ -5550,7 +5578,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). Vérifiez la clé API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). Vérifiez l’adresse du serveur et l’ID du modèle.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L’API compatible OpenAI a refusé la requête (HTTP {status}). La limite de requêtes a été dépassée. Réduisez le nombre de requêtes simultanées.",
-    "고급 설정": "Paramètres avancés"
+    "고급 설정": "Paramètres avancés",
+    "번역 누락 검사": "Vérification des omissions de traduction",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Considère comme échouées les traductions qui conservent le texte d’origine ou en omettent une partie.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Utilise tel quel le résultat renvoyé par le modèle.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Impossible d’appliquer le paramètre de vérification des omissions"
   },
   "tr": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
@@ -6244,7 +6276,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). API anahtarını kontrol edin.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). Sunucu adresini ve model kimliğini kontrol edin.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI uyumlu API isteği reddetti (HTTP {status}). İstek sınırı aşıldı. Eşzamanlı istek sayısını azaltın.",
-    "고급 설정": "Gelişmiş ayarlar"
+    "고급 설정": "Gelişmiş ayarlar",
+    "번역 누락 검사": "Çeviri eksikliği denetimi",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Kaynak metni koruyan veya bazı bölümleri atlayan sonuçları başarısız çeviri sayar.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Modelin döndürdüğü sonucu olduğu gibi kullanır.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Çeviri eksikliği denetimi ayarı uygulanamadı"
   },
   "ar": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
@@ -6938,7 +6974,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تحقّق من مفتاح API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تحقّق من عنوان الخادم ومعرّف النموذج.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "رفضت واجهة API المتوافقة مع OpenAI الطلب (HTTP {status}). تم تجاوز حد الطلبات. قلّل عدد الطلبات المتزامنة.",
-    "고급 설정": "الإعدادات المتقدمة"
+    "고급 설정": "الإعدادات المتقدمة",
+    "번역 누락 검사": "فحص نقص الترجمة",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "يعدّ النتائج التي تُبقي النص الأصلي أو تُسقط أجزاءً منه ترجمةً فاشلة.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "يستخدم النتيجة التي أعادها النموذج كما هي.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "تعذّر تطبيق إعداد فحص نقص الترجمة"
   },
   "vi": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
@@ -7632,7 +7672,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Hãy kiểm tra khóa API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Hãy kiểm tra địa chỉ máy chủ và ID mô hình.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API tương thích OpenAI đã từ chối yêu cầu (HTTP {status}). Đã vượt quá giới hạn yêu cầu. Hãy giảm số yêu cầu đồng thời.",
-    "고급 설정": "Cài đặt nâng cao"
+    "고급 설정": "Cài đặt nâng cao",
+    "번역 누락 검사": "Kiểm tra bản dịch bị sót",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Xem các kết quả còn giữ văn bản gốc hoặc bỏ sót một phần là dịch thất bại.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Dùng nguyên kết quả mà mô hình trả về.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Không thể áp dụng cài đặt kiểm tra bản dịch bị sót"
   },
   "it": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
@@ -8326,7 +8370,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). Controlla la chiave API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). Controlla l'indirizzo del server e l'ID del modello.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "L'API compatibile con OpenAI ha rifiutato la richiesta (HTTP {status}). È stato superato il limite di richieste. Riduci il numero di richieste simultanee.",
-    "고급 설정": "Impostazioni avanzate"
+    "고급 설정": "Impostazioni avanzate",
+    "번역 누락 검사": "Controllo delle omissioni nella traduzione",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Considera non riuscite le traduzioni che mantengono il testo originale o ne omettono parti.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Usa così com’è il risultato restituito dal modello.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Impossibile applicare l’impostazione del controllo delle omissioni"
   },
   "pl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
@@ -9020,7 +9068,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Sprawdź klucz API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Sprawdź adres serwera i ID modelu.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API zgodne z OpenAI odrzuciło żądanie (HTTP {status}). Przekroczono limit żądań. Zmniejsz liczbę równoczesnych żądań.",
-    "고급 설정": "Ustawienia zaawansowane"
+    "고급 설정": "Ustawienia zaawansowane",
+    "번역 누락 검사": "Sprawdzanie pominięć w tłumaczeniu",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Traktuje jako nieudane wyniki, które zachowują tekst źródłowy lub pomijają fragmenty.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Używa wyniku zwróconego przez model bez zmian.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Nie można zastosować ustawienia sprawdzania pominięć"
   },
   "uk": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
@@ -9714,7 +9766,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевірте ключ API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевірте адресу сервера та ID моделі.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API, сумісний з OpenAI, відхилив запит (HTTP {status}). Перевищено ліміт запитів. Зменште кількість одночасних запитів.",
-    "고급 설정": "Розширені налаштування"
+    "고급 설정": "Розширені налаштування",
+    "번역 누락 검사": "Перевірка пропусків перекладу",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Вважає невдалими результати, у яких лишився вихідний текст або пропущено частини.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Використовує результат моделі без змін.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Не вдалося застосувати налаштування перевірки пропусків перекладу"
   },
   "ms": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
@@ -10408,7 +10464,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Semak kunci API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Semak alamat pelayan dan ID model.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API serasi OpenAI menolak permintaan (HTTP {status}). Had permintaan telah dilampaui. Kurangkan bilangan permintaan serentak.",
-    "고급 설정": "Tetapan lanjutan"
+    "고급 설정": "Tetapan lanjutan",
+    "번역 누락 검사": "Semakan terjemahan tertinggal",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Menganggap hasil yang masih mengandungi teks asal atau tertinggal sebahagian sebagai terjemahan gagal.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Menggunakan hasil yang dikembalikan oleh model sebagaimana adanya.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Tidak dapat menggunakan tetapan semakan terjemahan tertinggal"
   },
   "nl": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
@@ -11102,7 +11162,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). Controleer de API-sleutel.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). Controleer het serveradres en de model-ID.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "De OpenAI-compatibele API heeft het verzoek geweigerd (HTTP {status}). De verzoeklimiet is overschreden. Verlaag het aantal gelijktijdige verzoeken.",
-    "고급 설정": "Geavanceerde instellingen"
+    "고급 설정": "Geavanceerde instellingen",
+    "번역 누락 검사": "Controle op ontbrekende vertaling",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Beschouwt resultaten die de brontekst behouden of delen weglaten als mislukte vertalingen.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Gebruikt het resultaat van het model ongewijzigd.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "De instelling voor de controle op ontbrekende vertaling kan niet worden toegepast"
   },
   "th": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
@@ -11796,7 +11860,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) ตรวจสอบคีย์ API",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) ตรวจสอบที่อยู่เซิร์ฟเวอร์และ ID โมเดล",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API ที่เข้ากันได้กับ OpenAI ปฏิเสธคำขอ (HTTP {status}) เกินขีดจำกัดคำขอ ลดจำนวนคำขอพร้อมกัน",
-    "고급 설정": "การตั้งค่าขั้นสูง"
+    "고급 설정": "การตั้งค่าขั้นสูง",
+    "번역 누락 검사": "ตรวจการแปลที่ตกหล่น",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "ถือว่าผลลัพธ์ที่ยังมีข้อความต้นฉบับหรือขาดบางส่วนเป็นการแปลที่ล้มเหลว",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "ใช้ผลลัพธ์ที่โมเดลส่งกลับมาตามเดิม",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "ไม่สามารถใช้การตั้งค่าตรวจการแปลที่ตกหล่นได้"
   },
   "fil": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
@@ -12490,7 +12558,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Suriin ang API key.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Suriin ang address ng server at ID ng modelo.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "Tinanggihan ng API na compatible sa OpenAI ang request (HTTP {status}). Nalampasan ang limit ng request. Bawasan ang bilang ng sabay-sabay na request.",
-    "고급 설정": "Mga advanced na setting"
+    "고급 설정": "Mga advanced na setting",
+    "번역 누락 검사": "Pagsuri sa kulang na salin",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Itinuturing na bigong salin ang resultang may natirang orihinal na teksto o may nawawalang bahagi.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Ginagamit nang buo ang resultang ibinalik ng modelo.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Hindi mailapat ang setting ng pagsuri sa kulang na salin"
   },
   "bn": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
@@ -13184,7 +13256,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। API কী যাচাই করুন।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। সার্ভারের ঠিকানা ও মডেল ID যাচাই করুন।",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-সামঞ্জস্যপূর্ণ API অনুরোধটি প্রত্যাখ্যান করেছে (HTTP {status})। অনুরোধের সীমা অতিক্রম হয়েছে। একসাথে অনুরোধের সংখ্যা কমান।",
-    "고급 설정": "উন্নত সেটিংস"
+    "고급 설정": "উন্নত সেটিংস",
+    "번역 누락 검사": "অনুবাদ বাদ পড়া যাচাই",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "যে ফলাফলে মূল লেখা রয়ে যায় বা কিছু অংশ বাদ পড়ে, সেগুলোকে ব্যর্থ অনুবাদ হিসেবে ধরে।",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "মডেল যে ফলাফল দেয় তা হুবহু ব্যবহার করে।",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "অনুবাদ বাদ পড়া যাচাইয়ের সেটিং প্রয়োগ করা যায়নি"
   },
   "ur": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
@@ -13878,7 +13954,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ API کلید چیک کریں۔",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ سرور کا پتہ اور ماڈل ID چیک کریں۔",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI سے مطابقت رکھنے والے API نے درخواست مسترد کر دی (HTTP {status})۔ درخواستوں کی حد سے تجاوز ہو گیا۔ بیک وقت درخواستوں کی تعداد کم کریں۔",
-    "고급 설정": "اعلیٰ ترتیبات"
+    "고급 설정": "اعلیٰ ترتیبات",
+    "번역 누락 검사": "ترجمے میں کمی کی جانچ",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "ایسے نتائج کو ناکام ترجمہ سمجھتا ہے جن میں اصل متن باقی رہے یا کچھ حصہ چھوٹ جائے۔",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "ماڈل کے واپس کیے گئے نتیجے کو جوں کا توں استعمال کرتا ہے۔",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "ترجمے میں کمی کی جانچ کی ترتیب لاگو نہیں ہو سکی"
   },
   "ta": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
@@ -14572,7 +14652,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). API விசையைச் சரிபார்க்கவும்.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). சர்வர் முகவரியையும் மாடல் ID-யையும் சரிபார்க்கவும்.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "OpenAI-இணக்கமான API கோரிக்கையை நிராகரித்தது (HTTP {status}). கோரிக்கை வரம்பு மீறப்பட்டது. ஒரே நேர கோரிக்கைகளின் எண்ணிக்கையைக் குறைக்கவும்.",
-    "고급 설정": "மேம்பட்ட அமைப்புகள்"
+    "고급 설정": "மேம்பட்ட அமைப்புகள்",
+    "번역 누락 검사": "மொழிபெயர்ப்பு விடுபாடு சரிபார்ப்பு",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "மூல உரை மீதமுள்ள அல்லது சில பகுதிகள் விடுபட்ட முடிவுகளைத் தோல்வியடைந்த மொழிபெயர்ப்பாகக் கருதும்.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "மாடல் திருப்பிய முடிவை அப்படியே பயன்படுத்தும்.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "மொழிபெயர்ப்பு விடுபாடு சரிபார்ப்பு அமைப்பைப் பயன்படுத்த முடியவில்லை"
   },
   "fa": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
@@ -15266,7 +15350,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). کلید API را بررسی کنید.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). نشانی سرور و شناسه مدل را بررسی کنید.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API سازگار با OpenAI درخواست را رد کرد (HTTP {status}). از سقف درخواست‌ها فراتر رفته است. تعداد درخواست‌های هم‌زمان را کاهش دهید.",
-    "고급 설정": "تنظیمات پیشرفته"
+    "고급 설정": "تنظیمات پیشرفته",
+    "번역 누락 검사": "بررسی جاافتادگی ترجمه",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "نتیجه‌هایی را که متن اصلی در آن‌ها مانده یا بخشی از آن‌ها افتاده است، ترجمهٔ ناموفق در نظر می‌گیرد.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "نتیجه‌ای را که مدل برمی‌گرداند بدون تغییر استفاده می‌کند.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "اعمال تنظیم بررسی جاافتادگی ترجمه ممکن نشد"
   },
   "he": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
@@ -15960,7 +16048,11 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). בדוק את מפתח ה-API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). בדוק את כתובת השרת ואת מזהה המודל.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "ה-API התואם OpenAI דחה את הבקשה (HTTP {status}). חריגה ממגבלת הבקשות. הפחת את מספר הבקשות הבו-זמניות.",
-    "고급 설정": "הגדרות מתקדמות"
+    "고급 설정": "הגדרות מתקדמות",
+    "번역 누락 검사": "בדיקת השמטות בתרגום",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "מתייחסת לתוצאות שהשאירו את טקסט המקור או השמיטו חלקים כתרגום שנכשל.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "משתמשת בתוצאה שהמודל החזיר כפי שהיא.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "לא ניתן להחיל את הגדרת בדיקת ההשמטות בתרגום"
   },
   "cs": {
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
@@ -16654,6 +16746,10 @@ export const UI_LOCALE_COPY = Object.freeze({
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). API 키를 확인하십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Zkontrolujte klíč API.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 서버 주소와 모델 ID를 확인하십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Zkontrolujte adresu serveru a ID modelu.",
     "OpenAI 호환 API가 요청을 거부했습니다 (HTTP {status}). 요청 한도를 초과했습니다. 동시 요청 수를 줄이십시오.": "API kompatibilní s OpenAI odmítlo požadavek (HTTP {status}). Byl překročen limit požadavků. Snižte počet souběžných požadavků.",
-    "고급 설정": "Pokročilá nastavení"
+    "고급 설정": "Pokročilá nastavení",
+    "번역 누락 검사": "Kontrola vynechání v překladu",
+    "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다.": "Výsledky, které ponechávají původní text nebo vynechávají části, považuje za neúspěšný překlad.",
+    "모델이 돌려준 결과를 그대로 사용합니다.": "Použije výsledek vrácený modelem beze změn.",
+    "번역 누락 검사 설정을 적용하지 못했습니다": "Nastavení kontroly vynechání v překladu nelze použít"
   }
 });
