@@ -5779,3 +5779,97 @@ mod tests {
         let _ = fs::remove_dir_all(path.parent().unwrap());
     }
 }
+
+#[cfg(test)]
+mod empty_result_regression_tests {
+    use super::*;
+    use crate::translation::{ResilientTranslator, Translator};
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+
+    struct EmptyThenValid {
+        first: &'static str,
+        calls: Arc<AtomicUsize>,
+    }
+    impl Translator for EmptyThenValid {
+        fn display_name(&self) -> &str {
+            "empty-result-fixture"
+        }
+        fn cache_namespace(&self) -> &str {
+            "empty-result-fixture:v1"
+        }
+        fn translate(&mut self, _: &str, _: Language, _: Language) -> Result<String, String> {
+            let text = if self.calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                self.first
+            } else {
+                "내일은 친구와 공원에 갑니다"
+            };
+            let payload = serde_json::json!({"translations": [{"id": 0, "text": text}]});
+            let mut parsed = crate::translation::subscription_cli::validated_translations(
+                &payload,
+                &std::collections::HashSet::from([0]),
+            )?;
+            Ok(parsed.remove(&0).unwrap())
+        }
+    }
+
+    #[test]
+    fn empty_results_are_rejected_without_caching_even_when_checks_are_disabled() {
+        for enabled in [false, true] {
+            for first in ["", " \n\t"] {
+                let calls = Arc::new(AtomicUsize::new(0));
+                let translator = ResilientTranslator::new(
+                    Box::new(EmptyThenValid {
+                        first,
+                        calls: calls.clone(),
+                    }),
+                    None,
+                )
+                .with_omission_check(enabled);
+                assert!(!translator.translation_is_acceptable(
+                    "明日は友達と公園に行きます",
+                    first,
+                    Language::Japanese,
+                    Language::Korean
+                ));
+                assert!(!translator.should_cache(
+                    "明日は友達と公園に行きます",
+                    first,
+                    Language::Japanese,
+                    Language::Korean
+                ));
+                let mut service = TranslationService::new(
+                    Box::new(translator),
+                    TranslationCache::in_memory(32).unwrap(),
+                );
+                let texts = ["明日は友達と公園に行きます".to_string()];
+                assert!(
+                    service
+                        .translate_many_for_incoming(&texts, Language::Korean)
+                        .is_err(),
+                    "enabled={enabled}, empty={first:?}"
+                );
+                assert_eq!(
+                    calls.load(Ordering::SeqCst),
+                    1,
+                    "empty output must not trigger quality repair"
+                );
+                for _ in 0..2 {
+                    assert_eq!(
+                        service
+                            .translate_many_for_incoming(&texts, Language::Korean)
+                            .unwrap(),
+                        ["내일은 친구와 공원에 갑니다"]
+                    );
+                }
+                assert_eq!(
+                    calls.load(Ordering::SeqCst),
+                    2,
+                    "only the valid result should be cached"
+                );
+            }
+        }
+    }
+}

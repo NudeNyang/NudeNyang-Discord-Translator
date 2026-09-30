@@ -116,6 +116,14 @@ impl Translator for ResilientTranslator {
         if results.len() != items.len() {
             return Err("주 번역 엔진이 요청 수와 다른 결과를 반환했습니다.".to_string());
         }
+        // Empty responses are invalid even when heuristic quality checks are disabled.
+        if items
+            .iter()
+            .zip(&results)
+            .any(|((text, _), result)| !text.trim().is_empty() && result.trim().is_empty())
+        {
+            return Err("번역 엔진이 빈 번역문을 반환했습니다.".to_string());
+        }
         if !self.omission_check {
             return Ok(results);
         }
@@ -283,8 +291,9 @@ impl Translator for ResilientTranslator {
         source: Language,
         target: Language,
     ) -> bool {
-        !self.omission_check
-            || !translation_needs_repair(source_text, translated_text, source, target)
+        (source_text.trim().is_empty() || !translated_text.trim().is_empty())
+            && (!self.omission_check
+                || !translation_needs_repair(source_text, translated_text, source, target))
     }
 
     fn prepare(&mut self) -> Result<(), String> {

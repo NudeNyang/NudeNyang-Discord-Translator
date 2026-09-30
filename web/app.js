@@ -270,7 +270,6 @@ const elements = {
   outgoingShortcutHint: document.querySelector("#outgoing-shortcut-hint"),
   keepWarm: document.querySelector("#keep-warm"),
   translationOmissionCheck: document.querySelector("#translation-omission-check"),
-  translationOmissionCheckHelp: document.querySelector("#translation-omission-check-help"),
   captureFps: document.querySelector("#capture-fps"),
   shortcut: document.querySelector("#toggle-shortcut"),
   outgoingShortcut: document.querySelector("#toggle-outgoing-shortcut"),
@@ -2757,12 +2756,6 @@ function renderConfig(config) {
 
 function renderTranslationOmissionCheck(enabled) {
   setSwitch(elements.translationOmissionCheck, enabled, "켜짐", "꺼짐");
-  setLocalizedText(
-    elements.translationOmissionCheckHelp,
-    enabled
-      ? "원문이 남았거나 일부가 빠진 결과를 번역 실패로 처리합니다."
-      : "모델이 돌려준 결과를 그대로 사용합니다.",
-  );
 }
 
 async function applySettingsPatch(patch, { status = true } = {}) {

@@ -28,6 +28,10 @@ test.beforeEach(async ({ page }) => {
       core: { invoke: async (command, payload) => {
         window.testCalls.push({ command, payload });
         if (command === "settings_get") return window.testConfig;
+        if (command === "settings_update") {
+          Object.assign(window.testConfig, payload.patch);
+          return { ...window.testConfig };
+        }
         if (command === "provider_connections_get") return providers;
         if (command === "autostart_get") return false;
         if (command === "storage_status_get") return { models: [], cache: {} };
@@ -43,7 +47,7 @@ test.beforeEach(async ({ page }) => {
         return null;
       } },
       event: { listen: async (name, callback) => { window.testEvents[name] = callback; return () => {}; } },
-      app: { getVersion: async () => "0.7.8-beta" },
+      app: { getVersion: async () => "0.7.9-beta" },
     };
   });
   await page.goto("http://settings.test/");
@@ -209,3 +213,22 @@ for (const theme of ["dark", "light"]) {
     expect(errors).toEqual([]);
   });
 }
+
+
+test("translation result check defaults on and keeps its accessible description when toggled", async ({ page }) => {
+  const control = page.getByRole("switch", { name: "번역 결과 검사", exact: true });
+  const description = "원문이 그대로 남거나 번역이 불완전해 보이면 다시 번역합니다. 코드나 고유명사가 불필요하게 재번역되는 경우 끌 수 있습니다.";
+  await expect(page.locator("#translation-advanced-settings").getByRole("heading", { name: "고급 설정" })).toBeVisible();
+  await expect(control).toHaveAttribute("aria-checked", "true");
+  await expect(control).toHaveAccessibleDescription(description);
+  await control.focus();
+  await page.keyboard.press("Space");
+  await expect(control).toHaveAttribute("aria-checked", "false");
+  await expect(control).toHaveAccessibleDescription(description);
+  await expect.poll(() => page.evaluate(() => window.testConfig.translation_omission_check)).toBe(false);
+  await page.keyboard.press("Space");
+  await expect(control).toHaveAttribute("aria-checked", "true");
+  await expect(control).toHaveAccessibleDescription(description);
+  await expect.poll(() => page.evaluate(() => window.testConfig.translation_omission_check)).toBe(true);
+  expect(await page.evaluate(() => window.testCalls.filter(call => call.command === "settings_update").map(call => call.payload.patch.translation_omission_check))).toEqual([false, true]);
+});
