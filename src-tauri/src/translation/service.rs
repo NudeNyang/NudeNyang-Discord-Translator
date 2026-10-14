@@ -413,7 +413,8 @@ impl TranslationService {
             true,
         )?;
         for (original, translated_segment) in segments.iter().zip(&translated) {
-            if original == translated_segment
+            if self.translator.omission_check_enabled()
+                && original == translated_segment
                 && detect_language(original).language == Language::Unknown
                 && detection_script_family(original)
                     .zip(language_script_family(target))
@@ -1812,7 +1813,8 @@ impl TranslationService {
                 if self
                     .translator
                     .should_cache(&provider_source, &translated, source, target)
-                    && !(translate_unknown
+                    && !(self.translator.omission_check_enabled()
+                        && translate_unknown
                         && restored == text
                         && detect_language(&text).language == Language::Unknown
                         && detection_script_family(&text)
@@ -2535,6 +2537,32 @@ mod tests {
                 "请阅读规则".to_string(),
                 "Keep this untranslated".to_string()
             ]
+        );
+        assert_eq!(calls.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn latency_send_disabled_omission_check_keeps_unchecked_outgoing() {
+        let calls: Arc<Mutex<Vec<(String, Language)>>> = Arc::new(Mutex::new(Vec::new()));
+        let mut service = TranslationService::new(
+            Box::new(
+                ResilientTranslator::new(
+                    Box::new(LatencySendProbe {
+                        calls: calls.clone(),
+                        echo: true,
+                    }),
+                    None,
+                )
+                .with_omission_check(false),
+            ),
+            TranslationCache::in_memory(32).unwrap(),
+        );
+
+        assert_eq!(
+            service
+                .translate_for_discord("你好", Language::English)
+                .unwrap(),
+            "你好"
         );
         assert_eq!(calls.lock().unwrap().len(), 1);
     }

@@ -273,6 +273,23 @@ function buttonBusy(button) {
 // 3. Tests
 // ---------------------------------------------------------------------------
 
+test("automatic optional model probing does not overwrite settings status", async () => {
+  const h = createHarness();
+  h.setInvokeImpl(async () => {
+    throw new Error("CodeBuddy CLI unavailable");
+  });
+
+  await h.exports.loadCodeBuddyModels({ silent: true });
+
+  assert.equal(h.errors.length, 0);
+  assert.ok(h.diagnostics.length >= 1);
+  assert.equal(h.button.disabled, false);
+
+  await h.exports.loadCodeBuddyModels();
+
+  assert.equal(h.errors.length, 1);
+});
+
 test("renders the catalog as dynamic options with full ids and keeps the current selection", () => {
   const h = createHarness();
   const catalog = [

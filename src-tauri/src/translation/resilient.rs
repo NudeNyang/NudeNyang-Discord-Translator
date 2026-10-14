@@ -70,6 +70,10 @@ impl Translator for ResilientTranslator {
         &self.cache_namespace
     }
 
+    fn omission_check_enabled(&self) -> bool {
+        self.omission_check
+    }
+
     fn sends_text_externally(&self) -> bool {
         self.primary.sends_text_externally()
             || self

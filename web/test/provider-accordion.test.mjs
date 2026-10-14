@@ -17,7 +17,7 @@ function setup() {
 test("only OpenAI details collapse; all existing status, connect and disconnect controls remain outside", () => {
   const { root, row, button } = setup();
   assert.equal(root.querySelectorAll(".provider-summary").length, 1);
-  assert.equal(root.querySelectorAll(".provider-status").length, 5);
+  assert.equal(root.querySelectorAll(".provider-status").length, 6);
   const panel = row.querySelector(".provider-panel");
   assert.ok(panel.hidden);
   assert.equal(button.getAttribute("aria-expanded"), "false");
@@ -26,7 +26,7 @@ test("only OpenAI details collapse; all existing status, connect and disconnect 
   for (const control of root.querySelectorAll(".provider-status,.provider-action,.provider-disconnect,.provider-secret")) {
     assert.equal(control.closest(".provider-panel"), null);
   }
-  for (const provider of ["chatgpt", "claude", "gemini", "deepl"]) {
+  for (const provider of ["chatgpt", "claude", "gemini", "codebuddy", "deepl"]) {
     assert.equal(root.querySelector(`[data-provider="${provider}"] .provider-summary`), null);
   }
 });

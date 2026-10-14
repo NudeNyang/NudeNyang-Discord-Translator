@@ -637,7 +637,7 @@ function renderCodeBuddyModels(models, selected) {
   setSelectValue("codebuddy_model", selected);
 }
 
-async function loadCodeBuddyModels() {
+async function loadCodeBuddyModels({ silent = false } = {}) {
   if (codeBuddyModelsLoading) return;
   codeBuddyModelsLoading = true;
   const button = document.getElementById("codebuddy-models-refresh");
@@ -651,7 +651,9 @@ async function loadCodeBuddyModels() {
     renderCodeBuddyModels(models, selected);
     codeBuddyModelsLoaded = true;
   } catch (error) {
-    setLocalizedError(elements.saveStatus, error);
+    if (!silent) {
+      setLocalizedError(elements.saveStatus, error);
+    }
     writeDiagnostic("warn", `codebuddy-models: ${String(error)}`);
   } finally {
     codeBuddyModelsLoading = false;
@@ -3338,7 +3340,7 @@ async function initializeSettingsUi() {
   // Provider probes can take several seconds, so begin them as soon as the
   // saved configuration is available without delaying engine activation.
   void loadProviderConnections();
-  void loadCodeBuddyModels();
+  void loadCodeBuddyModels({ silent: true });
   try {
     await loadAutostartState();
   } catch (error) {

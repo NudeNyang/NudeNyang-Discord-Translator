@@ -82,14 +82,71 @@ impl DisplayReplay {
         Self::key(namespace, batch).map(|key| format!("{}:{key}", batch.generation))
     }
 
+    /// One failure bucket per message context. Every range keeps the full batch
+    /// metadata so a context keys the same way regardless of render boundaries;
+    /// only the aligned `source_hints` and `parts` slices are narrowed. Ranges
+    /// are never split further into fragments.
+    fn context_batches(batch: &TranslationBatch) -> Vec<TranslationBatch> {
+        message_ranges(&batch.parts)
+            .into_iter()
+            .map(|range| TranslationBatch {
+                source_hints: batch
+                    .source_hints
+                    .as_ref()
+                    .map(|hints| hints[range.clone()].to_vec()),
+                generation: batch.generation,
+                view_epoch: batch.view_epoch,
+                view_scope: batch.view_scope.clone(),
+                target: batch.target,
+                allowed_sources: batch.allowed_sources.clone(),
+                parts: batch.parts[range].to_vec(),
+                context_scope: batch.context_scope.clone(),
+                queued_at: batch.queued_at,
+            })
+            .collect()
+    }
+
+    pub fn take_deferred(
+        &self,
+        batch: &mut TranslationBatch,
+        now: Instant,
+    ) -> Vec<(TranslationBatch, String)> {
+        let context = Self::context_batches(batch);
+        let mut ready_parts = Vec::new();
+        let mut ready_hints = batch.source_hints.as_ref().map(|_| Vec::new());
+        let mut deferred = Vec::new();
+        for context_batch in context {
+            if let Some(error) = self.deferred_error(&context_batch, now) {
+                deferred.push((context_batch, error));
+                continue;
+            }
+            if let Some(hints) = ready_hints.as_mut() {
+                hints.extend(context_batch.source_hints.unwrap_or_default());
+            }
+            ready_parts.extend(context_batch.parts);
+        }
+        batch.parts = ready_parts;
+        if let Some(hints) = ready_hints {
+            batch.source_hints = Some(hints);
+        }
+        deferred
+    }
+
     pub fn deferred_error(&self, batch: &TranslationBatch, now: Instant) -> Option<String> {
         let state = self.state.lock().unwrap();
-        let key = Self::failure_key(&state.namespace, batch)?;
-        let failure = state.failures.get(&key)?;
-        if failure.retry_at.is_some_and(|retry_at| now >= retry_at) {
-            return None;
+        for context in Self::context_batches(batch) {
+            let Some(key) = Self::failure_key(&state.namespace, &context) else {
+                continue;
+            };
+            let Some(failure) = state.failures.get(&key) else {
+                continue;
+            };
+            if failure.retry_at.is_some_and(|retry_at| now >= retry_at) {
+                continue;
+            }
+            return Some(failure.error.clone());
         }
-        Some(failure.error.clone())
+        None
     }
 
     pub fn record_failure(
@@ -103,29 +160,31 @@ impl DisplayReplay {
         if state.revision != revision {
             return;
         }
-        let Some(key) = Self::failure_key(&state.namespace, batch) else {
-            return;
-        };
-        let attempts = state
-            .failures
-            .get(&key)
-            .map_or(1, |failure| failure.attempts.saturating_add(1));
-        // Quality repair already ran inside the provider. Repeating the entire
-        // pipeline cannot distinguish code from an unchanged natural sentence.
-        let terminal =
-            error.starts_with(crate::translation::QUALITY_REJECTED_ERROR) || attempts >= 3;
-        if !state.failures.contains_key(&key) {
-            state.failure_order.push_back(key.clone());
+        for context in Self::context_batches(batch) {
+            let Some(key) = Self::failure_key(&state.namespace, &context) else {
+                continue;
+            };
+            let attempts = state
+                .failures
+                .get(&key)
+                .map_or(1, |failure| failure.attempts.saturating_add(1));
+            // Quality repair already ran inside the provider. Repeating the entire
+            // pipeline cannot distinguish code from an unchanged natural sentence.
+            let terminal =
+                error.starts_with(crate::translation::QUALITY_REJECTED_ERROR) || attempts >= 3;
+            if !state.failures.contains_key(&key) {
+                state.failure_order.push_back(key.clone());
+            }
+            state.failures.insert(
+                key,
+                DisplayFailure {
+                    attempts,
+                    retry_at: (!terminal).then(|| now + Duration::from_secs(1 << attempts)),
+                    // Bound diagnostics in memory; never persist failed message bodies.
+                    error: error.chars().take(1024).collect(),
+                },
+            );
         }
-        state.failures.insert(
-            key,
-            DisplayFailure {
-                attempts,
-                retry_at: (!terminal).then(|| now + Duration::from_secs(1 << attempts)),
-                // Bound diagnostics in memory; never persist failed message bodies.
-                error: error.chars().take(1024).collect(),
-            },
-        );
         while state.failures.len() > MAX_REPLAY_MESSAGES {
             let oldest = state.failure_order.pop_front().unwrap();
             state.failures.remove(&oldest);
@@ -137,9 +196,11 @@ impl DisplayReplay {
         if state.revision != revision {
             return;
         }
-        if let Some(key) = Self::failure_key(&state.namespace, batch) {
-            state.failures.remove(&key);
-            state.failure_order.retain(|candidate| candidate != &key);
+        for context in Self::context_batches(batch) {
+            if let Some(key) = Self::failure_key(&state.namespace, &context) {
+                state.failures.remove(&key);
+                state.failure_order.retain(|candidate| candidate != &key);
+            }
         }
     }
 
@@ -375,6 +436,154 @@ mod tests {
                 displayed_text: None,
             }],
         }
+    }
+
+    #[test]
+    fn codebuddy_deferred_context_keeps_neighbor_and_hints() {
+        let replay = DisplayReplay {
+            store: None,
+            state: Mutex::new(ReplayState::default()),
+            visible: Mutex::new(HashMap::new()),
+        };
+        replay.activate("codebuddy-hints-test");
+
+        let mut failed = batch();
+        let mut second = failed.parts[0].clone();
+        second.index = 1;
+        second.text = "Second fragment".to_string();
+        failed.parts.push(second);
+
+        let now = Instant::now();
+        replay.record_failure(
+            &failed,
+            crate::translation::QUALITY_REJECTED_ERROR,
+            replay.revision(),
+            now,
+        );
+
+        let mut pending = batch();
+        pending.parts = failed.parts.clone();
+        let mut neighbor = pending.parts[0].clone();
+        neighbor.context_id = Some("neighbor".to_string());
+        neighbor.item_id = "neighbor".to_string();
+        neighbor.index = 0;
+        neighbor.text = "Neighbor".to_string();
+        pending.parts.push(neighbor);
+        pending.source_hints = Some(vec![
+            Some(crate::language::Language::English),
+            Some(crate::language::Language::English),
+            Some(crate::language::Language::Japanese),
+        ]);
+
+        let deferred = replay.take_deferred(&mut pending, now);
+
+        assert_eq!(deferred.len(), 1);
+        assert_eq!(deferred[0].0.parts.len(), 2);
+        assert_eq!(
+            deferred[0].0.source_hints,
+            Some(vec![
+                Some(crate::language::Language::English),
+                Some(crate::language::Language::English),
+            ])
+        );
+        assert_eq!(deferred[0].1, crate::translation::QUALITY_REJECTED_ERROR);
+
+        assert_eq!(pending.parts.len(), 1);
+        assert_eq!(pending.parts[0].text, "Neighbor");
+        assert_eq!(
+            pending.source_hints,
+            Some(vec![Some(crate::language::Language::Japanese)])
+        );
+        assert_eq!(pending.generation, 1);
+        assert_eq!(pending.view_scope, "/channels/guild/channel");
+    }
+
+    #[test]
+    fn codebuddy_batched_failure_is_visible_to_single_message() {
+        let replay = DisplayReplay {
+            store: None,
+            state: Mutex::new(ReplayState::default()),
+            visible: Mutex::new(HashMap::new()),
+        };
+        replay.activate("codebuddy-budget-test");
+
+        let now = Instant::now();
+        let revision = replay.revision();
+
+        let original = batch();
+        let mut mixed = batch();
+
+        let mut neighbor = original.parts[0].clone();
+        neighbor.context_id = Some("neighbor".to_string());
+        neighbor.item_id = "neighbor".to_string();
+        neighbor.text = "Another English message".to_string();
+        mixed.parts.push(neighbor);
+
+        replay.record_failure(
+            &mixed,
+            crate::translation::QUALITY_REJECTED_ERROR,
+            revision,
+            now,
+        );
+        assert!(replay.deferred_error(&original, now).is_some());
+
+        mixed.parts[1].context_id = Some("neighbor-updated".to_string());
+        mixed.parts[1].text = "A changed English message".to_string();
+
+        assert!(replay.deferred_error(&original, now).is_some());
+
+        let mut changed_neighbor = batch();
+        changed_neighbor.parts = vec![mixed.parts[1].clone()];
+        assert!(replay.deferred_error(&changed_neighbor, now).is_none());
+    }
+
+    #[test]
+    fn codebuddy_batched_transport_budget_survives_neighbors() {
+        let replay = DisplayReplay {
+            store: None,
+            state: Mutex::new(ReplayState::default()),
+            visible: Mutex::new(HashMap::new()),
+        };
+        replay.activate("codebuddy-budget-test");
+
+        let now = Instant::now();
+        let revision = replay.revision();
+
+        let mut mixed = batch();
+        let mut neighbor = batch().parts[0].clone();
+        neighbor.context_id = Some("neighbor".to_string());
+        neighbor.item_id = "neighbor".to_string();
+        neighbor.text = "Another English message".to_string();
+        mixed.parts.push(neighbor);
+
+        replay.record_failure(&mixed, "server unavailable", revision, now);
+        replay.record_failure(
+            &mixed,
+            "server unavailable",
+            revision,
+            now + Duration::from_secs(2),
+        );
+        replay.record_failure(
+            &mixed,
+            "server unavailable",
+            revision,
+            now + Duration::from_secs(6),
+        );
+
+        let single_a = batch();
+        let mut single_b = batch();
+        single_b.parts = vec![mixed.parts[1].clone()];
+
+        let later = now + Duration::from_secs(3600);
+        assert!(replay.deferred_error(&single_a, later).is_some());
+        assert!(replay.deferred_error(&single_b, later).is_some());
+
+        replay.clear_failure(&single_b, revision);
+        assert!(replay.deferred_error(&single_b, later).is_none());
+        assert!(replay.deferred_error(&single_a, later).is_some());
+
+        replay.clear_failure(&single_a, revision);
+        assert!(replay.deferred_error(&single_a, later).is_none());
     }
 
     #[test]

@@ -3806,6 +3806,19 @@ fn run_translation_worker_with_replay(
                         queued_at: batch.queued_at,
                     }));
                 }
+                for (deferred_batch, error) in replay.take_deferred(&mut batch, Instant::now()) {
+                    let _ = results.send(WorkerResult::Translated {
+                        generation: deferred_batch.generation,
+                        view_epoch: deferred_batch.view_epoch,
+                        view_scope: deferred_batch.view_scope,
+                        target: deferred_batch.target,
+                        parts: deferred_batch.parts,
+                        values: Err(error),
+                    });
+                }
+                if batch.parts.is_empty() {
+                    continue;
+                }
                 log_worker_queue(
                     "display",
                     batch.queued_at,
