@@ -18,7 +18,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="0.7.10-beta" src="https://img.shields.io/badge/release-0.7.10--beta-4C1">
+  <img alt="0.7.11-beta" src="https://img.shields.io/badge/release-0.7.11--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -29,9 +29,9 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ## 다운로드와 업데이트
 
-[0.7.10 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.10-beta)에서 Windows 10/11용 설치 파일을 받으세요. Discord가 다시 연결된 뒤 다른 창을 사용하면 이전 연결 경고가 남던 문제를 수정했습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.10-beta.md)에 정리했습니다.
+[0.7.11 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.11-beta)에서 Windows 10/11용 설치 파일을 받으세요. CodeBuddy CLI 번역을 추가하고, 번역 실패 메시지의 반복 요청과 다른 앱 사용 중 Discord 재연결 문제를 수정했습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.11-beta.md)에 정리했습니다.
 
-0.7.10-beta는 GitHub 정식 최신 릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
+0.7.11-beta는 GitHub 프리릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
 - 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
@@ -125,7 +125,7 @@ sequenceDiagram
 | 진단 로그 | 사용자 홈 경로와 비밀 값은 가리고, 메시지 본문과 로컬 모델 프롬프트는 남기지 않습니다. |
 | 모델 다운로드 | 고정된 리비전에서 받은 뒤 예상 크기와 SHA-256이 맞는 파일만 불러옵니다. |
 
-Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemini, DeepL, OpenAI 호환 API는 선택 사항이며, 이 가운데 하나를 고르면 번역할 텍스트가 해당 서비스로 전송됩니다.
+Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemini, DeepL, CodeBuddy, OpenAI 호환 API는 선택 사항이며, 이 가운데 하나를 고르면 번역할 텍스트가 해당 서비스로 전송됩니다.
 
 ## 주요 기능
 
@@ -133,7 +133,7 @@ Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemin
 - 채널별 설정이나 최근 대화 언어를 따르며 마지막 전송은 사용자에게 맡기는 보내는 메시지 번역
 - 한국어, 영어, 일본어, 간체·번체 중국어를 포함한 채팅·인터페이스 28개 언어
 - Hy-MT2 1.8B·7B 로컬 모델과 실험용 TranslateGemma 4B
-- 선택형 ChatGPT·Claude·Gemini·DeepL·사용자 지정 OpenAI 호환 API 연동과 테스트용 Mock 엔진
+- 선택형 ChatGPT·Claude·Gemini·DeepL·CodeBuddy·사용자 지정 OpenAI 호환 API 연동과 테스트용 Mock 엔진
 - 적응형 PP-OCR 인식, 원본/번역 전환을 갖춘 로컬 이미지 번역
 - 별도 결과 창, 발음, 문맥 뜻 정렬, 개인 용어와 선택 설치형 오프라인팩을 갖춘 메시지 사전
 - 추가 인증 중 번역 연결을 분리하고 명시적인 재연결을 제공하는 인증 호환 모드
@@ -184,7 +184,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
-0.7.10-beta는 관리자의 요청에 따라 정식 릴리스로 게시합니다. 새 정식 릴리스를 만들 때는 `-StableRelease`를 지정합니다. 이미 공개된 릴리스의 분류 변경과 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
+0.7.11-beta는 기본 정책에 따라 프리릴리스로 게시하며 정식 최신 릴리스로 지정하지 않습니다. 이미 공개된 릴리스의 분류 변경과 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
 
 </details>
 
@@ -192,6 +192,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 
 | 문서 | 내용 |
 |---|---|
+| [0.7.11-beta 변경 내역](docs/releases/0.7.11-beta.md) | CodeBuddy CLI 추가, 반복 번역 요청과 비활성 창 재연결 수정 |
 | [0.7.10-beta 변경 내역](docs/releases/0.7.10-beta.md) | Discord 재연결·창 전환 후 연결 상태 표시 수정 |
 | [0.7.9-beta 변경 내역](docs/releases/0.7.9-beta.md) | 번역 결과 검사 건너뛰기와 빈 응답 보호 |
 | [0.7.8-beta 변경 내역](docs/releases/0.7.8-beta.md) | Discord 번역 실패 메시지의 반복 요청 방지 |

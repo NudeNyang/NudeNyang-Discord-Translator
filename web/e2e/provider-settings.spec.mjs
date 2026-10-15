@@ -61,7 +61,7 @@ test.beforeEach(async ({ page }) => {
         return null;
       } },
       event: { listen: async (name, callback) => { window.testEvents[name] = callback; return () => {}; } },
-      app: { getVersion: async () => "0.7.10-beta" },
+      app: { getVersion: async () => "0.7.11-beta" },
     };
   });
   await page.goto("http://settings.test/");
