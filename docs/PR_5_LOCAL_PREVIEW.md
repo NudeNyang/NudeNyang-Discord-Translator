@@ -53,7 +53,8 @@ Node 검사는 제품 코드와 DOM fixture를 사용한다. Discord E2E는 별�
 ## 로컬 실행
 
 최초 확인본은 `dist/PR5Preview/NudeNyangDiscordTranslator.exe`에 보관하고, 화면 배치와
-재연결을 보완한 확인본은 `dist/PR5Preview2/NudeNyangDiscordTranslator.exe`에 둔다.
+재연결을 보완한 확인본은 `dist/PR5Preview2/NudeNyangDiscordTranslator.exe`에 보관한다.
+CodeBuddy 버튼 여백까지 수정한 최신 확인본은 `dist/PR5Preview3/NudeNyangDiscordTranslator.exe`다.
 기존 로컬 llama 런타임을 함께 사용하고, 데스크톱·프로젝트의 기존
 `NudeNyang Discord Translator (Tauri).lnk`를 같은 실행 파일로 맞춘다. 프론트 확인 후 병합 여부를
 결정할 수 있도록 원격 PR과 공개 릴리스는 변경하지 않는다.
@@ -83,3 +84,16 @@ Node 검사는 제품 코드와 DOM fixture를 사용한다. Discord E2E는 별�
 Discord 검증은 격리 문서와 모사한 OS 상태·번역 모델을 사용한다. 제보자 PC의 실제 보안
 파이프 장애나 실제 로그인 대화를 재현한 것은 아니다. 웹 공통 수집·적용 코드는 이번에
 변경하지 않았으며, 공개 사이트 표본 검사와 ARM64 하드웨어 실행은 수행하지 않았다.
+
+## CodeBuddy 연결 버튼 여백 보완
+
+모델 설정 줄에만 공통 `.setting-row`의 좌우 여백과 아래 구분선이 적용되어 연결 버튼이
+입력칸보다 오른쪽으로 나가고 선에 붙었다. CodeBuddy 안에서 중복 여백을 없애고, 구분선은
+하단 버튼 영역에 배치해 위아래에 14px 여백을 둔다. 모델 선택과 새로 고침도 같은 오른쪽
+끝에 정렬한다. 기존 아이콘과 동작은 유지한다.
+
+수정 전 배치 검사는 1920px 화면에서 오른쪽 끝이 16px 어긋나 실패했다. 수정 후에는
+1920·1280·900·720px에서 연결·해제 버튼 각각의 정렬, 구분선 간격과 카드 안쪽 여백을 확인했다.
+설정 화면 E2E 14개와 `npm run test:web` 284개가 통과했고 밝은·어두운 테마의 렌더링을
+검사했다. CSS만 변경했으며 Discord 엔진과 웹 번역 수집·적용 코드는 변경하지 않았다.
+`git diff --check`와 x64 `tauri build --target x86_64-pc-windows-msvc --no-bundle`도 통과했다.

@@ -232,6 +232,42 @@ test("disclosure arrow remains geometrically centered when opened, closed and sc
   }
 });
 
+test("CodeBuddy footer keeps both action icons below the divider and aligned with the model controls", async ({ page }, testInfo) => {
+  const row = page.locator('[data-provider="codebuddy"]');
+  await row.locator('.provider-summary').click();
+  for (const width of [1920, 1280, 900, 720]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const connected of [false, true]) {
+      await page.evaluate(connected => {
+        Object.assign(window.testProviders.find(p => p.id === 'codebuddy'), {
+          connected, canDisconnect: connected, state: connected ? 'connected' : 'not-connected',
+        });
+        window.testEvents['provider-connections-changed']({});
+      }, connected);
+      const button = row.locator(connected ? '.provider-disconnect' : '.provider-action');
+      await expect(button).toBeVisible();
+      const geometry = await button.evaluate(button => {
+        const panel = button.closest('.provider-panel');
+        const footer = button.parentElement;
+        const model = panel.querySelector('.select-trigger').getBoundingClientRect();
+        const refresh = panel.querySelector('#codebuddy-models-refresh').getBoundingClientRect();
+        const settings = panel.querySelector('.setting-row').getBoundingClientRect();
+        const action = button.getBoundingClientRect();
+        const divider = footer.getBoundingClientRect();
+        return { modelOffset: action.right - model.right, refreshOffset: action.right - refresh.right,
+          lineInset: action.top - divider.top, contentGap: divider.top - settings.bottom,
+          inside: panel.getBoundingClientRect().bottom - action.bottom };
+      });
+      expect(Math.abs(geometry.modelOffset), `${width}px model alignment`).toBeLessThan(1);
+      expect(Math.abs(geometry.refreshOffset), `${width}px refresh alignment`).toBeLessThan(1);
+      expect(geometry.lineInset, `${width}px divider spacing`).toBeGreaterThanOrEqual(12);
+      expect(geometry.contentGap).toBeGreaterThanOrEqual(12);
+      expect(geometry.inside).toBeGreaterThanOrEqual(12);
+    }
+  }
+  await row.screenshot({ path: testInfo.outputPath('codebuddy-footer-narrow.png') });
+});
+
 for (const theme of ["dark", "light"]) {
   test(`${theme} provider layouts fit narrow screens and preserve localized labels`, async ({ page }, testInfo) => {
     const errors = [];
