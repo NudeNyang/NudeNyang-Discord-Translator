@@ -17,13 +17,13 @@ const [markup, styles, script, rustMain, credentials, config, providers, subscri
   readFile(new URL("../tray.js", import.meta.url), "utf8"),
 ]);
 const providerIcons = await Promise.all(
-  ["openai", "claude", "gemini", "deepl"].map(name =>
+  ["openai", "claude", "gemini", "codebuddy", "deepl"].map(name =>
     readFile(new URL(`../assets/provider-${name}.svg`, import.meta.url), "utf8"),
   ),
 );
 
 test("provider setup is available without exposing credentials in settings", () => {
-  for (const provider of ["chatgpt", "claude", "gemini", "deepl"]) {
+  for (const provider of ["chatgpt", "claude", "gemini", "codebuddy", "deepl"]) {
     assert.match(markup, new RegExp(`data-provider="${provider}"`));
   }
   assert.match(markup, /type="password"/);
@@ -37,7 +37,7 @@ test("provider setup is available without exposing credentials in settings", () 
 test("Claude connects through the official local Claude Code CLI", () => {
   assert.match(markup, /data-provider="claude"/);
   assert.match(script, /\["claude",\s*"Claude CLI \(권장·품질 우선\)"/);
-  assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "deepl", "openai_compat"\]\)/);
+  assert.match(script, /EXTERNAL_PROVIDERS = new Set\(\["chatgpt", "claude", "gemini", "codebuddy", "deepl", "openai_compat"\]\)/);
   assert.doesNotMatch(config, /"kanana" \| "original" \| "claude"/);
   assert.match(providers, /cli_status\(\s*"claude",\s*"Claude"/);
   assert.match(subscriptionCli, /Anthropic\.ClaudeCode/);
@@ -71,7 +71,7 @@ test("Gemini subscriptions use the supported Google Antigravity CLI", () => {
 });
 
 test("provider cards keep stable service names instead of volatile model labels", () => {
-  for (const provider of ["ChatGPT", "Claude", "Gemini", "DeepL"]) {
+  for (const provider of ["ChatGPT", "Claude", "Gemini", "CodeBuddy", "DeepL"]) {
     assert.match(markup, new RegExp(`<h3>${provider}<\\/h3><span class="provider-use-badge" hidden>현재 사용<\\/span><\\/div><\\/div><\\/div>`));
   }
   assert.doesNotMatch(`${markup}${trayMarkup}`, /GPT-5\.6 Luna\/Terra|Claude Haiku|Gemini Flash Low|DeepL API Free \/ Pro/);
@@ -102,10 +102,10 @@ test("connected provider status does not expose an internal model identifier", (
 });
 
 test("provider cards use bundled brand icons instead of letter placeholders", () => {
-  for (const provider of ["openai", "claude", "gemini", "deepl"]) {
+  for (const provider of ["openai", "claude", "gemini", "codebuddy", "deepl"]) {
     assert.match(markup, new RegExp(`src="\\./assets/provider-${provider}\\.svg"`));
   }
-  assert.equal(providerIcons.length, 4);
+  assert.equal(providerIcons.length, 5);
   for (const icon of providerIcons) {
     assert.match(icon, /<svg[\s\S]*<path/);
   }
@@ -234,8 +234,8 @@ test("OpenAI-compatible servers are configured with an address, model and option
 });
 
 test("subscription CLI disconnect only disables the provider inside NudeNyang Discord Translator", () => {
-  for (const provider of ["chatgpt", "claude", "gemini"]) {
-    const row = markup.match(new RegExp(`<article class="provider-row" data-provider="${provider}">[\\s\\S]*?<\\/article>`))?.[0] || "";
+  for (const provider of ["chatgpt", "claude", "gemini", "codebuddy"]) {
+    const row = markup.match(new RegExp(`<article class="provider-row(?: provider-row-form)?" data-provider="${provider}">[\\s\\S]*?<\\/article>`))?.[0] || "";
     assert.match(row, /provider-disconnect/);
   }
   assert.match(config, /disabled_providers/);
@@ -309,4 +309,26 @@ test("provider status details wrap instead of being clipped", () => {
   assert.match(statusDetailRule, /white-space:\s*normal/);
   assert.match(statusDetailRule, /overflow-wrap:\s*anywhere/);
   assert.doesNotMatch(statusDetailRule, /text-overflow:\s*ellipsis/);
+});
+
+test("CodeBuddy uses the existing CLI sign-in without installing or logging in again", () => {
+  assert.match(markup, /data-provider="codebuddy"/);
+  assert.match(markup, /data-field="codebuddy_model"/);
+  assert.match(script, /invoke\("codebuddy_models_get"\)/);
+  assert.match(script, /codebuddy_model: CODEBUDDY_MODEL_OPTIONS,/);
+  assert.match(script, /\["codebuddy",\s*"CodeBuddy CLI \(기존 로그인·외부 전송\)"/);
+  assert.match(script, /provider !== "codebuddy"/);
+  assert.match(script, /RECOMMENDED_PROVIDER_ORDER = \["chatgpt", "claude", "gemini", "codebuddy"\]/);
+  assert.match(script, /provider === "codebuddy"\s*\n?\s*\?\s*"CodeBuddy CLI와 로그인 상태를 확인하고 있습니다\."/);
+  assert.match(config, /CODEBUDDY_DEFAULT_MODEL: &str = "hy3"/);
+  assert.match(config, /"chatgpt" \| "claude" \| "gemini" \| "codebuddy"/);
+  assert.match(providers, /기존 CodeBuddy CLI 로그인 · 모델별 사용량/);
+  assert.match(providers, /CodeBuddy CLI를 찾지 못했습니다/);
+  assert.match(providers, /fn codebuddy_connection/);
+  assert.match(providers, /"chatgpt" \| "claude" \| "gemini" \| "codebuddy" =>/);
+  assert.match(rustMain, /"chatgpt" \| "claude" \| "gemini" \| "codebuddy"/);
+  assert.match(trayMarkup, /data-translator="codebuddy"[\s\S]*?<strong>CodeBuddy<\/strong>/);
+  assert.match(trayScript, /codebuddy:\s*"CodeBuddy"/);
+  assert.match(trayScript, /\["chatgpt", "claude", "gemini", "codebuddy", "deepl", "openai_compat"\]\.includes\(translator\)/);
+  assert.doesNotMatch(`${markup}${script}`, /평생 무료|영구 무료|항상 무료/);
 });

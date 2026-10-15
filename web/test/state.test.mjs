@@ -147,6 +147,7 @@ test("old settings receive safe Tauri defaults", () => {
   assert.equal(config.enabled, true);
   assert.equal(config.translator, "hymt_1_8b");
   assert.equal(config.outgoing_translator, "hymt_1_8b");
+  assert.equal(config.codebuddy_model, "hy3");
   assert.equal(config.discord_verification_mode, false);
   assert.equal(config.discord_auto_restart_consent_granted, false);
   assert.equal(config.translation_history_retention_days, 30);
@@ -419,6 +420,25 @@ test("translator runtime label distinguishes preparation from the active model",
     }),
     "DeepL 품질 우선 (API) 사용 중",
   );
+  assert.equal(
+    translatorRuntimeLabel({
+      configuredTranslator: "codebuddy",
+      activeTranslator: "codebuddy",
+      translatorState: "ready",
+    }),
+    "CodeBuddy (CodeBuddy CLI) 사용 중",
+  );
+});
+
+test("CodeBuddy model selection keeps the exact provider model identifier", () => {
+  assert.equal(normalizeConfig({}).codebuddy_model, "hy3");
+  for (const model of [
+    "hy3",
+    "deepseek-v4.1-flash",
+    "custom-local:CodeBuddy-CN/deepseek-v4.1-flash",
+  ]) {
+    assert.equal(normalizeConfig({ codebuddy_model: model }).codebuddy_model, model);
+  }
 });
 
 test("local model preparation reports downloaded gigabytes and progress", () => {

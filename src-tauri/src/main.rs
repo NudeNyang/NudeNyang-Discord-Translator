@@ -1099,6 +1099,13 @@ async fn provider_connections_get(
 }
 
 #[tauri::command]
+async fn codebuddy_models_get() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(crate::translation::codebuddy_available_models)
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 async fn provider_install(provider: String) -> Result<providers::ProviderConnection, String> {
     tauri::async_runtime::spawn_blocking(move || providers::install(&provider))
         .await
@@ -1219,7 +1226,10 @@ fn provider_disconnect(
 ) -> Result<providers::ProviderConnection, String> {
     let connection = providers::disconnect(&provider)?;
     let current = config.get()?;
-    let is_subscription_cli = matches!(provider.as_str(), "chatgpt" | "claude" | "gemini");
+    let is_subscription_cli = matches!(
+        provider.as_str(),
+        "chatgpt" | "claude" | "gemini" | "codebuddy"
+    );
     let mut patch = json!({});
     if is_subscription_cli {
         let mut disabled_providers = current.disabled_providers.clone();
@@ -2003,6 +2013,7 @@ fn main() {
             local_model_delete,
             translation_cache_clear,
             provider_connections_get,
+            codebuddy_models_get,
             provider_install,
             provider_connect,
             provider_openai_compat_connect,

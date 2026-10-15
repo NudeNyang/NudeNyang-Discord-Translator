@@ -1,5 +1,12 @@
 {
   "zh-Hant": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "正在檢查 CodeBuddy CLI 與登入狀態。",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "找不到 CodeBuddy CLI。請先安裝 CodeBuddy CLI，然後重新連接。",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI 已安裝。選擇「連接」會使用所選通道的額度執行一次小型測試翻譯，以驗證現有登入。",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "所選模型先前已使用此 CodeBuddy CLI 登入驗證過。翻譯時將沿用同一登入。",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI（現有登入・外部傳送）",
+    "CodeBuddy 모델": "CodeBuddy 模型",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "傳遞給 CodeBuddy CLI 的模型 ID。此選擇由閱讀翻譯與傳送訊息翻譯共用。用量不同：原生 CodeBuddy 模型使用 CodeBuddy 額度，viito 線路使用其自身用量。",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "由於未授予選用權限，未儲存同意。",
     "동의를 철회했습니다.": "已撤回同意。",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "無法儲存您的同意，請再試一次。",
@@ -694,9 +701,17 @@
     "고급 설정": "進階設定",
     "번역 누락 검사 설정을 적용하지 못했습니다": "無法套用翻譯遺漏檢查設定",
     "번역 결과 검사 건너뛰기": "略過翻譯結果檢查",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "即使翻譯看起來不完整，也會使用該結果，不會因檢查而重新翻譯。如果程式碼或專有名詞被不必要地重新翻譯，可以開啟此設定。"
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "即使翻譯看起來不完整，也會使用該結果，不會因檢查而重新翻譯。如果程式碼或專有名詞被不必要地重新翻譯，可以開啟此設定。",
+    "모델 목록 새로 고침": "重新整理模型清單"
   },
   "pt-BR": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Verificando o CodeBuddy CLI e o status de login.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "O CodeBuddy CLI não foi encontrado. Instale o CodeBuddy CLI e conecte novamente.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "O CodeBuddy CLI está instalado. Selecionar Conectar executa uma pequena tradução de teste com a cota do canal selecionado para verificar o login existente.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "O modelo selecionado já foi verificado antes com este login do CodeBuddy CLI. A tradução reutiliza o mesmo login.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (login existente · transferência externa)",
+    "CodeBuddy 모델": "Modelo do CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID do modelo enviado ao CodeBuddy CLI. Esta escolha é compartilhada pela tradução de leitura e pela tradução de mensagens enviadas. O uso difere: modelos nativos do CodeBuddy usam sua cota do CodeBuddy, e a rota viito usa o próprio consumo dela.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "O consentimento não foi salvo porque a permissão opcional não foi concedida.",
     "동의를 철회했습니다.": "O consentimento foi retirado.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Não foi possível salvar seu consentimento. Tente novamente.",
@@ -1391,9 +1406,17 @@
     "고급 설정": "Configurações avançadas",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Não foi possível aplicar a configuração de verificação de omissões",
     "번역 결과 검사 건너뛰기": "Ignorar verificações do resultado da tradução",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa o resultado mesmo que a tradução pareça incompleta, sem repetir a tradução com base nessas verificações. Ative se códigos ou nomes próprios forem retraduzidos sem necessidade."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa o resultado mesmo que a tradução pareça incompleta, sem repetir a tradução com base nessas verificações. Ative se códigos ou nomes próprios forem retraduzidos sem necessidade.",
+    "모델 목록 새로 고침": "Atualizar lista de modelos"
   },
   "hi": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "CodeBuddy CLI और लॉगिन स्थिति की जाँच की जा रही है।",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI नहीं मिला। CodeBuddy CLI इंस्टॉल करें, फिर दोबारा कनेक्ट करें।",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI इंस्टॉल है। कनेक्ट चुनने पर चुने गए चैनल की कोटा से एक छोटा परीक्षण अनुवाद चलता है और मौजूदा लॉगिन सत्यापित होता है।",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "चुना गया मॉडल पहले इसी CodeBuddy CLI लॉगिन से सत्यापित किया गया था। अनुवाद वही लॉगिन दोबारा उपयोग करता है।",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (मौजूदा लॉगिन · बाहरी ट्रांसफ़र)",
+    "CodeBuddy 모델": "CodeBuddy मॉडल",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "CodeBuddy CLI को भेजी जाने वाली मॉडल ID। यह चयन पढ़ने के अनुवाद और भेजे जाने वाले संदेश के अनुवाद में साझा रहता है। उपयोग अलग होता है: मूल CodeBuddy मॉडल आपकी CodeBuddy कोटा उपयोग करते हैं और viito मार्ग अपना उपयोग करता है।",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "वैकल्पिक अनुमति नहीं मिलने के कारण सहमति सहेजी नहीं गई।",
     "동의를 철회했습니다.": "सहमति वापस ले ली गई है।",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "आपकी सहमति सहेजी नहीं जा सकी। कृपया फिर प्रयास करें।",
@@ -2088,9 +2111,17 @@
     "고급 설정": "उन्नत सेटिंग",
     "번역 누락 검사 설정을 적용하지 못했습니다": "अनुवाद चूक जाँच सेटिंग लागू नहीं की जा सकी",
     "번역 결과 검사 건너뛰기": "अनुवाद के परिणाम की जाँच छोड़ें",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "अनुवाद अधूरा लगने पर भी परिणाम का उपयोग करता है और इन जाँचों के आधार पर दोबारा अनुवाद नहीं करता। यदि कोड या व्यक्तिवाचक नामों का अनावश्यक रूप से दोबारा अनुवाद हो रहा हो, तो इसे चालू करें।"
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "अनुवाद अधूरा लगने पर भी परिणाम का उपयोग करता है और इन जाँचों के आधार पर दोबारा अनुवाद नहीं करता। यदि कोड या व्यक्तिवाचक नामों का अनावश्यक रूप से दोबारा अनुवाद हो रहा हो, तो इसे चालू करें।",
+    "모델 목록 새로 고침": "मॉडल सूची रीफ़्रेश करें"
   },
   "es-419": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Comprobando CodeBuddy CLI y el estado de inicio de sesión.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "No se encontró CodeBuddy CLI. Instala CodeBuddy CLI y vuelve a conectar.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI está instalado. Al seleccionar Conectar se ejecuta una pequeña traducción de prueba con la cuota del canal seleccionado para verificar el inicio de sesión existente.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "El modelo seleccionado ya se verificó antes con este inicio de sesión de CodeBuddy CLI. La traducción reutiliza el mismo inicio de sesión.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (inicio de sesión existente · transferencia externa)",
+    "CodeBuddy 모델": "Modelo de CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID del modelo enviado a CodeBuddy CLI. Esta elección se comparte entre la traducción de lectura y la de mensajes enviados. El uso varía: los modelos nativos de CodeBuddy usan tu cuota de CodeBuddy y la ruta viito usa su propio consumo.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "No se guardó el consentimiento porque no se concedió el permiso opcional.",
     "동의를 철회했습니다.": "Se retiró el consentimiento.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "No se pudo guardar su consentimiento. Vuelva a intentarlo.",
@@ -2785,9 +2816,17 @@
     "고급 설정": "Configuración avanzada",
     "번역 누락 검사 설정을 적용하지 못했습니다": "No se pudo aplicar la configuración de verificación de omisiones",
     "번역 결과 검사 건너뛰기": "Omitir la revisión del resultado de la traducción",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa el resultado aunque la traducción parezca incompleta, sin volver a traducir por estas revisiones. Activa esta opción si el código o los nombres propios se vuelven a traducir innecesariamente."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa el resultado aunque la traducción parezca incompleta, sin volver a traducir por estas revisiones. Activa esta opción si el código o los nombres propios se vuelven a traducir innecesariamente.",
+    "모델 목록 새로 고침": "Actualizar lista de modelos"
   },
   "de": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "CodeBuddy CLI und Anmeldestatus werden geprüft.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI wurde nicht gefunden. Installiere CodeBuddy CLI und verbinde erneut.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI ist installiert. Beim Auswählen von Verbinden wird mit dem Kontingent des gewählten Kanals eine kleine Testübersetzung ausgeführt, um die vorhandene Anmeldung zu prüfen.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Das ausgewählte Modell wurde zuvor mit dieser CodeBuddy CLI-Anmeldung geprüft. Die Übersetzung nutzt dieselbe Anmeldung.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (vorhandene Anmeldung · externe Übertragung)",
+    "CodeBuddy 모델": "CodeBuddy-Modell",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "Modell-ID, die an CodeBuddy CLI übergeben wird. Diese Auswahl gilt gemeinsam für die Leseübersetzung und die Übersetzung ausgehender Nachrichten. Die Nutzung unterscheidet sich: native CodeBuddy-Modelle nutzen dein CodeBuddy-Kontingent, die viito-Route nutzt ihren eigenen Verbrauch.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Die Einwilligung wurde nicht gespeichert, da die optionale Berechtigung nicht erteilt wurde.",
     "동의를 철회했습니다.": "Die Einwilligung wurde widerrufen.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Ihre Einwilligung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
@@ -3482,9 +3521,17 @@
     "고급 설정": "Erweiterte Einstellungen",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Die Einstellung für die Prüfung auf Übersetzungslücken konnte nicht angewendet werden",
     "번역 결과 검사 건너뛰기": "Prüfung des Übersetzungsergebnisses überspringen",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Verwendet das Ergebnis auch bei scheinbar unvollständiger Übersetzung, ohne aufgrund dieser Prüfung erneut zu übersetzen. Aktivieren Sie dies, wenn Code oder Eigennamen unnötig erneut übersetzt werden."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Verwendet das Ergebnis auch bei scheinbar unvollständiger Übersetzung, ohne aufgrund dieser Prüfung erneut zu übersetzen. Aktivieren Sie dies, wenn Code oder Eigennamen unnötig erneut übersetzt werden.",
+    "모델 목록 새로 고침": "Modellliste aktualisieren"
   },
   "ru": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Проверка CodeBuddy CLI и состояния входа.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI не найден. Установите CodeBuddy CLI и подключитесь снова.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI установлен. При выборе «Подключить» выполняется один небольшой тестовый перевод за счёт квоты выбранного канала, чтобы проверить существующий вход.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Выбранная модель уже была проверена ранее с этим входом в CodeBuddy CLI. Перевод использует тот же вход.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (существующий вход · внешняя передача)",
+    "CodeBuddy 모델": "Модель CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "Идентификатор модели, передаваемый в CodeBuddy CLI. Этот выбор общий для перевода при чтении и перевода исходящих сообщений. Расход различается: нативные модели CodeBuddy используют вашу квоту CodeBuddy, а маршрут viito — свой расход.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Согласие не сохранено, так как дополнительное разрешение не предоставлено.",
     "동의를 철회했습니다.": "Согласие отозвано.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Не удалось сохранить согласие. Повторите попытку.",
@@ -4179,9 +4226,17 @@
     "고급 설정": "Расширенные настройки",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Не удалось применить настройку проверки пропусков перевода",
     "번역 결과 검사 건너뛰기": "Пропускать проверку результата перевода",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Использует результат, даже если перевод выглядит неполным, без повторного перевода по итогам проверки. Включите, если код или имена собственные переводятся повторно без необходимости."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Использует результат, даже если перевод выглядит неполным, без повторного перевода по итогам проверки. Включите, если код или имена собственные переводятся повторно без необходимости.",
+    "모델 목록 새로 고침": "Обновить список моделей"
   },
   "id": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Memeriksa CodeBuddy CLI dan status login.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI tidak ditemukan. Instal CodeBuddy CLI, lalu sambungkan lagi.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI sudah terpasang. Memilih Sambungkan menjalankan satu terjemahan uji kecil memakai kuota kanal yang dipilih untuk memverifikasi login yang ada.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Model yang dipilih sudah diverifikasi sebelumnya dengan login CodeBuddy CLI ini. Terjemahan memakai login yang sama.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (login yang ada · transfer eksternal)",
+    "CodeBuddy 모델": "Model CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID model yang dikirim ke CodeBuddy CLI. Pilihan ini dipakai bersama oleh terjemahan bacaan dan terjemahan pesan keluar. Penggunaannya berbeda: model native CodeBuddy memakai kuota CodeBuddy Anda, sedangkan rute viito memakai penggunaannya sendiri.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan karena izin opsional tidak diberikan.",
     "동의를 철회했습니다.": "Persetujuan telah dicabut.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Persetujuan Anda tidak dapat disimpan. Silakan coba lagi.",
@@ -4876,9 +4931,17 @@
     "고급 설정": "Pengaturan lanjutan",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Tidak dapat menerapkan setelan pemeriksaan terjemahan terlewat",
     "번역 결과 검사 건너뛰기": "Lewati pemeriksaan hasil terjemahan",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Menggunakan hasil meskipun terjemahan tampak belum lengkap, tanpa mengulang terjemahan berdasarkan pemeriksaan ini. Aktifkan jika kode atau nama diri diterjemahkan ulang tanpa perlu."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Menggunakan hasil meskipun terjemahan tampak belum lengkap, tanpa mengulang terjemahan berdasarkan pemeriksaan ini. Aktifkan jika kode atau nama diri diterjemahkan ulang tanpa perlu.",
+    "모델 목록 새로 고침": "Muat ulang daftar model"
   },
   "fr": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Vérification de CodeBuddy CLI et de l'état de connexion.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI est introuvable. Installez CodeBuddy CLI, puis reconnectez-vous.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI est installé. Sélectionner Connecter lance une petite traduction de test avec le quota du canal sélectionné pour vérifier la connexion existante.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Le modèle sélectionné a déjà été vérifié avec cette connexion CodeBuddy CLI. La traduction réutilise la même connexion.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (connexion existante · transfert externe)",
+    "CodeBuddy 모델": "Modèle CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID du modèle transmis à CodeBuddy CLI. Ce choix est partagé par la traduction de lecture et par celle des messages envoyés. L'utilisation diffère : les modèles natifs CodeBuddy utilisent votre quota CodeBuddy et la route viito utilise sa propre consommation.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Le consentement n’a pas été enregistré, car l’autorisation facultative n’a pas été accordée.",
     "동의를 철회했습니다.": "Le consentement a été retiré.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Impossible d’enregistrer votre consentement. Veuillez réessayer.",
@@ -5573,9 +5636,17 @@
     "고급 설정": "Paramètres avancés",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Impossible d’appliquer le paramètre de vérification des omissions",
     "번역 결과 검사 건너뛰기": "Ignorer la vérification du résultat de traduction",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Utilise le résultat même si la traduction semble incomplète, sans relancer la traduction à la suite de ces vérifications. Activez cette option si du code ou des noms propres sont retraduits inutilement."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Utilise le résultat même si la traduction semble incomplète, sans relancer la traduction à la suite de ces vérifications. Activez cette option si du code ou des noms propres sont retraduits inutilement.",
+    "모델 목록 새로 고침": "Actualiser la liste des modèles"
   },
   "tr": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "CodeBuddy CLI ve oturum durumu denetleniyor.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI bulunamadı. CodeBuddy CLI'yi kurup yeniden bağlanın.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI kurulu. Bağlan'ı seçmek, mevcut oturumu doğrulamak için seçilen kanalın kotasıyla bir küçük test çevirisi çalıştırır.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Seçilen model daha önce bu CodeBuddy CLI oturumuyla doğrulanmıştı. Çeviri aynı oturumu kullanır.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (mevcut oturum · dışa aktarım)",
+    "CodeBuddy 모델": "CodeBuddy modeli",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "CodeBuddy CLI'ye gönderilen model kimliği. Bu seçim okuma çevirisi ve giden mesaj çevirisi için ortaktır. Kullanım farklıdır: yerel CodeBuddy modelleri CodeBuddy kotanızı, viito yolu ise kendi kullanımını harcar.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "İsteğe bağlı izin verilmediği için onay kaydedilmedi.",
     "동의를 철회했습니다.": "Onay geri çekildi.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Onayınız kaydedilemedi. Lütfen tekrar deneyin.",
@@ -6270,9 +6341,17 @@
     "고급 설정": "Gelişmiş ayarlar",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Çeviri eksikliği denetimi ayarı uygulanamadı",
     "번역 결과 검사 건너뛰기": "Çeviri sonucu denetimini atla",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Çeviri eksik görünse bile sonucu kullanır ve bu denetimlere göre yeniden çeviri yapmaz. Kod veya özel adlar gereksiz yere tekrar çevriliyorsa bu ayarı açın."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Çeviri eksik görünse bile sonucu kullanır ve bu denetimlere göre yeniden çeviri yapmaz. Kod veya özel adlar gereksiz yere tekrar çevriliyorsa bu ayarı açın.",
+    "모델 목록 새로 고침": "Model listesini yenile"
   },
   "ar": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "جارٍ التحقق من CodeBuddy CLI وحالة تسجيل الدخول.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "لم يتم العثور على CodeBuddy CLI. ثبّت CodeBuddy CLI ثم أعد الاتصال.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "تم تثبيت CodeBuddy CLI. اختيار «اتصال» يشغّل ترجمة اختبارية صغيرة باستخدام حصة القناة المحددة للتحقق من تسجيل الدخول الحالي.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "تم التحقق من النموذج المحدد سابقًا باستخدام تسجيل الدخول هذا إلى CodeBuddy CLI. ستستخدم الترجمة تسجيل الدخول نفسه.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (تسجيل دخول حالي · إرسال خارجي)",
+    "CodeBuddy 모델": "نموذج CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "معرّف النموذج المُرسل إلى CodeBuddy CLI. هذا الاختيار مشترك بين ترجمة القراءة وترجمة الرسائل الصادرة. يختلف الاستخدام: نماذج CodeBuddy الأصلية تستخدم حصتك في CodeBuddy، ومسار viito يستخدم استخدامه الخاص.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "لم تُحفظ الموافقة لأن الإذن الاختياري لم يُمنح.",
     "동의를 철회했습니다.": "تم سحب الموافقة.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "تعذر حفظ موافقتك. يرجى المحاولة مرة أخرى.",
@@ -6967,9 +7046,17 @@
     "고급 설정": "الإعدادات المتقدمة",
     "번역 누락 검사 설정을 적용하지 못했습니다": "تعذّر تطبيق إعداد فحص نقص الترجمة",
     "번역 결과 검사 건너뛰기": "تخطي فحص نتيجة الترجمة",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "يستخدم النتيجة حتى إذا بدت الترجمة غير مكتملة، دون إعادة الترجمة بناءً على هذا الفحص. فعّله إذا أُعيدت ترجمة التعليمات البرمجية أو أسماء الأعلام دون داعٍ."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "يستخدم النتيجة حتى إذا بدت الترجمة غير مكتملة، دون إعادة الترجمة بناءً على هذا الفحص. فعّله إذا أُعيدت ترجمة التعليمات البرمجية أو أسماء الأعلام دون داعٍ.",
+    "모델 목록 새로 고침": "تحديث قائمة النماذج"
   },
   "vi": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Đang kiểm tra CodeBuddy CLI và trạng thái đăng nhập.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "Không tìm thấy CodeBuddy CLI. Hãy cài CodeBuddy CLI rồi kết nối lại.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI đã được cài đặt. Chọn Kết nối sẽ chạy một bản dịch thử nhỏ bằng hạn mức của kênh đã chọn để xác minh đăng nhập hiện có.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Mô hình đã chọn đã được xác minh trước đó bằng đăng nhập CodeBuddy CLI này. Bản dịch dùng lại cùng đăng nhập đó.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (đăng nhập hiện có · truyền ra ngoài)",
+    "CodeBuddy 모델": "Mô hình CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID mô hình gửi đến CodeBuddy CLI. Lựa chọn này được dùng chung cho bản dịch khi đọc và bản dịch tin nhắn gửi đi. Mức sử dụng khác nhau: mô hình CodeBuddy gốc dùng hạn mức CodeBuddy của bạn, còn tuyến viito dùng mức sử dụng riêng của tuyến đó.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Không lưu sự đồng ý vì quyền tùy chọn chưa được cấp.",
     "동의를 철회했습니다.": "Đã rút lại sự đồng ý.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Không thể lưu sự đồng ý của bạn. Vui lòng thử lại.",
@@ -7664,9 +7751,17 @@
     "고급 설정": "Cài đặt nâng cao",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Không thể áp dụng cài đặt kiểm tra bản dịch bị sót",
     "번역 결과 검사 건너뛰기": "Bỏ qua kiểm tra kết quả dịch",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Sử dụng kết quả ngay cả khi bản dịch có vẻ chưa đầy đủ và không dịch lại dựa trên kiểm tra này. Bật nếu mã hoặc tên riêng bị dịch lại không cần thiết."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Sử dụng kết quả ngay cả khi bản dịch có vẻ chưa đầy đủ và không dịch lại dựa trên kiểm tra này. Bật nếu mã hoặc tên riêng bị dịch lại không cần thiết.",
+    "모델 목록 새로 고침": "Làm mới danh sách mô hình"
   },
   "it": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Verifica di CodeBuddy CLI e dello stato di accesso.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI non è stato trovato. Installa CodeBuddy CLI e riconnettiti.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI è installato. Selezionando Connetti viene eseguita una piccola traduzione di prova con la quota del canale selezionato per verificare l'accesso esistente.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Il modello selezionato è già stato verificato in precedenza con questo accesso a CodeBuddy CLI. La traduzione usa lo stesso accesso.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (accesso esistente · trasferimento esterno)",
+    "CodeBuddy 모델": "Modello CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID del modello inviato a CodeBuddy CLI. Questa scelta è condivisa dalla traduzione di lettura e da quella dei messaggi in uscita. L'utilizzo è diverso: i modelli nativi CodeBuddy usano la tua quota CodeBuddy, la rotta viito usa il proprio consumo.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Il consenso non è stato salvato perché l’autorizzazione facoltativa non è stata concessa.",
     "동의를 철회했습니다.": "Il consenso è stato revocato.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Impossibile salvare il consenso. Riprovare.",
@@ -8361,9 +8456,17 @@
     "고급 설정": "Impostazioni avanzate",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Impossibile applicare l’impostazione del controllo delle omissioni",
     "번역 결과 검사 건너뛰기": "Salta il controllo del risultato della traduzione",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa il risultato anche se la traduzione sembra incompleta, senza ripeterla in base a questi controlli. Attiva questa opzione se codice o nomi propri vengono ritradotti inutilmente."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Usa il risultato anche se la traduzione sembra incompleta, senza ripeterla in base a questi controlli. Attiva questa opzione se codice o nomi propri vengono ritradotti inutilmente.",
+    "모델 목록 새로 고침": "Aggiorna elenco modelli"
   },
   "pl": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Sprawdzanie CodeBuddy CLI i stanu logowania.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "Nie znaleziono CodeBuddy CLI. Zainstaluj CodeBuddy CLI i połącz ponownie.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI jest zainstalowany. Wybranie Połącz uruchamia jedno małe tłumaczenie testowe w ramach limitu wybranego kanału, aby zweryfikować istniejące logowanie.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Wybrany model został już wcześniej zweryfikowany tym logowaniem do CodeBuddy CLI. Tłumaczenie używa tego samego logowania.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (istniejące logowanie · transfer zewnętrzny)",
+    "CodeBuddy 모델": "Model CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "Identyfikator modelu przekazywany do CodeBuddy CLI. Ten wybór jest wspólny dla tłumaczenia czytania i tłumaczenia wysyłanych wiadomości. Zużycie jest różne: natywne modele CodeBuddy zużywają Twój limit CodeBuddy, a trasa viito używa własnego zużycia.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Zgoda nie została zapisana, ponieważ nie udzielono opcjonalnego uprawnienia.",
     "동의를 철회했습니다.": "Zgoda została wycofana.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Nie udało się zapisać zgody. Proszę spróbować ponownie.",
@@ -9058,9 +9161,17 @@
     "고급 설정": "Ustawienia zaawansowane",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Nie można zastosować ustawienia sprawdzania pominięć",
     "번역 결과 검사 건너뛰기": "Pomijaj sprawdzanie wyniku tłumaczenia",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Używa wyniku nawet wtedy, gdy tłumaczenie wydaje się niepełne, bez ponawiania go na podstawie tej kontroli. Włącz, jeśli kod lub nazwy własne są niepotrzebnie tłumaczone ponownie."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Używa wyniku nawet wtedy, gdy tłumaczenie wydaje się niepełne, bez ponawiania go na podstawie tej kontroli. Włącz, jeśli kod lub nazwy własne są niepotrzebnie tłumaczone ponownie.",
+    "모델 목록 새로 고침": "Odśwież listę modeli"
   },
   "uk": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Перевірка CodeBuddy CLI та стану входу.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI не знайдено. Встановіть CodeBuddy CLI і підключіться знову.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI встановлено. Вибір «Підключити» виконує один невеликий тестовий переклад за рахунок квоти вибраного каналу, щоб перевірити наявний вхід.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Вибрану модель уже було перевірено раніше цим входом до CodeBuddy CLI. Переклад використовує той самий вхід.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (наявний вхід · зовнішня передача)",
+    "CodeBuddy 모델": "Модель CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "Ідентифікатор моделі, що передається до CodeBuddy CLI. Цей вибір спільний для перекладу під час читання та перекладу вихідних повідомлень. Витрати різні: рідні моделі CodeBuddy використовують вашу квоту CodeBuddy, а маршрут viito — власні витрати.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Згоду не збережено, оскільки додатковий дозвіл не надано.",
     "동의를 철회했습니다.": "Згоду відкликано.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Не вдалося зберегти згоду. Спробуйте ще раз.",
@@ -9755,9 +9866,17 @@
     "고급 설정": "Розширені налаштування",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Не вдалося застосувати налаштування перевірки пропусків перекладу",
     "번역 결과 검사 건너뛰기": "Пропускати перевірку результату перекладу",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Використовує результат, навіть якщо переклад здається неповним, без повторного перекладу за результатами перевірки. Увімкніть, якщо код або власні назви перекладаються повторно без потреби."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Використовує результат, навіть якщо переклад здається неповним, без повторного перекладу за результатами перевірки. Увімкніть, якщо код або власні назви перекладаються повторно без потреби.",
+    "모델 목록 새로 고침": "Оновити список моделей"
   },
   "ms": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Menyemak CodeBuddy CLI dan status log masuk.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI tidak ditemui. Pasang CodeBuddy CLI, kemudian sambung semula.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI telah dipasang. Pilih Sambung untuk mengesahkan log masuk sedia ada.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Log masuk CodeBuddy CLI dan model yang dipilih telah disahkan. Terjemahan menggunakan log masuk yang sama.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (log masuk sedia ada · pemindahan luaran)",
+    "CodeBuddy 모델": "Model CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID model yang dihantar ke CodeBuddy CLI. Penggunaan boleh berbeza mengikut model.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Persetujuan tidak disimpan kerana kebenaran pilihan tidak diberikan.",
     "동의를 철회했습니다.": "Persetujuan telah ditarik balik.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Persetujuan anda tidak dapat disimpan. Sila cuba lagi.",
@@ -10452,9 +10571,17 @@
     "고급 설정": "Tetapan lanjutan",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Tidak dapat menggunakan tetapan semakan terjemahan tertinggal",
     "번역 결과 검사 건너뛰기": "Langkau semakan hasil terjemahan",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Menggunakan hasil walaupun terjemahan kelihatan tidak lengkap, tanpa menterjemah semula berdasarkan semakan ini. Hidupkan jika kod atau nama khas diterjemah semula tanpa keperluan."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Menggunakan hasil walaupun terjemahan kelihatan tidak lengkap, tanpa menterjemah semula berdasarkan semakan ini. Hidupkan jika kod atau nama khas diterjemah semula tanpa keperluan.",
+    "모델 목록 새로 고침": "Muat semula senarai model"
   },
   "nl": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "CodeBuddy CLI en aanmeldstatus worden gecontroleerd.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI is niet gevonden. Installeer CodeBuddy CLI en verbind opnieuw.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI is geïnstalleerd. Kies Verbinden om de bestaande aanmelding te verifiëren.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "CodeBuddy CLI-aanmelding en geselecteerd model zijn geverifieerd. De vertaling gebruikt dezelfde aanmelding.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (bestaande aanmelding · externe overdracht)",
+    "CodeBuddy 모델": "CodeBuddy-model",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "Model-ID die aan CodeBuddy CLI wordt doorgegeven. Het gebruik kan per model verschillen.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "De toestemming is niet opgeslagen omdat de optionele machtiging niet is verleend.",
     "동의를 철회했습니다.": "De toestemming is ingetrokken.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Uw toestemming kon niet worden opgeslagen. Probeer het opnieuw.",
@@ -11149,9 +11276,17 @@
     "고급 설정": "Geavanceerde instellingen",
     "번역 누락 검사 설정을 적용하지 못했습니다": "De instelling voor de controle op ontbrekende vertaling kan niet worden toegepast",
     "번역 결과 검사 건너뛰기": "Controle van vertaalresultaten overslaan",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Gebruikt het resultaat ook als de vertaling onvolledig lijkt, zonder opnieuw te vertalen op basis van deze controle. Schakel dit in als code of eigennamen onnodig opnieuw worden vertaald."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Gebruikt het resultaat ook als de vertaling onvolledig lijkt, zonder opnieuw te vertalen op basis van deze controle. Schakel dit in als code of eigennamen onnodig opnieuw worden vertaald.",
+    "모델 목록 새로 고침": "Modellenlijst vernieuwen"
   },
   "th": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "กำลังตรวจสอบ CodeBuddy CLI และสถานะการลงชื่อเข้าใช้",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "ไม่พบ CodeBuddy CLI โปรดติดตั้ง CodeBuddy CLI แล้วเชื่อมต่ออีกครั้ง",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "ติดตั้ง CodeBuddy CLI แล้ว เลือกเชื่อมต่อเพื่อยืนยันการลงชื่อเข้าใช้ที่มีอยู่",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "ยืนยันการลงชื่อเข้าใช้ CodeBuddy CLI และโมเดลที่เลือกแล้ว การแปลจะใช้การลงชื่อเข้าใช้เดียวกัน",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (การลงชื่อเข้าใช้ที่มีอยู่ · ส่งออกภายนอก)",
+    "CodeBuddy 모델": "โมเดล CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "รหัสโมเดลที่ส่งไปยัง CodeBuddy CLI การใช้งานอาจแตกต่างกันตามโมเดล",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ไม่ได้บันทึกความยินยอม เนื่องจากไม่ได้รับสิทธิ์การเข้าถึงที่เป็นตัวเลือก",
     "동의를 철회했습니다.": "ถอนความยินยอมแล้ว",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "ไม่สามารถบันทึกความยินยอมของคุณได้ โปรดลองอีกครั้ง",
@@ -11846,9 +11981,17 @@
     "고급 설정": "การตั้งค่าขั้นสูง",
     "번역 누락 검사 설정을 적용하지 못했습니다": "ไม่สามารถใช้การตั้งค่าตรวจการแปลที่ตกหล่นได้",
     "번역 결과 검사 건너뛰기": "ข้ามการตรวจสอบผลการแปล",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "ใช้ผลลัพธ์แม้คำแปลดูไม่สมบูรณ์ และไม่แปลซ้ำตามผลการตรวจสอบนี้ เปิดใช้หากโค้ดหรือชื่อเฉพาะถูกแปลซ้ำโดยไม่จำเป็น"
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "ใช้ผลลัพธ์แม้คำแปลดูไม่สมบูรณ์ และไม่แปลซ้ำตามผลการตรวจสอบนี้ เปิดใช้หากโค้ดหรือชื่อเฉพาะถูกแปลซ้ำโดยไม่จำเป็น",
+    "모델 목록 새로 고침": "รีเฟรชรายการโมเดล"
   },
   "fil": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Sinusuri ang CodeBuddy CLI at ang estado ng pag-sign in.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "Hindi natagpuan ang CodeBuddy CLI. I-install ang CodeBuddy CLI, pagkatapos kumonekta muli.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "Naka-install ang CodeBuddy CLI. Piliin ang Kumonekta upang i-verify ang umiiral na pag-sign in.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Na-verify ang pag-sign in sa CodeBuddy CLI at ang napiling modelo. Gagamitin ng pagsasalin ang parehong pag-sign in.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (umiiral na pag-sign in · panlabas na paglipat)",
+    "CodeBuddy 모델": "Modelo ng CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "Model ID na ipinapasa sa CodeBuddy CLI. Maaaring mag-iba ang paggamit ayon sa modelo.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Hindi na-save ang pahintulot dahil hindi ipinagkaloob ang opsyonal na permiso.",
     "동의를 철회했습니다.": "Nabawi na ang pahintulot.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Hindi ma-save ang inyong pahintulot. Pakisubukang muli.",
@@ -12543,9 +12686,17 @@
     "고급 설정": "Mga advanced na setting",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Hindi mailapat ang setting ng pagsuri sa kulang na salin",
     "번역 결과 검사 건너뛰기": "Laktawan ang pagsusuri ng resulta ng pagsasalin",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Ginagamit ang resulta kahit mukhang hindi kumpleto ang salin, nang hindi nagsasalin muli batay sa pagsusuring ito. I-on kung hindi kinakailangang isinasalin muli ang code o mga pangalang pantangi."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Ginagamit ang resulta kahit mukhang hindi kumpleto ang salin, nang hindi nagsasalin muli batay sa pagsusuring ito. I-on kung hindi kinakailangang isinasalin muli ang code o mga pangalang pantangi.",
+    "모델 목록 새로 고침": "I-refresh ang listahan ng modelo"
   },
   "bn": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "CodeBuddy CLI ও সাইন-ইন অবস্থা যাচাই করা হচ্ছে।",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI পাওয়া যায়নি। CodeBuddy CLI ইনস্টল করে আবার সংযুক্ত করুন।",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI ইনস্টল করা আছে। বিদ্যমান সাইন-ইন যাচাই করতে সংযুক্ত করুন নির্বাচন করুন।",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "CodeBuddy CLI সাইন-ইন ও নির্বাচিত মডেল যাচাই করা হয়েছে। অনুবাদ একই সাইন-ইন ব্যবহার করবে।",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (বিদ্যমান সাইন-ইন · বাইরে স্থানান্তর)",
+    "CodeBuddy 모델": "CodeBuddy মডেল",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "CodeBuddy CLI-তে পাঠানো মডেল ID। মডেল অনুযায়ী ব্যবহার ভিন্ন হতে পারে।",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ঐচ্ছিক অনুমতি না দেওয়ায় সম্মতি সংরক্ষণ করা হয়নি।",
     "동의를 철회했습니다.": "সম্মতি প্রত্যাহার করা হয়েছে।",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "আপনার সম্মতি সংরক্ষণ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
@@ -13240,9 +13391,17 @@
     "고급 설정": "উন্নত সেটিংস",
     "번역 누락 검사 설정을 적용하지 못했습니다": "অনুবাদ বাদ পড়া যাচাইয়ের সেটিং প্রয়োগ করা যায়নি",
     "번역 결과 검사 건너뛰기": "অনুবাদের ফলাফল পরীক্ষা এড়িয়ে যান",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "অনুবাদ অসম্পূর্ণ মনে হলেও ফলাফল ব্যবহার করে এবং এই পরীক্ষার ভিত্তিতে আবার অনুবাদ করে না। কোড বা বিশেষ নাম অপ্রয়োজনে আবার অনুবাদ হলে এটি চালু করুন।"
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "অনুবাদ অসম্পূর্ণ মনে হলেও ফলাফল ব্যবহার করে এবং এই পরীক্ষার ভিত্তিতে আবার অনুবাদ করে না। কোড বা বিশেষ নাম অপ্রয়োজনে আবার অনুবাদ হলে এটি চালু করুন।",
+    "모델 목록 새로 고침": "মডেল তালিকা রিফ্রেশ করুন"
   },
   "ur": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "CodeBuddy CLI اور سائن اِن کی حیثیت جانچی جا رہی ہے۔",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI نہیں ملا۔ CodeBuddy CLI انسٹال کریں، پھر دوبارہ منسلک کریں۔",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI انسٹال ہے۔ موجودہ سائن اِن کی تصدیق کے لیے منسلک کریں منتخب کریں۔",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "CodeBuddy CLI سائن اِن اور منتخب ماڈل کی تصدیق ہو گئی۔ ترجمہ وہی سائن اِن استعمال کرے گا۔",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (موجودہ سائن اِن · بیرونی منتقلی)",
+    "CodeBuddy 모델": "CodeBuddy ماڈل",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "CodeBuddy CLI کو بھیجا جانے والا ماڈل ID۔ ماڈل کے مطابق استعمال مختلف ہو سکتا ہے۔",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "اختیاری اجازت نہ ملنے کی وجہ سے رضامندی محفوظ نہیں کی گئی۔",
     "동의를 철회했습니다.": "رضامندی واپس لے لی گئی ہے۔",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "آپ کی رضامندی محفوظ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
@@ -13937,9 +14096,17 @@
     "고급 설정": "اعلیٰ ترتیبات",
     "번역 누락 검사 설정을 적용하지 못했습니다": "ترجمے میں کمی کی جانچ کی ترتیب لاگو نہیں ہو سکی",
     "번역 결과 검사 건너뛰기": "ترجمے کے نتیجے کی جانچ چھوڑیں",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "ترجمہ نامکمل لگنے پر بھی نتیجہ استعمال کرتا ہے اور اس جانچ کی بنیاد پر دوبارہ ترجمہ نہیں کرتا۔ اگر کوڈ یا خاص ناموں کا بلا ضرورت دوبارہ ترجمہ ہو رہا ہو تو اسے آن کریں۔"
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "ترجمہ نامکمل لگنے پر بھی نتیجہ استعمال کرتا ہے اور اس جانچ کی بنیاد پر دوبارہ ترجمہ نہیں کرتا۔ اگر کوڈ یا خاص ناموں کا بلا ضرورت دوبارہ ترجمہ ہو رہا ہو تو اسے آن کریں۔",
+    "모델 목록 새로 고침": "ماڈل فہرست تازہ کریں"
   },
   "ta": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "CodeBuddy CLI மற்றும் உள்நுழைவு நிலை சரிபார்க்கப்படுகிறது.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI கிடைக்கவில்லை. CodeBuddy CLI-ஐ நிறுவி மீண்டும் இணைக்கவும்.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI நிறுவப்பட்டுள்ளது. தற்போதைய உள்நுழைவைச் சரிபார்க்க இணைக்கவும் என்பதைத் தேர்ந்தெடுக்கவும்.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "CodeBuddy CLI உள்நுழைவும் தேர்ந்தெடுத்த மாடலும் சரிபார்க்கப்பட்டன. மொழிபெயர்ப்பு அதே உள்நுழைவைப் பயன்படுத்தும்.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (தற்போதைய உள்நுழைவு · வெளிப்புற பரிமாற்றம்)",
+    "CodeBuddy 모델": "CodeBuddy மாடல்",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "CodeBuddy CLI-க்கு அனுப்பப்படும் மாடல் ID. மாடலைப் பொறுத்து பயன்பாடு மாறலாம்.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "விருப்ப அனுமதி வழங்கப்படாததால் ஒப்புதல் சேமிக்கப்படவில்லை.",
     "동의를 철회했습니다.": "ஒப்புதல் திரும்பப் பெறப்பட்டது.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "உங்கள் ஒப்புதலைச் சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
@@ -14634,9 +14801,17 @@
     "고급 설정": "மேம்பட்ட அமைப்புகள்",
     "번역 누락 검사 설정을 적용하지 못했습니다": "மொழிபெயர்ப்பு விடுபாடு சரிபார்ப்பு அமைப்பைப் பயன்படுத்த முடியவில்லை",
     "번역 결과 검사 건너뛰기": "மொழிபெயர்ப்பு முடிவைச் சரிபார்ப்பதைத் தவிர்த்தல்",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "மொழிபெயர்ப்பு முழுமையற்றதாகத் தோன்றினாலும் முடிவைப் பயன்படுத்தும்; இந்தச் சரிபார்ப்பின் அடிப்படையில் மீண்டும் மொழிபெயர்க்காது. நிரல் குறியீடு அல்லது சிறப்புப் பெயர்கள் தேவையின்றி மீண்டும் மொழிபெயர்க்கப்பட்டால் இதை இயக்கவும்."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "மொழிபெயர்ப்பு முழுமையற்றதாகத் தோன்றினாலும் முடிவைப் பயன்படுத்தும்; இந்தச் சரிபார்ப்பின் அடிப்படையில் மீண்டும் மொழிபெயர்க்காது. நிரல் குறியீடு அல்லது சிறப்புப் பெயர்கள் தேவையின்றி மீண்டும் மொழிபெயர்க்கப்பட்டால் இதை இயக்கவும்.",
+    "모델 목록 새로 고침": "மாதிரி பட்டியலைப் புதுப்பி"
   },
   "fa": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "بررسی CodeBuddy CLI و وضعیت ورود.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI یافت نشد. CodeBuddy CLI را نصب کنید و دوباره متصل شوید.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI نصب است. برای بررسی ورود موجود، «اتصال» را انتخاب کنید.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "ورود CodeBuddy CLI و مدل انتخاب‌شده تأیید شد. ترجمه از همان ورود استفاده می‌کند.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (ورود موجود · انتقال بیرونی)",
+    "CodeBuddy 모델": "مدل CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "شناسه مدلی که به CodeBuddy CLI فرستاده می‌شود. میزان استفاده بسته به مدل متفاوت است.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "چون مجوز اختیاری داده نشد، رضایت ذخیره نشد.",
     "동의를 철회했습니다.": "رضایت پس گرفته شد.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "رضایت شما ذخیره نشد. لطفاً دوباره تلاش کنید.",
@@ -15331,9 +15506,17 @@
     "고급 설정": "تنظیمات پیشرفته",
     "번역 누락 검사 설정을 적용하지 못했습니다": "اعمال تنظیم بررسی جاافتادگی ترجمه ممکن نشد",
     "번역 결과 검사 건너뛰기": "رد کردن بررسی نتیجهٔ ترجمه",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "حتی اگر ترجمه ناقص به نظر برسد، از نتیجه استفاده می‌کند و بر اساس این بررسی دوباره ترجمه نمی‌کند. اگر کد یا نام‌های خاص بی‌دلیل دوباره ترجمه می‌شوند، این گزینه را روشن کنید."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "حتی اگر ترجمه ناقص به نظر برسد، از نتیجه استفاده می‌کند و بر اساس این بررسی دوباره ترجمه نمی‌کند. اگر کد یا نام‌های خاص بی‌دلیل دوباره ترجمه می‌شوند، این گزینه را روشن کنید.",
+    "모델 목록 새로 고침": "بهروزرسانی فهرست مدلها"
   },
   "he": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "בודק את CodeBuddy CLI ואת מצב ההתחברות.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI לא נמצא. התקן את CodeBuddy CLI ואז התחבר שוב.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI מותקן. בחר התחבר כדי לאמת את ההתחברות הקיימת.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "ההתחברות ל-CodeBuddy CLI והמודל הנבחר אומתו. התרגום ישתמש באותה התחברות.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (התחברות קיימת · העברה חיצונית)",
+    "CodeBuddy 모델": "מודל CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "מזהה המודל שנשלח אל CodeBuddy CLI. השימוש עשוי להשתנות לפי המודל.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "ההסכמה לא נשמרה משום שלא ניתנה ההרשאה האופציונלית.",
     "동의를 철회했습니다.": "ההסכמה בוטלה.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "לא ניתן לשמור את ההסכמה. נא לנסות שוב.",
@@ -16028,9 +16211,17 @@
     "고급 설정": "הגדרות מתקדמות",
     "번역 누락 검사 설정을 적용하지 못했습니다": "לא ניתן להחיל את הגדרת בדיקת ההשמטות בתרגום",
     "번역 결과 검사 건너뛰기": "דילוג על בדיקת תוצאת התרגום",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "משתמש בתוצאה גם אם התרגום נראה חלקי, בלי לתרגם שוב בעקבות הבדיקה. יש להפעיל אם קוד או שמות פרטיים מתורגמים שוב ללא צורך."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "משתמש בתוצאה גם אם התרגום נראה חלקי, בלי לתרגם שוב בעקבות הבדיקה. יש להפעיל אם קוד או שמות פרטיים מתורגמים שוב ללא צורך.",
+    "모델 목록 새로 고침": "רענן רשימת מודלים"
   },
   "cs": {
+    "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다.": "Kontrola CodeBuddy CLI a stavu přihlášení.",
+    "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.": "CodeBuddy CLI nebyl nalezen. Nainstalujte CodeBuddy CLI a znovu se připojte.",
+    "CodeBuddy CLI가 설치되어 있습니다. 연결을 선택하면 기존 로그인을 확인합니다.": "CodeBuddy CLI je nainstalován. Zvolte Připojit pro ověření stávajícího přihlášení.",
+    "CodeBuddy CLI 로그인과 선택한 모델을 확인했습니다. 번역할 때 같은 로그인을 사용합니다.": "Přihlášení k CodeBuddy CLI a zvolený model byly ověřeny. Překlad použije stejné přihlášení.",
+    "CodeBuddy CLI (기존 로그인·외부 전송)": "CodeBuddy CLI (stávající přihlášení · externí přenos)",
+    "CodeBuddy 모델": "Model CodeBuddy",
+    "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": "ID modelu předávané nástroji CodeBuddy CLI. Využití se může lišit podle modelu.",
     "선택 권한이 허용되지 않아 동의를 저장하지 않았습니다.": "Souhlas nebyl uložen, protože nebylo uděleno volitelné oprávnění.",
     "동의를 철회했습니다.": "Souhlas byl odvolán.",
     "동의를 저장하지 못했습니다. 다시 시도해 주십시오.": "Souhlas se nepodařilo uložit. Zkuste to prosím znovu.",
@@ -16725,6 +16916,7 @@
     "고급 설정": "Pokročilá nastavení",
     "번역 누락 검사 설정을 적용하지 못했습니다": "Nastavení kontroly vynechání v překladu nelze použít",
     "번역 결과 검사 건너뛰기": "Přeskočit kontrolu výsledku překladu",
-    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Použije výsledek, i když překlad vypadá neúplně, a na základě této kontroly jej znovu nepřekládá. Zapněte, pokud se kód nebo vlastní jména zbytečně překládají opakovaně."
+    "번역이 불완전해 보여도 결과를 사용하며, 검사에 따른 재번역을 하지 않습니다. 코드나 고유명사가 불필요하게 재번역되는 경우 켤 수 있습니다.": "Použije výsledek, i když překlad vypadá neúplně, a na základě této kontroly jej znovu nepřekládá. Zapněte, pokud se kód nebo vlastní jména zbytečně překládají opakovaně.",
+    "모델 목록 새로 고침": "Obnovit seznam modelů"
   }
 }

@@ -42,6 +42,12 @@ const APP_LINKS = Object.freeze({
   repository: "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
 });
 
+// Only the displayed label is human-readable. The value stays the full provider model id,
+// which is what `--model` receives, so the channel a label names never changes the request.
+const CODEBUDDY_MODEL_OPTIONS = [
+  [normalizeConfig({}).codebuddy_model, normalizeConfig({}).codebuddy_model],
+];
+
 const DISPLAY_TRANSLATOR_OPTIONS = [
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)", "local"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)", "local"],
@@ -49,6 +55,7 @@ const DISPLAY_TRANSLATOR_OPTIONS = [
   ["chatgpt", "ChatGPT CLI (외부·품질 우선)", "external"],
   ["claude", "Claude CLI (외부·품질 우선)", "external"],
   ["gemini", "Gemini CLI (외부·품질 우선)", "external"],
+  ["codebuddy", "CodeBuddy CLI (기존 로그인·외부 전송)", "external"],
   ["deepl", "DeepL (API 키·외부 전송)", "external"],
   ["openai_compat", "OpenAI 호환 API (사용자 지정 서버)", "external"],
   ["mock", "Mock 테스트", "testing"],
@@ -58,6 +65,7 @@ const OUTGOING_TRANSLATOR_OPTIONS = [
   ["chatgpt", "ChatGPT CLI (권장·품질 우선)", "recommended"],
   ["claude", "Claude CLI (권장·품질 우선)", "recommended"],
   ["gemini", "Gemini CLI (권장·품질 우선)", "recommended"],
+  ["codebuddy", "CodeBuddy CLI (기존 로그인·외부 전송)", "recommended"],
   ["deepl", "DeepL (API 키·외부 전송)", "recommended"],
   ["openai_compat", "OpenAI 호환 API (사용자 지정 서버)", "recommended"],
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·속도 우선)", "local-limited"],
@@ -89,6 +97,7 @@ const OPTIONS = {
   target_language: LANGUAGE_OPTIONS,
   translator: DISPLAY_TRANSLATOR_OPTIONS,
   outgoing_translator: OUTGOING_TRANSLATOR_OPTIONS,
+  codebuddy_model: CODEBUDDY_MODEL_OPTIONS,
   outgoing_target_language: [["auto", "최근 대화에서 자동 감지"], ...LANGUAGE_OPTIONS],
   hymt_device: [
     ["auto", "자동 보호 (권장)"],
@@ -336,13 +345,13 @@ const providerAccordion = createProviderAccordion(document.querySelector("#provi
   window.requestAnimationFrame(updateScrollIndicator);
 });
 
-const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "deepl", "openai_compat"]);
+const EXTERNAL_PROVIDERS = new Set(["chatgpt", "claude", "gemini", "codebuddy", "deepl", "openai_compat"]);
 const LOCAL_TRANSLATORS = new Set(
   DISPLAY_TRANSLATOR_OPTIONS
     .filter(([, , group]) => group === "local")
     .map(([value]) => value),
 );
-const RECOMMENDED_PROVIDER_ORDER = ["chatgpt", "claude", "gemini"];
+const RECOMMENDED_PROVIDER_ORDER = ["chatgpt", "claude", "gemini", "codebuddy"];
 const PROVIDER_LOGIN_COPY = Object.freeze({
   chatgpt: { name: "ChatGPT", account: "ChatGPT 계정" },
   claude: { name: "Claude", account: "Claude 계정" },
@@ -571,7 +580,7 @@ function renderProviderConnections(connections) {
     if (action) {
       action.hidden = connection.canDisconnect;
       action.disabled = connection.connected || operation.blocked;
-      setProviderActionLabel(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
+      setProviderActionLabel(action, connection.connected ? "연결됨" : connection.installed || connection.id === "codebuddy" ? "연결" : "설치");
     }
     if (disconnect) {
       disconnect.hidden = !connection.canDisconnect;
@@ -603,6 +612,64 @@ async function loadProviderConnections() {
   } finally {
     state.providerLoading = false;
     renderOutgoingModelGuidance();
+  }
+}
+
+let codeBuddyModelsLoading = false;
+let codeBuddyModelsLoaded = false;
+
+function renderCodeBuddyModels(models, selected) {
+  const ids = [];
+  for (const model of Array.isArray(models) ? models : []) {
+    if (typeof model !== "string") continue;
+    const id = model.trim();
+    if (!id || ids.includes(id)) continue;
+    ids.push(id);
+  }
+  const chosen = typeof selected === "string" ? selected.trim() : "";
+  if (chosen && !ids.includes(chosen)) ids.unshift(chosen);
+  OPTIONS.codebuddy_model = ids.map(id => [id, id]);
+  const element = document.querySelector('.custom-select[data-field="codebuddy_model"]');
+  if (!element) return;
+  closeSelect(element);
+  element.replaceChildren();
+  renderSelect(element);
+  setSelectValue("codebuddy_model", selected);
+}
+
+async function loadCodeBuddyModels({ silent = false } = {}) {
+  if (codeBuddyModelsLoading) return;
+  codeBuddyModelsLoading = true;
+  const button = document.getElementById("codebuddy-models-refresh");
+  const status = document.getElementById("codebuddy-models-status");
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  }
+  if (status) status.hidden = true;
+  try {
+    const models = await invoke("codebuddy_models_get");
+    if (!Array.isArray(models) || models.length === 0 || !models.every(model => typeof model === "string")) {
+      throw new Error("CodeBuddy 모델 목록을 불러오지 못했습니다");
+    }
+    const selected = state.selectValues.codebuddy_model || state.config.codebuddy_model;
+    renderCodeBuddyModels(models, selected);
+    codeBuddyModelsLoaded = true;
+  } catch (error) {
+    if (!silent) {
+      if (status) {
+        setLocalizedError(status, error);
+        status.hidden = false;
+      }
+      setLocalizedError(elements.saveStatus, error);
+    }
+    writeDiagnostic("warn", `codebuddy-models: ${String(error)}`);
+  } finally {
+    codeBuddyModelsLoading = false;
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   }
 }
 
@@ -1699,7 +1766,7 @@ async function connectProvider(row) {
   action.disabled = true;
   try {
     let current = providerConnection(provider);
-    if (current && !current.installed) {
+    if (current && !current.installed && provider !== "codebuddy") {
       setProviderActionLabel(action, "설치 중");
       status.dataset.state = "loading";
       setLocalizedText(status.querySelector("strong"), "설치 중");
@@ -1713,17 +1780,20 @@ async function connectProvider(row) {
     }
 
     action.disabled = true;
-    setProviderActionLabel(action, provider === "deepl" ? "확인 중" : "로그인 중");
+    const confirmsExistingAccess = provider === "deepl" || provider === "codebuddy";
+    setProviderActionLabel(action, confirmsExistingAccess ? "확인 중" : "로그인 중");
     status.dataset.state = "loading";
     setLocalizedText(
       status.querySelector("strong"),
-      provider === "deepl" ? "확인 중" : "로그인 중",
+      confirmsExistingAccess ? "확인 중" : "로그인 중",
     );
     setLocalizedText(
       status.querySelector("span"),
       provider === "deepl"
         ? "DeepL API 키의 유효성을 확인하고 있습니다."
-        : "계정 로그인 절차를 시작하고 있습니다.",
+        : provider === "codebuddy"
+          ? "CodeBuddy CLI와 로그인 상태를 확인하고 있습니다."
+          : "계정 로그인 절차를 시작하고 있습니다.",
     );
     const loginProgress = provider !== "deepl" ? await showProviderLoginProgress(provider) : null;
     let connection;
@@ -1753,7 +1823,8 @@ async function connectProvider(row) {
 
 async function showProviderLoginProgress(provider) {
   const copy = PROVIDER_LOGIN_COPY[provider];
-  if (!copy) throw new Error("지원하지 않는 계정 로그인 방식입니다.");
+  // Providers without a browser sign-in flow (DeepL, CodeBuddy) run inline instead.
+  if (!copy) return null;
   let cancelled = false;
   let closed = false;
   let unlistenReady = null;
@@ -2464,6 +2535,10 @@ function renderSelect(element) {
   trigger.dir = "ltr";
   trigger.setAttribute("aria-haspopup", "listbox");
   trigger.setAttribute("aria-expanded", "false");
+  if (field === "codebuddy_model") {
+    trigger.setAttribute("aria-labelledby", "codebuddy-model-heading");
+    trigger.setAttribute("aria-describedby", "codebuddy-model-description");
+  }
   triggerLabel.className = "select-trigger-label";
   triggerLabel.dir = languageField ? "auto" : "ltr";
   trigger.append(triggerLabel);
@@ -2724,6 +2799,10 @@ function closeAllSelects() {
 
 function renderConfig(config) {
   state.config = normalizeConfig(config);
+  renderCodeBuddyModels(
+    codeBuddyModelsLoaded ? OPTIONS.codebuddy_model.map(([id]) => id) : [],
+    state.config.codebuddy_model,
+  );
   for (const field of Object.keys(OPTIONS)) setSelectValue(field, state.config[field]);
   renderSourceLanguagePicker();
   elements.outgoingAutoHelp.hidden = state.config.outgoing_target_language !== "auto";
@@ -2771,6 +2850,11 @@ async function applySettingsPatch(patch, { status = true } = {}) {
     if (revision === state.settingsApplyRevision) {
       renderConfig(updated);
       if (status) setLocalizedText(elements.saveStatus, "적용되었습니다.");
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "codebuddy_model")) {
+      // A stored verification marker belongs to one model, so the CodeBuddy card has to be
+      // re-read after the new model is saved instead of showing the previous model's state.
+      await loadProviderConnections();
     }
     return updated;
   } catch (error) {
@@ -3068,7 +3152,7 @@ function localizeRuntimeLabel(label, language) {
     if (label.endsWith(suffix)) {
       const runtimeName = label.slice(0, -suffix.length).trim();
       const externalService = runtimeName.match(
-        /^(ChatGPT|Claude|Gemini|DeepL) 품질 우선 \((Codex CLI|Claude Code|Antigravity CLI|API)\)$/,
+        /^(ChatGPT|Claude|Gemini|DeepL|CodeBuddy) 품질 우선 \((Codex CLI|Claude Code|Antigravity CLI|API|CodeBuddy CLI)\)$/,
       );
       const localizedRuntimeName = externalService
         ? `${externalService[1]} ${translateCopy(language, "품질 최우선")} (${externalService[2]})`
@@ -3272,6 +3356,7 @@ async function initializeSettingsUi() {
   // Provider probes can take several seconds, so begin them as soon as the
   // saved configuration is available without delaying engine activation.
   void loadProviderConnections();
+  void loadCodeBuddyModels({ silent: true });
   try {
     await loadAutostartState();
   } catch (error) {
@@ -3287,6 +3372,10 @@ document.querySelectorAll(".custom-select[data-field]").forEach(renderSelect);
 initializeSourceLanguagePicker();
 populateDictionaryLanguageSelects();
 initializeDictionaryCustomSelects();
+const codeBuddyModelsRefresh = document.getElementById("codebuddy-models-refresh");
+if (codeBuddyModelsRefresh) {
+  codeBuddyModelsRefresh.addEventListener("click", () => void loadCodeBuddyModels());
+}
 document.addEventListener("click", event => {
   if (!event.target.closest(".custom-select")) closeAllSelects();
 });

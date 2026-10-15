@@ -108,15 +108,50 @@ test("recovered connections clear previous errors before Discord becomes active"
   } finally { await app.close(); }
 });
 
+test("a transient heartbeat failure reconnects while inactive without reading new messages", async () => {
+  const app = await fixture();
+  try {
+    await app.focus("stable");
+    await expect(app.message("stable")).toContainText("[ko]");
+    await app.focus(null);
+    const page = app.pages.stable;
+    await page.evaluate(() => {
+      window.fixtureController = window.__nudeTranslatorOutgoing;
+      Object.defineProperty(window, "__nudeTranslatorOutgoing", { configurable: true,
+        get() { throw new Error("Transient heartbeat fixture failure"); } });
+    });
+    await expect.poll(async () => (await app.call("status")).cdpConnected).toBe(false);
+    await page.evaluate(() => {
+      Object.defineProperty(window, "__nudeTranslatorOutgoing", { configurable: true,
+        writable: true, value: window.fixtureController });
+      const message = document.createElement("li");
+      message.id = "chat-messages-1-3";
+      message.innerHTML = '<div id="message-content-3">A new message arrived while another app was active.</div>';
+      document.querySelector("ol").append(message);
+    });
+    await expect.poll(async () => (await app.call("status")).cdpConnected, { timeout: 8000 }).toBe(true);
+    const recovered = await app.call("status");
+    expect(recovered.connectionIssue).toBe("");
+    expect(recovered.discordWaiting).toBe(true);
+    expect(discordConnectionLabel(recovered)).toBe("Discord 창 대기 중");
+    const newMessage = page.locator("#message-content-3");
+    await expect(newMessage).toHaveText("A new message arrived while another app was active.");
+    await app.focus("stable");
+    await expect(newMessage).toContainText("[ko]");
+  } finally { await app.close(); }
+});
+
 test("failed replacement connections remain visible while Discord is inactive", async () => {
   const app = await fixture();
   try {
     await app.focus("stable");
     await expect.poll(async () => (await app.call("status")).cdpConnected).toBe(true);
     await app.focus(null);
+    await app.call("clients", { clients: app.clients.map(client => client.variant === "stable"
+      ? { ...client, endpoint: "ws://127.0.0.1:1/unavailable" } : client) });
     const result = await app.call("replace", { variant: "stable", endpoint: "ws://127.0.0.1:1/unavailable" });
     expect(result.ok).toBe(false);
-    await new Promise(resolve => setTimeout(resolve, 2200));
+    await new Promise(resolve => setTimeout(resolve, 4200));
     const failed = await app.call("status");
     expect(failed.cdpConnected).toBe(false);
     expect(failed.discordWaiting).toBe(true);

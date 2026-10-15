@@ -2609,6 +2609,7 @@ select:focus-visible,
 .provider-form-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 .button.danger {
@@ -3382,4 +3383,21 @@ select:focus-visible,
   .engine-restart-button[data-state="working"] .engine-restart-icon {
     animation: none;
   }
+}
+
+/* NudeNyang model picker: keep long provider:model ids inside the control. */
+/* Keep provider-specific settings inside the existing service disclosure. */
+#codebuddy-model-panel .setting-row { margin: 0; padding: 4px 0 8px; border-bottom: 0; }
+#codebuddy-model-panel .provider-form-actions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.codebuddy-model-controls { display: grid; gap: 8px; min-width: 0; width: min(100%, 340px); justify-self: end; }
+.codebuddy-model-controls .select-trigger-label,
+.codebuddy-model-controls .select-option { overflow-wrap: anywhere; text-align: start; }
+#codebuddy-models-refresh { justify-self: end; max-width: 100%; white-space: normal; }
+.codebuddy-models-status { margin: 4px 0 0; color: var(--danger); overflow-wrap: anywhere; }
+@media (max-width: 740px) {
+  .codebuddy-model-controls { width: 100%; }
 }

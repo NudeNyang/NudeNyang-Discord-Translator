@@ -43,15 +43,16 @@ use crate::outgoing::{
     OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
 };
 use crate::translation::{
-    outgoing_can_passthrough, DeepLTranslator, HyMtModelSize, HyMtTranslator, MockTranslator,
-    ModelPreparationCancellation, ModelPreparationProgress, ModelProgressObserver,
-    OpenAiCompatSettings, OpenAiCompatTranslator, OriginalTranslator, ResilientTranslator,
-    SubscriptionCliTranslator, TranslationService, Translator,
+    outgoing_can_passthrough, CodeBuddyCliTranslator, DeepLTranslator, HyMtModelSize,
+    HyMtTranslator, MockTranslator, ModelPreparationCancellation, ModelPreparationProgress,
+    ModelProgressObserver, OpenAiCompatSettings, OpenAiCompatTranslator, OriginalTranslator,
+    ResilientTranslator, SubscriptionCliTranslator, TranslationService, Translator,
 };
 
 const MAX_BATCH_ITEMS: usize = 32;
 const CPU_MAX_BATCH_ITEMS: usize = 6;
 const MAX_MESSAGE_CONTEXT_BATCH_ITEMS: usize = 128;
+const MAX_INCOMING_BATCH_CHARS: usize = 4000;
 const DISPLAY_VIEW_SETTLE_DELAY: Duration = Duration::from_millis(250);
 const HISTORY_CLEANUP_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MAX_IMAGE_BYTES: usize = 20 * 1024 * 1024;
@@ -363,6 +364,8 @@ enum Control {
 struct PartState {
     original: String,
     translated: String,
+    // An unchanged fallback must not survive an explicit retry/configuration change.
+    passthrough_generation: Option<u64>,
 }
 
 struct DiscordSession {
@@ -920,16 +923,34 @@ fn translator_preparation_plan(
         || updated.translation_omission_check != current.translation_omission_check;
     let openai_compat_changed =
         OpenAiCompatSettings::from_config(updated) != OpenAiCompatSettings::from_config(current);
+    // The CodeBuddy model is part of the translator identity, so a model change rebuilds every
+    // lane that currently or previously used CodeBuddy.
+    let codebuddy_model_changed = updated.codebuddy_model != current.codebuddy_model;
     let lane_changed = |current_name: &str, updated_name: &str| {
         updated_name != current_name
             || shared_settings_changed
             || (openai_compat_changed && updated_name == "openai_compat")
+            || (codebuddy_model_changed
+                && (current_name == "codebuddy" || updated_name == "codebuddy"))
             || refreshed_provider == Some(updated_name)
     };
     TranslatorPreparationPlan {
         display: lane_changed(&current.translator, &updated.translator),
         outgoing: lane_changed(&current.outgoing_translator, &updated.outgoing_translator),
     }
+}
+
+/// Whether a CodeBuddy model change affects a lane that currently or previously uses CodeBuddy.
+///
+/// The CodeBuddy model is part of the translator identity, so a model change must also reset
+/// parked Discord windows: otherwise another window keeps results produced with the previous
+/// model even after the worker lane was rebuilt.
+fn codebuddy_model_changes_lane(current: &AppConfig, updated: &AppConfig) -> bool {
+    updated.codebuddy_model != current.codebuddy_model
+        && (current.translator == "codebuddy"
+            || updated.translator == "codebuddy"
+            || current.outgoing_translator == "codebuddy"
+            || updated.outgoing_translator == "codebuddy")
 }
 
 fn preparation_plan_for_active_lanes(
@@ -1456,6 +1477,7 @@ fn run_controller(
                         || updated.incoming_source_languages != config.incoming_source_languages
                         || updated.incoming_language_mode != config.incoming_language_mode
                         || updated.image_ocr_quality != config.image_ocr_quality
+                        || codebuddy_model_changes_lane(&config, &updated)
                     {
                         for other in parked.values_mut() {
                             other.reset();
@@ -2102,8 +2124,10 @@ fn run_controller(
             }
         }
 
-        if foreground_active
-            && !session.verification_paused
+        // Reattach to an existing secure connection even while another app is
+        // active. This never launches/restarts Discord; message collection and
+        // result application remain gated by may_scan below.
+        if !session.verification_paused
             && session.client.is_none()
             && Instant::now() >= session.retry_at
         {
@@ -2944,7 +2968,12 @@ fn scan_dom(
         .iter()
         .map(DomPart::locator)
         .collect::<HashSet<_>>();
-    states.retain(|locator, _| locators.contains(locator));
+    states.retain(|locator, state| {
+        locators.contains(locator)
+            && state
+                .passthrough_generation
+                .is_none_or(|attempt| attempt == generation)
+    });
     let mut deferred = HashSet::new();
     for range in message_ranges(&snapshot.parts) {
         let group = &snapshot.parts[range];
@@ -2979,6 +3008,7 @@ fn scan_dom(
                     part.locator(),
                     PartState {
                         original: part.text.clone(),
+                        passthrough_generation: (translated == part.text).then_some(generation),
                         translated,
                     },
                 );
@@ -3406,6 +3436,8 @@ fn drain_worker_results(
                                 PartState {
                                     original: part.text.clone(),
                                     translated: translated.clone(),
+                                    passthrough_generation: (translated == part.text)
+                                        .then_some(result_generation),
                                 },
                             );
                             if translated != part.text && config.enabled {
@@ -3764,7 +3796,10 @@ fn run_translation_worker_with_replay(
                 }
                 // Yield only between complete message contexts. Preserve the
                 // original batch's language evidence across these yields.
-                let end = message_ranges(&batch.parts)[0].end;
+                let end = incoming_batch_end(
+                    &batch.parts,
+                    service.translator().preferred_incoming_batch_contexts(),
+                );
                 if end < batch.parts.len() {
                     let remaining = batch.parts.split_off(end);
                     let hints = batch
@@ -3782,6 +3817,19 @@ fn run_translation_worker_with_replay(
                         context_scope: batch.context_scope.clone(),
                         queued_at: batch.queued_at,
                     }));
+                }
+                for (deferred_batch, error) in replay.take_deferred(&mut batch, Instant::now()) {
+                    let _ = results.send(WorkerResult::Translated {
+                        generation: deferred_batch.generation,
+                        view_epoch: deferred_batch.view_epoch,
+                        view_scope: deferred_batch.view_scope,
+                        target: deferred_batch.target,
+                        parts: deferred_batch.parts,
+                        values: Err(error),
+                    });
+                }
+                if batch.parts.is_empty() {
+                    continue;
                 }
                 log_worker_queue(
                     "display",
@@ -3802,34 +3850,33 @@ fn run_translation_worker_with_replay(
                 let revision = replay.revision();
                 let deferred_error = replay.deferred_error(&batch, Instant::now());
                 let deferred = deferred_error.is_some();
-                let values = if let Some(values) = replay.lookup(&batch) {
-                    Ok(values)
+                let outcome = if let Some(values) = replay.lookup(&batch) {
+                    Ok(values
+                        .into_iter()
+                        .map(crate::translation::TranslationPart::from)
+                        .collect::<Vec<_>>())
                 } else if let Some(error) = deferred_error {
                     Err(error)
-                } else if let Some(hints) = &batch.source_hints {
-                    service.translate_incoming_with_hints(
-                        &texts,
-                        &message_keys,
-                        hints,
-                        batch.target,
-                        batch.allowed_sources.as_ref(),
-                    )
                 } else {
-                    service.translate_many_for_incoming_contextual_filtered(
-                        &texts,
-                        &message_keys,
-                        &batch.context_scope,
-                        batch.target,
-                        batch.allowed_sources.as_ref(),
-                    )
+                    let hints = batch.source_hints.clone().map(Ok).unwrap_or_else(|| {
+                        service.incoming_source_hints(&texts, &message_keys, &batch.context_scope)
+                    });
+                    hints.and_then(|hints| {
+                        service.translate_incoming_parts_with_hints(
+                            &texts,
+                            &message_keys,
+                            &hints,
+                            batch.target,
+                            batch.allowed_sources.as_ref(),
+                        )
+                    })
                 };
-                if let Ok(values) = &values {
-                    replay.clear_failure(&batch, revision);
-                    replay.store(&batch, values, revision);
+                if let Ok(parts) = &outcome {
+                    replay.record_translation(&batch, parts, revision);
                 } else if !deferred {
                     replay.record_failure(
                         &batch,
-                        values.as_ref().unwrap_err(),
+                        outcome.as_ref().unwrap_err(),
                         revision,
                         Instant::now(),
                     );
@@ -3840,7 +3887,7 @@ fn run_translation_worker_with_replay(
                     view_scope: batch.view_scope,
                     target: batch.target,
                     parts: batch.parts,
-                    values,
+                    values: outcome.map(|parts| parts.into_iter().map(|part| part.text).collect()),
                 });
             }
             WorkerCommand::TranslateBrowser(mut batch) => {
@@ -4496,6 +4543,12 @@ fn make_translator(
             120,
             cache_root(),
         )?))),
+        "codebuddy" => Ok(checked(Box::new(CodeBuddyCliTranslator::new(
+            &config.codebuddy_model,
+            "auto",
+            120,
+            cache_root(),
+        )?))),
         "deepl" => Ok(checked(Box::new(DeepLTranslator::new(
             None,
             Duration::from_secs(30),
@@ -4611,6 +4664,7 @@ fn translator_label(name: &str) -> &str {
         "chatgpt" => "ChatGPT 품질 우선 (Codex CLI)",
         "claude" => "Claude 품질 우선 (Claude Code)",
         "gemini" => "Gemini 품질 우선 (Antigravity CLI)",
+        "codebuddy" => "CodeBuddy (CodeBuddy CLI)",
         "deepl" => "DeepL 품질 우선 (API)",
         "openai_compat" => "OpenAI 호환 API",
         "mock" => "Mock 테스트",
@@ -4664,6 +4718,33 @@ fn update_status(status: &Arc<Mutex<RuntimeStatus>>, update: impl FnOnce(&mut Ru
     if let Ok(mut status) = status.lock() {
         update(&mut status);
     }
+}
+
+/// End offset of the next display batch. Complete message contexts are added
+/// while they fit within `max_contexts` and the combined character budget, so a
+/// yield never splits one message. The first context always ships whole so an
+/// oversized message still makes progress.
+fn incoming_batch_end(parts: &[DomPart], max_contexts: usize) -> usize {
+    let limit = max_contexts.max(1);
+    let mut end = 0;
+    let mut contexts = 0;
+    let mut characters = 0usize;
+    for range in message_ranges(parts) {
+        let range_characters = parts[range.clone()]
+            .iter()
+            .map(|part| part.text.chars().count())
+            .sum::<usize>();
+        if contexts > 0 && characters + range_characters > MAX_INCOMING_BATCH_CHARS {
+            break;
+        }
+        end = range.end;
+        contexts += 1;
+        characters += range_characters;
+        if contexts >= limit {
+            break;
+        }
+    }
+    end
 }
 
 #[cfg(test)]
@@ -5165,9 +5246,10 @@ mod tests {
     }
 
     use super::{
-        cdp_attach_text_scripts, dictionary_source_language, dictionary_translation_is_acceptable,
-        display_batch_item_limit, display_preparation_is_required, display_translation_is_ready,
-        display_view_scope, incoming_context_key, initial_model_preparation_progress,
+        cdp_attach_text_scripts, codebuddy_model_changes_lane, dictionary_source_language,
+        dictionary_translation_is_acceptable, display_batch_item_limit,
+        display_preparation_is_required, display_translation_is_ready, display_view_scope,
+        incoming_batch_end, incoming_context_key, initial_model_preparation_progress,
         localize_dictionary_result, next_worker_command, plan_dom_updates, poll_interval,
         preparation_plan_for_active_lanes, record_outgoing_ui_change, retain_enabled_dom_parts,
         run_outgoing_translation_worker, stage_dictionary_lookup_result,
@@ -6297,8 +6379,9 @@ mod tests {
         );
         assert_eq!(translator_label("deepl"), "DeepL 품질 우선 (API)");
         assert_eq!(translator_label("openai_compat"), "OpenAI 호환 API");
+        assert_eq!(translator_label("codebuddy"), "CodeBuddy (CodeBuddy CLI)");
         assert!(translator_label("translategemma_4b").contains("TranslateGemma 4B"));
-        for provider in ["chatgpt", "claude", "gemini", "deepl"] {
+        for provider in ["chatgpt", "claude", "gemini", "codebuddy", "deepl"] {
             assert!(!translator_label(provider).contains("Luna/Terra"));
             assert!(!translator_label(provider).contains("GPT-5.6"));
         }
@@ -6313,6 +6396,113 @@ mod tests {
         assert!(!prepared.contains("지금부터"));
         assert!(deferred.contains("번역을 켜면 모델을 준비합니다"));
         assert!(!deferred.contains("준비가 완료되었습니다"));
+    }
+
+    #[test]
+    fn changing_the_codebuddy_model_rebuilds_only_the_codebuddy_lanes() {
+        let current = AppConfig {
+            translator: "codebuddy".to_string(),
+            outgoing_translator: "chatgpt".to_string(),
+            ..Default::default()
+        };
+        let updated = AppConfig {
+            codebuddy_model: "deepseek-v4.1-flash".to_string(),
+            ..current.clone()
+        };
+
+        assert_eq!(
+            translator_preparation_plan(&current, &updated, None),
+            TranslatorPreparationPlan {
+                display: true,
+                outgoing: false,
+            }
+        );
+
+        let outgoing_codebuddy = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "codebuddy".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            translator_preparation_plan(
+                &outgoing_codebuddy,
+                &AppConfig {
+                    codebuddy_model: "deepseek-v4.1-flash".to_string(),
+                    ..outgoing_codebuddy.clone()
+                },
+                None,
+            ),
+            TranslatorPreparationPlan {
+                display: false,
+                outgoing: true,
+            }
+        );
+
+        // A CodeBuddy model change must not rebuild lanes that never use CodeBuddy.
+        let chatgpt_only = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "claude".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            translator_preparation_plan(
+                &chatgpt_only,
+                &AppConfig {
+                    codebuddy_model: "deepseek-v4.1-flash".to_string(),
+                    ..chatgpt_only.clone()
+                },
+                None,
+            ),
+            TranslatorPreparationPlan {
+                display: false,
+                outgoing: false,
+            }
+        );
+    }
+
+    #[test]
+    fn changing_the_codebuddy_model_resets_parked_windows_for_codebuddy_lanes() {
+        let display_codebuddy = AppConfig {
+            translator: "codebuddy".to_string(),
+            outgoing_translator: "chatgpt".to_string(),
+            ..Default::default()
+        };
+        let updated_model = |base: &AppConfig| AppConfig {
+            codebuddy_model: "deepseek-v4.1-flash".to_string(),
+            ..base.clone()
+        };
+
+        assert!(
+            codebuddy_model_changes_lane(&display_codebuddy, &updated_model(&display_codebuddy)),
+            "a display CodeBuddy lane must reset parked windows when its model changes"
+        );
+
+        let outgoing_codebuddy = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "codebuddy".to_string(),
+            ..Default::default()
+        };
+        assert!(
+            codebuddy_model_changes_lane(&outgoing_codebuddy, &updated_model(&outgoing_codebuddy)),
+            "an outgoing CodeBuddy lane must reset parked windows when its model changes"
+        );
+
+        // A model change must not reset windows when no lane uses CodeBuddy.
+        let chatgpt_only = AppConfig {
+            translator: "chatgpt".to_string(),
+            outgoing_translator: "claude".to_string(),
+            ..Default::default()
+        };
+        assert!(!codebuddy_model_changes_lane(
+            &chatgpt_only,
+            &updated_model(&chatgpt_only)
+        ));
+
+        // An unchanged model never triggers a reset, even on a CodeBuddy lane.
+        assert!(!codebuddy_model_changes_lane(
+            &display_codebuddy,
+            &display_codebuddy
+        ));
     }
 
     #[test]
@@ -6842,6 +7032,7 @@ mod tests {
             PartState {
                 original: "Hello".to_string(),
                 translated: "안녕하세요".to_string(),
+                passthrough_generation: None,
             },
         )]);
         let mut pending = HashSet::new();
@@ -6926,6 +7117,64 @@ mod tests {
         );
 
         assert_eq!(queued.len(), CPU_MAX_BATCH_ITEMS);
+    }
+
+    fn incoming_contexts(widths: &[usize]) -> Vec<DomPart> {
+        widths
+            .iter()
+            .enumerate()
+            .map(|(context, width)| DomPart {
+                kind: "message".to_string(),
+                item_id: format!("dto-message-{context}"),
+                context_id: Some(format!("dto-context-{context}")),
+                index: 0,
+                text: "x".repeat(*width),
+                displayed_text: None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn incoming_batch_keeps_whole_contexts_up_to_the_provider_limit() {
+        let parts = incoming_contexts(&[10, 10, 10, 10, 10, 10, 10, 10]);
+        assert_eq!(incoming_batch_end(&parts, 8), 8);
+        assert_eq!(incoming_batch_end(&parts, 3), 3);
+    }
+
+    #[test]
+    fn incoming_batch_defaults_to_a_single_context() {
+        let parts = incoming_contexts(&[10, 10, 10, 10, 10, 10, 10, 10]);
+        assert_eq!(incoming_batch_end(&parts, 0), 1);
+        assert_eq!(incoming_batch_end(&parts, 1), 1);
+    }
+
+    #[test]
+    fn incoming_batch_stops_before_a_context_over_the_character_budget() {
+        // 3000 + 1500 exceeds the 4000 character budget, so only the first
+        // complete context ships even though the context limit allows more.
+        let parts = incoming_contexts(&[3000, 1500, 10]);
+        assert_eq!(incoming_batch_end(&parts, 8), 1);
+        let inside = incoming_contexts(&[3000, 900, 10]);
+        assert_eq!(incoming_batch_end(&inside, 8), 3);
+        let charboundary = incoming_contexts(&[3000, 1000, 1]);
+        assert_eq!(incoming_batch_end(&charboundary, 8), 2);
+    }
+
+    #[test]
+    fn incoming_batch_always_ships_an_oversized_first_context() {
+        let parts = incoming_contexts(&[5000, 10]);
+        assert_eq!(incoming_batch_end(&parts, 8), 1);
+    }
+
+    #[test]
+    fn incoming_batch_never_splits_a_multi_fragment_context() {
+        let mut parts = incoming_contexts(&[10, 10, 10]);
+        parts[1].context_id = parts[0].context_id.clone();
+        parts[1].item_id = "dto-message-0".to_string();
+        parts[1].index = 1;
+        // A multi-fragment context stays intact at both provider limits.
+        assert_eq!(incoming_batch_end(&parts, 8), 3);
+        assert_eq!(incoming_batch_end(&parts, 1), 2);
     }
 
     #[test]
