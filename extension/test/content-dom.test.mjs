@@ -2098,3 +2098,20 @@ test("번역 응답에 포함된 최신 사용 중지 설정도 영상 응답 �
   assert.equal(reply.ok, false);
   assert.equal((await p.message(embedRequest("status"))).enabled, false);
 });
+
+test("CodeBuddy 영상 제목도 외부 전송 한도를 초과하면 보내지 않는다", async (t) => {
+  const prose = ["文".repeat(3999), "章".repeat(3999), "字".repeat(1990)];
+  const p = page(t, `${prose.map((text) => `<p>${text}</p>`).join("")}
+    <iframe src="${FRAME_URL}"></iframe>`, {
+    translator: "codebuddy", settings: { externalPageCharLimit: 10000 },
+  });
+  await p.message({ type: "nudenyang-ready" });
+  await waitFor(() => p.requests.length === 1, "prose should consume the budget");
+  const context = await p.message(embedRequest("status"));
+  const reply = await p.message(embedRequest("translate", {
+    title: "題".repeat(20), epoch: context.epoch, translationKey: context.translationKey,
+  }));
+  assert.equal(reply.code, "limited");
+  assert.equal(p.requests.length, 1);
+  assert.equal((await p.message({ type: "nudenyang-status" })).sentChars, 9988);
+});

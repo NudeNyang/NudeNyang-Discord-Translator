@@ -34,8 +34,8 @@ pub use openai_compat::{
     OpenAiCompatTranslator, CREDENTIAL_ID as OPENAI_COMPAT_CREDENTIAL_ID,
 };
 pub use resilient::{translation_needs_repair, ResilientTranslator};
-pub(crate) use service::QUALITY_REJECTED_ERROR;
 pub use service::{outgoing_can_passthrough, TranslationService, WebTranslationSession};
+pub(crate) use service::{TranslationPart, QUALITY_REJECTED_ERROR};
 pub use subscription_cli::{
     connect_subscription_interactively_with_observer, install_subscription_cli,
     probe_subscription_connection, CliConnectionProbe, LoginBrowserGate, LoginProcessObserver,

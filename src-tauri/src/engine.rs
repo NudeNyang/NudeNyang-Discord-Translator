@@ -364,6 +364,8 @@ enum Control {
 struct PartState {
     original: String,
     translated: String,
+    // An unchanged fallback must not survive an explicit retry/configuration change.
+    passthrough_generation: Option<u64>,
 }
 
 struct DiscordSession {
@@ -2964,7 +2966,12 @@ fn scan_dom(
         .iter()
         .map(DomPart::locator)
         .collect::<HashSet<_>>();
-    states.retain(|locator, _| locators.contains(locator));
+    states.retain(|locator, state| {
+        locators.contains(locator)
+            && state
+                .passthrough_generation
+                .is_none_or(|attempt| attempt == generation)
+    });
     let mut deferred = HashSet::new();
     for range in message_ranges(&snapshot.parts) {
         let group = &snapshot.parts[range];
@@ -2999,6 +3006,7 @@ fn scan_dom(
                     part.locator(),
                     PartState {
                         original: part.text.clone(),
+                        passthrough_generation: (translated == part.text).then_some(generation),
                         translated,
                     },
                 );
@@ -3426,6 +3434,8 @@ fn drain_worker_results(
                                 PartState {
                                     original: part.text.clone(),
                                     translated: translated.clone(),
+                                    passthrough_generation: (translated == part.text)
+                                        .then_some(result_generation),
                                 },
                             );
                             if translated != part.text && config.enabled {
@@ -3838,34 +3848,33 @@ fn run_translation_worker_with_replay(
                 let revision = replay.revision();
                 let deferred_error = replay.deferred_error(&batch, Instant::now());
                 let deferred = deferred_error.is_some();
-                let values = if let Some(values) = replay.lookup(&batch) {
-                    Ok(values)
+                let outcome = if let Some(values) = replay.lookup(&batch) {
+                    Ok(values
+                        .into_iter()
+                        .map(crate::translation::TranslationPart::from)
+                        .collect::<Vec<_>>())
                 } else if let Some(error) = deferred_error {
                     Err(error)
-                } else if let Some(hints) = &batch.source_hints {
-                    service.translate_incoming_with_hints(
-                        &texts,
-                        &message_keys,
-                        hints,
-                        batch.target,
-                        batch.allowed_sources.as_ref(),
-                    )
                 } else {
-                    service.translate_many_for_incoming_contextual_filtered(
-                        &texts,
-                        &message_keys,
-                        &batch.context_scope,
-                        batch.target,
-                        batch.allowed_sources.as_ref(),
-                    )
+                    let hints = batch.source_hints.clone().map(Ok).unwrap_or_else(|| {
+                        service.incoming_source_hints(&texts, &message_keys, &batch.context_scope)
+                    });
+                    hints.and_then(|hints| {
+                        service.translate_incoming_parts_with_hints(
+                            &texts,
+                            &message_keys,
+                            &hints,
+                            batch.target,
+                            batch.allowed_sources.as_ref(),
+                        )
+                    })
                 };
-                if let Ok(values) = &values {
-                    replay.clear_failure(&batch, revision);
-                    replay.store(&batch, values, revision);
+                if let Ok(parts) = &outcome {
+                    replay.record_translation(&batch, parts, revision);
                 } else if !deferred {
                     replay.record_failure(
                         &batch,
-                        values.as_ref().unwrap_err(),
+                        outcome.as_ref().unwrap_err(),
                         revision,
                         Instant::now(),
                     );
@@ -3876,7 +3885,7 @@ fn run_translation_worker_with_replay(
                     view_scope: batch.view_scope,
                     target: batch.target,
                     parts: batch.parts,
-                    values,
+                    values: outcome.map(|parts| parts.into_iter().map(|part| part.text).collect()),
                 });
             }
             WorkerCommand::TranslateBrowser(mut batch) => {
@@ -7021,6 +7030,7 @@ mod tests {
             PartState {
                 original: "Hello".to_string(),
                 translated: "안녕하세요".to_string(),
+                passthrough_generation: None,
             },
         )]);
         let mut pending = HashSet::new();

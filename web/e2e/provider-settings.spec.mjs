@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }) => {
     window.testConfig = { ui_language: "ko", ui_theme: "dark", outgoing_translator: "openai_compat" };
     const storedCheck = sessionStorage.getItem("test-omission-check");
     if (storedCheck !== null) window.testConfig.translation_omission_check = storedCheck === "true";
-    const providers = ["chatgpt", "claude", "gemini", "deepl", "openai_compat"].map(id => ({
+    const providers = ["chatgpt", "claude", "gemini", "codebuddy", "deepl", "openai_compat"].map(id => ({
       id, name: id, installed: true, connected: id === "deepl", canDisconnect: id === "deepl",
       state: id === "deepl" ? "connected" : "not-connected",
       detail: id === "deepl" ? "API 키가 운영체제 보안 저장소에 저장되어 있습니다." : "연결 정보를 확인하십시오.",
@@ -41,6 +41,11 @@ test.beforeEach(async ({ page }) => {
           return { ...window.testConfig };
         }
         if (command === "provider_connections_get") return providers;
+        if (command === "codebuddy_models_get") {
+          if (window.testDelayModels) await new Promise(resolve => { window.testFinishModels = resolve; });
+          if (window.testFailModels) throw new Error("CodeBuddy 모델 목록을 불러오지 못했습니다");
+          return ["hy3", "custom-provider:team/model-with-a-long-name-v2"];
+        }
         if (command === "autostart_get") return false;
         if (command === "storage_status_get") return { models: [], cache: {} };
         if (command === "runtime_status") return window.testRuntime;
@@ -206,7 +211,7 @@ for (const theme of ["dark", "light"]) {
   test(`${theme} provider layouts fit narrow screens and preserve localized labels`, async ({ page }, testInfo) => {
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+    await page.evaluate(theme => { window.testConfig.ui_theme = theme; document.documentElement.dataset.theme = theme; }, theme);
     await page.locator("#provider-openai_compat-summary").click();
     for (const width of [1100, 760, 420, 320]) {
       await page.setViewportSize({ width, height: 1100 });
@@ -278,3 +283,66 @@ test("saved disabled checking remains enabled skipping after reopening settings"
   await page.locator('[data-settings-panel="engine"]').click();
   await expect(control).toHaveAttribute("aria-checked", "false");
 });
+
+
+for (const theme of ["dark", "light"]) {
+  test(`CodeBuddy ${theme}: stable header, accessible settings and recoverable model loading`, async ({ page }, testInfo) => {
+    await page.setViewportSize({width: 1280, height: 980});
+    await page.evaluate(theme => { window.testConfig.ui_theme = theme; document.documentElement.dataset.theme = theme; }, theme);
+    const row = page.locator('[data-provider="codebuddy"]');
+    const summary = row.locator('.provider-summary');
+    await row.scrollIntoViewIfNeeded();
+    const measureHeader = () => row.evaluate(row => {
+      const origin = row.getBoundingClientRect();
+      return [...row.querySelectorAll('.provider-mark,.provider-title-line,.provider-status,.provider-summary')].map(element => {
+        const box = element.getBoundingClientRect();
+        return {x:box.x-origin.x, y:box.y-origin.y, width:box.width, height:box.height};
+      });
+    });
+    const before = await measureHeader();
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    const after = await measureHeader();
+    for (let i=0; i<before.length; i++) {
+      for (const axis of ['x','y','width','height']) {
+        expect(Math.abs(before[i][axis]-after[i][axis])).toBeLessThan(0.1);
+      }
+    }
+    const geometry = await row.evaluate(row => {
+      const button = row.querySelector('.provider-summary').getBoundingClientRect();
+      const arrow = row.querySelector('.provider-chevron').getBoundingClientRect();
+      return { dx:(button.x+button.width/2)-(arrow.x+arrow.width/2), dy:(button.y+button.height/2)-(arrow.y+arrow.height/2) };
+    });
+    expect(Math.abs(geometry.dx)).toBeLessThan(1);
+    expect(Math.abs(geometry.dy)).toBeLessThan(1);
+    await expect(row.locator('.provider-action')).toBeVisible();
+    const trigger = row.locator('[data-field="codebuddy_model"] .select-trigger');
+    await expect(trigger).toHaveAccessibleName('CodeBuddy 모델');
+    await trigger.click();
+    await row.locator('[data-field="codebuddy_model"] .select-option').filter({hasText:'custom-provider:team/model-with-a-long-name-v2'}).click();
+    await expect(trigger).toContainText('custom-provider:team/model-with-a-long-name-v2');
+    await page.evaluate(() => { window.testDelayModels=true; window.testFailModels=true; });
+    const refresh = row.locator('#codebuddy-models-refresh');
+    await refresh.click();
+    await expect(refresh).toBeDisabled();
+    await expect(refresh).toHaveAttribute('aria-busy', 'true');
+    await page.evaluate(() => window.testFinishModels());
+    await expect(row.locator('#codebuddy-models-status')).toBeVisible();
+    await expect(trigger).toContainText('custom-provider:team/model-with-a-long-name-v2');
+    await page.evaluate(() => { window.testDelayModels=false; window.testFailModels=false; });
+    await refresh.click();
+    await expect(row.locator('#codebuddy-models-status')).toBeHidden();
+    await summary.click();
+    await page.evaluate(() => window.testEvents['provider-connections-changed']({}));
+    await expect(summary).toHaveAttribute('aria-expanded','false');
+    await summary.click();
+    await expect(trigger).toContainText('custom-provider:team/model-with-a-long-name-v2');
+    await row.screenshot({path:testInfo.outputPath(`codebuddy-${theme}-wide.png`)});
+    await page.setViewportSize({width:720,height:900});
+    await row.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await row.screenshot({path:testInfo.outputPath(`codebuddy-${theme}-narrow.png`)});
+    await page.locator('#provider-openai_compat-summary').click();
+    await expect(row.locator('#codebuddy-model-panel')).toBeHidden();
+  });
+}

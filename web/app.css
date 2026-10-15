@@ -3385,7 +3385,13 @@ select:focus-visible,
 }
 
 /* NudeNyang model picker: keep long provider:model ids inside the control. */
-.codebuddy-model-controls { display: grid; gap: 8px; min-width: 0; }
+/* Keep provider-specific settings inside the existing service disclosure. */
+#codebuddy-model-panel .setting-row { padding: 4px 0 8px; }
+.codebuddy-model-controls { display: grid; gap: 8px; min-width: 0; width: min(100%, 340px); }
 .codebuddy-model-controls .select-trigger-label,
 .codebuddy-model-controls .select-option { overflow-wrap: anywhere; text-align: start; }
-#codebuddy-models-refresh { justify-self: end; }
+#codebuddy-models-refresh { justify-self: end; max-width: 100%; white-space: normal; }
+.codebuddy-models-status { margin: 4px 0 0; color: var(--danger); overflow-wrap: anywhere; }
+@media (max-width: 740px) {
+  .codebuddy-model-controls { width: 100%; }
+}

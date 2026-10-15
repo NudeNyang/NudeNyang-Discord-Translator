@@ -211,3 +211,39 @@ test("a transient server error can recover before exhausting the budget", async 
     expect(requests.length).toBe(2);
   });
 });
+
+
+test("rejected output stays stopped after a message leaves the viewport and returns", async () => {
+  test.setTimeout(40_000);
+  await withApi(items => ({items: items.map(item => ({id:item.id, text:item.text}))}), async (app, requests) => {
+    await expect.poll(() => requests.length).toBe(2);
+    await settle();
+    const original = await app.pages.stable.locator("ol").innerHTML();
+    await app.pages.stable.locator("ol").evaluate(element => { element.innerHTML = ""; });
+    await settle();
+    await app.pages.stable.locator("ol").evaluate((element, html) => { element.innerHTML = html; }, original);
+    await settle();
+    expect(requests.length).toBe(2);
+    await expect(app.message("stable")).toHaveText("while(true)");
+  });
+});
+
+
+test("partial quality replay preserves successful fragments without retrying the rejected fragment", async () => {
+  test.setTimeout(40_000);
+  await withApi(items => ({items:items.map(item => ({id:item.id,text:item.text.replaceAll("Please read the rules", "규칙을 읽어 주세요")}))}), async (app, requests) => {
+    await expect.poll(() => requests.length).toBe(2);
+    await app.message("stable").evaluate(element => { element.innerHTML = '<span>Please read the rules</span> <strong>Keep this untranslated</strong>'; });
+    await expect(app.message("stable")).toContainText("규칙을 읽어 주세요");
+    await expect(app.message("stable")).toContainText("Keep this untranslated");
+    await settle();
+    const completed = requests.length;
+    await app.pages.stable.locator("ol").evaluate(element => { element.innerHTML = ""; });
+    await settle();
+    await app.pages.stable.locator("ol").evaluate(element => { element.innerHTML = '<li id="chat-messages-1-2"><div id="message-content-2"><span>Please read the rules</span> <strong>Keep this untranslated</strong></div></li>'; });
+    await expect(app.message("stable")).toContainText("규칙을 읽어 주세요");
+    await expect(app.message("stable")).toContainText("Keep this untranslated");
+    await settle();
+    expect(requests.length).toBe(completed);
+  });
+});

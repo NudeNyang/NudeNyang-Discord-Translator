@@ -283,6 +283,19 @@ impl DisplayReplay {
 
     pub fn lookup(&self, batch: &TranslationBatch) -> Option<Vec<String>> {
         let mut state = self.state.lock().unwrap();
+        // Partial quality failures are completed attempts for this configuration,
+        // but must never enter the persistent successful-translation cache.
+        let contexts = Self::context_batches(batch);
+        let attempted = contexts
+            .iter()
+            .map(|context| {
+                let key = Self::quality_attempt_key(&state, context)?;
+                state.entries.get(&key).cloned()
+            })
+            .collect::<Option<Vec<_>>>();
+        if let Some(attempted) = attempted {
+            return Some(attempted.into_iter().flatten().collect());
+        }
         let key = Self::key(&state.namespace, batch)?;
         if let Some(values) = state.entries.get(&key) {
             return Some(values.clone());
@@ -303,6 +316,49 @@ impl DisplayReplay {
         }
         Self::remember(&mut state, key, values.clone());
         Some(values)
+    }
+
+    fn quality_attempt_key(state: &ReplayState, batch: &TranslationBatch) -> Option<String> {
+        Self::key(&state.namespace, batch).map(|key| {
+            format!(
+                "quality-attempt:{}:{}:{key}",
+                state.revision, batch.generation
+            )
+        })
+    }
+
+    pub fn record_translation(
+        &self,
+        batch: &TranslationBatch,
+        parts: &[crate::translation::TranslationPart],
+        revision: u64,
+    ) {
+        if parts.len() != batch.parts.len() {
+            return;
+        }
+        self.clear_failure(batch, revision);
+        let mut offset = 0;
+        for context in Self::context_batches(batch) {
+            let outcome = &parts[offset..offset + context.parts.len()];
+            offset += context.parts.len();
+            let values = outcome
+                .iter()
+                .map(|part| part.text.clone())
+                .collect::<Vec<_>>();
+            if outcome.iter().any(|part| part.quality_rejected) {
+                let mut state = self.state.lock().unwrap();
+                if state.revision != revision {
+                    return;
+                }
+                if let Some(key) = Self::quality_attempt_key(&state, &context) {
+                    // Same bounded memory budget as normal replay. Explicit retry,
+                    // edits, model/target changes and history deletion invalidate it.
+                    Self::remember(&mut state, key, values);
+                }
+            } else {
+                self.store(&context, &values, revision);
+            }
+        }
     }
 
     pub fn store(&self, batch: &TranslationBatch, values: &[String], revision: u64) {
@@ -436,6 +492,51 @@ mod tests {
                 displayed_text: None,
             }],
         }
+    }
+
+    #[test]
+    fn partial_quality_attempt_replays_without_persisting_or_blocking_explicit_retry() {
+        let replay = DisplayReplay {
+            store: None,
+            state: Mutex::new(ReplayState::default()),
+            visible: Mutex::new(HashMap::new()),
+        };
+        replay.activate("partial-quality-test");
+        let mut request = batch();
+        let mut fragment = request.parts[0].clone();
+        fragment.index += 1;
+        fragment.text = "Still untranslated".into();
+        request.parts.push(fragment);
+        let values = vec![
+            crate::translation::TranslationPart::from("번역된 부분".to_string()),
+            crate::translation::TranslationPart {
+                text: "Still untranslated".into(),
+                quality_rejected: true,
+            },
+        ];
+        let revision = replay.revision();
+        replay.record_translation(&request, &values, revision);
+        request.view_epoch += 1;
+        assert_eq!(
+            replay.lookup(&request),
+            Some(vec!["번역된 부분".into(), "Still untranslated".into()])
+        );
+        assert!(replay.deferred_error(&request, Instant::now()).is_none());
+        let key = DisplayReplay::key("partial-quality-test", &request).unwrap();
+        assert!(!replay.state.lock().unwrap().entries.contains_key(&key));
+        request.generation += 1;
+        assert!(replay.lookup(&request).is_none());
+        request.generation -= 1;
+        request.parts[1].text = "Edited message".into();
+        assert!(replay.lookup(&request).is_none());
+        request.parts[1].text = "Still untranslated".into();
+        replay.activate("partial-quality-test");
+        assert!(replay.lookup(&request).is_none());
+        replay.record_translation(&request, &values, revision);
+        assert!(
+            replay.lookup(&request).is_none(),
+            "stale worker cannot resurrect an attempt"
+        );
     }
 
     #[test]

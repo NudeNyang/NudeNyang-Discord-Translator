@@ -580,7 +580,7 @@ function renderProviderConnections(connections) {
     if (action) {
       action.hidden = connection.canDisconnect;
       action.disabled = connection.connected || operation.blocked;
-      setProviderActionLabel(action, connection.connected ? "연결됨" : connection.installed ? "연결" : "설치");
+      setProviderActionLabel(action, connection.connected ? "연결됨" : connection.installed || connection.id === "codebuddy" ? "연결" : "설치");
     }
     if (disconnect) {
       disconnect.hidden = !connection.canDisconnect;
@@ -641,7 +641,12 @@ async function loadCodeBuddyModels({ silent = false } = {}) {
   if (codeBuddyModelsLoading) return;
   codeBuddyModelsLoading = true;
   const button = document.getElementById("codebuddy-models-refresh");
-  if (button) button.disabled = true;
+  const status = document.getElementById("codebuddy-models-status");
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  }
+  if (status) status.hidden = true;
   try {
     const models = await invoke("codebuddy_models_get");
     if (!Array.isArray(models) || models.length === 0 || !models.every(model => typeof model === "string")) {
@@ -652,12 +657,19 @@ async function loadCodeBuddyModels({ silent = false } = {}) {
     codeBuddyModelsLoaded = true;
   } catch (error) {
     if (!silent) {
+      if (status) {
+        setLocalizedError(status, error);
+        status.hidden = false;
+      }
       setLocalizedError(elements.saveStatus, error);
     }
     writeDiagnostic("warn", `codebuddy-models: ${String(error)}`);
   } finally {
     codeBuddyModelsLoading = false;
-    if (button) button.disabled = false;
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   }
 }
 
@@ -2523,6 +2535,10 @@ function renderSelect(element) {
   trigger.dir = "ltr";
   trigger.setAttribute("aria-haspopup", "listbox");
   trigger.setAttribute("aria-expanded", "false");
+  if (field === "codebuddy_model") {
+    trigger.setAttribute("aria-labelledby", "codebuddy-model-heading");
+    trigger.setAttribute("aria-describedby", "codebuddy-model-description");
+  }
   triggerLabel.className = "select-trigger-label";
   triggerLabel.dir = languageField ? "auto" : "ltr";
   trigger.append(triggerLabel);

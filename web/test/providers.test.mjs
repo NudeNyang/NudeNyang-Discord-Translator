@@ -235,7 +235,7 @@ test("OpenAI-compatible servers are configured with an address, model and option
 
 test("subscription CLI disconnect only disables the provider inside NudeNyang Discord Translator", () => {
   for (const provider of ["chatgpt", "claude", "gemini", "codebuddy"]) {
-    const row = markup.match(new RegExp(`<article class="provider-row" data-provider="${provider}">[\\s\\S]*?<\\/article>`))?.[0] || "";
+    const row = markup.match(new RegExp(`<article class="provider-row(?: provider-row-form)?" data-provider="${provider}">[\\s\\S]*?<\\/article>`))?.[0] || "";
     assert.match(row, /provider-disconnect/);
   }
   assert.match(config, /disabled_providers/);
