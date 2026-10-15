@@ -2124,8 +2124,10 @@ fn run_controller(
             }
         }
 
-        if foreground_active
-            && !session.verification_paused
+        // Reattach to an existing secure connection even while another app is
+        // active. This never launches/restarts Discord; message collection and
+        // result application remain gated by may_scan below.
+        if !session.verification_paused
             && session.client.is_none()
             && Instant::now() >= session.retry_at
         {
