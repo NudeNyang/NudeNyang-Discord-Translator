@@ -7,8 +7,10 @@
 - 원문으로 남긴 품질 실패를 성공 번역과 구분해 전달한다. 메시지가 화면에서 사라졌다가
   다시 나타나도 같은 번역을 재요청하지 않는다. 같은 메시지의 정상 번역 부분은 유지한다.
 - CodeBuddy를 웹 확장의 외부 번역 서비스로 분류해 페이지 전송 한도를 적용한다.
-- 모델 선택을 CodeBuddy 서비스 설정 안으로 옮겼다. 연결·해제 버튼은 항상 표시되는 행에
-  유지하고, 설정 화살표·키보드 조작·조회 중 상태·오류 안내·긴 모델명 줄바꿈을 확인한다.
+- CodeBuddy를 DeepL과 OpenAI 호환 API 사이에 두고 모델 선택과 기존 연결·해제 아이콘을
+  펼친 설정 안으로 옮겼다. 두 아코디언의 화살표는 연결 여부에 관계없이 오른쪽 끝을 유지한다.
+- Discord가 비활성인 동안 일시적인 연결 확인 오류가 나도 기존 보안 연결에 다시 접속한다.
+  메시지 수집과 번역 적용은 계속 활성 창에서만 수행한다.
 
 ## 수정 전 재현
 
@@ -50,7 +52,34 @@ Node 검사는 제품 코드와 DOM fixture를 사용한다. Discord E2E는 별�
 
 ## 로컬 실행
 
-확인본은 `dist/PR5Preview/NudeNyangDiscordTranslator.exe`에 두고 기존 실행 파일은 보관한다.
+최초 확인본은 `dist/PR5Preview/NudeNyangDiscordTranslator.exe`에 보관하고, 화면 배치와
+재연결을 보완한 확인본은 `dist/PR5Preview2/NudeNyangDiscordTranslator.exe`에 둔다.
 기존 로컬 llama 런타임을 함께 사용하고, 데스크톱·프로젝트의 기존
 `NudeNyang Discord Translator (Tauri).lnk`를 같은 실행 파일로 맞춘다. 프론트 확인 후 병합 여부를
 결정할 수 있도록 원격 PR과 공개 릴리스는 변경하지 않는다.
+
+## 화면 배치·재연결 보완 검증 (2026-10-15)
+
+- `npm run test:e2e -- --workers=1`: 전체 208개 통과(8.4분). 비활성 창의 일시적 연결 확인
+  오류 뒤 재접속, 지속되는 실제 연결 실패, 추가 인증, 다중 Discord 창 전환을 포함한다.
+- `cargo test --manifest-path src-tauri/Cargo.toml --no-fail-fast`: 567개 통과, 51개 제외.
+- `npm test`: 801개 통과.
+- `PLAYWRIGHT_BROWSERS_PATH=0`을 설정하고 `npx playwright test --config web/e2e/playwright.config.mjs`:
+  설정 화면 13개 통과. CodeBuddy와 OpenAI 호환 API의 연결 전후 화살표 위치, 접힌 상태의
+  버튼 숨김, 펼쳤을 때 헤더 고정, 입력 보존과 좁은 화면 배치를 검사했다.
+- 기존 연결·해제 버튼 10개의 HTML을 변경 전과 비교해 SVG, 툴팁과 접근성 속성이 동일함을 확인했다.
+- `npm run test:locales`, `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`,
+  `git diff --check`: 통과.
+- 실제 OCR 모델 로드·이미지 처리 검사 1개 통과. 비 MSVC 충돌 제보는 재현 환경이 없어
+  해결 여부를 판단하지 않았다. 상세 내용은 [OCR 빌드 조사](OCR_BUILD_INVESTIGATION.md)에 기록했다.
+- `npm run tauri -- build --target x86_64-pc-windows-msvc --no-bundle`: 릴리스 실행 파일
+  빌드 성공. 버전은 `0.7.10-beta`이며, 설치 파일 패키징과 공개 배포는 하지 않았다.
+
+비활성 창 재연결 검사는 수정 전에 8초 동안 복구되지 않아 실패한 뒤 수정 후 통과했다.
+화면 구조 검사도 수정 전 헤더에 버튼이 3개 남아 실패했고, 기존 버튼을 설정 안으로 옮긴 뒤
+통과했다. 설정 화면 E2E의 첫 실행은 공유 브라우저 캐시의 실행 오류로 시작하지 못했으며,
+프로젝트의 hermetic Playwright 설치를 선택한 위 명령으로 13개 모두 통과했다.
+
+Discord 검증은 격리 문서와 모사한 OS 상태·번역 모델을 사용한다. 제보자 PC의 실제 보안
+파이프 장애나 실제 로그인 대화를 재현한 것은 아니다. 웹 공통 수집·적용 코드는 이번에
+변경하지 않았으며, 공개 사이트 표본 검사와 ARM64 하드웨어 실행은 수행하지 않았다.
