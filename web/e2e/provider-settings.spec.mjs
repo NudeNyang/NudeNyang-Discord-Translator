@@ -29,6 +29,7 @@ test.beforeEach(async ({ page }) => {
       state: id === "deepl" ? "connected" : "not-connected",
       detail: id === "deepl" ? "API 키가 운영체제 보안 저장소에 저장되어 있습니다." : "연결 정보를 확인하십시오.",
     }));
+    window.testProviders = providers;
     window.__TAURI__ = {
       core: { invoke: async (command, payload) => {
         window.testCalls.push({ command, payload });
@@ -138,7 +139,31 @@ test("service guidance reveals setup and failed connections reopen the intact dr
   await expect(page.locator('[data-provider="openai_compat"] .provider-status')).toHaveAttribute("data-state", "connected");
   await expect(page.locator("#openai-compat-key")).toHaveValue("");
   await page.locator("#provider-openai_compat-summary").click();
+  await expect(page.locator('[data-provider="openai_compat"] .provider-disconnect')).toBeHidden();
+  await page.locator("#provider-openai_compat-summary").click();
   await expect(page.locator('[data-provider="openai_compat"] .provider-disconnect')).toBeVisible();
+});
+
+test("accordion arrows stay aligned regardless of provider connection state", async ({ page }) => {
+  const codebuddy = page.locator('[data-provider="codebuddy"]');
+  const api = page.locator('[data-provider="openai_compat"]');
+  const rightEdge = row => row.locator('.provider-summary').evaluate(button => button.getBoundingClientRect().right);
+  for (const connected of [false, true]) {
+    await page.evaluate(connected => {
+      for (const provider of window.testProviders.filter(p => ['codebuddy','openai_compat'].includes(p.id))) {
+        Object.assign(provider, {connected, canDisconnect:connected, state:connected?'connected':'not-connected'});
+      }
+      window.testEvents['provider-connections-changed']({});
+    }, connected);
+    await expect(codebuddy.locator('.provider-status')).toHaveAttribute('data-state', connected?'connected':'not-connected');
+    expect(Math.abs(await rightEdge(codebuddy) - await rightEdge(api))).toBeLessThan(0.1);
+    await expect(codebuddy.locator('.provider-row-header button')).toHaveCount(1);
+    await expect(api.locator('.provider-row-header button')).toHaveCount(1);
+    await expect(codebuddy.locator('.provider-disconnect')).toBeHidden();
+    await codebuddy.locator('.provider-summary').click();
+    await expect(codebuddy.locator(connected?'.provider-disconnect':'.provider-action')).toBeVisible();
+    await codebuddy.locator('.provider-summary').click();
+  }
 });
 
 test("native validation reveals an invalid field even after its settings have been collapsed", async ({ page }) => {
@@ -300,6 +325,7 @@ for (const theme of ["dark", "light"]) {
       });
     });
     const before = await measureHeader();
+    await expect(row.locator('.provider-action')).toBeHidden();
     await summary.focus();
     await page.keyboard.press('Enter');
     const after = await measureHeader();
@@ -335,6 +361,7 @@ for (const theme of ["dark", "light"]) {
     await summary.click();
     await page.evaluate(() => window.testEvents['provider-connections-changed']({}));
     await expect(summary).toHaveAttribute('aria-expanded','false');
+    await expect(row.locator('.provider-action')).toBeHidden();
     await summary.click();
     await expect(trigger).toContainText('custom-provider:team/model-with-a-long-name-v2');
     await row.screenshot({path:testInfo.outputPath(`codebuddy-${theme}-wide.png`)});

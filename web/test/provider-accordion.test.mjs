@@ -14,7 +14,7 @@ function setup() {
   return { document, root, controller, row, button };
 }
 
-test("only provider-specific settings collapse; all existing status, connect and disconnect controls remain outside", () => {
+test("only providers with settings collapse, with their existing action icons inside", () => {
   const { root, row, button } = setup();
   assert.equal(root.querySelectorAll(".provider-summary").length, 2);
   assert.equal(root.querySelectorAll(".provider-status").length, 6);
@@ -23,12 +23,28 @@ test("only provider-specific settings collapse; all existing status, connect and
   assert.equal(button.getAttribute("aria-expanded"), "false");
   assert.equal(button.getAttribute("aria-controls"), panel.id);
   assert.equal(panel.getAttribute("aria-labelledby"), button.id);
-  for (const control of root.querySelectorAll(".provider-status,.provider-action,.provider-disconnect,.provider-secret")) {
+  for (const control of root.querySelectorAll(".provider-status")) {
     assert.equal(control.closest(".provider-panel"), null);
   }
   for (const provider of ["chatgpt", "claude", "gemini", "deepl"]) {
-    assert.equal(root.querySelector(`[data-provider="${provider}"] .provider-summary`), null);
+    const providerRow = root.querySelector(`[data-provider="${provider}"]`);
+    assert.equal(providerRow.querySelector(".provider-summary"), null);
+    for (const control of providerRow.querySelectorAll(".provider-action,.provider-disconnect,.provider-secret")) {
+      assert.equal(control.closest(".provider-panel"), null);
+    }
   }
+  for (const provider of ["codebuddy", "openai_compat"]) {
+    const providerRow = root.querySelector(`[data-provider="${provider}"]`);
+    assert.equal(providerRow.querySelectorAll(".provider-row-header button").length, 1);
+    for (const control of providerRow.querySelectorAll(".provider-action,.provider-disconnect")) {
+      assert.ok(control.closest(".provider-panel"));
+      assert.equal(control.textContent.trim(), "");
+      assert.ok(control.querySelector("svg.provider-action-icon"));
+      assert.equal(control.getAttribute("aria-label"), control.dataset.tooltip);
+    }
+  }
+  assert.deepEqual([...root.querySelectorAll(".provider-row")].map(row => row.dataset.provider),
+    ["chatgpt", "claude", "gemini", "deepl", "codebuddy", "openai_compat"]);
 });
 
 test("closing and reopening preserves API drafts and advanced choices without rebuilding fields", () => {
