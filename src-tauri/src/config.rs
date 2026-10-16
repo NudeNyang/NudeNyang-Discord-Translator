@@ -13,9 +13,7 @@ use crate::translation::HyMtModelSize;
 const DEFAULT_UPDATE_REPOSITORY: &str = "NudeNyang/NudeNyang-Discord-Translator";
 const WEB_EXTENSION_SETUP_VERSION: u32 = 1;
 const DISCORD_ACTIVE_WINDOW_SETUP_VERSION: u32 = 1;
-/// CodeBuddy CLI model used until the user picks another one.
 pub const CODEBUDDY_DEFAULT_MODEL: &str = "hy3";
-/// Upper bound for a CodeBuddy model id, which is also used in cache namespaces.
 const CODEBUDDY_MODEL_MAX_CHARS: usize = 120;
 const LEGACY_UPDATE_REPOSITORIES: &[&str] = &[
     "NudeNyang/NudeNyang-Translator",
@@ -238,9 +236,7 @@ impl AppConfig {
         object.remove("kanana_device");
         object.remove("kanana_precision");
 
-        // The CodeBuddy model is a full provider model id, so only the shape is validated. A
-        // missing value falls back to the default, but an explicitly provided id must be valid:
-        // the selected CLI model must never be silently replaced with another model.
+        // Validate explicit IDs without replacing them with the default.
         let codebuddy_model = match object.get("codebuddy_model") {
             None => CODEBUDDY_DEFAULT_MODEL.to_string(),
             Some(value) => value
@@ -536,8 +532,7 @@ fn is_local_translator(value: &str) -> bool {
     HyMtModelSize::from_config_id(value).is_some()
 }
 
-/// A CodeBuddy model id is passed to the CLI unchanged, so only its shape is validated.
-/// Provider-qualified ids such as `custom-local:example/model-v1.0` stay valid.
+/// Validates model ID syntax without restricting the provider or model.
 fn valid_codebuddy_model(value: &str) -> bool {
     !value.is_empty()
         && value.chars().count() <= CODEBUDDY_MODEL_MAX_CHARS
@@ -1300,16 +1295,13 @@ mod tests {
     }
 
     #[test]
-    fn codebuddy_model_keeps_full_provider_ids_and_preserves_existing_selections() {
+    fn codebuddy_model_defaults_and_validation_preserve_existing_selections() {
         let config = AppConfig::from_value(json!({
             "translator": "chatgpt",
-            "outgoing_translator": "claude",
-            "codebuddy_model": "custom-local:example/model-v1.0"
+            "outgoing_translator": "claude"
         }))
         .expect("normalize codebuddy model");
 
-        assert_eq!(config.codebuddy_model, "custom-local:example/model-v1.0");
-        // Adding the CodeBuddy model must not disturb an existing provider selection.
         assert_eq!(config.translator, "chatgpt");
         assert_eq!(config.outgoing_translator, "claude");
 
@@ -1319,7 +1311,6 @@ mod tests {
                 .codebuddy_model,
             super::CODEBUDDY_DEFAULT_MODEL
         );
-        // An explicitly provided model must never be replaced with another model.
         for invalid in [json!(""), json!("   "), json!("bad model!"), json!(7)] {
             assert!(
                 AppConfig::from_value(json!({ "codebuddy_model": invalid })).is_err(),

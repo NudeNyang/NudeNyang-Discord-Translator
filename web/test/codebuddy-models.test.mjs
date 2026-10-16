@@ -1,19 +1,4 @@
-// web/test/codebuddy-models.test.mjs
-//
-// Exercises the REAL model-catalog controller pulled straight out of
-// web/app.js: the source slice that starts at
-//
-//     let codeBuddyModelsLoading = false;
-//
-// and ends just before
-//
-//     function revealProviderConnection
-//
-// The slice (controller flags, renderCodeBuddyModels(), async loadCodeBuddyModels())
-// is evaluated inside a vm context whose globals are a small DOM + dependency
-// harness. Only the existing widget renderer (renderSelect / setSelectValue / ...)
-// is stubbed; the catalog logic under test is the real product code. Nothing from
-// app.js is copied into this file.
+// Tests the controller extracted from app.js with DOM and widget stubs.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -25,10 +10,6 @@ const START_MARKER = "let codeBuddyModelsLoading = false;";
 const END_MARKER = "function revealProviderConnection";
 const FIELD = "codebuddy_model";
 const REFRESH_ID = "codebuddy-models-refresh";
-
-// ---------------------------------------------------------------------------
-// 1. Extract the controller slice from the real product source.
-// ---------------------------------------------------------------------------
 
 const appSource = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
@@ -44,21 +25,14 @@ function extractControllerSlice(source) {
 
 const controllerSlice = extractControllerSlice(appSource);
 
-// Appended to the slice inside the same script scope so the hoisted function
-// declarations can be handed back to the test.
+// Export declarations from the controller's script scope.
 const EPILOGUE =
   "\n;globalThis.__codeBuddyModelsExports = {" +
   " renderCodeBuddyModels, loadCodeBuddyModels };\n";
 
-// Catalog entries carry id/value/label/name aliases so the controller may read
-// whichever property it prefers; the tests never re-implement that mapping.
 function modelEntry(id, label) {
   return id;
 }
-
-// ---------------------------------------------------------------------------
-// 2. Harness: fresh DOM + dependency stubs per test.
-// ---------------------------------------------------------------------------
 
 function createHarness() {
   const dom = new JSDOM(`<!DOCTYPE html><html><body>
@@ -75,9 +49,6 @@ function createHarness() {
     selectValues: { [FIELD]: "custom-local:chosen/model" },
   };
 
-  // Options store. Supports both array-style use (OPTIONS.push/length) and
-  // registry-style use (OPTIONS[FIELD] = [...]) without knowing which the
-  // controller prefers; both funnel into the same backing array.
   const OPTIONS = [];
   Object.defineProperty(OPTIONS, FIELD, {
     configurable: true,
@@ -95,7 +66,6 @@ function createHarness() {
   const errors = [];
   const diagnostics = [];
 
-  // invoke: ONLY codebuddy_models_get is allowed; anything else throws.
   let invokeImpl = () => Promise.resolve([]);
   function invoke(command, args) {
     if (command !== "codebuddy_models_get") {
@@ -105,7 +75,6 @@ function createHarness() {
     return invokeImpl(command, args);
   }
 
-  // --- stubbed existing widget renderer -----------------------------------
   function findContainer() {
     return document.querySelector(`.custom-select[data-field="${FIELD}"]`);
   }
@@ -119,8 +88,6 @@ function createHarness() {
     /* recorded no-op */
   }
 
-  // renderSelect stub: rebuilds button.select-trigger + .select-option list
-  // from the OPTIONS store (or an explicitly passed list).
   function renderSelect(a, b, c) {
     let options = OPTIONS;
     let selected;
@@ -161,7 +128,6 @@ function createHarness() {
     }
   }
 
-  // setSelectValue stub: updates state and the visible label.
   function setSelectValue(field, value) {
     if (field !== FIELD) {
       if (typeof field === "string" && value !== undefined) state.selectValues[field] = value;
@@ -186,7 +152,6 @@ function createHarness() {
     return key;
   }
 
-  // --- evaluate the real slice -------------------------------------------
   const context = {
     document,
     window: dom.window,
@@ -240,10 +205,6 @@ function createHarness() {
   };
 }
 
-// ---------------------------------------------------------------------------
-// helpers
-// ---------------------------------------------------------------------------
-
 function renderedValues(h) {
   return Array.from(
     h.document.querySelectorAll(`.custom-select[data-field="${FIELD}"] .select-option`),
@@ -268,10 +229,6 @@ function buttonBusy(button) {
     button.classList.contains("busy")
   );
 }
-
-// ---------------------------------------------------------------------------
-// 3. Tests
-// ---------------------------------------------------------------------------
 
 test("automatic optional model probing does not overwrite settings status", async () => {
   const h = createHarness();
@@ -302,7 +259,6 @@ test("renders the catalog as dynamic options with full ids and keeps the current
   h.exports.renderCodeBuddyModels(catalog, "custom-local:chosen/model");
 
   const values = renderedValues(h);
-  // duplicates collapsed, full provider:model ids preserved
   assert.equal(values.length, 3);
   assert.deepEqual(
     [...values].sort(),
@@ -310,7 +266,6 @@ test("renders the catalog as dynamic options with full ids and keeps the current
   );
   assert.equal(renderedSelected(h), "custom-local:chosen/model");
   assert.equal(h.state.selectValues[FIELD], "custom-local:chosen/model");
-  // catalog rendering must not trigger persistence or inference traffic
   assert.equal(h.invokes.length, 0, "renderCodeBuddyModels must not call invoke");
 });
 
@@ -342,7 +297,7 @@ test("applies the selection made while the catalog request is still pending", as
   const pending = h.exports.loadCodeBuddyModels();
   assert.equal(h.invokes.length, 1, "the refresh must issue exactly one request");
 
-  // user changes the picker before the deferred request resolves
+  // Change the selection before the pending request resolves.
   h.state.config[FIELD] = "native:future-model";
   h.state.selectValues[FIELD] = "native:future-model";
 
