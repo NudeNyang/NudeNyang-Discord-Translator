@@ -525,7 +525,7 @@ mod tests {
 
     #[test]
     fn codebuddy_arguments_send_the_prompt_on_stdin_and_pass_the_exact_model_id() {
-        let model = "custom-local:CodeBuddy-CN/deepseek-v4.1-flash";
+        let model = "custom-local:example/model-v1.0";
         let arguments = codebuddy_arguments(model);
         let argument_after = |flag: &str| {
             arguments
@@ -607,14 +607,14 @@ mod tests {
         let help = concat!(
             "Options:\n",
             "  --model <model>   Choose the model. Currently supported: (hy3, ",
-            "custom-local:CodeBuddy-CN/deepseek-v4.1-flash)\n",
+            "custom-local:example/model-v1.0)\n",
             "  --output-format <format>   Output format\n",
         );
         assert_eq!(
             parse_available_models(help).expect("the native and custom ids must parse"),
             vec![
                 "hy3".to_string(),
-                "custom-local:CodeBuddy-CN/deepseek-v4.1-flash".to_string(),
+                "custom-local:example/model-v1.0".to_string(),
             ],
         );
 

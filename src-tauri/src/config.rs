@@ -537,7 +537,7 @@ fn is_local_translator(value: &str) -> bool {
 }
 
 /// A CodeBuddy model id is passed to the CLI unchanged, so only its shape is validated.
-/// Provider-qualified ids such as `custom-local:CodeBuddy-CN/deepseek-v4.1-flash` stay valid.
+/// Provider-qualified ids such as `custom-local:example/model-v1.0` stay valid.
 fn valid_codebuddy_model(value: &str) -> bool {
     !value.is_empty()
         && value.chars().count() <= CODEBUDDY_MODEL_MAX_CHARS
@@ -1304,14 +1304,11 @@ mod tests {
         let config = AppConfig::from_value(json!({
             "translator": "chatgpt",
             "outgoing_translator": "claude",
-            "codebuddy_model": "custom-local:CodeBuddy-CN/deepseek-v4.1-flash"
+            "codebuddy_model": "custom-local:example/model-v1.0"
         }))
         .expect("normalize codebuddy model");
 
-        assert_eq!(
-            config.codebuddy_model,
-            "custom-local:CodeBuddy-CN/deepseek-v4.1-flash"
-        );
+        assert_eq!(config.codebuddy_model, "custom-local:example/model-v1.0");
         // Adding the CodeBuddy model must not disturb an existing provider selection.
         assert_eq!(config.translator, "chatgpt");
         assert_eq!(config.outgoing_translator, "claude");
