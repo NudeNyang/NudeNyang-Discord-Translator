@@ -435,6 +435,7 @@ test("CodeBuddy model selection keeps the exact provider model identifier", () =
   for (const model of [
     "hy3",
     "deepseek-v4.1-flash",
+    "fixture:provider/model-v1.2_test",
   ]) {
     assert.equal(normalizeConfig({ codebuddy_model: model }).codebuddy_model, model);
   }

@@ -476,7 +476,7 @@ mod tests {
 
     #[test]
     fn codebuddy_arguments_send_the_prompt_on_stdin_and_pass_the_exact_model_id() {
-        let model = crate::config::CODEBUDDY_DEFAULT_MODEL;
+        let model = "fixture:provider/model-v1.2_test";
         let arguments = codebuddy_arguments(model);
         let argument_after = |flag: &str| {
             arguments
@@ -549,6 +549,22 @@ mod tests {
         assert!(CodeBuddyCliTranslator::new("   ", "auto", 120, &root).is_err());
         assert!(CodeBuddyCliTranslator::new("hy3", "shouting", 120, &root).is_err());
         assert!(CodeBuddyCliTranslator::new("hy3", "auto", 120, &root).is_ok());
+    }
+
+    #[test]
+    fn available_models_preserves_full_ids_in_wrapped_help() {
+        let help = concat!(
+            "  --model <model>   Currently supported: (hy3,\n",
+            "    fixture:provider/model-v1.2_test, hy3, fixture:provider/model-v1.2_test)\n",
+            "  --tools <tools>   Tools to enable\n",
+        );
+        assert_eq!(
+            parse_available_models(help).expect("parse full model IDs"),
+            vec![
+                "hy3".to_string(),
+                "fixture:provider/model-v1.2_test".to_string()
+            ],
+        );
     }
 
     #[test]

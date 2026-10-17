@@ -40,4 +40,19 @@ Rust 설정·제공자·CodeBuddy 번역 모듈 네 파일과 `web/app.js`는 �
 
 GitHub에 등록된 자동 검사는 검토 시점에 없었다. 전체 Rust·확장 E2E, 실제 CodeBuddy 계정 번역, ARM64 빌드·실행은 이번 검토에서 수행하지 않았다. PR의 변경 범위는 문구·주석·테스트 정리이며, 위 결과를 실제 서비스 전체 검증으로 해석하지 않는다.
 
-리뷰 기록만 로컬 커밋으로 남긴다. PR 병합, 원격 리뷰 게시, 푸시, 릴리스, 사용자 실행본 교체는 수행하지 않는다.
+최초 검토에서는 리뷰 기록만 로컬 커밋으로 남겼다.
+
+## 보완 반영 — 2026-10-17
+
+사용자 요청에 따라 `fixture:provider/model-v1.2_test`를 테스트 전용 ID로 사용해 위 네 경로의 검사를 복원했다. 설정 직렬화·복원 뒤의 ID 보존도 확인하며, 도움말 검사는 줄바꿈과 중복 ID를 함께 처리한다. 실제 제공 모델 목록이나 사용자 기본 설정에는 테스트 ID를 넣지 않는다.
+
+PR 변경과 보완사항은 [0.7.12-beta](releases/0.7.12-beta.md)에 함께 반영한다.
+
+0.7.12-beta 소스에서 다음 검사를 실행했다.
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --no-fail-fast`: 568개 통과, 51개 제외.
+- `npm test`: 웹 284개, 랜딩 38개, 확장 470개, 사전 9개로 총 801개 통과. 사전 팩 검증도 통과.
+- `PLAYWRIGHT_BROWSERS_PATH=0 npx playwright test --config web/e2e/playwright.config.mjs`: 설정 화면 14개 통과.
+- `npm run test:locales`, `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`, `git diff --check`: 통과.
+
+이번 보완은 테스트와 버전·문서 변경이다. 전체 확장 E2E와 실제 계정 번역은 다시 실행하지 않았다. x64·ARM64 설치형은 패키징 스크립트로 함께 생성하고 서명·체크섬을 검증한 뒤 공개한다.

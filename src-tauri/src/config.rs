@@ -1296,14 +1296,24 @@ mod tests {
 
     #[test]
     fn codebuddy_model_defaults_and_validation_preserve_existing_selections() {
+        let model = "fixture:provider/model-v1.2_test";
         let config = AppConfig::from_value(json!({
             "translator": "chatgpt",
-            "outgoing_translator": "claude"
+            "outgoing_translator": "claude",
+            "codebuddy_model": model
         }))
         .expect("normalize codebuddy model");
 
         assert_eq!(config.translator, "chatgpt");
         assert_eq!(config.outgoing_translator, "claude");
+        assert_eq!(config.codebuddy_model, model);
+        let saved = serde_json::to_value(&config).expect("serialize model selection");
+        assert_eq!(
+            AppConfig::from_value(saved)
+                .expect("restore model selection")
+                .codebuddy_model,
+            model
+        );
 
         assert_eq!(
             AppConfig::from_value(json!({}))

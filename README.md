@@ -22,7 +22,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="0.7.11-beta" src="https://img.shields.io/badge/release-0.7.11--beta-4C1">
+  <img alt="0.7.12-beta" src="https://img.shields.io/badge/release-0.7.12--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -33,9 +33,9 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 ## Download and update
 
-Download the Windows installer from [0.7.11 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.11-beta). This release adds CodeBuddy CLI translation, fixes repeated requests for untranslated messages, and restores existing Discord connections while another app is active. See the [release notes](docs/releases/0.7.11-beta.md) for details.
+Download the Windows installer from [0.7.12 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.12-beta). This release removes personal configuration references from the CodeBuddy help text and restores tests for preserving full model IDs. See the [release notes](docs/releases/0.7.12-beta.md) for details.
 
-0.7.11-beta is published as a GitHub prerelease. Existing installers use the same app update channel. Version 1.0.0 is reserved for the macOS release.
+0.7.12-beta is published as the latest regular GitHub release. Existing installers use the same app update channel. Version 1.0.0 is reserved for the macOS release.
 
 Existing installed versions can follow the app's update prompt. The update URL and signing key are unchanged; you do not need to uninstall or reset the app. Older portable builds require a manual installer download.
 
@@ -204,7 +204,7 @@ Commit source/version/release notes before packaging, and push that source commi
 The public packaging script builds **both x64 and ARM64**, signs both installers with the existing
 Tauri updater key, and verifies signatures, SHA-256 checksums, URLs and both update platform entries.
 Missing or mismatched artifacts stop deployment. By default, `-beta` versions use GitHub prereleases.
-0.7.11-beta follows the default prerelease policy and is not marked as the latest regular release.
+The maintainer has requested a regular release for 0.7.12-beta.
 For a new regular release, pass `-StableRelease` to the deployment script; it publishes with
 `--prerelease=false --latest=true`. Both publication modes use the same app update URL.
 
@@ -220,6 +220,7 @@ the update endpoint to add ARM64 support. See [Windows release procedure](docs/W
 
 | Document | Contents |
 |---|---|
+| [0.7.12-beta release notes](docs/releases/0.7.12-beta.md) | CodeBuddy help text cleanup and full model ID regression tests |
 | [0.7.11-beta release notes](docs/releases/0.7.11-beta.md) | CodeBuddy CLI support, translation retries, and background Discord reconnection |
 | [0.7.10-beta release notes](docs/releases/0.7.10-beta.md) | Discord connection status after reconnecting and switching windows |
 | [0.7.9-beta release notes](docs/releases/0.7.9-beta.md) | Optional translation result checks and empty-response protection |

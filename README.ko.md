@@ -18,7 +18,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="0.7.11-beta" src="https://img.shields.io/badge/release-0.7.11--beta-4C1">
+  <img alt="0.7.12-beta" src="https://img.shields.io/badge/release-0.7.12--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -29,9 +29,9 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ## 다운로드와 업데이트
 
-[0.7.11 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.11-beta)에서 Windows 10/11용 설치 파일을 받으세요. CodeBuddy CLI 번역을 추가하고, 번역 실패 메시지의 반복 요청과 다른 앱 사용 중 Discord 재연결 문제를 수정했습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.11-beta.md)에 정리했습니다.
+[0.7.12 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.12-beta)에서 Windows 10/11용 설치 파일을 받으세요. CodeBuddy 안내에서 개인 환경에 해당하는 설명을 정리하고 모델 ID 보존 검사를 보완했습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.12-beta.md)에 정리했습니다.
 
-0.7.11-beta는 GitHub 프리릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
+0.7.12-beta는 GitHub 정식 최신 릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
 - 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
@@ -184,7 +184,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
-0.7.11-beta는 기본 정책에 따라 프리릴리스로 게시하며 정식 최신 릴리스로 지정하지 않습니다. 이미 공개된 릴리스의 분류 변경과 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
+0.7.12-beta는 관리자의 요청에 따라 정식 최신 릴리스로 게시합니다. 배포 명령에 `-StableRelease`를 지정하며, 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
 
 </details>
 
@@ -192,6 +192,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 
 | 문서 | 내용 |
 |---|---|
+| [0.7.12-beta 변경 내역](docs/releases/0.7.12-beta.md) | CodeBuddy 안내 정리와 모델 ID 보존 검사 보완 |
 | [0.7.11-beta 변경 내역](docs/releases/0.7.11-beta.md) | CodeBuddy CLI 추가, 반복 번역 요청과 비활성 창 재연결 수정 |
 | [0.7.10-beta 변경 내역](docs/releases/0.7.10-beta.md) | Discord 재연결·창 전환 후 연결 상태 표시 수정 |
 | [0.7.9-beta 변경 내역](docs/releases/0.7.9-beta.md) | 번역 결과 검사 건너뛰기와 빈 응답 보호 |
