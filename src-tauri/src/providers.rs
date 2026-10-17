@@ -12,7 +12,6 @@ use crate::translation::{
     OPENAI_COMPAT_CREDENTIAL_ID,
 };
 
-/// CodeBuddy has no in-app installer: it uses the CLI the user already installed and logged in.
 const CODEBUDDY_INSTALL_HINT: &str =
     "CodeBuddy CLI를 찾지 못했습니다. CodeBuddy CLI를 설치한 뒤 다시 연결하십시오.";
 const CODEBUDDY_AUTH_MODE: &str = "기존 CodeBuddy CLI 로그인 · 모델별 사용량";
@@ -116,13 +115,10 @@ pub fn connect_with_observer(
             Ok(cli_connection(provider, name, auth_mode, probe, false))
         }
         "codebuddy" => {
-            // Connecting is the only place that may spend a request: it verifies the login the
-            // user already created through the CodeBuddy CLI with one tiny fixed translation.
             if !codebuddy_cli_is_installed() {
                 return Err(CODEBUDDY_INSTALL_HINT.to_string());
             }
-            // The selected model decides which stored verification is still valid. A failed
-            // settings read must fail the explicit connect instead of silently using a default.
+            // Verification is tied to the selected model.
             let model = selected_codebuddy_model()?;
             if !codebuddy_login_is_verified(&model) {
                 verify_codebuddy_login(&model)?;
@@ -158,8 +154,7 @@ pub fn disconnect(provider: &str) -> Result<ProviderConnection, String> {
             Ok(openai_compat_status(&AppConfig::default()))
         }
         "chatgpt" | "claude" | "gemini" | "codebuddy" => {
-            // Disconnecting only stops using the provider inside this app. It never logs the
-            // user out of the CLI they installed and configured themselves.
+            // Disable app usage without logging out of the CLI.
             let (name, auth_mode) = cli_provider_identity(provider);
             Ok(cli_connection(
                 provider,
@@ -209,15 +204,8 @@ fn cli_status(
     )
 }
 
-/// CodeBuddy connection state.
-///
-/// Listing providers only checks that the CLI is installed and whether an earlier explicit
-/// connect verified its existing login. It never runs the CLI, never infers a login from
-/// `--version`, and never spends a request while the settings list refreshes.
+/// Reports cached verification without making a translation request.
 fn codebuddy_status(disabled_providers: &[String]) -> ProviderConnection {
-    // Listing compares the selected model with the stored previous-verification marker only.
-    // It never runs the CLI and never spends a request; an unreadable settings file simply
-    // reports login-required instead of guessing a model.
     let verified = selected_codebuddy_model()
         .map(|model| codebuddy_login_is_verified(&model))
         .unwrap_or(false);
@@ -231,7 +219,6 @@ fn codebuddy_status(disabled_providers: &[String]) -> ProviderConnection {
 }
 
 fn codebuddy_connection(installed: bool, verified: bool, disabled: bool) -> ProviderConnection {
-    // A verified login can never outrank a missing executable.
     let verified = installed && verified;
     cli_connection(
         "codebuddy",

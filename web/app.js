@@ -42,8 +42,7 @@ const APP_LINKS = Object.freeze({
   repository: "https://github.com/NudeNyang/NudeNyang-Discord-Translator",
 });
 
-// Only the displayed label is human-readable. The value stays the full provider model id,
-// which is what `--model` receives, so the channel a label names never changes the request.
+// Keep the full model ID as the option value passed to the CLI.
 const CODEBUDDY_MODEL_OPTIONS = [
   [normalizeConfig({}).codebuddy_model, normalizeConfig({}).codebuddy_model],
 ];
@@ -2852,8 +2851,7 @@ async function applySettingsPatch(patch, { status = true } = {}) {
       if (status) setLocalizedText(elements.saveStatus, "적용되었습니다.");
     }
     if (Object.prototype.hasOwnProperty.call(patch, "codebuddy_model")) {
-      // A stored verification marker belongs to one model, so the CodeBuddy card has to be
-      // re-read after the new model is saved instead of showing the previous model's state.
+      // Reload verification status for the newly saved model.
       await loadProviderConnections();
     }
     return updated;

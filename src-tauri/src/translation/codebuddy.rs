@@ -1,30 +1,19 @@
-//! CodeBuddy CLI translation provider contract.
-//!
-//! This module pins the response contract of the CodeBuddy `stream-json` protocol and the
-//! cache isolation rules. It stays free of `crate::` dependencies and of process handling so
-//! the protocol contract can be compiled and exercised on its own. Process lifecycle and CLI
-//! arguments live in [`super::codebuddy_cli`].
+//! Decodes CodeBuddy streams and defines translation cache identity.
 
 use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
-/// Provider key used by settings, provider lists and cache namespaces.
 pub const PROVIDER_KEY: &str = "codebuddy";
 
-/// Product-facing provider name.
 pub const DISPLAY_NAME: &str = "CodeBuddy";
 
-/// Bumping this invalidates every cached CodeBuddy result.
+/// Bumping this invalidates cached CodeBuddy results.
 pub const PROMPT_VERSION: &str = "codebuddy-cli-translation-v1";
 
-/// Speech styles accepted by the shared prompt contract.
 pub const SPEECH_STYLES: [&str; 3] = ["auto", "polite", "casual"];
 
-/// Returns the final result message of the CodeBuddy JSON-lines stream.
-///
-/// Progress messages are ignored, the last `type: "result"` message wins, and a stream
-/// that ends without one is an incomplete response rather than a success.
+/// Returns the last result event; a stream without one is incomplete.
 pub fn decode_stream_result(raw: &str) -> Result<Value, String> {
     let mut last_result: Option<Value> = None;
     for line in raw.lines().map(str::trim).filter(|line| !line.is_empty()) {
@@ -48,9 +37,7 @@ pub fn decode_stream_result(raw: &str) -> Result<Value, String> {
 }
 
 fn result_reports_error(result: &Value) -> bool {
-    // A terminal result is only usable when it explicitly reports success. Failure subtypes
-    // such as `error_during_execution` and `error_max_turns` may still carry a plausible
-    // partial translations payload, so any subtype other than `success` is a failure.
+    // Failure events can contain partial translations, so require an explicit success.
     result
         .get("is_error")
         .and_then(Value::as_bool)
@@ -75,8 +62,7 @@ fn result_error_message(result: &Value) -> String {
         {
             return format!("CodeBuddy 번역에 실패했습니다: {message}");
         }
-        // The CLI reports terminal failures such as `error_during_execution` as an `errors`
-        // array of reason strings instead of a single message field.
+        // Terminal failures report reasons in an errors array.
         if let Some(message) = candidate
             .as_array()
             .and_then(|values| values.iter().filter_map(Value::as_str).find_map(non_empty))
@@ -92,10 +78,7 @@ fn non_empty(value: &str) -> Option<&str> {
     (!trimmed.is_empty()).then_some(trimmed)
 }
 
-/// Maps a CodeBuddy result payload onto exactly the requested item ids.
-///
-/// Accepts the result message as returned by [`decode_stream_result`] and a bare
-/// translation payload. Every requested id must be covered exactly once.
+/// Requires exactly one translation for each requested item ID.
 pub fn validated_translations(
     payload: &Value,
     expected_ids: &HashSet<usize>,
@@ -133,7 +116,6 @@ pub fn validated_translations(
     Ok(results)
 }
 
-/// Finds the `translations` array inside a result message, a nested object, or a JSON string.
 fn unwrap_translation_payload(payload: &Value) -> Result<Value, String> {
     if payload.get("translations").is_some_and(Value::is_array) {
         return Ok(payload.clone());
@@ -170,10 +152,7 @@ fn unwrap_translation_payload(payload: &Value) -> Result<Value, String> {
     Err("CodeBuddy 응답에서 translations 배열을 찾지 못했습니다.".to_string())
 }
 
-/// Cache namespace for one CodeBuddy model and speech style.
-///
-/// The namespace must include the provider key, prompt version, model and speech style so
-/// that switching models never reuses another model's cached translations.
+/// Separates cached results by prompt version, model, and speech style.
 pub fn cache_namespace(model: &str, speech_style: &str) -> Result<String, String> {
     let model = model.trim();
     if model.is_empty() {
@@ -220,8 +199,6 @@ mod tests {
         "\"result\":\"usage limit reached for this account\"}\n",
     );
 
-    // A failure result can still carry a plausible translations payload, so the subtype alone
-    // must decide the outcome.
     const ERROR_SUBTYPE_WITH_TRANSLATIONS_STREAM: &str = concat!(
         "{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"fixture-session\"}\n",
         "{\"type\":\"result\",\"subtype\":\"error_max_turns\",\"is_error\":false,",
@@ -292,8 +269,6 @@ mod tests {
 
     #[test]
     fn a_terminal_execution_error_reports_its_errors_array() {
-        // The CodeBuddy CLI reports terminal failures such as `error_during_execution` as an
-        // `errors` array of reason strings instead of a single message field.
         let stream = concat!(
             "{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"fixture-session\"}\n",
             "{\"type\":\"result\",\"subtype\":\"error_during_execution\",\"is_error\":true,",

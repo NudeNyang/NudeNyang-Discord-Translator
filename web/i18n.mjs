@@ -567,7 +567,7 @@ export const COPY = Object.freeze({
   "CodeBuddy CLI (기존 로그인·외부 전송)": ["CodeBuddy CLI (existing sign-in · external transfer)", "CodeBuddy CLI（既存ログイン・外部送信）", "CodeBuddy CLI（现有登录・外部传输）"],
   "CodeBuddy 모델": ["CodeBuddy model", "CodeBuddyモデル", "CodeBuddy 模型"],
   "모델 목록 새로 고침": ["Refresh model list", "モデル一覧を更新", "刷新模型列表"],
-  "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": ["Model ID passed to CodeBuddy CLI. One selection is shared by reading translation and outgoing message translation. Usage differs: native CodeBuddy models use your CodeBuddy quota, while the viito route uses its own usage.", "CodeBuddy CLIに渡すモデルIDです。この選択は閲覧翻訳と送信メッセージの通訳で共有されます。使用量は異なり、ネイティブのCodeBuddyモデルはCodeBuddyの利用枠を、viitoルートはそのルートの使用量を使用します。", "传递给 CodeBuddy CLI 的模型 ID。该选择由阅读翻译和发送消息翻译共用。用量不同：原生 CodeBuddy 模型使用 CodeBuddy 配额，viito 线路使用其自身用量。"],
+  "CodeBuddy CLI에 전달할 모델 ID입니다. 모델에 따라 사용량이 달라질 수 있습니다.": ["Model ID passed to CodeBuddy CLI. This selection is shared by incoming and outgoing message translation. Usage depends on the selected model and service.", "CodeBuddy CLI に渡すモデル ID です。この選択は受信メッセージ翻訳と送信メッセージ翻訳で共有されます。使用量は選択したモデルとサービスによって異なります。", "传递给 CodeBuddy CLI 的模型 ID。此选择由接收消息翻译和发送消息翻译共用。用量取决于所选的模型和服务。"],
   "API 사용량 과금": ["Usage-based API billing", "API使用量に応じた課金", "按 API 使用量计费"],
   "저장된 API 키를 확인하고 있습니다.": ["Checking the saved API key.", "保存済みのAPIキーを確認しています。", "正在检查已保存的 API 密钥。"],
   "구독 서비스 인증은 각 공식 CLI에서 관리하며 API 키는 운영체제 보안 저장소에 보관합니다.": ["Subscription authentication is managed by each official CLI, and API keys are stored in the operating system secure storage.", "サブスクリプションサービスの認証は各公式CLIで管理され、APIキーはOSのセキュアストレージに保存されます。", "订阅服务身份验证由各官方 CLI 管理，API 密钥保存在操作系统安全存储中。"],
