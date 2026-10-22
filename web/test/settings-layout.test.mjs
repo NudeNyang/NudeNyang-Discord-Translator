@@ -347,7 +347,9 @@ test("display translation and outgoing interpretation present role-appropriate m
   assert.match(markup, /id="local-engine-settings" aria-labelledby="local-engine-heading"/);
   assert.match(markup, /<div class="panel-subheading"><h3 id="local-engine-heading">로컬 엔진<\/h3>/);
   assert.doesNotMatch(markup, /<div class="card-heading">\s*<span class="card-index" aria-hidden="true">L<\/span>\s*<div><h3>로컬 엔진<\/h3>/);
-  assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
+  assert.doesNotMatch(script, /milmmt_4b|MiLMMT[- ](?:46-)?4B/);
+  assert.match(script, /\["milmmt_12b", "MiLMMT 12B Q4 \(실험·약 7\.3GB\)", "local"\]/);
+  assert.match(script, /\["milmmt_12b", "MiLMMT 12B Q4 \(실험·약 7\.3GB\)", "local-limited"\]/);
 });
 
 test("convenience panel exposes the Discord target and global translation toggles", () => {

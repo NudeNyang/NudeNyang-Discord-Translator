@@ -129,14 +129,18 @@ The boundary is intentionally narrow:
 | Diagnostics | Redacts home paths and secrets. Message bodies and local-model prompts are not written to the log. |
 | Downloaded models | Uses pinned revisions and verifies expected file size and SHA-256 before loading. |
 
-Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, Gemini, DeepL, CodeBuddy, and OpenAI-compatible APIs are optional; choosing one sends the text that needs translation to that provider under its own terms.
+Local Hy-MT2, TranslateGemma, and MiLMMT 12B requests stay on the machine. ChatGPT, Claude, Gemini, DeepL, CodeBuddy, and OpenAI-compatible APIs are optional; choosing one sends the text that needs translation to that provider under its own terms.
+
+MiLMMT 12B is the experimental MiLMMT-46-12B-v1.0 Q4_K_M model. It downloads about 7.3 GB, and a local GPU with roughly 10 GB of available VRAM is recommended. It uses Xiaomi's official translation prompt (raw text), supports 46 languages including Malay, does not support Ukrainian, and follows the source text's register and tone. Choosing this local model applies it to both incoming and outgoing translation.
+
+Set `NUDE_TRANSLATOR_MODEL_DIR` to use a different root for downloaded models, such as a mounted NAS folder. Each model keeps its own subdirectory under that root. Loading models over a network may take longer on first startup while the file is read from the share.
 
 ## Features
 
 - Incoming-message and channel-name translation with conservative detection and an optional source-language filter
 - Outgoing translation based on a per-channel choice or recent conversation language, with the final send left to the user
 - 28 chat and interface languages, including Korean, English, Japanese, Simplified and Traditional Chinese
-- Hy-MT2 1.8B and 7B local models, plus experimental TranslateGemma 4B
+- Hy-MT2 1.8B and 7B local models, plus experimental TranslateGemma 4B and MiLMMT 12B
 - Optional ChatGPT, Claude, Gemini, DeepL, CodeBuddy, a user-specified OpenAI-compatible API, and a mock provider for testing
 - Local image translation with adaptive PP-OCR recognition and original/translated toggling
 - Selection dictionary with a separate result window, speech, contextual sense ordering, personal terms, and install-on-demand practical packs
