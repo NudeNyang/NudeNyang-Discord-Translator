@@ -485,6 +485,10 @@ pub fn remove_retired_milmmt_files() -> Result<u64, String> {
 }
 
 fn remove_cached_model_files(path: &Path) -> Result<u64, String> {
+    if !path.parent().is_some_and(Path::exists) {
+        return Ok(0);
+    }
+    let model_lock = ModelFileLock::acquire(path)?;
     let mut removed_bytes = 0_u64;
     for candidate in [path.to_path_buf(), partial_path(path), hash_marker(path)] {
         let Ok(metadata) = candidate.metadata() else {
@@ -498,6 +502,7 @@ fn remove_cached_model_files(path: &Path) -> Result<u64, String> {
             )
         })?;
     }
+    drop(model_lock);
     if let Some(parent) = path.parent() {
         let _ = fs::remove_dir(parent);
         if let Some(family) = parent.parent() {
@@ -874,19 +879,23 @@ impl HyMtTranslator {
     }
 
     fn ensure_model(&self) -> Result<(), String> {
+        let url = format!(
+            "https://huggingface.co/{}/resolve/main/{}?download=true",
+            self.model.repository, self.model.filename
+        );
+        self.ensure_model_from_url(&url)
+    }
+
+    fn ensure_model_from_url(&self, url: &str) -> Result<(), String> {
         self.preparation_cancellation.check()?;
-        if model_is_verified(&self.model_path, self.model)? {
-            return Ok(());
-        }
         if bundled_model_path(self.model).as_deref() == Some(self.model_path.as_path()) {
+            if model_is_verified(&self.model_path, self.model)? {
+                return Ok(());
+            }
             return Err(format!(
                 "앱에 포함된 {} 모델의 무결성 검증에 실패했습니다. 앱을 다시 설치하십시오.",
                 self.model.label
             ));
-        }
-        if self.model_path.exists() {
-            fs::remove_file(&self.model_path)
-                .map_err(|error| format!("손상된 로컬 모델을 삭제하지 못했습니다: {error}"))?;
         }
         let parent = self
             .model_path
@@ -894,6 +903,18 @@ impl HyMtTranslator {
             .ok_or_else(|| "로컬 모델 폴더를 찾지 못했습니다.".to_string())?;
         fs::create_dir_all(parent)
             .map_err(|error| format!("로컬 모델 폴더를 만들지 못했습니다: {error}"))?;
+        // This covers verification, partial-length inspection, writes, hash
+        // failure cleanup, final rename and marker publication across PCs.
+        let _model_lock = ModelFileLock::acquire(&self.model_path)?;
+        self.preparation_cancellation.check()?;
+        if model_is_verified(&self.model_path, self.model)? {
+            let _ = fs::write(hash_marker(&self.model_path), self.model.expected_sha256);
+            return Ok(());
+        }
+        if self.model_path.exists() {
+            fs::remove_file(&self.model_path)
+                .map_err(|error| format!("손상된 로컬 모델을 삭제하지 못했습니다: {error}"))?;
+        }
         let required = self.model.expected_bytes + 512 * 1024 * 1024;
         if available_space(parent).is_ok_and(|free| free < required) {
             return Err(format!(
@@ -912,10 +933,6 @@ impl HyMtTranslator {
         self.report_progress("downloading", downloaded);
         if downloaded < self.model.expected_bytes {
             self.preparation_cancellation.check()?;
-            let url = format!(
-                "https://huggingface.co/{}/resolve/main/{}?download=true",
-                self.model.repository, self.model.filename
-            );
             let download_client = Client::builder()
                 .connect_timeout(Duration::from_secs(30))
                 .timeout(None)
@@ -2588,9 +2605,38 @@ fn model_is_verified(path: &Path, model: HyMtModel) -> Result<bool, String> {
     if actual != model.expected_sha256 {
         return Ok(false);
     }
-    // 번들 내부 모델은 읽기 전용일 수 있다. 해시가 맞으면 표식 저장 실패는 무시한다.
-    let _ = fs::write(marker, &actual);
+    // Readiness/status probes are read-only. Only the locked preparation path
+    // publishes a marker; bundled models may live on read-only media.
     Ok(true)
+}
+
+/// Atomic directory creation is arbitrated by the filesystem server on SMB/NFS,
+/// unlike a process mutex or a host-local PID check. Fail closed if a peer owns
+/// the lock or the server cannot provide it. Never steal a lock on a timer: a
+/// slow NAS or suspended PC may still be writing. A crash leaves an empty lock
+/// directory for explicit recovery after all clients have stopped.
+struct ModelFileLock(PathBuf);
+
+impl ModelFileLock {
+    fn acquire(model: &Path) -> Result<Self, String> {
+        let mut value = model.as_os_str().to_os_string();
+        value.push(".lock");
+        let path = PathBuf::from(value);
+        fs::create_dir(&path).map_err(|error| {
+            format!(
+                "모델 잠금을 획득하지 못했습니다 ({}): {error}. 다른 PC의 다운로드·삭제가 끝난 뒤 다시 시도하십시오. 비정상 종료 후에도 남아 있다면 모든 PC의 앱을 종료한 뒤 이 빈 잠금 폴더만 삭제하십시오.",
+                path.display()
+            )
+        })?;
+        Ok(Self(path))
+    }
+}
+
+impl Drop for ModelFileLock {
+    fn drop(&mut self) {
+        // Do not recursively delete or unlink another client's model data.
+        let _ = fs::remove_dir(&self.0);
+    }
 }
 
 fn file_sha256(path: &Path) -> Result<String, String> {
@@ -2631,6 +2677,246 @@ fn free_tcp_port() -> Result<u16, String> {
 
 #[cfg(test)]
 mod tests {
+    struct MiLMMTValidationFixture;
+
+    impl crate::translation::Translator for MiLMMTValidationFixture {
+        fn display_name(&self) -> &str {
+            "MiLMMT validation fixture"
+        }
+        fn cache_namespace(&self) -> &str {
+            "milmmt-validation-fixture"
+        }
+        fn translate(
+            &mut self,
+            text: &str,
+            source: Language,
+            target: Language,
+        ) -> Result<String, String> {
+            let source = super::validate_milmmt_languages(text, source, target)?;
+            super::milmmt_completion_payload(text, source, target, 32)?;
+            Ok(match text.trim() {
+                "Hello" => "안녕",
+                "world" => "세계",
+                "こんにちは" => "안녕하세요",
+                other => panic!("unexpected fixture input: {other}"),
+            }
+            .to_string())
+        }
+    }
+
+    #[test]
+    fn milmmt_discord_service_preserves_source_across_format_fragments() {
+        use crate::cache::TranslationCache;
+        use crate::translation::TranslationService;
+        for (source, expected) in [
+            ("Hello **world**", "안녕 **세계**"),
+            ("Hello\nworld", "안녕\n세계"),
+            ("Hello\r\nworld", "안녕\r\n세계"),
+            ("Hello **world**\nこんにちは", "안녕 **세계**\n안녕하세요"),
+        ] {
+            let mut service = TranslationService::new(
+                Box::new(MiLMMTValidationFixture),
+                TranslationCache::in_memory(32).unwrap(),
+            );
+            assert_eq!(
+                service
+                    .translate_for_discord(source, Language::Korean)
+                    .unwrap(),
+                expected
+            );
+            // A preceding English message must not become evidence for a new draft.
+            assert!(service
+                .translate_for_discord("world", Language::Korean)
+                .is_err());
+            assert!(service
+                .translate_for_discord("안녕하세요 **world**", Language::Korean)
+                .is_err());
+            // Protected code must not supply source-language evidence.
+            assert!(service
+                .translate_for_discord("`Hello` **world**", Language::Korean)
+                .is_err());
+        }
+    }
+
+    fn download_fixture(path: std::path::PathBuf) -> HyMtTranslator {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto")
+            .unwrap()
+            .with_paths(path, None);
+        translator.model = HyMtModel {
+            key: "test",
+            family: "test",
+            label: "Test model",
+            repository: "unused",
+            filename: "model.gguf",
+            expected_bytes: 6,
+            expected_sha256: "bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721",
+        };
+        translator
+    }
+
+    #[test]
+    #[ignore = "helper launched by concurrent_model_resume_processes"]
+    fn model_resume_child_process() {
+        let directory = std::path::PathBuf::from(std::env::var_os("NUDE_RESUME_FIXTURE").unwrap());
+        let mode = std::env::var("NUDE_RESUME_MODE").unwrap();
+        if mode == "crash" {
+            let _lock = super::ModelFileLock::acquire(&directory.join("model.gguf")).unwrap();
+            // Simulate abrupt termination: destructors deliberately do not run.
+            std::process::exit(0);
+        }
+        let mut translator = download_fixture(directory.join("model.gguf"));
+        if mode == "first" {
+            let directory = directory.clone();
+            translator = translator.with_progress_observer(Arc::new(move |progress| {
+                if progress.phase == "downloading" && progress.downloaded == 3 {
+                    std::fs::write(directory.join("ready"), b"ready").unwrap();
+                    let deadline = Instant::now() + Duration::from_secs(20);
+                    while !directory.join("release").exists() {
+                        assert!(Instant::now() < deadline, "parent did not release download");
+                        std::thread::sleep(Duration::from_millis(20));
+                    }
+                }
+            }));
+        }
+        let result = translator.ensure_model_from_url(&std::env::var("NUDE_RESUME_URL").unwrap());
+        if mode == "contender" {
+            assert!(result.unwrap_err().contains("모델 잠금"));
+            assert_eq!(
+                std::fs::read(super::partial_path(&translator.model_path)).unwrap(),
+                b"abc"
+            );
+        } else {
+            result.unwrap();
+            assert_eq!(std::fs::read(&translator.model_path).unwrap(), b"abcdef");
+        }
+    }
+
+    #[test]
+    fn concurrent_model_resume_processes() {
+        use std::io::{Read, Write};
+        let directory = std::env::temp_dir().join(format!(
+            "nude-resume-processes-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(super::partial_path(&directory.join("model.gguf")), b"abc").unwrap();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/model", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let server_stop = stop.clone();
+        let requests = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let server_requests = requests.clone();
+        let server = std::thread::spawn(move || {
+            while !server_stop.load(std::sync::atomic::Ordering::SeqCst) {
+                match listener.accept() {
+                    Ok((mut stream, _)) => {
+                        stream
+                            .set_read_timeout(Some(Duration::from_secs(5)))
+                            .unwrap();
+                        let mut request = Vec::new();
+                        let mut byte = [0];
+                        while !request.ends_with(b"\r\n\r\n") {
+                            stream.read_exact(&mut byte).unwrap();
+                            request.push(byte[0]);
+                        }
+                        assert!(String::from_utf8_lossy(&request)
+                            .to_lowercase()
+                            .contains("range: bytes=3-"));
+                        server_requests.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        stream.write_all(b"HTTP/1.1 206 Partial Content\r\nContent-Length: 3\r\nContent-Range: bytes 3-5/6\r\nConnection: close\r\n\r\ndef").unwrap();
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(10))
+                    }
+                    Err(e) => panic!("fixture server: {e}"),
+                }
+            }
+        });
+        let child = |mode: &str| {
+            let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+            command
+                .args([
+                    "--exact",
+                    "translation::hymt::tests::model_resume_child_process",
+                    "--ignored",
+                    "--nocapture",
+                ])
+                .env("NUDE_RESUME_FIXTURE", &directory)
+                .env("NUDE_RESUME_MODE", mode)
+                .env("NUDE_RESUME_URL", &url);
+            command
+        };
+        let mut first = child("first").spawn().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !directory.join("ready").exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let ready = directory.join("ready").exists();
+        let contender = ready && child("contender").status().unwrap().success();
+        std::fs::write(directory.join("release"), b"release").unwrap();
+        let first_ok = first.wait().unwrap().success();
+        let retry_ok = first_ok && child("retry").status().unwrap().success();
+        stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        server.join().unwrap();
+        assert!(ready && contender && first_ok && retry_ok);
+        assert_eq!(requests.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(
+            std::fs::read(directory.join("model.gguf.sha256")).unwrap(),
+            b"bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721"
+        );
+        assert!(!super::partial_path(&directory.join("model.gguf")).exists());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn model_lock_protects_cleanup_and_survives_a_crashed_owner() {
+        let directory =
+            std::env::temp_dir().join(format!("nude-lock-recovery-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("model.gguf");
+        let partial = super::partial_path(&path);
+        std::fs::write(&partial, b"abcdef").unwrap();
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "translation::hymt::tests::model_resume_child_process",
+                "--ignored",
+            ])
+            .env("NUDE_RESUME_FIXTURE", &directory)
+            .env("NUDE_RESUME_MODE", "crash")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let translator = download_fixture(path.clone());
+        assert!(translator
+            .ensure_model_from_url("http://invalid")
+            .unwrap_err()
+            .contains("모델 잠금"));
+        assert!(super::remove_cached_model_files(&path)
+            .unwrap_err()
+            .contains("모델 잠금"));
+        assert_eq!(std::fs::read(&partial).unwrap(), b"abcdef");
+        // Explicit recovery is safe only after stopping all clients.
+        std::fs::remove_dir(directory.join("model.gguf.lock")).unwrap();
+        std::fs::write(&partial, b"badbad").unwrap();
+        assert!(translator
+            .ensure_model_from_url("http://invalid")
+            .unwrap_err()
+            .contains("무결성"));
+        assert!(!partial.exists());
+        assert!(!directory.join("model.gguf.lock").exists());
+        std::fs::write(&partial, b"abcdef").unwrap();
+        translator.ensure_model_from_url("http://invalid").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"abcdef");
+        assert!(!directory.join("model.gguf.lock").exists());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
     #[test]
     fn cpu_execution_limits_both_compute_pools_without_busy_waiting() {
         for (logical, expected) in [
