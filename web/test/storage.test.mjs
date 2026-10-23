@@ -32,7 +32,8 @@ test("storage management exposes downloaded models and SQLite history cleanup", 
   assert.match(rustMain, /local_model_storage_folder_open/);
   assert.match(rustMain, /local_model_delete/);
   assert.match(rustMain, /translation_cache_clear/);
-  assert.doesNotMatch(script, /milmmt_4b|MiLMMT/);
+  assert.doesNotMatch(script, /milmmt_4b|MiLMMT[- ](?:46-)?4B/);
+  assert.match(script, /milmmt_12b/);
   assert.match(model, /remove_retired_milmmt_files/);
   assert.match(model, /pub fn local_model_storage_root\(\)/);
 });

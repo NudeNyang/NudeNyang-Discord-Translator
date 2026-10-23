@@ -51,6 +51,7 @@ const DISPLAY_TRANSLATOR_OPTIONS = [
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·기본)", "local"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·품질 우선)", "local"],
   ["translategemma_4b", "TranslateGemma 4B Q4 (실험·약 2.5GB)", "local"],
+  ["milmmt_12b", "MiLMMT 12B Q4 (실험·약 7.3GB)", "local"],
   ["chatgpt", "ChatGPT CLI (외부·품질 우선)", "external"],
   ["claude", "Claude CLI (외부·품질 우선)", "external"],
   ["gemini", "Gemini CLI (외부·품질 우선)", "external"],
@@ -70,6 +71,7 @@ const OUTGOING_TRANSLATOR_OPTIONS = [
   ["hymt_1_8b", "Hy-MT2 1.8B Q4 (로컬·속도 우선)", "local-limited"],
   ["hymt_7b", "Hy-MT2 7B Q4 (로컬·속도 우선)", "local-limited"],
   ["translategemma_4b", "TranslateGemma 4B Q4 (실험·속도 우선)", "local-limited"],
+  ["milmmt_12b", "MiLMMT 12B Q4 (실험·약 7.3GB)", "local-limited"],
   ["mock", "Mock 테스트", "testing"],
 ];
 

@@ -22,7 +22,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="0.7.12-beta" src="https://img.shields.io/badge/release-0.7.12--beta-4C1">
+  <img alt="0.7.13-beta" src="https://img.shields.io/badge/release-0.7.13--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -33,9 +33,9 @@ NudeNyang works with the Discord window that is already on screen. It does not u
 
 ## Download and update
 
-Download the Windows installer from [0.7.12 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.12-beta). This release removes personal configuration references from the CodeBuddy help text and restores tests for preserving full model IDs. See the [release notes](docs/releases/0.7.12-beta.md) for details.
+Download the Windows installer from [0.7.13 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.13-beta). This release adds MiLMMT 12B, fixes language detection in formatted outgoing messages, and protects shared model downloads. See the [release notes](docs/releases/0.7.13-beta.md) for details.
 
-0.7.12-beta is published as the latest regular GitHub release. Existing installers use the same app update channel. Version 1.0.0 is reserved for the macOS release.
+0.7.13-beta is published as the latest regular GitHub release. Existing installers use the same app update channel. Version 1.0.0 is reserved for the macOS release.
 
 Existing installed versions can follow the app's update prompt. The update URL and signing key are unchanged; you do not need to uninstall or reset the app. Older portable builds require a manual installer download.
 
@@ -129,14 +129,18 @@ The boundary is intentionally narrow:
 | Diagnostics | Redacts home paths and secrets. Message bodies and local-model prompts are not written to the log. |
 | Downloaded models | Uses pinned revisions and verifies expected file size and SHA-256 before loading. |
 
-Local Hy-MT2 and TranslateGemma requests stay on the machine. ChatGPT, Claude, Gemini, DeepL, CodeBuddy, and OpenAI-compatible APIs are optional; choosing one sends the text that needs translation to that provider under its own terms.
+Local Hy-MT2, TranslateGemma, and MiLMMT 12B requests stay on the machine. ChatGPT, Claude, Gemini, DeepL, CodeBuddy, and OpenAI-compatible APIs are optional; choosing one sends the text that needs translation to that provider under its own terms.
+
+MiLMMT 12B is the experimental MiLMMT-46-12B-v1.0 Q4_K_M model. It downloads about 7.3 GB, and a local GPU with roughly 10 GB of available VRAM is recommended. It uses Xiaomi's official translation prompt (raw text), supports 46 languages including Malay, does not support Ukrainian, and follows the source text's register and tone. Choosing this local model applies it to both incoming and outgoing translation.
+
+Set `NUDE_TRANSLATOR_MODEL_DIR` to use a different root for downloaded models, such as a mounted NAS folder. Each model keeps its own subdirectory under that root. Loading models over a network may take longer on first startup while the file is read from the share. All PCs sharing that folder must use a version with model download locks. If a crash leaves an empty `.lock` folder, stop the app on every PC before removing that lock folder. See the [recovery notes](docs/releases/0.7.13-beta-local.md).
 
 ## Features
 
 - Incoming-message and channel-name translation with conservative detection and an optional source-language filter
 - Outgoing translation based on a per-channel choice or recent conversation language, with the final send left to the user
 - 28 chat and interface languages, including Korean, English, Japanese, Simplified and Traditional Chinese
-- Hy-MT2 1.8B and 7B local models, plus experimental TranslateGemma 4B
+- Hy-MT2 1.8B and 7B local models, plus experimental TranslateGemma 4B and MiLMMT 12B
 - Optional ChatGPT, Claude, Gemini, DeepL, CodeBuddy, a user-specified OpenAI-compatible API, and a mock provider for testing
 - Local image translation with adaptive PP-OCR recognition and original/translated toggling
 - Selection dictionary with a separate result window, speech, contextual sense ordering, personal terms, and install-on-demand practical packs
@@ -204,7 +208,7 @@ Commit source/version/release notes before packaging, and push that source commi
 The public packaging script builds **both x64 and ARM64**, signs both installers with the existing
 Tauri updater key, and verifies signatures, SHA-256 checksums, URLs and both update platform entries.
 Missing or mismatched artifacts stop deployment. By default, `-beta` versions use GitHub prereleases.
-The maintainer has requested a regular release for 0.7.12-beta.
+The maintainer has requested a regular release for 0.7.13-beta.
 For a new regular release, pass `-StableRelease` to the deployment script; it publishes with
 `--prerelease=false --latest=true`. Both publication modes use the same app update URL.
 
@@ -220,6 +224,7 @@ the update endpoint to add ARM64 support. See [Windows release procedure](docs/W
 
 | Document | Contents |
 |---|---|
+| [0.7.13-beta release notes](docs/releases/0.7.13-beta.md) | MiLMMT 12B, formatted message fixes, and shared model download locks |
 | [0.7.12-beta release notes](docs/releases/0.7.12-beta.md) | CodeBuddy help text cleanup and full model ID regression tests |
 | [0.7.11-beta release notes](docs/releases/0.7.11-beta.md) | CodeBuddy CLI support, translation retries, and background Discord reconnection |
 | [0.7.10-beta release notes](docs/releases/0.7.10-beta.md) | Discord connection status after reconnecting and switching windows |

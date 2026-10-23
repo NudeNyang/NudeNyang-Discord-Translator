@@ -3,6 +3,7 @@ pub enum HyMtModelSize {
     Small,
     Large,
     TranslateGemma4B,
+    MiLMMT12B,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -20,6 +21,7 @@ pub struct HyMtModel {
 pub(crate) enum LocalPromptStrategy {
     SharedChat,
     OfficialTranslateGemma,
+    OfficialMiLMMT,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -72,7 +74,7 @@ impl LocalModelProfile {
     }
 }
 
-pub(crate) const LOCAL_MODEL_PROFILES: [LocalModelProfile; 3] = [
+pub(crate) const LOCAL_MODEL_PROFILES: [LocalModelProfile; 4] = [
     LocalModelProfile::shared_chat(
         HyMtModelSize::Small,
         "hymt_1_8b",
@@ -125,6 +127,27 @@ pub(crate) const LOCAL_MODEL_PROFILES: [LocalModelProfile; 3] = [
         cache_family: "translategemma",
         quality_version: "source-faithful-v3",
         gpu_context_size: "2048",
+        cpu_context_size: "2048",
+        server_compatibility_args: RAW_TRANSLATION_SERVER_ARGS,
+    },
+    LocalModelProfile {
+        kind: HyMtModelSize::MiLMMT12B,
+        config_id: "milmmt_12b",
+        runtime_label: "MiLMMT 12B Q4 (실험·약 7.3GB)",
+        model: HyMtModel {
+            key: "46-12b-v1.0",
+            family: "milmmt",
+            label: "MiLMMT46-12B-v1.0Q4_K_M",
+            repository: "mradermacher/MiLMMT-46-12B-v1.0-GGUF",
+            filename: "MiLMMT-46-12B-v1.0.Q4_K_M.gguf",
+            expected_bytes: 7_300_777_440,
+            expected_sha256: "8c2d878d8daf8722faf1a42eef02ce046411ede17bf3115fb8b2cce491d5fb03",
+        },
+        prompt_strategy: LocalPromptStrategy::OfficialMiLMMT,
+        completion_api: LocalCompletionApi::RawCompletion,
+        cache_family: "milmmt",
+        quality_version: "official-v1",
+        gpu_context_size: "4096",
         cpu_context_size: "2048",
         server_compatibility_args: RAW_TRANSLATION_SERVER_ARGS,
     },
@@ -238,6 +261,45 @@ mod tests {
         assert_eq!(
             large.server_compatibility_args,
             small.server_compatibility_args
+        );
+    }
+
+    #[test]
+    fn milmmt_12b_resolves_to_the_46_12b_artifact() {
+        let model = HyMtModelSize::from_config_id("milmmt_12b")
+            .expect("milmmt_12b must be a selectable local model")
+            .model();
+        assert_eq!(model.family, "milmmt");
+        assert_eq!(model.key, "46-12b-v1.0");
+        assert_eq!(model.filename, "MiLMMT-46-12B-v1.0.Q4_K_M.gguf");
+        assert_eq!(model.expected_bytes, 7_300_777_440);
+    }
+
+    #[test]
+    fn milmmt_12b_profile_is_distinct_and_uses_raw_official_prompting() {
+        let profile = HyMtModelSize::MiLMMT12B.profile();
+        assert_eq!(profile.config_id, "milmmt_12b");
+        assert_eq!(profile.runtime_label, "MiLMMT 12B Q4 (실험·약 7.3GB)");
+        assert_eq!(profile.prompt_strategy, LocalPromptStrategy::OfficialMiLMMT);
+        assert_eq!(profile.completion_api, LocalCompletionApi::RawCompletion);
+        assert_eq!(profile.cache_family, "milmmt");
+        assert_eq!(profile.quality_version, "official-v1");
+        assert_eq!(profile.context_size("gpu"), "4096");
+        assert_eq!(profile.context_size("cpu"), "2048");
+        assert_eq!(
+            profile.server_compatibility_args,
+            ["--no-jinja", "--skip-chat-parsing"]
+        );
+        assert_eq!(profile.model.label, "MiLMMT46-12B-v1.0Q4_K_M");
+        assert_eq!(
+            profile.model.expected_sha256,
+            "8c2d878d8daf8722faf1a42eef02ce046411ede17bf3115fb8b2cce491d5fb03"
+        );
+        assert_ne!(
+            profile.cache_namespace("auto"),
+            HyMtModelSize::TranslateGemma4B
+                .profile()
+                .cache_namespace("auto")
         );
     }
 

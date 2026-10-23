@@ -70,6 +70,21 @@ test("the measured 1.8B automatic profile is shown as about 1.7GB of VRAM", () =
   assert.equal((guidance.estimatedUsageBytes / GiB).toFixed(1), "1.7");
 });
 
+test("the MiLMMT 12B profile reports its model bytes and VRAM usage", () => {
+  const guidance = localModelResourceGuidance(
+    {
+      translator: "milmmt_12b",
+      outgoing_translator: "milmmt_12b",
+      hymt_device: "auto",
+    },
+    { totalBytes: 24 * GiB, availableBytes: 20 * GiB },
+  );
+  assert.notEqual(guidance, null);
+  assert.equal(guidance.model, "MiLMMT 12B");
+  assert.equal(guidance.modelBytes, 7_300_777_440);
+  assert.equal(guidance.usageKind, "vram");
+});
+
 test("settings expose automatic VRAM protection, GPU priority, and CPU-only execution", () => {
   assert.match(script, /\["auto", "자동 보호 \(권장\)"\]/);
   assert.match(script, /\["gpu", "GPU 우선"\]/);

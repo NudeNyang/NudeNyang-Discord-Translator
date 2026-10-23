@@ -124,6 +124,7 @@ test("translation model can be changed inside the tray menu", () => {
     "hymt_1_8b",
     "hymt_7b",
     "translategemma_4b",
+    "milmmt_12b",
     "chatgpt",
     "gemini",
     "codebuddy",

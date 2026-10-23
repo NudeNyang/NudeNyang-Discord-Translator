@@ -425,7 +425,32 @@ impl TranslationService {
         if segments.is_empty() {
             return Ok(text.to_string());
         }
-        let source_hints = vec![None; segments.len()];
+        // Infer only from this draft's translatable text. Formatting can leave
+        // tiny ambiguous pieces ("Hello **world**"); code, URLs and a preceding
+        // draft must not contribute evidence. Separate script families so a
+        // Japanese line cannot turn an ambiguous English word into Japanese.
+        let mut grouped = HashMap::<ScriptFamily, String>::new();
+        for segment in &segments {
+            if let Some(family) = detection_script_family(segment) {
+                let aggregate = grouped.entry(family).or_default();
+                aggregate.push_str(segment);
+                aggregate.push('\n');
+            }
+        }
+        let grouped_languages = grouped
+            .into_iter()
+            .filter_map(|(family, text)| {
+                let language = detect_explicit_language(&text);
+                (language_script_family(language) == Some(family)).then_some((family, language))
+            })
+            .collect::<HashMap<_, _>>();
+        let source_hints = segments
+            .iter()
+            .map(|segment| {
+                detection_script_family(segment)
+                    .and_then(|family| grouped_languages.get(&family).copied())
+            })
+            .collect::<Vec<_>>();
         // Outgoing messages are translated strictly and must not leave an
         // untranslated draft behind: unknown scripts are sent to the provider
         // and an unchanged result in a different script is rejected before rendering.
