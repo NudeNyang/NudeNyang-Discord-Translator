@@ -578,6 +578,31 @@ pub fn detect_explicit_language(text: &str) -> Language {
     detect_language(text).language
 }
 
+pub(crate) fn detect_translation_source(text: &str) -> Language {
+    let explicit = detect_explicit_language(text);
+    if explicit != Language::Unknown {
+        return explicit;
+    }
+    let prepared = prepare_for_detection(text);
+    let counts = script_counts(&prepared);
+    if counts.han == 0 || counts.kana > 0 || counts.hangul > 0 || counts.cyrillic > 0 {
+        return Language::Unknown;
+    }
+    let simplified = prepared
+        .chars()
+        .filter(|character| SIMPLIFIED_HINTS.contains(*character))
+        .count();
+    let traditional = prepared
+        .chars()
+        .filter(|character| TRADITIONAL_HINTS.contains(*character))
+        .count();
+    if traditional > simplified {
+        Language::ChineseTraditional
+    } else {
+        Language::ChineseSimplified
+    }
+}
+
 fn from_lingua(
     language: LinguaLanguage,
     simplified: usize,
@@ -991,10 +1016,10 @@ fn is_complete_v6_candidate(
 #[cfg(test)]
 mod tests {
     use super::{
-        detect_explicit_language, detect_language, detection_script_family,
-        normalize_halfwidth_kana, provider_language_codes, CandidateSelector, Language,
-        LanguageDetector, ProviderLanguageCodes, RecognitionCandidate, ScriptFamily,
-        TranslationProvider, LANGUAGE_MENU_ORDER, SUPPORTED_LANGUAGES,
+        detect_explicit_language, detect_language, detect_translation_source,
+        detection_script_family, normalize_halfwidth_kana, provider_language_codes,
+        CandidateSelector, Language, LanguageDetector, ProviderLanguageCodes, RecognitionCandidate,
+        ScriptFamily, TranslationProvider, LANGUAGE_MENU_ORDER, SUPPORTED_LANGUAGES,
     };
     use std::collections::BTreeMap;
     use std::fmt::Write as _;
@@ -1230,6 +1255,24 @@ mod tests {
             assert_eq!(detect_explicit_language(text), Language::Unknown, "{text}");
         }
         assert_eq!(detect_language("nice").confidence, 0.0);
+    }
+
+    #[test]
+    fn translation_source_fallback_labels_short_han_text_without_relaxing_general_detection() {
+        assert_eq!(detect_explicit_language("你好"), Language::Unknown);
+        assert_eq!(
+            detect_translation_source("你好"),
+            Language::ChineseSimplified
+        );
+        assert_eq!(
+            detect_translation_source("我一直使用的balenaEtcher"),
+            Language::ChineseSimplified
+        );
+        assert_eq!(
+            detect_translation_source("謝謝"),
+            Language::ChineseTraditional
+        );
+        assert_eq!(detect_translation_source("12345"), Language::Unknown);
     }
 
     #[test]

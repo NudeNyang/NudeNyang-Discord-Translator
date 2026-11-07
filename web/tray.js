@@ -14,6 +14,7 @@ const TRANSLATOR_LABELS = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
   translategemma_4b: "TranslateGemma 4B",
+  milmmt_12b: "MiLMMT 12B",
   chatgpt: "ChatGPT",
   claude: "Claude",
   gemini: "Gemini",

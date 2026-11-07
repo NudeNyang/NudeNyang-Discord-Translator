@@ -292,6 +292,7 @@ export const COPY = Object.freeze({
   "보내는 메시지 통역 모델": ["Outgoing message translation model", "送信メッセージ通訳モデル", "发送消息翻译模型"],
   "의미와 말투를 자연스럽게 전달하도록 품질 우선 CLI 모델 사용을 권장합니다.": ["A quality-first CLI model is recommended to convey meaning and tone naturally.", "意味と文体を自然に伝えるため、品質優先のCLIモデルを推奨します。", "建议使用质量优先的 CLI 模型，以自然地传达含义和语气。"],
   "TranslateGemma 4B Q4 (실험·약 2.5GB)": ["TranslateGemma 4B Q4 (experimental · about 2.5GB)", "TranslateGemma 4B Q4（実験・約2.5GB）", "TranslateGemma 4B Q4（实验 · 约2.5GB）"],
+  "MiLMMT 12B Q4 (실험·약 7.3GB)": ["MiLMMT 12B Q4 (experimental · ~7.3 GB)", "MiLMMT 12B Q4（実験・約7.3GB）", "MiLMMT 12B Q4（实验性·约 7.3 GB）"],
   "GPT-5.6 (품질 최우선)": ["GPT-5.6 (quality first)", "GPT-5.6（品質最優先）", "GPT-5.6（质量优先）"],
   "Claude (품질 최우선)": ["Claude (quality first)", "Claude（品質最優先）", "Claude（质量优先）"],
   "Gemini (품질 최우선)": ["Gemini (quality first)", "Gemini（品質最優先）", "Gemini（质量优先）"],

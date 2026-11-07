@@ -1386,6 +1386,34 @@ mod tests {
     }
 
     #[test]
+    fn milmmt_12b_selection_round_trips_and_syncs_both_roles() {
+        let config = AppConfig::from_value(json!({
+            "translator": "milmmt_12b",
+            "outgoing_translator": "milmmt_12b"
+        }))
+        .expect("MiLMMT 12B selection should load");
+        assert_eq!(config.translator, "milmmt_12b");
+        assert_eq!(config.outgoing_translator, "milmmt_12b");
+
+        let serialized = serde_json::to_value(&config).expect("serialize MiLMMT config");
+        let restored = AppConfig::from_value(serialized).expect("restore MiLMMT config");
+        assert_eq!(restored.translator, "milmmt_12b");
+        assert_eq!(restored.outgoing_translator, "milmmt_12b");
+
+        let display = AppConfig::default()
+            .patched(json!({"translator": "milmmt_12b"}))
+            .expect("select MiLMMT for display translation");
+        assert_eq!(display.translator, "milmmt_12b");
+        assert_eq!(display.outgoing_translator, "milmmt_12b");
+
+        let outgoing = AppConfig::default()
+            .patched(json!({"outgoing_translator": "milmmt_12b"}))
+            .expect("select MiLMMT for outgoing translation");
+        assert_eq!(outgoing.translator, "milmmt_12b");
+        assert_eq!(outgoing.outgoing_translator, "milmmt_12b");
+    }
+
+    #[test]
     fn removed_milmmt_selection_migrates_to_the_default_local_model() {
         let migrated = AppConfig::from_value(json!({
             "translator": "milmmt_4b",

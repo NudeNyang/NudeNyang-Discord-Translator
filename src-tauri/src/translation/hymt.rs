@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::ffi::OsString;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -484,6 +485,10 @@ pub fn remove_retired_milmmt_files() -> Result<u64, String> {
 }
 
 fn remove_cached_model_files(path: &Path) -> Result<u64, String> {
+    if !path.parent().is_some_and(Path::exists) {
+        return Ok(0);
+    }
+    let model_lock = ModelFileLock::acquire(path)?;
     let mut removed_bytes = 0_u64;
     for candidate in [path.to_path_buf(), partial_path(path), hash_marker(path)] {
         let Ok(metadata) = candidate.metadata() else {
@@ -497,6 +502,7 @@ fn remove_cached_model_files(path: &Path) -> Result<u64, String> {
             )
         })?;
     }
+    drop(model_lock);
     if let Some(parent) = path.parent() {
         let _ = fs::remove_dir(parent);
         if let Some(family) = parent.parent() {
@@ -873,19 +879,23 @@ impl HyMtTranslator {
     }
 
     fn ensure_model(&self) -> Result<(), String> {
+        let url = format!(
+            "https://huggingface.co/{}/resolve/main/{}?download=true",
+            self.model.repository, self.model.filename
+        );
+        self.ensure_model_from_url(&url)
+    }
+
+    fn ensure_model_from_url(&self, url: &str) -> Result<(), String> {
         self.preparation_cancellation.check()?;
-        if model_is_verified(&self.model_path, self.model)? {
-            return Ok(());
-        }
         if bundled_model_path(self.model).as_deref() == Some(self.model_path.as_path()) {
+            if model_is_verified(&self.model_path, self.model)? {
+                return Ok(());
+            }
             return Err(format!(
                 "앱에 포함된 {} 모델의 무결성 검증에 실패했습니다. 앱을 다시 설치하십시오.",
                 self.model.label
             ));
-        }
-        if self.model_path.exists() {
-            fs::remove_file(&self.model_path)
-                .map_err(|error| format!("손상된 로컬 모델을 삭제하지 못했습니다: {error}"))?;
         }
         let parent = self
             .model_path
@@ -893,6 +903,18 @@ impl HyMtTranslator {
             .ok_or_else(|| "로컬 모델 폴더를 찾지 못했습니다.".to_string())?;
         fs::create_dir_all(parent)
             .map_err(|error| format!("로컬 모델 폴더를 만들지 못했습니다: {error}"))?;
+        // This covers verification, partial-length inspection, writes, hash
+        // failure cleanup, final rename and marker publication across PCs.
+        let _model_lock = ModelFileLock::acquire(&self.model_path)?;
+        self.preparation_cancellation.check()?;
+        if model_is_verified(&self.model_path, self.model)? {
+            let _ = fs::write(hash_marker(&self.model_path), self.model.expected_sha256);
+            return Ok(());
+        }
+        if self.model_path.exists() {
+            fs::remove_file(&self.model_path)
+                .map_err(|error| format!("손상된 로컬 모델을 삭제하지 못했습니다: {error}"))?;
+        }
         let required = self.model.expected_bytes + 512 * 1024 * 1024;
         if available_space(parent).is_ok_and(|free| free < required) {
             return Err(format!(
@@ -911,10 +933,6 @@ impl HyMtTranslator {
         self.report_progress("downloading", downloaded);
         if downloaded < self.model.expected_bytes {
             self.preparation_cancellation.check()?;
-            let url = format!(
-                "https://huggingface.co/{}/resolve/main/{}?download=true",
-                self.model.repository, self.model.filename
-            );
             let download_client = Client::builder()
                 .connect_timeout(Duration::from_secs(30))
                 .timeout(None)
@@ -1071,6 +1089,28 @@ impl HyMtTranslator {
             .map_err(|error| format!("TranslateGemma 번역 응답을 읽지 못했습니다: {error}"))?;
         translate_gemma_completion_result(&payload)
     }
+
+    fn complete_milmmt(
+        &self,
+        text: &str,
+        source: Language,
+        target: Language,
+    ) -> Result<String, String> {
+        let output_limit = max_output_tokens(text);
+        let request_payload = milmmt_completion_payload(text, source, target, output_limit)?;
+        let response = self
+            .client
+            .post(format!("http://127.0.0.1:{}/completion", self.port))
+            .timeout(self.request_timeout)
+            .json(&request_payload)
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|error| format!("MiLMMT 12B 번역 요청이 실패했습니다: {error}"))?;
+        let payload: Value = response
+            .json()
+            .map_err(|error| format!("MiLMMT 12B 번역 응답을 읽지 못했습니다: {error}"))?;
+        milmmt_completion_result(&payload)
+    }
 }
 
 fn completion_payload(prompt: &str, output_limit: usize) -> Value {
@@ -1171,6 +1211,113 @@ fn translate_gemma_language_name(language: Language) -> &'static str {
     }
 }
 
+fn milmmt_language_name(language: Language) -> Option<&'static str> {
+    match language {
+        Language::ChineseSimplified => Some("Chinese (Simplified)"),
+        Language::ChineseTraditional => Some("Chinese (Traditional)"),
+        Language::BrazilianPortuguese => Some("Portuguese"),
+        Language::LatinAmericanSpanish => Some("Spanish"),
+        Language::Filipino => Some("Tagalog"),
+        Language::Ukrainian | Language::Unknown => None,
+        other => Some(other.english_name()),
+    }
+}
+
+fn milmmt_unsupported_source(language: Language) -> String {
+    if language == Language::Unknown {
+        "MiLMMT 12B 모델은 원문 언어를 확인하지 못했습니다. 원문 언어를 직접 선택해 주십시오."
+            .to_string()
+    } else {
+        format!(
+            "MiLMMT 12B 모델은 원문 언어({})를 지원하지 않습니다. 지원되는 언어를 선택해 주십시오.",
+            language.english_name()
+        )
+    }
+}
+
+fn milmmt_unsupported_target(language: Language) -> String {
+    format!(
+        "MiLMMT 12B 모델은 대상 언어({})를 지원하지 않습니다. 지원되는 언어를 선택해 주십시오.",
+        language.english_name()
+    )
+}
+
+fn resolve_milmmt_source(text: &str, source: Language) -> Result<Language, String> {
+    let resolved = if source == Language::Unknown {
+        crate::language::detect_translation_source(text)
+    } else {
+        source
+    };
+    if milmmt_language_name(resolved).is_none() {
+        return Err(milmmt_unsupported_source(resolved));
+    }
+    Ok(resolved)
+}
+
+fn validate_milmmt_languages(
+    text: &str,
+    source: Language,
+    target: Language,
+) -> Result<Language, String> {
+    let source = resolve_milmmt_source(text, source)?;
+    if milmmt_language_name(target).is_none() {
+        return Err(milmmt_unsupported_target(target));
+    }
+    Ok(source)
+}
+
+fn milmmt_prompt(text: &str, source: Language, target: Language) -> Result<String, String> {
+    let source = resolve_milmmt_source(text, source)?;
+    let source_name =
+        milmmt_language_name(source).ok_or_else(|| milmmt_unsupported_source(source))?;
+    let target_name =
+        milmmt_language_name(target).ok_or_else(|| milmmt_unsupported_target(target))?;
+    Ok(format!(
+        "Translate this from {source_name} to {target_name}:\n{source_name}: {text}\n{target_name}:"
+    ))
+}
+
+fn milmmt_completion_payload(
+    text: &str,
+    source: Language,
+    target: Language,
+    output_limit: usize,
+) -> Result<Value, String> {
+    let prompt = milmmt_prompt(text, source, target)?;
+    Ok(json!({
+        "prompt": prompt,
+        "n_predict": output_limit.min(2048),
+        "temperature": INFERENCE_TEMPERATURE,
+        "top_k": 1,
+        "cache_prompt": !crate::diagnostics::ephemeral_request_active(),
+        "stop": ["<end_of_turn>", "<eos>"],
+    }))
+}
+
+fn milmmt_completion_result(payload: &Value) -> Result<String, String> {
+    if payload
+        .get("stop_type")
+        .and_then(Value::as_str)
+        .is_some_and(|reason| reason == "limit")
+    {
+        return Err(
+            "MiLMMT 12B 번역 결과가 길이 제한에 도달했습니다. 텍스트를 나누어 다시 시도하십시오."
+                .to_string(),
+        );
+    }
+    let result = clean_translation(
+        payload
+            .get("content")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
+    );
+    if result.is_empty() {
+        Err("MiLMMT 12B 모델이 빈 번역 결과를 반환했습니다.".to_string())
+    } else {
+        Ok(result)
+    }
+}
+
 fn translate_gemma_completion_result(payload: &Value) -> Result<String, String> {
     if payload
         .get("stop_type")
@@ -1266,6 +1413,18 @@ impl Translator for HyMtTranslator {
     ) -> Result<String, String> {
         if source == target || text.trim().is_empty() {
             return Ok(text.to_string());
+        }
+        if self.profile.prompt_strategy == LocalPromptStrategy::OfficialMiLMMT {
+            let resolved_source = validate_milmmt_languages(text, source, target)?;
+            let _request_guard = self.begin_request()?;
+            let style = self.speech_style.clone();
+            return translate_with_translate_gemma(
+                text,
+                resolved_source,
+                target,
+                &style,
+                |fragment, _resolved_style| self.complete_milmmt(fragment, resolved_source, target),
+            );
         }
         let _request_guard = self.begin_request()?;
         if self.profile.completion_api == LocalCompletionApi::RawCompletion {
@@ -1506,7 +1665,7 @@ where
         let leading_len = part.len() - part.trim_start().len();
         let trailing_start = part.trim_end().len();
         let core = part.trim();
-        let prompt = translation_prompt_for_profile(profile, core, source, target, resolved_style);
+        let prompt = translation_prompt_for_profile(profile, core, source, target, resolved_style)?;
         let model_key = profile.model.key;
         let mut result = complete_translation_with_retry(
             model_key,
@@ -1575,7 +1734,7 @@ where
                                 Language::English,
                                 Language::Korean,
                                 "neutral",
-                            );
+                            )?;
                             if let Ok(replacement) = complete_translation_with_retry(
                                 profile.model.key,
                                 &word_prompt,
@@ -2054,7 +2213,7 @@ fn translation_prompt_for_model(
     target: Language,
     style: &str,
 ) -> String {
-    translation_prompt_for_profile(model_size.profile(), text, source, target, style)
+    translation_prompt_for_profile(model_size.profile(), text, source, target, style).unwrap()
 }
 
 fn translation_prompt_for_profile(
@@ -2063,11 +2222,12 @@ fn translation_prompt_for_profile(
     source: Language,
     target: Language,
     style: &str,
-) -> String {
+) -> Result<String, String> {
     match profile.prompt_strategy {
         LocalPromptStrategy::SharedChat | LocalPromptStrategy::OfficialTranslateGemma => {
-            shared_chat_translation_prompt(text, source, target, style)
+            Ok(shared_chat_translation_prompt(text, source, target, style))
         }
+        LocalPromptStrategy::OfficialMiLMMT => milmmt_prompt(text, source, target),
     }
 }
 
@@ -2327,7 +2487,14 @@ fn default_cache_root() -> PathBuf {
 }
 
 pub fn local_model_storage_root() -> PathBuf {
-    default_cache_root().join("models")
+    model_storage_root(env::var_os("NUDE_TRANSLATOR_MODEL_DIR"))
+}
+
+fn model_storage_root(override_root: Option<OsString>) -> PathBuf {
+    override_root
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_cache_root().join("models"))
 }
 
 fn default_model_path(model: HyMtModel) -> PathBuf {
@@ -2438,9 +2605,38 @@ fn model_is_verified(path: &Path, model: HyMtModel) -> Result<bool, String> {
     if actual != model.expected_sha256 {
         return Ok(false);
     }
-    // 번들 내부 모델은 읽기 전용일 수 있다. 해시가 맞으면 표식 저장 실패는 무시한다.
-    let _ = fs::write(marker, &actual);
+    // Readiness/status probes are read-only. Only the locked preparation path
+    // publishes a marker; bundled models may live on read-only media.
     Ok(true)
+}
+
+/// Atomic directory creation is arbitrated by the filesystem server on SMB/NFS,
+/// unlike a process mutex or a host-local PID check. Fail closed if a peer owns
+/// the lock or the server cannot provide it. Never steal a lock on a timer: a
+/// slow NAS or suspended PC may still be writing. A crash leaves an empty lock
+/// directory for explicit recovery after all clients have stopped.
+struct ModelFileLock(PathBuf);
+
+impl ModelFileLock {
+    fn acquire(model: &Path) -> Result<Self, String> {
+        let mut value = model.as_os_str().to_os_string();
+        value.push(".lock");
+        let path = PathBuf::from(value);
+        fs::create_dir(&path).map_err(|error| {
+            format!(
+                "모델 잠금을 획득하지 못했습니다 ({}): {error}. 다른 PC의 다운로드·삭제가 끝난 뒤 다시 시도하십시오. 비정상 종료 후에도 남아 있다면 모든 PC의 앱을 종료한 뒤 이 빈 잠금 폴더만 삭제하십시오.",
+                path.display()
+            )
+        })?;
+        Ok(Self(path))
+    }
+}
+
+impl Drop for ModelFileLock {
+    fn drop(&mut self) {
+        // Do not recursively delete or unlink another client's model data.
+        let _ = fs::remove_dir(&self.0);
+    }
 }
 
 fn file_sha256(path: &Path) -> Result<String, String> {
@@ -2481,6 +2677,246 @@ fn free_tcp_port() -> Result<u16, String> {
 
 #[cfg(test)]
 mod tests {
+    struct MiLMMTValidationFixture;
+
+    impl crate::translation::Translator for MiLMMTValidationFixture {
+        fn display_name(&self) -> &str {
+            "MiLMMT validation fixture"
+        }
+        fn cache_namespace(&self) -> &str {
+            "milmmt-validation-fixture"
+        }
+        fn translate(
+            &mut self,
+            text: &str,
+            source: Language,
+            target: Language,
+        ) -> Result<String, String> {
+            let source = super::validate_milmmt_languages(text, source, target)?;
+            super::milmmt_completion_payload(text, source, target, 32)?;
+            Ok(match text.trim() {
+                "Hello" => "안녕",
+                "world" => "세계",
+                "こんにちは" => "안녕하세요",
+                other => panic!("unexpected fixture input: {other}"),
+            }
+            .to_string())
+        }
+    }
+
+    #[test]
+    fn milmmt_discord_service_preserves_source_across_format_fragments() {
+        use crate::cache::TranslationCache;
+        use crate::translation::TranslationService;
+        for (source, expected) in [
+            ("Hello **world**", "안녕 **세계**"),
+            ("Hello\nworld", "안녕\n세계"),
+            ("Hello\r\nworld", "안녕\r\n세계"),
+            ("Hello **world**\nこんにちは", "안녕 **세계**\n안녕하세요"),
+        ] {
+            let mut service = TranslationService::new(
+                Box::new(MiLMMTValidationFixture),
+                TranslationCache::in_memory(32).unwrap(),
+            );
+            assert_eq!(
+                service
+                    .translate_for_discord(source, Language::Korean)
+                    .unwrap(),
+                expected
+            );
+            // A preceding English message must not become evidence for a new draft.
+            assert!(service
+                .translate_for_discord("world", Language::Korean)
+                .is_err());
+            assert!(service
+                .translate_for_discord("안녕하세요 **world**", Language::Korean)
+                .is_err());
+            // Protected code must not supply source-language evidence.
+            assert!(service
+                .translate_for_discord("`Hello` **world**", Language::Korean)
+                .is_err());
+        }
+    }
+
+    fn download_fixture(path: std::path::PathBuf) -> HyMtTranslator {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::Small, "auto", "auto")
+            .unwrap()
+            .with_paths(path, None);
+        translator.model = HyMtModel {
+            key: "test",
+            family: "test",
+            label: "Test model",
+            repository: "unused",
+            filename: "model.gguf",
+            expected_bytes: 6,
+            expected_sha256: "bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721",
+        };
+        translator
+    }
+
+    #[test]
+    #[ignore = "helper launched by concurrent_model_resume_processes"]
+    fn model_resume_child_process() {
+        let directory = std::path::PathBuf::from(std::env::var_os("NUDE_RESUME_FIXTURE").unwrap());
+        let mode = std::env::var("NUDE_RESUME_MODE").unwrap();
+        if mode == "crash" {
+            let _lock = super::ModelFileLock::acquire(&directory.join("model.gguf")).unwrap();
+            // Simulate abrupt termination: destructors deliberately do not run.
+            std::process::exit(0);
+        }
+        let mut translator = download_fixture(directory.join("model.gguf"));
+        if mode == "first" {
+            let directory = directory.clone();
+            translator = translator.with_progress_observer(Arc::new(move |progress| {
+                if progress.phase == "downloading" && progress.downloaded == 3 {
+                    std::fs::write(directory.join("ready"), b"ready").unwrap();
+                    let deadline = Instant::now() + Duration::from_secs(20);
+                    while !directory.join("release").exists() {
+                        assert!(Instant::now() < deadline, "parent did not release download");
+                        std::thread::sleep(Duration::from_millis(20));
+                    }
+                }
+            }));
+        }
+        let result = translator.ensure_model_from_url(&std::env::var("NUDE_RESUME_URL").unwrap());
+        if mode == "contender" {
+            assert!(result.unwrap_err().contains("모델 잠금"));
+            assert_eq!(
+                std::fs::read(super::partial_path(&translator.model_path)).unwrap(),
+                b"abc"
+            );
+        } else {
+            result.unwrap();
+            assert_eq!(std::fs::read(&translator.model_path).unwrap(), b"abcdef");
+        }
+    }
+
+    #[test]
+    fn concurrent_model_resume_processes() {
+        use std::io::{Read, Write};
+        let directory = std::env::temp_dir().join(format!(
+            "nude-resume-processes-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(super::partial_path(&directory.join("model.gguf")), b"abc").unwrap();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/model", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let server_stop = stop.clone();
+        let requests = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let server_requests = requests.clone();
+        let server = std::thread::spawn(move || {
+            while !server_stop.load(std::sync::atomic::Ordering::SeqCst) {
+                match listener.accept() {
+                    Ok((mut stream, _)) => {
+                        stream
+                            .set_read_timeout(Some(Duration::from_secs(5)))
+                            .unwrap();
+                        let mut request = Vec::new();
+                        let mut byte = [0];
+                        while !request.ends_with(b"\r\n\r\n") {
+                            stream.read_exact(&mut byte).unwrap();
+                            request.push(byte[0]);
+                        }
+                        assert!(String::from_utf8_lossy(&request)
+                            .to_lowercase()
+                            .contains("range: bytes=3-"));
+                        server_requests.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        stream.write_all(b"HTTP/1.1 206 Partial Content\r\nContent-Length: 3\r\nContent-Range: bytes 3-5/6\r\nConnection: close\r\n\r\ndef").unwrap();
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(10))
+                    }
+                    Err(e) => panic!("fixture server: {e}"),
+                }
+            }
+        });
+        let child = |mode: &str| {
+            let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+            command
+                .args([
+                    "--exact",
+                    "translation::hymt::tests::model_resume_child_process",
+                    "--ignored",
+                    "--nocapture",
+                ])
+                .env("NUDE_RESUME_FIXTURE", &directory)
+                .env("NUDE_RESUME_MODE", mode)
+                .env("NUDE_RESUME_URL", &url);
+            command
+        };
+        let mut first = child("first").spawn().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !directory.join("ready").exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let ready = directory.join("ready").exists();
+        let contender = ready && child("contender").status().unwrap().success();
+        std::fs::write(directory.join("release"), b"release").unwrap();
+        let first_ok = first.wait().unwrap().success();
+        let retry_ok = first_ok && child("retry").status().unwrap().success();
+        stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        server.join().unwrap();
+        assert!(ready && contender && first_ok && retry_ok);
+        assert_eq!(requests.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(
+            std::fs::read(directory.join("model.gguf.sha256")).unwrap(),
+            b"bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721"
+        );
+        assert!(!super::partial_path(&directory.join("model.gguf")).exists());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn model_lock_protects_cleanup_and_survives_a_crashed_owner() {
+        let directory =
+            std::env::temp_dir().join(format!("nude-lock-recovery-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("model.gguf");
+        let partial = super::partial_path(&path);
+        std::fs::write(&partial, b"abcdef").unwrap();
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "translation::hymt::tests::model_resume_child_process",
+                "--ignored",
+            ])
+            .env("NUDE_RESUME_FIXTURE", &directory)
+            .env("NUDE_RESUME_MODE", "crash")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let translator = download_fixture(path.clone());
+        assert!(translator
+            .ensure_model_from_url("http://invalid")
+            .unwrap_err()
+            .contains("모델 잠금"));
+        assert!(super::remove_cached_model_files(&path)
+            .unwrap_err()
+            .contains("모델 잠금"));
+        assert_eq!(std::fs::read(&partial).unwrap(), b"abcdef");
+        // Explicit recovery is safe only after stopping all clients.
+        std::fs::remove_dir(directory.join("model.gguf.lock")).unwrap();
+        std::fs::write(&partial, b"badbad").unwrap();
+        assert!(translator
+            .ensure_model_from_url("http://invalid")
+            .unwrap_err()
+            .contains("무결성"));
+        assert!(!partial.exists());
+        assert!(!directory.join("model.gguf.lock").exists());
+        std::fs::write(&partial, b"abcdef").unwrap();
+        translator.ensure_model_from_url("http://invalid").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"abcdef");
+        assert!(!directory.join("model.gguf.lock").exists());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
     #[test]
     fn cpu_execution_limits_both_compute_pools_without_busy_waiting() {
         for (logical, expected) in [
@@ -2518,7 +2954,8 @@ mod tests {
         apply_conservative_semantic_repairs, clean_cross_script_language_terms,
         clean_korean_listener_question_person, clean_translation, complete_translation_with_retry,
         completion_payload, completion_result, context_size_for_attempt, detect_speech_style,
-        evaluate_vram_protection, find_llama_server, max_output_tokens, remove_cached_model_files,
+        evaluate_vram_protection, find_llama_server, max_output_tokens, milmmt_completion_payload,
+        milmmt_completion_result, milmmt_language_name, milmmt_prompt, remove_cached_model_files,
         repair_translation_prompt, replace_ascii_word, rewrite_style_prompt,
         startup_device_attempts, translate_gemma_completion_payload, translate_with_completion,
         translate_with_completion_for_model, translate_with_completion_for_profile,
@@ -2659,6 +3096,21 @@ mod tests {
             Language::Japanese,
             Language::Korean,
         ));
+    }
+
+    #[test]
+    fn model_storage_root_uses_only_a_non_empty_override() {
+        let default_root = super::default_cache_root().join("models");
+        assert_eq!(super::model_storage_root(None), default_root);
+        assert_eq!(
+            super::model_storage_root(Some(std::ffi::OsString::new())),
+            default_root
+        );
+        let custom = std::path::PathBuf::from(r"\\nas-host\share\models");
+        assert_eq!(
+            super::model_storage_root(Some(custom.clone().into_os_string())),
+            custom
+        );
     }
 
     #[test]
@@ -4011,5 +4463,267 @@ mod tests {
             }
             translator.close();
         }
+    }
+
+    #[test]
+    fn milmmt_prompt_uses_the_official_raw_template_without_chat_wrappers() {
+        let to_english =
+            milmmt_prompt("你好", Language::ChineseSimplified, Language::English).unwrap();
+        assert_eq!(
+            to_english,
+            "Translate this from Chinese (Simplified) to English:\nChinese (Simplified): 你好\nEnglish:"
+        );
+        let to_chinese =
+            milmmt_prompt("Hello", Language::English, Language::ChineseSimplified).unwrap();
+        assert_eq!(
+            to_chinese,
+            "Translate this from English to Chinese (Simplified):\nEnglish: Hello\nChinese (Simplified):"
+        );
+        for prompt in [to_english, to_chinese] {
+            assert!(!prompt.contains("<bos>"));
+            assert!(!prompt.contains("<start_of_turn>"));
+            assert!(!prompt.contains("<end_of_turn>"));
+            assert!(!prompt.contains("professional"));
+            assert!(!prompt.contains("Output only"));
+        }
+    }
+
+    #[test]
+    fn milmmt_language_labels_follow_the_official_locale_names() {
+        assert_eq!(
+            milmmt_language_name(Language::ChineseSimplified),
+            Some("Chinese (Simplified)")
+        );
+        assert_eq!(
+            milmmt_language_name(Language::ChineseTraditional),
+            Some("Chinese (Traditional)")
+        );
+        assert_eq!(
+            milmmt_language_name(Language::BrazilianPortuguese),
+            Some("Portuguese")
+        );
+        assert_eq!(
+            milmmt_language_name(Language::LatinAmericanSpanish),
+            Some("Spanish")
+        );
+        assert_eq!(milmmt_language_name(Language::Filipino), Some("Tagalog"));
+    }
+
+    #[test]
+    fn milmmt_rejects_unsupported_or_unknown_languages() {
+        let error = milmmt_prompt("Hello", Language::Ukrainian, Language::English).unwrap_err();
+        assert!(error.contains("MiLMMT 12B"), "unexpected error: {error}");
+        assert!(
+            error.contains("지원하지 않습니다"),
+            "unexpected error: {error}"
+        );
+        assert_eq!(
+            milmmt_prompt("Hello", Language::Malay, Language::English).unwrap(),
+            "Translate this from Malay to English:\nMalay: Hello\nEnglish:"
+        );
+        assert_eq!(
+            milmmt_prompt("Hello", Language::English, Language::Malay).unwrap(),
+            "Translate this from English to Malay:\nEnglish: Hello\nMalay:"
+        );
+        let unknown_source = milmmt_prompt("12345", Language::Unknown, Language::English)
+            .expect_err("unrecognizable source language must not silently become English");
+        assert!(
+            unknown_source.contains("확인하지 못했습니다"),
+            "unexpected error: {unknown_source}"
+        );
+        let resolved = milmmt_prompt("你好", Language::Unknown, Language::English).unwrap();
+        assert_eq!(
+            resolved,
+            "Translate this from Chinese (Simplified) to English:\nChinese (Simplified): 你好\nEnglish:"
+        );
+        let unknown_target = milmmt_prompt("Hello", Language::English, Language::Unknown)
+            .expect_err("unknown target language must be rejected");
+        assert!(
+            unknown_target.contains("대상 언어"),
+            "unexpected error: {unknown_target}"
+        );
+    }
+
+    #[test]
+    fn milmmt_official_prompt_resolves_unknown_chinese_text_without_rewriting_it() {
+        let mixed = "我一直使用的balenaEtcher";
+        assert_eq!(
+            milmmt_prompt(mixed, Language::Unknown, Language::English).unwrap(),
+            format!(
+                "Translate this from Chinese (Simplified) to English:\nChinese (Simplified): {mixed}\nEnglish:"
+            )
+        );
+        let traditional = "謝謝";
+        assert_eq!(
+            milmmt_prompt(traditional, Language::Unknown, Language::English).unwrap(),
+            "Translate this from Chinese (Traditional) to English:\nChinese (Traditional): 謝謝\nEnglish:"
+        );
+    }
+
+    #[test]
+    fn milmmt_payload_is_deterministic_capped_and_private_aware() {
+        let public =
+            milmmt_completion_payload("你好", Language::ChineseSimplified, Language::English, 4096)
+                .unwrap();
+        assert_eq!(public["n_predict"], 2048);
+        assert_eq!(public["temperature"].as_f64(), Some(0.0));
+        assert_eq!(public["top_k"], 1);
+        assert_eq!(public["cache_prompt"], true);
+        assert_eq!(
+            public["stop"],
+            serde_json::json!(["<end_of_turn>", "<eos>"])
+        );
+        assert_eq!(
+            public,
+            milmmt_completion_payload("你好", Language::ChineseSimplified, Language::English, 4096)
+                .unwrap()
+        );
+        {
+            let _scope = crate::diagnostics::ephemeral_request_scope();
+            let private = milmmt_completion_payload(
+                "你好",
+                Language::ChineseSimplified,
+                Language::English,
+                4096,
+            )
+            .unwrap();
+            assert_eq!(private["cache_prompt"], false);
+            assert_eq!(private["n_predict"], 2048);
+        }
+    }
+
+    #[test]
+    fn milmmt_rejects_empty_and_length_limited_results() {
+        let limited = serde_json::json!({
+            "stop_type": "limit",
+            "content": "partial translation"
+        });
+        assert!(milmmt_completion_result(&limited)
+            .unwrap_err()
+            .contains("길이 제한"));
+        let empty = serde_json::json!({"content": "   "});
+        assert!(milmmt_completion_result(&empty)
+            .unwrap_err()
+            .contains("빈 번역 결과"));
+        assert_eq!(
+            milmmt_completion_result(&serde_json::json!({
+                "content": "Translation: 안녕하세요"
+            }))
+            .unwrap(),
+            "안녕하세요"
+        );
+    }
+
+    #[test]
+    fn milmmt_preserves_protected_markers_with_official_prompts() {
+        let mut prompts = Vec::new();
+        let translated = translate_with_translate_gemma(
+            "Hello ZXQKEEP000QXZ friend",
+            Language::English,
+            Language::ChineseSimplified,
+            "casual",
+            |fragment, style| {
+                assert_eq!(style, "casual");
+                let prompt =
+                    milmmt_prompt(fragment, Language::English, Language::ChineseSimplified)?;
+                prompts.push(prompt);
+                Ok(if fragment == "Hello" {
+                    "你好"
+                } else {
+                    "朋友"
+                }
+                .to_string())
+            },
+        )
+        .unwrap();
+        assert_eq!(translated, "你好 ZXQKEEP000QXZ 朋友");
+        assert_eq!(prompts.len(), 2);
+        assert!(prompts
+            .iter()
+            .all(|prompt| prompt
+                .starts_with("Translate this from English to Chinese (Simplified):\n")));
+        assert!(!prompts.iter().any(|prompt| prompt.contains("ZXQKEEP")));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "MiLMMT 12B 모델과 llama-server가 필요합니다"]
+    fn live_milmmt_12b_translation() {
+        let mut translator = HyMtTranslator::new(HyMtModelSize::MiLMMT12B, "gpu", "auto").unwrap();
+        let model_override = std::env::var_os("NUDE_MILMMT_SMOKE_MODEL")
+            .filter(|value| !value.is_empty())
+            .map(std::path::PathBuf::from);
+        let server_override = std::env::var_os("NUDE_MILMMT_SMOKE_SERVER")
+            .filter(|value| !value.is_empty())
+            .map(std::path::PathBuf::from);
+        if let Some(model) = model_override {
+            translator = translator.with_paths(model, server_override);
+        } else if let Some(server) = server_override {
+            let model = translator.model_path().to_path_buf();
+            translator = translator.with_paths(model, Some(server));
+        }
+        let warmup_started = Instant::now();
+        translator.prepare().expect("start MiLMMT 12B server");
+        eprintln!(
+            "MILMMT WARMUP {:.2}s",
+            warmup_started.elapsed().as_secs_f64()
+        );
+        let cases = [
+            (
+                "Hello, how are you today?",
+                Language::English,
+                Language::ChineseSimplified,
+            ),
+            (
+                "你好，今天过得怎么样？",
+                Language::ChineseSimplified,
+                Language::English,
+            ),
+            (
+                "general chat",
+                Language::English,
+                Language::ChineseSimplified,
+            ),
+            (
+                "First line\nSecond line ZXQKEEP000QXZ",
+                Language::English,
+                Language::ChineseSimplified,
+            ),
+            (
+                "我一直使用的balenaEtcher",
+                Language::Unknown,
+                Language::English,
+            ),
+            (
+                "请先备份U盘里的文件，再用 balenaEtcher 写入镜像。如果写入后仍然无法启动，请把错误日志发给我。",
+                Language::ChineseSimplified,
+                Language::English,
+            ),
+        ];
+        for (index, (source_text, source, target)) in cases.into_iter().enumerate() {
+            let started = Instant::now();
+            let translated = translator
+                .translate(source_text, source, target)
+                .unwrap_or_else(|error| panic!("MiLMMT 12B case {index} failed: {error}"));
+            let elapsed = started.elapsed();
+            eprintln!(
+                "MILMMT CASE {index} ({}->{}) {:.2}s\nSOURCE: {source_text}\nRESULT: {translated}",
+                source.code(),
+                target.code(),
+                elapsed.as_secs_f64()
+            );
+            assert!(!translated.trim().is_empty());
+            assert_ne!(translated.trim(), source_text.trim());
+            assert!(!translated.contains("Translate this from"));
+            assert!(!translated.starts_with("Chinese (Simplified):"));
+            assert!(!translated.starts_with("English:"));
+            if source_text.contains("ZXQKEEP000QXZ") {
+                assert!(
+                    translated.contains("ZXQKEEP000QXZ"),
+                    "protected marker was lost: {translated}"
+                );
+            }
+        }
+        translator.close();
     }
 }

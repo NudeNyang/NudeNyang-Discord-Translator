@@ -272,6 +272,7 @@ const TRANSLATOR_RUNTIME_NAMES = Object.freeze({
   hymt_1_8b: "Hy-MT2 1.8B",
   hymt_7b: "Hy-MT2 7B",
   translategemma_4b: "TranslateGemma 4B",
+  milmmt_12b: "MiLMMT 12B",
   chatgpt: "ChatGPT 품질 우선 (Codex CLI)",
   claude: "Claude 품질 우선 (Claude Code)",
   gemini: "Gemini 품질 우선 (Antigravity CLI)",
@@ -300,6 +301,12 @@ const LOCAL_MODEL_RESOURCE_PROFILES = Object.freeze({
     modelBytes: 2_489_909_312,
     estimatedVramBytes: 3 * 1024 ** 3,
     estimatedRamBytes: Math.round(3.2 * 1024 ** 3),
+  }),
+  milmmt_12b: Object.freeze({
+    model: "MiLMMT 12B",
+    modelBytes: 7_300_777_440,
+    estimatedVramBytes: Math.round(10 * 1024 ** 3),
+    estimatedRamBytes: Math.round(10 * 1024 ** 3),
   }),
 });
 

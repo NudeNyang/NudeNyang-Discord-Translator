@@ -18,7 +18,7 @@
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/core-Rust-000000?logo=rust&logoColor=white">
-  <img alt="0.7.12-beta" src="https://img.shields.io/badge/release-0.7.12--beta-4C1">
+  <img alt="0.7.13-beta" src="https://img.shields.io/badge/release-0.7.13--beta-4C1">
   <img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-4C1">
 </p>
 
@@ -29,9 +29,9 @@ NudeNyang은 화면에 떠 있는 Discord 창과 직접 연결되는 Tauri/Rust 
 
 ## 다운로드와 업데이트
 
-[0.7.12 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.12-beta)에서 Windows 10/11용 설치 파일을 받으세요. CodeBuddy 안내에서 개인 환경에 해당하는 설명을 정리하고 모델 ID 보존 검사를 보완했습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.12-beta.md)에 정리했습니다.
+[0.7.13 Beta](https://github.com/NudeNyang/NudeNyang-Discord-Translator/releases/tag/v0.7.13-beta)에서 Windows 10/11용 설치 파일을 받으세요. MiLMMT 12B를 추가하고 서식이 있는 보내는 글의 언어 감지와 공유 모델 다운로드를 보완했습니다. 자세한 내용은 [변경 내역](docs/releases/0.7.13-beta.md)에 정리했습니다.
 
-0.7.12-beta는 GitHub 정식 최신 릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
+0.7.13-beta는 GitHub 정식 최신 릴리스로 배포합니다. 버전명과 앱의 업데이트 경로는 그대로 유지합니다. 1.0.0은 macOS 버전 출시 때 사용할 예정입니다.
 
 - `x64`는 대부분의 Intel·AMD PC용이며, `ARM64`는 Windows on ARM PC용입니다.
 - 공개 릴리스는 x64와 ARM64 설치형만 제공합니다. 자동 업데이트를 지원하지 않는 포터블판은 더 이상 배포하지 않습니다.
@@ -125,14 +125,18 @@ sequenceDiagram
 | 진단 로그 | 사용자 홈 경로와 비밀 값은 가리고, 메시지 본문과 로컬 모델 프롬프트는 남기지 않습니다. |
 | 모델 다운로드 | 고정된 리비전에서 받은 뒤 예상 크기와 SHA-256이 맞는 파일만 불러옵니다. |
 
-Hy-MT2와 TranslateGemma는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemini, DeepL, CodeBuddy, OpenAI 호환 API는 선택 사항이며, 이 가운데 하나를 고르면 번역할 텍스트가 해당 서비스로 전송됩니다.
+Hy-MT2, TranslateGemma와 MiLMMT 12B는 PC 안에서 처리됩니다. ChatGPT, Claude, Gemini, DeepL, CodeBuddy, OpenAI 호환 API는 선택 사항이며, 이 가운데 하나를 고르면 번역할 텍스트가 해당 서비스로 전송됩니다.
+
+MiLMMT 12B는 실험용 로컬 모델입니다. Q4_K_M 모델을 선택하면 약 7.3GB를 별도로 내려받으며, GPU 사용 시 여유 VRAM 약 10GB를 권장합니다. 우크라이나어는 지원하지 않고 Gemma 이용약관이 적용됩니다. 기본 모델은 Hy-MT2 1.8B를 유지합니다.
+
+다운로드한 모델을 NAS 등 다른 폴더에 두려면 `NUDE_TRANSLATOR_MODEL_DIR`를 지정하십시오. 같은 공유 폴더를 사용하는 모든 PC는 모델 다운로드 잠금을 지원하는 버전을 사용해야 합니다. 강제 종료 후 빈 `.lock` 폴더가 남았다면 모든 PC의 앱을 종료한 뒤 해당 잠금 폴더만 삭제하십시오. 자세한 내용은 [복구 안내](docs/releases/0.7.13-beta-local.md)를 참고하십시오.
 
 ## 주요 기능
 
 - 보수적인 언어 판별과 선택형 원문 언어 필터를 적용한 받은 메시지·채널명 번역
 - 채널별 설정이나 최근 대화 언어를 따르며 마지막 전송은 사용자에게 맡기는 보내는 메시지 번역
 - 한국어, 영어, 일본어, 간체·번체 중국어를 포함한 채팅·인터페이스 28개 언어
-- Hy-MT2 1.8B·7B 로컬 모델과 실험용 TranslateGemma 4B
+- Hy-MT2 1.8B·7B 로컬 모델과 실험용 TranslateGemma 4B·MiLMMT 12B
 - 선택형 ChatGPT·Claude·Gemini·DeepL·CodeBuddy·사용자 지정 OpenAI 호환 API 연동과 테스트용 Mock 엔진
 - 적응형 PP-OCR 인식, 원본/번역 전환을 갖춘 로컬 이미지 번역
 - 별도 결과 창, 발음, 문맥 뜻 정렬, 개인 용어와 선택 설치형 오프라인팩을 갖춘 메시지 사전
@@ -184,7 +188,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package_github_release.ps1
 powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 ```
 
-0.7.12-beta는 관리자의 요청에 따라 정식 최신 릴리스로 게시합니다. 배포 명령에 `-StableRelease`를 지정하며, 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
+0.7.13-beta는 관리자의 요청에 따라 정식 최신 릴리스로 게시합니다. 배포 명령에 `-StableRelease`를 지정하며, 업데이트 목록 반영 순서는 [Windows 릴리스 절차](docs/WINDOWS_RELEASE.md)를 따릅니다.
 
 </details>
 
@@ -192,6 +196,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy_github_release.ps1
 
 | 문서 | 내용 |
 |---|---|
+| [0.7.13-beta 변경 내역](docs/releases/0.7.13-beta.md) | MiLMMT 12B 추가, 보내는 글의 언어 감지와 공유 모델 다운로드 보완 |
 | [0.7.12-beta 변경 내역](docs/releases/0.7.12-beta.md) | CodeBuddy 안내 정리와 모델 ID 보존 검사 보완 |
 | [0.7.11-beta 변경 내역](docs/releases/0.7.11-beta.md) | CodeBuddy CLI 추가, 반복 번역 요청과 비활성 창 재연결 수정 |
 | [0.7.10-beta 변경 내역](docs/releases/0.7.10-beta.md) | Discord 재연결·창 전환 후 연결 상태 표시 수정 |
