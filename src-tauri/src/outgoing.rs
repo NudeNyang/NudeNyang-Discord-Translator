@@ -32,7 +32,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
   const uiLanguage = resolveUiLanguage(requestedUiLanguage === 'auto' ? systemUiLanguage : requestedUiLanguage);
   const GLOBAL = '__nudeTranslatorOutgoing';
   const ROOT_ID = 'nt-outgoing-translation';
-  const CONTROLLER_VERSION = 64;
+  const CONTROLLER_VERSION = 65;
   const HEARTBEAT_TIMEOUT_MS = 5000;
   const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
   const MESSAGE_UTF16_LIMIT = 1900;
@@ -290,13 +290,14 @@ const OUTGOING_UI_SCRIPT: &str = r####"
     return plan?.supported ? plan.text : composerText(editor);
   }
   function currentComposerForItem(item) {
+    if (item.channel_key !== currentChannelKey()) return null;
     const expected = item.original_text || item.text || '';
     const current = item.editor;
-    if (current?.isConnected && isPrimaryComposer(current) && sourceTextForItem(current, item) === expected) return current;
+    if (current?.isConnected && isPrimaryComposer(current) && composerText(current) === expected) return current;
     const messageRowSelector = 'li[id^="chat-messages-"], [data-list-item-id^="chat-messages___"], [class*="messageListItem"]';
     const candidates = [...document.querySelectorAll(composerSelector)]
       .filter(candidate => candidate.isConnected && isPrimaryComposer(candidate) && !candidate.closest(messageRowSelector))
-      .filter(candidate => sourceTextForItem(candidate, item) === expected);
+      .filter(candidate => composerText(candidate) === expected);
     const focused = document.activeElement;
     return candidates.find(candidate => candidate === focused || candidate.contains(focused))
       || candidates.sort((left, right) => left.getBoundingClientRect().bottom - right.getBoundingClientRect().bottom).at(-1)
@@ -652,6 +653,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const original = item.original_text || item.text || '';
           const translationWasInserted = item.review_ready || item.installing_review;
           if (!translationWasInserted || !original || !editor?.isConnected || !composerHasText(editor)) continue;
+          if (item.review_ready && sourceTextForItem(editor, item) !== item.review_text) continue;
           if (composerText(editor) === original) continue;
           editor.focus();
           const range = document.createRange();
@@ -898,6 +900,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           const original = item.original_text || item.text || '';
           const translationWasInserted = item.review_ready || item.installing_review;
           if (!translationWasInserted || !original || !editor?.isConnected || !composerHasText(editor)) continue;
+          if (item.review_ready && sourceTextForItem(editor, item) !== item.review_text) continue;
           if (composerText(editor) === original) continue;
           editor.focus();
           const range = document.createRange();
@@ -1049,6 +1052,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (!item) return;
         if (language === 'original') {
           this.pending.delete(id);
+          this.oneShotOriginal = true;
           this.setStatus(copy('nextOriginal'));
           return;
         }
@@ -1085,10 +1089,11 @@ const OUTGOING_UI_SCRIPT: &str = r####"
       pendingForEditor(editor) {
         for (const entry of this.pending.entries()) {
           const [, item] = entry;
-          if (item.editor === editor) return entry;
           if (item.channel_key !== currentChannelKey()) continue;
+          if (item.editor === editor) return entry;
+          if (item.review_ready || item.editor?.isConnected) continue;
           const expected = item.original_text || item.text || '';
-          if (sourceTextForItem(editor, item) !== expected) continue;
+          if (composerText(editor) !== expected) continue;
           item.editor = editor;
           return entry;
         }
@@ -1154,8 +1159,12 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         if (inputType && !inputType.startsWith('delete')) return;
         this.cancelReview(editor);
       },
-      draftKey(channelKey, language, text) {
-        return JSON.stringify([channelKey, language, text]);
+      reviewedTextForDraft(item, language) {
+        if (item?.selected_language !== language) return null;
+        return item.review_ready ? item.review_text : item.reviewed_text;
+      },
+      draftKey(channelKey, language, text, reviewedText) {
+        return JSON.stringify([channelKey, language, text, reviewedText]);
       },
       queueDraftCheck(editor = activeComposer()) {
         if (!this.enabled || !editor?.isConnected || !isPrimaryComposer(editor)) return;
@@ -1172,7 +1181,9 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         // Symbols need no asynchronous language classification. Keep this in
         // sync with the synchronous Enter check below.
         if (!/[\p{L}\p{N}]/u.test(text)) return;
-        const key = this.draftKey(channelKey, selected, text);
+        const reviewedText = this.reviewedTextForDraft(this.pendingForEditor(editor)?.[1], selected);
+        if (reviewedText === text) return;
+        const key = this.draftKey(channelKey, selected, text, reviewedText);
         const existing = this.draftChecks.get(key);
         if (existing && Date.now() - existing.created_at < 60000) return;
         const id = `outgoing-check-${Date.now()}-${++this.sequence}`;
@@ -1182,6 +1193,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           id,
           channel_key:channelKey,
           text,
+          reviewed_text:reviewedText,
           action:'classify',
           selected_language:selected,
           recent_messages:recentMessages(),
@@ -1212,19 +1224,41 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           event.stopImmediatePropagation();
           return;
         }
-        const review = [...this.pending.entries()].find(([, item]) => item.editor === editor && item.review_ready);
-        if (review) {
-          const [id, item] = review;
-          const text = composerText(editor);
-          if (!text.trim()) return;
-          if (text.length > MESSAGE_UTF16_LIMIT) {
+        const originalText = composerText(editor);
+        if (!originalText.trim()) return;
+        const key = currentChannelKey();
+        if (!key) return;
+        const previous = this.pendingForEditor(editor);
+        if (this.oneShotOriginal) {
+          this.oneShotOriginal = false;
+          if (previous) {
+            this.pending.delete(previous[0]);
+            this.queue = this.queue.filter(request => request.id !== previous[0]);
+          }
+          this.setStatus('');
+          return;
+        }
+        const mentionPlan = prefixMentionPlan(editor);
+        if (mentionPlan && !mentionPlan.supported) return;
+        const text = mentionPlan ? mentionPlan.text : originalText;
+        if (!text.trim() || text.startsWith('/')) return;
+        const selected = selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
+        if (selected === 'original') return;
+        const reviewedText = this.reviewedTextForDraft(previous?.[1], selected);
+        const draftDecision = this.draftChecks.get(this.draftKey(key, selected, text, reviewedText));
+        // Symbols need no asynchronous classification, including in auto mode.
+        const canSend = text === reviewedText || !/[\p{L}\p{N}]/u.test(text)
+          || (draftDecision?.resolved && draftDecision.pass);
+        if (canSend && previous?.[1].review_ready) {
+          const [id, item] = previous;
+          if (originalText.length > MESSAGE_UTF16_LIMIT) {
             this.setStatus(copy('reviewReadyLong'), true, true);
             return;
           }
           this.sent.push({
             channel_key: item.channel_key,
             original_text: item.original_text || item.text,
-            sent_text: text,
+            sent_text: originalText,
             part_number: 1,
             total_parts: 1,
             existing_message_ids: [...document.querySelectorAll('[id^="message-content-"]')]
@@ -1237,22 +1271,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           // 실제 키보드 Enter를 Discord에 그대로 전달한다. 여기서는 전송 이벤트를 만들지 않는다.
           return;
         }
-        const mentionPlan = prefixMentionPlan(editor);
-        if (mentionPlan && !mentionPlan.supported) return;
-        const text = mentionPlan ? mentionPlan.text : composerText(editor);
-        if (!text.trim() || text.startsWith('/')) return;
-        const originalText = composerText(editor);
-        const key = currentChannelKey();
-        if (!key) return;
-        const selected = this.oneShotOriginal
-          ? 'original'
-          : selectedLanguageForChannel(key, this.defaultLanguage, this.channelLanguages);
-        this.oneShotOriginal = false;
-        if (selected === 'original') return;
-        // Enter can arrive before the Rust draft classifier has replied.
-        // Punctuation/emoji-only drafts must keep the user's native Enter,
-        // including auto language with no recent conversation to classify.
-        if (!/[\p{L}\p{N}]/u.test(text)) {
+        if (canSend) {
           for (const [id, item] of this.pending) {
             if (item.editor !== editor) continue;
             this.pending.delete(id);
@@ -1261,29 +1280,25 @@ const OUTGOING_UI_SCRIPT: &str = r####"
           this.setStatus('');
           return;
         }
-        const draftDecision = this.draftChecks.get(this.draftKey(key, selected, text));
-        if (draftDecision?.resolved && draftDecision.pass) {
-          this.setStatus('');
-          return;
-        }
-        const previous = this.pendingForEditor(editor);
+        event.preventDefault();
+        event.stopImmediatePropagation();
         if (previous) {
           const [previousId, previousItem] = previous;
           const expired = Date.now() - previousItem.created_at >= 30000;
           const changed = (previousItem.original_text || previousItem.text) !== originalText;
-          if (!expired && !changed) {
+          if (!previousItem.review_ready && !expired && !changed && previousItem.selected_language === selected) {
             this.setStatus(copy('pending'), false, true);
             return;
           }
           this.pending.delete(previousId);
+          this.queue = this.queue.filter(request => request.id !== previousId);
         }
-        event.preventDefault();
-        event.stopImmediatePropagation();
         const id = `outgoing-${Date.now()}-${++this.sequence}`;
         const item = {
           id,
           channel_key:key,
           text,
+          reviewed_text:reviewedText,
           original_text:originalText,
           preserve_prefix_mentions:Boolean(mentionPlan),
           selected_language:selected,
@@ -1293,11 +1308,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         };
         this.pending.set(id, {...item, editor});
         this.queue.push(item);
-        this.setStatus(
-          selected === 'original' ? copy('sendingOriginal') : copy('translating'),
-          false,
-          selected !== 'original',
-        );
+        this.setStatus(copy('translating'), false, true);
       },
       prepareReview(id) {
         const item = this.pending.get(id);
@@ -1369,6 +1380,7 @@ const OUTGOING_UI_SCRIPT: &str = r####"
         const item = this.pending.get(id);
         if (!item?.installing_review || !item.editor?.isConnected || !composerHasText(item.editor)) return false;
         item.installing_review = false;
+        item.review_text = sourceTextForItem(item.editor, item);
         item.review_ready = true;
         const text = composerText(item.editor);
         this.setStatus(text.length > MESSAGE_UTF16_LIMIT ? copy('reviewReadyLong') : copy('reviewReady'), text.length > MESSAGE_UTF16_LIMIT, text.length > MESSAGE_UTF16_LIMIT);
@@ -1739,6 +1751,8 @@ pub struct OutgoingRequest {
     pub id: String,
     pub channel_key: String,
     pub text: String,
+    #[serde(default)]
+    pub reviewed_text: Option<String>,
     #[serde(default)]
     pub action: String,
     pub selected_language: String,
@@ -2268,7 +2282,7 @@ mod tests {
         assert!(script.contains("if (hasActiveMediaViewer()) {"));
         assert!(script.contains("this.root.hidden = true;"));
         assert!(script.contains("this.root.hidden = !this.displayControlVisible"));
-        assert!(script.contains("const CONTROLLER_VERSION = 64"));
+        assert!(script.contains("const CONTROLLER_VERSION = 65"));
     }
 
     #[test]

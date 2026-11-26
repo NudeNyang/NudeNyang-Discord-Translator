@@ -221,6 +221,113 @@ test("outgoing punctuation bypasses Enter interception before draft classificati
   } finally {await app.close();}
 });
 
+test("edited outgoing reviews translate new text before the next native send", async () => {
+  test.setTimeout(60_000);
+  const app = await fixture({ delay: 250 });
+  try {
+    const page = app.pages.stable;
+    const editor = page.getByRole("textbox");
+    await app.call("configure", { patch: { enabled: false, outgoing_translation_enabled: true, outgoing_target_language: "en" } });
+    await app.focus("stable");
+    await expect.poll(() => page.evaluate(() => window.__nudeTranslatorOutgoing?.enabled)).toBe(true);
+    await editor.evaluate(node => {
+      window.fixtureSends = [];
+      node.addEventListener("keydown", event => {
+        if (event.key !== "Enter" || event.shiftKey) return;
+        event.preventDefault();
+        window.fixtureSends.push(node.innerText);
+      });
+      // Model Discord's plain-text paste contract for multi-line reviews.
+      node.addEventListener("beforeinput", event => {
+        if (event.inputType !== "insertFromPaste") return;
+        event.preventDefault();
+        node.textContent = event.dataTransfer.getData("text/plain");
+        node.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
+      });
+    });
+    const source = "안녕하세요 오늘 일정을 확인해 주세요.";
+    const review = `[en] ${source}`;
+    const prepare = async () => {
+      await editor.fill(source);
+      await editor.press("Enter");
+      await expect(editor).toHaveText(review);
+      await expect.poll(() => page.evaluate(() =>
+        [...window.__nudeTranslatorOutgoing.pending.values()].some(item => item.review_ready)
+      )).toBe(true);
+    };
+    const append = async (separator, text) => {
+      await editor.press("End");
+      if (separator === "\n") await editor.press("Shift+Enter");
+      await page.keyboard.insertText(separator === "\n" ? text : separator + text);
+    };
+    const sends = () => page.evaluate(() => window.fixtureSends);
+
+    for (const [separator, extra] of [
+      ["", "请告诉我你什么时候有空。"],
+      ["\n", "明日の予定を教えてください。"],
+      [" ", "Пожалуйста, пришлите мне расписание на завтра."],
+    ]) {
+      const count = (await sends()).length;
+      await prepare();
+      await append(separator, extra);
+      await editor.press("Enter");
+      await editor.press("Enter");
+      expect(await sends()).toHaveLength(count);
+      await expect(editor).toHaveJSProperty("textContent", `${review}${separator}[en] ${extra}`);
+      await editor.press("Enter");
+      expect(await sends()).toHaveLength(count + 1);
+    }
+
+    await prepare();
+    await editor.press("Control+a");
+    const replacement = "Je voudrais connaître les horaires de demain.";
+    await page.keyboard.insertText(replacement);
+    await editor.press("Enter");
+    await expect(editor).toHaveText(`[en] ${replacement}`);
+    expect(await sends()).toHaveLength(3);
+    await editor.press("Enter");
+    expect(await sends()).toHaveLength(4);
+
+    await prepare();
+    const sameLanguage = " Please let me know when you are available.";
+    await append("", sameLanguage);
+    await expect.poll(() => page.evaluate(draft =>
+      [...window.__nudeTranslatorOutgoing.draftChecks].some(([key, decision]) =>
+        JSON.parse(key)[2] === draft && decision.resolved && decision.pass
+      ), review + sameLanguage)).toBe(true);
+    await editor.press("Enter");
+    expect(await sends()).toHaveLength(5);
+    expect((await sends()).at(-1)).toBe(review + sameLanguage);
+
+    await prepare();
+    const verbatim = " 这句话请保留原文。";
+    await append("", verbatim);
+    await page.locator(".nt-outgoing-trigger").click();
+    await page.getByRole("button", { name: "이번 메시지만 원문으로 전송" }).click();
+    await editor.press("Enter");
+    expect(await sends()).toHaveLength(6);
+    expect((await sends()).at(-1)).toBe(review + verbatim);
+    await expect.poll(() => page.evaluate(() => window.__nudeTranslatorOutgoing.oneShotOriginal)).toBe(false);
+    await prepare();
+    expect(await sends()).toHaveLength(6);
+
+    // The same flow also works with a non-English destination.
+    await app.call("configure", { patch: { outgoing_target_language: "ja" } });
+    await expect.poll(() => page.evaluate(() => window.__nudeTranslatorOutgoing.defaultLanguage)).toBe("ja");
+    await editor.fill(source);
+    await editor.press("Enter");
+    const japaneseReview = `[ja] ${source}`;
+    await expect(editor).toHaveText(japaneseReview);
+    const english = " Please let me know when you are available.";
+    await append("", english);
+    await editor.press("Enter");
+    expect(await sends()).toHaveLength(6);
+    await expect(editor).toHaveText(`${japaneseReview} [ja]${english}`);
+    await editor.press("Enter");
+    expect(await sends()).toHaveLength(7);
+  } finally { await app.close(); }
+});
+
 test("outgoing punctuation mixed with words still requests translation before classification returns", async () => {
   const app = await fixture();
   try {

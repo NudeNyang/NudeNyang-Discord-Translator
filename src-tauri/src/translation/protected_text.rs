@@ -193,7 +193,7 @@ pub fn sanitize_unexpected_marker_artifacts(source: &str, translated: &str) -> S
     }
 }
 
-pub fn protect_text(text: &str) -> ProtectedText {
+pub(super) fn protected_spans(text: &str) -> Vec<(usize, usize)> {
     let mut spans = Vec::new();
     for pattern in [
         &*MENTION_RE,
@@ -232,6 +232,11 @@ pub fn protect_text(text: &str) -> ProtectedText {
         }
         selected.push((start, end));
     }
+    selected
+}
+
+pub fn protect_text(text: &str) -> ProtectedText {
+    let selected = protected_spans(text);
     if selected.is_empty() {
         return ProtectedText {
             original: text.to_string(),

@@ -135,11 +135,26 @@ fn split_failed_web_clauses(text: &str) -> Vec<(String, String)> {
     parts
 }
 
-pub fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
+fn outgoing_can_passthrough(text: &str, target: Option<Language>) -> bool {
+    outgoing_draft_can_passthrough(text, target, None)
+}
+
+pub fn outgoing_draft_can_passthrough(
+    text: &str,
+    target: Option<Language>,
+    reviewed: Option<&str>,
+) -> bool {
     if !protect_text(text).has_translatable_text() {
         return true;
     }
-    let segments = DiscordFormatTemplate::parse(text).translatable_texts();
+    let template = match reviewed {
+        Some(reviewed) => DiscordFormatTemplate::for_review_edit(text, reviewed),
+        None => DiscordFormatTemplate::parse(text),
+    };
+    outgoing_segments_can_passthrough(&template.translatable_texts(), target)
+}
+
+fn outgoing_segments_can_passthrough(segments: &[String], target: Option<Language>) -> bool {
     let meaningful = segments
         .iter()
         .filter(|segment| protect_text(segment).has_translatable_text())
@@ -420,10 +435,33 @@ impl TranslationService {
         text: &str,
         target: Language,
     ) -> Result<String, String> {
-        let template = DiscordFormatTemplate::parse(text);
+        self.translate_discord_template(DiscordFormatTemplate::parse(text), target, false)
+    }
+
+    pub fn translate_discord_review_edit(
+        &mut self,
+        text: &str,
+        reviewed: &str,
+        target: Language,
+    ) -> Result<String, String> {
+        self.translate_discord_template(
+            DiscordFormatTemplate::for_review_edit(text, reviewed),
+            target,
+            true,
+        )
+    }
+
+    fn translate_discord_template(
+        &mut self,
+        template: DiscordFormatTemplate,
+        target: Language,
+        review_edit: bool,
+    ) -> Result<String, String> {
         let segments = template.translatable_texts();
-        if segments.is_empty() {
-            return Ok(text.to_string());
+        if segments.is_empty()
+            || (review_edit && outgoing_segments_can_passthrough(&segments, Some(target)))
+        {
+            return template.render(&segments);
         }
         // Infer only from this draft's translatable text. Formatting can leave
         // tiny ambiguous pieces ("Hello **world**"); code, URLs and a preceding

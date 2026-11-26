@@ -1,3 +1,6 @@
+use super::protected_text::protected_spans;
+use std::ops::Range;
+
 #[derive(Clone, Debug, PartialEq)]
 enum FormatPart {
     Literal(String),
@@ -51,6 +54,42 @@ impl DiscordFormatTemplate {
                 FormatPart::Literal(_) => None,
             })
             .collect()
+    }
+
+    pub fn for_review_edit(source: &str, reviewed: &str) -> Self {
+        let changed = reviewed_edit_range(source, reviewed);
+        let mut template = Self { parts: Vec::new() };
+        let mut offset = 0;
+        for part in Self::parse(source).parts {
+            let text = match &part {
+                FormatPart::Literal(text) | FormatPart::Translatable(text) => text,
+            };
+            let end = offset + text.len();
+            if !changed.is_empty()
+                && matches!(part, FormatPart::Translatable(_))
+                && changed.start < end
+                && offset < changed.end
+            {
+                let mut start = changed.start.saturating_sub(offset);
+                let mut stop = changed.end.min(end) - offset;
+                // Keep protected tokens intact even when the edit is inside one.
+                for (token_start, token_end) in protected_spans(text) {
+                    if token_start < start && start < token_end {
+                        start = token_start;
+                    }
+                    if token_start < stop && stop < token_end {
+                        stop = token_end;
+                    }
+                }
+                template.push_literal(&text[..start]);
+                template.push_translatable(&text[start..stop]);
+                template.push_literal(&text[stop..]);
+            } else {
+                template.push_literal(text);
+            }
+            offset = end;
+        }
+        template
     }
 
     pub fn render(&self, translated: &[String]) -> Result<String, String> {
@@ -158,6 +197,50 @@ impl DiscordFormatTemplate {
         }
         self.push_literal(&text[trailing_start..]);
     }
+}
+
+fn reviewed_edit_range(source: &str, reviewed: &str) -> Range<usize> {
+    let shared_prefix = source
+        .chars()
+        .zip(reviewed.chars())
+        .take_while(|(left, right)| left == right)
+        .map(|(character, _)| character.len_utf8())
+        .sum::<usize>();
+    let shared_suffix = source[shared_prefix..]
+        .chars()
+        .rev()
+        .zip(reviewed[shared_prefix..].chars().rev())
+        .take_while(|(left, right)| left == right)
+        .map(|(character, _)| character.len_utf8())
+        .sum::<usize>();
+    let mut start = shared_prefix;
+    let mut end = source.len() - shared_suffix;
+    if start == end {
+        return start..end;
+    }
+
+    // If a replacement shares letters with the old word, classify and
+    // translate the complete new word. An append after the old draft ends
+    // keeps the reviewed prefix intact, even without an intervening space.
+    let is_word = |character: char| character.is_alphanumeric();
+    if source[start..].starts_with(is_word) && reviewed[start..].starts_with(is_word) {
+        start -= source[..start]
+            .chars()
+            .rev()
+            .take_while(|character| is_word(*character))
+            .map(char::len_utf8)
+            .sum::<usize>();
+    }
+    if source[..end].ends_with(is_word)
+        && reviewed[..reviewed.len() - shared_suffix].ends_with(is_word)
+    {
+        end += source[end..]
+            .chars()
+            .take_while(|character| is_word(*character))
+            .map(char::len_utf8)
+            .sum::<usize>();
+    }
+    start..end
 }
 
 fn line_boundaries(text: &str, start: usize) -> (usize, usize) {
@@ -342,6 +425,30 @@ fn markdown_link_at(text: &str, start: usize) -> Option<MarkdownLink> {
 #[cfg(test)]
 mod tests {
     use super::DiscordFormatTemplate;
+
+    #[test]
+    fn review_edit_preserves_reviewed_text_and_discord_formatting() {
+        let reviewed = "Reviewed **bold** and `code`.\n";
+        let draft = "Reviewed **bold** and `code`.\n> 新しい文章\n\nhttps://example.test/例";
+        let template = DiscordFormatTemplate::for_review_edit(draft, reviewed);
+        assert_eq!(template.translatable_texts(), ["新しい文章"]);
+        assert_eq!(
+            template.render(&["New sentence".into()]).unwrap(),
+            "Reviewed **bold** and `code`.\n> New sentence\n\nhttps://example.test/例",
+        );
+    }
+
+    #[test]
+    fn review_edit_keeps_shared_word_edges_and_protected_tokens_together() {
+        let template =
+            DiscordFormatTemplate::for_review_edit("Keep bicycle here", "Keep binary here");
+        assert_eq!(template.translatable_texts(), ["bicycle"]);
+        let template =
+            DiscordFormatTemplate::for_review_edit("Keep #翻訳作業 here", "Keep #翻訳結果 here");
+        assert_eq!(template.translatable_texts(), ["#翻訳作業"]);
+        let template = DiscordFormatTemplate::for_review_edit("Keep this", "Keep only this");
+        assert!(template.translatable_texts().is_empty());
+    }
 
     #[test]
     fn preserves_empty_lines_and_mixed_line_endings() {

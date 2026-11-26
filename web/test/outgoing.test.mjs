@@ -337,7 +337,7 @@ test("outgoing translation reserves the second physical Enter for the user", () 
   assert.match(outgoing, /!event\.isComposing/);
   assert.match(outgoing, /if \(!ordinaryEnter\) return/);
   assert.match(outgoing, /review_ready/);
-  assert.match(outgoing, /if \(review\) \{[\s\S]*?this\.pending\.delete\(id\);[\s\S]*?return;/);
+  assert.match(outgoing, /this\.sent\.push\([\s\S]*?this\.pending\.delete\(id\);[\s\S]*?return;/);
   assert.match(outgoingProduction, /if \(selected === 'original'\) return;[\s\S]*?event\.preventDefault\(\)/);
   assert.doesNotMatch(outgoing, /action:'send-reviewed'/);
   assert.doesNotMatch(outgoingProduction, /Input\.dispatchKeyEvent/);
@@ -391,7 +391,7 @@ test("configured outgoing defaults preflight drafts before the review-before-sen
   assert.match(outgoing, /action:'classify'/);
   assert.match(outgoing, /draftChecks/);
   assert.match(outgoing, /draftDecision\?\.resolved && draftDecision\.pass/);
-  assert.match(engine, /outgoing_can_passthrough/);
+  assert.match(engine, /outgoing_draft_can_passthrough/);
   assert.match(engine, /apply_outgoing_classification_script/);
   assert.match(engine, /dispatch_outgoing_review\(client, &request_id, &translated\)/);
 });
@@ -402,7 +402,6 @@ test("outgoing interpretation status stays visible until the request finishes", 
   assert.match(outgoing, /setStatus\(message, error = false, persistent = false\)/);
   assert.match(outgoing, /if \(message && !persistent\) this\.statusTimer = setTimeout/);
   assert.match(outgoing, /setStatus\(copy\('translating'\), false, true\)/);
-  assert.match(outgoing, /selected !== 'original'/);
   assert.match(outgoing, /detected\(id, language\)[\s\S]*?setStatus\(copy\('translating'\), false, true\)/);
 });
 
@@ -593,7 +592,7 @@ test("Discord chat controls stay aligned to the composer and expose display tran
   assert.match(outgoing, /bounds\.height > 20/);
   assert.match(outgoing, /bounds\.top > window\.innerHeight \* 0\.4/);
   assert.match(outgoing, /\[hidden\]\{display:none!important\}/);
-  assert.match(outgoing, /CONTROLLER_VERSION = 64/);
+  assert.match(outgoing, /CONTROLLER_VERSION = 65/);
   assert.match(outgoing, /function primaryComposerContainer\(element\)/);
   assert.match(outgoing, /element\.closest\('\[class\*="channelTextArea"\]'\)/);
   assert.match(outgoing, /container\.closest\('main, \[role="main"\], \[class\*="chatContent"\]'\)/);

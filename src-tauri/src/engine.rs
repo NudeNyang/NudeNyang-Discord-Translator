@@ -43,7 +43,7 @@ use crate::outgoing::{
     OUTGOING_BINDINGS_SCRIPT, OUTGOING_CLEANUP_SCRIPT, OUTGOING_ORIGINALS_UI_VERSION,
 };
 use crate::translation::{
-    outgoing_can_passthrough, CodeBuddyCliTranslator, DeepLTranslator, HyMtModelSize,
+    outgoing_draft_can_passthrough, CodeBuddyCliTranslator, DeepLTranslator, HyMtModelSize,
     HyMtTranslator, MockTranslator, ModelPreparationCancellation, ModelPreparationProgress,
     ModelProgressObserver, OpenAiCompatSettings, OpenAiCompatTranslator, OriginalTranslator,
     ResilientTranslator, SubscriptionCliTranslator, TranslationService, Translator,
@@ -556,6 +556,7 @@ struct OutgoingTranslationBatch {
     target: Language,
     request_id: String,
     text: String,
+    reviewed_text: Option<String>,
     queued_at: Instant,
 }
 
@@ -3284,7 +3285,11 @@ fn scan_outgoing(
                     .ok()
                     .filter(|target| *target != Language::Unknown)
             };
-            let can_pass = outgoing_can_passthrough(&request.text, target);
+            let can_pass = outgoing_draft_can_passthrough(
+                &request.text,
+                target,
+                request.reviewed_text.as_deref(),
+            );
             client.evaluate(
                 &apply_outgoing_classification_script(&request.id, can_pass)?,
                 false,
@@ -3339,6 +3344,7 @@ fn enqueue_outgoing_translation(
             target,
             request_id: request.id,
             text: request.text,
+            reviewed_text: request.reviewed_text,
             queued_at: Instant::now(),
         }))
         .map_err(|_| "전송 메시지 통역 작업을 시작하지 못했습니다.".to_string())
@@ -4371,7 +4377,12 @@ fn run_outgoing_translation_worker(
         match command {
             OutgoingWorkerCommand::Translate(batch) => {
                 log_worker_queue("outgoing", batch.queued_at, 1, batch.text.chars().count());
-                let value = service.translate_for_discord(&batch.text, batch.target);
+                let value = match batch.reviewed_text {
+                    Some(reviewed) => {
+                        service.translate_discord_review_edit(&batch.text, &reviewed, batch.target)
+                    }
+                    None => service.translate_for_discord(&batch.text, batch.target),
+                };
                 let _ = results.send(WorkerResult::OutgoingTranslated {
                     generation: batch.generation,
                     request_id: batch.request_id,
@@ -5285,6 +5296,7 @@ mod tests {
             id: format!("{action}-test"),
             channel_key: "/channels/1/2".to_string(),
             text: String::new(),
+            reviewed_text: None,
             action: action.to_string(),
             selected_language: selected_language.to_string(),
             recent_messages: Vec::new(),
@@ -6769,6 +6781,7 @@ mod tests {
                 target: Language::Japanese,
                 request_id: "outgoing-priority".to_string(),
                 text: "안녕하세요".to_string(),
+                reviewed_text: None,
                 queued_at: Instant::now(),
             }))
             .unwrap();
